@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --bg-base: #06080f;
+  --bg-surface: #0d1117;
+  --bg-elevated: #131a24;
+  --bg-card: #0f1620;
+  --border: #1e2d3d;
+  --border-bright: #2a3f55;
+  --cyan: #00d4ff;
+  --cyan-dim: #00a8cc;
+  --cyan-glow: rgba(0, 212, 255, 0.15);
+  --cyan-glow-strong: rgba(0, 212, 255, 0.3);
+  --text-primary: #f0f6ff;
+  --text-secondary: #8ba3bd;
+  --text-muted: #4d6478;
+  --amber: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+/* Selection */
+::selection { background: var(--cyan-glow-strong); color: var(--text-primary); }
+
+/* Focus */
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Utility classes */
+.glow-cyan {
+  box-shadow: 0 0 20px var(--cyan-glow), 0 0 60px rgba(0, 212, 255, 0.05);
+}
+
+.glow-cyan-text {
+  text-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+}
+
+.border-cyan-glow {
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.card-surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.card-surface:hover {
+  border-color: rgba(0, 212, 255, 0.25);
+  background: var(--bg-elevated);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #f0f6ff 0%, #00d4ff 60%, #0099cc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
