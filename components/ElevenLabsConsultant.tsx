@@ -4,7 +4,9 @@ import Script from "next/script";
 import { createElement } from "react";
 
 export default function ElevenLabsConsultant() {
-  const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
+  const agentId =
+    process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ||
+    "agent_4501kxv503fheb69mwxp40xeam5e";
 
   if (!agentId) return null;
 
