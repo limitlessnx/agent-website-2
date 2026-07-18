@@ -8,6 +8,7 @@ import {
   Stethoscope, Truck, Briefcase, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useState } from "react";
+import ElevenLabsConsultant from "@/components/ElevenLabsConsultant";
 
 function NeuralGrid() {
   return (
@@ -157,6 +158,7 @@ const centered = { textAlign:"center" as const };
 export default function HomePage() {
   return (
     <div>
+      <ElevenLabsConsultant />
       {/* HERO */}
       <section style={{ position:"relative", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", padding:"120px 24px 80px" }}>
         <NeuralGrid />
