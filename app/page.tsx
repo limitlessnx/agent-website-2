@@ -160,74 +160,51 @@ export default function HomePage() {
     <div>
       <ElevenLabsConsultant />
       {/* HERO */}
-      <section className="hero-3d-section">
+      <section style={{ position:"relative", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", padding:"120px 24px 80px" }}>
         <NeuralGrid />
-        <div className="hero-3d-glow" aria-hidden="true" />
-        <div className="hero-3d-shell">
-          <div className="hero-copy">
-            <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5}}>
+        <div aria-hidden="true" style={{ position:"absolute", top:"35%", left:"50%", transform:"translate(-50%,-50%)", width:"700px", height:"500px", background:"radial-gradient(ellipse, rgba(0,212,255,0.06) 0%, transparent 70%)", pointerEvents:"none" }} />
+        <div style={{ position:"relative", zIndex:1, maxWidth:"900px", margin:"0 auto", ...centered }}>
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5}}>
             <span style={{ display:"inline-flex", alignItems:"center", gap:"8px", fontSize:"0.72rem", fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:"#00d4ff", border:"1px solid rgba(0,212,255,0.25)", borderRadius:"100px", padding:"5px 14px", marginBottom:"28px" }}>
               <span style={{ width:"6px", height:"6px", borderRadius:"50%", background:"#00d4ff", boxShadow:"0 0 8px #00d4ff", display:"inline-block" }} />
               AI Automation Agency
             </span>
-            </motion.div>
+          </motion.div>
 
-            <motion.h1 initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:0.7,delay:0.1,ease:[0.16,1,0.3,1]}}>
-              Your 3D AI workforce for{" "}
-              <span className="gradient-text">sales, support, and automation</span>
-            </motion.h1>
+          <motion.h1 initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:0.7,delay:0.1,ease:[0.16,1,0.3,1]}}
+            style={{ fontSize:"clamp(2.2rem,6vw,4.5rem)", fontWeight:900, letterSpacing:"-0.04em", lineHeight:1.08, color:"#f0f6ff", marginBottom:"24px" }}>
+            AI Employees That Help Your Business{" "}
+            <span className="gradient-text">Sell, Support, and Scale</span>{" "}
+            Automatically
+          </motion.h1>
 
-            <motion.p initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.6,delay:0.25}}>
-              FluxAgents builds voice, chat, WhatsApp, CRM, and workflow agents that feel like a real operating layer inside your business.
-            </motion.p>
+          <motion.p initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.6,delay:0.25}}
+            style={{ fontSize:"clamp(1rem,2vw,1.2rem)", color:"#8ba3bd", lineHeight:1.75, maxWidth:"640px", margin:"0 auto 40px" }}>
+            We build AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and custom AI systems for growing businesses.
+          </motion.p>
 
-            <motion.div className="hero-actions" initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.4}}>
-              <Link href="/contact" className="hero-primary-link">
-                Book a Free Strategy Call <ArrowRight size={16} strokeWidth={2.5} />
-              </Link>
-              <Link href="/services" className="hero-secondary-link">
-                See What We Build
-              </Link>
-            </motion.div>
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.4}}
+            style={{ display:"flex", gap:"16px", justifyContent:"center", flexWrap:"wrap" }}>
+            <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
+              onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 50px rgba(0,212,255,0.5)")}
+              onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 0 30px rgba(0,212,255,0.3)")}>
+              Book a Free Strategy Call <ArrowRight size={16} strokeWidth={2.5} />
+            </Link>
+            <Link href="/services" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:600, color:"#f0f6ff", background:"rgba(255,255,255,0.05)", border:"1px solid #1e2d3d", borderRadius:"10px", textDecoration:"none", transition:"border-color 0.2s" }}
+              onMouseEnter={e=>(e.currentTarget.style.borderColor="rgba(0,212,255,0.4)")}
+              onMouseLeave={e=>(e.currentTarget.style.borderColor="#1e2d3d")}>
+              See What We Build
+            </Link>
+          </motion.div>
 
-            <motion.div className="hero-stat-grid" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.7}}>
-              {[{n:"24/7",label:"Always-on agents"},{n:"48hr",label:"Fastest go-live"},{n:"6+",label:"AI system types"},{n:"100%",label:"Custom-built"}].map(({n,label})=>(
-                <div key={n}>
-                  <p>{n}</p>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </motion.div>
-          </div>
-
-          <motion.div
-            className="bot-stage"
-            initial={{opacity:0,scale:0.92,rotateY:-16}}
-            animate={{opacity:1,scale:1,rotateY:0}}
-            transition={{duration:0.8,delay:0.2,ease:[0.16,1,0.3,1]}}
-          >
-            <div className="bot-orbit bot-orbit-one" aria-hidden="true" />
-            <div className="bot-orbit bot-orbit-two" aria-hidden="true" />
-            <div className="bot-card">
-              <img
-                src="/flux-3d-bot.svg"
-                alt="3D FluxAgents AI consultant bot"
-                className="bot-image"
-              />
-              <div className="bot-floor" aria-hidden="true" />
-            </div>
-            <div className="floating-panel panel-top">
-              <span>Voice Agent</span>
-              <strong>Live</strong>
-            </div>
-            <div className="floating-panel panel-right">
-              <span>Lead Quality</span>
-              <strong>Hot</strong>
-            </div>
-            <div className="floating-panel panel-bottom">
-              <span>Workflow</span>
-              <strong>n8n Ready</strong>
-            </div>
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.7}}
+            style={{ marginTop:"64px", display:"flex", flexWrap:"wrap", gap:"40px", justifyContent:"center" }}>
+            {[{n:"24/7",label:"Always-on agents"},{n:"48hr",label:"Fastest go-live"},{n:"6+",label:"AI system types"},{n:"100%",label:"Custom-built"}].map(({n,label})=>(
+              <div key={n} style={centered}>
+                <p style={{ fontSize:"1.5rem", fontWeight:800, color:"#00d4ff", letterSpacing:"-0.02em", lineHeight:1, marginBottom:"4px" }}>{n}</p>
+                <p style={{ fontSize:"0.78rem", color:"#4d6478" }}>{label}</p>
+              </div>
+            ))}
           </motion.div>
         </div>
       </section>
