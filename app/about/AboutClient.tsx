@@ -42,7 +42,7 @@ export default function AboutClient() {
               We build AI systems that do the work <span className="gradient-text">humans shouldn&apos;t have to do</span>
             </h1>
             <p style={{ fontSize:"1.1rem", color:"#8ba3bd", lineHeight:1.8, maxWidth:"620px" }}>
-              Boundless Flux AI is an AI automation agency. We build custom AI agents and automation systems for businesses that are tired of losing leads to slow response times, burning money on repetitive manual work, and scaling headcount just to keep up with demand.
+              Fluxknight is an AI automation agency. We build custom AI agents, lead generation engines, and automation systems for businesses that are tired of losing leads to slow response times, burning money on repetitive manual work, and scaling headcount just to keep up with demand.
             </p>
           </motion.div>
         </div>
@@ -75,7 +75,7 @@ export default function AboutClient() {
                   Our clients are typically small to mid-size businesses that have outgrown manual processes but aren&apos;t ready — or willing — to hire large teams to keep up with demand.
                 </p>
                 <p style={{ fontSize:"0.9rem", color:"#8ba3bd", lineHeight:1.8 }}>
-                  Real estate agencies, computer retailers, service businesses, clinics, e-commerce brands, logistics companies. What they share: sales driven by conversation, support driven by volume, and operations that still run on too many manual steps.
+                  Hotels, restaurants, clinics, sales companies, real estate teams, gyms, auto shops, e-commerce brands, and professional services. What they share: sales driven by conversation, support driven by volume, and operations that still run on too many manual steps.
                 </p>
               </div>
             </FadeUp>

@@ -5,11 +5,11 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "Boundless Flux AI — AI Employees for Growing Businesses",
-    template: "%s | Boundless Flux AI",
+    default: "Fluxknight — AI Employees for Growing Businesses",
+    template: "%s | Fluxknight",
   },
   description:
-    "We build AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and custom AI systems for real estate, retail, and service businesses.",
+    "Fluxknight builds AI sales agents, customer support systems, WhatsApp automation, voice agents, lead generation engines, CRM workflows, and custom AI systems.",
   keywords: [
     "AI automation agency",
     "AI sales agent",
@@ -20,15 +20,15 @@ export const metadata: Metadata = {
     "business automation",
     "real estate AI",
   ],
-  authors: [{ name: "Boundless Flux AI" }],
-  creator: "Boundless Flux AI",
-  metadataBase: new URL("https://boundlessflux.ai"),
+  authors: [{ name: "Fluxknight" }],
+  creator: "Fluxknight",
+  metadataBase: new URL("https://fluxknight.ai"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://boundlessflux.ai",
-    siteName: "Boundless Flux AI",
-    title: "Boundless Flux AI — AI Employees for Growing Businesses",
+    url: "https://fluxknight.ai",
+    siteName: "Fluxknight",
+    title: "Fluxknight — AI Employees for Growing Businesses",
     description:
       "We build AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and custom AI systems for growing businesses.",
     images: [
@@ -36,13 +36,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Boundless Flux AI",
+        alt: "Fluxknight",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Boundless Flux AI — AI Employees for Growing Businesses",
+    title: "Fluxknight — AI Employees for Growing Businesses",
     description:
       "AI sales agents, WhatsApp automation, voice agents, and CRM systems for growing businesses.",
     images: ["/og-image.png"],

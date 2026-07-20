@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       automationGoal,
       budget,
       submittedAt: new Date().toISOString(),
-      source: "boundlessflux.ai/contact",
+      source: "fluxknight.ai/contact",
     };
 
     // ── Dev: log to console ───────────────────────────────────────────────────
@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
     // import { Resend } from "resend";
     // const resend = new Resend(process.env.RESEND_API_KEY);
     // await resend.emails.send({
-    //   from: "notifications@boundlessflux.ai",
-    //   to: "hello@boundlessflux.ai",
+    //   from: "notifications@fluxknight.ai",
+    //   to: "hello@fluxknight.ai",
     //   subject: `New Contact Form: ${name} — ${businessType}`,
     //   text: JSON.stringify(submission, null, 2),
     // });

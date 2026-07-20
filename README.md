@@ -1,4 +1,4 @@
-# Boundless Flux AI — Website
+# Fluxknight — Website
 
 Premium AI automation agency website built with Next.js 14, TypeScript, Tailwind CSS, and Framer Motion.
 
@@ -30,8 +30,8 @@ Premium AI automation agency website built with Next.js 14, TypeScript, Tailwind
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/boundless-flux-ai.git
-cd boundless-flux-ai
+git clone https://github.com/YOUR_USERNAME/fluxknight.git
+cd fluxknight
 
 # Install dependencies
 npm install
@@ -54,10 +54,10 @@ Open [http://localhost:3000](http://localhost:3000)
 # Initialize git (if not already)
 git init
 git add .
-git commit -m "Initial commit: Boundless Flux AI website"
+git commit -m "Initial commit: Fluxknight website"
 
 # Create repo on GitHub, then:
-git remote add origin https://github.com/YOUR_USERNAME/boundless-flux-ai.git
+git remote add origin https://github.com/YOUR_USERNAME/fluxknight.git
 git branch -M main
 git push -u origin main
 ```
@@ -84,7 +84,7 @@ vercel --prod
 ## 4. Connect a Custom Domain
 
 1. In Vercel dashboard → your project → Settings → Domains
-2. Add your domain (e.g. `boundlessflux.ai`)
+2. Add your domain (e.g. `fluxknight.ai`)
 3. Copy the nameservers or DNS records Vercel gives you
 4. Update your domain registrar (Namecheap, GoDaddy, Cloudflare, etc.)
 5. SSL is automatic — usually live within 10 minutes

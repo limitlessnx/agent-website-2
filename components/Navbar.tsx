@@ -89,8 +89,7 @@ export default function Navbar() {
               color: "#f0f6ff",
             }}
           >
-            Boundless Flux{" "}
-            <span style={{ color: "#00d4ff" }}>AI</span>
+            Fluxknight
           </span>
         </Link>
 

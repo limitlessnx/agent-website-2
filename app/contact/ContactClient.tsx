@@ -16,21 +16,25 @@ interface FormData {
 }
 
 const businessTypes = [
+  "Hotel",
+  "Restaurant",
+  "Clinic",
+  "Sales Company",
   "Real Estate",
-  "Computer Sales & Repair",
+  "Gym",
+  "Service Business",
+  "Auto Shop",
   "E-commerce",
-  "Clinic / Healthcare",
-  "Logistics",
   "Professional Services",
   "Other",
 ];
 
 const budgetRanges = [
-  "Under $1,000",
-  "$1,000 – $3,000",
-  "$3,000 – $6,000",
-  "$6,000 – $10,000",
-  "$10,000+",
+  "Under NGN 200,000",
+  "NGN 200,000 - NGN 500,000",
+  "NGN 500,000 - NGN 1,000,000",
+  "NGN 1,000,000 - NGN 2,000,000",
+  "NGN 2,000,000+",
   "Not sure yet",
 ];
 
@@ -175,7 +179,7 @@ export default function ContactClient() {
             {/* Direct contact */}
             <div style={{ marginTop: "40px", padding: "24px", background: "#0f1620", border: "1px solid #1e2d3d", borderRadius: "12px" }}>
               <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#4d6478", marginBottom: "12px" }}>Prefer to reach out directly?</p>
-              <a href="mailto:hello@boundlessflux.ai" style={{ fontSize: "0.9rem", color: "#00d4ff", textDecoration: "none", display: "block", marginBottom: "6px" }}>hello@boundlessflux.ai</a>
+              <a href="mailto:hello@fluxknight.ai" style={{ fontSize: "0.9rem", color: "#00d4ff", textDecoration: "none", display: "block", marginBottom: "6px" }}>hello@fluxknight.ai</a>
               <p style={{ fontSize: "0.8rem", color: "#4d6478" }}>We also respond on WhatsApp and Telegram.</p>
             </div>
           </motion.div>

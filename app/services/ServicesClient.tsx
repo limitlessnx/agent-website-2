@@ -65,12 +65,12 @@ const allServices = [
     bullets:["Lead capture from all channels","Automatic deal stage progression","Follow-up sequence triggers","Pipeline reporting dashboards","Integration with major CRMs"],
   },
   {
-    id:"lead-capture",
+    id:"lead-generation",
     icon:BarChart2,
-    title:"Lead Capture Systems",
-    tagline:"Never lose a lead again.",
-    desc:"Custom-built lead intake systems that capture, qualify, score, and route every inquiry from your website, ads, WhatsApp, and calls into one clean pipeline.",
-    bullets:["Multi-channel lead aggregation","Instant lead notification","Automatic qualification flows","Lead scoring and tagging","Real-time dashboard view"],
+    title:"Lead Generation Engine",
+    tagline:"Prospecting, follow-up, and lead scoring on autopilot.",
+    desc:"A production-ready lead generation system that scrapes targeted public business data, enriches it, launches cold email follow-up, tracks replies, and tags prospects as cold, warm, or hot so your team knows exactly who to contact first.",
+    bullets:["Targeted web scraping from public business sources","Lead enrichment and deduplication","Cold email sequence automation","Warm and hot lead classification","Instant notifications for sales-ready prospects"],
   },
   {
     id:"calendar-email",
@@ -81,12 +81,12 @@ const allServices = [
     bullets:["Multi-step email sequences","Appointment reminders","No-show re-engagement flows","Proposal follow-up automation","Calendar sync across tools"],
   },
   {
-    id:"content",
+    id:"email-follow-up",
     icon:FileText,
-    title:"AI Content System",
-    tagline:"Publish without the bottleneck.",
-    desc:"An AI pipeline that generates listings, product descriptions, follow-up emails, social posts, and reports from structured inputs — cutting content production time by 80%.",
-    bullets:["Property listing generation","Product description writing","Social media post creation","Email copywriting","SEO meta generation"],
+    title:"Email Follow-up Automation",
+    tagline:"Every lead gets the right next message.",
+    desc:"Automated email workflows for cold, warm, and hot leads. The system sends the right message based on reply behavior, interest level, budget, and timing, then routes the best opportunities to you.",
+    bullets:["Cold lead nurture sequences","Warm lead objection follow-up","Hot lead booking prompts","Reply tracking and status updates","Reusable templates for new campaigns"],
   },
 ];
 
@@ -102,7 +102,7 @@ export default function ServicesClient() {
               Every AI system your business needs to <span className="gradient-text">stop leaking revenue</span>
             </h1>
             <p style={{ fontSize:"1.05rem", color:"#8ba3bd", lineHeight:1.7, maxWidth:"580px", margin:"0 auto" }}>
-              We build, integrate, and optimize AI agents that work across WhatsApp, voice, web, CRM, and email — all connected to your existing tools.
+              We build, integrate, and optimize AI agents that work across WhatsApp, voice, web, CRM, lead generation, and email — all connected to your existing tools.
             </p>
           </motion.div>
         </div>

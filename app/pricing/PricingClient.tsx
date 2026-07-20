@@ -16,9 +16,9 @@ const plans = [
   {
     name:"Starter AI System",
     tag:"One focused automation, deployed fast.",
-    price:"Starting from $997",
+    price:"Starting at NGN 200,000",
     period:"one-time build fee",
-    monthly:"+ $97/mo support (optional)",
+    monthly:"Optional monthly support available",
     highlighted:false,
     features:[
       { text:"1 AI agent (sales, support, or WhatsApp)", included:true },
@@ -37,15 +37,15 @@ const plans = [
   {
     name:"Growth Automation System",
     tag:"Full AI-powered sales and support stack.",
-    price:"Starting from $2,997",
+    price:"Starting from NGN 500,000",
     period:"one-time build fee",
-    monthly:"+ $297/mo optimization (included 60 days)",
+    monthly:"Includes 60 days of optimization support",
     highlighted:true,
     features:[
       { text:"Up to 3 AI agents (mix and match)", included:true },
       { text:"WhatsApp + Telegram + voice integration", included:true },
       { text:"CRM sync and lead management", included:true },
-      { text:"Follow-up sequence automation", included:true },
+      { text:"Lead generation and follow-up automation", included:true },
       { text:"Lead scoring and routing", included:true },
       { text:"Multi-channel deployment", included:true },
       { text:"Analytics dashboard", included:true },
@@ -79,12 +79,12 @@ const plans = [
 ];
 
 const addons = [
-  { name:"AI Voice Agent Add-on", price:"From $797", desc:"Add inbound or outbound voice calling to any package." },
-  { name:"Analytics Dashboard", price:"From $497", desc:"Custom reporting dashboard showing leads, conversations, and conversion rates." },
-  { name:"Monthly Optimization Retainer", price:"From $297/mo", desc:"Ongoing monitoring, A/B testing, and system improvement." },
-  { name:"CRM Integration", price:"From $397", desc:"Connect your existing CRM (HubSpot, Pipedrive, custom) to the AI system." },
-  { name:"Multi-Language Agent", price:"From $597", desc:"Train your AI agent to handle conversations in multiple languages." },
-  { name:"Content Generation System", price:"From $697", desc:"AI pipeline for listings, product pages, emails, and social posts." },
+  { name:"AI Voice Agent Add-on", price:"From NGN 250,000", desc:"Add inbound or outbound voice calling to any package." },
+  { name:"Analytics Dashboard", price:"From NGN 150,000", desc:"Custom reporting dashboard showing leads, conversations, and conversion rates." },
+  { name:"Monthly Optimization Retainer", price:"From NGN 100,000/mo", desc:"Ongoing monitoring, A/B testing, and system improvement." },
+  { name:"CRM Integration", price:"From NGN 150,000", desc:"Connect your existing CRM (HubSpot, Pipedrive, custom) to the AI system." },
+  { name:"Multi-Language Agent", price:"From NGN 200,000", desc:"Train your AI agent to handle conversations in multiple languages." },
+  { name:"Content Generation System", price:"From NGN 250,000", desc:"AI pipeline for listings, product pages, emails, and social posts." },
 ];
 
 const faqs = [

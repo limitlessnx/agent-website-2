@@ -8,6 +8,7 @@ const footerLinks = {
     { href: "/services#ai-sales-agent", label: "AI Sales Agent" },
     { href: "/services#whatsapp", label: "WhatsApp AI Assistant" },
     { href: "/services#voice", label: "AI Voice Agent" },
+    { href: "/services#lead-generation", label: "Lead Generation Engine" },
     { href: "/services#crm", label: "CRM Automation" },
     { href: "/services#support", label: "AI Customer Support" },
   ],
@@ -19,11 +20,11 @@ const footerLinks = {
     { href: "/contact", label: "Contact" },
   ],
   Industries: [
-    { href: "/industries#real-estate", label: "Real Estate" },
-    { href: "/industries#computer-sales", label: "Computer Sales" },
-    { href: "/industries#ecommerce", label: "E-commerce" },
+    { href: "/industries#hotels", label: "Hotels" },
+    { href: "/industries#restaurants", label: "Restaurants" },
     { href: "/industries#clinics", label: "Clinics" },
-    { href: "/industries#logistics", label: "Logistics" },
+    { href: "/industries#real-estate", label: "Real Estate" },
+    { href: "/industries#ecommerce", label: "E-commerce" },
   ],
 };
 
@@ -81,7 +82,7 @@ export default function Footer() {
                   color: "#f0f6ff",
                 }}
               >
-                Boundless Flux <span style={{ color: "#00d4ff" }}>AI</span>
+                Fluxknight
               </span>
             </Link>
             <p
@@ -92,8 +93,7 @@ export default function Footer() {
                 marginBottom: "24px",
               }}
             >
-              We build AI employees and automation systems for businesses that
-              want to sell, support, and scale — without adding headcount.
+              We build AI employees, lead generation engines, and automation systems for businesses that want to sell, support, and scale.
             </p>
             <div style={{ display: "flex", gap: "12px" }}>
               {[
@@ -189,7 +189,7 @@ export default function Footer() {
           }}
         >
           <p style={{ fontSize: "0.8rem", color: "#4d6478" }}>
-            © {year} Boundless Flux AI. All rights reserved.
+            © {year} Fluxknight. All rights reserved.
           </p>
           <p style={{ fontSize: "0.8rem", color: "#4d6478" }}>
             Built with AI. Powered by automation.

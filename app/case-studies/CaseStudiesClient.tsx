@@ -24,14 +24,14 @@ const cases = [
     metrics:[{n:"3×",label:"More booked viewings in 60 days"},{n:"<3s",label:"Average response time"},{n:"100%",label:"Leads captured and logged"},{n:"21-day",label:"Automated follow-up sequence"}],
   },
   {
-    industry:"Computer Sales & Repair",
-    title:"AI Sales Agent for a Computer Store That Closes While You Sleep",
-    client:"Multi-branch computer retail and repair business",
-    challenge:"The store received dozens of product questions daily via WhatsApp and their website. Staff couldn't respond to after-hours inquiries, and valuable warm leads went cold by morning.",
-    solution:"We built a WhatsApp and web chat AI sales agent trained on the store's full product catalog. The agent answers technical questions, checks stock availability via API, qualifies buyers by budget and use case, and passes hot leads with full conversation context to a human closer.",
-    stack:["WhatsApp Business API","Web chat widget (custom)","n8n automation","OpenAI GPT-4o","Supabase (product + lead database)","Custom stock API integration"],
-    results:["Handles all product Q&A across WhatsApp and website","Checks real-time stock levels before confirming availability","Qualifies buyers with budget and intended use questions","Scores leads and routes high-intent buyers to human closers","Sends follow-up message if buyer goes quiet mid-conversation","Logs every inquiry into CRM with qualification notes"],
-    metrics:[{n:"67%",label:"After-hours inquiries converted"},{n:"0min",label:"Average response time"},{n:"4hrs",label:"Saved per day in manual Q&A"},{n:"40%",label:"Increase in qualified leads"}],
+    industry:"Sales Companies",
+    title:"Lead Generation Engine That Warms Prospects While the Team Sells",
+    client:"B2B sales company with a small closing team",
+    challenge:"The team needed more qualified prospects but did not have time to build lists, send cold outreach, track replies, and separate cold leads from warm or hot opportunities.",
+    solution:"We built a lead generation workflow that scrapes targeted public business data, cleans and deduplicates the list, launches cold email follow-up, scores replies by intent, and sends hot prospects to the team with full context.",
+    stack:["Public web data sources","n8n automation","Email sequencing","OpenAI lead scoring","Google Sheets lead database","Telegram hot lead alerts"],
+    results:["Builds targeted prospect lists from public business data","Removes duplicates before outreach starts","Runs cold follow-up sequences automatically","Scores replies as cold, warm, or hot","Routes sales-ready prospects to human closers","Logs every lead and status update into the tracking sheet"],
+    metrics:[{n:"40%",label:"Increase in qualified leads"},{n:"3x",label:"More follow-up consistency"},{n:"0",label:"Manual spreadsheet cleanup"},{n:"24/7",label:"Prospecting workflow"}],
   },
 ];
 

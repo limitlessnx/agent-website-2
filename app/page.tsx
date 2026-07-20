@@ -46,10 +46,10 @@ function FadeUp({ children, delay=0, style={} }: { children:React.ReactNode; del
 const services = [
   { icon:Bot, title:"AI Sales Agent", desc:"Qualifies leads, answers objections, and books meetings 24/7 without a salesperson in the loop." },
   { icon:Headphones, title:"AI Customer Support", desc:"Handles FAQs, complaints, and status checks instantly across chat and voice." },
-  { icon:MessageSquare, title:"WhatsApp AI Assistant", desc:"Runs your entire customer conversation flow on WhatsApp — from first message to closed deal." },
+  { icon:MessageSquare, title:"WhatsApp AI Assistant", desc:"Runs your entire customer conversation flow on WhatsApp from first message to closed deal." },
   { icon:Mic, title:"AI Voice Agent", desc:"Answers calls, books appointments, qualifies callers, and escalates when it matters." },
-  { icon:Database, title:"CRM Automation", desc:"Syncs every lead, conversation, and deal stage automatically — your CRM updates itself." },
-  { icon:FileText, title:"AI Content System", desc:"Generates listings, product pages, follow-up emails, and social posts from a single input." },
+  { icon:Database, title:"CRM Automation", desc:"Syncs every lead, conversation, and deal stage automatically so your CRM updates itself." },
+  { icon:FileText, title:"Lead Generation Engine", desc:"Scrapes targeted public business data, launches email follow-up, and scores cold, warm, and hot leads." },
 ];
 
 const steps = [
@@ -62,12 +62,16 @@ const steps = [
 ];
 
 const industries = [
-  { icon:Building2, label:"Real Estate", desc:"Lead capture, property tours, follow-up automation." },
-  { icon:Monitor, label:"Computer Sales & Repair", desc:"Product Q&A, stock checking, buyer qualification." },
-  { icon:ShoppingCart, label:"E-commerce", desc:"Order support, abandoned cart recovery, upsells." },
-  { icon:Stethoscope, label:"Clinics", desc:"Appointment booking, patient reminders, intake forms." },
-  { icon:Truck, label:"Logistics", desc:"Shipment tracking, driver coordination, ETA updates." },
-  { icon:Briefcase, label:"Professional Services", desc:"Lead qualification, proposal follow-up, scheduling." },
+  { id:"hotels", icon:Building2, label:"Hotels", image:"https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=700&q=80", desc:"Booking inquiries, guest requests, review follow-up, and reservation handoff." },
+  { id:"restaurants", icon:ShoppingCart, label:"Restaurants", image:"https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=80", desc:"Reservations, catering leads, menu questions, offers, and repeat-customer campaigns." },
+  { id:"clinics", icon:Stethoscope, label:"Clinics", image:"https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=700&q=80", desc:"Appointment booking, patient intake, no-show reminders, and treatment inquiry triage." },
+  { id:"sales-companies", icon:Briefcase, label:"Sales Companies", image:"https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=700&q=80", desc:"Web-scraped lead lists, cold email follow-up, reply scoring, and closer alerts." },
+  { id:"real-estate", icon:Building2, label:"Real Estate", image:"https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=700&q=80", desc:"Buyer qualification, listing recommendations, inspection bookings, and lead nurture." },
+  { id:"gyms", icon:Briefcase, label:"Gyms", image:"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=700&q=80", desc:"Trial bookings, membership questions, renewals, class promotions, and lead reactivation." },
+  { id:"services", icon:Briefcase, label:"Services", image:"https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=700&q=80", desc:"Service intake, quote qualification, consultation booking, and follow-up automation." },
+  { id:"auto-shops", icon:Truck, label:"Auto Shops", image:"https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=700&q=80", desc:"Repair booking, vehicle intake, quote follow-up, and maintenance reminder campaigns." },
+  { id:"ecommerce", icon:ShoppingCart, label:"E-commerce", image:"https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=700&q=80", desc:"Cart recovery, product Q&A, order support, upsells, and customer win-back flows." },
+  { id:"professional-services", icon:Briefcase, label:"Professional Services", image:"https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=700&q=80", desc:"Lead qualification, discovery calls, proposal follow-up, onboarding, and reminders." },
 ];
 
 const caseStudies = [
@@ -79,11 +83,11 @@ const caseStudies = [
     metricSub:"in the first 60 days",
   },
   {
-    industry:"Computer Sales",
-    title:"AI Sales Agent for a Computer Store That Closes While You Sleep",
-    results:["Answers product and compatibility questions instantly","Qualifies buyers by budget and urgency","Checks stock availability in real time","Hands off hot leads directly to a human closer"],
-    metric:"67% of after-hours inquiries",
-    metricSub:"converted without staff involvement",
+    industry:"Sales Companies",
+    title:"Lead Generation Engine That Warms Prospects While You Work",
+    results:["Scrapes targeted public business leads","Runs cold email follow-up automatically","Tags replies as cold, warm, or hot","Alerts your team when a prospect is ready for a closer"],
+    metric:"40% more qualified leads",
+    metricSub:"with automated prospecting and follow-up",
   },
 ];
 
@@ -91,7 +95,7 @@ const pricingPlans = [
   {
     name:"Starter AI System",
     tag:"One automation, deployed fast.",
-    price:"Starting from $997",
+    price:"Starting at NGN 200,000",
     period:"one-time build",
     features:["1 AI agent (sales, support, or WhatsApp)","WhatsApp or web chat integration","Basic lead capture and handoff","30-day post-launch support"],
     cta:"Get Started",
@@ -99,10 +103,10 @@ const pricingPlans = [
   },
   {
     name:"Growth Automation System",
-    tag:"Full AI-powered sales & support stack.",
-    price:"Starting from $2,997",
+    tag:"Full AI-powered sales and support stack.",
+    price:"Starting from NGN 500,000",
     period:"one-time build",
-    features:["Up to 3 AI agents","WhatsApp + Telegram + voice integration","CRM sync and follow-up automation","Lead scoring and routing","Analytics dashboard","60-day post-launch support"],
+    features:["Up to 3 AI agents","WhatsApp + Telegram + voice integration","Lead generation and follow-up automation","Lead scoring and routing","Analytics dashboard","60-day post-launch support"],
     cta:"Book a Strategy Call",
     highlighted:true,
   },
@@ -180,7 +184,7 @@ export default function HomePage() {
 
           <motion.p initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.6,delay:0.25}}
             style={{ fontSize:"clamp(1rem,2vw,1.2rem)", color:"#8ba3bd", lineHeight:1.75, maxWidth:"640px", margin:"0 auto 40px" }}>
-            We build AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and custom AI systems for growing businesses.
+            We build AI sales agents, customer support systems, WhatsApp automation, voice agents, lead generation engines, CRM workflows, and custom AI systems for growing businesses.
           </motion.p>
 
           <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.4}}
@@ -214,8 +218,8 @@ export default function HomePage() {
         <div style={S}>
           <FadeUp>
             <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>What We Build</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"12px" }}>Six types of AI employees. One agency.</h2>
-            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"520px", margin:"0 auto 56px", lineHeight:1.7 }}>Every system we build is connected, conversational, and specific to your business workflow.</p>
+            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"12px" }}>Core AI systems. One automation partner.</h2>
+            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"520px", margin:"0 auto 56px", lineHeight:1.7 }}>Every system we build is connected, conversational, and specific to your business workflow, including lead generation and follow-up.</p>
           </FadeUp>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:"20px" }}>
             {services.map((s,i)=>(
@@ -269,21 +273,24 @@ export default function HomePage() {
           <FadeUp>
             <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>Industries</p>
             <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"12px" }}>Built for businesses that run on sales and service</h2>
-            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"520px", margin:"0 auto 56px", lineHeight:1.7 }}>We go deep on your vertical so the AI understands your product, customers, and close process.</p>
+            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"520px", margin:"0 auto 56px", lineHeight:1.7 }}>We go deep on your vertical so the AI understands your customers, objections, buying triggers, and follow-up process.</p>
           </FadeUp>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:"20px" }}>
             {industries.map((ind,i)=>(
               <FadeUp key={ind.label} delay={i*0.06}>
-                <Link href={`/industries#${ind.label.toLowerCase().replace(/ /g,"-").replace(/[^a-z0-9-]/g,"")}`} style={{ textDecoration:"none" }}>
-                  <div className="card-surface" style={{ padding:"24px 28px", borderRadius:"12px", display:"flex", alignItems:"flex-start", gap:"16px", transition:"all 0.25s" }}
+                <Link href={`/industries#${ind.id}`} style={{ textDecoration:"none" }}>
+                  <div className="card-surface" style={{ padding:0, borderRadius:"12px", overflow:"hidden", transition:"all 0.25s", height:"100%" }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(0,212,255,0.3)";e.currentTarget.style.transform="translateY(-2px)"}}
                     onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2d3d";e.currentTarget.style.transform="translateY(0)"}}>
-                    <div style={{ width:"40px", height:"40px", borderRadius:"9px", background:"rgba(0,212,255,0.08)", border:"1px solid rgba(0,212,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      <ind.icon size={18} color="#00d4ff" />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize:"0.95rem", fontWeight:700, color:"#f0f6ff", marginBottom:"6px" }}>{ind.label}</h3>
-                      <p style={{ fontSize:"0.82rem", color:"#8ba3bd", lineHeight:1.6 }}>{ind.desc}</p>
+                    <div style={{ height:"140px", backgroundImage:`linear-gradient(180deg, rgba(6,8,15,0.05), rgba(6,8,15,0.72)), url(${ind.image})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+                    <div style={{ padding:"22px 24px", display:"flex", alignItems:"flex-start", gap:"14px" }}>
+                      <div style={{ width:"40px", height:"40px", borderRadius:"9px", background:"rgba(0,212,255,0.08)", border:"1px solid rgba(0,212,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        <ind.icon size={18} color="#00d4ff" />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize:"0.95rem", fontWeight:700, color:"#f0f6ff", marginBottom:"6px" }}>{ind.label}</h3>
+                        <p style={{ fontSize:"0.82rem", color:"#8ba3bd", lineHeight:1.6 }}>{ind.desc}</p>
+                      </div>
                     </div>
                   </div>
                 </Link>
