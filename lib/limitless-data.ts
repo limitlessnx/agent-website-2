@@ -159,25 +159,109 @@ async function supabaseFetch<T>(table: string, query = "", init?: RequestInit): 
     cache: "no-store",
   });
 
-  if (!response.ok) throw new Error(`Supabase ${table} request failed: ${response.status}`);
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Supabase ${table} request failed: ${response.status} ${detail}`);
+  }
   return (await response.json()) as T[];
 }
 
+async function supabaseFetchWithFallback<T>(table: string, queries: string[], fallback: T[]) {
+  if (!isSupabaseConfigured()) return fallback;
+  let lastError: unknown = null;
+
+  for (const query of queries) {
+    try {
+      return await supabaseFetch<T>(table, query);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.error(`Unable to load Supabase table "${table}".`, lastError);
+  return fallback;
+}
+
+function normalizeLead(row: Partial<Lead> & Record<string, unknown>): Lead {
+  return {
+    id: String(row.id || row.phone || row.whatsapp_id || crypto.randomUUID()),
+    name: String(row.name || row.full_name || row.client_name || row.profile_name || "Unknown"),
+    phone: String(row.phone || row.whatsapp || row.whatsapp_id || row.from || ""),
+    status: String(row.status || row.lead_status || "new"),
+    score: row.score ? String(row.score) : row.lead_score ? String(row.lead_score) : undefined,
+    budget: row.budget ? String(row.budget) : row.price_range ? String(row.price_range) : undefined,
+    location_preference: row.location_preference
+      ? String(row.location_preference)
+      : row.preferred_location
+        ? String(row.preferred_location)
+        : undefined,
+    property_type: row.property_type ? String(row.property_type) : undefined,
+    purpose: row.purpose ? String(row.purpose) : undefined,
+    follow_up_stage: row.follow_up_stage ? Number(row.follow_up_stage) : undefined,
+    last_contacted_at: row.last_contacted_at ? String(row.last_contacted_at) : undefined,
+    last_follow_up_at: row.last_follow_up_at ? String(row.last_follow_up_at) : undefined,
+    created_at: row.created_at ? String(row.created_at) : undefined,
+  };
+}
+
+function normalizeProperty(row: Partial<PropertyRecord> & Record<string, unknown>): PropertyRecord {
+  return {
+    id: String(row.id || row.title || row.name || crypto.randomUUID()),
+    title: String(row.title || row.name || row.property_name || "Untitled property"),
+    location_area: row.location_area ? String(row.location_area) : row.area ? String(row.area) : undefined,
+    location_city: row.location_city ? String(row.location_city) : row.city ? String(row.city) : undefined,
+    price: row.price ? String(row.price) : undefined,
+    type: row.type ? String(row.type) : row.property_type ? String(row.property_type) : undefined,
+    status: row.status ? String(row.status) : "active",
+    drive_photos_link: row.drive_photos_link
+      ? String(row.drive_photos_link)
+      : row.photos_link
+        ? String(row.photos_link)
+        : row.image_url
+          ? String(row.image_url)
+          : undefined,
+    drive_brochure_link: row.drive_brochure_link ? String(row.drive_brochure_link) : undefined,
+    features: row.features ? String(row.features) : row.title_details ? String(row.title_details) : undefined,
+    description: row.description ? String(row.description) : row.brief ? String(row.brief) : undefined,
+    created_at: row.created_at ? String(row.created_at) : undefined,
+  };
+}
+
 export async function getLeads(limit = 50) {
-  if (!isSupabaseConfigured()) return seedLeads;
-  return supabaseFetch<Lead>("leads", `?select=*&order=updated_at.desc.nullslast&limit=${limit}`);
+  const rows = await supabaseFetchWithFallback<Partial<Lead> & Record<string, unknown>>(
+    "leads",
+    [
+      `?select=*&order=updated_at.desc.nullslast&limit=${limit}`,
+      `?select=*&order=created_at.desc.nullslast&limit=${limit}`,
+      `?select=*&limit=${limit}`,
+    ],
+    seedLeads,
+  );
+  return rows.map(normalizeLead);
 }
 
 export async function getProperties(limit = 100) {
-  if (!isSupabaseConfigured()) return seedProperties;
-  return supabaseFetch<PropertyRecord>("properties", `?select=*&order=updated_at.desc.nullslast&limit=${limit}`);
+  const rows = await supabaseFetchWithFallback<Partial<PropertyRecord> & Record<string, unknown>>(
+    "properties",
+    [
+      `?select=*&order=updated_at.desc.nullslast&limit=${limit}`,
+      `?select=*&order=created_at.desc.nullslast&limit=${limit}`,
+      `?select=*&limit=${limit}`,
+    ],
+    seedProperties,
+  );
+  return rows.map(normalizeProperty);
 }
 
 export async function getCampaignReports(limit = 25) {
   if (!isSupabaseConfigured()) return seedCampaigns;
-  const rows = await supabaseFetch<{ id: string; content?: string; created_at?: string }>(
+  const rows = await supabaseFetchWithFallback<{ id: string; content?: string | Record<string, unknown>; created_at?: string }>(
     "bot_sessions",
-    `?select=*&role=eq.whatsapp_campaign_context&order=created_at.desc&limit=${limit}`,
+    [
+      `?select=*&role=eq.whatsapp_campaign_context&order=created_at.desc&limit=${limit}`,
+      `?select=*&role=eq.whatsapp_campaign_context&limit=${limit}`,
+    ],
+    seedCampaigns.map((campaign) => ({ id: campaign.id, content: campaign, created_at: campaign.created_at })),
   );
 
   return rows.map((row) => {
