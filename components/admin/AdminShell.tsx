@@ -4,15 +4,19 @@ import {
   BarChart3,
   Bot,
   Building2,
+  CalendarDays,
   Home,
   Image,
   Megaphone,
   MessageCircle,
+  Search,
   Settings,
   Users,
+  Bell,
 } from "lucide-react";
 import { getAdminSession } from "@/lib/admin-auth";
 import LogoutButton from "@/components/admin/LogoutButton";
+import ThemeToggle from "@/components/admin/ThemeToggle";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: Home },
@@ -34,7 +38,10 @@ export default async function AdminShell({ children }: { children: React.ReactNo
       <aside className="admin-sidebar">
         <Link href="/dashboard" className="admin-brand">
           <span className="admin-brand-mark"><BarChart3 size={18} /></span>
-          <span>Limitless OS</span>
+          <span>
+            Limitless OS
+            <small>Realty Admin</small>
+          </span>
         </Link>
         <nav className="admin-nav">
           {nav.map((item) => (
@@ -49,7 +56,26 @@ export default async function AdminShell({ children }: { children: React.ReactNo
           <LogoutButton />
         </div>
       </aside>
-      <section className="admin-main">{children}</section>
+      <section className="admin-main">
+        <header className="admin-topbar">
+          <div className="admin-breadcrumb">Admin / Dashboard</div>
+          <div className="admin-search">
+            <Search size={16} />
+            <span>Search leads, properties, campaigns...</span>
+          </div>
+          <div className="admin-topbar-actions">
+            <button type="button" className="admin-icon-button" aria-label="Notifications" title="Notifications">
+              <Bell size={17} />
+            </button>
+            <ThemeToggle />
+            <div className="admin-period">
+              <CalendarDays size={15} />
+              <span>Launch Mode</span>
+            </div>
+          </div>
+        </header>
+        {children}
+      </section>
     </div>
   );
 }
