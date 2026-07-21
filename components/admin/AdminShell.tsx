@@ -9,12 +9,12 @@ import {
   Image,
   Megaphone,
   MessageCircle,
-  Search,
   Settings,
   Users,
   Bell,
 } from "lucide-react";
 import { getAdminSession } from "@/lib/admin-auth";
+import AdminSearch from "@/components/admin/AdminSearch";
 import LogoutButton from "@/components/admin/LogoutButton";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 
@@ -59,10 +59,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
       <section className="admin-main">
         <header className="admin-topbar">
           <div className="admin-breadcrumb">Admin / Dashboard</div>
-          <div className="admin-search">
-            <Search size={16} />
-            <span>Search leads, properties, campaigns...</span>
-          </div>
+          <AdminSearch />
           <div className="admin-topbar-actions">
             <button type="button" className="admin-icon-button" aria-label="Notifications" title="Notifications">
               <Bell size={17} />

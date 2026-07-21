@@ -1,7 +1,8 @@
 "use client";
 
 import { Filter, MessageCircle, Search, Send, Star, UserCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import type { Lead } from "@/lib/limitless-data";
 
 type LeadsCrmProps = {
@@ -41,9 +42,14 @@ function getStatusLabel(value?: string) {
 }
 
 export default function LeadsCrm({ leads }: LeadsCrmProps) {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") || "");
   const [status, setStatus] = useState<(typeof statuses)[number]>("all");
   const [score, setScore] = useState<(typeof scores)[number]>("all");
+
+  useEffect(() => {
+    setQuery(searchParams.get("q") || "");
+  }, [searchParams]);
 
   const filteredLeads = useMemo(() => {
     const normalizedQuery = normalize(query);
