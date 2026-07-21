@@ -1491,3 +1491,153 @@ body {
     width: fit-content;
   }
 }
+
+@media screen and (max-device-width: 820px), screen and (pointer: coarse) and (orientation: portrait) {
+  html,
+  body,
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .admin-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    overflow-x: hidden !important;
+  }
+
+  .admin-sidebar {
+    position: relative !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 14px 12px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--admin-border) !important;
+  }
+
+  .admin-brand {
+    margin-bottom: 12px !important;
+  }
+
+  .admin-nav {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-nav a {
+    flex: 0 0 auto !important;
+    min-height: 36px !important;
+    padding: 8px 10px !important;
+    white-space: nowrap !important;
+  }
+
+  .admin-sidebar-footer {
+    display: none !important;
+  }
+
+  .admin-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 12px 22px !important;
+  }
+
+  .admin-topbar {
+    position: sticky !important;
+    top: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: auto !important;
+    margin: 0 -12px 14px !important;
+    padding: 10px 12px !important;
+  }
+
+  .admin-breadcrumb,
+  .admin-period {
+    display: none !important;
+  }
+
+  .admin-search {
+    min-width: 0 !important;
+    width: 100% !important;
+    min-height: 40px !important;
+    padding: 0 10px !important;
+  }
+
+  .admin-search button {
+    display: none !important;
+  }
+
+  .admin-topbar-actions {
+    display: flex !important;
+    gap: 6px !important;
+  }
+
+  .admin-icon-button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .admin-page,
+  .leads-crm {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .admin-hero-panel,
+  .admin-panel,
+  .admin-metric-card,
+  .leads-crm-summary > div,
+  .lead-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .admin-hero-panel {
+    grid-template-columns: 1fr !important;
+    padding: 16px !important;
+  }
+
+  .admin-hero-panel h1 {
+    font-size: 1.9rem !important;
+  }
+
+  .admin-metric-grid,
+  .admin-grid.two,
+  .admin-grid.four,
+  .admin-grid.dashboard-main,
+  .admin-grid.three,
+  .leads-crm-summary,
+  .leads-card-grid,
+  .lead-filter-bar,
+  .admin-form-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-table {
+    min-width: 620px !important;
+  }
+}
