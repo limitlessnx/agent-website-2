@@ -132,7 +132,7 @@ export default function ServicesClient() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"10px 22px", fontSize:"0.875rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"8px", textDecoration:"none" }}>
+                  <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"10px 22px", fontSize:"0.875rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"8px", textDecoration:"none" }}>
                     Get this system <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -147,7 +147,7 @@ export default function ServicesClient() {
         <FadeUp>
           <h2 style={{ fontSize:"clamp(1.5rem,3vw,2.25rem)", fontWeight:800, letterSpacing:"-0.03em", color:"#f0f6ff", marginBottom:"16px" }}>Not sure which system fits?</h2>
           <p style={{ color:"#8ba3bd", marginBottom:"32px", lineHeight:1.7 }}>Book a free strategy call. We&apos;ll audit your business and recommend exactly what to build first.</p>
-          <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
+          <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
             Book a Free Strategy Call <ArrowRight size={16} />
           </Link>
         </FadeUp>

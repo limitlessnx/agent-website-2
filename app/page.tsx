@@ -189,7 +189,7 @@ export default function HomePage() {
 
           <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.4}}
             style={{ display:"flex", gap:"16px", justifyContent:"center", flexWrap:"wrap" }}>
-            <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
+            <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
               onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 50px rgba(0,212,255,0.5)")}
               onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 0 30px rgba(0,212,255,0.3)")}>
               Book a Free Strategy Call <ArrowRight size={16} strokeWidth={2.5} />
@@ -397,7 +397,7 @@ export default function HomePage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/contact" style={{ display:"block", textAlign:"center", padding:"12px", fontSize:"0.9rem", fontWeight:700, borderRadius:"9px", textDecoration:"none", transition:"all 0.2s", background:plan.highlighted?"#00d4ff":"transparent", color:plan.highlighted?"#06080f":"#f0f6ff", border:plan.highlighted?"1px solid #00d4ff":"1px solid #1e2d3d" }}
+                  <Link href="/evaluation" style={{ display:"block", textAlign:"center", padding:"12px", fontSize:"0.9rem", fontWeight:700, borderRadius:"9px", textDecoration:"none", transition:"all 0.2s", background:plan.highlighted?"#00d4ff":"transparent", color:plan.highlighted?"#06080f":"#f0f6ff", border:plan.highlighted?"1px solid #00d4ff":"1px solid #1e2d3d" }}
                     onMouseEnter={e=>{if(!plan.highlighted){(e.currentTarget as HTMLElement).style.borderColor="rgba(0,212,255,0.4)";(e.currentTarget as HTMLElement).style.color="#00d4ff"}}}
                     onMouseLeave={e=>{if(!plan.highlighted){(e.currentTarget as HTMLElement).style.borderColor="#1e2d3d";(e.currentTarget as HTMLElement).style.color="#f0f6ff"}}}>
                     {plan.cta}
@@ -433,7 +433,7 @@ export default function HomePage() {
           <p style={{ color:"#8ba3bd", fontSize:"1.05rem", maxWidth:"460px", margin:"0 auto 40px", lineHeight:1.7 }}>
             Book a free 30-minute strategy call. We&apos;ll map out the highest-leverage automation for your business — no pitch, just clarity.
           </p>
-          <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"16px 40px", fontSize:"1rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"12px", textDecoration:"none", boxShadow:"0 0 40px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
+          <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"16px 40px", fontSize:"1rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"12px", textDecoration:"none", boxShadow:"0 0 40px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
             onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 60px rgba(0,212,255,0.5)")}
             onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 0 40px rgba(0,212,255,0.3)")}>
             Book a Free Strategy Call <ArrowRight size={18} strokeWidth={2.5} />

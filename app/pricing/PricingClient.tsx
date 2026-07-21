@@ -146,7 +146,7 @@ export default function PricingClient() {
                       ))}
                     </ul>
 
-                    <Link href="/contact" style={{ display:"block", textAlign:"center", padding:"13px", fontSize:"0.9rem", fontWeight:700, borderRadius:"10px", textDecoration:"none", transition:"all 0.2s", background:plan.highlighted?"#00d4ff":"transparent", color:plan.highlighted?"#06080f":"#f0f6ff", border:plan.highlighted?"1px solid #00d4ff":"1px solid #1e2d3d", marginBottom:"16px" }}
+                    <Link href="/evaluation" style={{ display:"block", textAlign:"center", padding:"13px", fontSize:"0.9rem", fontWeight:700, borderRadius:"10px", textDecoration:"none", transition:"all 0.2s", background:plan.highlighted?"#00d4ff":"transparent", color:plan.highlighted?"#06080f":"#f0f6ff", border:plan.highlighted?"1px solid #00d4ff":"1px solid #1e2d3d", marginBottom:"16px" }}
                       onMouseEnter={e=>{if(!plan.highlighted){(e.currentTarget as HTMLElement).style.borderColor="rgba(0,212,255,0.4)";(e.currentTarget as HTMLElement).style.color="#00d4ff"}}}
                       onMouseLeave={e=>{if(!plan.highlighted){(e.currentTarget as HTMLElement).style.borderColor="#1e2d3d";(e.currentTarget as HTMLElement).style.color="#f0f6ff"}}}>
                       {plan.cta}
@@ -206,7 +206,7 @@ export default function PricingClient() {
         <FadeUp>
           <h2 style={{ fontSize:"clamp(1.5rem,3vw,2.25rem)", fontWeight:800, color:"#f0f6ff", marginBottom:"16px" }}>Get an exact quote for your business</h2>
           <p style={{ color:"#8ba3bd", marginBottom:"32px", lineHeight:1.7, maxWidth:"440px", margin:"0 auto 32px" }}>30-minute call. We scope the system, confirm the price, and you decide — zero pressure.</p>
-          <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
+          <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
             Book a Free Strategy Call <ArrowRight size={16} />
           </Link>
         </FadeUp>

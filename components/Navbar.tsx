@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap } from "lucide-react";
+import { LayoutDashboard, Menu, X, Zap } from "lucide-react";
 
 const navLinks = [
   { href: "/services", label: "Services" },
@@ -24,10 +24,6 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   return (
     <header
@@ -130,7 +126,7 @@ export default function Navbar() {
             </Link>
           ))}
           <Link
-            href="/contact"
+            href="/evaluation"
             style={{
               marginLeft: "12px",
               padding: "8px 20px",
@@ -154,7 +150,26 @@ export default function Navbar() {
                 "0 0 20px rgba(0,212,255,0.2)";
             }}
           >
-            Book a Call
+            Start Evaluation
+          </Link>
+          <Link
+            href="/login"
+            aria-label="Admin login"
+            title="Admin login"
+            style={{
+              width: "36px",
+              height: "36px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: pathname === "/login" ? "#00d4ff" : "#8ba3bd",
+              border: "1px solid #1e2d3d",
+              borderRadius: "8px",
+              marginLeft: "8px",
+              textDecoration: "none",
+            }}
+          >
+            <LayoutDashboard size={16} />
           </Link>
         </div>
 
@@ -195,6 +210,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => setMenuOpen(false)}
                 style={{
                   display: "block",
                   padding: "12px 0",
@@ -210,7 +226,8 @@ export default function Navbar() {
               </Link>
             ))}
             <Link
-              href="/contact"
+              href="/evaluation"
+              onClick={() => setMenuOpen(false)}
               style={{
                 display: "block",
                 marginTop: "16px",
@@ -224,7 +241,25 @@ export default function Navbar() {
                 borderRadius: "8px",
               }}
             >
-              Book a Free Strategy Call →
+              Start AI Evaluation
+            </Link>
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                display: "block",
+                marginTop: "12px",
+                padding: "12px 0",
+                fontSize: "1rem",
+                fontWeight: 600,
+                color: "#8ba3bd",
+                textDecoration: "none",
+                textAlign: "center",
+                border: "1px solid #1e2d3d",
+                borderRadius: "8px",
+              }}
+            >
+              Admin Login
             </Link>
           </motion.div>
         )}

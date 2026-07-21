@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useState } from "react";
 import { CheckCircle, AlertCircle, ArrowRight, MessageSquare, Clock, Zap } from "lucide-react";
 
@@ -128,9 +129,9 @@ export default function ContactClient() {
           <p style={{ color: "#8ba3bd", lineHeight: 1.75, marginBottom: "32px" }}>
             We&apos;ll review your submission and reach out within 24 hours to schedule your free strategy call.
           </p>
-          <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px", fontSize: "0.9rem", fontWeight: 700, color: "#06080f", background: "#00d4ff", borderRadius: "10px", textDecoration: "none" }}>
+          <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px", fontSize: "0.9rem", fontWeight: 700, color: "#06080f", background: "#00d4ff", borderRadius: "10px", textDecoration: "none" }}>
             Back to home <ArrowRight size={14} />
-          </a>
+          </Link>
         </motion.div>
       </div>
     );

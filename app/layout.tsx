@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
   title: {
@@ -62,9 +61,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   );

@@ -113,7 +113,7 @@ export default function CaseStudiesClient() {
         <FadeUp>
           <h2 style={{ fontSize:"clamp(1.5rem,3vw,2.25rem)", fontWeight:800, color:"#f0f6ff", marginBottom:"16px" }}>Want results like these?</h2>
           <p style={{ color:"#8ba3bd", marginBottom:"32px", lineHeight:1.7 }}>Book a free strategy call and we&apos;ll scope the right system for your business.</p>
-          <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
+          <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
             Book a Free Strategy Call <ArrowRight size={16} />
           </Link>
         </FadeUp>

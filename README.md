@@ -140,7 +140,45 @@ Uncomment the Supabase block in `app/api/contact/route.ts`.
 
 ---
 
+## Enable ElevenLabs Voice Consultant
+
+The homepage includes `components/ElevenLabsConsultant.tsx`, which loads the official ElevenLabs Conversational AI widget.
+
+Add this environment variable in Vercel:
+
+```bash
+NEXT_PUBLIC_ELEVENLABS_AGENT_ID=agent_4501kxv503fheb69mwxp40xeam5e
+```
+
+Use the agent ID from the ElevenLabs `Fluxbio` agent Deploy/Widget panel. The n8n post-call webhook for this voice agent is:
+
+```text
+https://n8n.srv1720757.hstgr.cloud/webhook/fluxagents/elevenlabs/post-call
+```
+
+The full workflow handoff is in `../fluxagents-voice-ai/README.md`.
+
+---
+
 ## Project Structure
+
+## AI Evaluation Intake
+
+The `/evaluation` page collects the details needed before an AI call agent qualifies a prospect. The `/api/evaluation` route can write the lead to Supabase and forward it to n8n.
+
+1. Run `supabase-evaluation-setup.sql` in the Supabase SQL editor.
+2. Add these environment variables in Vercel:
+
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+N8N_EVALUATION_WEBHOOK_URL=https://your-n8n-instance/webhook/ai-evaluation
+```
+
+3. In n8n, create a `POST` webhook matching `N8N_EVALUATION_WEBHOOK_URL`.
+4. After the webhook receives the payload, trigger the call agent, update Supabase with the transcript/summary, and notify the team by Telegram and email.
+
+---
 
 ```
 app/

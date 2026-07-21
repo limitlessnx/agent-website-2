@@ -131,7 +131,7 @@ export default function AboutClient() {
         <FadeUp>
           <h2 style={{ fontSize:"clamp(1.5rem,3vw,2.25rem)", fontWeight:800, color:"#f0f6ff", marginBottom:"16px" }}>Ready to work together?</h2>
           <p style={{ color:"#8ba3bd", marginBottom:"32px", lineHeight:1.7, maxWidth:"440px", margin:"0 auto 32px" }}>Book a free 30-minute strategy call and let&apos;s map out the highest-leverage automation for your business.</p>
-          <Link href="/contact" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
+          <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.25)" }}>
             Book a Free Strategy Call <ArrowRight size={16} />
           </Link>
         </FadeUp>
