@@ -1,7 +1,7 @@
 import MetricCard from "@/components/admin/MetricCard";
 import type { CSSProperties } from "react";
 import { AlertTriangle, Bot, Building2, CheckCircle2, Clock3, Image, Send, ShieldCheck, Users } from "lucide-react";
-import { automationProjects, getCampaignReports, getLeads, getN8nStatus, getProperties, isSupabaseConfigured } from "@/lib/limitless-data";
+import { automationProjects, getCampaignReports, getLeads, getN8nStatus, getProperties, getSupabaseReadiness } from "@/lib/limitless-data";
 
 const inactiveLeadStatuses = ["cold", "closed", "converted"];
 const pipelineLabels = ["New", "Warm", "Hot", "Follow-up", "Campaign"];
@@ -13,7 +13,8 @@ export default async function DashboardPage() {
     getCampaignReports(20),
     getN8nStatus(),
   ]);
-  const supabaseReady = isSupabaseConfigured();
+  const supabase = await getSupabaseReadiness();
+  const supabaseReady = supabase.ready;
   const n8nReady = n8n.configured && !n8n.error;
   const liveLeads = leads.filter((lead) => !inactiveLeadStatuses.includes(String(lead.status).toLowerCase()));
   const newLeads = leads.filter((lead) => String(lead.status).toLowerCase() === "new").length;
@@ -41,6 +42,16 @@ export default async function DashboardPage() {
   const pipelineCounts = [newLeads, warmLeads, hotLeads, followUpLeads, campaigns.length];
   const pipelineMax = Math.max(1, ...pipelineCounts);
   const attentionItems = [
+    !supabaseReady
+      ? {
+          label: "Supabase schema not live",
+          detail: supabase.configured
+            ? `Missing or inaccessible table(s): ${supabase.tables.filter((table) => !table.ready).map((table) => table.table).join(", ")}. Run the schema SQL before using live data.`
+            : "Supabase env vars are not visible to production.",
+          href: "/dashboard/settings",
+          tone: "danger",
+        }
+      : null,
     missingImages
       ? {
           label: "Property images needed",
@@ -112,7 +123,7 @@ export default async function DashboardPage() {
               <p>Current CRM signal from Maia conversations.</p>
             </div>
             <span className={supabaseReady ? "admin-status live" : "admin-status warning"}>
-              {supabaseReady ? "Supabase connected" : "Fallback data"}
+              {supabaseReady ? "Supabase live" : "Schema pending"}
             </span>
           </div>
           <div className="admin-pipeline-bars" aria-label="Lead pipeline chart">

@@ -54,6 +54,20 @@ export type LeadImportResult = {
   errors: string[];
 };
 
+export type SupabaseTableStatus = {
+  table: string;
+  ready: boolean;
+  error?: string;
+};
+
+export type SupabaseReadiness = {
+  configured: boolean;
+  ready: boolean;
+  tables: SupabaseTableStatus[];
+};
+
+const requiredSupabaseTables = ["leads", "properties", "bot_sessions"] as const;
+
 const seedLeads: Lead[] = [
   {
     id: "sample-1",
@@ -180,7 +194,8 @@ async function supabasePatch<T>(table: string, query: string, payload: Record<st
 }
 
 async function supabaseFetchWithFallback<T>(table: string, queries: string[], fallback: T[]) {
-  if (!isSupabaseConfigured()) return fallback;
+  const shouldUseFallback = process.env.NODE_ENV !== "production";
+  if (!isSupabaseConfigured()) return shouldUseFallback ? fallback : [];
   let lastError: unknown = null;
 
   for (const query of queries) {
@@ -192,7 +207,35 @@ async function supabaseFetchWithFallback<T>(table: string, queries: string[], fa
   }
 
   console.error(`Unable to load Supabase table "${table}".`, lastError);
-  return fallback;
+  return shouldUseFallback ? fallback : [];
+}
+
+async function checkSupabaseTable(table: string): Promise<SupabaseTableStatus> {
+  if (!isSupabaseConfigured()) return { table, ready: false, error: "Supabase env vars are missing." };
+
+  try {
+    await supabaseFetch<Record<string, unknown>>(table, "?select=id&limit=1", {
+      headers: { Prefer: "return=minimal" },
+    });
+    return { table, ready: true };
+  } catch (error) {
+    return {
+      table,
+      ready: false,
+      error: error instanceof Error ? error.message : "Table check failed.",
+    };
+  }
+}
+
+export async function getSupabaseReadiness(): Promise<SupabaseReadiness> {
+  const configured = isSupabaseConfigured();
+  const tables = configured ? await Promise.all(requiredSupabaseTables.map(checkSupabaseTable)) : [];
+
+  return {
+    configured,
+    ready: configured && tables.every((table) => table.ready),
+    tables,
+  };
 }
 
 function normalizeLead(row: Partial<Lead> & Record<string, unknown>): Lead {

@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from "@/lib/limitless-data";
+import { getSupabaseReadiness } from "@/lib/limitless-data";
 
 const settings = [
   ["LIMITLESS_ADMIN_EMAIL", "Admin login email"],
@@ -17,7 +17,9 @@ const settings = [
   ["GOOGLE_DRIVE_PROPERTY_FOLDER_ID", "Google Drive parent folder for property images"],
 ];
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const supabase = await getSupabaseReadiness();
+
   return (
     <div className="admin-page">
       <div className="admin-page-header">
@@ -26,8 +28,8 @@ export default function SettingsPage() {
           <h1>Settings</h1>
           <p>Environment variables required for production control.</p>
         </div>
-        <span className={isSupabaseConfigured() ? "admin-status live" : "admin-status warning"}>
-          {isSupabaseConfigured() ? "Database connected" : "Database pending"}
+        <span className={supabase.ready ? "admin-status live" : "admin-status warning"}>
+          {supabase.ready ? "Database live" : "Database schema pending"}
         </span>
       </div>
 
@@ -46,6 +48,32 @@ export default function SettingsPage() {
               <em>{process.env[key] ? "set" : "missing"}</em>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <h2>Live Supabase Tables</h2>
+          <p>The dashboard requires these tables in the connected Supabase project.</p>
+        </div>
+        <div className="admin-list">
+          {supabase.tables.length ? supabase.tables.map((table) => (
+            <div key={table.table} className="admin-list-row">
+              <div>
+                <strong>{table.table}</strong>
+                <span>{table.error || "Ready for live reads and writes."}</span>
+              </div>
+              <em>{table.ready ? "ready" : "missing"}</em>
+            </div>
+          )) : (
+            <div className="admin-list-row">
+              <div>
+                <strong>Supabase</strong>
+                <span>Set Supabase env vars in Vercel before table checks can run.</span>
+              </div>
+              <em>pending</em>
+            </div>
+          )}
         </div>
       </section>
     </div>
