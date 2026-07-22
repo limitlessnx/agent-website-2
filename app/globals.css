@@ -469,7 +469,9 @@ body {
 .admin-login-card input,
 .admin-form-grid input,
 .admin-form-grid select,
-.admin-form-grid textarea {
+.admin-form-grid textarea,
+.admin-file-field input,
+.admin-import-form input {
   width: 100%;
   min-height: 42px;
   padding: 10px 12px;
@@ -481,7 +483,9 @@ body {
 }
 
 .admin-login-card button,
-.admin-form-grid button {
+.admin-form-grid button,
+.admin-import-form button,
+.admin-inline-upload button {
   min-height: 44px;
   padding: 10px 16px;
   border: 0;
@@ -491,6 +495,49 @@ body {
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+.admin-file-field {
+  display: grid;
+  gap: 7px;
+  color: var(--admin-text-soft);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.admin-file-field span {
+  color: var(--admin-text-muted);
+}
+
+.admin-form-grid .admin-file-field {
+  grid-column: 1 / -1;
+}
+
+.admin-import-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.admin-inline-upload {
+  min-width: 320px;
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-inline-upload input[type="file"] {
+  width: 100%;
+  color: var(--admin-text-soft);
+  font-size: 0.78rem;
+}
+
+.admin-inline-upload button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
 }
 
 .admin-login-card button:disabled {
@@ -537,8 +584,14 @@ body {
   }
 
   .admin-form-grid,
+  .admin-import-form,
+  .admin-inline-upload,
   .admin-nav {
     grid-template-columns: 1fr;
+  }
+
+  .admin-inline-upload {
+    min-width: 220px;
   }
 }
 
@@ -1677,7 +1730,9 @@ a.admin-list-row {
   .leads-crm-summary,
   .leads-card-grid,
   .lead-filter-bar,
-  .admin-form-grid {
+  .admin-form-grid,
+  .admin-import-form,
+  .admin-inline-upload {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
   }

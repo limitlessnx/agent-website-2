@@ -12,6 +12,9 @@ const settings = [
   ["N8N_BASE_URL", "n8n base URL"],
   ["N8N_EMAIL", "n8n login email"],
   ["N8N_PASSWORD", "n8n login password"],
+  ["GOOGLE_SERVICE_ACCOUNT_EMAIL", "Google Drive service account email"],
+  ["GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY", "Google Drive service account private key"],
+  ["GOOGLE_DRIVE_PROPERTY_FOLDER_ID", "Google Drive parent folder for property images"],
 ];
 
 export default function SettingsPage() {

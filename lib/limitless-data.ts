@@ -48,6 +48,12 @@ export type AutomationProject = {
   workflows: number;
 };
 
+export type LeadImportResult = {
+  imported: number;
+  skipped: number;
+  errors: string[];
+};
+
 const seedLeads: Lead[] = [
   {
     id: "sample-1",
@@ -164,6 +170,13 @@ async function supabaseFetch<T>(table: string, query = "", init?: RequestInit): 
     throw new Error(`Supabase ${table} request failed: ${response.status} ${detail}`);
   }
   return (await response.json()) as T[];
+}
+
+async function supabasePatch<T>(table: string, query: string, payload: Record<string, unknown>): Promise<T[]> {
+  return supabaseFetch<T>(table, query, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 async function supabaseFetchWithFallback<T>(table: string, queries: string[], fallback: T[]) {
@@ -299,6 +312,69 @@ export async function createLead(payload: Partial<Lead>) {
   });
 }
 
+function cleanPhone(phone: string) {
+  return phone.replace(/[^\d]/g, "");
+}
+
+async function upsertLeadByPhone(payload: Partial<Lead>) {
+  const phone = cleanPhone(String(payload.phone || ""));
+  if (!phone) throw new Error("Lead has no phone number.");
+
+  const body = {
+    name: payload.name || "Unknown",
+    phone,
+    status: payload.status || "new",
+    score: payload.score || "unscored",
+    budget: payload.budget || "",
+    location_preference: payload.location_preference || "",
+    property_type: payload.property_type || "",
+    purpose: payload.purpose || "",
+    source: "admin_dashboard_import",
+  };
+
+  try {
+    return await supabaseFetch<Lead>("leads", "?on_conflict=phone", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    const existing = await supabaseFetch<Lead>("leads", `?select=id&phone=eq.${encodeURIComponent(phone)}&limit=1`);
+    if (existing[0]?.id) {
+      return supabasePatch<Lead>("leads", `?id=eq.${encodeURIComponent(existing[0].id)}`, body);
+    }
+    return supabaseFetch<Lead>("leads", "", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+}
+
+export async function importLeads(leads: Partial<Lead>[]): Promise<LeadImportResult> {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured.");
+
+  const seen = new Set<string>();
+  const result: LeadImportResult = { imported: 0, skipped: 0, errors: [] };
+
+  for (const lead of leads) {
+    const phone = cleanPhone(String(lead.phone || ""));
+    if (!phone || seen.has(phone)) {
+      result.skipped += 1;
+      continue;
+    }
+    seen.add(phone);
+
+    try {
+      await upsertLeadByPhone({ ...lead, phone });
+      result.imported += 1;
+    } catch (error) {
+      result.errors.push(`${lead.name || phone}: ${error instanceof Error ? error.message : "Import failed"}`);
+    }
+  }
+
+  return result;
+}
+
 export async function createProperty(payload: Partial<PropertyRecord>) {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured.");
   return supabaseFetch<PropertyRecord>("properties", "", {
@@ -315,6 +391,14 @@ export async function createProperty(payload: Partial<PropertyRecord>) {
       features: payload.features || "",
       description: payload.description || "",
     }),
+  });
+}
+
+export async function updatePropertyImageLink(propertyId: string, drivePhotosLink: string) {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured.");
+  if (!propertyId) throw new Error("Property ID is missing.");
+  return supabasePatch<PropertyRecord>("properties", `?id=eq.${encodeURIComponent(propertyId)}`, {
+    drive_photos_link: drivePhotosLink,
   });
 }
 
