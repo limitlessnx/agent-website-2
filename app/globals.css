@@ -540,6 +540,14 @@ body {
   font-size: 0.78rem;
 }
 
+.media-upload-row {
+  align-items: center;
+}
+
+.media-upload-row .admin-inline-upload {
+  flex: 0 0 min(100%, 420px);
+}
+
 .admin-login-card button:disabled {
   opacity: 0.65;
   cursor: wait;
