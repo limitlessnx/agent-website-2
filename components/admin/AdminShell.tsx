@@ -67,7 +67,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             <ThemeToggle />
             <div className="admin-period">
               <CalendarDays size={15} />
-              <span>Launch Mode</span>
+              <span>Live Ops</span>
             </div>
           </div>
         </header>

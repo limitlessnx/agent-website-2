@@ -912,6 +912,14 @@ body {
   font-weight: 800;
 }
 
+.admin-pipeline-bars strong {
+  position: absolute;
+  bottom: calc(var(--bar-height) + 8px);
+  color: var(--admin-text);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .admin-health-ring {
   width: 172px;
   aspect-ratio: 1;
@@ -964,12 +972,49 @@ body {
   padding: 11px;
 }
 
+.admin-list-row.compact strong {
+  line-height: 1.25;
+}
+
+.admin-list-row.compact span {
+  line-height: 1.45;
+}
+
+a.admin-list-row {
+  color: inherit;
+  text-decoration: none;
+}
+
 .admin-list-row em.good {
   color: var(--admin-emerald);
 }
 
 .admin-list-row em.muted {
   color: var(--admin-text-muted);
+}
+
+.admin-list-row.attention-warning {
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.admin-list-row.attention-danger {
+  border-color: rgba(251, 113, 133, 0.32);
+}
+
+.admin-list-row.attention-good {
+  border-color: rgba(52, 211, 153, 0.28);
+}
+
+.admin-list-row.attention-warning em {
+  color: var(--admin-amber);
+}
+
+.admin-list-row.attention-danger em {
+  color: var(--admin-rose);
+}
+
+.admin-list-row.attention-good em {
+  color: var(--admin-emerald);
 }
 
 .admin-checklist.upgraded span {
