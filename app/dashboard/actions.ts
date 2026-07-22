@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import * as XLSX from "xlsx";
 import { uploadPropertyImagesToDrive } from "@/lib/google-drive";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createLead, createProperty, importLeads, updateProperty, updatePropertyImageLink, type Lead } from "@/lib/limitless-data";
@@ -62,22 +63,17 @@ function pick(row: Record<string, string>, keys: string[]) {
   return "";
 }
 
-function parseLeadImport(text: string): Partial<Lead>[] {
-  const rows = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+function mapLeadRows(rows: string[][]): Partial<Lead>[] {
   if (!rows.length) return [];
 
-  const firstRow = parseCsvLine(rows[0]);
+  const firstRow = rows[0].map((cell) => String(cell || "").trim());
   const hasHeader = firstRow.some((cell) => /name|phone|whatsapp|budget|location|status|score/i.test(cell));
   const headers = hasHeader
     ? firstRow.map(normalizeHeader)
     : ["name", "phone", "budget", "location_preference", "property_type", "purpose", "status", "score"];
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
-  return dataRows.map((line) => {
-    const cells = parseCsvLine(line);
+  return dataRows.map((cells) => {
     const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""]));
     return {
       name: pick(row, ["name", "full_name", "client_name", "customer_name"]) || "Unknown",
@@ -92,15 +88,39 @@ function parseLeadImport(text: string): Partial<Lead>[] {
   });
 }
 
+function parseCsvLeadImport(text: string): Partial<Lead>[] {
+  const rows = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(parseCsvLine);
+
+  return mapLeadRows(rows);
+}
+
+async function parseLeadImportFile(file: File): Promise<Partial<Lead>[]> {
+  const filename = file.name.toLowerCase();
+  const isExcel = filename.endsWith(".xlsx") || filename.endsWith(".xls");
+
+  if (isExcel) {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) return [];
+    const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, blankrows: false, defval: "" });
+    return mapLeadRows(rows.map((row) => row.map((cell) => String(cell || "").trim())).filter((row) => row.some(Boolean)));
+  }
+
+  return parseCsvLeadImport(await file.text());
+}
+
 export async function importLeadsAction(formData: FormData) {
   await requireAdmin();
   const file = formData.get("contacts_file");
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Upload a CSV contact file first.");
+    throw new Error("Upload a CSV or Excel contact file first.");
   }
 
-  const text = await file.text();
-  const result = await importLeads(parseLeadImport(text));
+  const result = await importLeads(await parseLeadImportFile(file));
   revalidatePath("/dashboard/limitless/leads");
   revalidatePath("/dashboard");
   redirect(`/dashboard/limitless/leads?imported=${result.imported}&skipped=${result.skipped}&errors=${result.errors.length}`);

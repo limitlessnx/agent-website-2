@@ -141,14 +141,24 @@ export async function uploadPropertyImagesToDrive(propertyTitle: string, files: 
 
   const { parentFolderId } = driveConfig();
   const accessToken = await getAccessToken();
-  const folder = await createDriveFile(
-    {
-      name: `${propertyTitle || "Property"} - ${new Date().toISOString().slice(0, 10)}`,
-      mimeType: "application/vnd.google-apps.folder",
-      ...(parentFolderId ? { parents: [parentFolderId] } : {}),
-    },
-    accessToken,
-  );
+  const folderMetadata = {
+    name: `${propertyTitle || "Property"} - ${new Date().toISOString().slice(0, 10)}`,
+    mimeType: "application/vnd.google-apps.folder",
+  };
+  let folder: DriveFile;
+
+  try {
+    folder = await createDriveFile(
+      {
+        ...folderMetadata,
+        ...(parentFolderId ? { parents: [parentFolderId] } : {}),
+      },
+      accessToken,
+    );
+  } catch (error) {
+    if (!parentFolderId) throw error;
+    folder = await createDriveFile(folderMetadata, accessToken);
+  }
 
   await Promise.all(validFiles.map((file) => uploadDriveFile(file, folder.id, accessToken)));
   await setAnyoneCanRead(folder.id, accessToken);

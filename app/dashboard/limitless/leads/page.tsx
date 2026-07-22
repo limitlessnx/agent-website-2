@@ -83,13 +83,13 @@ export default async function LeadsPage({
         <div className="admin-panel-header">
           <div>
             <h2>Bulk Contact Import</h2>
-            <p>Upload a CSV file with columns like name, phone, budget, location, property type, purpose, status, and score.</p>
+            <p>Upload a CSV or Excel file with columns like name, phone, budget, location, property type, purpose, status, and score.</p>
           </div>
         </div>
         <form action={importLeadsAction} className="admin-import-form">
           <label className="admin-file-field">
-            <span>Contact CSV file</span>
-            <input name="contacts_file" type="file" accept=".csv,text/csv,text/plain" required />
+            <span>Contact file</span>
+            <input name="contacts_file" type="file" accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required />
           </label>
           <button type="submit">Import contacts</button>
         </form>
