@@ -1,4 +1,4 @@
-import { createPropertyAction, uploadPropertyImagesAction } from "@/app/dashboard/actions";
+import { createPropertyAction, updatePropertyAction, uploadPropertyImagesAction } from "@/app/dashboard/actions";
 import { isGoogleDriveConfigured } from "@/lib/google-drive";
 import { getProperties } from "@/lib/limitless-data";
 
@@ -52,44 +52,49 @@ export default async function PropertiesPage() {
         <div className="admin-panel-header">
           <div>
             <h2>Catalog</h2>
-            <p>{properties.length} property records loaded.</p>
+            <p>{properties.length} property records loaded. Edit details here so Maia answers with the correct catalog data.</p>
           </div>
         </div>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Location</th>
-                <th>Price</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Images</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.map((property) => (
-                <tr key={property.id}>
-                  <td>{property.title}</td>
-                  <td>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "-"}</td>
-                  <td>{property.price || "-"}</td>
-                  <td>{property.type || "-"}</td>
-                  <td>{property.status || "active"}</td>
-                  <td>
-                    <form action={uploadPropertyImagesAction} className="admin-inline-upload">
-                      <input type="hidden" name="property_id" value={property.id} />
-                      <input type="hidden" name="property_title" value={property.title} />
-                      <span className={property.drive_photos_link ? "admin-status live" : "admin-status warning"}>
-                        {property.drive_photos_link ? "saved" : "missing"}
-                      </span>
-                      <input name="property_images" type="file" accept="image/*" multiple aria-label={`Upload images for ${property.title}`} />
-                      <button type="submit">{property.drive_photos_link ? "Replace" : "Upload"}</button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="property-editor-list">
+          {properties.map((property) => (
+            <article key={property.id} className="property-editor-card">
+              <form action={updatePropertyAction} className="property-edit-form">
+                <input type="hidden" name="property_id" value={property.id} />
+                <div className="property-edit-header">
+                  <div>
+                    <strong>{property.title}</strong>
+                    <span>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "No location saved"}</span>
+                  </div>
+                  <span className={property.drive_photos_link ? "admin-status live" : "admin-status warning"}>
+                    {property.drive_photos_link ? "images saved" : "images missing"}
+                  </span>
+                </div>
+                <div className="admin-form-grid compact">
+                  <input name="title" defaultValue={property.title} placeholder="Property title" required />
+                  <input name="price" defaultValue={property.price || ""} placeholder="Price" />
+                  <input name="location_area" defaultValue={property.location_area || ""} placeholder="Area/community" />
+                  <input name="location_city" defaultValue={property.location_city || ""} placeholder="City/state" />
+                  <input name="type" defaultValue={property.type || ""} placeholder="Type" />
+                  <select name="status" defaultValue={property.status || "active"}>
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                    <option value="sold">sold</option>
+                  </select>
+                  <input name="drive_brochure_link" defaultValue={property.drive_brochure_link || ""} placeholder="Brochure link" />
+                  <textarea name="features" defaultValue={property.features || ""} placeholder="Title/features" />
+                  <textarea name="description" defaultValue={property.description || ""} placeholder="Brief/description" />
+                  <button type="submit">Save changes</button>
+                </div>
+              </form>
+
+              <form action={uploadPropertyImagesAction} className="admin-inline-upload property-card-upload">
+                <input type="hidden" name="property_id" value={property.id} />
+                <input type="hidden" name="property_title" value={property.title} />
+                <input name="property_images" type="file" accept="image/*" multiple aria-label={`Upload images for ${property.title}`} />
+                <button type="submit">{property.drive_photos_link ? "Replace images" : "Upload images"}</button>
+              </form>
+            </article>
+          ))}
         </div>
       </section>
     </div>

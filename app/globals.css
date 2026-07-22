@@ -428,6 +428,10 @@ body {
   gap: 12px;
 }
 
+.admin-form-grid.compact {
+  gap: 10px;
+}
+
 .admin-form-grid textarea {
   min-height: 90px;
   resize: vertical;
@@ -548,6 +552,53 @@ body {
   flex: 0 0 min(100%, 420px);
 }
 
+.property-editor-list {
+  display: grid;
+  gap: 14px;
+}
+
+.property-editor-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--admin-panel-strong) 68%, transparent);
+}
+
+.property-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.property-edit-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.property-edit-header strong,
+.property-edit-header span {
+  display: block;
+}
+
+.property-edit-header strong {
+  color: var(--admin-text);
+  font-size: 1rem;
+}
+
+.property-edit-header span {
+  margin-top: 4px;
+  color: var(--admin-text-soft);
+  font-size: 0.84rem;
+}
+
+.property-card-upload {
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-border);
+}
+
 .admin-login-card button:disabled {
   opacity: 0.65;
   cursor: wait;
@@ -587,7 +638,8 @@ body {
 
   .admin-page-header,
   .admin-panel-header,
-  .admin-list-row {
+  .admin-list-row,
+  .property-edit-header {
     flex-direction: column;
   }
 
@@ -600,6 +652,10 @@ body {
 
   .admin-inline-upload {
     min-width: 220px;
+  }
+
+  .property-editor-card {
+    padding: 13px;
   }
 }
 

@@ -394,6 +394,22 @@ export async function createProperty(payload: Partial<PropertyRecord>) {
   });
 }
 
+export async function updateProperty(propertyId: string, payload: Partial<PropertyRecord>) {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured.");
+  if (!propertyId) throw new Error("Property ID is missing.");
+  return supabasePatch<PropertyRecord>("properties", `?id=eq.${encodeURIComponent(propertyId)}`, {
+    title: payload.title || "Untitled property",
+    location_area: payload.location_area || "",
+    location_city: payload.location_city || "",
+    price: payload.price || "",
+    type: payload.type || "",
+    status: payload.status || "active",
+    drive_brochure_link: payload.drive_brochure_link || "",
+    features: payload.features || "",
+    description: payload.description || "",
+  });
+}
+
 export async function updatePropertyImageLink(propertyId: string, drivePhotosLink: string) {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured.");
   if (!propertyId) throw new Error("Property ID is missing.");

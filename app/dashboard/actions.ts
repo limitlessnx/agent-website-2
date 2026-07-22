@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { uploadPropertyImagesToDrive } from "@/lib/google-drive";
 import { getAdminSession } from "@/lib/admin-auth";
-import { createLead, createProperty, importLeads, updatePropertyImageLink, type Lead } from "@/lib/limitless-data";
+import { createLead, createProperty, importLeads, updateProperty, updatePropertyImageLink, type Lead } from "@/lib/limitless-data";
 
 async function requireAdmin() {
   const session = await getAdminSession();
@@ -131,6 +131,27 @@ export async function createPropertyAction(formData: FormData) {
   revalidatePath("/dashboard/limitless/properties");
   revalidatePath("/dashboard/limitless/media");
   revalidatePath("/dashboard");
+}
+
+export async function updatePropertyAction(formData: FormData) {
+  await requireAdmin();
+  const propertyId = String(formData.get("property_id") || "");
+
+  await updateProperty(propertyId, {
+    title: String(formData.get("title") || ""),
+    location_area: String(formData.get("location_area") || ""),
+    location_city: String(formData.get("location_city") || ""),
+    price: String(formData.get("price") || ""),
+    type: String(formData.get("type") || ""),
+    status: String(formData.get("status") || "active"),
+    drive_brochure_link: String(formData.get("drive_brochure_link") || ""),
+    features: String(formData.get("features") || ""),
+    description: String(formData.get("description") || ""),
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/limitless/properties");
+  revalidatePath("/dashboard/limitless/media");
 }
 
 export async function uploadPropertyImagesAction(formData: FormData) {
