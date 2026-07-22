@@ -1641,3 +1641,149 @@ body {
     min-width: 620px !important;
   }
 }
+
+@media screen and (max-width: 760px), screen and (max-device-width: 820px), screen and (pointer: coarse) and (orientation: portrait) {
+  .admin-shell {
+    background:
+      linear-gradient(180deg, rgba(34, 211, 238, 0.06), transparent 240px),
+      var(--admin-bg) !important;
+  }
+
+  .admin-page {
+    gap: 14px !important;
+  }
+
+  .admin-hero-panel {
+    gap: 16px !important;
+    align-items: start !important;
+  }
+
+  .admin-hero-panel p {
+    font-size: 0.94rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .admin-hero-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .admin-hero-actions a,
+  .admin-outline-link {
+    min-height: 42px !important;
+    padding: 0 10px !important;
+    font-size: 0.82rem !important;
+    text-align: center !important;
+  }
+
+  .admin-launch-score {
+    width: 136px !important;
+    justify-self: start !important;
+  }
+
+  .admin-launch-score span {
+    font-size: 1.7rem !important;
+  }
+
+  .admin-launch-score p {
+    max-width: 88px !important;
+    font-size: 0.64rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .admin-metric-card {
+    min-height: 150px !important;
+    padding: 16px !important;
+  }
+
+  .admin-metric-card::after {
+    width: 46px !important;
+    height: 20px !important;
+    opacity: 0.22 !important;
+  }
+
+  .admin-metric-card strong {
+    font-size: 1.65rem !important;
+  }
+
+  .admin-chart-panel,
+  .admin-ring-panel {
+    min-height: auto !important;
+  }
+
+  .admin-pipeline-bars {
+    height: 132px !important;
+    gap: 8px !important;
+    padding: 0 4px 34px !important;
+    overflow: hidden !important;
+  }
+
+  .admin-pipeline-bars div::before {
+    width: min(34px, 72%) !important;
+    border-radius: 6px 6px 3px 3px !important;
+  }
+
+  .admin-pipeline-bars span {
+    bottom: 0 !important;
+    width: 100% !important;
+    transform: translateY(28px) !important;
+    white-space: normal !important;
+    text-align: center !important;
+    font-size: 0.62rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .admin-health-ring {
+    width: 148px !important;
+    margin: 6px auto 16px !important;
+  }
+
+  .admin-health-ring span {
+    font-size: 1.65rem !important;
+  }
+
+  .admin-mini-legend {
+    gap: 8px !important;
+  }
+
+  .admin-mini-legend span {
+    align-items: flex-start !important;
+    font-size: 0.82rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .admin-checklist span {
+    min-height: 54px !important;
+    padding: 12px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .admin-panel-header h2 {
+    font-size: 1.08rem !important;
+  }
+
+  .admin-panel-header p {
+    font-size: 0.88rem !important;
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .admin-hero-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-search input {
+    font-size: 0.82rem !important;
+  }
+
+  .admin-topbar-actions .admin-icon-button:first-child {
+    display: none !important;
+  }
+
+  .admin-health-ring,
+  .admin-launch-score {
+    width: 126px !important;
+  }
+}
