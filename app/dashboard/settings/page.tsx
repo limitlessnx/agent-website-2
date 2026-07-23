@@ -1,20 +1,22 @@
 import { getSupabaseReadiness } from "@/lib/limitless-data";
 
 const settings = [
-  ["LIMITLESS_ADMIN_EMAIL", "Admin login email"],
-  ["LIMITLESS_ADMIN_PASSWORD", "Admin login password"],
-  ["ADMIN_SESSION_SECRET", "Cookie signing secret"],
-  ["LIMITLESS_API_KEY", "API key for n8n/backend requests"],
-  ["SUPABASE_URL", "Supabase project URL"],
-  ["SUPABASE_SECRET_KEY", "Vercel Supabase server key"],
-  ["SUPABASE_SERVICE_ROLE_KEY", "Supabase service role key"],
-  ["SUPABASE_PUBLISHABLE_KEY", "Vercel Supabase publishable key"],
-  ["N8N_BASE_URL", "n8n base URL"],
-  ["N8N_EMAIL", "n8n login email"],
-  ["N8N_PASSWORD", "n8n login password"],
-  ["GOOGLE_SERVICE_ACCOUNT_EMAIL", "Google Drive service account email"],
-  ["GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY", "Google Drive service account private key"],
-  ["GOOGLE_DRIVE_PROPERTY_FOLDER_ID", "Google Drive parent folder for property images"],
+  { keys: ["LIMITLESS_ADMIN_EMAIL"], label: "Admin login email" },
+  { keys: ["LIMITLESS_ADMIN_PASSWORD"], label: "Admin login password" },
+  { keys: ["ADMIN_SESSION_SECRET"], label: "Cookie signing secret" },
+  { keys: ["LIMITLESS_API_KEY"], label: "API key for n8n/backend requests" },
+  { keys: ["LIMITLESS_SUPABASE_URL", "SUPABASE_URL"], label: "Supabase project URL" },
+  {
+    keys: ["LIMITLESS_SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"],
+    label: "Supabase server key",
+  },
+  { keys: ["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"], label: "Supabase public/anon key" },
+  { keys: ["N8N_BASE_URL"], label: "n8n base URL" },
+  { keys: ["N8N_EMAIL"], label: "n8n login email" },
+  { keys: ["N8N_PASSWORD"], label: "n8n login password" },
+  { keys: ["GOOGLE_SERVICE_ACCOUNT_EMAIL"], label: "Google Drive service account email" },
+  { keys: ["GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY"], label: "Google Drive service account private key" },
+  { keys: ["GOOGLE_DRIVE_PROPERTY_FOLDER_ID"], label: "Google Drive parent folder for property images" },
 ];
 
 export default async function SettingsPage() {
@@ -39,13 +41,13 @@ export default async function SettingsPage() {
           <p>Add these in Vercel Project Settings before production use.</p>
         </div>
         <div className="admin-list">
-          {settings.map(([key, label]) => (
-            <div key={key} className="admin-list-row">
+          {settings.map((setting) => (
+            <div key={setting.keys.join("|")} className="admin-list-row">
               <div>
-                <strong>{key}</strong>
-                <span>{label}</span>
+                <strong>{setting.keys.join(" or ")}</strong>
+                <span>{setting.label}</span>
               </div>
-              <em>{process.env[key] ? "set" : "missing"}</em>
+              <em>{setting.keys.some((key) => process.env[key]) ? "set" : "missing"}</em>
             </div>
           ))}
         </div>
