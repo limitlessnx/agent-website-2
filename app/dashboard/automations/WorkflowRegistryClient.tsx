@@ -1,20 +1,25 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import type { WorkflowRecord } from "@/lib/workflow-registry";
+import { useRouter } from "next/navigation";
+import type { WorkflowRecord, WorkflowRun } from "@/lib/workflow-registry";
 
 type Props = {
   initialWorkflows: WorkflowRecord[];
+  initialRuns: WorkflowRun[];
   configured: boolean;
 };
 
 const providers = ["n8n", "trigger.dev", "telegram", "whatsapp", "email", "elevenlabs", "custom"];
 const statuses: WorkflowRecord["status"][] = ["draft", "active", "paused", "disabled", "error"];
 
-export default function WorkflowRegistryClient({ initialWorkflows, configured }: Props) {
+export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, configured }: Props) {
+  const router = useRouter();
   const [workflows, setWorkflows] = useState(initialWorkflows);
+  const [runs] = useState(initialRuns);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [workingId, setWorkingId] = useState("");
 
   const counts = useMemo(
     () => ({
@@ -52,7 +57,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, configured }:
         body: JSON.stringify(payload),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Unable to register workflow.");
+      if (!response.ok) throw new Error(result.message || result.error || "Unable to register workflow.");
 
       setWorkflows((current) => {
         const others = current.filter((item) => item.id !== result.workflow.id);
@@ -60,12 +65,52 @@ export default function WorkflowRegistryClient({ initialWorkflows, configured }:
       });
       event.currentTarget.reset();
       setMessage("Workflow registered successfully.");
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to register workflow.");
     } finally {
       setSaving(false);
     }
   }
+
+  async function changeStatus(workflow: WorkflowRecord, status: WorkflowRecord["status"]) {
+    setWorkingId(workflow.id);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/admin/workflows/${workflow.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to update workflow.");
+      setWorkflows((current) => current.map((item) => item.id === workflow.id ? result.workflow : item));
+      setMessage(`${workflow.name} is now ${status}.`);
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to update workflow.");
+    } finally {
+      setWorkingId("");
+    }
+  }
+
+  async function retryRun(run: WorkflowRun) {
+    setWorkingId(run.id);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/admin/workflow-runs/${run.id}/retry`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to retry workflow run.");
+      setMessage(`${run.workflow_key} retry completed with status ${result.status}.`);
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to retry workflow run.");
+    } finally {
+      setWorkingId("");
+    }
+  }
+
+  const failedRuns = runs.filter((run) => ["failed", "timed_out", "cancelled"].includes(run.status)).slice(0, 10);
 
   return (
     <>
@@ -103,7 +148,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, configured }:
       <section className="admin-panel">
         <div className="admin-panel-header">
           <h2>Workflow registry</h2>
-          <p>One record per automation, regardless of whether it runs in n8n, Trigger.dev, a messaging channel, or a voice provider.</p>
+          <p>Pause a workflow before maintenance, then reactivate it after its endpoint is verified.</p>
         </div>
         <div className="admin-list">
           {workflows.length ? workflows.map((workflow) => (
@@ -113,9 +158,37 @@ export default function WorkflowRegistryClient({ initialWorkflows, configured }:
                 <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
                 <span>{workflow.description || workflow.workflow_key}</span>
               </div>
-              <em>{workflow.status}</em>
+              <div className="admin-inline-actions">
+                <em>{workflow.status}</em>
+                {workflow.status === "active" ? (
+                  <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "paused")}>Pause</button>
+                ) : (
+                  <button className="admin-button secondary" type="button" disabled={workingId === workflow.id || !workflow.endpoint_url} onClick={() => changeStatus(workflow, "active")}>Activate</button>
+                )}
+                <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "disabled")}>Disable</button>
+              </div>
             </div>
           )) : <p>No workflows are registered yet.</p>}
+        </div>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <h2>Failed runs</h2>
+          <p>Retry a failed execution using its original input payload and an incremented attempt number.</p>
+        </div>
+        <div className="admin-list">
+          {failedRuns.length ? failedRuns.map((run) => (
+            <div key={run.id} className="admin-list-row">
+              <div>
+                <strong>{run.workflow_key}</strong>
+                <span>{run.status} · attempt {run.attempt} · {run.error_message || "No error message recorded"}</span>
+              </div>
+              <button className="admin-button secondary" type="button" disabled={workingId === run.id} onClick={() => retryRun(run)}>
+                {workingId === run.id ? "Retrying..." : "Retry"}
+              </button>
+            </div>
+          )) : <p>No failed workflow runs need attention.</p>}
         </div>
       </section>
     </>
