@@ -44,3 +44,5 @@ export async function supabaseRest<T>(path: string, init?: RequestInit): Promise
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
+
+export const supabaseServerRequest = supabaseRest;
