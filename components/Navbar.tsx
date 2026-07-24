@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, Menu, X, Zap } from "lucide-react";
+import { Menu, X, Zap } from "lucide-react";
 
 const navLinks = [
   { href: "/services", label: "Services" },
@@ -34,9 +34,7 @@ export default function Navbar() {
         right: 0,
         zIndex: 100,
         transition: "background 0.3s, border-color 0.3s",
-        background: scrolled
-          ? "rgba(6, 8, 15, 0.92)"
-          : "transparent",
+        background: scrolled ? "rgba(6, 8, 15, 0.92)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
         borderBottom: scrolled
           ? "1px solid rgba(30, 45, 61, 0.8)"
@@ -54,7 +52,6 @@ export default function Navbar() {
           justifyContent: "space-between",
         }}
       >
-        {/* Logo */}
         <Link
           href="/"
           style={{
@@ -89,13 +86,8 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
+          style={{ display: "flex", alignItems: "center", gap: "4px" }}
           className="hidden-mobile"
         >
           {navLinks.map((link) => (
@@ -106,74 +98,57 @@ export default function Navbar() {
                 padding: "6px 14px",
                 fontSize: "0.85rem",
                 fontWeight: 500,
-                color:
-                  pathname === link.href
-                    ? "#00d4ff"
-                    : "#8ba3bd",
+                color: pathname === link.href ? "#00d4ff" : "#8ba3bd",
                 textDecoration: "none",
                 borderRadius: "6px",
                 transition: "color 0.2s",
               }}
-              onMouseEnter={(e) =>
-                ((e.target as HTMLElement).style.color = "#f0f6ff")
-              }
-              onMouseLeave={(e) =>
-                ((e.target as HTMLElement).style.color =
-                  pathname === link.href ? "#00d4ff" : "#8ba3bd")
-              }
+              onMouseEnter={(event) => {
+                (event.currentTarget as HTMLElement).style.color = "#f0f6ff";
+              }}
+              onMouseLeave={(event) => {
+                (event.currentTarget as HTMLElement).style.color =
+                  pathname === link.href ? "#00d4ff" : "#8ba3bd";
+              }}
             >
               {link.label}
             </Link>
           ))}
+
           <Link
-            href="/evaluation"
+            href="/account/login"
             style={{
-              marginLeft: "12px",
-              padding: "8px 20px",
+              marginLeft: "10px",
+              padding: "8px 14px",
               fontSize: "0.85rem",
               fontWeight: 600,
+              color: pathname === "/account/login" ? "#00d4ff" : "#c7d5e5",
+              textDecoration: "none",
+              border: "1px solid #1e2d3d",
+              borderRadius: "8px",
+            }}
+          >
+            Login
+          </Link>
+
+          <Link
+            href="/account/signup"
+            style={{
+              marginLeft: "4px",
+              padding: "8px 18px",
+              fontSize: "0.85rem",
+              fontWeight: 700,
               color: "#06080f",
               background: "#00d4ff",
               textDecoration: "none",
               borderRadius: "8px",
-              transition: "opacity 0.2s, box-shadow 0.2s",
               boxShadow: "0 0 20px rgba(0,212,255,0.2)",
             }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLElement).style.opacity = "0.9";
-              (e.target as HTMLElement).style.boxShadow =
-                "0 0 30px rgba(0,212,255,0.4)";
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLElement).style.opacity = "1";
-              (e.target as HTMLElement).style.boxShadow =
-                "0 0 20px rgba(0,212,255,0.2)";
-            }}
           >
-            Start Evaluation
-          </Link>
-          <Link
-            href="/login"
-            aria-label="Admin login"
-            title="Admin login"
-            style={{
-              width: "36px",
-              height: "36px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: pathname === "/login" ? "#00d4ff" : "#8ba3bd",
-              border: "1px solid #1e2d3d",
-              borderRadius: "8px",
-              marginLeft: "8px",
-              textDecoration: "none",
-            }}
-          >
-            <LayoutDashboard size={16} />
+            Create Account
           </Link>
         </div>
 
-        {/* Mobile menu button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle navigation menu"
@@ -192,7 +167,6 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -216,8 +190,7 @@ export default function Navbar() {
                   padding: "12px 0",
                   fontSize: "1rem",
                   fontWeight: 500,
-                  color:
-                    pathname === link.href ? "#00d4ff" : "#8ba3bd",
+                  color: pathname === link.href ? "#00d4ff" : "#8ba3bd",
                   textDecoration: "none",
                   borderBottom: "1px solid #1e2d3d",
                 }}
@@ -225,26 +198,29 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
             <Link
-              href="/evaluation"
+              href="/account/signup"
               onClick={() => setMenuOpen(false)}
               style={{
                 display: "block",
                 marginTop: "16px",
-                padding: "12px 0",
+                padding: "13px 0",
                 fontSize: "1rem",
-                fontWeight: 600,
-                color: "#00d4ff",
+                fontWeight: 700,
+                color: "#06080f",
+                background: "#00d4ff",
                 textDecoration: "none",
                 textAlign: "center",
-                border: "1px solid rgba(0,212,255,0.4)",
+                border: "1px solid #00d4ff",
                 borderRadius: "8px",
               }}
             >
-              Start AI Evaluation
+              Create Account
             </Link>
+
             <Link
-              href="/login"
+              href="/account/login"
               onClick={() => setMenuOpen(false)}
               style={{
                 display: "block",
@@ -252,14 +228,14 @@ export default function Navbar() {
                 padding: "12px 0",
                 fontSize: "1rem",
                 fontWeight: 600,
-                color: "#8ba3bd",
+                color: "#c7d5e5",
                 textDecoration: "none",
                 textAlign: "center",
                 border: "1px solid #1e2d3d",
                 borderRadius: "8px",
               }}
             >
-              Admin Login
+              Login
             </Link>
           </motion.div>
         )}
