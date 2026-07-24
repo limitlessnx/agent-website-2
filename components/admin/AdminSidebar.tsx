@@ -17,6 +17,7 @@ import {
   Workflow,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
+import styles from "@/components/admin/AdminSidebar.module.css";
 
 const groups = [
   {
@@ -87,22 +88,22 @@ export default function AdminSidebar({ email }: { email: string }) {
           const isOpen = openGroups.includes(group.id);
           const hasActiveItem = group.items.some((item) => itemIsActive(pathname, item));
           return (
-            <section key={group.id} className={`admin-nav-group${hasActiveItem ? " active" : ""}`}>
+            <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
               <button
                 type="button"
-                className="admin-nav-group-trigger"
+                className={styles.trigger}
                 onClick={() => toggleGroup(group.id)}
                 aria-expanded={isOpen}
                 aria-controls={`admin-nav-${group.id}`}
               >
                 <span>{group.label}</span>
-                <ChevronDown size={15} className={isOpen ? "open" : ""} />
+                <ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
               </button>
-              <div id={`admin-nav-${group.id}`} className={`admin-nav-group-items${isOpen ? " open" : ""}`}>
+              <div id={`admin-nav-${group.id}`} className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
                 {group.items.map((item) => {
                   const active = itemIsActive(pathname, item);
                   return (
-                    <Link key={item.href} href={item.href} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>
+                    <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}>
                       <item.icon size={17} />
                       <span>{item.label}</span>
                     </Link>
