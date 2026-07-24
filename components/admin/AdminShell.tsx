@@ -12,6 +12,7 @@ import {
   Settings,
   Users,
   Bell,
+  Workflow,
 } from "lucide-react";
 import { getAdminSession } from "@/lib/admin-auth";
 import AdminSearch from "@/components/admin/AdminSearch";
@@ -26,6 +27,7 @@ const nav = [
   { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/dashboard/limitless/followups", label: "Follow-ups", icon: MessageCircle },
   { href: "/dashboard/automations", label: "Automations", icon: Bot },
+  { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
