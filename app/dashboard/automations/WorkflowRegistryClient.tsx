@@ -85,7 +85,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to update workflow.");
       setWorkflows((current) => current.map((item) => item.id === workflow.id ? result.workflow : item));
-      setMessage(`${workflow.name} is now ${status}.`);
+      setMessage(`${workflow.name} is now ${status}${workflow.provider === "n8n" ? " in n8n and Fluxknight" : ""}.`);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to update workflow.");
@@ -151,24 +151,30 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
           <p>Pause a workflow before maintenance, then reactivate it after its endpoint is verified.</p>
         </div>
         <div className="admin-list">
-          {workflows.length ? workflows.map((workflow) => (
-            <div key={workflow.id} className="admin-list-row">
-              <div>
-                <strong>{workflow.name}</strong>
-                <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
-                <span>{workflow.description || workflow.workflow_key}</span>
+          {workflows.length ? workflows.map((workflow) => {
+            const canActivate = workflow.provider === "n8n"
+              ? Boolean(workflow.external_workflow_id)
+              : Boolean(workflow.endpoint_url);
+
+            return (
+              <div key={workflow.id} className="admin-list-row">
+                <div>
+                  <strong>{workflow.name}</strong>
+                  <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
+                  <span>{workflow.description || workflow.workflow_key}</span>
+                </div>
+                <div className="admin-inline-actions">
+                  <em>{workflow.status}</em>
+                  {workflow.status === "active" ? (
+                    <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "paused")}>Pause</button>
+                  ) : (
+                    <button className="admin-button secondary" type="button" disabled={workingId === workflow.id || !canActivate} onClick={() => changeStatus(workflow, "active")}>Activate</button>
+                  )}
+                  <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "disabled")}>Disable</button>
+                </div>
               </div>
-              <div className="admin-inline-actions">
-                <em>{workflow.status}</em>
-                {workflow.status === "active" ? (
-                  <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "paused")}>Pause</button>
-                ) : (
-                  <button className="admin-button secondary" type="button" disabled={workingId === workflow.id || !workflow.endpoint_url} onClick={() => changeStatus(workflow, "active")}>Activate</button>
-                )}
-                <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "disabled")}>Disable</button>
-              </div>
-            </div>
-          )) : <p>No workflows are registered yet.</p>}
+            );
+          }) : <p>No workflows are registered yet.</p>}
         </div>
       </section>
 
