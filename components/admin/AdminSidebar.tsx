@@ -82,27 +82,28 @@ export default function AdminSidebar({ email }: { email: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        className={styles.mobileToggle}
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation menu"
-        aria-expanded={mobileOpen}
-      >
-        <Menu size={20} />
-      </button>
+      {!mobileOpen ? (
+        <button
+          type="button"
+          className={styles.mobileToggle}
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={false}
+        >
+          <Menu size={21} />
+        </button>
+      ) : null}
 
       {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={() => setMobileOpen(false)} /> : null}
 
       <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.mobileHeader}>
-          <span>Navigation</span>
           <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu">
             <X size={20} />
           </button>
         </div>
 
-        <Link href="/dashboard" className="admin-brand">
+        <Link href="/dashboard" className={`admin-brand ${styles.brand}`}>
           <span className="admin-brand-mark"><BarChart3 size={18} /></span>
           <span>
             Limitless OS
@@ -110,7 +111,7 @@ export default function AdminSidebar({ email }: { email: string }) {
           </span>
         </Link>
 
-        <nav className="admin-nav" aria-label="Admin navigation">
+        <nav className={`admin-nav ${styles.nav}`} aria-label="Admin navigation">
           {groups.map((group) => {
             const isOpen = openGroups.includes(group.id);
             const hasActiveItem = group.items.some((item) => itemIsActive(pathname, item));
@@ -142,7 +143,7 @@ export default function AdminSidebar({ email }: { email: string }) {
           })}
         </nav>
 
-        <div className="admin-sidebar-footer">
+        <div className={`admin-sidebar-footer ${styles.footer}`}>
           <p>{email}</p>
           <LogoutButton />
         </div>
