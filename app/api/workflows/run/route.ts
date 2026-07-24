@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     const organizationId = String(body.organization_id || "limitless-realty");
     const workflowKey = String(body.workflow_key || "");
     const payload = body.payload && typeof body.payload === "object" ? body.payload : {};
+    const attempt = Math.max(1, Number(body.attempt || 1));
 
     if (!workflowKey) {
       return NextResponse.json({ error: "workflow_key is required." }, { status: 400 });
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     const startedIso = new Date().toISOString();
 
     await Promise.all([
-      updateWorkflowRun(run.id, { status: "running", started_at: startedIso }),
+      updateWorkflowRun(run.id, { status: "running", attempt, started_at: startedIso }),
       updateWorkflowHeartbeat(workflow.id, { last_run_at: startedIso }),
     ]);
 
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
           "Content-Type": "application/json",
           "x-fluxknight-run-id": run.id,
           "x-fluxknight-workflow-key": workflow.workflow_key,
+          "x-fluxknight-attempt": String(attempt),
         },
         body: JSON.stringify({
           organization_id: workflow.organization_id,
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest) {
           workflow_key: workflow.workflow_key,
           workflow_version: workflow.current_version,
           workflow_run_id: run.id,
+          attempt,
           payload,
         }),
         signal: controller.signal,
@@ -105,6 +108,7 @@ export async function POST(request: NextRequest) {
         success: true,
         workflow_run_id: run.id,
         status: "succeeded",
+        attempt,
         result,
       });
     } finally {
