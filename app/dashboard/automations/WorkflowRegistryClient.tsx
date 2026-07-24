@@ -11,7 +11,15 @@ type Props = {
 };
 
 const providers = ["n8n", "trigger.dev", "telegram", "whatsapp", "email", "elevenlabs", "custom"];
-const statuses: WorkflowRecord["status"][] = ["draft", "active", "paused", "disabled", "error"];
+const statuses: WorkflowRecord["status"][] = ["active", "paused", "draft", "error", "disabled"];
+
+function familyLabel(value: string) {
+  return value
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, configured }: Props) {
   const router = useRouter();
@@ -29,6 +37,15 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
     }),
     [workflows],
   );
+
+  const workflowFamilies = useMemo(() => {
+    const families = new Map<string, WorkflowRecord[]>();
+    workflows.forEach((workflow) => {
+      const key = workflow.organization_id || "unassigned";
+      families.set(key, [...(families.get(key) || []), workflow]);
+    });
+    return Array.from(families.entries()).sort(([left], [right]) => left.localeCompare(right));
+  }, [workflows]);
 
   async function submitWorkflow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,6 +127,31 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
     }
   }
 
+  function renderWorkflow(workflow: WorkflowRecord) {
+    const canActivate = workflow.provider === "n8n"
+      ? Boolean(workflow.external_workflow_id)
+      : Boolean(workflow.endpoint_url);
+
+    return (
+      <div key={workflow.id} className="admin-list-row">
+        <div>
+          <strong>{workflow.name}</strong>
+          <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
+          <span>{workflow.description || workflow.workflow_key}</span>
+        </div>
+        <div className="admin-inline-actions">
+          <em>{workflow.status}</em>
+          {workflow.status === "active" ? (
+            <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "paused")}>Pause</button>
+          ) : (
+            <button className="admin-button secondary" type="button" disabled={workingId === workflow.id || !canActivate} onClick={() => changeStatus(workflow, "active")}>Activate</button>
+          )}
+          <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "disabled")}>Disable</button>
+        </div>
+      </div>
+    );
+  }
+
   const failedRuns = runs.filter((run) => ["failed", "timed_out", "cancelled"].includes(run.status)).slice(0, 10);
 
   return (
@@ -123,14 +165,14 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
       <section className="admin-panel">
         <div className="admin-panel-header">
           <h2>Register workflow</h2>
-          <p>{configured ? "Create or update a workflow by its organization and workflow key." : "Configure Supabase and run the workflow registry migration before saving workflows."}</p>
+          <p>{configured ? "Assign each workflow to its agent family using the organization field." : "Configure Supabase and run the workflow registry migration before saving workflows."}</p>
         </div>
 
         <form className="admin-form" onSubmit={submitWorkflow}>
           <div className="admin-form-grid">
             <label>Workflow name<input name="name" required placeholder="Maia lead onboarding" /></label>
             <label>Workflow key<input name="workflow_key" required placeholder="maia-lead-onboarding" /></label>
-            <label>Organization<input name="organization_id" defaultValue="limitless-realty" required /></label>
+            <label>Agent family / organization<input name="organization_id" defaultValue="limitless-realty" required /></label>
             <label>Project<input name="project_id" defaultValue="limitless-realty" required /></label>
             <label>Provider<select name="provider" defaultValue="n8n">{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label>
             <label>Status<select name="status" defaultValue="draft">{statuses.map((status) => <option key={status}>{status}</option>)}</select></label>
@@ -147,35 +189,38 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <h2>Workflow registry</h2>
-          <p>Pause a workflow before maintenance, then reactivate it after its endpoint is verified.</p>
+          <div>
+            <h2>Workflow families</h2>
+            <p>Workflows are grouped by agent family first, then by operational status.</p>
+          </div>
         </div>
-        <div className="admin-list">
-          {workflows.length ? workflows.map((workflow) => {
-            const canActivate = workflow.provider === "n8n"
-              ? Boolean(workflow.external_workflow_id)
-              : Boolean(workflow.endpoint_url);
 
-            return (
-              <div key={workflow.id} className="admin-list-row">
-                <div>
-                  <strong>{workflow.name}</strong>
-                  <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
-                  <span>{workflow.description || workflow.workflow_key}</span>
-                </div>
-                <div className="admin-inline-actions">
-                  <em>{workflow.status}</em>
-                  {workflow.status === "active" ? (
-                    <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "paused")}>Pause</button>
-                  ) : (
-                    <button className="admin-button secondary" type="button" disabled={workingId === workflow.id || !canActivate} onClick={() => changeStatus(workflow, "active")}>Activate</button>
-                  )}
-                  <button className="admin-button secondary" type="button" disabled={workingId === workflow.id} onClick={() => changeStatus(workflow, "disabled")}>Disable</button>
-                </div>
+        {workflowFamilies.length ? workflowFamilies.map(([family, familyWorkflows]) => (
+          <div key={family} style={{ marginTop: 24 }}>
+            <div className="admin-panel-header">
+              <div>
+                <h2>{familyLabel(family)}</h2>
+                <p>{familyWorkflows.length} registered workflow{familyWorkflows.length === 1 ? "" : "s"}.</p>
               </div>
-            );
-          }) : <p>No workflows are registered yet.</p>}
-        </div>
+            </div>
+
+            {statuses.map((status) => {
+              const statusWorkflows = familyWorkflows.filter((workflow) => workflow.status === status);
+              if (!statusWorkflows.length) return null;
+              return (
+                <div key={`${family}-${status}`} className="admin-list" style={{ marginTop: 16 }}>
+                  <div className="admin-panel-header">
+                    <div>
+                      <h2>{familyLabel(status)}</h2>
+                      <p>{statusWorkflows.length} workflow{statusWorkflows.length === 1 ? "" : "s"}.</p>
+                    </div>
+                  </div>
+                  {statusWorkflows.map(renderWorkflow)}
+                </div>
+              );
+            })}
+          </div>
+        )) : <p>No workflows are registered yet.</p>}
       </section>
 
       <section className="admin-panel">
