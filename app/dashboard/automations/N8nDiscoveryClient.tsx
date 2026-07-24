@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { WorkflowRecord } from "@/lib/workflow-registry";
 
 type N8nWorkflow = { id: string; name: string; active: boolean; editor_url?: string };
@@ -16,6 +16,11 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
   const [busyId, setBusyId] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState("");
+
+  const groupedWorkflows = useMemo(() => ({
+    active: workflows.filter((workflow) => workflow.active),
+    inactive: workflows.filter((workflow) => !workflow.active),
+  }), [workflows]);
 
   async function syncN8n() {
     setSyncing(true);
@@ -70,39 +75,57 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
     }
   }
 
+  function renderWorkflow(workflow: N8nWorkflow) {
+    const imported = registeredIds.has(workflow.id);
+    return (
+      <div key={workflow.id} className="admin-list-row">
+        <div>
+          <strong>{workflow.name}</strong>
+          <span>External ID: {workflow.id}</span>
+          <span>{imported ? "Managed in Fluxknight registry" : "Discovered from n8n"}</span>
+        </div>
+        <div className="admin-row-actions">
+          <em className={workflow.active ? "good" : "muted"}>{workflow.active ? "active" : "inactive"}</em>
+          {workflow.editor_url ? <a className="admin-button secondary" href={workflow.editor_url} target="_blank" rel="noreferrer">Open in n8n</a> : null}
+          <button className="admin-button" type="button" disabled={imported || busyId === workflow.id} onClick={() => importWorkflow(workflow)}>
+            {busyId === workflow.id ? "Importing..." : imported ? "Imported" : "Import"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="admin-panel">
       <div className="admin-panel-header">
         <div>
-          <h2>n8n discovery</h2>
-          <p>{configured ? "Synchronize n8n, open workflows, or import individual workflows into Fluxknight." : "Add n8n environment variables to enable workflow discovery."}</p>
+          <h2>n8n automations</h2>
+          <p>{configured ? "Automations are grouped by their current n8n activity state." : "Add n8n environment variables to enable workflow discovery."}</p>
         </div>
         <button className="admin-button" type="button" disabled={!configured || syncing} onClick={syncN8n}>
           {syncing ? "Syncing..." : "Sync n8n"}
         </button>
       </div>
       {message ? <p className="admin-form-message">{message}</p> : null}
+
       <div className="admin-list">
-        {workflows.map((workflow) => {
-          const imported = registeredIds.has(workflow.id);
-          return (
-            <div key={workflow.id} className="admin-list-row">
-              <div>
-                <strong>{workflow.name}</strong>
-                <span>External ID: {workflow.id}</span>
-                <span>{imported ? "Managed in Fluxknight registry" : "Discovered from n8n"}</span>
-              </div>
-              <div className="admin-row-actions">
-                <em className={workflow.active ? "good" : "muted"}>{workflow.active ? "active" : "inactive"}</em>
-                {workflow.editor_url ? <a className="admin-button secondary" href={workflow.editor_url} target="_blank" rel="noreferrer">Open in n8n</a> : null}
-                <button className="admin-button" type="button" disabled={imported || busyId === workflow.id} onClick={() => importWorkflow(workflow)}>
-                  {busyId === workflow.id ? "Importing..." : imported ? "Imported" : "Import"}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        {!workflows.length ? <p>No n8n workflows discovered yet.</p> : null}
+        <div className="admin-panel-header">
+          <div>
+            <h2>Active</h2>
+            <p>{groupedWorkflows.active.length} automation{groupedWorkflows.active.length === 1 ? "" : "s"} currently running.</p>
+          </div>
+        </div>
+        {groupedWorkflows.active.length ? groupedWorkflows.active.map(renderWorkflow) : <p>No active n8n automations.</p>}
+      </div>
+
+      <div className="admin-list" style={{ marginTop: 24 }}>
+        <div className="admin-panel-header">
+          <div>
+            <h2>Inactive</h2>
+            <p>{groupedWorkflows.inactive.length} paused or inactive automation{groupedWorkflows.inactive.length === 1 ? "" : "s"}.</p>
+          </div>
+        </div>
+        {groupedWorkflows.inactive.length ? groupedWorkflows.inactive.map(renderWorkflow) : <p>No inactive n8n automations.</p>}
       </div>
     </section>
   );
