@@ -28,25 +28,19 @@ const groups = [
     items: [{ href: "/dashboard", label: "Overview", icon: Home, exact: true }],
   },
   {
-    id: "crm-sales",
-    label: "CRM & Sales",
+    id: "limitless-realty",
+    label: "Limitless Realty",
     items: [
       { href: "/dashboard/limitless/leads", label: "Leads", icon: Users },
       { href: "/dashboard/limitless/followups", label: "Follow-ups", icon: MessageCircle },
-    ],
-  },
-  {
-    id: "real-estate",
-    label: "Real Estate",
-    items: [
       { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
       { href: "/dashboard/limitless/media", label: "Media Library", icon: Image },
       { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
     ],
   },
   {
-    id: "automation-ai",
-    label: "Automation & AI",
+    id: "automation-platform",
+    label: "Automation Platform",
     items: [
       { href: "/dashboard/automations", label: "Automation Control", icon: Bot },
       { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
