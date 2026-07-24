@@ -8,6 +8,7 @@ import {
   Bot,
   Building2,
   ChevronDown,
+  CreditCard,
   Home,
   Image,
   Megaphone,
@@ -39,6 +40,7 @@ const groups = [
       { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
       { href: "/dashboard/limitless/media", label: "Media Library", icon: Image },
       { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/dashboard/limitless/payments", label: "Payments & Installments", icon: CreditCard },
     ],
   },
   {
