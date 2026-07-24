@@ -1,5 +1,5 @@
 import { Bot, Building2, Clock3, Mail, Users } from "lucide-react";
-import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
+import { listClientOnboardingProfiles, type ClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ const labels: Record<string, string> = {
 };
 
 export default async function ClientsPage() {
-  let profiles = [];
+  let profiles: ClientOnboardingProfile[] = [];
   let error = "";
   try {
     profiles = await listClientOnboardingProfiles(100);
