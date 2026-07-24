@@ -4,6 +4,9 @@ export type N8nWorkflow = {
   active: boolean;
   updatedAt?: string;
   createdAt?: string;
+  nodes?: unknown[];
+  connections?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
 };
 
 export type N8nExecution = {
@@ -59,6 +62,14 @@ export async function listN8nWorkflows(limit = 100) {
 export async function listN8nExecutions(limit = 100) {
   const result = await n8nRequest<{ data?: N8nExecution[] } | N8nExecution[]>(`/executions?limit=${limit}`);
   return Array.isArray(result) ? result : result.data || [];
+}
+
+export async function createN8nWorkflow(workflow: Omit<N8nWorkflow, "id" | "active"> & { active?: boolean }) {
+  return n8nRequest<N8nWorkflow>("/workflows", { method: "POST", body: JSON.stringify(workflow) });
+}
+
+export async function updateN8nWorkflow(id: string, workflow: Partial<N8nWorkflow>) {
+  return n8nRequest<N8nWorkflow>(`/workflows/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(workflow) });
 }
 
 export async function activateN8nWorkflow(id: string) {
