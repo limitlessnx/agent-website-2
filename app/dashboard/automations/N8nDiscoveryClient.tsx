@@ -10,10 +10,34 @@ function workflowKey(name: string, id: string) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || `n8n-${id}`;
 }
 
-export default function N8nDiscoveryClient({ workflows, registeredWorkflows, configured }: Props) {
+export default function N8nDiscoveryClient({ workflows: initialWorkflows, registeredWorkflows, configured }: Props) {
+  const [workflows, setWorkflows] = useState(initialWorkflows);
   const [registeredIds, setRegisteredIds] = useState(() => new Set(registeredWorkflows.map((item) => item.external_workflow_id).filter(Boolean)));
   const [busyId, setBusyId] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState("");
+
+  async function syncN8n() {
+    setSyncing(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/n8n/sync", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to sync n8n workflows.");
+
+      const syncedRecords = Array.isArray(result.workflows) ? result.workflows as WorkflowRecord[] : [];
+      setRegisteredIds(new Set(syncedRecords.map((item) => item.external_workflow_id).filter(Boolean)));
+      setWorkflows((current) => current.map((workflow) => {
+        const record = syncedRecords.find((item) => item.external_workflow_id === workflow.id);
+        return record ? { ...workflow, active: record.status === "active" } : workflow;
+      }));
+      setMessage(`${result.synced || 0} n8n workflows synchronized.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to sync n8n workflows.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function importWorkflow(workflow: N8nWorkflow) {
     setBusyId(workflow.id);
@@ -51,8 +75,11 @@ export default function N8nDiscoveryClient({ workflows, registeredWorkflows, con
       <div className="admin-panel-header">
         <div>
           <h2>n8n discovery</h2>
-          <p>{configured ? "Open workflows in n8n or import them into the Fluxknight registry." : "Add n8n environment variables to enable workflow discovery."}</p>
+          <p>{configured ? "Synchronize n8n, open workflows, or import individual workflows into Fluxknight." : "Add n8n environment variables to enable workflow discovery."}</p>
         </div>
+        <button className="admin-button" type="button" disabled={!configured || syncing} onClick={syncN8n}>
+          {syncing ? "Syncing..." : "Sync n8n"}
+        </button>
       </div>
       {message ? <p className="admin-form-message">{message}</p> : null}
       <div className="admin-list">
