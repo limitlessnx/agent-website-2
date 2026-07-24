@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./flux-theme.css";
+import "./home-responsive.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
