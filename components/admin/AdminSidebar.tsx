@@ -25,7 +25,10 @@ const groups = [
   {
     id: "operations",
     label: "Operations",
-    items: [{ href: "/dashboard", label: "Overview", icon: Home, exact: true }],
+    items: [
+      { href: "/dashboard", label: "Overview", icon: Home, exact: true },
+      { href: "/dashboard/clients", label: "Client Onboarding", icon: Users },
+    ],
   },
   {
     id: "limitless-realty",
@@ -77,13 +80,7 @@ export default function AdminSidebar({ email }: { email: string }) {
   return (
     <>
       {!mobileOpen ? (
-        <button
-          type="button"
-          className={styles.mobileToggle}
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open navigation menu"
-          aria-expanded={false}
-        >
+        <button type="button" className={styles.mobileToggle} onClick={() => setMobileOpen(true)} aria-label="Open navigation menu" aria-expanded={false}>
           <Menu size={21} />
         </button>
       ) : null}
@@ -92,17 +89,12 @@ export default function AdminSidebar({ email }: { email: string }) {
 
       <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.mobileHeader}>
-          <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu">
-            <X size={20} />
-          </button>
+          <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><X size={20} /></button>
         </div>
 
         <Link href="/dashboard" className={`admin-brand ${styles.brand}`}>
           <span className="admin-brand-mark"><BarChart3 size={18} /></span>
-          <span>
-            Limitless OS
-            <small>Operations Console</small>
-          </span>
+          <span>Limitless OS<small>Operations Console</small></span>
         </Link>
 
         <nav className={`admin-nav ${styles.nav}`} aria-label="Admin navigation">
@@ -111,13 +103,7 @@ export default function AdminSidebar({ email }: { email: string }) {
             const hasActiveItem = group.items.some((item) => itemIsActive(pathname, item));
             return (
               <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
-                <button
-                  type="button"
-                  className={styles.trigger}
-                  onClick={() => toggleGroup(group.id)}
-                  aria-expanded={isOpen}
-                  aria-controls={`admin-nav-${group.id}`}
-                >
+                <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen} aria-controls={`admin-nav-${group.id}`}>
                   <span>{group.label}</span>
                   <ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
                 </button>
@@ -126,8 +112,7 @@ export default function AdminSidebar({ email }: { email: string }) {
                     const active = itemIsActive(pathname, item);
                     return (
                       <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}>
-                        <item.icon size={17} />
-                        <span>{item.label}</span>
+                        <item.icon size={17} /><span>{item.label}</span>
                       </Link>
                     );
                   })}
