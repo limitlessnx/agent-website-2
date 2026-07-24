@@ -16,6 +16,7 @@ import {
   Users,
   Workflow,
 } from "lucide-react";
+import LogoutButton from "@/components/admin/LogoutButton";
 
 const groups = [
   {
@@ -115,6 +116,7 @@ export default function AdminSidebar({ email }: { email: string }) {
 
       <div className="admin-sidebar-footer">
         <p>{email}</p>
+        <LogoutButton />
       </div>
     </aside>
   );
