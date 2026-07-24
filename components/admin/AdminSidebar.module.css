@@ -1,3 +1,13 @@
+.sidebar {
+  z-index: 50;
+}
+
+.mobileToggle,
+.mobileHeader,
+.backdrop {
+  display: none;
+}
+
 .group {
   display: grid;
   gap: 4px;
@@ -65,4 +75,76 @@
   height: 18px;
   border-radius: 999px;
   background: var(--cyan);
+}
+
+@media (max-width: 900px) {
+  .mobileToggle {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 80;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    color: var(--admin-text);
+    background: var(--admin-panel-strong);
+    box-shadow: var(--admin-shadow);
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: block;
+    border: 0;
+    background: rgba(2, 6, 23, 0.68);
+    backdrop-filter: blur(4px);
+  }
+
+  .sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0;
+    z-index: 70;
+    width: min(82vw, 300px) !important;
+    max-width: 300px !important;
+    height: 100dvh !important;
+    padding: 18px !important;
+    border-right: 1px solid var(--admin-border) !important;
+    border-bottom: 0 !important;
+    transform: translateX(-105%);
+    transition: transform 220ms ease;
+    overflow-y: auto;
+    box-shadow: 24px 0 80px rgba(0, 0, 0, 0.45);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .mobileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--admin-text-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .mobileHeader button {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--admin-border);
+    border-radius: 9px;
+    color: var(--admin-text);
+    background: transparent;
+  }
 }
