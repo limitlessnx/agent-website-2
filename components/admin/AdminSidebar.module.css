@@ -1,0 +1,68 @@
+.group {
+  display: grid;
+  gap: 4px;
+}
+
+.trigger {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.trigger:hover,
+.groupActive .trigger {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.chevron {
+  transition: transform 160ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.items {
+  display: none;
+  gap: 4px;
+  padding-left: 6px;
+}
+
+.itemsOpen {
+  display: grid;
+}
+
+.items a {
+  position: relative;
+}
+
+.items a[aria-current="page"] {
+  color: var(--text-primary);
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.items a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--cyan);
+}
