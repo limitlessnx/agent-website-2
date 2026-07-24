@@ -5,355 +5,166 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   Bot,
-  CheckCircle2,
   Database,
   Headphones,
   MessageSquare,
   Mic,
   Network,
-  ShieldCheck,
   Sparkles,
   Workflow,
   Zap,
 } from "lucide-react";
 import ElevenLabsConsultant from "@/components/ElevenLabsConsultant";
 
-const capabilities = [
-  { icon: Bot, title: "AI Sales", text: "Qualifies prospects, handles objections, and advances deals around the clock." },
-  { icon: Headphones, title: "AI Support", text: "Resolves routine questions and hands complex issues to the correct person." },
-  { icon: Mic, title: "Voice Agents", text: "Answers and places calls, captures intent, and books appointments." },
-  { icon: MessageSquare, title: "Omnichannel", text: "Runs coordinated conversations across web, WhatsApp, Telegram, email, and voice." },
-  { icon: Workflow, title: "Automation", text: "Connects n8n, Trigger.dev, Supabase, and your existing business tools." },
-  { icon: Database, title: "Business Memory", text: "Stores leads, conversations, tasks, catalog data, and decisions in one system." },
+const featureCards = [
+  { icon: Bot, title: "AI Sales Agents", text: "Qualify leads, answer objections, recommend the next step, and move opportunities into your pipeline.", visual: "nodes" },
+  { icon: Headphones, title: "Customer Support", text: "Resolve routine questions instantly and route sensitive or complex requests to the correct human.", visual: "people" },
+  { icon: Database, title: "Data Integration", text: "Connect conversations, CRM records, catalogs, documents, and operational data in one controlled layer.", visual: "line" },
+  { icon: Mic, title: "Voice Automation", text: "Run natural inbound and outbound calls for qualification, booking, reminders, and follow-up.", visual: "wave" },
+  { icon: Workflow, title: "Workflow Intelligence", text: "Coordinate n8n, Trigger.dev, Supabase, and business tools through auditable workflow contracts.", visual: "bars" },
 ];
 
-const operatingLayers = [
-  ["01", "Understand", "Map your sales, support, and operating process before automating anything."],
-  ["02", "Deploy", "Launch focused AI employees with clear permissions, workflows, and human handoff."],
-  ["03", "Optimize", "Measure conversations, conversion, failures, and opportunities for expansion."],
-];
-
-const systems = [
-  { title: "Real Estate OS", detail: "Lead qualification, property matching, inspections, nurture, and agent handoff.", status: "Live architecture" },
-  { title: "Sales Engine", detail: "Lead sourcing, outbound sequences, reply scoring, CRM updates, and closer alerts.", status: "Deployable" },
-  { title: "Customer Care", detail: "Shared inbox, AI support, ticket routing, voice assistance, and escalation.", status: "Deployable" },
-  { title: "Operations Agent", detail: "Internal requests, reminders, reporting, document workflows, and approvals.", status: "Custom build" },
-];
-
-function WolfMark() {
+function MiniChart() {
   return (
-    <div className="wolf-stage" aria-label="Fluxknight cyber wolf emblem">
-      <div className="wolf-orbit orbit-one" />
-      <div className="wolf-orbit orbit-two" />
-      <motion.svg
-        className="wolf-mark"
-        viewBox="0 0 520 520"
-        initial={{ opacity: 0, scale: 0.86, rotate: -4 }}
-        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <defs>
-          <linearGradient id="wolfMetal" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#dff7ff" />
-            <stop offset="0.24" stopColor="#6bdcff" />
-            <stop offset="0.55" stopColor="#0c6fa9" />
-            <stop offset="1" stopColor="#03101d" />
-          </linearGradient>
-          <linearGradient id="wolfDark" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#102738" />
-            <stop offset="1" stopColor="#02070d" />
-          </linearGradient>
-          <filter id="wolfGlow" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="8" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        <path d="M88 104 208 54 260 136 312 54 432 104 394 264 338 392 260 458 182 392 126 264Z" fill="url(#wolfDark)" stroke="#1a668d" strokeWidth="4" />
-        <path d="M88 104 192 132 126 264Z" fill="url(#wolfMetal)" opacity="0.9" />
-        <path d="M432 104 328 132 394 264Z" fill="url(#wolfMetal)" opacity="0.9" />
-        <path d="M208 54 260 136 182 174 126 264 192 132Z" fill="#0b1d2b" stroke="#2bbde8" strokeWidth="3" />
-        <path d="M312 54 260 136 338 174 394 264 328 132Z" fill="#0b1d2b" stroke="#2bbde8" strokeWidth="3" />
-        <path d="M182 174 260 136 338 174 318 330 260 382 202 330Z" fill="url(#wolfMetal)" />
-        <path d="M182 174 216 260 260 240 260 136Z" fill="#102b3c" opacity="0.95" />
-        <path d="M338 174 304 260 260 240 260 136Z" fill="#071521" opacity="0.95" />
-        <path d="M202 330 260 382 318 330 298 396 260 430 222 396Z" fill="#06131d" stroke="#2bbde8" strokeWidth="3" />
-        <path d="M148 246 218 228 246 250 206 278 154 270Z" fill="#08111a" stroke="#6ee7ff" strokeWidth="3" />
-        <path d="M372 246 302 228 274 250 314 278 366 270Z" fill="#08111a" stroke="#6ee7ff" strokeWidth="3" />
-        <path d="M171 252 218 242 231 251 205 263 176 261Z" fill="#9cf1ff" filter="url(#wolfGlow)" />
-        <path d="M349 252 302 242 289 251 315 263 344 261Z" fill="#9cf1ff" filter="url(#wolfGlow)" />
-        <path d="M238 304 260 282 282 304 260 324Z" fill="#021019" stroke="#84edff" strokeWidth="3" />
-        <path d="M260 136V240M216 260l-34 70M304 260l34 70M260 324v58" stroke="#9beeff" strokeWidth="3" opacity="0.7" />
-      </motion.svg>
-      <div className="wolf-platform" />
+    <div className="mini-chart" aria-hidden="true">
+      {[36, 55, 44, 72, 62, 84, 67, 91].map((height, index) => (
+        <span key={index} style={{ height: `${height}%` }} className={index === 5 ? "active" : ""} />
+      ))}
     </div>
   );
 }
 
-function Metric({ value, label }: { value: string; label: string }) {
+function DashboardPreview() {
   return (
-    <div className="hero-metric">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
+    <motion.div className="product-preview" initial={{ opacity: 0, y: 42, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .9, delay: .28, ease: [0.16, 1, 0.3, 1] }}>
+      <div className="preview-glow" />
+      <div className="preview-shell">
+        <aside className="preview-sidebar">
+          <div className="preview-logo"><Zap size={14} /></div>
+          {["home", "agents", "flows", "data"].map((item, index) => <span key={item} className={index === 0 ? "selected" : ""} />)}
+        </aside>
+        <div className="preview-main">
+          <div className="preview-topbar">
+            <div><strong>Fluxknight OS</strong><span>Limitless Realty workspace</span></div>
+            <div className="preview-user">NE</div>
+          </div>
+          <div className="preview-heading">
+            <div><span>Workspace</span><h3>AI operations dashboard</h3></div>
+            <button>Deploy agent</button>
+          </div>
+          <div className="preview-metrics">
+            <article><span>Active agents</span><strong>04</strong><small>All systems online</small></article>
+            <article><span>Qualified leads</span><strong>128</strong><small>+18.4% this month</small></article>
+            <article><span>Workflow success</span><strong>96.8%</strong><small>1,842 recent runs</small></article>
+          </div>
+          <div className="preview-grid">
+            <article className="preview-chart-card">
+              <div className="card-title"><div><span>Automation activity</span><strong>Workflow executions</strong></div><small>Last 7 days</small></div>
+              <MiniChart />
+              <div className="chart-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+            </article>
+            <article className="preview-agent-card">
+              <div className="card-title"><div><span>Agent status</span><strong>Maia</strong></div><i /></div>
+              <div className="agent-orb"><Sparkles size={24} /></div>
+              <p>Real estate sales assistant</p>
+              <div className="agent-stat"><span>Conversations today</span><strong>47</strong></div>
+              <div className="agent-stat"><span>Human handoffs</span><strong>06</strong></div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
+}
+
+function FeatureVisual({ type }: { type: string }) {
+  if (type === "nodes") return <div className="visual-nodes"><span /><b><Bot size={23} /></b><span /><span /></div>;
+  if (type === "people") return <div className="visual-people"><i>NE</i><b><Headphones size={23} /></b><i>AM</i><i>OS</i></div>;
+  if (type === "line") return <div className="visual-line"><svg viewBox="0 0 360 110"><path d="M0 82 C42 72 55 88 89 59 S145 80 177 45 S230 68 263 31 S319 48 360 20" fill="none" stroke="url(#lineGlow)" strokeWidth="3"/><defs><linearGradient id="lineGlow"><stop stopColor="#6332cf"/><stop offset="1" stopColor="#d0a9ff"/></linearGradient></defs></svg></div>;
+  if (type === "wave") return <div className="visual-wave"><span /><span /><span /><b><Mic size={25} /></b><span /><span /><span /></div>;
+  return <div className="visual-bars">{[42,58,74,52,92,68].map((height,index)=><span key={index} style={{height:`${height}%`}} className={index===4?"active":""}/>)}</div>;
 }
 
 export default function HomePage() {
   return (
-    <main className="home-v2">
+    <main className="quantix-home">
       <ElevenLabsConsultant />
 
-      <section className="hero-v2">
-        <div className="hero-grid" />
-        <div className="hero-glow" />
-        <div className="hero-word" aria-hidden="true">FLUXKNIGHT</div>
-
-        <div className="hero-copy">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className="eyebrow">
-            <span className="pulse-dot" /> AI BUSINESS OPERATING SYSTEM
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.75, delay: 0.08 }}>
-            Build an AI workforce that <span>hunts bottlenecks.</span>
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.18 }}>
-            Fluxknight gives growing businesses AI sales, support, voice, lead generation, and workflow agents inside one controlled operating system.
-          </motion.p>
-          <motion.div className="hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.28 }}>
-            <Link className="primary-cta" href="/account/signup">Create Account <ArrowRight size={18} /></Link>
-            <Link className="secondary-cta" href="/evaluation">Explore Your AI System</Link>
-          </motion.div>
-        </div>
-
-        <WolfMark />
-
-        <motion.div className="floating-card card-agents" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.65 }}>
-          <div className="card-icon"><Bot size={18} /></div>
-          <span>Active agents</span>
-          <strong>04</strong>
-          <small>sales · care · voice · operations</small>
+      <section className="quantix-hero">
+        <div className="hero-stars" />
+        <div className="violet-arc" />
+        <div className="hero-haze" />
+        <motion.div className="hero-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
+          <div className="hero-pill"><Sparkles size={13} /> Coordinate your AI workforce</div>
+          <h1>Elevate your business using<br /><span>AI-driven automation.</span></h1>
+          <p>Deploy intelligent sales, support, voice, and workflow agents through one secure operating system built around your business.</p>
+          <div className="hero-buttons">
+            <Link className="button-primary" href="/account/signup">Create Account <ArrowRight size={17} /></Link>
+            <Link className="button-secondary" href="/evaluation">Book a Demo <ArrowRight size={16} /></Link>
+          </div>
         </motion.div>
+        <DashboardPreview />
+      </section>
 
-        <motion.div className="floating-card card-network" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.75 }}>
-          <div className="card-icon"><Network size={18} /></div>
-          <span>System status</span>
-          <strong className="online"><i /> Connected</strong>
-          <small>Supabase · n8n · channels</small>
-        </motion.div>
+      <section className="integration-strip">
+        <p>Built to connect with the tools your business already uses</p>
+        <div><span>n8n</span><span>Supabase</span><span>ElevenLabs</span><span>WhatsApp</span><span>Trigger.dev</span><span>OpenAI</span></div>
+      </section>
 
-        <div className="hero-bottom">
-          <Metric value="24/7" label="Always-on agents" />
-          <Metric value="01" label="Shared operating system" />
-          <Metric value="∞" label="Configurable workflows" />
+      <section className="quantix-features">
+        <div className="section-intro">
+          <div className="small-label"><Sparkles size={12} /> Platform capabilities</div>
+          <h2>Accelerate your operations with<br />one connected AI system.</h2>
+          <p>Each agent can work independently, while sharing the same data, permissions, workflow registry, and human escalation rules.</p>
+        </div>
+        <div className="feature-grid">
+          {featureCards.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <motion.article key={feature.title} className={index > 2 ? "feature-card wide" : "feature-card"} initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} transition={{ delay: index * .07 }}>
+                <FeatureVisual type={feature.visual} />
+                <div className="feature-copy"><Icon size={17} /><h3>{feature.title}</h3><p>{feature.text}</p></div>
+              </motion.article>
+            );
+          })}
+        </div>
+        <Link className="explore-button" href="/services">Explore all capabilities <ArrowRight size={16} /></Link>
+      </section>
+
+      <section className="quantix-platform">
+        <div className="platform-copy">
+          <div className="small-label"><Network size={12} /> Fluxknight platform</div>
+          <h2>One control layer for every AI employee.</h2>
+          <p>Manage organizations, branches, agent families, projects, workflows, conversations, permissions, and performance from one coherent backend.</p>
+          <div className="platform-points">
+            <span><Bot size={17} /> Agent management</span>
+            <span><Database size={17} /> Shared business memory</span>
+            <span><Workflow size={17} /> Workflow monitoring</span>
+            <span><MessageSquare size={17} /> Omnichannel conversations</span>
+          </div>
+          <Link href="/account/signup">Start building <ArrowRight size={17} /></Link>
+        </div>
+        <div className="platform-visual">
+          <div className="platform-ring ring-one" /><div className="platform-ring ring-two" />
+          <div className="platform-core"><Zap size={32} /><strong>FLUX CORE</strong><span>orchestration online</span></div>
+          <div className="platform-node node-a"><Bot size={17} /> Agents</div>
+          <div className="platform-node node-b"><Database size={17} /> Data</div>
+          <div className="platform-node node-c"><Workflow size={17} /> Flows</div>
+          <div className="platform-node node-d"><Mic size={17} /> Voice</div>
         </div>
       </section>
 
-      <section className="manifesto-section">
-        <div className="manifesto-word" aria-hidden="true">AUTOMATION</div>
-        <div className="section-wrap manifesto-grid">
-          <div>
-            <p className="section-kicker">A different kind of AI agency</p>
-            <h2>Not a chatbot.<br />A coordinated business system.</h2>
-          </div>
-          <div className="manifesto-copy">
-            <p>Most automation projects become a pile of disconnected bots. Fluxknight treats agents, workflows, data, permissions, and human teams as one operating structure.</p>
-            <div className="trust-row"><ShieldCheck size={20} /><span>Tenant-isolated data and controlled access</span></div>
-            <div className="trust-row"><CheckCircle2 size={20} /><span>Human handoff when confidence or authority runs out</span></div>
-            <div className="trust-row"><Zap size={20} /><span>Existing n8n workflows integrated instead of discarded</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="capabilities-section">
-        <div className="section-wrap">
-          <div className="section-heading-row">
-            <div>
-              <p className="section-kicker">Fluxknight capabilities</p>
-              <h2>One intelligence layer.<br />Multiple AI employees.</h2>
-            </div>
-            <p>Every module is independent enough to deploy quickly, but structured to collaborate through shared data and clear workflow contracts.</p>
-          </div>
-          <div className="capability-grid">
-            {capabilities.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <motion.article key={item.title} className="capability-card" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}>
-                  <div className="capability-number">0{index + 1}</div>
-                  <Icon size={24} />
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
-                </motion.article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="os-showcase">
-        <div className="section-wrap os-grid">
-          <div className="os-visual">
-            <div className="os-light" />
-            <div className="os-core">
-              <Sparkles size={34} />
-              <strong>FLUX CORE</strong>
-              <span>agent orchestration</span>
-            </div>
-            <div className="node node-one"><MessageSquare size={18} /> Channels</div>
-            <div className="node node-two"><Database size={18} /> Memory</div>
-            <div className="node node-three"><Workflow size={18} /> Workflows</div>
-            <div className="node node-four"><ShieldCheck size={18} /> Control</div>
-          </div>
-          <div className="os-copy">
-            <p className="section-kicker">The operating core</p>
-            <h2>Your business systems stop working alone.</h2>
-            <p>Fluxknight connects conversations, agents, CRM records, catalogs, workflows, and human actions through one tenant-aware platform.</p>
-            <Link href="/services">See the architecture <ArrowRight size={17} /></Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="roadmap-section">
-        <div className="section-wrap">
-          <div className="roadmap-heading">
-            <p className="section-kicker">Deployment roadmap</p>
-            <h2>A controlled path from audit to live AI workforce.</h2>
-          </div>
-          <div className="roadmap-grid">
-            {operatingLayers.map(([number, title, text], index) => (
-              <article className="roadmap-item" key={number}>
-                <div className="roadmap-circle"><span>{number}</span></div>
-                <div className="roadmap-pill"><i /> {title}</div>
-                <p>{text}</p>
-                {index < operatingLayers.length - 1 ? <div className="roadmap-line" /> : null}
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="systems-section">
-        <div className="section-wrap">
-          <div className="section-heading-row">
-            <div>
-              <p className="section-kicker">Systems we build</p>
-              <h2>Industry-ready foundations.<br />Configured for your business.</h2>
-            </div>
-            <Link className="text-link" href="/industries">View industries <ArrowRight size={16} /></Link>
-          </div>
-          <div className="systems-grid">
-            {systems.map((system, index) => (
-              <article className="system-card" key={system.title}>
-                <div className="system-index">0{index + 1}</div>
-                <div>
-                  <span>{system.status}</span>
-                  <h3>{system.title}</h3>
-                  <p>{system.detail}</p>
-                </div>
-                <ArrowRight size={20} />
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="final-cta-v2">
+      <section className="quantix-final">
         <div className="final-glow" />
-        <div className="section-wrap final-inner">
-          <p className="section-kicker">Enter the system</p>
-          <h2>Build the business that keeps moving when you log off.</h2>
-          <p>Create your Fluxknight workspace or begin with a strategy evaluation.</p>
-          <div className="hero-actions centered-actions">
-            <Link className="primary-cta" href="/account/signup">Create Account <ArrowRight size={18} /></Link>
-            <Link className="secondary-cta" href="/account/login">Login</Link>
-          </div>
-        </div>
+        <div className="small-label"><Sparkles size={12} /> Build your AI workforce</div>
+        <h2>Your business should keep moving<br />when you are not online.</h2>
+        <p>Create your Fluxknight workspace and begin configuring the agents your team actually needs.</p>
+        <div className="hero-buttons"><Link className="button-primary" href="/account/signup">Create Account <ArrowRight size={17} /></Link><Link className="button-secondary" href="/account/login">Login</Link></div>
       </section>
 
-      <style jsx global>{`
-        :root { --fk-blue:#27c9ff; --fk-blue-2:#0878bc; --fk-ink:#02060c; --fk-panel:#08121d; --fk-line:rgba(125,210,255,.18); --fk-muted:#7d95aa; }
-        .home-v2 { background:#02060c; color:#f6fbff; overflow:hidden; }
-        .section-wrap { width:min(1180px, calc(100% - 40px)); margin:0 auto; position:relative; z-index:2; }
-        .hero-v2 { min-height:940px; position:relative; display:grid; place-items:center; overflow:hidden; border-bottom:1px solid var(--fk-line); background:radial-gradient(circle at 50% 42%, rgba(19,144,211,.26), transparent 30%), linear-gradient(180deg,#02060c 0%,#03101b 58%,#02060c 100%); }
-        .hero-grid { position:absolute; inset:0; opacity:.55; background-image:linear-gradient(rgba(51,159,211,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(51,159,211,.08) 1px,transparent 1px); background-size:86px 86px; mask-image:linear-gradient(to bottom,black,transparent 92%); }
-        .hero-glow { position:absolute; width:760px; height:760px; border-radius:50%; background:radial-gradient(circle,rgba(34,184,255,.2),rgba(3,51,79,.08) 42%,transparent 70%); filter:blur(10px); top:160px; left:50%; transform:translateX(-50%); }
-        .hero-word { position:absolute; top:180px; left:50%; transform:translateX(-50%); font-size:clamp(5rem,13vw,12rem); font-weight:900; letter-spacing:.04em; color:rgba(214,244,255,.05); white-space:nowrap; }
-        .hero-copy { position:absolute; left:max(26px,calc((100vw - 1180px)/2)); top:180px; width:min(520px,44vw); z-index:4; }
-        .eyebrow,.section-kicker { color:#5bdcff; letter-spacing:.19em; text-transform:uppercase; font-size:.72rem; font-weight:800; }
-        .pulse-dot { width:7px;height:7px;border-radius:50%;background:#64e6ff;box-shadow:0 0 18px #35d5ff;display:inline-block;margin-right:8px; }
-        .hero-copy h1 { font-size:clamp(3rem,5.6vw,6.1rem); line-height:.94; letter-spacing:-.055em; margin:28px 0 24px; max-width:720px; }
-        .hero-copy h1 span { color:transparent; -webkit-text-stroke:1px #61dfff; text-shadow:0 0 36px rgba(47,201,255,.18); }
-        .hero-copy>p { color:#91a9ba; font-size:1.04rem; line-height:1.8; max-width:560px; }
-        .hero-actions { display:flex; gap:12px; margin-top:34px; flex-wrap:wrap; }
-        .primary-cta,.secondary-cta { min-height:52px; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:0 24px; border-radius:999px; text-decoration:none; font-weight:800; font-size:.9rem; }
-        .primary-cta { color:#001019; background:linear-gradient(135deg,#8bedff,#16b8ef); box-shadow:0 0 38px rgba(39,201,255,.22); }
-        .secondary-cta { color:#dcefff; border:1px solid rgba(121,214,255,.28); background:rgba(7,18,29,.66); backdrop-filter:blur(14px); }
-        .wolf-stage { position:absolute; width:min(560px,48vw); height:min(620px,65vw); left:58%; top:170px; display:grid; place-items:center; z-index:3; }
-        .wolf-mark { width:88%; position:relative; z-index:2; filter:drop-shadow(0 0 34px rgba(42,195,255,.18)); }
-        .wolf-orbit { position:absolute; border:1px solid rgba(78,205,255,.18); border-radius:50%; }
-        .orbit-one { width:92%;height:92%;animation:spinSlow 28s linear infinite; }
-        .orbit-two { width:72%;height:72%;border-style:dashed;animation:spinSlow 19s linear reverse infinite; }
-        .wolf-platform { position:absolute; bottom:28px; width:72%; height:62px; border-radius:50%; background:radial-gradient(ellipse,rgba(65,207,255,.38),rgba(5,59,88,.1) 55%,transparent 75%); filter:blur(10px); }
-        @keyframes spinSlow { to { transform:rotate(360deg); } }
-        .floating-card { position:absolute; z-index:5; width:220px; padding:18px; border:1px solid rgba(113,212,255,.23); border-radius:20px; background:linear-gradient(145deg,rgba(18,37,52,.82),rgba(5,15,24,.66)); backdrop-filter:blur(20px); box-shadow:inset 0 1px rgba(255,255,255,.07),0 18px 50px rgba(0,0,0,.28); }
-        .floating-card span,.floating-card small { display:block;color:#7f99ad; }
-        .floating-card strong { display:block;font-size:1.55rem;margin:8px 0; }
-        .floating-card small { font-size:.7rem;line-height:1.5; }
-        .card-icon { width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(35,196,255,.12);color:#6ee7ff;margin-bottom:13px; }
-        .card-agents { left:calc(50% - 40px); top:640px; }
-        .card-network { right:max(24px,calc((100vw - 1180px)/2)); top:300px; }
-        .online { font-size:1rem!important;color:#d9f7ff;display:flex!important;align-items:center;gap:8px; }
-        .online i { width:8px;height:8px;border-radius:50%;background:#62ffbd;box-shadow:0 0 14px #62ffbd; }
-        .hero-bottom { position:absolute; bottom:42px; left:50%; transform:translateX(-50%); width:min(1060px,calc(100% - 48px)); display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--fk-line); padding-top:24px; z-index:4; }
-        .hero-metric { text-align:center; border-right:1px solid var(--fk-line); }
-        .hero-metric:last-child { border-right:0; }
-        .hero-metric strong { display:block;color:#4edbff;font-size:2rem;letter-spacing:-.04em; }
-        .hero-metric span { color:#6f879b;font-size:.78rem; }
-        .manifesto-section { min-height:690px; position:relative; display:grid; align-items:center; border-bottom:1px solid var(--fk-line); background:radial-gradient(circle at 50% 100%,rgba(24,145,205,.18),transparent 34%),#02060c; }
-        .manifesto-word { position:absolute; bottom:54px; left:50%; transform:translateX(-50%); font-size:clamp(5rem,16vw,14rem); font-weight:900; color:rgba(52,190,255,.06); white-space:nowrap; }
-        .manifesto-grid { display:grid;grid-template-columns:1.05fr .95fr;gap:90px;align-items:center; }
-        .manifesto-grid h2,.section-heading-row h2,.os-copy h2,.roadmap-heading h2,.final-inner h2 { font-size:clamp(2.5rem,5vw,5.2rem);line-height:1;letter-spacing:-.05em;margin:18px 0; }
-        .manifesto-copy>p,.section-heading-row>p,.os-copy>p,.final-inner>p { color:#8198ab;line-height:1.85; }
-        .trust-row { display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid rgba(125,210,255,.12);color:#cfe5f2; }
-        .trust-row svg { color:#50d8ff; }
-        .capabilities-section,.systems-section { padding:120px 0;background:#03080e; }
-        .section-heading-row { display:grid;grid-template-columns:1.15fr .85fr;gap:80px;align-items:end;margin-bottom:60px; }
-        .section-heading-row>p { max-width:500px; }
-        .capability-grid { display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--fk-line);border-left:1px solid var(--fk-line); }
-        .capability-card { min-height:300px;padding:34px;border-right:1px solid var(--fk-line);border-bottom:1px solid var(--fk-line);background:linear-gradient(145deg,rgba(12,28,42,.58),rgba(4,10,16,.62));position:relative; }
-        .capability-card svg { color:#61ddff;margin-top:52px; }
-        .capability-card h3 { font-size:1.35rem;margin:20px 0 12px; }
-        .capability-card p { color:#7890a4;line-height:1.7;font-size:.9rem; }
-        .capability-number { position:absolute;right:24px;top:20px;color:rgba(113,217,255,.22);font-size:2.7rem;font-weight:800; }
-        .os-showcase { padding:130px 0;border-block:1px solid var(--fk-line);background:radial-gradient(circle at 35% 50%,rgba(20,147,213,.2),transparent 28%),#02060c; }
-        .os-grid { display:grid;grid-template-columns:1.15fr .85fr;gap:90px;align-items:center; }
-        .os-visual { min-height:560px;position:relative;display:grid;place-items:center;border:1px solid rgba(107,210,255,.16);background:linear-gradient(145deg,rgba(12,32,47,.7),rgba(2,8,14,.55));overflow:hidden; }
-        .os-light { position:absolute;width:430px;height:430px;border-radius:50%;background:radial-gradient(circle,rgba(43,190,255,.24),transparent 68%); }
-        .os-core { width:190px;height:190px;border-radius:50%;border:1px solid rgba(123,222,255,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(4,16,25,.82);box-shadow:0 0 70px rgba(34,183,248,.16);z-index:2; }
-        .os-core svg { color:#7ceaff; }
-        .os-core strong { letter-spacing:.14em; }
-        .os-core span { color:#708da2;font-size:.68rem; }
-        .node { position:absolute;padding:12px 16px;border:1px solid rgba(115,212,255,.22);border-radius:999px;background:rgba(7,21,31,.8);display:flex;align-items:center;gap:8px;color:#b9d8e8;font-size:.78rem; }
-        .node svg { color:#54d8ff; }
-        .node-one { top:90px;left:70px; }.node-two{top:110px;right:58px}.node-three{bottom:90px;left:48px}.node-four{bottom:105px;right:68px}
-        .os-copy a,.text-link { color:#65ddff;text-decoration:none;display:inline-flex;align-items:center;gap:8px;margin-top:20px;font-weight:700; }
-        .roadmap-section { padding:130px 0;background:linear-gradient(180deg,#03111d,#04243a 55%,#02060c); }
-        .roadmap-heading { text-align:center;max-width:800px;margin:0 auto 70px; }
-        .roadmap-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:34px; }
-        .roadmap-item { position:relative;text-align:center;padding:30px 20px; }
-        .roadmap-circle { width:250px;height:250px;border-radius:50%;border:1px dashed rgba(112,211,255,.25);margin:0 auto -92px;display:grid;place-items:start center;padding-top:38px;color:#9bcce1; }
-        .roadmap-pill { min-height:48px;border-radius:999px;border:1px solid rgba(124,219,255,.2);background:linear-gradient(90deg,rgba(29,93,131,.62),rgba(75,157,202,.4));display:flex;align-items:center;justify-content:center;gap:10px;position:relative;z-index:2;box-shadow:inset 0 1px rgba(255,255,255,.08); }
-        .roadmap-pill i { width:8px;height:8px;border-radius:50%;background:white;box-shadow:0 0 10px white; }
-        .roadmap-item p { color:#7894a7;font-size:.85rem;line-height:1.7;margin:24px auto 0;max-width:260px; }
-        .roadmap-line { position:absolute;top:167px;right:-34px;width:68px;height:1px;background:rgba(93,202,255,.23); }
-        .systems-grid { display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--fk-line); }
-        .system-card { display:grid;grid-template-columns:70px 1fr auto;gap:24px;align-items:center;min-height:210px;padding:30px;border-right:1px solid var(--fk-line);border-bottom:1px solid var(--fk-line);background:linear-gradient(145deg,rgba(8,22,33,.65),rgba(2,8,13,.45)); }
-        .system-card:nth-child(even){border-right:0}.system-index{font-size:2.7rem;color:rgba(88,210,255,.2);font-weight:800}.system-card span{color:#4fd7ff;font-size:.67rem;text-transform:uppercase;letter-spacing:.14em}.system-card h3{font-size:1.35rem;margin:10px 0}.system-card p{color:#748b9e;line-height:1.65;font-size:.86rem}.system-card>svg{color:#4bd4ff}
-        .final-cta-v2 { padding:150px 0;position:relative;text-align:center;background:#02060c;border-top:1px solid var(--fk-line); }
-        .final-glow { position:absolute;width:700px;height:500px;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(35,184,249,.16),transparent 66%); }
-        .final-inner { max-width:900px; }.final-inner h2{max-width:850px;margin:20px auto}.final-inner>p{max-width:560px;margin:0 auto}.centered-actions{justify-content:center}
-        @media (max-width:980px){
-          .hero-v2{min-height:1120px;display:block}.hero-copy{position:relative;left:auto;top:auto;width:min(720px,calc(100% - 40px));margin:0 auto;padding-top:135px;text-align:center}.hero-copy>p{margin-inline:auto}.hero-actions{justify-content:center}.wolf-stage{left:50%;transform:translateX(-50%);top:510px;width:min(520px,88vw);height:520px}.card-agents{left:28px;top:760px}.card-network{right:28px;top:610px}.hero-word{top:235px}.manifesto-grid,.section-heading-row,.os-grid{grid-template-columns:1fr;gap:42px}.capability-grid{grid-template-columns:repeat(2,1fr)}.roadmap-grid{grid-template-columns:1fr}.roadmap-line{display:none}.systems-grid{grid-template-columns:1fr}.system-card,.system-card:nth-child(even){border-right:0}}
-        @media (max-width:640px){
-          .section-wrap{width:min(100% - 28px,1180px)}.hero-v2{min-height:1080px}.hero-copy{width:calc(100% - 28px);padding-top:110px}.hero-copy h1{font-size:3.15rem}.hero-word{top:300px;font-size:4.3rem}.wolf-stage{top:510px;height:430px}.floating-card{width:170px;padding:14px}.card-agents{left:14px;top:780px}.card-network{right:14px;top:625px}.hero-bottom{bottom:28px;width:calc(100% - 28px)}.hero-metric strong{font-size:1.35rem}.hero-metric span{font-size:.62rem}.manifesto-section{padding:100px 0}.manifesto-grid h2,.section-heading-row h2,.os-copy h2,.roadmap-heading h2,.final-inner h2{font-size:2.6rem}.capabilities-section,.systems-section,.roadmap-section,.os-showcase{padding:90px 0}.capability-grid{grid-template-columns:1fr}.capability-card{min-height:260px}.os-visual{min-height:460px}.node{font-size:.66rem;padding:10px}.node-one{left:16px}.node-two{right:14px}.node-three{left:12px}.node-four{right:14px}.systems-grid{display:block}.system-card{grid-template-columns:50px 1fr;}.system-card>svg{display:none}.primary-cta,.secondary-cta{width:100%}.hero-actions{width:100%}.roadmap-circle{width:220px;height:220px}}
+      <style jsx>{`
+        .quantix-home{overflow:hidden;background:#07040f;color:#faf8ff}.quantix-hero{position:relative;min-height:1040px;padding:150px 24px 90px;text-align:center;isolation:isolate}.hero-stars{position:absolute;inset:0;background-image:radial-gradient(rgba(196,164,255,.18) .7px,transparent .7px);background-size:28px 28px;mask-image:linear-gradient(to bottom,#000,transparent 72%);opacity:.28}.violet-arc{position:absolute;z-index:-1;top:82px;left:50%;width:min(1000px,120vw);height:540px;transform:translateX(-50%);border-top:3px solid rgba(218,190,255,.9);border-radius:50%;filter:drop-shadow(0 0 12px #9d62ff) drop-shadow(0 0 54px rgba(139,92,246,.62));opacity:.88}.violet-arc:after{content:"";position:absolute;inset:-4px 8%;border-top:1px solid rgba(255,255,255,.7);border-radius:50%;filter:blur(7px)}.hero-haze{position:absolute;z-index:-2;top:20px;left:50%;width:1050px;height:620px;transform:translateX(-50%);background:radial-gradient(ellipse,rgba(107,55,224,.38),transparent 67%);filter:blur(12px)}.hero-content{position:relative;z-index:3;max-width:820px;margin:0 auto}.hero-pill,.small-label{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid rgba(197,160,255,.2);border-radius:999px;background:rgba(139,92,246,.08);color:#b89be9;font-size:.72rem;font-weight:650}.hero-content h1{margin:22px 0 18px;font-size:clamp(2.45rem,6vw,5.1rem);line-height:1.02;letter-spacing:-.055em;font-weight:540}.hero-content h1 span{color:#fff;text-shadow:0 0 42px rgba(190,153,255,.24)}.hero-content>p{max-width:640px;margin:0 auto;color:#a79db9;font-size:1rem;line-height:1.75}.hero-buttons{display:flex;justify-content:center;gap:12px;margin-top:28px;flex-wrap:wrap}.button-primary,.button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 18px;border-radius:11px;text-decoration:none;font-size:.86rem;font-weight:700}.button-primary{color:#fff;border:1px solid rgba(217,191,255,.42);background:linear-gradient(135deg,#a55dff,#6f35df);box-shadow:0 12px 38px rgba(91,45,190,.32),0 0 30px rgba(139,92,246,.18)}.button-secondary{color:#cbc1d9;border:1px solid rgba(193,159,248,.2);background:rgba(11,6,22,.52);backdrop-filter:blur(12px)}.product-preview{position:relative;z-index:5;width:min(1040px,100%);margin:72px auto 0;padding:1px;border-radius:20px;background:linear-gradient(120deg,rgba(226,208,255,.42),rgba(124,70,232,.18),rgba(224,204,255,.32));box-shadow:0 36px 100px rgba(12,2,30,.7),0 0 80px rgba(118,63,224,.18)}.preview-glow{position:absolute;left:8%;right:8%;top:-18px;height:50px;background:#9254ff;filter:blur(38px);opacity:.36}.preview-shell{position:relative;display:grid;grid-template-columns:62px 1fr;min-height:540px;overflow:hidden;border-radius:19px;background:linear-gradient(155deg,#10081e,#090512 62%)}.preview-sidebar{padding:17px 12px;display:flex;flex-direction:column;align-items:center;gap:17px;border-right:1px solid rgba(181,142,245,.1);background:rgba(255,255,255,.015)}.preview-logo{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;background:linear-gradient(145deg,#a862ff,#6e35df)}.preview-sidebar>span{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.04)}.preview-sidebar>span.selected{background:rgba(139,92,246,.22);box-shadow:inset 0 0 0 1px rgba(185,145,255,.18)}.preview-main{padding:22px;text-align:left}.preview-topbar,.preview-heading,.card-title,.agent-stat{display:flex;align-items:center;justify-content:space-between}.preview-topbar{padding-bottom:18px;border-bottom:1px solid rgba(180,139,255,.1)}.preview-topbar strong,.preview-topbar span{display:block}.preview-topbar strong{font-size:.9rem}.preview-topbar span{margin-top:3px;color:#746a85;font-size:.68rem}.preview-user{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#553093,#231238);font-size:.7rem}.preview-heading{margin:24px 0}.preview-heading span{color:#776b8b;font-size:.68rem}.preview-heading h3{margin:4px 0 0;font-size:1.1rem}.preview-heading button{padding:9px 12px;border:1px solid rgba(192,153,255,.24);border-radius:9px;color:#fff;background:linear-gradient(135deg,#8f50ef,#6430ce);font-size:.7rem}.preview-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.preview-metrics article,.preview-chart-card,.preview-agent-card{border:1px solid rgba(180,139,255,.1);border-radius:13px;background:linear-gradient(145deg,rgba(36,20,63,.64),rgba(14,8,27,.72))}.preview-metrics article{padding:15px}.preview-metrics span,.preview-metrics small{display:block;color:#7e728f;font-size:.66rem}.preview-metrics strong{display:block;margin:9px 0 6px;font-size:1.35rem}.preview-grid{display:grid;grid-template-columns:1.7fr .8fr;gap:12px;margin-top:12px}.preview-chart-card,.preview-agent-card{padding:17px}.card-title span,.card-title strong{display:block}.card-title span{color:#776b88;font-size:.64rem}.card-title strong{margin-top:4px;font-size:.82rem}.card-title small{color:#776b88;font-size:.62rem}.mini-chart{height:210px;display:flex;align-items:flex-end;gap:12px;padding:26px 8px 0}.mini-chart span{flex:1;min-width:12px;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,rgba(151,91,242,.7),rgba(75,39,135,.18))}.mini-chart span.active{background:linear-gradient(180deg,#c597ff,#7f46e5);box-shadow:0 0 28px rgba(168,105,255,.46)}.chart-labels{display:flex;justify-content:space-between;color:#60566f;font-size:.58rem}.preview-agent-card{text-align:center}.preview-agent-card .card-title{text-align:left}.preview-agent-card .card-title i{width:8px;height:8px;border-radius:50%;background:#8dffbf;box-shadow:0 0 12px #51e38b}.agent-orb{width:78px;height:78px;margin:22px auto 12px;display:grid;place-items:center;border-radius:50%;color:#fff;background:radial-gradient(circle,#b981ff,#6735d6 52%,#25103e 72%);box-shadow:0 0 36px rgba(163,99,255,.38)}.preview-agent-card p{color:#756a87;font-size:.65rem}.agent-stat{padding:9px 0;border-top:1px solid rgba(180,139,255,.08);text-align:left}.agent-stat span{color:#746a84;font-size:.62rem}.agent-stat strong{font-size:.72rem}.integration-strip{padding:35px 24px 90px;text-align:center}.integration-strip p{color:#6f657f;font-size:.72rem}.integration-strip div{max-width:900px;margin:24px auto 0;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}.integration-strip span{color:#82778f;font-size:.86rem;font-weight:700;letter-spacing:-.02em}.quantix-features{padding:90px 24px 110px}.section-intro{max-width:760px;margin:0 auto 52px;text-align:center}.section-intro h2,.platform-copy h2,.quantix-final h2{margin:18px 0 14px;font-size:clamp(2rem,4vw,3.4rem);line-height:1.08;letter-spacing:-.048em;font-weight:540}.section-intro p,.platform-copy>p,.quantix-final>p{color:#958aa7;line-height:1.75}.feature-grid{max-width:1120px;margin:auto;display:grid;grid-template-columns:repeat(6,1fr);gap:14px}.feature-card{grid-column:span 2;min-height:330px;overflow:hidden;border:1px solid rgba(180,139,255,.13);border-radius:17px;background:linear-gradient(150deg,rgba(31,17,55,.76),rgba(12,7,22,.84));box-shadow:0 24px 66px rgba(11,2,27,.24)}.feature-card.wide{grid-column:span 3}.feature-copy{padding:19px 20px 22px}.feature-copy>svg{color:#9b68f1}.feature-copy h3{margin:11px 0 8px;font-size:.98rem}.feature-copy p{margin:0;color:#867b96;font-size:.78rem;line-height:1.65}.visual-nodes,.visual-people,.visual-line,.visual-wave,.visual-bars{position:relative;height:200px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 50%,rgba(139,92,246,.19),transparent 58%)}.visual-nodes b,.visual-people b{width:58px;height:58px;display:grid;place-items:center;border-radius:50%;color:#fff;background:linear-gradient(145deg,#ae6aff,#6730d6);box-shadow:0 0 30px rgba(156,90,255,.4)}.visual-nodes span{position:absolute;width:14px;height:14px;border-radius:50%;background:#5d348e;box-shadow:0 0 18px rgba(139,92,246,.5)}.visual-nodes span:first-child{left:18%;top:35%}.visual-nodes span:nth-child(3){right:17%;top:30%}.visual-nodes span:last-child{right:26%;bottom:20%}.visual-people{gap:17px}.visual-people i{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#2c173f;color:#baa8cc;font-size:.58rem;font-style:normal}.visual-line svg{width:100%;height:100%}.visual-wave{gap:7px}.visual-wave span{width:3px;height:48px;border-radius:5px;background:linear-gradient(#4e287e,#b878ff,#4e287e)}.visual-wave span:nth-child(2),.visual-wave span:nth-child(6){height:76px}.visual-wave span:nth-child(3),.visual-wave span:nth-child(5){height:104px}.visual-wave b{width:64px;height:64px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#b77eff,#6a32d7);box-shadow:0 0 34px rgba(164,94,255,.42)}.visual-bars{align-items:flex-end;gap:14px;padding:35px 60px}.visual-bars span{flex:1;max-width:34px;border-radius:7px 7px 2px 2px;background:linear-gradient(#6e3ab6,#28143d)}.visual-bars span.active{background:linear-gradient(#ce9cff,#7e43df);box-shadow:0 0 24px rgba(174,108,255,.42)}.explore-button{width:max-content;margin:30px auto 0;display:flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid rgba(195,159,248,.2);border-radius:10px;color:#d2c4e3;background:rgba(139,92,246,.08);text-decoration:none;font-size:.76rem}.quantix-platform{max-width:1120px;margin:0 auto 110px;padding:40px 24px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:70px}.platform-copy>a{display:inline-flex;align-items:center;gap:8px;margin-top:26px;color:#cfaaff;text-decoration:none;font-size:.86rem}.platform-points{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}.platform-points span{display:flex;align-items:center;gap:8px;color:#9c90ae;font-size:.75rem}.platform-points svg{color:#9b63ee}.platform-visual{position:relative;height:470px;display:grid;place-items:center}.platform-ring{position:absolute;border:1px solid rgba(182,139,255,.14);border-radius:50%}.ring-one{width:360px;height:360px}.ring-two{width:250px;height:250px;box-shadow:0 0 70px rgba(107,53,223,.16)}.platform-core{position:relative;z-index:2;width:145px;height:145px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(208,178,255,.3);border-radius:34px;color:#fff;background:linear-gradient(145deg,#4f2788,#1c0e31);box-shadow:0 0 50px rgba(139,92,246,.32)}.platform-core strong{margin-top:10px;font-size:.78rem;letter-spacing:.08em}.platform-core span{margin-top:4px;color:#aa97bd;font-size:.58rem}.platform-node{position:absolute;display:flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid rgba(190,150,255,.16);border-radius:11px;background:rgba(23,12,40,.86);color:#aa9ab9;font-size:.7rem}.node-a{left:3%;top:18%}.node-b{right:2%;top:24%}.node-c{left:6%;bottom:18%}.node-d{right:4%;bottom:16%}.quantix-final{position:relative;padding:120px 24px;text-align:center;border-top:1px solid rgba(180,139,255,.1);background:linear-gradient(to bottom,rgba(139,92,246,.04),transparent)}.quantix-final>*{position:relative;z-index:2}.quantix-final>p{max-width:590px;margin:0 auto}.final-glow{position:absolute;z-index:0;left:50%;top:50%;width:750px;height:350px;transform:translate(-50%,-50%);background:radial-gradient(ellipse,rgba(117,60,230,.22),transparent 68%);filter:blur(20px)}
+        @media(max-width:800px){.quantix-hero{min-height:auto;padding-top:125px}.violet-arc{top:70px;height:360px}.hero-content h1 br{display:none}.product-preview{margin-top:52px}.preview-shell{grid-template-columns:1fr;min-height:0}.preview-sidebar{display:none}.preview-main{padding:14px}.preview-metrics{grid-template-columns:1fr}.preview-grid{grid-template-columns:1fr}.preview-agent-card{display:none}.mini-chart{height:160px;gap:6px}.feature-grid{grid-template-columns:1fr}.feature-card,.feature-card.wide{grid-column:1}.quantix-platform{grid-template-columns:1fr;gap:20px}.platform-copy{text-align:center}.platform-points{grid-template-columns:1fr}.platform-points span{justify-content:center}.platform-visual{height:390px}.ring-one{width:310px;height:310px}.ring-two{width:220px;height:220px}.integration-strip div{justify-content:center}.quantix-final h2 br{display:none}}
       `}</style>
     </main>
   );
