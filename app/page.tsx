@@ -1,445 +1,360 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
-  Bot, Headphones, MessageSquare, Mic, Database, FileText,
-  ArrowRight, CheckCircle, Building2, Monitor, ShoppingCart,
-  Stethoscope, Truck, Briefcase, ChevronDown, ChevronUp,
+  ArrowRight,
+  Bot,
+  CheckCircle2,
+  Database,
+  Headphones,
+  MessageSquare,
+  Mic,
+  Network,
+  ShieldCheck,
+  Sparkles,
+  Workflow,
+  Zap,
 } from "lucide-react";
-import { useState } from "react";
 import ElevenLabsConsultant from "@/components/ElevenLabsConsultant";
 
-function NeuralGrid() {
+const capabilities = [
+  { icon: Bot, title: "AI Sales", text: "Qualifies prospects, handles objections, and advances deals around the clock." },
+  { icon: Headphones, title: "AI Support", text: "Resolves routine questions and hands complex issues to the correct person." },
+  { icon: Mic, title: "Voice Agents", text: "Answers and places calls, captures intent, and books appointments." },
+  { icon: MessageSquare, title: "Omnichannel", text: "Runs coordinated conversations across web, WhatsApp, Telegram, email, and voice." },
+  { icon: Workflow, title: "Automation", text: "Connects n8n, Trigger.dev, Supabase, and your existing business tools." },
+  { icon: Database, title: "Business Memory", text: "Stores leads, conversations, tasks, catalog data, and decisions in one system." },
+];
+
+const operatingLayers = [
+  ["01", "Understand", "Map your sales, support, and operating process before automating anything."],
+  ["02", "Deploy", "Launch focused AI employees with clear permissions, workflows, and human handoff."],
+  ["03", "Optimize", "Measure conversations, conversion, failures, and opportunities for expansion."],
+];
+
+const systems = [
+  { title: "Real Estate OS", detail: "Lead qualification, property matching, inspections, nurture, and agent handoff.", status: "Live architecture" },
+  { title: "Sales Engine", detail: "Lead sourcing, outbound sequences, reply scoring, CRM updates, and closer alerts.", status: "Deployable" },
+  { title: "Customer Care", detail: "Shared inbox, AI support, ticket routing, voice assistance, and escalation.", status: "Deployable" },
+  { title: "Operations Agent", detail: "Internal requests, reminders, reporting, document workflows, and approvals.", status: "Custom build" },
+];
+
+function WolfMark() {
   return (
-    <svg aria-hidden="true" style={{ position:"absolute",inset:0,width:"100%",height:"100%",opacity:0.4,pointerEvents:"none" }} xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <radialGradient id="fade" cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.12" />
-          <stop offset="100%" stopColor="#06080f" stopOpacity="0" />
-        </radialGradient>
-        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-          <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(0,212,255,0.07)" strokeWidth="1" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" />
-      <rect width="100%" height="100%" fill="url(#fade)" />
-      {[120,240,360,480,600,720].map(x=>[120,240,360,480].map(y=>(
-        <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" fill="rgba(0,212,255,0.18)" />
-      )))}
-      <line x1="120" y1="120" x2="240" y2="240" stroke="rgba(0,212,255,0.06)" strokeWidth="1"/>
-      <line x1="360" y1="120" x2="480" y2="240" stroke="rgba(0,212,255,0.06)" strokeWidth="1"/>
-      <line x1="240" y1="240" x2="360" y2="360" stroke="rgba(0,212,255,0.05)" strokeWidth="1"/>
-      <line x1="480" y1="120" x2="600" y2="240" stroke="rgba(0,212,255,0.06)" strokeWidth="1"/>
-    </svg>
-  );
-}
-
-function FadeUp({ children, delay=0, style={} }: { children:React.ReactNode; delay?:number; style?:React.CSSProperties }) {
-  return (
-    <motion.div initial={{opacity:0,y:28}} whileInView={{opacity:1,y:0}} viewport={{once:true,margin:"-60px"}} transition={{duration:0.65,delay,ease:[0.16,1,0.3,1]}} style={style}>
-      {children}
-    </motion.div>
-  );
-}
-
-const services = [
-  { icon:Bot, title:"AI Sales Agent", desc:"Qualifies leads, answers objections, and books meetings 24/7 without a salesperson in the loop." },
-  { icon:Headphones, title:"AI Customer Support", desc:"Handles FAQs, complaints, and status checks instantly across chat and voice." },
-  { icon:MessageSquare, title:"WhatsApp AI Assistant", desc:"Runs your entire customer conversation flow on WhatsApp from first message to closed deal." },
-  { icon:Mic, title:"AI Voice Agent", desc:"Answers calls, books appointments, qualifies callers, and escalates when it matters." },
-  { icon:Database, title:"CRM Automation", desc:"Syncs every lead, conversation, and deal stage automatically so your CRM updates itself." },
-  { icon:FileText, title:"Lead Generation Engine", desc:"Scrapes targeted public business data, launches email follow-up, and scores cold, warm, and hot leads." },
-];
-
-const steps = [
-  { label:"Discovery Call", desc:"We learn how your business sells and operates today." },
-  { label:"Business Audit", desc:"We map the gaps, bottlenecks, and highest-leverage automation points." },
-  { label:"AI Strategy", desc:"We design the exact system architecture for your business." },
-  { label:"Build & Integrate", desc:"We build and connect everything to your existing tools." },
-  { label:"Test & Launch", desc:"We run the system through its paces before you go live." },
-  { label:"Optimize Monthly", desc:"We monitor, improve, and expand your AI stack over time." },
-];
-
-const industries = [
-  { id:"hotels", icon:Building2, label:"Hotels", image:"https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=700&q=80", desc:"Booking inquiries, guest requests, review follow-up, and reservation handoff." },
-  { id:"restaurants", icon:ShoppingCart, label:"Restaurants", image:"https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=80", desc:"Reservations, catering leads, menu questions, offers, and repeat-customer campaigns." },
-  { id:"clinics", icon:Stethoscope, label:"Clinics", image:"https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=700&q=80", desc:"Appointment booking, patient intake, no-show reminders, and treatment inquiry triage." },
-  { id:"sales-companies", icon:Briefcase, label:"Sales Companies", image:"https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=700&q=80", desc:"Web-scraped lead lists, cold email follow-up, reply scoring, and closer alerts." },
-  { id:"real-estate", icon:Building2, label:"Real Estate", image:"https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=700&q=80", desc:"Buyer qualification, listing recommendations, inspection bookings, and lead nurture." },
-  { id:"gyms", icon:Briefcase, label:"Gyms", image:"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=700&q=80", desc:"Trial bookings, membership questions, renewals, class promotions, and lead reactivation." },
-  { id:"services", icon:Briefcase, label:"Services", image:"https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=700&q=80", desc:"Service intake, quote qualification, consultation booking, and follow-up automation." },
-  { id:"auto-shops", icon:Truck, label:"Auto Shops", image:"https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=700&q=80", desc:"Repair booking, vehicle intake, quote follow-up, and maintenance reminder campaigns." },
-  { id:"ecommerce", icon:ShoppingCart, label:"E-commerce", image:"https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=700&q=80", desc:"Cart recovery, product Q&A, order support, upsells, and customer win-back flows." },
-  { id:"professional-services", icon:Briefcase, label:"Professional Services", image:"https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=700&q=80", desc:"Lead qualification, discovery calls, proposal follow-up, onboarding, and reminders." },
-];
-
-const caseStudies = [
-  {
-    industry:"Real Estate",
-    title:"AI Assistant That Books Property Viewings on Autopilot",
-    results:["Captures leads from WhatsApp and web chat 24/7","Sends matching property details in seconds","Books inspection appointments without agent involvement","Follows up with unsold leads over 21 days automatically"],
-    metric:"3× more booked viewings",
-    metricSub:"in the first 60 days",
-  },
-  {
-    industry:"Sales Companies",
-    title:"Lead Generation Engine That Warms Prospects While You Work",
-    results:["Scrapes targeted public business leads","Runs cold email follow-up automatically","Tags replies as cold, warm, or hot","Alerts your team when a prospect is ready for a closer"],
-    metric:"40% more qualified leads",
-    metricSub:"with automated prospecting and follow-up",
-  },
-];
-
-const pricingPlans = [
-  {
-    name:"Starter AI System",
-    tag:"One automation, deployed fast.",
-    price:"Starting at NGN 200,000",
-    period:"one-time build",
-    features:["1 AI agent (sales, support, or WhatsApp)","WhatsApp or web chat integration","Basic lead capture and handoff","30-day post-launch support"],
-    cta:"Get Started",
-    highlighted:false,
-  },
-  {
-    name:"Growth Automation System",
-    tag:"Full AI-powered sales and support stack.",
-    price:"Starting from NGN 500,000",
-    period:"one-time build",
-    features:["Up to 3 AI agents","WhatsApp + Telegram + voice integration","Lead generation and follow-up automation","Lead scoring and routing","Analytics dashboard","60-day post-launch support"],
-    cta:"Book a Strategy Call",
-    highlighted:true,
-  },
-  {
-    name:"Full AI Business OS",
-    tag:"End-to-end automation for your whole business.",
-    price:"Custom Quote",
-    period:"scoped per project",
-    features:["Unlimited AI agents","Full pipeline automation","Custom integrations and CRMs","Voice + chat + email + social","Monthly optimization retainer","Priority support and SLA"],
-    cta:"Let's Talk",
-    highlighted:false,
-  },
-];
-
-const faqs = [
-  { q:"Can you integrate with WhatsApp?", a:"Yes. We connect your AI agent to WhatsApp Business API. The agent handles entire conversations — from first message to booking or sale." },
-  { q:"What about Telegram?", a:"Telegram bots are fully supported. We build AI-powered Telegram agents for lead capture, support, notifications, and admin dashboards." },
-  { q:"Can the AI make and receive voice calls?", a:"Yes. We build AI voice agents that handle inbound and outbound calls with human-like conversation, appointment booking, and lead qualification." },
-  { q:"Does it connect to my existing CRM?", a:"We integrate with most major CRMs — and build custom integrations if yours is proprietary. Every lead and conversation syncs automatically." },
-  { q:"How long does setup take?", a:"Most systems are live within 7–14 days. Enterprise builds with custom integrations take 3–5 weeks." },
-  { q:"Do you offer ongoing support after launch?", a:"Every project includes post-launch support. Growth and OS plans include ongoing monthly optimization to improve performance over time." },
-  { q:"Can you build completely custom systems?", a:"Yes. We design custom AI systems from scratch using n8n, OpenAI, Supabase, and your tool stack." },
-];
-
-const demos = [
-  { title:"Real Estate AI Assistant", tag:"WhatsApp + CRM", status:"Live Demo" },
-  { title:"Computer Store Sales Agent", tag:"Chat + Stock Check", status:"Preview" },
-  { title:"Lead Qualification Bot", tag:"WhatsApp Intake", status:"Preview" },
-  { title:"AI Voice Receptionist", tag:"Inbound Calls", status:"Live Demo" },
-];
-
-function FAQItem({ q, a }: { q:string; a:string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ borderBottom:"1px solid #1e2d3d", padding:"20px 0" }}>
-      <button onClick={()=>setOpen(!open)} aria-expanded={open}
-        style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:"#f0f6ff", fontSize:"1rem", fontWeight:600, textAlign:"left", gap:"16px", padding:0, lineHeight:1.4 }}>
-        <span>{q}</span>
-        {open ? <ChevronUp size={18} color="#00d4ff" style={{flexShrink:0}} /> : <ChevronDown size={18} color="#8ba3bd" style={{flexShrink:0}} />}
-      </button>
-      {open && (
-        <motion.p initial={{opacity:0}} animate={{opacity:1}} style={{ marginTop:"12px", fontSize:"0.9rem", color:"#8ba3bd", lineHeight:1.75 }}>
-          {a}
-        </motion.p>
-      )}
+    <div className="wolf-stage" aria-label="Fluxknight cyber wolf emblem">
+      <div className="wolf-orbit orbit-one" />
+      <div className="wolf-orbit orbit-two" />
+      <motion.svg
+        className="wolf-mark"
+        viewBox="0 0 520 520"
+        initial={{ opacity: 0, scale: 0.86, rotate: -4 }}
+        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <defs>
+          <linearGradient id="wolfMetal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#dff7ff" />
+            <stop offset="0.24" stopColor="#6bdcff" />
+            <stop offset="0.55" stopColor="#0c6fa9" />
+            <stop offset="1" stopColor="#03101d" />
+          </linearGradient>
+          <linearGradient id="wolfDark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#102738" />
+            <stop offset="1" stopColor="#02070d" />
+          </linearGradient>
+          <filter id="wolfGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <path d="M88 104 208 54 260 136 312 54 432 104 394 264 338 392 260 458 182 392 126 264Z" fill="url(#wolfDark)" stroke="#1a668d" strokeWidth="4" />
+        <path d="M88 104 192 132 126 264Z" fill="url(#wolfMetal)" opacity="0.9" />
+        <path d="M432 104 328 132 394 264Z" fill="url(#wolfMetal)" opacity="0.9" />
+        <path d="M208 54 260 136 182 174 126 264 192 132Z" fill="#0b1d2b" stroke="#2bbde8" strokeWidth="3" />
+        <path d="M312 54 260 136 338 174 394 264 328 132Z" fill="#0b1d2b" stroke="#2bbde8" strokeWidth="3" />
+        <path d="M182 174 260 136 338 174 318 330 260 382 202 330Z" fill="url(#wolfMetal)" />
+        <path d="M182 174 216 260 260 240 260 136Z" fill="#102b3c" opacity="0.95" />
+        <path d="M338 174 304 260 260 240 260 136Z" fill="#071521" opacity="0.95" />
+        <path d="M202 330 260 382 318 330 298 396 260 430 222 396Z" fill="#06131d" stroke="#2bbde8" strokeWidth="3" />
+        <path d="M148 246 218 228 246 250 206 278 154 270Z" fill="#08111a" stroke="#6ee7ff" strokeWidth="3" />
+        <path d="M372 246 302 228 274 250 314 278 366 270Z" fill="#08111a" stroke="#6ee7ff" strokeWidth="3" />
+        <path d="M171 252 218 242 231 251 205 263 176 261Z" fill="#9cf1ff" filter="url(#wolfGlow)" />
+        <path d="M349 252 302 242 289 251 315 263 344 261Z" fill="#9cf1ff" filter="url(#wolfGlow)" />
+        <path d="M238 304 260 282 282 304 260 324Z" fill="#021019" stroke="#84edff" strokeWidth="3" />
+        <path d="M260 136V240M216 260l-34 70M304 260l34 70M260 324v58" stroke="#9beeff" strokeWidth="3" opacity="0.7" />
+      </motion.svg>
+      <div className="wolf-platform" />
     </div>
   );
 }
 
-const S = { maxWidth:"1200px", margin:"0 auto" };
-const centered = { textAlign:"center" as const };
+function Metric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="hero-metric">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div>
+    <main className="home-v2">
       <ElevenLabsConsultant />
-      {/* HERO */}
-      <section style={{ position:"relative", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", padding:"120px 24px 80px" }}>
-        <NeuralGrid />
-        <div aria-hidden="true" style={{ position:"absolute", top:"35%", left:"50%", transform:"translate(-50%,-50%)", width:"700px", height:"500px", background:"radial-gradient(ellipse, rgba(0,212,255,0.06) 0%, transparent 70%)", pointerEvents:"none" }} />
-        <div style={{ position:"relative", zIndex:1, maxWidth:"900px", margin:"0 auto", ...centered }}>
-          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5}}>
-            <span style={{ display:"inline-flex", alignItems:"center", gap:"8px", fontSize:"0.72rem", fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:"#00d4ff", border:"1px solid rgba(0,212,255,0.25)", borderRadius:"100px", padding:"5px 14px", marginBottom:"28px" }}>
-              <span style={{ width:"6px", height:"6px", borderRadius:"50%", background:"#00d4ff", boxShadow:"0 0 8px #00d4ff", display:"inline-block" }} />
-              AI Automation Agency
-            </span>
-          </motion.div>
 
-          <motion.h1 initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:0.7,delay:0.1,ease:[0.16,1,0.3,1]}}
-            style={{ fontSize:"clamp(2.2rem,6vw,4.5rem)", fontWeight:900, letterSpacing:"-0.04em", lineHeight:1.08, color:"#f0f6ff", marginBottom:"24px" }}>
-            AI Employees That Help Your Business{" "}
-            <span className="gradient-text">Sell, Support, and Scale</span>{" "}
-            Automatically
+      <section className="hero-v2">
+        <div className="hero-grid" />
+        <div className="hero-glow" />
+        <div className="hero-word" aria-hidden="true">FLUXKNIGHT</div>
+
+        <div className="hero-copy">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className="eyebrow">
+            <span className="pulse-dot" /> AI BUSINESS OPERATING SYSTEM
+          </motion.div>
+          <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.75, delay: 0.08 }}>
+            Build an AI workforce that <span>hunts bottlenecks.</span>
           </motion.h1>
-
-          <motion.p initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.6,delay:0.25}}
-            style={{ fontSize:"clamp(1rem,2vw,1.2rem)", color:"#8ba3bd", lineHeight:1.75, maxWidth:"640px", margin:"0 auto 40px" }}>
-            We build AI sales agents, customer support systems, WhatsApp automation, voice agents, lead generation engines, CRM workflows, and custom AI systems for growing businesses.
+          <motion.p initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.18 }}>
+            Fluxknight gives growing businesses AI sales, support, voice, lead generation, and workflow agents inside one controlled operating system.
           </motion.p>
-
-          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.4}}
-            style={{ display:"flex", gap:"16px", justifyContent:"center", flexWrap:"wrap" }}>
-            <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"10px", textDecoration:"none", boxShadow:"0 0 30px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
-              onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 50px rgba(0,212,255,0.5)")}
-              onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 0 30px rgba(0,212,255,0.3)")}>
-              Book a Free Strategy Call <ArrowRight size={16} strokeWidth={2.5} />
-            </Link>
-            <Link href="/services" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", fontSize:"0.95rem", fontWeight:600, color:"#f0f6ff", background:"rgba(255,255,255,0.05)", border:"1px solid #1e2d3d", borderRadius:"10px", textDecoration:"none", transition:"border-color 0.2s" }}
-              onMouseEnter={e=>(e.currentTarget.style.borderColor="rgba(0,212,255,0.4)")}
-              onMouseLeave={e=>(e.currentTarget.style.borderColor="#1e2d3d")}>
-              See What We Build
-            </Link>
-          </motion.div>
-
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.7}}
-            style={{ marginTop:"64px", display:"flex", flexWrap:"wrap", gap:"40px", justifyContent:"center" }}>
-            {[{n:"24/7",label:"Always-on agents"},{n:"48hr",label:"Fastest go-live"},{n:"6+",label:"AI system types"},{n:"100%",label:"Custom-built"}].map(({n,label})=>(
-              <div key={n} style={centered}>
-                <p style={{ fontSize:"1.5rem", fontWeight:800, color:"#00d4ff", letterSpacing:"-0.02em", lineHeight:1, marginBottom:"4px" }}>{n}</p>
-                <p style={{ fontSize:"0.78rem", color:"#4d6478" }}>{label}</p>
-              </div>
-            ))}
+          <motion.div className="hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.28 }}>
+            <Link className="primary-cta" href="/account/signup">Create Account <ArrowRight size={18} /></Link>
+            <Link className="secondary-cta" href="/evaluation">Explore Your AI System</Link>
           </motion.div>
         </div>
+
+        <WolfMark />
+
+        <motion.div className="floating-card card-agents" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.65 }}>
+          <div className="card-icon"><Bot size={18} /></div>
+          <span>Active agents</span>
+          <strong>04</strong>
+          <small>sales · care · voice · operations</small>
+        </motion.div>
+
+        <motion.div className="floating-card card-network" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.75 }}>
+          <div className="card-icon"><Network size={18} /></div>
+          <span>System status</span>
+          <strong className="online"><i /> Connected</strong>
+          <small>Supabase · n8n · channels</small>
+        </motion.div>
+
+        <div className="hero-bottom">
+          <Metric value="24/7" label="Always-on agents" />
+          <Metric value="01" label="Shared operating system" />
+          <Metric value="∞" label="Configurable workflows" />
+        </div>
       </section>
 
-      {/* SERVICES */}
-      <section style={{ padding:"100px 24px", background:"#0d1117", borderTop:"1px solid #1e2d3d", borderBottom:"1px solid #1e2d3d" }}>
-        <div style={S}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>What We Build</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"12px" }}>Core AI systems. One automation partner.</h2>
-            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"520px", margin:"0 auto 56px", lineHeight:1.7 }}>Every system we build is connected, conversational, and specific to your business workflow, including lead generation and follow-up.</p>
-          </FadeUp>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:"20px" }}>
-            {services.map((s,i)=>(
-              <FadeUp key={s.title} delay={i*0.07}>
-                <div className="card-surface" style={{ padding:"28px", borderRadius:"12px", transition:"all 0.25s", height:"100%" }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(0,212,255,0.3)";e.currentTarget.style.transform="translateY(-3px)"}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2d3d";e.currentTarget.style.transform="translateY(0)"}}>
-                  <div style={{ width:"44px", height:"44px", borderRadius:"10px", background:"rgba(0,212,255,0.1)", border:"1px solid rgba(0,212,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"16px" }}>
-                    <s.icon size={20} color="#00d4ff" />
-                  </div>
-                  <h3 style={{ fontSize:"1rem", fontWeight:700, color:"#f0f6ff", marginBottom:"10px" }}>{s.title}</h3>
-                  <p style={{ fontSize:"0.875rem", color:"#8ba3bd", lineHeight:1.7 }}>{s.desc}</p>
+      <section className="manifesto-section">
+        <div className="manifesto-word" aria-hidden="true">AUTOMATION</div>
+        <div className="section-wrap manifesto-grid">
+          <div>
+            <p className="section-kicker">A different kind of AI agency</p>
+            <h2>Not a chatbot.<br />A coordinated business system.</h2>
+          </div>
+          <div className="manifesto-copy">
+            <p>Most automation projects become a pile of disconnected bots. Fluxknight treats agents, workflows, data, permissions, and human teams as one operating structure.</p>
+            <div className="trust-row"><ShieldCheck size={20} /><span>Tenant-isolated data and controlled access</span></div>
+            <div className="trust-row"><CheckCircle2 size={20} /><span>Human handoff when confidence or authority runs out</span></div>
+            <div className="trust-row"><Zap size={20} /><span>Existing n8n workflows integrated instead of discarded</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="capabilities-section">
+        <div className="section-wrap">
+          <div className="section-heading-row">
+            <div>
+              <p className="section-kicker">Fluxknight capabilities</p>
+              <h2>One intelligence layer.<br />Multiple AI employees.</h2>
+            </div>
+            <p>Every module is independent enough to deploy quickly, but structured to collaborate through shared data and clear workflow contracts.</p>
+          </div>
+          <div className="capability-grid">
+            {capabilities.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <motion.article key={item.title} className="capability-card" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}>
+                  <div className="capability-number">0{index + 1}</div>
+                  <Icon size={24} />
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </motion.article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="os-showcase">
+        <div className="section-wrap os-grid">
+          <div className="os-visual">
+            <div className="os-light" />
+            <div className="os-core">
+              <Sparkles size={34} />
+              <strong>FLUX CORE</strong>
+              <span>agent orchestration</span>
+            </div>
+            <div className="node node-one"><MessageSquare size={18} /> Channels</div>
+            <div className="node node-two"><Database size={18} /> Memory</div>
+            <div className="node node-three"><Workflow size={18} /> Workflows</div>
+            <div className="node node-four"><ShieldCheck size={18} /> Control</div>
+          </div>
+          <div className="os-copy">
+            <p className="section-kicker">The operating core</p>
+            <h2>Your business systems stop working alone.</h2>
+            <p>Fluxknight connects conversations, agents, CRM records, catalogs, workflows, and human actions through one tenant-aware platform.</p>
+            <Link href="/services">See the architecture <ArrowRight size={17} /></Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="roadmap-section">
+        <div className="section-wrap">
+          <div className="roadmap-heading">
+            <p className="section-kicker">Deployment roadmap</p>
+            <h2>A controlled path from audit to live AI workforce.</h2>
+          </div>
+          <div className="roadmap-grid">
+            {operatingLayers.map(([number, title, text], index) => (
+              <article className="roadmap-item" key={number}>
+                <div className="roadmap-circle"><span>{number}</span></div>
+                <div className="roadmap-pill"><i /> {title}</div>
+                <p>{text}</p>
+                {index < operatingLayers.length - 1 ? <div className="roadmap-line" /> : null}
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="systems-section">
+        <div className="section-wrap">
+          <div className="section-heading-row">
+            <div>
+              <p className="section-kicker">Systems we build</p>
+              <h2>Industry-ready foundations.<br />Configured for your business.</h2>
+            </div>
+            <Link className="text-link" href="/industries">View industries <ArrowRight size={16} /></Link>
+          </div>
+          <div className="systems-grid">
+            {systems.map((system, index) => (
+              <article className="system-card" key={system.title}>
+                <div className="system-index">0{index + 1}</div>
+                <div>
+                  <span>{system.status}</span>
+                  <h3>{system.title}</h3>
+                  <p>{system.detail}</p>
                 </div>
-              </FadeUp>
-            ))}
-          </div>
-          <div style={{ ...centered, marginTop:"40px" }}>
-            <FadeUp>
-              <Link href="/services" style={{ display:"inline-flex", alignItems:"center", gap:"8px", color:"#00d4ff", fontSize:"0.9rem", fontWeight:600, textDecoration:"none" }}>
-                View all services <ArrowRight size={15} />
-              </Link>
-            </FadeUp>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section style={{ padding:"100px 24px" }}>
-        <div style={S}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>The Process</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"56px" }}>From first call to live system in weeks</h2>
-          </FadeUp>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:"2px", background:"#1e2d3d", borderRadius:"16px", overflow:"hidden" }}>
-            {steps.map((step,i)=>(
-              <FadeUp key={step.label} delay={i*0.08}>
-                <div style={{ background:"#06080f", padding:"32px 28px", height:"100%" }}>
-                  <div style={{ fontSize:"0.65rem", fontWeight:800, letterSpacing:"0.15em", color:"#00d4ff", marginBottom:"12px" }}>STEP {String(i+1).padStart(2,"0")}</div>
-                  <h3 style={{ fontSize:"1rem", fontWeight:700, color:"#f0f6ff", marginBottom:"8px" }}>{step.label}</h3>
-                  <p style={{ fontSize:"0.875rem", color:"#8ba3bd", lineHeight:1.65 }}>{step.desc}</p>
-                </div>
-              </FadeUp>
+                <ArrowRight size={20} />
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* INDUSTRIES */}
-      <section style={{ padding:"100px 24px", background:"#0d1117", borderTop:"1px solid #1e2d3d", borderBottom:"1px solid #1e2d3d" }}>
-        <div style={S}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>Industries</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"12px" }}>Built for businesses that run on sales and service</h2>
-            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"520px", margin:"0 auto 56px", lineHeight:1.7 }}>We go deep on your vertical so the AI understands your customers, objections, buying triggers, and follow-up process.</p>
-          </FadeUp>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:"20px" }}>
-            {industries.map((ind,i)=>(
-              <FadeUp key={ind.label} delay={i*0.06}>
-                <Link href={`/industries#${ind.id}`} style={{ textDecoration:"none" }}>
-                  <div className="card-surface" style={{ padding:0, borderRadius:"12px", overflow:"hidden", transition:"all 0.25s", height:"100%" }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(0,212,255,0.3)";e.currentTarget.style.transform="translateY(-2px)"}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2d3d";e.currentTarget.style.transform="translateY(0)"}}>
-                    <div style={{ height:"140px", backgroundImage:`linear-gradient(180deg, rgba(6,8,15,0.05), rgba(6,8,15,0.72)), url(${ind.image})`, backgroundSize:"cover", backgroundPosition:"center" }} />
-                    <div style={{ padding:"22px 24px", display:"flex", alignItems:"flex-start", gap:"14px" }}>
-                      <div style={{ width:"40px", height:"40px", borderRadius:"9px", background:"rgba(0,212,255,0.08)", border:"1px solid rgba(0,212,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                        <ind.icon size={18} color="#00d4ff" />
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize:"0.95rem", fontWeight:700, color:"#f0f6ff", marginBottom:"6px" }}>{ind.label}</h3>
-                        <p style={{ fontSize:"0.82rem", color:"#8ba3bd", lineHeight:1.6 }}>{ind.desc}</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </FadeUp>
-            ))}
+      <section className="final-cta-v2">
+        <div className="final-glow" />
+        <div className="section-wrap final-inner">
+          <p className="section-kicker">Enter the system</p>
+          <h2>Build the business that keeps moving when you log off.</h2>
+          <p>Create your Fluxknight workspace or begin with a strategy evaluation.</p>
+          <div className="hero-actions centered-actions">
+            <Link className="primary-cta" href="/account/signup">Create Account <ArrowRight size={18} /></Link>
+            <Link className="secondary-cta" href="/account/login">Login</Link>
           </div>
         </div>
       </section>
 
-      {/* DEMOS */}
-      <section style={{ padding:"100px 24px" }}>
-        <div style={S}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>Showcase</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"56px" }}>See the systems in action</h2>
-          </FadeUp>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:"20px" }}>
-            {demos.map((demo,i)=>(
-              <FadeUp key={demo.title} delay={i*0.07}>
-                <div style={{ background:"#0f1620", border:"1px solid #1e2d3d", borderRadius:"12px", overflow:"hidden", transition:"border-color 0.25s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.borderColor="rgba(0,212,255,0.3)")}
-                  onMouseLeave={e=>(e.currentTarget.style.borderColor="#1e2d3d")}>
-                  <div style={{ height:"160px", background:"linear-gradient(135deg,#0d1421,#111c2a)", borderBottom:"1px solid #1e2d3d", display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden" }}>
-                    <div aria-hidden="true" style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px)", backgroundSize:"30px 30px" }} />
-                    <div style={{ width:"48px", height:"48px", borderRadius:"50%", background:"rgba(0,212,255,0.1)", border:"1px solid rgba(0,212,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <Bot size={22} color="#00d4ff" />
-                    </div>
-                  </div>
-                  <div style={{ padding:"20px" }}>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"8px" }}>
-                      <span style={{ fontSize:"0.68rem", fontWeight:700, letterSpacing:"0.1em", color:demo.status==="Live Demo"?"#00d4ff":"#4d6478", textTransform:"uppercase" }}>{demo.status}</span>
-                      <span style={{ fontSize:"0.7rem", color:"#4d6478", border:"1px solid #1e2d3d", borderRadius:"100px", padding:"2px 10px" }}>{demo.tag}</span>
-                    </div>
-                    <h3 style={{ fontSize:"0.95rem", fontWeight:700, color:"#f0f6ff" }}>{demo.title}</h3>
-                  </div>
-                </div>
-              </FadeUp>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CASE STUDIES */}
-      <section style={{ padding:"100px 24px", background:"#0d1117", borderTop:"1px solid #1e2d3d", borderBottom:"1px solid #1e2d3d" }}>
-        <div style={S}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>Results</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"56px" }}>Real systems. Measurable outcomes.</h2>
-          </FadeUp>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(340px,1fr))", gap:"24px" }}>
-            {caseStudies.map((cs,i)=>(
-              <FadeUp key={cs.title} delay={i*0.1}>
-                <div style={{ background:"#0f1620", border:"1px solid #1e2d3d", borderRadius:"16px", padding:"36px", height:"100%", display:"flex", flexDirection:"column", gap:"24px" }}>
-                  <div>
-                    <span style={{ fontSize:"0.68rem", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"#00d4ff", display:"block", marginBottom:"12px" }}>{cs.industry}</span>
-                    <h3 style={{ fontSize:"1.15rem", fontWeight:700, color:"#f0f6ff", lineHeight:1.4 }}>{cs.title}</h3>
-                  </div>
-                  <ul style={{ listStyle:"none", padding:0, margin:0, flex:1 }}>
-                    {cs.results.map(r=>(
-                      <li key={r} style={{ display:"flex", alignItems:"flex-start", gap:"10px", marginBottom:"10px", fontSize:"0.875rem", color:"#8ba3bd", lineHeight:1.6 }}>
-                        <CheckCircle size={15} color="#00d4ff" style={{ flexShrink:0, marginTop:"2px" }} />{r}
-                      </li>
-                    ))}
-                  </ul>
-                  <div style={{ borderTop:"1px solid #1e2d3d", paddingTop:"20px" }}>
-                    <p style={{ fontSize:"1.4rem", fontWeight:800, color:"#00d4ff", letterSpacing:"-0.02em", lineHeight:1.2, marginBottom:"4px" }}>{cs.metric}</p>
-                    <p style={{ fontSize:"0.8rem", color:"#4d6478" }}>{cs.metricSub}</p>
-                  </div>
-                </div>
-              </FadeUp>
-            ))}
-          </div>
-          <div style={{ ...centered, marginTop:"40px" }}>
-            <FadeUp><Link href="/case-studies" style={{ display:"inline-flex", alignItems:"center", gap:"8px", color:"#00d4ff", fontSize:"0.9rem", fontWeight:600, textDecoration:"none" }}>View all case studies <ArrowRight size={15} /></Link></FadeUp>
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section style={{ padding:"100px 24px" }}>
-        <div style={{ maxWidth:"1100px", margin:"0 auto" }}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>Pricing</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.75rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"12px" }}>Clear packages. No ambiguity.</h2>
-            <p style={{ ...centered, color:"#8ba3bd", maxWidth:"480px", margin:"0 auto 56px", lineHeight:1.7 }}>Every build is scoped to your exact business. Book a call and we&apos;ll confirm the right package.</p>
-          </FadeUp>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:"20px", alignItems:"start" }}>
-            {pricingPlans.map((plan,i)=>(
-              <FadeUp key={plan.name} delay={i*0.08}>
-                <div style={{ background:plan.highlighted?"rgba(0,212,255,0.05)":"#0f1620", border:plan.highlighted?"1px solid rgba(0,212,255,0.4)":"1px solid #1e2d3d", borderRadius:"16px", padding:"32px", position:"relative", boxShadow:plan.highlighted?"0 0 40px rgba(0,212,255,0.08)":"none" }}>
-                  {plan.highlighted && (
-                    <div style={{ position:"absolute", top:"-12px", left:"50%", transform:"translateX(-50%)", background:"#00d4ff", color:"#06080f", fontSize:"0.65rem", fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", padding:"4px 16px", borderRadius:"100px", whiteSpace:"nowrap" }}>Most Popular</div>
-                  )}
-                  <p style={{ fontSize:"0.72rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#4d6478", marginBottom:"8px" }}>{plan.tag}</p>
-                  <h3 style={{ fontSize:"1.15rem", fontWeight:800, color:"#f0f6ff", marginBottom:"20px" }}>{plan.name}</h3>
-                  <div style={{ marginBottom:"24px" }}>
-                    <p style={{ fontSize:"1.6rem", fontWeight:800, color:plan.highlighted?"#00d4ff":"#f0f6ff", letterSpacing:"-0.02em", lineHeight:1, marginBottom:"4px" }}>{plan.price}</p>
-                    <p style={{ fontSize:"0.78rem", color:"#4d6478" }}>{plan.period}</p>
-                  </div>
-                  <ul style={{ listStyle:"none", padding:0, margin:"0 0 28px" }}>
-                    {plan.features.map(f=>(
-                      <li key={f} style={{ display:"flex", alignItems:"flex-start", gap:"10px", marginBottom:"10px", fontSize:"0.85rem", color:"#8ba3bd", lineHeight:1.55 }}>
-                        <CheckCircle size={14} color={plan.highlighted?"#00d4ff":"#4d6478"} style={{ flexShrink:0, marginTop:"2px" }} />{f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/evaluation" style={{ display:"block", textAlign:"center", padding:"12px", fontSize:"0.9rem", fontWeight:700, borderRadius:"9px", textDecoration:"none", transition:"all 0.2s", background:plan.highlighted?"#00d4ff":"transparent", color:plan.highlighted?"#06080f":"#f0f6ff", border:plan.highlighted?"1px solid #00d4ff":"1px solid #1e2d3d" }}
-                    onMouseEnter={e=>{if(!plan.highlighted){(e.currentTarget as HTMLElement).style.borderColor="rgba(0,212,255,0.4)";(e.currentTarget as HTMLElement).style.color="#00d4ff"}}}
-                    onMouseLeave={e=>{if(!plan.highlighted){(e.currentTarget as HTMLElement).style.borderColor="#1e2d3d";(e.currentTarget as HTMLElement).style.color="#f0f6ff"}}}>
-                    {plan.cta}
-                  </Link>
-                </div>
-              </FadeUp>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section style={{ padding:"100px 24px", background:"#0d1117", borderTop:"1px solid #1e2d3d", borderBottom:"1px solid #1e2d3d" }}>
-        <div style={{ maxWidth:"760px", margin:"0 auto" }}>
-          <FadeUp>
-            <p className="section-label" style={{ ...centered, marginBottom:"16px" }}>FAQ</p>
-            <h2 style={{ fontSize:"clamp(1.75rem,4vw,2.5rem)", fontWeight:800, letterSpacing:"-0.03em", ...centered, color:"#f0f6ff", marginBottom:"56px" }}>Questions we hear every week</h2>
-          </FadeUp>
-          {faqs.map((faq,i)=>(
-            <FadeUp key={i} delay={i*0.04}><FAQItem q={faq.q} a={faq.a} /></FadeUp>
-          ))}
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section style={{ padding:"120px 24px", ...centered, position:"relative", overflow:"hidden" }}>
-        <div aria-hidden="true" style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"700px", height:"400px", background:"radial-gradient(ellipse, rgba(0,212,255,0.06) 0%, transparent 70%)", pointerEvents:"none" }} />
-        <FadeUp>
-          <p className="section-label" style={{ marginBottom:"20px" }}>Get Started</p>
-          <h2 style={{ fontSize:"clamp(2rem,5vw,3.5rem)", fontWeight:900, letterSpacing:"-0.04em", lineHeight:1.1, color:"#f0f6ff", marginBottom:"20px" }}>
-            Ready to hire your first <span className="gradient-text">AI employee?</span>
-          </h2>
-          <p style={{ color:"#8ba3bd", fontSize:"1.05rem", maxWidth:"460px", margin:"0 auto 40px", lineHeight:1.7 }}>
-            Book a free 30-minute strategy call. We&apos;ll map out the highest-leverage automation for your business — no pitch, just clarity.
-          </p>
-          <Link href="/evaluation" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"16px 40px", fontSize:"1rem", fontWeight:700, color:"#06080f", background:"#00d4ff", borderRadius:"12px", textDecoration:"none", boxShadow:"0 0 40px rgba(0,212,255,0.3)", transition:"box-shadow 0.2s" }}
-            onMouseEnter={e=>(e.currentTarget.style.boxShadow="0 0 60px rgba(0,212,255,0.5)")}
-            onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 0 40px rgba(0,212,255,0.3)")}>
-            Book a Free Strategy Call <ArrowRight size={18} strokeWidth={2.5} />
-          </Link>
-        </FadeUp>
-      </section>
-    </div>
+      <style jsx global>{`
+        :root { --fk-blue:#27c9ff; --fk-blue-2:#0878bc; --fk-ink:#02060c; --fk-panel:#08121d; --fk-line:rgba(125,210,255,.18); --fk-muted:#7d95aa; }
+        .home-v2 { background:#02060c; color:#f6fbff; overflow:hidden; }
+        .section-wrap { width:min(1180px, calc(100% - 40px)); margin:0 auto; position:relative; z-index:2; }
+        .hero-v2 { min-height:940px; position:relative; display:grid; place-items:center; overflow:hidden; border-bottom:1px solid var(--fk-line); background:radial-gradient(circle at 50% 42%, rgba(19,144,211,.26), transparent 30%), linear-gradient(180deg,#02060c 0%,#03101b 58%,#02060c 100%); }
+        .hero-grid { position:absolute; inset:0; opacity:.55; background-image:linear-gradient(rgba(51,159,211,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(51,159,211,.08) 1px,transparent 1px); background-size:86px 86px; mask-image:linear-gradient(to bottom,black,transparent 92%); }
+        .hero-glow { position:absolute; width:760px; height:760px; border-radius:50%; background:radial-gradient(circle,rgba(34,184,255,.2),rgba(3,51,79,.08) 42%,transparent 70%); filter:blur(10px); top:160px; left:50%; transform:translateX(-50%); }
+        .hero-word { position:absolute; top:180px; left:50%; transform:translateX(-50%); font-size:clamp(5rem,13vw,12rem); font-weight:900; letter-spacing:.04em; color:rgba(214,244,255,.05); white-space:nowrap; }
+        .hero-copy { position:absolute; left:max(26px,calc((100vw - 1180px)/2)); top:180px; width:min(520px,44vw); z-index:4; }
+        .eyebrow,.section-kicker { color:#5bdcff; letter-spacing:.19em; text-transform:uppercase; font-size:.72rem; font-weight:800; }
+        .pulse-dot { width:7px;height:7px;border-radius:50%;background:#64e6ff;box-shadow:0 0 18px #35d5ff;display:inline-block;margin-right:8px; }
+        .hero-copy h1 { font-size:clamp(3rem,5.6vw,6.1rem); line-height:.94; letter-spacing:-.055em; margin:28px 0 24px; max-width:720px; }
+        .hero-copy h1 span { color:transparent; -webkit-text-stroke:1px #61dfff; text-shadow:0 0 36px rgba(47,201,255,.18); }
+        .hero-copy>p { color:#91a9ba; font-size:1.04rem; line-height:1.8; max-width:560px; }
+        .hero-actions { display:flex; gap:12px; margin-top:34px; flex-wrap:wrap; }
+        .primary-cta,.secondary-cta { min-height:52px; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:0 24px; border-radius:999px; text-decoration:none; font-weight:800; font-size:.9rem; }
+        .primary-cta { color:#001019; background:linear-gradient(135deg,#8bedff,#16b8ef); box-shadow:0 0 38px rgba(39,201,255,.22); }
+        .secondary-cta { color:#dcefff; border:1px solid rgba(121,214,255,.28); background:rgba(7,18,29,.66); backdrop-filter:blur(14px); }
+        .wolf-stage { position:absolute; width:min(560px,48vw); height:min(620px,65vw); left:58%; top:170px; display:grid; place-items:center; z-index:3; }
+        .wolf-mark { width:88%; position:relative; z-index:2; filter:drop-shadow(0 0 34px rgba(42,195,255,.18)); }
+        .wolf-orbit { position:absolute; border:1px solid rgba(78,205,255,.18); border-radius:50%; }
+        .orbit-one { width:92%;height:92%;animation:spinSlow 28s linear infinite; }
+        .orbit-two { width:72%;height:72%;border-style:dashed;animation:spinSlow 19s linear reverse infinite; }
+        .wolf-platform { position:absolute; bottom:28px; width:72%; height:62px; border-radius:50%; background:radial-gradient(ellipse,rgba(65,207,255,.38),rgba(5,59,88,.1) 55%,transparent 75%); filter:blur(10px); }
+        @keyframes spinSlow { to { transform:rotate(360deg); } }
+        .floating-card { position:absolute; z-index:5; width:220px; padding:18px; border:1px solid rgba(113,212,255,.23); border-radius:20px; background:linear-gradient(145deg,rgba(18,37,52,.82),rgba(5,15,24,.66)); backdrop-filter:blur(20px); box-shadow:inset 0 1px rgba(255,255,255,.07),0 18px 50px rgba(0,0,0,.28); }
+        .floating-card span,.floating-card small { display:block;color:#7f99ad; }
+        .floating-card strong { display:block;font-size:1.55rem;margin:8px 0; }
+        .floating-card small { font-size:.7rem;line-height:1.5; }
+        .card-icon { width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(35,196,255,.12);color:#6ee7ff;margin-bottom:13px; }
+        .card-agents { left:calc(50% - 40px); top:640px; }
+        .card-network { right:max(24px,calc((100vw - 1180px)/2)); top:300px; }
+        .online { font-size:1rem!important;color:#d9f7ff;display:flex!important;align-items:center;gap:8px; }
+        .online i { width:8px;height:8px;border-radius:50%;background:#62ffbd;box-shadow:0 0 14px #62ffbd; }
+        .hero-bottom { position:absolute; bottom:42px; left:50%; transform:translateX(-50%); width:min(1060px,calc(100% - 48px)); display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--fk-line); padding-top:24px; z-index:4; }
+        .hero-metric { text-align:center; border-right:1px solid var(--fk-line); }
+        .hero-metric:last-child { border-right:0; }
+        .hero-metric strong { display:block;color:#4edbff;font-size:2rem;letter-spacing:-.04em; }
+        .hero-metric span { color:#6f879b;font-size:.78rem; }
+        .manifesto-section { min-height:690px; position:relative; display:grid; align-items:center; border-bottom:1px solid var(--fk-line); background:radial-gradient(circle at 50% 100%,rgba(24,145,205,.18),transparent 34%),#02060c; }
+        .manifesto-word { position:absolute; bottom:54px; left:50%; transform:translateX(-50%); font-size:clamp(5rem,16vw,14rem); font-weight:900; color:rgba(52,190,255,.06); white-space:nowrap; }
+        .manifesto-grid { display:grid;grid-template-columns:1.05fr .95fr;gap:90px;align-items:center; }
+        .manifesto-grid h2,.section-heading-row h2,.os-copy h2,.roadmap-heading h2,.final-inner h2 { font-size:clamp(2.5rem,5vw,5.2rem);line-height:1;letter-spacing:-.05em;margin:18px 0; }
+        .manifesto-copy>p,.section-heading-row>p,.os-copy>p,.final-inner>p { color:#8198ab;line-height:1.85; }
+        .trust-row { display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid rgba(125,210,255,.12);color:#cfe5f2; }
+        .trust-row svg { color:#50d8ff; }
+        .capabilities-section,.systems-section { padding:120px 0;background:#03080e; }
+        .section-heading-row { display:grid;grid-template-columns:1.15fr .85fr;gap:80px;align-items:end;margin-bottom:60px; }
+        .section-heading-row>p { max-width:500px; }
+        .capability-grid { display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--fk-line);border-left:1px solid var(--fk-line); }
+        .capability-card { min-height:300px;padding:34px;border-right:1px solid var(--fk-line);border-bottom:1px solid var(--fk-line);background:linear-gradient(145deg,rgba(12,28,42,.58),rgba(4,10,16,.62));position:relative; }
+        .capability-card svg { color:#61ddff;margin-top:52px; }
+        .capability-card h3 { font-size:1.35rem;margin:20px 0 12px; }
+        .capability-card p { color:#7890a4;line-height:1.7;font-size:.9rem; }
+        .capability-number { position:absolute;right:24px;top:20px;color:rgba(113,217,255,.22);font-size:2.7rem;font-weight:800; }
+        .os-showcase { padding:130px 0;border-block:1px solid var(--fk-line);background:radial-gradient(circle at 35% 50%,rgba(20,147,213,.2),transparent 28%),#02060c; }
+        .os-grid { display:grid;grid-template-columns:1.15fr .85fr;gap:90px;align-items:center; }
+        .os-visual { min-height:560px;position:relative;display:grid;place-items:center;border:1px solid rgba(107,210,255,.16);background:linear-gradient(145deg,rgba(12,32,47,.7),rgba(2,8,14,.55));overflow:hidden; }
+        .os-light { position:absolute;width:430px;height:430px;border-radius:50%;background:radial-gradient(circle,rgba(43,190,255,.24),transparent 68%); }
+        .os-core { width:190px;height:190px;border-radius:50%;border:1px solid rgba(123,222,255,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(4,16,25,.82);box-shadow:0 0 70px rgba(34,183,248,.16);z-index:2; }
+        .os-core svg { color:#7ceaff; }
+        .os-core strong { letter-spacing:.14em; }
+        .os-core span { color:#708da2;font-size:.68rem; }
+        .node { position:absolute;padding:12px 16px;border:1px solid rgba(115,212,255,.22);border-radius:999px;background:rgba(7,21,31,.8);display:flex;align-items:center;gap:8px;color:#b9d8e8;font-size:.78rem; }
+        .node svg { color:#54d8ff; }
+        .node-one { top:90px;left:70px; }.node-two{top:110px;right:58px}.node-three{bottom:90px;left:48px}.node-four{bottom:105px;right:68px}
+        .os-copy a,.text-link { color:#65ddff;text-decoration:none;display:inline-flex;align-items:center;gap:8px;margin-top:20px;font-weight:700; }
+        .roadmap-section { padding:130px 0;background:linear-gradient(180deg,#03111d,#04243a 55%,#02060c); }
+        .roadmap-heading { text-align:center;max-width:800px;margin:0 auto 70px; }
+        .roadmap-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:34px; }
+        .roadmap-item { position:relative;text-align:center;padding:30px 20px; }
+        .roadmap-circle { width:250px;height:250px;border-radius:50%;border:1px dashed rgba(112,211,255,.25);margin:0 auto -92px;display:grid;place-items:start center;padding-top:38px;color:#9bcce1; }
+        .roadmap-pill { min-height:48px;border-radius:999px;border:1px solid rgba(124,219,255,.2);background:linear-gradient(90deg,rgba(29,93,131,.62),rgba(75,157,202,.4));display:flex;align-items:center;justify-content:center;gap:10px;position:relative;z-index:2;box-shadow:inset 0 1px rgba(255,255,255,.08); }
+        .roadmap-pill i { width:8px;height:8px;border-radius:50%;background:white;box-shadow:0 0 10px white; }
+        .roadmap-item p { color:#7894a7;font-size:.85rem;line-height:1.7;margin:24px auto 0;max-width:260px; }
+        .roadmap-line { position:absolute;top:167px;right:-34px;width:68px;height:1px;background:rgba(93,202,255,.23); }
+        .systems-grid { display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--fk-line); }
+        .system-card { display:grid;grid-template-columns:70px 1fr auto;gap:24px;align-items:center;min-height:210px;padding:30px;border-right:1px solid var(--fk-line);border-bottom:1px solid var(--fk-line);background:linear-gradient(145deg,rgba(8,22,33,.65),rgba(2,8,13,.45)); }
+        .system-card:nth-child(even){border-right:0}.system-index{font-size:2.7rem;color:rgba(88,210,255,.2);font-weight:800}.system-card span{color:#4fd7ff;font-size:.67rem;text-transform:uppercase;letter-spacing:.14em}.system-card h3{font-size:1.35rem;margin:10px 0}.system-card p{color:#748b9e;line-height:1.65;font-size:.86rem}.system-card>svg{color:#4bd4ff}
+        .final-cta-v2 { padding:150px 0;position:relative;text-align:center;background:#02060c;border-top:1px solid var(--fk-line); }
+        .final-glow { position:absolute;width:700px;height:500px;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(35,184,249,.16),transparent 66%); }
+        .final-inner { max-width:900px; }.final-inner h2{max-width:850px;margin:20px auto}.final-inner>p{max-width:560px;margin:0 auto}.centered-actions{justify-content:center}
+        @media (max-width:980px){
+          .hero-v2{min-height:1120px;display:block}.hero-copy{position:relative;left:auto;top:auto;width:min(720px,calc(100% - 40px));margin:0 auto;padding-top:135px;text-align:center}.hero-copy>p{margin-inline:auto}.hero-actions{justify-content:center}.wolf-stage{left:50%;transform:translateX(-50%);top:510px;width:min(520px,88vw);height:520px}.card-agents{left:28px;top:760px}.card-network{right:28px;top:610px}.hero-word{top:235px}.manifesto-grid,.section-heading-row,.os-grid{grid-template-columns:1fr;gap:42px}.capability-grid{grid-template-columns:repeat(2,1fr)}.roadmap-grid{grid-template-columns:1fr}.roadmap-line{display:none}.systems-grid{grid-template-columns:1fr}.system-card,.system-card:nth-child(even){border-right:0}}
+        @media (max-width:640px){
+          .section-wrap{width:min(100% - 28px,1180px)}.hero-v2{min-height:1080px}.hero-copy{width:calc(100% - 28px);padding-top:110px}.hero-copy h1{font-size:3.15rem}.hero-word{top:300px;font-size:4.3rem}.wolf-stage{top:510px;height:430px}.floating-card{width:170px;padding:14px}.card-agents{left:14px;top:780px}.card-network{right:14px;top:625px}.hero-bottom{bottom:28px;width:calc(100% - 28px)}.hero-metric strong{font-size:1.35rem}.hero-metric span{font-size:.62rem}.manifesto-section{padding:100px 0}.manifesto-grid h2,.section-heading-row h2,.os-copy h2,.roadmap-heading h2,.final-inner h2{font-size:2.6rem}.capabilities-section,.systems-section,.roadmap-section,.os-showcase{padding:90px 0}.capability-grid{grid-template-columns:1fr}.capability-card{min-height:260px}.os-visual{min-height:460px}.node{font-size:.66rem;padding:10px}.node-one{left:16px}.node-two{right:14px}.node-three{left:12px}.node-four{right:14px}.systems-grid{display:block}.system-card{grid-template-columns:50px 1fr;}.system-card>svg{display:none}.primary-cta,.secondary-cta{width:100%}.hero-actions{width:100%}.roadmap-circle{width:220px;height:220px}}
+      `}</style>
+    </main>
   );
 }
