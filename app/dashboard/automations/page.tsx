@@ -11,11 +11,15 @@ export default async function AutomationsPage() {
         <div>
           <p className="admin-kicker">Orchestration</p>
           <h1>Workflow Control Center</h1>
-          <p>Register, map, and monitor the automations powering every FluxAgents client project.</p>
+          <p>Register, map, monitor, pause, and retry the automations powering every FluxAgents client project.</p>
         </div>
       </div>
 
-      <WorkflowRegistryClient initialWorkflows={registry.workflows} configured={registry.configured} />
+      <WorkflowRegistryClient
+        initialWorkflows={registry.workflows}
+        initialRuns={registry.runs}
+        configured={registry.configured}
+      />
 
       <section className="admin-panel">
         <div className="admin-panel-header">
