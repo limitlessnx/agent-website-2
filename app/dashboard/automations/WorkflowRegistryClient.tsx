@@ -1,0 +1,123 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import type { WorkflowRecord } from "@/lib/workflow-registry";
+
+type Props = {
+  initialWorkflows: WorkflowRecord[];
+  configured: boolean;
+};
+
+const providers = ["n8n", "trigger.dev", "telegram", "whatsapp", "email", "elevenlabs", "custom"];
+const statuses: WorkflowRecord["status"][] = ["draft", "active", "paused", "disabled", "error"];
+
+export default function WorkflowRegistryClient({ initialWorkflows, configured }: Props) {
+  const [workflows, setWorkflows] = useState(initialWorkflows);
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const counts = useMemo(
+    () => ({
+      total: workflows.length,
+      active: workflows.filter((workflow) => workflow.status === "active").length,
+      attention: workflows.filter((workflow) => ["error", "paused"].includes(workflow.status)).length,
+    }),
+    [workflows],
+  );
+
+  async function submitWorkflow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage("");
+
+    const data = new FormData(event.currentTarget);
+    const payload = {
+      organization_id: String(data.get("organization_id") || "limitless-realty"),
+      project_id: String(data.get("project_id") || "limitless-realty"),
+      workflow_key: String(data.get("workflow_key") || ""),
+      name: String(data.get("name") || ""),
+      description: String(data.get("description") || ""),
+      provider: String(data.get("provider") || "n8n"),
+      external_workflow_id: String(data.get("external_workflow_id") || ""),
+      endpoint_url: String(data.get("endpoint_url") || ""),
+      status: String(data.get("status") || "draft"),
+      timeout_seconds: Number(data.get("timeout_seconds") || 60),
+      max_retries: Number(data.get("max_retries") || 2),
+    };
+
+    try {
+      const response = await fetch("/api/admin/workflows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to register workflow.");
+
+      setWorkflows((current) => {
+        const others = current.filter((item) => item.id !== result.workflow.id);
+        return [result.workflow, ...others];
+      });
+      event.currentTarget.reset();
+      setMessage("Workflow registered successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to register workflow.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <section className="admin-stat-grid">
+        <article className="admin-stat-card"><span>Registered</span><strong>{counts.total}</strong></article>
+        <article className="admin-stat-card"><span>Active</span><strong>{counts.active}</strong></article>
+        <article className="admin-stat-card"><span>Needs attention</span><strong>{counts.attention}</strong></article>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <h2>Register workflow</h2>
+          <p>{configured ? "Create or update a workflow by its organization and workflow key." : "Configure Supabase and run the workflow registry migration before saving workflows."}</p>
+        </div>
+
+        <form className="admin-form" onSubmit={submitWorkflow}>
+          <div className="admin-form-grid">
+            <label>Workflow name<input name="name" required placeholder="Maia lead onboarding" /></label>
+            <label>Workflow key<input name="workflow_key" required placeholder="maia-lead-onboarding" /></label>
+            <label>Organization<input name="organization_id" defaultValue="limitless-realty" required /></label>
+            <label>Project<input name="project_id" defaultValue="limitless-realty" required /></label>
+            <label>Provider<select name="provider" defaultValue="n8n">{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label>
+            <label>Status<select name="status" defaultValue="draft">{statuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+            <label>External workflow ID<input name="external_workflow_id" placeholder="n8n workflow ID" /></label>
+            <label>Endpoint URL<input name="endpoint_url" type="url" placeholder="https://..." /></label>
+            <label>Timeout seconds<input name="timeout_seconds" type="number" min="5" defaultValue="60" /></label>
+            <label>Maximum retries<input name="max_retries" type="number" min="0" max="10" defaultValue="2" /></label>
+          </div>
+          <label>Description<textarea name="description" rows={3} placeholder="What this workflow does and which agent uses it." /></label>
+          <button className="admin-button" type="submit" disabled={saving || !configured}>{saving ? "Saving..." : "Register workflow"}</button>
+          {message ? <p className="admin-form-message">{message}</p> : null}
+        </form>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <h2>Workflow registry</h2>
+          <p>One record per automation, regardless of whether it runs in n8n, Trigger.dev, a messaging channel, or a voice provider.</p>
+        </div>
+        <div className="admin-list">
+          {workflows.length ? workflows.map((workflow) => (
+            <div key={workflow.id} className="admin-list-row">
+              <div>
+                <strong>{workflow.name}</strong>
+                <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
+                <span>{workflow.description || workflow.workflow_key}</span>
+              </div>
+              <em>{workflow.status}</em>
+            </div>
+          )) : <p>No workflows are registered yet.</p>}
+        </div>
+      </section>
+    </>
+  );
+}
