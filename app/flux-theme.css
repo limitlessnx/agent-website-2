@@ -1,0 +1,146 @@
+:root {
+  --bg-base: #07040f;
+  --bg-surface: #0d0719;
+  --bg-elevated: #130b24;
+  --bg-card: rgba(18, 10, 34, 0.72);
+  --border: rgba(180, 139, 255, 0.16);
+  --border-bright: rgba(188, 146, 255, 0.34);
+  --cyan: #8b5cf6;
+  --cyan-dim: #7045d8;
+  --cyan-glow: rgba(139, 92, 246, 0.18);
+  --cyan-glow-strong: rgba(139, 92, 246, 0.38);
+  --text-primary: #faf8ff;
+  --text-secondary: #aaa0c0;
+  --text-muted: #6e6483;
+  --admin-bg: #07040f;
+  --admin-shell-bg: #090513;
+  --admin-sidebar-bg: rgba(11, 6, 22, 0.9);
+  --admin-panel-bg: rgba(18, 10, 34, 0.68);
+  --admin-panel-strong: rgba(28, 16, 50, 0.88);
+  --admin-border: rgba(180, 139, 255, 0.16);
+  --admin-border-strong: rgba(167, 139, 250, 0.36);
+  --admin-text: #faf8ff;
+  --admin-text-soft: #b7accd;
+  --admin-text-muted: #716781;
+  --admin-cyan: #9b6cff;
+  --admin-violet: #b68cff;
+  --admin-shadow: 0 28px 90px rgba(20, 6, 45, 0.55);
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(126, 57, 255, 0.18), transparent 34rem),
+    #07040f;
+}
+
+::selection { background: rgba(139, 92, 246, .42); }
+:focus-visible { outline-color: #9b6cff; }
+.gradient-text {
+  background: linear-gradient(120deg, #fff 0%, #d9c5ff 42%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.section-label, .admin-kicker { color: #a477ff; }
+
+/* Shared public-page treatment */
+main:not(.admin-main) > section:not(.quantix-hero):not(.quantix-features):not(.quantix-platform):not(.quantix-final) {
+  border-color: rgba(180, 139, 255, .12) !important;
+}
+.card-surface,
+[class*="pricing"],
+[class*="service-card"],
+[class*="industry-card"] {
+  border-color: rgba(180, 139, 255, .16) !important;
+}
+
+/* Admin product theme */
+.admin-shell {
+  background:
+    radial-gradient(circle at 82% 0%, rgba(112, 69, 216, .14), transparent 32rem),
+    #07040f;
+}
+.admin-sidebar {
+  background: linear-gradient(180deg, rgba(13, 7, 25, .98), rgba(7, 4, 15, .98));
+  border-right-color: rgba(180, 139, 255, .14);
+  backdrop-filter: blur(24px);
+}
+.admin-brand-mark,
+.admin-login-icon {
+  color: #fff;
+  background: linear-gradient(145deg, #a96cff, #6d35e8);
+  box-shadow: 0 0 26px rgba(139, 92, 246, .36);
+  border-radius: 10px;
+}
+.admin-nav a,
+.admin-text-button { border-radius: 10px; }
+.admin-nav a:hover,
+.admin-text-button:hover {
+  border-color: rgba(180, 139, 255, .22);
+  background: rgba(139, 92, 246, .08);
+}
+.admin-main { padding: 30px; }
+.admin-page { gap: 18px; }
+.admin-page-header {
+  padding: 22px 24px;
+  border: 1px solid rgba(180, 139, 255, .14);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(28, 16, 50, .78), rgba(10, 6, 19, .72));
+  box-shadow: 0 24px 70px rgba(18, 6, 38, .28);
+}
+.admin-page-header h1 { font-weight: 650; letter-spacing: -.045em; }
+.admin-panel,
+.admin-metric-card,
+.admin-stat-card {
+  border-color: rgba(180, 139, 255, .15) !important;
+  border-radius: 16px !important;
+  background:
+    linear-gradient(145deg, rgba(29, 17, 52, .78), rgba(12, 7, 22, .8)) !important;
+  box-shadow: 0 20px 56px rgba(12, 3, 28, .24);
+  backdrop-filter: blur(20px);
+}
+.admin-metric-card,
+.admin-stat-card { position: relative; overflow: hidden; }
+.admin-metric-card::before,
+.admin-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(190, 153, 255, .55), transparent);
+}
+.admin-list-row {
+  border-color: rgba(180, 139, 255, .12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .018);
+}
+.admin-list-row:hover { background: rgba(139, 92, 246, .055); }
+.admin-button {
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #9b6cff, #6f3ce5) !important;
+  border-color: rgba(199, 170, 255, .5) !important;
+  box-shadow: 0 10px 28px rgba(91, 45, 190, .24);
+}
+.admin-button.secondary {
+  color: #cfc3e8 !important;
+  background: rgba(139, 92, 246, .08) !important;
+  border-color: rgba(180, 139, 255, .18) !important;
+  box-shadow: none;
+}
+.admin-status.live {
+  color: #d7c0ff;
+  border-color: rgba(167, 139, 250, .38);
+  background: rgba(139, 92, 246, .11);
+}
+.admin-form input,
+.admin-form select,
+.admin-form textarea,
+.admin-search input {
+  border-color: rgba(180, 139, 255, .15) !important;
+  background: rgba(7, 4, 15, .72) !important;
+}
+
+@media (max-width: 900px) {
+  .admin-main { padding: 18px; }
+  .admin-page-header { padding: 18px; border-radius: 14px; }
+}
