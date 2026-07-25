@@ -67,10 +67,56 @@ export async function getN8nWorkflow(id: string) {
   return n8nRequest<N8nWorkflow>(`/workflows/${encodeURIComponent(id)}`);
 }
 
+function normalizedWorkflowName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function findN8nWorkflowByName(name: string) {
   const workflows = await listN8nWorkflows(250);
-  const target = name.trim().toLowerCase();
-  return workflows.find((workflow) => workflow.name.trim().toLowerCase() === target) || null;
+  const target = normalizedWorkflowName(name);
+  return workflows.find((workflow) => normalizedWorkflowName(workflow.name) === target) || null;
+}
+
+export async function findN8nWorkflowFlexible(options: {
+  exactNames?: string[];
+  requiredKeywords?: string[];
+  preferredKeywords?: string[];
+  workflowId?: string;
+}) {
+  if (options.workflowId) {
+    try {
+      return await getN8nWorkflow(options.workflowId);
+    } catch {
+      // Continue to name and keyword matching.
+    }
+  }
+
+  const workflows = await listN8nWorkflows(250);
+  const exactTargets = (options.exactNames || []).map(normalizedWorkflowName).filter(Boolean);
+
+  const exact = workflows.find((workflow) => exactTargets.includes(normalizedWorkflowName(workflow.name)));
+  if (exact) return exact;
+
+  const required = (options.requiredKeywords || []).map(normalizedWorkflowName).filter(Boolean);
+  const preferred = (options.preferredKeywords || []).map(normalizedWorkflowName).filter(Boolean);
+
+  const ranked = workflows
+    .map((workflow) => {
+      const name = normalizedWorkflowName(workflow.name);
+      const allRequired = required.every((keyword) => name.includes(keyword));
+      if (!allRequired) return null;
+      const preferredScore = preferred.reduce((score, keyword) => score + (name.includes(keyword) ? 1 : 0), 0);
+      return { workflow, score: preferredScore + (workflow.active ? 0.25 : 0) };
+    })
+    .filter((entry): entry is { workflow: N8nWorkflow; score: number } => Boolean(entry))
+    .sort((a, b) => b.score - a.score);
+
+  return ranked[0]?.workflow || null;
 }
 
 export async function listN8nExecutions(limit = 100) {
