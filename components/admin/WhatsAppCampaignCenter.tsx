@@ -118,7 +118,13 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Campaign failed.");
-        setResult(`${data.accepted} lead(s) accepted by the WhatsApp campaign workflow.`);
+
+        if (data.failed > 0) {
+          const firstFailure = data.failures?.[0]?.error ? ` First error: ${data.failures[0].error}` : "";
+          setResult(`${data.completed} workflow(s) completed and ${data.failed} failed.${firstFailure}`);
+        } else {
+          setResult(`${data.completed} Maia WhatsApp workflow(s) completed successfully.`);
+        }
       } catch (error) {
         setResult(error instanceof Error ? error.message : "Campaign failed.");
       }
@@ -229,7 +235,7 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
             <small>Undocumented leads are included when using All leads or manual selection.</small>
           </div>
           <button type="button" disabled={isPending || !message.trim() || audience.length === 0} onClick={sendCampaign}>
-            {isPending ? "Sending to n8n..." : "Send WhatsApp campaign"}
+            {isPending ? "Waiting for Maia workflow..." : "Send WhatsApp campaign"}
           </button>
         </div>
         {result ? <p className="campaign-result">{result}</p> : null}
