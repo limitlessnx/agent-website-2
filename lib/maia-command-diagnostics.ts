@@ -22,6 +22,15 @@ type WorkflowConnection = {
   main?: Array<Array<{ node: string; type: string; index: number }>>;
 };
 
+type ExecutionResultData = {
+  runData?: Record<string, unknown>;
+  lastNodeExecuted?: string;
+  error?: {
+    message?: string;
+    description?: string;
+  };
+};
+
 function containsMarker(value: unknown, marker: string) {
   try {
     return JSON.stringify(value).includes(marker);
@@ -133,7 +142,8 @@ export async function inspectAndRepairMaiaCommandPath(marker = TRACE_MARKER) {
   });
 
   const traced = executions.find((execution) => containsMarker(execution, marker));
-  const runData = traced?.data?.resultData?.runData || {};
+  const resultData = (traced?.data?.resultData || {}) as ExecutionResultData;
+  const runData = resultData.runData || {};
   const tracedNodes = Object.entries(runData)
     .filter(([, value]) => containsMarker(value, marker))
     .map(([nodeName]) => nodeName);
@@ -167,8 +177,8 @@ export async function inspectAndRepairMaiaCommandPath(marker = TRACE_MARKER) {
       status: traced?.status || null,
       nodesContainingMarker: tracedNodes,
       inferredCommandPath: downstreamPath,
-      lastNodeExecuted: traced?.data?.resultData?.lastNodeExecuted || null,
-      error: traced?.data?.resultData?.error?.message || traced?.data?.resultData?.error?.description || null,
+      lastNodeExecuted: resultData.lastNodeExecuted || null,
+      error: resultData.error?.message || resultData.error?.description || null,
     },
   };
 }
