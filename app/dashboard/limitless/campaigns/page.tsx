@@ -1,12 +1,13 @@
 import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenter";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
-import { getCampaignReports, getProperties } from "@/lib/limitless-data";
+import { getProperties } from "@/lib/limitless-data";
+import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
 
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
   const [campaigns, leads, properties] = await Promise.all([
-    getCampaignReports(50),
+    getDetailedCampaignReports(50),
     getCampaignAudienceLeads(5000),
     getProperties(500),
   ]);
@@ -21,53 +22,41 @@ export default async function CampaignsPage() {
           <p className="admin-kicker">Limitless Realty</p>
           <h1>WhatsApp Campaign Center</h1>
           <p>
-            Send campaigns directly from Fluxknight through Maia&apos;s WhatsApp client agent. Target all
+            Send campaigns directly from Fluxknight through Maia&apos;s WhatsApp action workflow. Target all
             leads, manually selected contacts, or audiences filtered by state, interest, property, and budget.
           </p>
         </div>
-        <div className="admin-launch-score">
-          <span>{eligible}</span>
-          <p>Campaign-ready leads</p>
-        </div>
+        <div className="admin-launch-score"><span>{eligible}</span><p>Campaign-ready leads</p></div>
       </section>
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <div>
-            <h2>Direct WhatsApp Campaign</h2>
-            <p>
-              Telegram is no longer required as the dashboard trigger. Undocumented leads remain eligible
-              when they have a valid name and phone number.
-            </p>
-          </div>
+          <div><h2>Direct WhatsApp Campaign</h2><p>Every send now carries an idempotency key, n8n execution ID, and truthful provider state.</p></div>
           <span className="admin-status live">{undocumented} undocumented</span>
         </div>
         <WhatsAppCampaignCenter leads={leads} properties={properties} />
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div>
-            <h2>Recent Campaign Reports</h2>
-            <p>Delivery summaries saved by dashboard and existing WhatsApp campaign executions.</p>
-          </div>
-        </div>
+        <div className="admin-panel-header"><div><h2>Recent Campaign Reports</h2><p>Provider submission, delivery confirmation, failures, and n8n execution references.</p></div></div>
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead>
-              <tr><th>Campaign</th><th>Attempted</th><th>Accepted</th><th>Failed</th><th>Skipped</th><th>Date</th></tr>
-            </thead>
+            <thead><tr><th>Campaign</th><th>Status</th><th>Attempted</th><th>Sent</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Execution</th><th>Date</th></tr></thead>
             <tbody>
-              {campaigns.map((campaign) => (
+              {campaigns.length ? campaigns.map((campaign) => (
                 <tr key={campaign.id}>
                   <td>{campaign.campaign_topic}</td>
+                  <td>{campaign.status.replaceAll("_", " ")}</td>
                   <td>{campaign.attempted}</td>
                   <td>{campaign.accepted}</td>
+                  <td>{campaign.delivered}</td>
+                  <td>{campaign.pending_delivery}</td>
                   <td>{campaign.failed}</td>
                   <td>{campaign.skipped}</td>
+                  <td>{campaign.execution_id || "-"}</td>
                   <td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString("en-NG") : "-"}</td>
                 </tr>
-              ))}
+              )) : <tr><td colSpan={10}>No saved campaign reports yet.</td></tr>}
             </tbody>
           </table>
         </div>
