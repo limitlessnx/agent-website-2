@@ -90,10 +90,10 @@ export default function Navbar() {
               role="dialog"
               aria-modal="true"
               aria-label="Mobile navigation"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 24 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
             >
               <div className="mobile-links">
                 {navLinks.map((link) => (
@@ -113,16 +113,17 @@ export default function Navbar() {
         .site-header {
           position: fixed;
           inset: 0 0 auto;
-          z-index: 1000;
+          z-index: 2147483647;
           padding: 16px 20px;
           pointer-events: none;
           transition: padding .25s ease;
+          isolation: isolate;
         }
         .site-header.is-scrolled { padding-top: 10px; }
         .site-nav {
           pointer-events: auto;
           position: relative;
-          z-index: 1003;
+          z-index: 3;
           width: min(1120px, 100%);
           min-height: 58px;
           margin: 0 auto;
@@ -133,10 +134,8 @@ export default function Navbar() {
           gap: 18px;
           border: 1px solid rgba(190, 153, 255, .18);
           border-radius: 18px;
-          background: rgba(9, 5, 18, .94);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          box-shadow: 0 18px 55px rgba(8, 2, 18, .45), inset 0 1px rgba(255,255,255,.04);
+          background-color: #090512;
+          box-shadow: 0 18px 55px rgba(8, 2, 18, .55), inset 0 1px rgba(255,255,255,.04);
         }
         .site-brand {
           display: inline-flex;
@@ -195,35 +194,31 @@ export default function Navbar() {
           border: 1px solid rgba(180,139,255,.22);
           border-radius: 12px;
           color: #fff;
-          background: #130b24;
+          background-color: #130b24;
           box-shadow: 0 8px 24px rgba(0,0,0,.28);
         }
         .menu-backdrop {
           pointer-events: auto;
           position: fixed;
           inset: 0;
-          z-index: 1001;
+          z-index: 1;
           border: 0;
-          background: rgba(3, 1, 8, .88);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background-color: #08040f;
+          opacity: 1;
         }
         .mobile-panel {
           pointer-events: auto;
           position: fixed;
-          z-index: 1002;
-          top: 0;
-          right: 0;
-          bottom: 0;
-          width: min(88vw, 420px);
-          padding: 104px 22px 28px;
+          inset: 0;
+          z-index: 2;
+          padding: 108px 20px max(28px, env(safe-area-inset-bottom));
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          border-left: 1px solid rgba(190,153,255,.22);
-          background: #0a0613;
-          box-shadow: -28px 0 80px rgba(0,0,0,.65);
+          background-color: #08040f;
+          opacity: 1;
           overflow-y: auto;
+          isolation: isolate;
         }
         .mobile-links { display: grid; }
         .mobile-links a {
@@ -247,7 +242,7 @@ export default function Navbar() {
           color: #d3cae3;
           text-align: center;
           text-decoration: none;
-          background: #10091e;
+          background-color: #10091e;
         }
         .mobile-actions a.primary {
           color: #fff;
@@ -267,7 +262,6 @@ export default function Navbar() {
         }
         @media (max-width: 420px) {
           .site-nav { min-height: 54px; }
-          .mobile-panel { width: 100%; border-left: 0; }
         }
       `}</style>
     </header>
