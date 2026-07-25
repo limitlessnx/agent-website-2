@@ -149,8 +149,43 @@ export async function createN8nWorkflow(workflow: Omit<N8nWorkflow, "id" | "acti
   return n8nRequest<N8nWorkflow>("/workflows", { method: "POST", body: JSON.stringify(workflow) });
 }
 
+function sanitizeWorkflowSettings(settings?: Record<string, unknown>) {
+  if (!settings) return undefined;
+
+  const allowedKeys = [
+    "executionOrder",
+    "saveManualExecutions",
+    "saveExecutionProgress",
+    "saveDataErrorExecution",
+    "saveDataSuccessExecution",
+    "timezone",
+    "errorWorkflow",
+    "callerPolicy",
+    "executionTimeout",
+  ] as const;
+
+  const sanitized: Record<string, unknown> = {};
+  for (const key of allowedKeys) {
+    if (settings[key] !== undefined) sanitized[key] = settings[key];
+  }
+
+  return sanitized;
+}
+
 export async function updateN8nWorkflow(id: string, workflow: Partial<N8nWorkflow>) {
-  return n8nRequest<N8nWorkflow>(`/workflows/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(workflow) });
+  const payload: Partial<N8nWorkflow> = { ...workflow };
+  const sanitizedSettings = sanitizeWorkflowSettings(workflow.settings);
+
+  if (sanitizedSettings && Object.keys(sanitizedSettings).length > 0) {
+    payload.settings = sanitizedSettings;
+  } else {
+    delete payload.settings;
+  }
+
+  return n8nRequest<N8nWorkflow>(`/workflows/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function activateN8nWorkflow(id: string) {
