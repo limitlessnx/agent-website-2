@@ -36,7 +36,7 @@ function parseStep(value: unknown) {
   return step;
 }
 
-function validateEmail(value: string | undefined, field: string) {
+function validateEmail(value: string | null | undefined, field: string) {
   if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
     throw new Error(`${field} must be a valid email address.`);
   }
