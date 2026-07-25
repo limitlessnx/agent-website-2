@@ -10,6 +10,7 @@ import type { ProgressiveLead } from "@/lib/lead-profile-service";
 import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 
 const DASHBOARD_WEBHOOK_NODE = "Fluxknight Maia Command Webhook";
+const DASHBOARD_NORMALIZE_NODE = "Fluxknight Normalize Maia Command";
 const DASHBOARD_WEBHOOK_PATH = "fluxknight-maia-command";
 const LEGACY_TRIGGER_NAME = "Fluxknight Campaign Trigger";
 const EXECUTION_TIMEOUT_MS = 30000;
@@ -84,6 +85,25 @@ function findSourceTrigger(nodes: WorkflowNode[], connections: Record<string, Wo
   );
 }
 
+function connectionTargets(connection?: WorkflowConnection) {
+  return (connection?.main || []).flat().map((item) => item.node);
+}
+
+function findTelegramParser(
+  nodes: WorkflowNode[],
+  connections: Record<string, WorkflowConnection>,
+  sourceTrigger: WorkflowNode,
+) {
+  const sourceTargets = new Set(connectionTargets(connections[sourceTrigger.name]));
+  return (
+    nodes.find(
+      (node) =>
+        sourceTargets.has(node.name) &&
+        /extract.*message|message.*data|telegram.*parse|parse.*telegram|normalize.*telegram/i.test(node.name),
+    ) || null
+  );
+}
+
 export async function ensureMaiaDashboardWebhook() {
   const summary = await resolveMaiaWorkflow();
   const workflow = await getN8nWorkflow(summary.id);
@@ -94,23 +114,39 @@ export async function ensureMaiaDashboardWebhook() {
   if (!sourceTrigger) throw new Error(`${summary.name} has no connected source trigger to mirror.`);
 
   const sourceConnection = connections[sourceTrigger.name];
+  const telegramParser = findTelegramParser(nodes, connections, sourceTrigger);
+  const downstreamConnection = telegramParser ? connections[telegramParser.name] : sourceConnection;
+  const nextNodes = connectionTargets(downstreamConnection);
+
+  if (!nextNodes.length) {
+    throw new Error(
+      `${telegramParser?.name || sourceTrigger.name} has no downstream Maia processing node.`,
+    );
+  }
+
   const webhookNode = nodes.find((node) => node.name === DASHBOARD_WEBHOOK_NODE);
-  const nextNodes = (sourceConnection?.main || []).flat().map((item) => item.node);
-
-  if (!nextNodes.length) throw new Error(`${sourceTrigger.name} has no downstream processing node.`);
-
+  const normalizeNode = nodes.find((node) => node.name === DASHBOARD_NORMALIZE_NODE);
   const legacyTrigger = nodes.find((node) => node.name === LEGACY_TRIGGER_NAME);
-  const cleanedNodes = nodes.filter((node) => node.name !== LEGACY_TRIGGER_NAME && node.name !== DASHBOARD_WEBHOOK_NODE);
+  const cleanedNodes = nodes.filter(
+    (node) =>
+      node.name !== LEGACY_TRIGGER_NAME &&
+      node.name !== DASHBOARD_WEBHOOK_NODE &&
+      node.name !== DASHBOARD_NORMALIZE_NODE,
+  );
   const nextConnections = { ...connections };
   delete nextConnections[LEGACY_TRIGGER_NAME];
   delete nextConnections[DASHBOARD_WEBHOOK_NODE];
+  delete nextConnections[DASHBOARD_NORMALIZE_NODE];
+
+  const baseX = Number(telegramParser?.position?.[0] || sourceTrigger.position?.[0] || 0);
+  const baseY = Number(telegramParser?.position?.[1] || sourceTrigger.position?.[1] || 0);
 
   const directWebhook: WorkflowNode = {
     id: webhookNode?.id || crypto.randomUUID(),
     name: DASHBOARD_WEBHOOK_NODE,
     type: "n8n-nodes-base.webhook",
     typeVersion: 2,
-    position: [Number(sourceTrigger.position?.[0] || 0), Number(sourceTrigger.position?.[1] || 0) + 180],
+    position: [baseX, baseY + 180],
     webhookId: String(webhookNode?.webhookId || crypto.randomUUID()),
     parameters: {
       httpMethod: "POST",
@@ -120,19 +156,40 @@ export async function ensureMaiaDashboardWebhook() {
     },
   };
 
+  const normalizeCommand: WorkflowNode = {
+    id: normalizeNode?.id || crypto.randomUUID(),
+    name: DASHBOARD_NORMALIZE_NODE,
+    type: "n8n-nodes-base.code",
+    typeVersion: 2,
+    position: [baseX + 220, baseY + 180],
+    parameters: {
+      mode: "runOnceForEachItem",
+      jsCode:
+        "const value = $json.body && typeof $json.body === 'object' ? $json.body : $json; return { json: value };",
+    },
+  };
+
+  const webhookConnection: WorkflowConnection = {
+    main: [[{ node: DASHBOARD_NORMALIZE_NODE, type: "main", index: 0 }]],
+  };
+  const normalizeConnection = JSON.parse(JSON.stringify(downstreamConnection)) as WorkflowConnection;
+
   const needsUpdate =
     !webhookNode ||
+    !normalizeNode ||
     Boolean(legacyTrigger) ||
     webhookNode.parameters?.responseMode !== "onReceived" ||
-    JSON.stringify(connections[DASHBOARD_WEBHOOK_NODE] || {}) !== JSON.stringify(sourceConnection || {});
+    JSON.stringify(connections[DASHBOARD_WEBHOOK_NODE] || {}) !== JSON.stringify(webhookConnection) ||
+    JSON.stringify(connections[DASHBOARD_NORMALIZE_NODE] || {}) !== JSON.stringify(normalizeConnection);
 
   if (needsUpdate) {
     const updated = await updateN8nWorkflow(summary.id, {
       name: workflow.name,
-      nodes: [...cleanedNodes, directWebhook],
+      nodes: [...cleanedNodes, directWebhook, normalizeCommand],
       connections: {
         ...nextConnections,
-        [DASHBOARD_WEBHOOK_NODE]: JSON.parse(JSON.stringify(sourceConnection)),
+        [DASHBOARD_WEBHOOK_NODE]: webhookConnection,
+        [DASHBOARD_NORMALIZE_NODE]: normalizeConnection,
       },
       settings: {
         ...(workflow.settings || {}),
@@ -148,6 +205,8 @@ export async function ensureMaiaDashboardWebhook() {
     workflowId: summary.id,
     workflowName: summary.name,
     sourceTrigger: sourceTrigger.name,
+    bypassedParser: telegramParser?.name || null,
+    normalizationNode: DASHBOARD_NORMALIZE_NODE,
     nextNodes,
     webhookPath: DASHBOARD_WEBHOOK_PATH,
     repaired: needsUpdate,
@@ -161,6 +220,7 @@ function buildMaiaInput(payload: MaiaDirectCommandPayload) {
 
   return {
     source: "fluxknight_dashboard",
+    channel: "whatsapp",
     command_id: payload.commandId,
     command_type: payload.commandType,
     campaign_id: payload.commandId,
@@ -168,9 +228,13 @@ function buildMaiaInput(payload: MaiaDirectCommandPayload) {
     campaign_message: payload.message,
     message: payload.message,
     text: payload.message,
+    message_text: payload.message,
     media_url: mediaUrl,
+    attachments: mediaUrl ? [{ type: "image", url: mediaUrl }] : [],
     property: payload.property || null,
     lead: { ...lead, phone },
+    lead_id: lead.id || null,
+    conversation_id: payload.commandId,
     name: lead.name,
     phone,
     to: phone,
@@ -183,20 +247,6 @@ function buildMaiaInput(payload: MaiaDirectCommandPayload) {
     purpose: lead.purpose || "",
     created_by: payload.createdBy || "fluxknight_dashboard",
     metadata: payload.metadata || {},
-    body: {
-      source: "fluxknight_dashboard",
-      command_id: payload.commandId,
-      command_type: payload.commandType,
-      message: payload.message,
-      text: payload.message,
-      phone,
-      to: phone,
-      name: lead.name,
-      media_url: mediaUrl,
-      property: payload.property || null,
-      lead: { ...lead, phone },
-      metadata: payload.metadata || {},
-    },
   };
 }
 
