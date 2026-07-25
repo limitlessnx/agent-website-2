@@ -47,13 +47,15 @@ export async function dispatchMaiaCommand(command: MaiaCommand) {
   const topic = command.topic || command.type.replaceAll("_", " ");
 
   const results = [];
-  const failures: Array<{ phone: string; error: string }> = [];
+  const failures: Array<{ phone: string; commandId: string; error: string }> = [];
 
-  for (const recipient of recipients) {
+  for (const [index, recipient] of recipients.entries()) {
+    const recipientCommandId = `${commandId}:${index + 1}:${recipient.phone}`;
+
     try {
       results.push(
         await dispatchMaiaDirectCommand({
-          commandId,
+          commandId: recipientCommandId,
           commandType: command.type,
           topic,
           message,
@@ -61,12 +63,17 @@ export async function dispatchMaiaCommand(command: MaiaCommand) {
           property: command.property as Record<string, unknown> | undefined,
           recipient,
           createdBy: command.createdBy || "fluxknight_dashboard",
-          metadata: command.metadata,
+          metadata: {
+            ...(command.metadata || {}),
+            parentCommandId: commandId,
+            recipientIndex: index,
+          },
         }),
       );
     } catch (error) {
       failures.push({
         phone: recipient.phone,
+        commandId: recipientCommandId,
         error: error instanceof Error ? error.message : "Maia command failed.",
       });
     }
@@ -94,7 +101,7 @@ export async function dispatchMaiaCommand(command: MaiaCommand) {
       dashboardNextNodes: route.nextNodes,
       repaired: route.repaired,
     },
-    responses: results.map((result) => result.response),
+    executions: results.map((result) => result.response),
     metadata: command.metadata || {},
   };
 }
