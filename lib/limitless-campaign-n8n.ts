@@ -4,8 +4,10 @@ import {
   findN8nWorkflowByName,
   findN8nWorkflowFlexible,
   getN8nBaseUrl,
+  getN8nWorkflow,
   isN8nApiConfigured,
   listN8nWorkflows,
+  updateN8nWorkflow,
 } from "@/lib/n8n-api";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
 
@@ -66,24 +68,13 @@ async function resolveWhatsAppAgentWorkflow() {
   );
 }
 
-export async function ensureLimitlessCampaignWorkflow() {
-  if (!isN8nApiConfigured()) {
-    throw new Error("n8n API is not configured in Vercel.");
-  }
-
-  const existing = await findN8nWorkflowByName(DASHBOARD_WORKFLOW_NAME);
-  if (existing) {
-    if (!existing.active) await activateN8nWorkflow(existing.id);
-    return existing;
-  }
-
-  const downstream = await resolveWhatsAppAgentWorkflow();
-
+function buildCampaignWorkflow(downstream: { id: string; name: string }) {
   const webhookNodeName = "Dashboard Campaign Webhook";
   const prepareNodeName = "Prepare WhatsApp Recipients";
   const executeNodeName = "Run WhatsApp Client Agent";
+  const resultNodeName = "Campaign Execution Result";
 
-  const workflow = await createN8nWorkflow({
+  return {
     name: DASHBOARD_WORKFLOW_NAME,
     nodes: [
       {
@@ -96,7 +87,7 @@ export async function ensureLimitlessCampaignWorkflow() {
         parameters: {
           httpMethod: "POST",
           path: WEBHOOK_PATH,
-          responseMode: "onReceived",
+          responseMode: "lastNode",
           options: {},
         },
       },
@@ -118,6 +109,7 @@ return recipients
       campaign_topic: payload.topic,
       campaign_message: payload.message,
       message: payload.message,
+      text: payload.message,
       media_url: payload.mediaUrl || payload.property?.drivePhotosLink || '',
       property: payload.property || null,
       lead,
@@ -149,8 +141,24 @@ return recipients
             cachedResultName: downstream.name,
           },
           options: {
-            waitForSubWorkflow: false,
+            waitForSubWorkflow: true,
           },
+        },
+      },
+      {
+        id: nodeId(),
+        name: resultNodeName,
+        type: "n8n-nodes-base.code",
+        typeVersion: 2,
+        position: [820, 0],
+        parameters: {
+          jsCode: `const items = $input.all();
+return [{ json: {
+  ok: true,
+  processed: items.length,
+  status: 'workflow_completed',
+  note: 'The downstream WhatsApp workflow completed. Provider delivery receipts must still be confirmed separately.'
+} }];`,
         },
       },
     ],
@@ -161,12 +169,38 @@ return recipients
       [prepareNodeName]: {
         main: [[{ node: executeNodeName, type: "main", index: 0 }]],
       },
+      [executeNodeName]: {
+        main: [[{ node: resultNodeName, type: "main", index: 0 }]],
+      },
     },
     settings: {
       executionOrder: "v1",
     },
-  });
+  };
+}
 
+export async function ensureLimitlessCampaignWorkflow() {
+  if (!isN8nApiConfigured()) {
+    throw new Error("n8n API is not configured in Vercel.");
+  }
+
+  const downstream = await resolveWhatsAppAgentWorkflow();
+  const definition = buildCampaignWorkflow(downstream);
+  const existing = await findN8nWorkflowByName(DASHBOARD_WORKFLOW_NAME);
+
+  if (existing) {
+    const current = await getN8nWorkflow(existing.id);
+    const updated = await updateN8nWorkflow(existing.id, {
+      name: definition.name,
+      nodes: definition.nodes,
+      connections: definition.connections,
+      settings: definition.settings,
+    });
+    if (!current.active && !updated.active) await activateN8nWorkflow(existing.id);
+    return updated;
+  }
+
+  const workflow = await createN8nWorkflow(definition);
   await activateN8nWorkflow(workflow.id);
   return workflow;
 }
@@ -180,13 +214,23 @@ export async function dispatchLimitlessWhatsAppCampaign(payload: CampaignDispatc
     cache: "no-store",
   });
 
+  const responseText = await response.text().catch(() => "");
+
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`Campaign webhook failed: ${response.status} ${detail}`);
+    throw new Error(`Campaign workflow failed: ${response.status} ${responseText}`);
+  }
+
+  let result: Record<string, unknown> = {};
+  try {
+    result = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    result = { raw: responseText };
   }
 
   return {
     accepted: payload.recipients.length,
-    response: await response.text().catch(() => ""),
+    processed: Number(result.processed || 0),
+    status: String(result.status || "workflow_completed"),
+    response: result,
   };
 }
