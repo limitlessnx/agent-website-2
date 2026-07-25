@@ -21,6 +21,7 @@ export async function createProgressiveLeadAction(formData: FormData) {
   await saveProgressiveLead({
     name: String(formData.get("name") || "").trim(),
     phone: String(formData.get("phone") || "").trim(),
+    email: String(formData.get("email") || "").trim() || undefined,
     status: String(formData.get("status") || "new"),
     score: String(formData.get("score") || "").trim() || undefined,
     budget: String(formData.get("budget") || "").trim() || undefined,
@@ -52,17 +53,18 @@ function mapRows(rows: string[][]): ProgressiveLeadInput[] {
   if (!rows.length) return [];
 
   const first = rows[0].map((cell) => String(cell || "").trim());
-  const hasHeader = first.some((cell) => /name|phone|whatsapp|mobile|budget|location|interest|property/i.test(cell));
+  const hasHeader = first.some((cell) => /name|phone|whatsapp|mobile|email|budget|location|interest|property/i.test(cell));
   const headers = hasHeader
     ? first.map(normalizeHeader)
-    : ["name", "phone", "budget", "location_preference", "property_type", "purpose", "status", "score"];
+    : ["name", "phone", "email", "budget", "location_preference", "property_type", "purpose", "status", "score"];
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
   return dataRows.map((cells) => {
     const row = Object.fromEntries(headers.map((header, index) => [header, String(cells[index] || "").trim()]));
     return {
       name: pick(row, ["name", "full_name", "client_name", "customer_name"]),
-      phone: pick(row, ["phone", "whatsapp", "whatsapp_phone", "mobile", "number", "contact"]),
+      phone: pick(row, ["phone", "phone_number", "whatsapp", "whatsapp_phone", "mobile", "mobile_number", "number", "contact"]),
+      email: pick(row, ["email", "email_address", "customer_email", "client_email", "contact_email"]) || undefined,
       budget: pick(row, ["budget", "price_range", "price"]) || undefined,
       location_preference: pick(row, ["location_preference", "preferred_location", "location", "state", "area"]) || undefined,
       property_type: pick(row, ["property_type", "type"]) || undefined,
