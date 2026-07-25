@@ -54,9 +54,23 @@ export function isN8nApiConfigured() {
   return Boolean(process.env.N8N_BASE_URL && process.env.N8N_API_KEY);
 }
 
+export function getN8nBaseUrl() {
+  return config().baseUrl;
+}
+
 export async function listN8nWorkflows(limit = 100) {
   const result = await n8nRequest<{ data?: N8nWorkflow[] } | N8nWorkflow[]>(`/workflows?limit=${limit}`);
   return Array.isArray(result) ? result : result.data || [];
+}
+
+export async function getN8nWorkflow(id: string) {
+  return n8nRequest<N8nWorkflow>(`/workflows/${encodeURIComponent(id)}`);
+}
+
+export async function findN8nWorkflowByName(name: string) {
+  const workflows = await listN8nWorkflows(250);
+  const target = name.trim().toLowerCase();
+  return workflows.find((workflow) => workflow.name.trim().toLowerCase() === target) || null;
 }
 
 export async function listN8nExecutions(limit = 100) {
