@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Globe2, Linkedin, Mail } from "lucide-react";
+import { ExternalLink, Globe2, Mail } from "lucide-react";
 import FluxLogo from "@/components/FluxLogo";
 
 const groups = [
@@ -15,7 +15,7 @@ export default function Footer() {
         <div className="flux-footer-brand">
           <Link href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
           <p>We build connected AI employees, lead-generation engines, and automation systems for businesses that want to sell, support, and scale without operational confusion.</p>
-          <div className="flux-socials"><a href="/" aria-label="Website"><Globe2 size={17} /></a><a href="/contact" aria-label="Email"><Mail size={17} /></a><a href="/about" aria-label="LinkedIn"><Linkedin size={17} /></a></div>
+          <div className="flux-socials"><a href="/" aria-label="Website"><Globe2 size={17} /></a><a href="/contact" aria-label="Email"><Mail size={17} /></a><a href="/about" aria-label="Company profile"><ExternalLink size={17} /></a></div>
         </div>
         {groups.map((group) => <div key={group.title} className="flux-footer-group"><h4>{group.title}</h4>{group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</div>)}
       </div>
