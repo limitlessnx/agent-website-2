@@ -6,6 +6,7 @@ import {
   getN8nBaseUrl,
   getN8nWorkflow,
   isN8nApiConfigured,
+  listN8nExecutions,
   listN8nWorkflows,
   updateN8nWorkflow,
 } from "@/lib/n8n-api";
@@ -117,6 +118,7 @@ return recipients
       phone: lead.phone,
       to: lead.phone,
       recipient_phone: lead.phone,
+      whatsapp_number: lead.phone,
       budget: lead.budget || '',
       location_preference: lead.location_preference || '',
       property_type: lead.property_type || '',
@@ -197,16 +199,34 @@ export async function ensureLimitlessCampaignWorkflow() {
       settings: definition.settings,
     });
     if (!current.active && !updated.active) await activateN8nWorkflow(existing.id);
-    return updated;
+    return { workflow: updated, downstream };
   }
 
   const workflow = await createN8nWorkflow(definition);
   await activateN8nWorkflow(workflow.id);
-  return workflow;
+  return { workflow, downstream };
+}
+
+async function describeLatestFailure(workflowId: string) {
+  try {
+    const executions = await listN8nExecutions({
+      limit: 3,
+      workflowId,
+      status: "error",
+      includeData: true,
+    });
+    const latest = executions[0];
+    const error = latest?.data?.resultData?.error;
+    const nodeName = error?.node?.name || latest?.data?.resultData?.lastNodeExecuted || "unknown node";
+    const detail = error?.description || error?.message || "n8n returned no detailed node error.";
+    return `Execution ${latest?.id || "unknown"} failed at ${nodeName}: ${detail}`;
+  } catch (error) {
+    return `Could not read n8n execution diagnostics: ${error instanceof Error ? error.message : "unknown error"}`;
+  }
 }
 
 export async function dispatchLimitlessWhatsAppCampaign(payload: CampaignDispatchPayload) {
-  await ensureLimitlessCampaignWorkflow();
+  const { workflow, downstream } = await ensureLimitlessCampaignWorkflow();
   const response = await fetch(`${getN8nBaseUrl()}/webhook/${WEBHOOK_PATH}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -217,7 +237,12 @@ export async function dispatchLimitlessWhatsAppCampaign(payload: CampaignDispatc
   const responseText = await response.text().catch(() => "");
 
   if (!response.ok) {
-    throw new Error(`Campaign workflow failed: ${response.status} ${responseText}`);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const wrapperFailure = await describeLatestFailure(workflow.id);
+    const downstreamFailure = await describeLatestFailure(downstream.id);
+    throw new Error(
+      `Campaign workflow failed: ${response.status}. ${wrapperFailure}. WhatsApp workflow: ${downstreamFailure}`,
+    );
   }
 
   let result: Record<string, unknown> = {};
