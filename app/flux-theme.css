@@ -41,6 +41,34 @@ body {
 }
 .section-label, .admin-kicker { color: #a477ff; }
 
+.flux-wordmark {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  color: #fff;
+  font-family: "Avenir Next", "Century Gothic", "Trebuchet MS", Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  text-shadow: 0 0 22px rgba(167, 139, 250, .14);
+}
+.flux-wordmark-x {
+  display: inline-block;
+  margin: 0 .015em;
+  color: #a970ff;
+  font-weight: 700;
+  transform: skewX(-11deg) scaleX(1.08);
+  text-shadow: 0 0 18px rgba(155, 92, 255, .58);
+}
+.flux-wordmark.compact {
+  font-size: .82rem;
+  letter-spacing: .16em;
+}
+.flux-brand .flux-wordmark { font-size: .9rem; }
+footer .flux-wordmark { font-size: .95rem; }
+
 main:not(.admin-main) > section:not(.quantix-hero):not(.quantix-features):not(.quantix-platform):not(.quantix-final) { border-color: rgba(180, 139, 255, .12) !important; }
 .card-surface, [class*="pricing"], [class*="service-card"], [class*="industry-card"] { border-color: rgba(180, 139, 255, .16) !important; }
 
@@ -111,7 +139,7 @@ main:not(.admin-main) > section:not(.quantix-hero):not(.quantix-features):not(.q
 .property-media-info a { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; color: #cbb6ff; text-decoration: none; font-size: .84rem; }
 .property-media-badge { display: inline-flex; padding: 5px 9px; border-radius: 999px; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .property-media-badge.missing { color: #f6d48a; background: rgba(245, 158, 11, .1); border: 1px solid rgba(245, 158, 11, .24); }
-.property-media-badge.linked { color: #baf3d5; background: rgba(52, 211, 153, .1); border: 1px solid rgba(52, 211, 153, .24); }
+.property-media-badge.linked { color: #baf3d5; background: rgba(52, 211, 153, .1); border: 1px solid rgba(52, 211, 153,.24); }
 .media-uploader { display: grid; gap: 10px; }
 .media-file-control { position: relative; min-height: 50px; display: flex; align-items: center; justify-content: center; padding: 12px 14px; border: 1px dashed rgba(188, 146, 255, .3); border-radius: 12px; color: #c4b9d8; background: rgba(255,255,255,.025); text-align: center; cursor: pointer; }
 .media-file-control input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
@@ -131,6 +159,8 @@ main:not(.admin-main) > section:not(.quantix-hero):not(.quantix-features):not(.q
 }
 
 @media (max-width: 640px) {
+  .flux-wordmark { font-size: .86rem; letter-spacing: .16em; }
+  .flux-brand .flux-wordmark { font-size: .82rem; }
   .admin-main { padding: 72px 12px 24px; }
   .admin-page { gap: 14px; }
   .admin-page-header { display: grid; gap: 14px; padding: 16px; }
