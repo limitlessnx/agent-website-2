@@ -28,8 +28,8 @@ export default async function LeadsPage({
           <p className="admin-kicker">Limitless Realty</p>
           <h1>Lead CRM</h1>
           <p>
-            A lead becomes valid with a name and WhatsApp number. Maia or staff can progressively add
-            budget, location, interest, property, and qualification details later.
+            A lead becomes valid with a name and WhatsApp number. Email and other details remain optional,
+            and Maia or staff can progressively complete the profile later.
           </p>
           <div className="admin-hero-actions">
             <a href="#lead-control">Review pipeline</a>
@@ -59,7 +59,7 @@ export default async function LeadsPage({
           <div className="admin-panel-header">
             <div>
               <h2>Import Result</h2>
-              <p>{imported} saved, {skipped} skipped, {errors} error(s).</p>
+              <p>{imported} saved or updated, {skipped} skipped, {errors} error(s).</p>
             </div>
             <span className={errors ? "admin-status warning" : "admin-status live"}>{errors ? "Review file" : "Saved"}</span>
           </div>
@@ -70,13 +70,14 @@ export default async function LeadsPage({
         <div className="admin-panel-header">
           <div>
             <h2>Quick Lead Capture</h2>
-            <p>Only name and phone are required. Every other field is optional and can be completed later.</p>
+            <p>Only name and phone are required. Email and every other field can be completed later.</p>
           </div>
           <span className="admin-status warning">{undocumented} undocumented</span>
         </div>
         <form action={createProgressiveLeadAction} className="admin-form-grid">
           <input name="name" placeholder="Name" required />
           <input name="phone" placeholder="WhatsApp phone e.g. 234..." required />
+          <input name="email" type="email" placeholder="Email (optional)" />
           <input name="budget" placeholder="Budget (optional)" />
           <input name="location_preference" placeholder="State or location (optional)" />
           <input name="property_type" placeholder="Property type (optional)" />
@@ -103,7 +104,7 @@ export default async function LeadsPage({
         <div className="admin-panel-header">
           <div>
             <h2>Bulk Contact Import</h2>
-            <p>Name and phone are enough. Extra columns are accepted when available and ignored when absent.</p>
+            <p>Upload up to 1,000 CSV or Excel contacts. Name, phone, and email columns are recognised automatically.</p>
           </div>
         </div>
         <form action={importProgressiveLeadsAction} className="admin-import-form">
