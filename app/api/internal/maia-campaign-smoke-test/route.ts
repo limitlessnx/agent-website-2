@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 const TOKEN = "maia-smoke-94c2f13d";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   const url = new URL(request.url);
   if (url.searchParams.get("token") !== TOKEN) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
