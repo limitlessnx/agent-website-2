@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
+import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const repair = await repairMaiaActionWorkflowInput();
   const commandId = `smoke-${crypto.randomUUID()}`;
   const result = await dispatchMaiaCampaignAction({
     commandId,
@@ -29,5 +31,5 @@ export async function GET(request: Request) {
     createdBy: "fluxknight_smoke_test",
   });
 
-  return NextResponse.json({ ok: true, commandId, ...result });
+  return NextResponse.json({ ok: true, commandId, repair, ...result });
 }
