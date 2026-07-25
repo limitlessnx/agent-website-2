@@ -22,13 +22,19 @@ export async function GET(request: Request) {
   if (url.searchParams.get("token") !== TOKEN) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const workflows = await listN8nWorkflows(250);
-  const selected = workflows.filter((w) => /Maia Action - Search Lead|Limitless Realty WhatsApp Client Agent/i.test(w.name));
+  const selected = workflows.filter((w) => /limitless|maia|whatsapp/i.test(w.name));
   const result = [];
   for (const summary of selected) {
     const workflow = await getN8nWorkflow(summary.id);
     const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as Array<Record<string, unknown>>;
-    const wanted = nodes.filter((node) => /Prepare WhatsApp Campaign|OpenAI - Generate Response2|Extract Message Data|Process Ad Guide Capture|property|catalog|search lead/i.test(String(node.name || "")));
-    result.push({ id: workflow.id, name: workflow.name, nodes: wanted.map((node) => ({ name: node.name, type: node.type, parameters: redact(node.parameters) })), connections: redact(workflow.connections) });
+    const wanted = nodes.filter((node) => /Prepare WhatsApp Campaign|Send Campaign WhatsApp|Prepare Campaign Context Log|Save Campaign Context|OpenAI|Extract Message Data|Process Ad Guide Capture|property|catalog|search lead|context|memory/i.test(String(node.name || "")));
+    result.push({
+      id: workflow.id,
+      name: workflow.name,
+      active: workflow.active,
+      nodes: wanted.map((node) => ({ name: node.name, type: node.type, parameters: redact(node.parameters) })),
+      connections: redact(workflow.connections),
+    });
   }
-  return NextResponse.json({ workflows: result });
+  return NextResponse.json({ workflowNames: workflows.map((w) => ({ id: w.id, name: w.name, active: w.active })), workflows: result });
 }
