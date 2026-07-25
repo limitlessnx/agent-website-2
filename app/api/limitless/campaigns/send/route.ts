@@ -3,7 +3,6 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getProperties } from "@/lib/limitless-data";
 import {
   getCampaignAudienceLeads,
-  saveCampaignReport,
   type ProgressiveLead,
 } from "@/lib/lead-profile-service";
 import { dispatchMaiaCommand } from "@/lib/maia-command-gateway";
@@ -127,32 +126,17 @@ export async function POST(request: Request) {
       },
     });
 
-    await saveCampaignReport({
-      campaign_id: campaignId,
-      campaign_topic: topic,
-      source: "fluxknight_dashboard",
-      audience_mode: mode,
-      attempted: recipients.length,
-      accepted: dispatch.accepted,
-      failed: 0,
-      skipped: allLeads.length - recipients.length,
-      filters: {
-        state: body.state || "",
-        interest: body.interest || "",
-        property_id: body.propertyId || "",
-        budget_min: budgetMin || null,
-        budget_max: budgetMax || null,
-      },
-      created_at: new Date().toISOString(),
-    });
-
     return NextResponse.json({
       ok: true,
       campaignId,
       attempted: recipients.length,
-      accepted: dispatch.accepted,
+      completed: dispatch.completed,
+      failed: dispatch.failed,
       skipped: allLeads.length - recipients.length,
+      status: dispatch.status,
+      failures: dispatch.failures,
       maiaCommandPath: dispatch.route,
+      workflowResponses: dispatch.responses,
     });
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
