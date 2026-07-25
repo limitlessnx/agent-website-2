@@ -6,6 +6,7 @@ import {
   type ProgressiveLead,
 } from "@/lib/lead-profile-service";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
+import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,6 +98,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No campaign-eligible leads matched this audience." }, { status: 400 });
     }
 
+    await repairMaiaActionWorkflowInput();
+
     const campaignId = crypto.randomUUID();
     const dispatch = await dispatchMaiaCampaignAction({
       commandId: campaignId,
@@ -104,7 +107,11 @@ export async function POST(request: Request) {
       message,
       recipients,
       propertyTitle: selectedProperty?.title,
-      createdBy: String((session as { email?: string; id?: string }).email || (session as { id?: string }).id || "admin_dashboard"),
+      createdBy: String(
+        (session as { email?: string; id?: string }).email ||
+          (session as { id?: string }).id ||
+          "admin_dashboard",
+      ),
     });
 
     return NextResponse.json({
