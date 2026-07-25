@@ -1,22 +1,56 @@
-import { getCampaignReports } from "@/lib/limitless-data";
+import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenter";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import { getCampaignReports, getProperties } from "@/lib/limitless-data";
+
+export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
-  const campaigns = await getCampaignReports(50);
+  const [campaigns, leads, properties] = await Promise.all([
+    getCampaignReports(50),
+    getCampaignAudienceLeads(5000),
+    getProperties(500),
+  ]);
+
+  const eligible = leads.filter((lead) => lead.phone && lead.campaign_eligible !== false).length;
+  const undocumented = leads.filter((lead) => lead.profile_status === "undocumented").length;
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <section className="admin-hero-panel">
         <div>
           <p className="admin-kicker">Limitless Realty</p>
-          <h1>Campaigns</h1>
-          <p>Review WhatsApp broadcast activity and delivery context.</p>
+          <h1>WhatsApp Campaign Center</h1>
+          <p>
+            Send campaigns directly from Fluxknight through Maia&apos;s WhatsApp client agent. Target all
+            leads, manually selected contacts, or audiences filtered by state, interest, property, and budget.
+          </p>
         </div>
-      </div>
+        <div className="admin-launch-score">
+          <span>{eligible}</span>
+          <p>Campaign-ready leads</p>
+        </div>
+      </section>
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <h2>Recent Campaign Reports</h2>
-          <p>Telegram remains the send/approval interface for now; this page gives central visibility.</p>
+          <div>
+            <h2>Direct WhatsApp Campaign</h2>
+            <p>
+              Telegram is no longer required as the dashboard trigger. Undocumented leads remain eligible
+              when they have a valid name and phone number.
+            </p>
+          </div>
+          <span className="admin-status live">{undocumented} undocumented</span>
+        </div>
+        <WhatsAppCampaignCenter leads={leads} properties={properties} />
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Recent Campaign Reports</h2>
+            <p>Delivery summaries saved by dashboard and existing WhatsApp campaign executions.</p>
+          </div>
         </div>
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -31,7 +65,7 @@ export default async function CampaignsPage() {
                   <td>{campaign.accepted}</td>
                   <td>{campaign.failed}</td>
                   <td>{campaign.skipped}</td>
-                  <td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString() : "-"}</td>
+                  <td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString("en-NG") : "-"}</td>
                 </tr>
               ))}
             </tbody>
