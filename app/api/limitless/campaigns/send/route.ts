@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       status: dispatch.status,
       failures: dispatch.failures,
       maiaCommandPath: dispatch.route,
-      workflowResponses: dispatch.responses,
+      workflowExecutions: dispatch.executions,
     });
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
