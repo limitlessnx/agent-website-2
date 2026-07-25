@@ -1,10 +1,12 @@
-const MARK = "data:image/webp;base64,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";
-
 export default function FluxLogo({ compact = false, className = "" }: { compact?: boolean; className?: string }) {
   return (
-    <span className={`flux-logo ${compact ? "compact" : ""} ${className}`.trim()}>
-      <img src={MARK} alt="Fluxknight" />
-      {!compact ? <span>Fluxknight</span> : null}
+    <span
+      className={`flux-wordmark ${compact ? "compact" : ""} ${className}`.trim()}
+      aria-label="Fluxknight"
+    >
+      <span>FLU</span>
+      <span className="flux-wordmark-x">X</span>
+      <span>KNIGHT</span>
     </span>
   );
 }
