@@ -115,7 +115,7 @@ async function ensureSubworkflowTrigger(summary: { id: string; name: string; act
     type: "n8n-nodes-base.executeWorkflowTrigger",
     typeVersion: 1.1,
     position: [Number(sourcePosition[0] || 0), Number(sourcePosition[1] || 0) + 180],
-    parameters: {},
+    parameters: { inputSource: "passthrough" },
   };
 
   const updated = await updateN8nWorkflow(summary.id, {
