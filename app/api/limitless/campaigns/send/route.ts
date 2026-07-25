@@ -7,6 +7,7 @@ import {
   type ProgressiveLead,
 } from "@/lib/lead-profile-service";
 import { dispatchLimitlessWhatsAppCampaign } from "@/lib/limitless-campaign-n8n";
+import { inspectAndRepairMaiaCommandPath } from "@/lib/maia-command-diagnostics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,14 @@ export async function POST(request: Request) {
     const topic = String(body.topic || "WhatsApp campaign").trim();
     const message = String(body.message || "").trim();
     if (!message) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
+
+    const commandPath = await inspectAndRepairMaiaCommandPath();
+    if (!commandPath.dashboardTrigger.nextNodes.length) {
+      return NextResponse.json(
+        { error: "Maia command routing has no downstream processing node. Run the Telegram trace again before sending." },
+        { status: 409 },
+      );
+    }
 
     const [allLeads, properties] = await Promise.all([
       getCampaignAudienceLeads(10000),
@@ -147,6 +156,12 @@ export async function POST(request: Request) {
       attempted: recipients.length,
       accepted: dispatch.accepted,
       skipped: allLeads.length - recipients.length,
+      maiaCommandPath: {
+        workflow: commandPath.workflow.name,
+        sourceTrigger: commandPath.sourceTrigger.name,
+        downstreamNodes: commandPath.dashboardTrigger.nextNodes,
+        telegramTraceFound: commandPath.trace.found,
+      },
     });
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
