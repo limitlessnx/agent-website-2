@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./flux-theme.css";
 import "./home-responsive.css";
+import "./brand-refresh.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
@@ -32,45 +33,19 @@ export const metadata: Metadata = {
     title: "Fluxknight — AI Employees for Growing Businesses",
     description:
       "We build AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and custom AI systems for growing businesses.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Fluxknight",
-      },
-    ],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Fluxknight" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Fluxknight — AI Employees for Growing Businesses",
-    description:
-      "AI sales agents, WhatsApp automation, voice agents, and CRM systems for growing businesses.",
+    description: "AI sales agents, WhatsApp automation, voice agents, and CRM systems for growing businesses.",
     images: ["/og-image.png"],
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true },
-  },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
+export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body>
-        <SiteShell>{children}</SiteShell>
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <html lang="en"><body><SiteShell>{children}</SiteShell></body></html>;
 }
