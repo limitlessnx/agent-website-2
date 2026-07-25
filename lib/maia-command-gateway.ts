@@ -1,4 +1,5 @@
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
+import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 import type { CampaignDispatchPayload } from "@/lib/limitless-campaign-n8n";
 import { dispatchMaiaDirectCommand, ensureMaiaDashboardWebhook } from "@/lib/maia-direct-webhook";
 
@@ -23,14 +24,10 @@ export type MaiaCommand = {
   commandId?: string;
 };
 
-function normalizePhone(value: unknown) {
-  return String(value || "").replace(/[^\d]/g, "");
-}
-
 function normalizeRecipients(recipients: ProgressiveLead[]) {
   const seen = new Set<string>();
   return recipients
-    .map((lead) => ({ ...lead, phone: normalizePhone(lead.phone) }))
+    .map((lead) => ({ ...lead, phone: normalizeLeadPhone(String(lead.phone || "")) }))
     .filter((lead) => {
       if (!lead.phone || seen.has(lead.phone)) return false;
       seen.add(lead.phone);
@@ -80,11 +77,12 @@ export async function dispatchMaiaCommand(command: MaiaCommand) {
   }
 
   return {
+    completed: results.length,
     accepted: results.length,
     processed: results.length,
     failed: failures.length,
     failures,
-    status: failures.length ? "partially_accepted" : "accepted",
+    status: failures.length ? "partially_completed" : "completed",
     commandId,
     commandType: command.type,
     recipientCount: recipients.length,
@@ -96,6 +94,7 @@ export async function dispatchMaiaCommand(command: MaiaCommand) {
       dashboardNextNodes: route.nextNodes,
       repaired: route.repaired,
     },
+    responses: results.map((result) => result.response),
     metadata: command.metadata || {},
   };
 }
