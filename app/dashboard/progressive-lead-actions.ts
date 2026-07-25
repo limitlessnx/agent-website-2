@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
 import { getAdminSession } from "@/lib/admin-auth";
+import { importProgressiveLeadsInBatches } from "@/lib/bulk-lead-import";
 import {
-  importProgressiveLeads,
   saveProgressiveLead,
   type ProgressiveLeadInput,
 } from "@/lib/lead-profile-service";
@@ -125,7 +125,7 @@ export async function importProgressiveLeadsAction(formData: FormData) {
   const file = formData.get("contacts_file");
   if (!(file instanceof File) || file.size === 0) throw new Error("Upload a CSV or Excel contact file first.");
 
-  const result = await importProgressiveLeads(await parseFile(file));
+  const result = await importProgressiveLeadsInBatches(await parseFile(file));
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/limitless/leads");
   revalidatePath("/dashboard/limitless/campaigns");
