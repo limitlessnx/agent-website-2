@@ -5,15 +5,38 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const INSPECT_TOKEN = "maia-inspect-7f34c9b2";
-const SEND_PATTERN = /whatsapp|send.*(message|text|media)|message.*send|cloud api|evolution|twilio|http request/i;
+const TARGET_WORKFLOW = "Maia Action - Search Lead";
+const TARGET_NODES = [
+  "Action Input",
+  "Route Campaign Request",
+  "Prepare WhatsApp Campaign",
+  "Should Send Campaign?",
+  "Send Campaign WhatsApp",
+  "Campaign Send Summary",
+];
 
-function nodeNames(execution: Record<string, any>) {
-  return Object.keys(execution.data?.resultData?.runData || {});
+function safe(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(safe);
+  if (!value || typeof value !== "object") return value;
+  const output: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (/credential|secret|token|api.?key|authorization|password/i.test(key)) {
+      output[key] = "[redacted]";
+    } else {
+      output[key] = safe(item);
+    }
+  }
+  return output;
 }
 
-function connectionTargets(connection: unknown) {
-  const main = (connection as { main?: Array<Array<{ node?: string }>> } | undefined)?.main || [];
-  return main.map((branch) => branch.map((item) => String(item.node || "")).filter(Boolean));
+function nodeOutput(execution: Record<string, any>, nodeName: string) {
+  const runs = execution.data?.resultData?.runData?.[nodeName];
+  const firstRun = Array.isArray(runs) ? runs[0] : null;
+  const branches = Array.isArray(firstRun?.data?.main) ? firstRun.data.main : [];
+  return branches.map((branch: unknown) => {
+    const items = Array.isArray(branch) ? branch : [];
+    return items.slice(0, 2).map((item: any) => safe(item?.json));
+  });
 }
 
 export async function GET(request: Request) {
@@ -23,67 +46,38 @@ export async function GET(request: Request) {
   }
 
   const workflows = await listN8nWorkflows(250);
-  const candidates = workflows.filter((workflow) =>
-    /limitless|maia|whatsapp|telegram|campaign/i.test(workflow.name),
-  );
+  const summary = workflows.find((workflow) => workflow.name === TARGET_WORKFLOW);
+  if (!summary) return NextResponse.json({ error: `${TARGET_WORKFLOW} not found` }, { status: 404 });
 
-  const evidence = [];
-  for (const summary of candidates) {
-    const workflow = await getN8nWorkflow(summary.id);
-    const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as Array<Record<string, any>>;
-    const nodeMap = new Map(nodes.map((node) => [String(node.name), node]));
-    const connections = (workflow.connections || {}) as Record<string, unknown>;
-    const executions = (await listN8nExecutions({ workflowId: summary.id, includeData: true, limit: 100 })) as Array<Record<string, any>>;
+  const workflow = await getN8nWorkflow(summary.id);
+  const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as Array<Record<string, any>>;
+  const selectedNodes = TARGET_NODES.map((name) => nodes.find((node) => node.name === name))
+    .filter(Boolean)
+    .map((node) => ({
+      name: node!.name,
+      type: node!.type,
+      parameters: safe(node!.parameters),
+    }));
 
-    const failed2189 = executions.find((execution) => String(execution.id) === "2189");
-    const successfulSendExecutions = executions
-      .filter((execution) => {
-        const names = nodeNames(execution);
-        const status = String(execution.status || "").toLowerCase();
-        return (execution.finished || status === "success") && names.some((name) => SEND_PATTERN.test(name));
-      })
-      .slice(0, 8);
+  const executions = (await listN8nExecutions({ workflowId: summary.id, includeData: true, limit: 30 })) as Array<Record<string, any>>;
+  const selectedExecutions = executions
+    .filter((execution) => ["2168", "2164", "2162", "2137"].includes(String(execution.id)))
+    .map((execution) => ({
+      id: execution.id,
+      status: execution.status,
+      path: Object.keys(execution.data?.resultData?.runData || {}),
+      input: nodeOutput(execution, "Action Input"),
+      routed: nodeOutput(execution, "Route Campaign Request"),
+      prepared: nodeOutput(execution, "Prepare WhatsApp Campaign"),
+      decision: nodeOutput(execution, "Should Send Campaign?"),
+      sent: nodeOutput(execution, "Send Campaign WhatsApp"),
+      summary: nodeOutput(execution, "Campaign Send Summary"),
+    }));
 
-    const selected = [failed2189, ...successfulSendExecutions].filter(Boolean) as Array<Record<string, any>>;
-    if (!selected.length) continue;
-
-    const routeNames = new Set(selected.flatMap(nodeNames));
-    const routeConnections: Record<string, string[][]> = {};
-    for (const name of routeNames) {
-      if (connections[name]) routeConnections[name] = connectionTargets(connections[name]);
-    }
-
-    const routeNodes = [...routeNames].map((name) => {
-      const node = nodeMap.get(name);
-      return {
-        name,
-        type: String(node?.type || ""),
-        operation: String(node?.parameters?.operation || node?.parameters?.resource || ""),
-      };
-    });
-
-    evidence.push({
-      workflow: { id: summary.id, name: summary.name, active: summary.active },
-      failed2189: failed2189
-        ? {
-            path: nodeNames(failed2189),
-            lastNode: failed2189.data?.resultData?.lastNodeExecuted,
-            message: failed2189.data?.resultData?.error?.message || failed2189.data?.resultData?.error?.description,
-          }
-        : null,
-      successfulSendExecutions: successfulSendExecutions.map((execution) => ({
-        id: execution.id,
-        startedAt: execution.startedAt,
-        path: nodeNames(execution),
-        sendNodes: nodeNames(execution).filter((name) => SEND_PATTERN.test(name)),
-        lastNode: execution.data?.resultData?.lastNodeExecuted,
-      })),
-      routeNodes,
-      routeConnections,
-    });
-  }
-
-  const payload = { generatedAt: new Date().toISOString(), evidence };
-  console.log("MAIA_ROUTE_EVIDENCE", JSON.stringify(payload));
-  return NextResponse.json(payload);
+  return NextResponse.json({
+    workflow: { id: summary.id, name: summary.name, active: summary.active },
+    nodes: selectedNodes,
+    connections: safe(workflow.connections),
+    executions: selectedExecutions,
+  });
 }
