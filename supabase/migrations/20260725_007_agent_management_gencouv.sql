@@ -73,11 +73,12 @@ begin
   values (
     v_org_id, v_branch_id, 'Gencouv Ecosystem', 'gencouv',
     'Trading and investor onboarding automation ecosystem managed through Fluxknight.',
-    'production', '{"brand":"Gencouv","channels":["Telegram","WhatsApp","Email"]}'::jsonb
+    'active', '{"brand":"Gencouv","channels":["Telegram","WhatsApp","Email"]}'::jsonb
   )
   on conflict (organization_id, slug) do update set
     name = excluded.name,
     description = excluded.description,
+    status = excluded.status,
     configuration = coalesce(public.agent_families.configuration, '{}'::jsonb) || excluded.configuration
   returning id into v_family_id;
 
@@ -85,11 +86,12 @@ begin
   values (
     v_org_id, v_family_id, v_branch_id, 'Gencouv Client Acquisition', 'client-acquisition',
     'Lead generation, onboarding, education, qualification and follow-up for the Gencouv ecosystem.',
-    'production', '{"brand":"Gencouv","primary_channel":"Telegram"}'::jsonb
+    'active', '{"brand":"Gencouv","primary_channel":"Telegram"}'::jsonb
   )
   on conflict (agent_family_id, slug) do update set
     name = excluded.name,
     description = excluded.description,
+    status = excluded.status,
     metadata = coalesce(public.projects.metadata, '{}'::jsonb) || excluded.metadata
   returning id into v_project_id;
 
