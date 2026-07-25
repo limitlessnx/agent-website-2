@@ -17,6 +17,17 @@ export type N8nExecution = {
   startedAt?: string;
   stoppedAt?: string;
   mode?: string;
+  data?: {
+    resultData?: {
+      error?: {
+        message?: string;
+        description?: string;
+        node?: { name?: string; type?: string };
+        stack?: string;
+      };
+      lastNodeExecuted?: string;
+    };
+  };
 };
 
 function config() {
@@ -119,8 +130,18 @@ export async function findN8nWorkflowFlexible(options: {
   return ranked[0]?.workflow || null;
 }
 
-export async function listN8nExecutions(limit = 100) {
-  const result = await n8nRequest<{ data?: N8nExecution[] } | N8nExecution[]>(`/executions?limit=${limit}`);
+export async function listN8nExecutions(options: {
+  limit?: number;
+  workflowId?: string;
+  status?: "error" | "success" | "waiting" | "running";
+  includeData?: boolean;
+} = {}) {
+  const params = new URLSearchParams();
+  params.set("limit", String(options.limit || 100));
+  if (options.workflowId) params.set("workflowId", options.workflowId);
+  if (options.status) params.set("status", options.status);
+  if (options.includeData) params.set("includeData", "true");
+  const result = await n8nRequest<{ data?: N8nExecution[] } | N8nExecution[]>(`/executions?${params.toString()}`);
   return Array.isArray(result) ? result : result.data || [];
 }
 
