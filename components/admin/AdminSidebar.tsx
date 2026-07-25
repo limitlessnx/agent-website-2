@@ -47,6 +47,7 @@ const groups = [
     id: "automation-platform",
     label: "Automation Platform",
     items: [
+      { href: "/dashboard/agents", label: "Agent Management", icon: Bot },
       { href: "/dashboard/automations", label: "Automation Control", icon: Bot },
       { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
     ],
