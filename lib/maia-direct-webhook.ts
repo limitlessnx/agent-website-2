@@ -3,6 +3,7 @@ import {
   findN8nWorkflowFlexible,
   getN8nBaseUrl,
   getN8nWorkflow,
+  listN8nExecutions,
   updateN8nWorkflow,
 } from "@/lib/n8n-api";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
@@ -11,6 +12,8 @@ import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 const DASHBOARD_WEBHOOK_NODE = "Fluxknight Maia Command Webhook";
 const DASHBOARD_WEBHOOK_PATH = "fluxknight-maia-command";
 const LEGACY_TRIGGER_NAME = "Fluxknight Campaign Trigger";
+const EXECUTION_TIMEOUT_MS = 30000;
+const POLL_INTERVAL_MS = 750;
 
 type WorkflowNode = {
   id?: string;
@@ -25,6 +28,16 @@ type WorkflowNode = {
 type WorkflowConnection = {
   main?: Array<Array<{ node: string; type: string; index: number }>>;
   [key: string]: unknown;
+};
+
+type ExecutionResultData = {
+  runData?: Record<string, unknown>;
+  lastNodeExecuted?: string;
+  error?: {
+    message?: string;
+    description?: string;
+    node?: { name?: string; type?: string };
+  };
 };
 
 export type MaiaDirectCommandPayload = {
@@ -82,8 +95,8 @@ export async function ensureMaiaDashboardWebhook() {
 
   const sourceConnection = connections[sourceTrigger.name];
   const webhookNode = nodes.find((node) => node.name === DASHBOARD_WEBHOOK_NODE);
-
   const nextNodes = (sourceConnection?.main || []).flat().map((item) => item.node);
+
   if (!nextNodes.length) throw new Error(`${sourceTrigger.name} has no downstream processing node.`);
 
   const legacyTrigger = nodes.find((node) => node.name === LEGACY_TRIGGER_NAME);
@@ -102,7 +115,7 @@ export async function ensureMaiaDashboardWebhook() {
     parameters: {
       httpMethod: "POST",
       path: DASHBOARD_WEBHOOK_PATH,
-      responseMode: "lastNode",
+      responseMode: "onReceived",
       options: {},
     },
   };
@@ -110,7 +123,7 @@ export async function ensureMaiaDashboardWebhook() {
   const needsUpdate =
     !webhookNode ||
     Boolean(legacyTrigger) ||
-    webhookNode.parameters?.responseMode !== "lastNode" ||
+    webhookNode.parameters?.responseMode !== "onReceived" ||
     JSON.stringify(connections[DASHBOARD_WEBHOOK_NODE] || {}) !== JSON.stringify(sourceConnection || {});
 
   if (needsUpdate) {
@@ -121,7 +134,12 @@ export async function ensureMaiaDashboardWebhook() {
         ...nextConnections,
         [DASHBOARD_WEBHOOK_NODE]: JSON.parse(JSON.stringify(sourceConnection)),
       },
-      settings: workflow.settings || {},
+      settings: {
+        ...(workflow.settings || {}),
+        saveExecutionProgress: true,
+        saveDataSuccessExecution: "all",
+        saveDataErrorExecution: "all",
+      },
     });
     if (summary.active && !updated.active) await activateN8nWorkflow(summary.id);
   }
@@ -182,8 +200,85 @@ function buildMaiaInput(payload: MaiaDirectCommandPayload) {
   };
 }
 
+function containsCommandId(value: unknown, commandId: string) {
+  try {
+    return JSON.stringify(value).includes(commandId);
+  } catch {
+    return false;
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForMaiaExecution(workflowId: string, commandId: string, startedAfter: number) {
+  const deadline = Date.now() + EXECUTION_TIMEOUT_MS;
+  let seenExecutionId: string | null = null;
+
+  while (Date.now() < deadline) {
+    const executions = await listN8nExecutions({
+      workflowId,
+      includeData: true,
+      limit: 50,
+    });
+
+    const execution = executions.find((candidate) => {
+      const startedAt = candidate.startedAt ? new Date(candidate.startedAt).getTime() : 0;
+      return startedAt >= startedAfter - 5000 && containsCommandId(candidate, commandId);
+    });
+
+    if (!execution) {
+      await sleep(POLL_INTERVAL_MS);
+      continue;
+    }
+
+    seenExecutionId = execution.id;
+    const resultData = (execution.data?.resultData || {}) as ExecutionResultData;
+    const runData = resultData.runData || {};
+    const executedNodes = Object.keys(runData);
+    const status = String(execution.status || "").toLowerCase();
+    const error = resultData.error;
+
+    if (error || ["error", "crashed", "canceled"].includes(status)) {
+      const nodeName = error?.node?.name || resultData.lastNodeExecuted || "unknown node";
+      const message = error?.message || error?.description || `Execution ended with status ${status || "error"}.`;
+      throw new Error(`Maia execution ${execution.id} failed at ${nodeName}: ${message}`);
+    }
+
+    if (execution.finished || status === "success") {
+      const sendNodes = executedNodes.filter((name) =>
+        /whatsapp|send.*(message|text|media)|message.*send|cloud api|evolution|twilio|http request/i.test(name),
+      );
+
+      if (!sendNodes.length) {
+        throw new Error(
+          `Maia execution ${execution.id} completed without reaching a recognisable WhatsApp send node. Executed: ${executedNodes.join(" -> ") || "none"}.`,
+        );
+      }
+
+      return {
+        executionId: execution.id,
+        status: status || "success",
+        lastNodeExecuted: resultData.lastNodeExecuted || executedNodes.at(-1) || null,
+        executedNodes,
+        sendNodes,
+      };
+    }
+
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  throw new Error(
+    seenExecutionId
+      ? `Maia execution ${seenExecutionId} did not finish within ${EXECUTION_TIMEOUT_MS / 1000} seconds.`
+      : `No Maia execution was found for command ${commandId} within ${EXECUTION_TIMEOUT_MS / 1000} seconds.`,
+  );
+}
+
 export async function dispatchMaiaDirectCommand(payload: MaiaDirectCommandPayload) {
   const route = await ensureMaiaDashboardWebhook();
+  const startedAt = Date.now();
   const response = await fetch(`${getN8nBaseUrl()}/webhook/${route.webhookPath}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -193,20 +288,15 @@ export async function dispatchMaiaDirectCommand(payload: MaiaDirectCommandPayloa
 
   const responseText = await response.text().catch(() => "");
   if (!response.ok) {
-    throw new Error(`Maia workflow failed: ${response.status}${responseText ? ` ${responseText}` : ""}`);
+    throw new Error(`Maia webhook rejected the command: ${response.status}${responseText ? ` ${responseText}` : ""}`);
   }
 
-  let workflowResponse: unknown = responseText;
-  try {
-    workflowResponse = responseText ? JSON.parse(responseText) : null;
-  } catch {
-    // Preserve plain-text n8n responses.
-  }
+  const execution = await waitForMaiaExecution(route.workflowId, payload.commandId, startedAt);
 
   return {
     ok: true,
-    status: response.status,
-    response: workflowResponse,
+    status: 200,
+    response: execution,
     route,
   };
 }
