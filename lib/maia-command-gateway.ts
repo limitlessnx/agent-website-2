@@ -1,9 +1,6 @@
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
-import {
-  dispatchLimitlessWhatsAppCampaign,
-  type CampaignDispatchPayload,
-} from "@/lib/limitless-campaign-n8n";
-import { inspectAndRepairMaiaCommandPath } from "@/lib/maia-command-diagnostics";
+import type { CampaignDispatchPayload } from "@/lib/limitless-campaign-n8n";
+import { dispatchMaiaDirectCommand, ensureMaiaDashboardWebhook } from "@/lib/maia-direct-webhook";
 
 export type MaiaCommandType =
   | "campaign"
@@ -48,36 +45,56 @@ export async function dispatchMaiaCommand(command: MaiaCommand) {
   const recipients = normalizeRecipients(command.recipients || []);
   if (!recipients.length) throw new Error("The Maia command has no valid WhatsApp recipients.");
 
-  const route = await inspectAndRepairMaiaCommandPath();
-  if (!route.dashboardTrigger.nextNodes.length) {
-    throw new Error("Maia command routing is not connected to a downstream processing node.");
+  const route = await ensureMaiaDashboardWebhook();
+  const commandId = command.commandId || crypto.randomUUID();
+  const topic = command.topic || command.type.replaceAll("_", " ");
+
+  const results = [];
+  const failures: Array<{ phone: string; error: string }> = [];
+
+  for (const recipient of recipients) {
+    try {
+      results.push(
+        await dispatchMaiaDirectCommand({
+          commandId,
+          commandType: command.type,
+          topic,
+          message,
+          mediaUrl: command.mediaUrl,
+          property: command.property as Record<string, unknown> | undefined,
+          recipient,
+          createdBy: command.createdBy || "fluxknight_dashboard",
+          metadata: command.metadata,
+        }),
+      );
+    } catch (error) {
+      failures.push({
+        phone: recipient.phone,
+        error: error instanceof Error ? error.message : "Maia command failed.",
+      });
+    }
   }
 
-  const commandId = command.commandId || crypto.randomUUID();
-  const result = await dispatchLimitlessWhatsAppCampaign({
-    campaignId: commandId,
-    topic: command.topic || command.type.replaceAll("_", " "),
-    message,
-    mediaUrl: command.mediaUrl,
-    property: command.property,
-    recipients,
-    createdBy: command.createdBy || "fluxknight_dashboard",
-  });
+  if (!results.length) {
+    throw new Error(failures[0]?.error || "Maia rejected every dashboard command.");
+  }
 
   return {
-    ...result,
+    accepted: results.length,
+    processed: results.length,
+    failed: failures.length,
+    failures,
+    status: failures.length ? "partially_accepted" : "accepted",
     commandId,
     commandType: command.type,
     recipientCount: recipients.length,
     route: {
-      workflowId: route.workflow.id,
-      workflowName: route.workflow.name,
-      sourceTrigger: route.sourceTrigger.name,
-      sourceNextNodes: route.sourceTrigger.nextNodes,
-      dashboardNextNodes: route.dashboardTrigger.nextNodes,
-      telegramTraceFound: route.trace.found,
-      tracedExecutionId: route.trace.executionId,
-      inferredCommandPath: route.trace.inferredCommandPath,
+      workflowId: route.workflowId,
+      workflowName: route.workflowName,
+      sourceTrigger: route.sourceTrigger,
+      dashboardWebhook: route.webhookPath,
+      dashboardNextNodes: route.nextNodes,
+      repaired: route.repaired,
     },
     metadata: command.metadata || {},
   };
