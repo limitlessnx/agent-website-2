@@ -2,8 +2,10 @@ import {
   activateN8nWorkflow,
   createN8nWorkflow,
   findN8nWorkflowByName,
+  findN8nWorkflowFlexible,
   getN8nBaseUrl,
   isN8nApiConfigured,
+  listN8nWorkflows,
 } from "@/lib/n8n-api";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
 
@@ -32,6 +34,38 @@ function nodeId() {
   return crypto.randomUUID();
 }
 
+async function resolveWhatsAppAgentWorkflow() {
+  const explicitId = process.env.N8N_LIMITLESS_WHATSAPP_WORKFLOW_ID || "";
+  const explicitName = process.env.N8N_LIMITLESS_WHATSAPP_WORKFLOW_NAME || "";
+
+  const workflow = await findN8nWorkflowFlexible({
+    workflowId: explicitId || undefined,
+    exactNames: [
+      explicitName,
+      WHATSAPP_AGENT_WORKFLOW_NAME,
+      "Limitless Realty Whatsapp Client Agent",
+      "Limitless Realty Maia WhatsApp Client Agent",
+      "Limitless Realty WhatsApp Agent",
+    ].filter(Boolean),
+    requiredKeywords: ["limitless", "whatsapp"],
+    preferredKeywords: ["realty", "client", "agent", "maia"],
+  });
+
+  if (workflow) return workflow;
+
+  const workflows = await listN8nWorkflows(250);
+  const limitlessNames = workflows
+    .filter((item) => /limitless|whatsapp|maia/i.test(item.name))
+    .map((item) => item.name)
+    .slice(0, 12);
+
+  throw new Error(
+    limitlessNames.length
+      ? `n8n WhatsApp workflow not found. Available related workflows: ${limitlessNames.join(" | ")}`
+      : "n8n WhatsApp workflow not found. No Limitless, Maia, or WhatsApp workflows were returned by the n8n API key.",
+  );
+}
+
 export async function ensureLimitlessCampaignWorkflow() {
   if (!isN8nApiConfigured()) {
     throw new Error("n8n API is not configured in Vercel.");
@@ -43,10 +77,7 @@ export async function ensureLimitlessCampaignWorkflow() {
     return existing;
   }
 
-  const downstream = await findN8nWorkflowByName(WHATSAPP_AGENT_WORKFLOW_NAME);
-  if (!downstream) {
-    throw new Error(`n8n workflow not found: ${WHATSAPP_AGENT_WORKFLOW_NAME}`);
-  }
+  const downstream = await resolveWhatsAppAgentWorkflow();
 
   const webhookNodeName = "Dashboard Campaign Webhook";
   const prepareNodeName = "Prepare WhatsApp Recipients";
