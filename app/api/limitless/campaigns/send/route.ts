@@ -6,8 +6,7 @@ import {
   saveCampaignReport,
   type ProgressiveLead,
 } from "@/lib/lead-profile-service";
-import { dispatchLimitlessWhatsAppCampaign } from "@/lib/limitless-campaign-n8n";
-import { inspectAndRepairMaiaCommandPath } from "@/lib/maia-command-diagnostics";
+import { dispatchMaiaCommand } from "@/lib/maia-command-gateway";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,14 +53,6 @@ export async function POST(request: Request) {
     const message = String(body.message || "").trim();
     if (!message) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
 
-    const commandPath = await inspectAndRepairMaiaCommandPath();
-    if (!commandPath.dashboardTrigger.nextNodes.length) {
-      return NextResponse.json(
-        { error: "Maia command routing has no downstream processing node. Run the Telegram trace again before sending." },
-        { status: 409 },
-      );
-    }
-
     const [allLeads, properties] = await Promise.all([
       getCampaignAudienceLeads(10000),
       getProperties(500),
@@ -78,7 +69,6 @@ export async function POST(request: Request) {
 
     const recipients = allLeads.filter((lead) => {
       if (!isContactable(lead)) return false;
-
       if (mode === "manual") return selectedIds.has(String(lead.id));
       if (mode === "all") return true;
 
@@ -101,7 +91,6 @@ export async function POST(request: Request) {
       const budget = money(lead.budget);
       if (budgetMin && (!budget || budget < budgetMin)) return false;
       if (budgetMax && (!budget || budget > budgetMax)) return false;
-
       return true;
     });
 
@@ -121,14 +110,21 @@ export async function POST(request: Request) {
         }
       : undefined;
 
-    const dispatch = await dispatchLimitlessWhatsAppCampaign({
-      campaignId,
+    const dispatch = await dispatchMaiaCommand({
+      type: "campaign",
+      commandId: campaignId,
       topic,
       message,
       mediaUrl: String(body.mediaUrl || selectedProperty?.drive_photos_link || "").trim() || undefined,
       property,
       recipients,
       createdBy: "admin_dashboard",
+      metadata: {
+        audienceMode: mode,
+        state: body.state || "",
+        interest: body.interest || "",
+        propertyId: body.propertyId || "",
+      },
     });
 
     await saveCampaignReport({
@@ -156,12 +152,7 @@ export async function POST(request: Request) {
       attempted: recipients.length,
       accepted: dispatch.accepted,
       skipped: allLeads.length - recipients.length,
-      maiaCommandPath: {
-        workflow: commandPath.workflow.name,
-        sourceTrigger: commandPath.sourceTrigger.name,
-        downstreamNodes: commandPath.dashboardTrigger.nextNodes,
-        telegramTraceFound: commandPath.trace.found,
-      },
+      maiaCommandPath: dispatch.route,
     });
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
