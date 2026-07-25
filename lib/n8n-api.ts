@@ -26,6 +26,7 @@ export type N8nExecution = {
         stack?: string;
       };
       lastNodeExecuted?: string;
+      runData?: Record<string, unknown>;
     };
   };
 };
