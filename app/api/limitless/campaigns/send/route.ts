@@ -5,7 +5,7 @@ import {
   getCampaignAudienceLeads,
   type ProgressiveLead,
 } from "@/lib/lead-profile-service";
-import { dispatchMaiaCommand } from "@/lib/maia-command-gateway";
+import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,45 +98,35 @@ export async function POST(request: Request) {
     }
 
     const campaignId = crypto.randomUUID();
-    const property = selectedProperty
-      ? {
-          id: selectedProperty.id,
-          title: selectedProperty.title,
-          price: selectedProperty.price,
-          location: [selectedProperty.location_area, selectedProperty.location_city].filter(Boolean).join(", "),
-          drivePhotosLink: selectedProperty.drive_photos_link,
-          driveBrochureLink: selectedProperty.drive_brochure_link,
-        }
-      : undefined;
-
-    const dispatch = await dispatchMaiaCommand({
-      type: "campaign",
+    const dispatch = await dispatchMaiaCampaignAction({
       commandId: campaignId,
       topic,
       message,
-      mediaUrl: String(body.mediaUrl || selectedProperty?.drive_photos_link || "").trim() || undefined,
-      property,
       recipients,
-      createdBy: "admin_dashboard",
-      metadata: {
-        audienceMode: mode,
-        state: body.state || "",
-        interest: body.interest || "",
-        propertyId: body.propertyId || "",
-      },
+      propertyTitle: selectedProperty?.title,
+      createdBy: String((session as { email?: string; id?: string }).email || (session as { id?: string }).id || "admin_dashboard"),
     });
 
     return NextResponse.json({
       ok: true,
       campaignId,
-      attempted: recipients.length,
-      completed: dispatch.completed,
+      attempted: dispatch.attempted,
+      completed: dispatch.accepted,
+      accepted: dispatch.accepted,
+      acceptedByWhatsAppApi: dispatch.accepted,
       failed: dispatch.failed,
-      skipped: allLeads.length - recipients.length,
+      immediateFailed: dispatch.failed,
+      skipped: dispatch.skipped,
+      pendingDeliveryConfirmation: dispatch.pendingDelivery,
+      freeFormSent: dispatch.freeFormSent,
+      templateSent: dispatch.templateSent,
       status: dispatch.status,
-      failures: dispatch.failures,
+      message: dispatch.message,
+      acceptedRecipients: dispatch.acceptedRecipients,
+      failedRecipients: dispatch.failedRecipients,
+      executionId: dispatch.executionId,
+      workflowPath: dispatch.path,
       maiaCommandPath: dispatch.route,
-      workflowExecutions: dispatch.executions,
     });
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
