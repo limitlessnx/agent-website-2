@@ -13,6 +13,7 @@ const DASHBOARD_WEBHOOK_NODE = "Fluxknight Maia Command Webhook";
 const DASHBOARD_NORMALIZE_NODE = "Fluxknight Normalize Maia Command";
 const DASHBOARD_WEBHOOK_PATH = "fluxknight-maia-command";
 const LEGACY_TRIGGER_NAME = "Fluxknight Campaign Trigger";
+const PARSER_PATCH_MARKER = "FLUXKNIGHT_DASHBOARD_PARSER_V1";
 const EXECUTION_TIMEOUT_MS = 30000;
 const POLL_INTERVAL_MS = 750;
 
@@ -104,6 +105,33 @@ function findTelegramParser(
   );
 }
 
+function patchParserForDashboard(parser: WorkflowNode) {
+  if (parser.type !== "n8n-nodes-base.code") {
+    throw new Error(`${parser.name} must be a Code node before Fluxknight can safely extend it.`);
+  }
+
+  const parameters = { ...(parser.parameters || {}) };
+  const originalCode = String(parameters.jsCode || "");
+  if (!originalCode) throw new Error(`${parser.name} has no JavaScript parser code to extend.`);
+  if (originalCode.includes(PARSER_PATCH_MARKER)) return parser;
+
+  const mode = String(parameters.mode || "runOnceForAllItems");
+  const dashboardReturn =
+    mode === "runOnceForEachItem"
+      ? "return { json: __fluxknightDashboardPayload };"
+      : "return [{ json: __fluxknightDashboardPayload }];";
+
+  const patch = `// ${PARSER_PATCH_MARKER}\nconst __fluxknightCandidate = typeof $json !== 'undefined' ? $json : {};\nconst __fluxknightDashboardPayload = __fluxknightCandidate?.body?.source === 'fluxknight_dashboard'\n  ? __fluxknightCandidate.body\n  : (__fluxknightCandidate?.source === 'fluxknight_dashboard' ? __fluxknightCandidate : null);\nif (__fluxknightDashboardPayload) { ${dashboardReturn} }\n\n`;
+
+  return {
+    ...parser,
+    parameters: {
+      ...parameters,
+      jsCode: `${patch}${originalCode}`,
+    },
+  };
+}
+
 export async function ensureMaiaDashboardWebhook() {
   const summary = await resolveMaiaWorkflow();
   const workflow = await getN8nWorkflow(summary.id);
@@ -113,40 +141,44 @@ export async function ensureMaiaDashboardWebhook() {
 
   if (!sourceTrigger) throw new Error(`${summary.name} has no connected source trigger to mirror.`);
 
-  const sourceConnection = connections[sourceTrigger.name];
   const telegramParser = findTelegramParser(nodes, connections, sourceTrigger);
-  const downstreamConnection = telegramParser ? connections[telegramParser.name] : sourceConnection;
-  const nextNodes = connectionTargets(downstreamConnection);
-
-  if (!nextNodes.length) {
-    throw new Error(
-      `${telegramParser?.name || sourceTrigger.name} has no downstream Maia processing node.`,
-    );
+  if (!telegramParser) {
+    throw new Error(`${sourceTrigger.name} has no identifiable Telegram message parser.`);
   }
 
+  const patchedParser = patchParserForDashboard(telegramParser);
+  const parserConnection = connections[telegramParser.name];
+  const nextNodes = connectionTargets(parserConnection);
+  if (!nextNodes.length) throw new Error(`${telegramParser.name} has no downstream Maia processing node.`);
+
   const webhookNode = nodes.find((node) => node.name === DASHBOARD_WEBHOOK_NODE);
-  const normalizeNode = nodes.find((node) => node.name === DASHBOARD_NORMALIZE_NODE);
   const legacyTrigger = nodes.find((node) => node.name === LEGACY_TRIGGER_NAME);
-  const cleanedNodes = nodes.filter(
-    (node) =>
-      node.name !== LEGACY_TRIGGER_NAME &&
-      node.name !== DASHBOARD_WEBHOOK_NODE &&
-      node.name !== DASHBOARD_NORMALIZE_NODE,
-  );
+  const oldNormalizeNode = nodes.find((node) => node.name === DASHBOARD_NORMALIZE_NODE);
+
+  const cleanedNodes = nodes
+    .filter(
+      (node) =>
+        node.name !== LEGACY_TRIGGER_NAME &&
+        node.name !== DASHBOARD_WEBHOOK_NODE &&
+        node.name !== DASHBOARD_NORMALIZE_NODE &&
+        node.name !== telegramParser.name,
+    )
+    .concat(patchedParser);
+
   const nextConnections = { ...connections };
   delete nextConnections[LEGACY_TRIGGER_NAME];
   delete nextConnections[DASHBOARD_WEBHOOK_NODE];
   delete nextConnections[DASHBOARD_NORMALIZE_NODE];
-
-  const baseX = Number(telegramParser?.position?.[0] || sourceTrigger.position?.[0] || 0);
-  const baseY = Number(telegramParser?.position?.[1] || sourceTrigger.position?.[1] || 0);
 
   const directWebhook: WorkflowNode = {
     id: webhookNode?.id || crypto.randomUUID(),
     name: DASHBOARD_WEBHOOK_NODE,
     type: "n8n-nodes-base.webhook",
     typeVersion: 2,
-    position: [baseX, baseY + 180],
+    position: [
+      Number(telegramParser.position?.[0] || sourceTrigger.position?.[0] || 0),
+      Number(telegramParser.position?.[1] || sourceTrigger.position?.[1] || 0) + 180,
+    ],
     webhookId: String(webhookNode?.webhookId || crypto.randomUUID()),
     parameters: {
       httpMethod: "POST",
@@ -156,40 +188,26 @@ export async function ensureMaiaDashboardWebhook() {
     },
   };
 
-  const normalizeCommand: WorkflowNode = {
-    id: normalizeNode?.id || crypto.randomUUID(),
-    name: DASHBOARD_NORMALIZE_NODE,
-    type: "n8n-nodes-base.code",
-    typeVersion: 2,
-    position: [baseX + 220, baseY + 180],
-    parameters: {
-      mode: "runOnceForEachItem",
-      jsCode:
-        "const value = $json.body && typeof $json.body === 'object' ? $json.body : $json; return { json: value };",
-    },
-  };
-
   const webhookConnection: WorkflowConnection = {
-    main: [[{ node: DASHBOARD_NORMALIZE_NODE, type: "main", index: 0 }]],
+    main: [[{ node: telegramParser.name, type: "main", index: 0 }]],
   };
-  const normalizeConnection = JSON.parse(JSON.stringify(downstreamConnection)) as WorkflowConnection;
 
+  const parserAlreadyPatched = String(telegramParser.parameters?.jsCode || "").includes(PARSER_PATCH_MARKER);
   const needsUpdate =
     !webhookNode ||
-    !normalizeNode ||
     Boolean(legacyTrigger) ||
+    Boolean(oldNormalizeNode) ||
+    !parserAlreadyPatched ||
     webhookNode.parameters?.responseMode !== "onReceived" ||
-    JSON.stringify(connections[DASHBOARD_WEBHOOK_NODE] || {}) !== JSON.stringify(webhookConnection) ||
-    JSON.stringify(connections[DASHBOARD_NORMALIZE_NODE] || {}) !== JSON.stringify(normalizeConnection);
+    JSON.stringify(connections[DASHBOARD_WEBHOOK_NODE] || {}) !== JSON.stringify(webhookConnection);
 
   if (needsUpdate) {
     const updated = await updateN8nWorkflow(summary.id, {
       name: workflow.name,
-      nodes: [...cleanedNodes, directWebhook, normalizeCommand],
+      nodes: [...cleanedNodes, directWebhook],
       connections: {
         ...nextConnections,
         [DASHBOARD_WEBHOOK_NODE]: webhookConnection,
-        [DASHBOARD_NORMALIZE_NODE]: normalizeConnection,
       },
       settings: {
         ...(workflow.settings || {}),
@@ -205,8 +223,7 @@ export async function ensureMaiaDashboardWebhook() {
     workflowId: summary.id,
     workflowName: summary.name,
     sourceTrigger: sourceTrigger.name,
-    bypassedParser: telegramParser?.name || null,
-    normalizationNode: DASHBOARD_NORMALIZE_NODE,
+    sharedParser: telegramParser.name,
     nextNodes,
     webhookPath: DASHBOARD_WEBHOOK_PATH,
     repaired: needsUpdate,
