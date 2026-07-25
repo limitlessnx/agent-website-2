@@ -6,6 +6,7 @@ import {
   updateN8nWorkflow,
 } from "@/lib/n8n-api";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
+import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 
 const DASHBOARD_WEBHOOK_NODE = "Fluxknight Maia Command Webhook";
 const DASHBOARD_WEBHOOK_PATH = "fluxknight-maia-command";
@@ -101,7 +102,7 @@ export async function ensureMaiaDashboardWebhook() {
     parameters: {
       httpMethod: "POST",
       path: DASHBOARD_WEBHOOK_PATH,
-      responseMode: "onReceived",
+      responseMode: "lastNode",
       options: {},
     },
   };
@@ -109,6 +110,7 @@ export async function ensureMaiaDashboardWebhook() {
   const needsUpdate =
     !webhookNode ||
     Boolean(legacyTrigger) ||
+    webhookNode.parameters?.responseMode !== "lastNode" ||
     JSON.stringify(connections[DASHBOARD_WEBHOOK_NODE] || {}) !== JSON.stringify(sourceConnection || {});
 
   if (needsUpdate) {
@@ -136,7 +138,7 @@ export async function ensureMaiaDashboardWebhook() {
 
 function buildMaiaInput(payload: MaiaDirectCommandPayload) {
   const lead = payload.recipient;
-  const phone = String(lead.phone || "").replace(/[^\d]/g, "");
+  const phone = normalizeLeadPhone(String(lead.phone || ""));
   const mediaUrl = payload.mediaUrl || "";
 
   return {
@@ -150,7 +152,7 @@ function buildMaiaInput(payload: MaiaDirectCommandPayload) {
     text: payload.message,
     media_url: mediaUrl,
     property: payload.property || null,
-    lead,
+    lead: { ...lead, phone },
     name: lead.name,
     phone,
     to: phone,
@@ -174,7 +176,7 @@ function buildMaiaInput(payload: MaiaDirectCommandPayload) {
       name: lead.name,
       media_url: mediaUrl,
       property: payload.property || null,
-      lead,
+      lead: { ...lead, phone },
       metadata: payload.metadata || {},
     },
   };
@@ -191,13 +193,20 @@ export async function dispatchMaiaDirectCommand(payload: MaiaDirectCommandPayloa
 
   const responseText = await response.text().catch(() => "");
   if (!response.ok) {
-    throw new Error(`Maia dashboard webhook failed: ${response.status}${responseText ? ` ${responseText}` : ""}`);
+    throw new Error(`Maia workflow failed: ${response.status}${responseText ? ` ${responseText}` : ""}`);
+  }
+
+  let workflowResponse: unknown = responseText;
+  try {
+    workflowResponse = responseText ? JSON.parse(responseText) : null;
+  } catch {
+    // Preserve plain-text n8n responses.
   }
 
   return {
     ok: true,
     status: response.status,
-    response: responseText,
+    response: workflowResponse,
     route,
   };
 }
