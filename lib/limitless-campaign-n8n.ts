@@ -15,6 +15,7 @@ import type { ProgressiveLead } from "@/lib/lead-profile-service";
 const DASHBOARD_WORKFLOW_NAME = "Limitless Realty Dashboard Campaign";
 const WHATSAPP_AGENT_WORKFLOW_NAME = "Limitless Realty WhatsApp Client Agent";
 const WEBHOOK_PATH = "limitless-realty-dashboard-campaign";
+const SUBWORKFLOW_TRIGGER_NAME = "Fluxknight Campaign Trigger";
 
 export type CampaignDispatchPayload = {
   campaignId: string;
@@ -31,6 +32,21 @@ export type CampaignDispatchPayload = {
   };
   recipients: ProgressiveLead[];
   createdBy?: string;
+};
+
+type WorkflowNode = {
+  id: string;
+  name: string;
+  type: string;
+  typeVersion?: number;
+  position?: number[];
+  parameters?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+type WorkflowConnection = {
+  main?: Array<Array<{ node: string; type: string; index: number }>>;
+  [key: string]: unknown;
 };
 
 function nodeId() {
@@ -67,6 +83,53 @@ async function resolveWhatsAppAgentWorkflow() {
       ? `n8n WhatsApp workflow not found. Available related workflows: ${limitlessNames.join(" | ")}`
       : "n8n WhatsApp workflow not found. No Limitless, Maia, or WhatsApp workflows were returned by the n8n API key.",
   );
+}
+
+async function ensureSubworkflowTrigger(summary: { id: string; name: string; active?: boolean }) {
+  const workflow = await getN8nWorkflow(summary.id);
+  const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as WorkflowNode[];
+  const connections = (workflow.connections || {}) as Record<string, WorkflowConnection>;
+
+  const existingTrigger = nodes.find((node) => node.type === "n8n-nodes-base.executeWorkflowTrigger");
+  if (existingTrigger) return workflow;
+
+  const connectedTriggers = nodes.filter((node) => {
+    const output = connections[node.name]?.main;
+    return /trigger|webhook/i.test(node.type) && Array.isArray(output) && output.some((branch) => branch?.length);
+  });
+
+  const sourceTrigger =
+    connectedTriggers.find((node) => /whatsapp|telegram|webhook/i.test(`${node.name} ${node.type}`)) || connectedTriggers[0];
+
+  if (!sourceTrigger) {
+    throw new Error(
+      `${summary.name} has no connected trigger whose first processing connection can be reused for dashboard campaigns.`,
+    );
+  }
+
+  const sourceConnection = connections[sourceTrigger.name];
+  const sourcePosition = Array.isArray(sourceTrigger.position) ? sourceTrigger.position : [0, 0];
+  const dashboardTrigger: WorkflowNode = {
+    id: nodeId(),
+    name: SUBWORKFLOW_TRIGGER_NAME,
+    type: "n8n-nodes-base.executeWorkflowTrigger",
+    typeVersion: 1.1,
+    position: [Number(sourcePosition[0] || 0), Number(sourcePosition[1] || 0) + 180],
+    parameters: {},
+  };
+
+  const updated = await updateN8nWorkflow(summary.id, {
+    name: workflow.name,
+    nodes: [...nodes, dashboardTrigger],
+    connections: {
+      ...connections,
+      [dashboardTrigger.name]: JSON.parse(JSON.stringify(sourceConnection)),
+    },
+    settings: workflow.settings || {},
+  });
+
+  if (summary.active && !updated.active) await activateN8nWorkflow(summary.id);
+  return updated;
 }
 
 function buildCampaignWorkflow(downstream: { id: string; name: string }) {
@@ -124,6 +187,16 @@ return recipients
       property_type: lead.property_type || '',
       property_interest: lead.property_interest || '',
       purpose: lead.purpose || '',
+      body: {
+        source: 'fluxknight_dashboard',
+        message: payload.message,
+        text: payload.message,
+        phone: lead.phone,
+        to: lead.phone,
+        name: lead.name,
+        media_url: payload.mediaUrl || payload.property?.drivePhotosLink || '',
+        property: payload.property || null
+      }
     },
   }));`,
         },
@@ -186,7 +259,8 @@ export async function ensureLimitlessCampaignWorkflow() {
     throw new Error("n8n API is not configured in Vercel.");
   }
 
-  const downstream = await resolveWhatsAppAgentWorkflow();
+  const downstreamSummary = await resolveWhatsAppAgentWorkflow();
+  const downstream = await ensureSubworkflowTrigger(downstreamSummary);
   const definition = buildCampaignWorkflow(downstream);
   const existing = await findN8nWorkflowByName(DASHBOARD_WORKFLOW_NAME);
 
