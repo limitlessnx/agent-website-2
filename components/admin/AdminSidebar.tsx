@@ -10,6 +10,7 @@ import {
   BrainCircuit,
   Building2,
   ChevronDown,
+  ClipboardList,
   CreditCard,
   Database,
   Home,
@@ -38,6 +39,7 @@ const platformGroups = [
     items: [
       { href: "/dashboard", label: "Executive Overview", icon: Home, exact: true },
       { href: "/dashboard/clients", label: "Organizations", icon: Layers3 },
+      { href: "/dashboard/onboarding", label: "Client Onboarding", icon: ClipboardList },
       { href: "/dashboard/platform-engine", label: "Platform Engine", icon: Boxes },
       { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
       { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
