@@ -4,58 +4,66 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  BarChart3,
+  Activity,
   Bot,
   Building2,
   ChevronDown,
   CreditCard,
+  Database,
   Home,
   Image,
+  Layers3,
   Megaphone,
   Menu,
   MessageCircle,
+  Network,
+  Plus,
   Settings,
   Users,
   Workflow,
   X,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
+import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import styles from "@/components/admin/AdminSidebar.module.css";
 
-const groups = [
+const platformGroups = [
   {
-    id: "operations",
-    label: "Operations",
+    id: "platform",
+    label: "Platform",
     items: [
-      { href: "/dashboard", label: "Overview", icon: Home, exact: true },
-      { href: "/dashboard/clients", label: "Client Onboarding", icon: Users },
+      { href: "/dashboard", label: "Executive Overview", icon: Home, exact: true },
+      { href: "/dashboard/clients", label: "Organizations", icon: Layers3 },
     ],
   },
   {
-    id: "limitless-realty",
-    label: "Limitless Realty",
+    id: "workspace-limitless",
+    label: "Limitless Realty Workspace",
     items: [
-      { href: "/dashboard/limitless/leads", label: "Leads", icon: Users },
-      { href: "/dashboard/limitless/followups", label: "Follow-ups", icon: MessageCircle },
-      { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
-      { href: "/dashboard/limitless/media", label: "Media Library", icon: Image },
-      { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
-      { href: "/dashboard/limitless/payments", label: "Payments & Installments", icon: CreditCard },
+      { href: "/dashboard/limitless/leads", label: "CRM · Leads", icon: Users },
+      { href: "/dashboard/limitless/followups", label: "CRM · Follow-ups", icon: MessageCircle },
+      { href: "/dashboard/limitless/properties", label: "Property Registry", icon: Building2 },
+      { href: "/dashboard/limitless/media", label: "Knowledge & Media", icon: Image },
+      { href: "/dashboard/limitless/campaigns", label: "Campaign Center", icon: Megaphone },
+      { href: "/dashboard/limitless/payments", label: "Revenue Operations", icon: CreditCard },
     ],
   },
   {
-    id: "automation-platform",
-    label: "Automation Platform",
+    id: "ai-operations",
+    label: "AI Operations",
     items: [
-      { href: "/dashboard/agents", label: "Agent Management", icon: Bot },
-      { href: "/dashboard/automations", label: "Automation Control", icon: Bot },
+      { href: "/dashboard/agents", label: "Agent Registry", icon: Bot },
       { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
+      { href: "/dashboard/automations", label: "Automation Control", icon: Network },
     ],
   },
   {
-    id: "system",
-    label: "System",
-    items: [{ href: "/dashboard/settings", label: "Settings", icon: Settings }],
+    id: "governance",
+    label: "Governance",
+    items: [
+      { href: "/dashboard/activity", label: "Unified Activity", icon: Activity },
+      { href: "/dashboard/settings", label: "Platform Settings", icon: Settings },
+    ],
   },
 ];
 
@@ -66,15 +74,13 @@ function itemIsActive(pathname: string, item: { href: string; exact?: boolean })
 export default function AdminSidebar({ email }: { email: string }) {
   const pathname = usePathname();
   const activeGroupIds = useMemo(
-    () => groups.filter((group) => group.items.some((item) => itemIsActive(pathname, item))).map((group) => group.id),
+    () => platformGroups.filter((group) => group.items.some((item) => itemIsActive(pathname, item))).map((group) => group.id),
     [pathname],
   );
-  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupIds.length ? activeGroupIds : ["operations"]);
+  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupIds.length ? activeGroupIds : ["platform", "workspace-limitless"]);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  useEffect(() => setMobileOpen(false), [pathname]);
 
   function toggleGroup(id: string) {
     setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
@@ -83,11 +89,10 @@ export default function AdminSidebar({ email }: { email: string }) {
   return (
     <>
       {!mobileOpen ? (
-        <button type="button" className={styles.mobileToggle} onClick={() => setMobileOpen(true)} aria-label="Open navigation menu" aria-expanded={false}>
+        <button type="button" className={styles.mobileToggle} onClick={() => setMobileOpen(true)} aria-label="Open navigation menu">
           <Menu size={21} />
         </button>
       ) : null}
-
       {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={() => setMobileOpen(false)} /> : null}
 
       <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
@@ -96,21 +101,27 @@ export default function AdminSidebar({ email }: { email: string }) {
         </div>
 
         <Link href="/dashboard" className={`admin-brand ${styles.brand}`}>
-          <span className="admin-brand-mark"><BarChart3 size={18} /></span>
-          <span>Limitless OS<small>Operations Console</small></span>
+          <span className={styles.logoMark}><FluxknightLogo /></span>
+          <span>Fluxknight<small>AI Operations Platform</small></span>
         </Link>
 
-        <nav className={`admin-nav ${styles.nav}`} aria-label="Admin navigation">
-          {groups.map((group) => {
+        <button type="button" className={styles.workspaceSwitcher}>
+          <span className={styles.workspaceIcon}><Building2 size={16} /></span>
+          <span><small>Organization workspace</small><strong>Limitless Realty</strong></span>
+          <ChevronDown size={15} />
+        </button>
+
+        <nav className={`admin-nav ${styles.nav}`} aria-label="Organization workspace navigation">
+          {platformGroups.map((group) => {
             const isOpen = openGroups.includes(group.id);
             const hasActiveItem = group.items.some((item) => itemIsActive(pathname, item));
             return (
               <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
-                <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen} aria-controls={`admin-nav-${group.id}`}>
+                <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}>
                   <span>{group.label}</span>
                   <ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
                 </button>
-                <div id={`admin-nav-${group.id}`} className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
+                <div className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
                   {group.items.map((item) => {
                     const active = itemIsActive(pathname, item);
                     return (
@@ -125,8 +136,13 @@ export default function AdminSidebar({ email }: { email: string }) {
           })}
         </nav>
 
+        <Link href="/dashboard/clients" className={styles.addOrganization}><Plus size={15} /> Add organization</Link>
+
         <div className={`admin-sidebar-footer ${styles.footer}`}>
-          <p>{email}</p>
+          <div className={styles.userCard}>
+            <span><Database size={15} /></span>
+            <div><strong>Platform Admin</strong><small>{email}</small></div>
+          </div>
           <LogoutButton />
         </div>
       </aside>
