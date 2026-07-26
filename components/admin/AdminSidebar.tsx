@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Bot,
+  Boxes,
+  BrainCircuit,
   Building2,
   ChevronDown,
   CreditCard,
@@ -17,6 +19,7 @@ import {
   Menu,
   MessageCircle,
   Network,
+  PlugZap,
   Plus,
   Settings,
   Users,
@@ -35,6 +38,10 @@ const platformGroups = [
     items: [
       { href: "/dashboard", label: "Executive Overview", icon: Home, exact: true },
       { href: "/dashboard/clients", label: "Organizations", icon: Layers3 },
+      { href: "/dashboard/platform-engine", label: "Platform Engine", icon: Boxes },
+      { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
+      { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
+      { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
     ],
   },
   {
