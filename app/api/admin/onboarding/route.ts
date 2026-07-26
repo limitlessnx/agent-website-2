@@ -75,6 +75,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, onboardingId, accessToken: token });
     }
 
+    if (action === "link_organization") {
+      const onboardingId = String(body.onboardingId || "").trim();
+      const organizationId = String(body.organizationId || "").trim();
+      if (!onboardingId || !organizationId) {
+        return NextResponse.json({ error: "Onboarding record and organization are required." }, { status: 400 });
+      }
+
+      const result = await supabaseServerRequest(
+        `client_onboarding_submissions?id=eq.${encodeURIComponent(onboardingId)}`,
+        { method: "PATCH", body: JSON.stringify({ organization_id: organizationId, updated_at: new Date().toISOString() }) },
+      );
+      await supabaseServerRequest(
+        `organization_deployment_tasks?onboarding_id=eq.${encodeURIComponent(onboardingId)}`,
+        { method: "PATCH", body: JSON.stringify({ organization_id: organizationId, updated_at: new Date().toISOString() }) },
+      );
+      return NextResponse.json({ ok: true, result });
+    }
+
     if (action === "update_status") {
       const onboardingId = String(body.onboardingId || "").trim();
       const status = String(body.status || "").trim();
