@@ -1,12 +1,11 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 export default function AdminSearch() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
 
@@ -17,16 +16,7 @@ export default function AdminSearch() {
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedQuery = query.trim();
-    const targetPath = pathname.includes("/dashboard/limitless/leads")
-      ? pathname
-      : "/dashboard/limitless/leads";
-
-    if (!trimmedQuery) {
-      router.push(targetPath);
-      return;
-    }
-
-    router.push(`${targetPath}?q=${encodeURIComponent(trimmedQuery)}`);
+    router.push(trimmedQuery ? `/dashboard/search?q=${encodeURIComponent(trimmedQuery)}` : "/dashboard/search");
   }
 
   return (
@@ -35,8 +25,8 @@ export default function AdminSearch() {
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search leads, phone, budget, location..."
-        aria-label="Search leads"
+        placeholder="Search organizations, leads, properties, agents and workflows..."
+        aria-label="Global platform search"
       />
       <button type="submit">Search</button>
     </form>
