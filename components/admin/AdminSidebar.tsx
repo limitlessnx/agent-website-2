@@ -26,6 +26,7 @@ import {
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import styles from "@/components/admin/AdminSidebar.module.css";
+import extras from "@/components/admin/AdminSidebarExtras.module.css";
 
 const platformGroups = [
   {
@@ -101,12 +102,12 @@ export default function AdminSidebar({ email }: { email: string }) {
         </div>
 
         <Link href="/dashboard" className={`admin-brand ${styles.brand}`}>
-          <span className={styles.logoMark}><FluxknightLogo /></span>
+          <span className={extras.logoMark}><FluxknightLogo /></span>
           <span>Fluxknight<small>AI Operations Platform</small></span>
         </Link>
 
-        <button type="button" className={styles.workspaceSwitcher}>
-          <span className={styles.workspaceIcon}><Building2 size={16} /></span>
+        <button type="button" className={extras.workspaceSwitcher}>
+          <span className={extras.workspaceIcon}><Building2 size={16} /></span>
           <span><small>Organization workspace</small><strong>Limitless Realty</strong></span>
           <ChevronDown size={15} />
         </button>
@@ -136,10 +137,10 @@ export default function AdminSidebar({ email }: { email: string }) {
           })}
         </nav>
 
-        <Link href="/dashboard/clients" className={styles.addOrganization}><Plus size={15} /> Add organization</Link>
+        <Link href="/dashboard/clients" className={extras.addOrganization}><Plus size={15} /> Add organization</Link>
 
         <div className={`admin-sidebar-footer ${styles.footer}`}>
-          <div className={styles.userCard}>
+          <div className={extras.userCard}>
             <span><Database size={15} /></span>
             <div><strong>Platform Admin</strong><small>{email}</small></div>
           </div>
