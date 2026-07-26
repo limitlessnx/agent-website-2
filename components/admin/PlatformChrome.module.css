@@ -1,0 +1,213 @@
+.commandButton,
+.activityButton {
+  min-height: 40px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  color: var(--admin-text-soft);
+  background: var(--admin-panel-bg);
+  cursor: pointer;
+}
+
+.commandButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.commandButton kbd {
+  padding: 3px 6px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  color: var(--admin-text-muted);
+  background: rgba(255,255,255,.03);
+  font-size: .68rem;
+}
+
+.activityButton {
+  position: relative;
+  width: 40px;
+  display: inline-grid;
+  place-items: center;
+}
+
+.activityButton i {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--admin-emerald);
+  box-shadow: 0 0 0 3px var(--admin-panel-bg);
+}
+
+.overlay,
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(3,5,13,.72);
+  backdrop-filter: blur(10px);
+}
+
+.overlay {
+  display: grid;
+  place-items: start center;
+  padding: min(14vh, 120px) 20px 20px;
+}
+
+.palette {
+  width: min(720px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(167,139,250,.32);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--admin-panel-strong) 96%, #080914);
+  box-shadow: 0 34px 120px rgba(0,0,0,.52), 0 0 60px rgba(124,58,237,.12);
+}
+
+.searchRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.searchRow input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: var(--admin-text);
+  background: transparent;
+  font: inherit;
+  font-size: .94rem;
+}
+
+.searchRow button,
+.drawer header button {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  color: var(--admin-text-soft);
+  background: rgba(255,255,255,.02);
+  cursor: pointer;
+}
+
+.commandList {
+  max-height: 440px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.commandList > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: var(--admin-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.commandList > button:hover {
+  border-color: rgba(167,139,250,.26);
+  background: rgba(124,58,237,.1);
+}
+
+.commandIcon {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #d8c9ff;
+  background: rgba(124,58,237,.16);
+}
+
+.commandList strong,
+.commandList small {
+  display: block;
+}
+
+.commandList strong { font-size: .86rem; }
+.commandList small { margin-top: 3px; color: var(--admin-text-muted); font-size: .72rem; }
+.commandList p { padding: 24px; color: var(--admin-text-muted); text-align: center; }
+
+.drawerBackdrop { z-index: 101; }
+
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 102;
+  width: min(420px, 94vw);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border-left: 1px solid var(--admin-border);
+  background: color-mix(in srgb, var(--admin-sidebar-bg) 96%, #080914);
+  box-shadow: -30px 0 100px rgba(0,0,0,.42);
+}
+
+.drawer header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.drawer header strong,
+.drawer header span { display: block; }
+.drawer header span { margin-top: 4px; color: var(--admin-text-muted); font-size: .76rem; }
+
+.activityList { display: grid; gap: 10px; }
+.activityList article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+}
+.activityList i { width: 8px; height: 8px; margin-top: 5px; border-radius: 999px; }
+.activityList .live { background: var(--admin-emerald); }
+.activityList .info { background: var(--admin-cyan); }
+.activityList .warn { background: var(--admin-amber); }
+.activityList strong,
+.activityList span { display: block; }
+.activityList strong { font-size: .82rem; }
+.activityList span { margin-top: 4px; color: var(--admin-text-muted); font-size: .74rem; line-height: 1.45; }
+.drawer > a {
+  margin-top: auto;
+  padding: 11px 14px;
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 10px;
+  color: #e5dcff;
+  background: rgba(124,58,237,.12);
+  text-align: center;
+  text-decoration: none;
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .commandButton span,
+  .commandButton kbd { display: none; }
+  .commandButton { width: 40px; padding: 0; justify-content: center; }
+}
