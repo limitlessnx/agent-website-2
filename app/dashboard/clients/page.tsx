@@ -1,14 +1,25 @@
 import { Bot, Building2, Clock3, Mail, Users } from "lucide-react";
 import { listClientOnboardingProfiles, type ClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import ClientStatusControl from "./ClientStatusControl";
+import TemplateProvisionControl from "./TemplateProvisionControl";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
   let profiles: ClientOnboardingProfile[] = [];
+  let templates: Array<{ slug: string; name: string }> = [];
   let error = "";
+
   try {
-    profiles = await listClientOnboardingProfiles(100);
+    const [onboardingProfiles, platform] = await Promise.all([
+      listClientOnboardingProfiles(100),
+      getPlatformEngineSummary(),
+    ]);
+    profiles = onboardingProfiles;
+    templates = platform.templates
+      .filter((template) => template.status === "active")
+      .map((template) => ({ slug: template.slug, name: template.name }));
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Unable to load client onboarding records.";
   }
@@ -23,8 +34,8 @@ export default async function ClientsPage() {
       <div className="admin-page-header">
         <div>
           <p className="admin-kicker">Client operations</p>
-          <h1>Client onboarding</h1>
-          <p>Move every organization from account creation through configuration, testing, approval, and launch.</p>
+          <h1>Organization provisioning</h1>
+          <p>Move every organization from onboarding through template provisioning, configuration, testing, approval, and launch.</p>
         </div>
       </div>
 
@@ -37,18 +48,20 @@ export default async function ClientsPage() {
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <div><h2>Workspace queue</h2><p>Update the deployment stage directly from the queue.</p></div>
+          <div><h2>Workspace provisioning queue</h2><p>Select a reusable platform template, provision the workspace, then manage its deployment stage.</p></div>
+          <span className={templates.length ? "admin-status live" : "admin-status warning"}>{templates.length} active templates</span>
         </div>
         {error ? <p className="admin-empty">{error}</p> : null}
         <div className="admin-list">
           {profiles.map((profile) => (
-            <div key={profile.id} className="admin-list-row">
-              <div>
+            <div key={profile.id} className="admin-list-row" style={{ alignItems: "start", gap: 18 }}>
+              <div style={{ flex: 1 }}>
                 <strong>{profile.business_name || "Unnamed organization"}</strong>
                 <span><Mail size={13} /> {profile.business_email || "No business email"} · {profile.industry || "Industry not selected"}</span>
                 <span>{profile.requested_agents.length ? profile.requested_agents.join(", ").replaceAll("_", " ") : "No agents selected yet"}</span>
                 <span>Created {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(profile.created_at))}</span>
               </div>
+              <TemplateProvisionControl organizationId={profile.organization_id} templates={templates} />
               {profile.status === "in_progress" ? <em className="muted">Client completing form</em> : <ClientStatusControl id={profile.id} value={profile.status} />}
             </div>
           ))}
