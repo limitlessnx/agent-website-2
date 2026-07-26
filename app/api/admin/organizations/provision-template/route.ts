@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           p_organization_id: organizationId,
           p_template_slug: templateSlug,
-          p_actor_user_id: session.userId || null,
+          p_actor_user_id: null,
         }),
       },
     );
