@@ -1,15 +1,23 @@
-.logoMark {
-  width: 42px;
-  height: 42px;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border: 1px solid rgba(167,139,250,.28);
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(124,58,237,.2), rgba(34,211,238,.08));
-  box-shadow: 0 12px 34px rgba(124,58,237,.12);
+.brandLockup {
+  display: grid !important;
+  gap: 4px !important;
+  align-items: start !important;
 }
-.logoMark svg { width: 31px; height: 31px; }
+
+.wordmark {
+  width: min(100%, 188px);
+  height: 34px;
+  color: var(--admin-text);
+}
+
+.brandLockup small {
+  margin: 0 0 0 3px !important;
+  color: var(--admin-text-muted) !important;
+  font-size: .62rem !important;
+  font-weight: 800 !important;
+  letter-spacing: .16em !important;
+  text-transform: uppercase !important;
+}
 
 .workspaceSwitcher {
   width: 100%;
