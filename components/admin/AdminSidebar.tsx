@@ -40,6 +40,7 @@ const platformGroups = [
       { href: "/dashboard/clients", label: "Organizations", icon: Layers3 },
       { href: "/dashboard/platform-engine", label: "Platform Engine", icon: Boxes },
       { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
+      { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
       { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
       { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
     ],
