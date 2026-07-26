@@ -2,13 +2,14 @@ import { Bot, Building2, Clock3, Mail, Users } from "lucide-react";
 import { listClientOnboardingProfiles, type ClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import ClientStatusControl from "./ClientStatusControl";
+import OrganizationCreationWizard from "./OrganizationCreationWizard";
 import TemplateProvisionControl from "./TemplateProvisionControl";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
   let profiles: ClientOnboardingProfile[] = [];
-  let templates: Array<{ slug: string; name: string }> = [];
+  let templates: Array<{ slug: string; name: string; industry: string; description: string | null }> = [];
   let error = "";
 
   try {
@@ -19,7 +20,12 @@ export default async function ClientsPage() {
     profiles = onboardingProfiles;
     templates = platform.templates
       .filter((template) => template.status === "active")
-      .map((template) => ({ slug: template.slug, name: template.name }));
+      .map((template) => ({
+        slug: template.slug,
+        name: template.name,
+        industry: template.industry,
+        description: template.description,
+      }));
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Unable to load client onboarding records.";
   }
@@ -35,12 +41,14 @@ export default async function ClientsPage() {
         <div>
           <p className="admin-kicker">Client operations</p>
           <h1>Organization provisioning</h1>
-          <p>Move every organization from onboarding through template provisioning, configuration, testing, approval, and launch.</p>
+          <p>Create new organizations, provision reusable platform templates, and move each deployment through testing and launch.</p>
         </div>
       </div>
 
+      <OrganizationCreationWizard templates={templates} />
+
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><Users size={15} /> Client accounts</p><strong>{profiles.length}</strong><span>Visible organizations</span></article>
+        <article className="admin-metric-card"><p><Users size={15} /> Client accounts</p><strong>{profiles.length}</strong><span>Visible onboarding accounts</span></article>
         <article className="admin-metric-card"><p><Clock3 size={15} /> In progress</p><strong>{inProgress}</strong><span>Still completing onboarding</span></article>
         <article className="admin-metric-card"><p><Bot size={15} /> Configured</p><strong>{configured}</strong><span>{testing} testing or approving</span></article>
         <article className="admin-metric-card"><p><Building2 size={15} /> Live</p><strong>{live}</strong><span>Client systems launched</span></article>
@@ -61,7 +69,7 @@ export default async function ClientsPage() {
                 <span>{profile.requested_agents.length ? profile.requested_agents.join(", ").replaceAll("_", " ") : "No agents selected yet"}</span>
                 <span>Created {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(profile.created_at))}</span>
               </div>
-              <TemplateProvisionControl organizationId={profile.organization_id} templates={templates} />
+              <TemplateProvisionControl organizationId={profile.organization_id} templates={templates.map(({ slug, name }) => ({ slug, name }))} />
               {profile.status === "in_progress" ? <em className="muted">Client completing form</em> : <ClientStatusControl id={profile.id} value={profile.status} />}
             </div>
           ))}
