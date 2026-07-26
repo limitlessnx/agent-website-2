@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 const TOKEN = "maia-repair-7bc4";
 
-export async function POST(request: Request) {
+async function run(request: Request) {
   const url = new URL(request.url);
   if (url.searchParams.get("token") !== TOKEN) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -22,3 +22,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const GET = run;
+export const POST = run;
