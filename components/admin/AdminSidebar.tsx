@@ -101,9 +101,9 @@ export default function AdminSidebar({ email }: { email: string }) {
           <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><X size={20} /></button>
         </div>
 
-        <Link href="/dashboard" className={`admin-brand ${styles.brand}`}>
-          <span className={extras.logoMark}><FluxknightLogo /></span>
-          <span>Fluxknight<small>AI Operations Platform</small></span>
+        <Link href="/dashboard" className={`admin-brand ${styles.brand} ${extras.brandLockup}`}>
+          <FluxknightLogo className={extras.wordmark} />
+          <small>AI Operations Platform</small>
         </Link>
 
         <button type="button" className={extras.workspaceSwitcher}>
