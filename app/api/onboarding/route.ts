@@ -12,6 +12,7 @@ type Submission = {
   business_services: Record<string, unknown>;
   communication_details: Record<string, unknown>;
   automation_requirements: Record<string, unknown>;
+  business_resources: Record<string, unknown>;
   review_confirmation: Record<string, unknown>;
   submitted_at: string | null;
   service_packages?: unknown;
@@ -23,13 +24,13 @@ async function authorize(request: NextRequest) {
   if (!onboardingId || !token) throw new Error("Onboarding access details are required.");
 
   const rows = await supabaseServerRequest<Submission[]>(
-    `client_onboarding_submissions?select=id,payment_status,access_token_hash,status,current_step,business_information,business_services,communication_details,automation_requirements,review_confirmation,submitted_at,service_packages(id,name,slug)&id=eq.${encodeURIComponent(onboardingId)}&limit=1`,
+    `client_onboarding_submissions?select=id,payment_status,access_token_hash,status,current_step,business_information,business_services,communication_details,automation_requirements,business_resources,review_confirmation,submitted_at,service_packages(id,name,slug)&id=eq.${encodeURIComponent(onboardingId)}&limit=1`,
   );
   const submission = rows[0];
   if (!submission || !verifyOnboardingAccessToken(token, submission.access_token_hash)) {
     throw new Error("Invalid onboarding access details.");
   }
-  if (!['paid', 'waived'].includes(submission.payment_status)) {
+  if (!["paid", "waived"].includes(submission.payment_status)) {
     throw new Error("Payment must be confirmed before onboarding can continue.");
   }
   return submission;
@@ -60,7 +61,7 @@ export async function PATCH(request: NextRequest) {
       2: "business_services",
       3: "communication_details",
       4: "automation_requirements",
-      5: "review_confirmation",
+      5: "business_resources",
     };
     const field = fields[step];
     if (!field || !data) {
