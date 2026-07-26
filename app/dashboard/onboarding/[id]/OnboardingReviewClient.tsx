@@ -25,6 +25,7 @@ type Task = { id: string; title: string; task_key: string; status: string; compl
 type Note = { id: string; note: string; visibility: string; author_email?: string | null; created_at: string };
 type Organization = { id: string; name: string; slug: string; status: string };
 type Model = { id: string; provider: string; model_key: string; display_name: string; status: string };
+type Template = { id: string; name: string; slug: string; industry: string; description?: string | null; status: string };
 type Event = { id: string; from_status?: string | null; to_status: string; reason?: string | null; changed_by?: string | null; created_at: string };
 type Document = { id: string; file_name: string; document_type: string; status: string; storage_bucket: string; storage_path: string; created_at: string };
 
@@ -52,7 +53,7 @@ function DetailSection({ title, data }: { title: string; data?: Json }) {
   );
 }
 
-export default function OnboardingReviewClient({ submission, documents, initialNotes, initialTasks, events, organizations, models }: {
+export default function OnboardingReviewClient({ submission, documents, initialNotes, initialTasks, events, organizations, models, templates }: {
   submission: Submission;
   documents: Document[];
   initialNotes: Note[];
@@ -60,6 +61,7 @@ export default function OnboardingReviewClient({ submission, documents, initialN
   events: Event[];
   organizations: Organization[];
   models: Model[];
+  templates: Template[];
 }) {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
@@ -78,6 +80,27 @@ export default function OnboardingReviewClient({ submission, documents, initialN
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Unable to update onboarding.");
     return result;
+  }
+
+  async function provisionOrganization(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy("provision");
+    setMessage("");
+    const data = new FormData(event.currentTarget);
+    try {
+      const result = await adminAction({
+        action: "provision_organization",
+        onboardingId: submission.id,
+        templateSlug: data.get("templateSlug"),
+        modelId: data.get("modelId") || "",
+      });
+      setMessage(`${result.organization?.organization_name || "Organization"} was created and provisioned successfully.`);
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to provision organization.");
+    } finally {
+      setBusy("");
+    }
   }
 
   async function changeStatus(status: string) {
@@ -135,7 +158,7 @@ export default function OnboardingReviewClient({ submission, documents, initialN
 
   async function assignModel(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!submission.organization_id) return setMessage("Link an organization before assigning an AI model.");
+    if (!submission.organization_id) return setMessage("Link or provision an organization before assigning an AI model.");
     setBusy("model");
     const data = new FormData(event.currentTarget);
     try {
@@ -163,11 +186,24 @@ export default function OnboardingReviewClient({ submission, documents, initialN
 
       {message ? <section className="admin-panel"><p className="admin-form-message">{message}</p></section> : null}
 
+      {!submission.organization_id ? (
+        <section className="admin-panel">
+          <div className="admin-panel-header"><div><h2>Create and provision workspace</h2><p>Create the organization, apply its platform template, enable its modules, and optionally assign its approved AI model in one operation.</p></div></div>
+          <form className="admin-form" onSubmit={provisionOrganization}>
+            <div className="admin-form-grid">
+              <label>Organization template<select name="templateSlug" required defaultValue=""><option value="" disabled>Select template</option>{templates.map((template) => <option key={template.id} value={template.slug}>{template.name} · {template.industry}</option>)}</select></label>
+              <label>Approved AI model<select name="modelId" defaultValue=""><option value="">Assign later</option>{models.map((model) => <option key={model.id} value={model.id}>{model.provider} · {model.display_name}</option>)}</select></label>
+            </div>
+            <button className="admin-button" disabled={busy === "provision"} type="submit">{busy === "provision" ? "Provisioning..." : "Create and provision organization"}</button>
+          </form>
+        </section>
+      ) : null}
+
       <section className="admin-panel">
         <div className="admin-panel-header"><div><h2>Delivery controls</h2><p>Only the Super Admin assigns the workspace, model, systems, and final activation state.</p></div></div>
         <div className="admin-form-grid">
           <form className="admin-form" onSubmit={linkOrganization}>
-            <label>Organization<select name="organizationId" required defaultValue={submission.organization_id || ""}><option value="" disabled>Select organization</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name} · {org.status}</option>)}</select></label>
+            <label>Existing organization<select name="organizationId" required defaultValue={submission.organization_id || ""}><option value="" disabled>Select organization</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name} · {org.status}</option>)}</select></label>
             <button className="admin-button" disabled={busy === "organization"} type="submit">{busy === "organization" ? "Saving..." : "Link organization"}</button>
           </form>
           <form className="admin-form" onSubmit={assignModel}>
