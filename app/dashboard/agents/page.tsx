@@ -23,12 +23,7 @@ export default async function AgentManagementPage() {
     const linkedWorkflowIds = new Set(
       summary.links.filter((link) => agents.some((agent) => agent.id === link.agent_id)).map((link) => link.workflow_id),
     );
-    return {
-      project,
-      agents,
-      active: agents.filter((agent) => agent.status === "active").length,
-      workflows: linkedWorkflowIds.size,
-    };
+    return { project, agents, active: agents.filter((agent) => agent.status === "active").length, workflows: linkedWorkflowIds.size };
   });
 
   return (
@@ -37,19 +32,17 @@ export default async function AgentManagementPage() {
         <div>
           <p className="admin-kicker">AI Workforce Registry</p>
           <h1>Agent Registry</h1>
-          <p>Organization-scoped AI employees grouped by project, channels, knowledge, escalation and workflow ownership.</p>
+          <p>Organization-scoped AI employees grouped by purpose, channels, knowledge, escalation and workflow ownership.</p>
         </div>
       </header>
 
-      {error ? (
-        <section className="admin-panel"><div className="admin-list-row attention-danger"><div><strong>Agent schema needs attention</strong><span>{error}</span></div><em>action</em></div></section>
-      ) : null}
+      {error ? <section className="admin-panel"><div className="admin-list-row attention-danger"><div><strong>Agent schema needs attention</strong><span>{error}</span></div><em>action</em></div></section> : null}
 
       <div className="admin-metric-grid">
         <MetricCard icon={Bot} tone="violet" label="Registered agents" value={summary.agents.length} detail={`${active} active`} trend="workforce" />
         <MetricCard icon={Network} tone="cyan" label="Organizations" value={organizations.size} detail={`${summary.projects.length} projects`} trend="tenancy" />
         <MetricCard icon={Workflow} tone="emerald" label="Workflow links" value={summary.links.length} detail={`${summary.workflows.length} workflows available`} trend="orchestration" />
-        <MetricCard icon={ShieldCheck} tone="amber" label="Governed agents" value={summary.agents.filter((agent) => agent.human_handoff_destination && Object.keys(agent.human_handoff_destination).length).length} detail="Handoff configured" trend="governance" />
+        <MetricCard icon={ShieldCheck} tone="amber" label="Governed agents" value={summary.agents.filter((agent) => agent.human_handoff_destination && Object.keys(agent.human_handoff_destination).length).length} detail="Central model + handoff controls" trend="governance" />
       </div>
 
       <section className="admin-panel">
@@ -66,7 +59,7 @@ export default async function AgentManagementPage() {
                   <div className="admin-list-row compact" key={agent.id}>
                     <div>
                       <strong>{agent.name}</strong>
-                      <span>{agent.agent_type || "custom agent"} · {agent.ai_model || "model pending"} · {Array.isArray(agent.communication_channels) ? agent.communication_channels.join(", ") || "no channels" : "no channels"}</span>
+                      <span>{agent.agent_type || "custom agent"} · model centrally assigned · {Array.isArray(agent.communication_channels) ? agent.communication_channels.join(", ") || "no channels" : "no channels"}</span>
                     </div>
                     <em className={agent.status === "active" ? "good" : agent.status === "error" ? "bad" : "muted"}>{agent.status}</em>
                   </div>
