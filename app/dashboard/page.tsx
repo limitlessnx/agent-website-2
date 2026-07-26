@@ -1,351 +1,207 @@
-import MetricCard from "@/components/admin/MetricCard";
-import type { CSSProperties } from "react";
-import { AlertTriangle, Bot, Building2, CheckCircle2, Clock3, Image, Send, ShieldCheck, Users } from "lucide-react";
-import { automationProjects, getCampaignReports, getLeads, getN8nStatus, getProperties, getSupabaseReadiness } from "@/lib/limitless-data";
+import {
+  Activity,
+  ArrowUpRight,
+  Bot,
+  Building2,
+  Database,
+  Megaphone,
+  Network,
+  Send,
+  ShieldCheck,
+  Users,
+  Workflow,
+} from "lucide-react";
+import {
+  getCampaignReports,
+  getLeads,
+  getN8nStatus,
+  getProperties,
+  getSupabaseReadiness,
+} from "@/lib/limitless-data";
+import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import styles from "@/app/dashboard/DashboardExecutive.module.css";
 
 const inactiveLeadStatuses = ["cold", "closed", "converted"];
-const pipelineLabels = ["New", "Warm", "Hot", "Follow-up", "Campaign"];
 
 export default async function DashboardPage() {
-  const [leads, properties, campaigns, n8n] = await Promise.all([
-    getLeads(100),
-    getProperties(100),
-    getCampaignReports(20),
+  const [leads, properties, campaigns, n8n, supabase] = await Promise.all([
+    getLeads(500),
+    getProperties(500),
+    getCampaignReports(50),
     getN8nStatus(),
+    getSupabaseReadiness(),
   ]);
-  const supabase = await getSupabaseReadiness();
-  const supabaseReady = supabase.ready;
-  const n8nReady = n8n.configured && !n8n.error;
-  const liveLeads = leads.filter((lead) => !inactiveLeadStatuses.includes(String(lead.status).toLowerCase()));
-  const newLeads = leads.filter((lead) => String(lead.status).toLowerCase() === "new").length;
-  const warmLeads = leads.filter((lead) => String(lead.score).toLowerCase() === "warm").length;
-  const hotLeads = leads.filter((lead) => ["hot", "qualified"].includes(String(lead.score || lead.status).toLowerCase())).length;
-  const missingImages = properties.filter((property) => !property.drive_photos_link).length;
-  const missingPhones = leads.filter((lead) => !lead.phone).length;
+
+  const liveLeads = leads.filter((lead) => !inactiveLeadStatuses.includes(String(lead.status || "").toLowerCase()));
+  const hotLeads = leads.filter((lead) => ["hot", "qualified"].includes(String(lead.score || lead.status || "").toLowerCase())).length;
+  const warmLeads = leads.filter((lead) => String(lead.score || "").toLowerCase() === "warm").length;
+  const newLeads = leads.filter((lead) => String(lead.status || "").toLowerCase() === "new").length;
   const activeProperties = properties.filter((property) => String(property.status || "active").toLowerCase() === "active").length;
-  const acceptedCampaigns = campaigns.reduce((total, campaign) => total + campaign.accepted, 0);
-  const failedCampaigns = campaigns.reduce((total, campaign) => total + campaign.failed, 0);
-  const activeFollowUpLeads = liveLeads.filter((lead) => Number(lead.follow_up_stage || 0) < 4);
-  const followUpLeads = activeFollowUpLeads.length;
-  const healthScore =
-    100 -
-    (missingImages ? 12 : 0) -
-    (!supabaseReady ? 20 : 0) -
-    (!n8nReady ? 12 : 0) -
-    (failedCampaigns ? 10 : 0) -
-    (missingPhones ? 6 : 0);
-  const visibleLeads = leads.slice(0, 5);
-  const visibleCampaigns = campaigns.slice(0, 4);
-  const workflowRows = n8n.workflows.slice(0, 5);
-  const missingImageRows = properties.filter((property) => !property.drive_photos_link).slice(0, 4);
-  const failedCampaignRows = campaigns.filter((campaign) => campaign.failed > 0).slice(0, 3);
-  const pipelineCounts = [newLeads, warmLeads, hotLeads, followUpLeads, campaigns.length];
-  const pipelineMax = Math.max(1, ...pipelineCounts);
-  const attentionItems = [
-    !supabaseReady
-      ? {
-          label: "Supabase schema not live",
-          detail: supabase.configured
-            ? `Missing or inaccessible table(s): ${supabase.tables.filter((table) => !table.ready).map((table) => table.table).join(", ")}. Run the schema SQL before using live data.`
-            : "Supabase env vars are not visible to production.",
-          href: "/dashboard/settings",
-          tone: "danger",
-        }
-      : null,
-    missingImages
-      ? {
-          label: "Property images needed",
-          detail: `${missingImages} active catalog item(s) need Google Drive image links so Maia can show the right media.`,
-          href: "/dashboard/limitless/media",
-          tone: "warning",
-        }
-      : null,
-    failedCampaigns
-      ? {
-          label: "Campaign failures found",
-          detail: `${failedCampaigns} immediate WhatsApp failure(s) are recorded in recent campaign reports.`,
-          href: "/dashboard/limitless/campaigns",
-          tone: "danger",
-        }
-      : null,
-    missingPhones
-      ? {
-          label: "Lead phone cleanup",
-          detail: `${missingPhones} lead(s) cannot receive WhatsApp messages until their phone numbers are fixed.`,
-          href: "/dashboard/limitless/leads",
-          tone: "warning",
-        }
-      : null,
-    !n8nReady
-      ? {
-          label: "n8n visibility needs attention",
-          detail: n8n.configured ? n8n.error || "n8n is configured but the workflow check did not pass." : "n8n variables are not visible to the dashboard.",
-          href: "/dashboard/automations",
-          tone: "danger",
-        }
-      : null,
-  ].filter(Boolean) as { label: string; detail: string; href: string; tone: string }[];
+  const missingMedia = properties.filter((property) => !property.drive_photos_link).length;
+  const campaignSent = campaigns.reduce((total, campaign) => total + Number(campaign.accepted || 0), 0);
+  const campaignFailed = campaigns.reduce((total, campaign) => total + Number(campaign.failed || 0), 0);
+  const followUps = liveLeads.filter((lead) => Number(lead.follow_up_stage || 0) < 4).length;
+  const systemHealth = Math.max(
+    0,
+    100 - (!supabase.ready ? 22 : 0) - (n8n.error ? 18 : 0) - (missingMedia ? 10 : 0) - (campaignFailed ? 8 : 0),
+  );
+  const pipeline = [
+    { label: "New", value: newLeads },
+    { label: "Warm", value: warmLeads },
+    { label: "Hot", value: hotLeads },
+    { label: "Follow-up", value: followUps },
+  ];
+  const pipelineMax = Math.max(1, ...pipeline.map((item) => item.value));
+
+  const actions = [
+    {
+      label: missingMedia ? "Complete property media" : "Property media healthy",
+      detail: missingMedia ? `${missingMedia} properties need image links` : "All visible records have media",
+      href: "/dashboard/limitless/media",
+      icon: Building2,
+      value: missingMedia || "Clear",
+    },
+    {
+      label: campaignFailed ? "Review failed campaign sends" : "Campaign delivery healthy",
+      detail: campaignFailed ? `${campaignFailed} immediate failures recorded` : `${campaignSent} accepted by WhatsApp`,
+      href: "/dashboard/limitless/campaigns",
+      icon: Megaphone,
+      value: campaignFailed || campaignSent,
+    },
+    {
+      label: "Review active follow-ups",
+      detail: `${followUps} leads remain in sequence`,
+      href: "/dashboard/limitless/followups",
+      icon: Users,
+      value: followUps,
+    },
+    {
+      label: supabase.ready ? "Data services operational" : "Repair data services",
+      detail: supabase.ready ? "Supabase readiness checks passed" : "Database configuration needs attention",
+      href: "/dashboard/settings",
+      icon: Database,
+      value: supabase.ready ? "Live" : "Action",
+    },
+  ];
 
   return (
-    <div className="admin-page">
-      <section className="admin-hero-panel">
-        <div>
-          <p className="admin-kicker">Live Control Center</p>
-          <h1>Good day, Limitless Admin</h1>
+    <main className={`${styles.page} admin-page`}>
+      <section className={styles.hero}>
+        <div className={styles.heroCopy}>
+          <p className={styles.kicker}>Multi-Organization AI Operations</p>
+          <h1>Operate agents, workflows and revenue from <span>one control plane.</span></h1>
           <p>
-            Maia is running as the live operating system for Limitless Realty. You have {hotLeads} hot/qualified lead(s),
-            {missingImages} propert{missingImages === 1 ? "y" : "ies"} missing images, and {n8n.activeWorkflows} active
-            n8n workflow(s) visible from this console.
+            Fluxknight coordinates organization data, Maia&apos;s WhatsApp operations, campaign delivery,
+            automation health and executive performance without flattening every business into one chaotic menu.
           </p>
-          <div className="admin-hero-actions">
-            <a href="/dashboard/limitless/leads">Review leads</a>
-            <a href="/dashboard/limitless/properties">Update properties</a>
+          <div className={styles.heroActions}>
+            <a href="/dashboard/clients"><Building2 size={15} /> Manage organizations</a>
+            <a href="/dashboard/agents"><Bot size={15} /> Open agent registry</a>
+            <a href="/dashboard/workflows"><Workflow size={15} /> Open workflows</a>
           </div>
         </div>
-        <div className="admin-launch-score">
-          <span>{Math.max(0, healthScore)}%</span>
-          <p>System health</p>
+        <div className={styles.automationVisual} aria-label="Fluxknight AI automation network visual">
+          <div className={styles.orbit} />
+          <div className={`${styles.orbit} ${styles.orbitTwo}`} />
+          <div className={styles.core}><FluxknightLogo width={78} height={78} /></div>
+          <div className={`${styles.node} ${styles.nodeOne}`}><Bot size={14} /> Maia</div>
+          <div className={`${styles.node} ${styles.nodeTwo}`}><Network size={14} /> n8n</div>
+          <div className={`${styles.node} ${styles.nodeThree}`}><Database size={14} /> Supabase</div>
         </div>
       </section>
 
-      <div className="admin-metric-grid">
-        <MetricCard icon={Users} tone="cyan" label="Total leads" value={leads.length} detail={`${hotLeads} hot/qualified`} trend="+ live CRM" />
-        <MetricCard icon={Building2} tone="emerald" label="Active properties" value={activeProperties} detail={`${missingImages} missing image links`} trend="catalog" />
-        <MetricCard icon={Send} tone="amber" label="WhatsApp accepted" value={acceptedCampaigns} detail={`${failedCampaigns} immediate failures`} trend="campaigns" />
-        <MetricCard icon={Bot} tone="violet" label="Active workflows" value={n8n.activeWorkflows} detail={n8n.configured ? "Live n8n check" : "n8n env not set"} trend="n8n" />
-      </div>
+      <section className={styles.metrics} aria-label="Executive KPI cards">
+        <article className={styles.metric}>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><Users size={17} /></span><small>CRM</small></div>
+          <strong>{leads.length.toLocaleString("en-NG")}</strong>
+          <p>{hotLeads} hot or qualified leads</p>
+        </article>
+        <article className={styles.metric}>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><Building2 size={17} /></span><small>Catalog</small></div>
+          <strong>{activeProperties.toLocaleString("en-NG")}</strong>
+          <p>{missingMedia} missing media records</p>
+        </article>
+        <article className={styles.metric}>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><Send size={17} /></span><small>Messaging</small></div>
+          <strong>{campaignSent.toLocaleString("en-NG")}</strong>
+          <p>{campaignFailed} immediate campaign failures</p>
+        </article>
+        <article className={styles.metric}>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><ShieldCheck size={17} /></span><small>Platform health</small></div>
+          <strong>{systemHealth}%</strong>
+          <p>{n8n.activeWorkflows} active workflows visible</p>
+        </article>
+      </section>
 
-      <div className="admin-grid dashboard-main">
-        <section className="admin-panel admin-chart-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Lead Pipeline</h2>
-              <p>Current CRM signal from Maia conversations.</p>
-            </div>
-            <span className={supabaseReady ? "admin-status live" : "admin-status warning"}>
-              {supabaseReady ? "Supabase live" : "Schema pending"}
-            </span>
-          </div>
-          <div className="admin-pipeline-bars" aria-label="Lead pipeline chart">
-            {pipelineLabels.map((label, index) => (
-              <div key={label} style={{ "--bar-height": `${Math.max(12, Math.round((pipelineCounts[index] / pipelineMax) * 86))}%` } as CSSProperties}>
-                <strong>{pipelineCounts[index]}</strong>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="admin-panel admin-ring-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Maia Health</h2>
-              <p>Live operating checks.</p>
-            </div>
-          </div>
-          <div className="admin-health-ring">
-            <span>{Math.max(0, healthScore)}%</span>
-          </div>
-          <div className="admin-mini-legend">
-            <span><i className="dot cyan" /> Supabase {supabaseReady ? "ready" : "pending"}</span>
-            <span><i className="dot amber" /> {followUpLeads} leads in sequence</span>
-            <span><i className="dot rose" /> {missingImages} missing images</span>
-          </div>
-        </section>
-      </div>
-
-      <div className="admin-grid three">
-        <section className="admin-panel admin-live-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Attention Queue</h2>
-              <p>Items that need action before the system can operate cleanly.</p>
-            </div>
-          </div>
-          <div className="admin-list">
-            {attentionItems.map((item) => (
-              <a key={item.label} className={`admin-list-row compact attention-${item.tone}`} href={item.href}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <span>{item.detail}</span>
-                </div>
-                <em>open</em>
+      <section className={styles.grid}>
+        <article className={styles.panel}>
+          <header className={styles.panelHeader}>
+            <div><h2>Organization Action Center</h2><p>Compact operational actions replacing verbose status walls.</p></div>
+            <a href="/dashboard/activity">View activity <ArrowUpRight size={12} /></a>
+          </header>
+          <div className={styles.actionGrid}>
+            {actions.map((action) => (
+              <a key={action.label} href={action.href} className={styles.actionCard}>
+                <span><action.icon size={15} /></span>
+                <span><strong>{action.label}</strong><small>{action.detail}</small></span>
+                <em>{action.value}</em>
               </a>
             ))}
-            {!attentionItems.length ? (
-              <div className="admin-list-row compact attention-good">
-                <div>
-                  <strong>No urgent issue found</strong>
-                  <span>Core live checks are currently clean from the data visible to the dashboard.</span>
-                </div>
-                <em>clean</em>
-              </div>
-            ) : null}
           </div>
-        </section>
+        </article>
 
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Live Safeguards</h2>
-              <p>Controls that reduce accidental client-facing errors.</p>
-            </div>
-          </div>
-          <div className="admin-checklist upgraded">
-            <span><ShieldCheck size={16} /> Campaign sends stay behind Telegram approval</span>
-            <span><CheckCircle2 size={16} /> Viewing reminders are not part of this dashboard</span>
-            <span><Clock3 size={16} /> Follow-ups remain per-lead, not repeated hourly</span>
-            <span><AlertTriangle size={16} /> Failed sends surface here for review</span>
-          </div>
-        </section>
-
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Missing Media</h2>
-              <p>Properties Maia cannot show images for yet.</p>
-            </div>
-            <a className="admin-outline-link" href="/dashboard/limitless/media">Open media</a>
-          </div>
-          <div className="admin-list">
-            {missingImageRows.map((property) => (
-              <div key={property.id} className="admin-list-row compact">
-                <div>
-                  <strong>{property.title}</strong>
-                  <span>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "No location saved"}</span>
-                </div>
-                <em>missing</em>
-              </div>
-            ))}
-            {!missingImageRows.length ? <p className="admin-empty">All visible properties have image links.</p> : null}
-          </div>
-        </section>
-      </div>
-
-      <div className="admin-grid three">
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Daily Operations</h2>
-              <p>Review these before sending campaigns or handing leads to sales.</p>
-            </div>
-          </div>
-          <div className="admin-checklist upgraded">
-            <span><CheckCircle2 size={16} /> Check new and hot leads</span>
-            <span><CheckCircle2 size={16} /> Confirm active properties are accurate</span>
-            <span><Clock3 size={16} /> Review follow-up sequence counts</span>
-            <span><Image size={16} /> Fix missing property image links</span>
-          </div>
-        </section>
-
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Campaign Pulse</h2>
-              <p>Latest WhatsApp campaign summaries.</p>
-            </div>
-          </div>
-          <div className="admin-list">
-            {visibleCampaigns.map((campaign) => (
-              <div key={campaign.id} className="admin-list-row compact">
-                <div>
-                  <strong>{campaign.campaign_topic}</strong>
-                  <span>{campaign.accepted} accepted / {campaign.failed} failed / {campaign.skipped} skipped</span>
-                </div>
-                <em>{campaign.attempted}</em>
-              </div>
-            ))}
-            {!visibleCampaigns.length ? <p className="admin-empty">No campaign reports yet.</p> : null}
-          </div>
-        </section>
-
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Workflow Watch</h2>
-              <p>n8n automation visibility.</p>
-            </div>
-          </div>
-          <div className="admin-list">
-            {workflowRows.map((workflow) => (
-              <div key={workflow.id} className="admin-list-row compact">
-                <div>
-                  <strong>{workflow.name}</strong>
-                  <span>{workflow.id}</span>
-                </div>
-                <em className={workflow.active ? "good" : "muted"}>{workflow.active ? "active" : "off"}</em>
-              </div>
-            ))}
-            {!workflowRows.length ? <p className="admin-empty">{n8n.configured ? "No workflows returned." : "n8n credentials are not configured."}</p> : null}
-          </div>
-        </section>
-      </div>
-
-      {failedCampaignRows.length ? (
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Recent Send Failures</h2>
-              <p>These need review before retrying any outbound WhatsApp message.</p>
-            </div>
-            <a className="admin-outline-link" href="/dashboard/limitless/campaigns">Open campaigns</a>
-          </div>
-          <div className="admin-list">
-            {failedCampaignRows.map((campaign) => (
-              <div key={campaign.id} className="admin-list-row compact attention-danger">
-                <div>
-                  <strong>{campaign.campaign_topic}</strong>
-                  <span>{campaign.failed} failed / {campaign.accepted} accepted / {campaign.skipped} skipped</span>
-                </div>
-                <em>{campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : "review"}</em>
+        <article className={styles.panel}>
+          <header className={styles.panelHeader}>
+            <div><h2>Lead Pipeline</h2><p>Limitless Realty workspace</p></div>
+            <a href="/dashboard/limitless/leads">Open CRM</a>
+          </header>
+          <div className={styles.pipeline}>
+            {pipeline.map((item) => (
+              <div className={styles.pipelineRow} key={item.label}>
+                <span>{item.label}</span>
+                <div className={styles.bar}><i style={{ width: `${Math.max(5, Math.round((item.value / pipelineMax) * 100))}%` }} /></div>
+                <strong>{item.value}</strong>
               </div>
             ))}
           </div>
-        </section>
-      ) : null}
-
-      <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div>
-            <h2>Activity Feed</h2>
-            <p>Recent lead and automation signals for the Limitless Realty system.</p>
-          </div>
-          <a className="admin-outline-link" href="/dashboard/limitless/leads">Open CRM</a>
-        </div>
-        <div className="admin-feed">
-          {visibleLeads.map((lead) => (
-            <div key={lead.id} className="admin-feed-row">
-              <span className="admin-avatar">{String(lead.name || "?").slice(0, 1).toUpperCase()}</span>
-              <div>
-                <strong>{lead.name || "Unknown lead"}</strong>
-                <p>{lead.phone || "No phone"} / {lead.location_preference || "location pending"} / {lead.budget || "budget pending"}</p>
-              </div>
-              <em>{lead.score || lead.status || "new"}</em>
-            </div>
-          ))}
-          {!visibleLeads.length ? <p className="admin-empty">No leads loaded yet.</p> : null}
-        </div>
+        </article>
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div>
-            <h2>Automation Projects</h2>
-            <p>Limitless now, reusable for future client systems.</p>
+      <section className={styles.grid}>
+        <article className={styles.panel}>
+          <header className={styles.panelHeader}>
+            <div><h2>AI Operations Registry</h2><p>Grouped agents and workflow infrastructure.</p></div>
+            <a href="/dashboard/automations">Control center</a>
+          </header>
+          <div className={styles.actionGrid}>
+            <a href="/dashboard/agents" className={styles.actionCard}>
+              <span><Bot size={15} /></span><span><strong>Customer-facing agents</strong><small>Maia and organization agent configurations</small></span><em>Open</em>
+            </a>
+            <a href="/dashboard/workflows" className={styles.actionCard}>
+              <span><Workflow size={15} /></span><span><strong>Workflow registry</strong><small>{n8n.workflows.length} workflows visible from n8n</small></span><em>{n8n.activeWorkflows}</em>
+            </a>
+            <a href="/dashboard/clients" className={styles.actionCard}>
+              <span><Building2 size={15} /></span><span><strong>Organization provisioning</strong><small>Create and manage client workspaces</small></span><em>Manage</em>
+            </a>
+            <a href="/dashboard/settings" className={styles.actionCard}>
+              <span><Database size={15} /></span><span><strong>Connections and governance</strong><small>Supabase, n8n and platform readiness</small></span><em>{supabase.ready ? "Live" : "Check"}</em>
+            </a>
           </div>
-        </div>
-        <div className="admin-list">
-          {automationProjects.map((project) => (
-            <div key={project.id} className="admin-list-row">
-              <div>
-                <strong>{project.name}</strong>
-                <span>{project.description}</span>
-              </div>
-              <em>{project.status}</em>
-            </div>
-          ))}
-        </div>
+        </article>
+
+        <article className={styles.panel}>
+          <header className={styles.panelHeader}>
+            <div><h2>Unified Activity</h2><p>Latest platform signals</p></div>
+            <Activity size={16} />
+          </header>
+          <div className={styles.activity}>
+            <article><i /><div><strong>Maia WhatsApp operations connected</strong><span>Canonical action workflow available for dashboard sends.</span></div></article>
+            <article><i className={missingMedia ? styles.warning : ""} /><div><strong>Property knowledge readiness</strong><span>{missingMedia ? `${missingMedia} property records need media cleanup.` : "Property media coverage is healthy."}</span></div></article>
+            <article><i className={campaignFailed ? styles.danger : ""} /><div><strong>Campaign delivery state</strong><span>{campaignFailed ? `${campaignFailed} failures require review.` : "No immediate failure found in the visible reports."}</span></div></article>
+            <article><i className={!supabase.ready || n8n.error ? styles.warning : ""} /><div><strong>Infrastructure health</strong><span>Supabase {supabase.ready ? "ready" : "needs attention"}; n8n {n8n.error ? "needs attention" : "connected"}.</span></div></article>
+          </div>
+        </article>
       </section>
-    </div>
+    </main>
   );
 }
