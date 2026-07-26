@@ -12,7 +12,7 @@ function list(value: unknown) {
 function blank(projectId = "") {
   return {
     id: "", name: "", slug: "", description: "", agent_type: "custom_agent", project_id: projectId,
-    status: "draft", system_prompt: "", ai_model: "gpt-4.1-mini", temperature: "0.3", language: "English",
+    status: "draft", system_prompt: "", temperature: "0.3", language: "English", tone: "Professional and helpful",
     voice_provider: "", communication_channels: "", escalation_rules: "Low confidence\nPayment or account access\nLegal or compliance request\nCustomer requests a human",
     handoff_type: "team", handoff_label: "", handoff_email: "", handoff_phone: "", knowledge_sources: "", workflow_ids: [] as string[],
   };
@@ -22,6 +22,7 @@ type FormState = ReturnType<typeof blank>;
 
 function fromAgent(agent: ManagedAgent, workflowIds: string[]): FormState {
   const handoff = agent.human_handoff_destination || {};
+  const config = agent.configuration || {};
   return {
     id: agent.id,
     name: agent.name,
@@ -31,9 +32,9 @@ function fromAgent(agent: ManagedAgent, workflowIds: string[]): FormState {
     project_id: agent.project_id,
     status: agent.status || "draft",
     system_prompt: agent.system_prompt || "",
-    ai_model: agent.ai_model || "gpt-4.1-mini",
     temperature: String(agent.temperature ?? 0.3),
     language: agent.language || "English",
+    tone: String(config.tone || "Professional and helpful"),
     voice_provider: agent.voice_provider || "",
     communication_channels: list(agent.communication_channels),
     escalation_rules: list(agent.escalation_rules),
@@ -86,7 +87,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
   return (
     <div className="agent-management-grid">
       <section className="admin-panel agent-registry-panel">
-        <div className="admin-panel-header"><div><h2>Agent Registry</h2><p>Manage every AI employee by project, status, model, channel and workflow.</p></div><button type="button" onClick={() => setForm(blank(summary.projects[0]?.id))}>New agent</button></div>
+        <div className="admin-panel-header"><div><h2>Agent Registry</h2><p>Manage AI employees by purpose, project, channels, knowledge, escalation and workflow.</p></div><button type="button" onClick={() => setForm(blank(summary.projects[0]?.id))}>New agent</button></div>
         <div className="agent-toolbar">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agents..." />
           <select value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)}><option value="all">All projects</option>{summary.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
@@ -96,7 +97,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
             const connected = linksByAgent.get(agent.id) || [];
             return <button key={agent.id} type="button" className={`agent-card ${form.id === agent.id ? "selected" : ""}`} onClick={() => setForm(fromAgent(agent, connected))}>
               <span><strong>{agent.name}</strong><small>{projectMap.get(agent.project_id)?.name || "Unknown project"} · {agent.agent_type || "custom agent"}</small></span>
-              <span className="agent-card-meta"><em>{agent.status}</em><small>{agent.ai_model || "model unset"} · {connected.length} workflows</small></span>
+              <span className="agent-card-meta"><em>{agent.status}</em><small>{connected.length} workflows · model centrally assigned</small></span>
             </button>;
           })}
           {!filtered.length ? <p className="admin-empty">No agents match this view.</p> : null}
@@ -104,18 +105,18 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
       </section>
 
       <section className="admin-panel agent-editor-panel">
-        <div className="admin-panel-header"><div><h2>{form.id ? "Edit Agent" : "Create Agent"}</h2><p>Configuration changes are stored in the canonical agent record.</p></div><span className="admin-status live">Phase 3</span></div>
+        <div className="admin-panel-header"><div><h2>{form.id ? "Edit Agent" : "Create Agent"}</h2><p>Configure behavior and operations. The AI model is assigned separately by the super admin.</p></div><span className="admin-status live">Governed</span></div>
         <div className="agent-form-grid">
           <label><span>Agent name</span><input value={form.name} onChange={(e) => set("name", e.target.value)} /></label>
           <label><span>Agent type</span><input value={form.agent_type} onChange={(e) => set("agent_type", e.target.value)} placeholder="sales_agent" /></label>
           <label><span>Project</span><select value={form.project_id} onChange={(e) => set("project_id", e.target.value)}>{summary.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
           <label><span>Status</span><select value={form.status} onChange={(e) => set("status", e.target.value)}>{["draft","active","paused","disabled","error"].map((value) => <option key={value}>{value}</option>)}</select></label>
-          <label><span>AI model</span><select value={form.ai_model} onChange={(e) => set("ai_model", e.target.value)}>{["gpt-4.1-mini","gpt-4.1","gpt-5-mini","gpt-5","claude-sonnet","gemini-2.5-flash"].map((value) => <option key={value}>{value}</option>)}</select></label>
           <label><span>Temperature</span><input type="number" min="0" max="2" step="0.05" value={form.temperature} onChange={(e) => set("temperature", e.target.value)} /></label>
           <label><span>Language</span><input value={form.language} onChange={(e) => set("language", e.target.value)} /></label>
-          <label><span>Voice provider</span><select value={form.voice_provider} onChange={(e) => set("voice_provider", e.target.value)}><option value="">None</option><option>ElevenLabs</option><option>Vapi</option><option>Retell AI</option><option>OpenAI</option></select></label>
-          <label className="wide"><span>Description</span><input value={form.description} onChange={(e) => set("description", e.target.value)} /></label>
-          <label className="wide"><span>System prompt</span><textarea rows={9} value={form.system_prompt} onChange={(e) => set("system_prompt", e.target.value)} /></label>
+          <label><span>Tone</span><input value={form.tone} onChange={(e) => set("tone", e.target.value)} placeholder="Professional and helpful" /></label>
+          <label><span>Voice provider</span><input value={form.voice_provider} onChange={(e) => set("voice_provider", e.target.value)} placeholder="Leave empty when voice is not enabled" /></label>
+          <label className="wide"><span>Purpose and description</span><input value={form.description} onChange={(e) => set("description", e.target.value)} /></label>
+          <label className="wide"><span>Instructions</span><textarea rows={9} value={form.system_prompt} onChange={(e) => set("system_prompt", e.target.value)} /></label>
           <label><span>Communication channels</span><textarea rows={5} value={form.communication_channels} onChange={(e) => set("communication_channels", e.target.value)} placeholder="WhatsApp\nTelegram\nEmail" /></label>
           <label><span>Escalation rules</span><textarea rows={5} value={form.escalation_rules} onChange={(e) => set("escalation_rules", e.target.value)} /></label>
           <label><span>Handoff destination</span><input value={form.handoff_label} onChange={(e) => set("handoff_label", e.target.value)} placeholder="Sales team" /><input value={form.handoff_email} onChange={(e) => set("handoff_email", e.target.value)} placeholder="team@example.com" /><input value={form.handoff_phone} onChange={(e) => set("handoff_phone", e.target.value)} placeholder="WhatsApp phone" /></label>
