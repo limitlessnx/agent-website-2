@@ -32,6 +32,7 @@
 .orbit::after { right: 15px; bottom: 52px; background: #22d3ee; }
 .orbitTwo { width: 150px; height: 150px; animation-direction: reverse; animation-duration: 16s; }
 .core { position: relative; z-index: 2; width: 108px; height: 108px; display: grid; place-items: center; border: 1px solid rgba(167,139,250,.4); border-radius: 28px; color: #eee8ff; background: linear-gradient(145deg, rgba(124,58,237,.36), rgba(34,211,238,.13)); box-shadow: 0 0 70px rgba(124,58,237,.25); }
+.core svg { width: 94px; height: auto; }
 .node { position: absolute; z-index: 3; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid var(--admin-border); border-radius: 9px; color: var(--admin-text-soft); background: rgba(10,12,27,.9); font-size: .68rem; font-weight: 800; }
 .nodeOne { top: 10px; left: 5px; }
 .nodeTwo { right: 0; top: 50%; }
