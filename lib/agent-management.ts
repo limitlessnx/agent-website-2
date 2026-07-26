@@ -1,4 +1,5 @@
 import { isServerSupabaseConfigured, supabaseRest } from "@/lib/supabase-server-rest";
+import { resolveOrganizationAiModel } from "@/lib/organization-security";
 import type { WorkflowRecord } from "@/lib/workflow-registry";
 
 export type AgentStatus = "draft" | "active" | "paused" | "disabled" | "error";
@@ -64,30 +65,21 @@ function normalizeAgent(agent: ManagedAgent): ManagedAgent {
   return {
     ...agent,
     agent_type: agent.agent_type || String(config.agent_key || "custom_agent"),
-    ai_model: agent.ai_model || String(config.ai_model || "gpt-4.1-mini"),
     temperature: Number(agent.temperature ?? config.temperature ?? 0.3),
     language: agent.language || String(config.language || "English"),
     voice_provider: agent.voice_provider || (config.voice_provider ? String(config.voice_provider) : null),
-    communication_channels: asArray(agent.communication_channels).length
-      ? asArray(agent.communication_channels)
-      : asArray(config.channels),
-    escalation_rules: asArray(agent.escalation_rules).length
-      ? asArray(agent.escalation_rules)
-      : asArray(config.escalation_rules),
+    communication_channels: asArray(agent.communication_channels).length ? asArray(agent.communication_channels) : asArray(config.channels),
+    escalation_rules: asArray(agent.escalation_rules).length ? asArray(agent.escalation_rules) : asArray(config.escalation_rules),
     human_handoff_destination:
       agent.human_handoff_destination && Object.keys(agent.human_handoff_destination).length
         ? agent.human_handoff_destination
         : ((config.human_contact as Record<string, unknown>) || {}),
-    knowledge_sources: asArray(agent.knowledge_sources).length
-      ? asArray(agent.knowledge_sources)
-      : asArray(config.knowledge_sources),
+    knowledge_sources: asArray(agent.knowledge_sources).length ? asArray(agent.knowledge_sources) : asArray(config.knowledge_sources),
   };
 }
 
 export async function getAgentManagementSummary(): Promise<AgentManagementSummary> {
-  if (!isServerSupabaseConfigured()) {
-    return { configured: false, agents: [], projects: [], workflows: [], links: [] };
-  }
+  if (!isServerSupabaseConfigured()) return { configured: false, agents: [], projects: [], workflows: [], links: [] };
 
   const [agents, projects, workflows, links] = await Promise.all([
     supabaseRest<ManagedAgent[]>("agents?select=*&order=updated_at.desc.nullslast&limit=300"),
@@ -96,13 +88,7 @@ export async function getAgentManagementSummary(): Promise<AgentManagementSummar
     supabaseRest<AgentWorkflowLink[]>("agent_workflow_links?select=id,agent_id,workflow_id,role&limit=1000").catch(() => []),
   ]);
 
-  return {
-    configured: true,
-    agents: agents.map(normalizeAgent),
-    projects,
-    workflows,
-    links,
-  };
+  return { configured: true, agents: agents.map(normalizeAgent), projects, workflows, links };
 }
 
 function clean(value: unknown) {
@@ -110,10 +96,7 @@ function clean(value: unknown) {
 }
 
 function parseList(value: unknown) {
-  return clean(value)
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return clean(value).split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
 }
 
 export async function saveManagedAgent(input: Record<string, unknown>) {
@@ -126,15 +109,15 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
 
   if (!projectId || !name || !slug) throw new Error("Project, agent name, and slug are required.");
   if (!statuses.has(status)) throw new Error("Invalid agent status.");
-  if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) {
-    throw new Error("Temperature must be between 0 and 2.");
-  }
+  if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw new Error("Temperature must be between 0 and 2.");
 
   const projects = await supabaseRest<AgentProject[]>(
     `projects?id=eq.${encodeURIComponent(projectId)}&select=id,organization_id,agent_family_id&limit=1`,
   );
   const project = projects[0];
   if (!project) throw new Error("Selected project was not found.");
+
+  if (status === "active") await resolveOrganizationAiModel(project.organization_id);
 
   const channels = parseList(input.communication_channels);
   const escalationRules = parseList(input.escalation_rules);
@@ -145,6 +128,7 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
     email: clean(input.handoff_email),
     phone: clean(input.handoff_phone),
   };
+  const tone = clean(input.tone || "Professional and helpful");
 
   const payload = {
     organization_id: project.organization_id,
@@ -156,7 +140,6 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
     agent_type: clean(input.agent_type || "custom_agent"),
     status,
     system_prompt: clean(input.system_prompt),
-    ai_model: clean(input.ai_model || "gpt-4.1-mini"),
     temperature,
     language: clean(input.language || "English"),
     voice_provider: clean(input.voice_provider) || null,
@@ -166,22 +149,20 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
     knowledge_sources: knowledgeSources,
     configuration: {
       agent_key: clean(input.agent_type || "custom_agent"),
-      ai_model: clean(input.ai_model || "gpt-4.1-mini"),
       temperature,
       language: clean(input.language || "English"),
+      tone,
       voice_provider: clean(input.voice_provider) || null,
       channels,
       escalation_rules: escalationRules,
       human_contact: handoff,
       knowledge_sources: knowledgeSources,
+      model_governance: "organization_assignment",
     },
   };
 
   const rows = id
-    ? await supabaseRest<ManagedAgent[]>(`agents?id=eq.${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        body: JSON.stringify(payload),
-      })
+    ? await supabaseRest<ManagedAgent[]>(`agents?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(payload) })
     : await supabaseRest<ManagedAgent[]>("agents", { method: "POST", body: JSON.stringify(payload) });
 
   return rows[0] || null;
@@ -189,27 +170,16 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
 
 export async function replaceAgentWorkflowLinks(agentId: string, workflowIds: string[]) {
   if (!agentId) throw new Error("Agent ID is required.");
-  await supabaseRest<unknown[]>(`agent_workflow_links?agent_id=eq.${encodeURIComponent(agentId)}`, {
-    method: "DELETE",
-  });
+  await supabaseRest<unknown[]>(`agent_workflow_links?agent_id=eq.${encodeURIComponent(agentId)}`, { method: "DELETE" });
 
   const unique = [...new Set(workflowIds.filter(Boolean))];
   if (!unique.length) return [];
 
-  const agents = await supabaseRest<ManagedAgent[]>(
-    `agents?id=eq.${encodeURIComponent(agentId)}&select=organization_id&limit=1`,
-  );
+  const agents = await supabaseRest<ManagedAgent[]>(`agents?id=eq.${encodeURIComponent(agentId)}&select=organization_id&limit=1`);
   const organizationId = agents[0]?.organization_id;
 
   return supabaseRest<AgentWorkflowLink[]>("agent_workflow_links", {
     method: "POST",
-    body: JSON.stringify(
-      unique.map((workflowId) => ({
-        organization_id: organizationId || null,
-        agent_id: agentId,
-        workflow_id: workflowId,
-        role: "connected",
-      })),
-    ),
+    body: JSON.stringify(unique.map((workflowId) => ({ organization_id: organizationId || null, agent_id: agentId, workflow_id: workflowId, role: "connected" }))),
   });
 }
