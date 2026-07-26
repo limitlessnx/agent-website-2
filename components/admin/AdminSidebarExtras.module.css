@@ -1,0 +1,76 @@
+.logoMark {
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(167,139,250,.28);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(124,58,237,.2), rgba(34,211,238,.08));
+  box-shadow: 0 12px 34px rgba(124,58,237,.12);
+}
+.logoMark svg { width: 31px; height: 31px; }
+
+.workspaceSwitcher {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid rgba(167,139,250,.22);
+  border-radius: 12px;
+  color: var(--admin-text);
+  background: linear-gradient(145deg, rgba(124,58,237,.11), rgba(255,255,255,.02));
+  text-align: left;
+  cursor: pointer;
+}
+.workspaceIcon {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #d8c9ff;
+  background: rgba(124,58,237,.18);
+}
+.workspaceSwitcher small,
+.workspaceSwitcher strong { display: block; }
+.workspaceSwitcher small { color: var(--admin-text-muted); font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; }
+.workspaceSwitcher strong { margin-top: 3px; font-size: .82rem; }
+
+.addOrganization {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px dashed rgba(167,139,250,.3);
+  border-radius: 10px;
+  color: #d8c9ff;
+  background: rgba(124,58,237,.06);
+  text-decoration: none;
+  font-size: .76rem;
+  font-weight: 800;
+}
+.userCard {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.userCard > span {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--admin-cyan);
+  background: rgba(34,211,238,.09);
+}
+.userCard strong,
+.userCard small { display: block; }
+.userCard strong { font-size: .76rem; }
+.userCard small { margin-top: 2px; overflow: hidden; color: var(--admin-text-muted); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
