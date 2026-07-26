@@ -4,10 +4,7 @@ import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 
 function formatDate(value?: string | null) {
   if (!value) return "Never";
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 export default async function WorkflowRegistryPage() {
@@ -28,27 +25,26 @@ export default async function WorkflowRegistryPage() {
     };
   }
 
-  const recentRuns = summary.runs.slice(0, 12);
+  const recentRuns = summary.runs.slice(0, 20);
+  const groups = summary.workflows.reduce<Record<string, typeof summary.workflows>>((accumulator, workflow) => {
+    const key = `${workflow.organization_id || "platform"}::${workflow.project_id || "unassigned"}`;
+    accumulator[key] = [...(accumulator[key] || []), workflow];
+    return accumulator;
+  }, {});
 
   return (
-    <div className="admin-page">
-      <div className="admin-page-header">
+    <main className="admin-page">
+      <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Fluxknight Orchestrator</p>
+          <p className="admin-kicker">AI Operations Registry</p>
           <h1>Workflow Registry</h1>
-          <p>Register, identify, and monitor every automation from one canonical control layer.</p>
+          <p>Organization-scoped workflow inventory grouped by workspace, project, provider and execution state.</p>
         </div>
-      </div>
+      </header>
 
       {"error" in summary && summary.error ? (
         <section className="admin-panel">
-          <div className="admin-list-row attention-danger">
-            <div>
-              <strong>Registry schema is not ready</strong>
-              <span>{summary.error}</span>
-            </div>
-            <em>setup required</em>
-          </div>
+          <div className="admin-list-row attention-danger"><div><strong>Registry schema needs attention</strong><span>{summary.error}</span></div><em>action</em></div>
         </section>
       ) : null}
 
@@ -61,68 +57,61 @@ export default async function WorkflowRegistryPage() {
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <div>
-            <h2>Registered Workflows</h2>
-            <p>Each workflow has a stable key, provider, endpoint, version, and operating status.</p>
-          </div>
-          <span className={summary.configured ? "admin-status live" : "admin-status warning"}>
-            {summary.configured ? "Supabase connected" : "Supabase missing"}
-          </span>
+          <div><h2>Organization Workflow Groups</h2><p>Each group represents an organization and project boundary.</p></div>
+          <span className={summary.configured ? "admin-status live" : "admin-status warning"}>{summary.configured ? "Registry connected" : "Registry pending"}</span>
         </div>
         <div className="admin-list">
-          {summary.workflows.map((workflow) => (
-            <div key={workflow.id} className="admin-list-row">
-              <div>
-                <strong>{workflow.name}</strong>
-                <span>
-                  {workflow.organization_id} / {workflow.project_id} / {workflow.workflow_key} · {workflow.provider} v{workflow.current_version}
-                </span>
-                <span>
-                  Last run: {formatDate(workflow.last_run_at)} · Endpoint: {workflow.endpoint_url ? "configured" : "missing"}
-                </span>
-              </div>
-              <em className={workflow.status === "active" ? "good" : workflow.status === "error" ? "bad" : "muted"}>
-                {workflow.status}
-              </em>
-            </div>
-          ))}
+          {Object.entries(groups).map(([key, workflows]) => {
+            const [organization, project] = key.split("::");
+            const active = workflows.filter((workflow) => workflow.status === "active").length;
+            return (
+              <article key={key} className="admin-panel compact">
+                <div className="admin-panel-header">
+                  <div><h2>{organization}</h2><p>Project: {project} · {workflows.length} workflow(s) · {active} active</p></div>
+                  <em className="admin-status live">{active}/{workflows.length}</em>
+                </div>
+                <div className="admin-list">
+                  {workflows.map((workflow) => (
+                    <div key={workflow.id} className="admin-list-row compact">
+                      <div>
+                        <strong>{workflow.name}</strong>
+                        <span>{workflow.workflow_key} · {workflow.provider} v{workflow.current_version}</span>
+                        <span>Last run: {formatDate(workflow.last_run_at)} · Endpoint {workflow.endpoint_url ? "configured" : "missing"}</span>
+                      </div>
+                      <em className={workflow.status === "active" ? "good" : workflow.status === "error" ? "bad" : "muted"}>{workflow.status}</em>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
           {!summary.workflows.length ? (
-            <div className="admin-list-row compact">
-              <div>
-                <strong>No workflows registered yet</strong>
-                <span>Run the Supabase schema, then register workflows through POST /api/workflows.</span>
-              </div>
-              <em>empty</em>
-            </div>
+            <div className="admin-list-row compact"><div><strong>No workflows registered</strong><span>Register organization workflows through the canonical workflow contract.</span></div><em>empty</em></div>
           ) : null}
         </div>
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div>
-            <h2>Recent Runs</h2>
-            <p>Execution history reported through the Fluxknight workflow contract.</p>
-          </div>
-        </div>
-        <div className="admin-list">
-          {recentRuns.map((run) => (
-            <div key={run.id} className="admin-list-row">
-              <div>
-                <strong>{run.workflow_key}</strong>
-                <span>
-                  {run.project_id} · attempt {run.attempt} · {run.duration_ms ? `${run.duration_ms} ms` : "duration pending"}
-                </span>
-                <span>{run.error_message || formatDate(run.created_at)}</span>
-              </div>
-              <em className={run.status === "succeeded" ? "good" : ["failed", "timed_out"].includes(run.status) ? "bad" : "muted"}>
-                {run.status === "succeeded" ? <CheckCircle2 size={14} /> : <Clock3 size={14} />} {run.status}
-              </em>
-            </div>
-          ))}
+        <div className="admin-panel-header"><div><h2>Unified Execution Activity</h2><p>Recent runs across all organization workspaces.</p></div></div>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead><tr><th>Workflow</th><th>Project</th><th>Status</th><th>Attempt</th><th>Duration</th><th>Time / Error</th></tr></thead>
+            <tbody>
+              {recentRuns.map((run) => (
+                <tr key={run.id}>
+                  <td>{run.workflow_key}</td>
+                  <td>{run.project_id}</td>
+                  <td><span className={run.status === "succeeded" ? "good" : ["failed", "timed_out"].includes(run.status) ? "bad" : "muted"}>{run.status === "succeeded" ? <CheckCircle2 size={13} /> : <Clock3 size={13} />} {run.status}</span></td>
+                  <td>{run.attempt}</td>
+                  <td>{run.duration_ms ? `${run.duration_ms.toLocaleString("en-NG")} ms` : "Pending"}</td>
+                  <td>{run.error_message || formatDate(run.created_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {!recentRuns.length ? <p className="admin-empty">No workflow runs have been recorded.</p> : null}
         </div>
       </section>
-    </div>
+    </main>
   );
 }
