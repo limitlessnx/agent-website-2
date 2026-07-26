@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import OnboardingReviewClient from "./OnboardingReviewClient";
+import DeliveryPreparationPanel from "./DeliveryPreparationPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function OnboardingReviewPage({ params }: Params) {
   const { id } = await params;
   const safeId = encodeURIComponent(id);
 
-  const [submissions, documents, notes, tasks, events, organizations, models, templates] = await Promise.all([
+  const [submissions, documents, notes, tasks, events, organizations, models, templates, notifications] = await Promise.all([
     supabaseServerRequest<any[]>(`client_onboarding_submissions?select=*,service_packages(id,name,slug,currency,billing_interval,included_modules),organizations(id,name,slug,status)&id=eq.${safeId}&limit=1`),
     supabaseServerRequest<any[]>(`client_onboarding_documents?select=*&onboarding_id=eq.${safeId}&order=created_at.desc`),
     supabaseServerRequest<any[]>(`client_onboarding_notes?select=*&onboarding_id=eq.${safeId}&order=created_at.desc`),
@@ -19,6 +20,7 @@ export default async function OnboardingReviewPage({ params }: Params) {
     supabaseServerRequest<any[]>("organizations?select=id,name,slug,status&order=name.asc"),
     supabaseServerRequest<any[]>("ai_model_catalog?select=id,provider,model_key,display_name,status&status=eq.active&order=provider.asc,display_name.asc"),
     supabaseServerRequest<any[]>("organization_templates?select=id,name,slug,industry,description,status&status=eq.active&order=name.asc"),
+    supabaseServerRequest<any[]>(`client_delivery_notifications?select=*&onboarding_id=eq.${safeId}&order=created_at.desc`),
   ]);
 
   const submission = submissions[0];
@@ -42,6 +44,11 @@ export default async function OnboardingReviewPage({ params }: Params) {
         organizations={organizations}
         models={models}
         templates={templates}
+      />
+      <DeliveryPreparationPanel
+        onboardingId={submission.id}
+        organizationId={submission.organization_id}
+        notifications={notifications}
       />
     </div>
   );
