@@ -15,7 +15,7 @@ export default async function GlobalSearchPage({ searchParams }: SearchPageProps
   const [leads, properties, n8n] = await Promise.all([getLeads(1000), getProperties(1000), getN8nStatus()]);
 
   const leadResults = query
-    ? leads.filter((lead) => [lead.name, lead.phone, lead.budget, lead.location_preference, lead.property_type, lead.purpose, lead.property_interest, lead.status, lead.score].some((value) => includes(value, query))).slice(0, 25)
+    ? leads.filter((lead) => [lead.name, lead.phone, lead.budget, lead.location_preference, lead.property_type, lead.purpose, lead.status, lead.score].some((value) => includes(value, query))).slice(0, 25)
     : [];
   const propertyResults = query
     ? properties.filter((property) => [property.title, property.location_area, property.location_city, property.type, property.description, property.status].some((value) => includes(value, query))).slice(0, 25)
