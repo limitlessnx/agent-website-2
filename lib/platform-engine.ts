@@ -19,13 +19,18 @@ export type OrganizationTemplate = {
 export type OrganizationIntegration = {
   id: string;
   organization_id: string;
+  organization_name: string;
   provider: string;
   display_name: string;
   status: string;
+  configuration: Record<string, unknown>;
   health: Record<string, unknown>;
   last_checked_at: string | null;
   last_connected_at: string | null;
   updated_at: string;
+  secret_keys: string[];
+  last_rotated_at: string | null;
+  has_credentials: boolean;
 };
 
 export type KnowledgeCollection = {
@@ -78,7 +83,7 @@ export async function getPlatformEngineSummary(): Promise<PlatformEngineSummary>
       "Organization templates",
     ),
     safeRead<OrganizationIntegration>(
-      "organization_integrations?select=id,organization_id,provider,display_name,status,health,last_checked_at,last_connected_at,updated_at&order=updated_at.desc&limit=300",
+      "organization_integration_admin_view?select=*&order=updated_at.desc&limit=300",
       errors,
       "Integrations",
     ),
