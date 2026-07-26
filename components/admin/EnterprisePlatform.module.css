@@ -1,0 +1,143 @@
+.platform :global(.admin-shell) {
+  grid-template-columns: 292px minmax(0, 1fr);
+}
+
+.platform :global(.admin-main) {
+  min-width: 0;
+}
+
+.platform :global(.admin-breadcrumb) {
+  display: grid;
+  gap: 2px;
+}
+
+.platform :global(.admin-breadcrumb strong) {
+  color: var(--admin-text);
+  font-size: .78rem;
+}
+
+.platform :global(.admin-breadcrumb span) {
+  color: var(--admin-text-muted);
+  font-size: .68rem;
+}
+
+.platform :global(.enterprise-grid-shell) {
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--admin-panel-bg) 92%, transparent);
+}
+
+.platform :global(.enterprise-grid-shell .admin-table) {
+  border: 0;
+}
+
+.platform :global(.enterprise-grid-toolbar),
+.platform :global(.enterprise-grid-footer) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.018);
+}
+
+.platform :global(.enterprise-grid-toolbar) {
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.platform :global(.enterprise-grid-footer) {
+  border-top: 1px solid var(--admin-border);
+  color: var(--admin-text-muted);
+  font-size: .74rem;
+}
+
+.platform :global(.enterprise-grid-search) {
+  min-width: min(360px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: rgba(255,255,255,.025);
+}
+
+.platform :global(.enterprise-grid-search input) {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  outline: 0;
+  color: var(--admin-text);
+  background: transparent;
+  font: inherit;
+  font-size: .78rem;
+}
+
+.platform :global(.enterprise-grid-actions),
+.platform :global(.enterprise-grid-footer > div) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.platform :global(.enterprise-grid-actions button),
+.platform :global(.enterprise-grid-actions select),
+.platform :global(.enterprise-grid-footer button) {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  color: var(--admin-text-soft);
+  background: var(--admin-panel-strong);
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.platform :global(.enterprise-grid-actions label) {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--admin-text-muted);
+  font-size: .7rem;
+}
+
+.platform :global(.enterprise-grid-footer button:disabled) {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.platform :global(.admin-table th) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--admin-panel-strong) 98%, transparent);
+}
+
+.platform :global(.admin-table tbody tr:hover) {
+  background: rgba(124,58,237,.055);
+}
+
+.platform :global(.admin-table input[type="checkbox"]) {
+  width: 15px;
+  height: 15px;
+  accent-color: #8b5cf6;
+}
+
+@media (max-width: 900px) {
+  .platform :global(.admin-shell) { grid-template-columns: 1fr; }
+  .platform :global(.admin-topbar) {
+    grid-template-columns: minmax(0,1fr) auto;
+    padding-left: 70px;
+  }
+  .platform :global(.admin-topbar .admin-search) { grid-column: 1 / -1; grid-row: 2; margin-bottom: 12px; }
+}
+
+@media (max-width: 700px) {
+  .platform :global(.enterprise-grid-toolbar),
+  .platform :global(.enterprise-grid-footer) { align-items: stretch; flex-direction: column; }
+  .platform :global(.enterprise-grid-actions) { flex-wrap: wrap; }
+  .platform :global(.enterprise-grid-search) { min-width: 0; width: 100%; }
+}
