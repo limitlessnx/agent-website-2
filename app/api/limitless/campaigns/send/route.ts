@@ -9,6 +9,7 @@ import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
 import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair";
 import { repairMaiaCampaignFormatting } from "@/lib/maia-campaign-format-repair";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
+import { splitWhatsAppMessage } from "@/lib/whatsapp-message-splitter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +76,11 @@ export async function POST(request: Request) {
     const message = String(body.message || "").trim();
     if (!message) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
 
+    const messageParts = splitWhatsAppMessage(message);
+    if (!messageParts.length) {
+      return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
+    }
+
     const [allLeads, properties] = await Promise.all([
       getCampaignAudienceLeads(10000),
       getProperties(500),
@@ -122,48 +128,68 @@ export async function POST(request: Request) {
         "admin_dashboard",
     );
 
-    const dispatch = await dispatchMaiaCampaignAction({
-      commandId: campaignId,
-      topic,
-      message,
-      recipients,
-      propertyTitle: selectedProperty?.title,
-      createdBy,
-    });
+    const dispatches = [];
+    for (let index = 0; index < messageParts.length; index += 1) {
+      dispatches.push(await dispatchMaiaCampaignAction({
+        commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`,
+        topic,
+        message: messageParts[index],
+        recipients,
+        propertyTitle: selectedProperty?.title,
+        createdBy,
+      }));
+    }
 
-    const delivered = Number((dispatch.summary as Record<string, unknown>).delivered || 0);
-    const read = Number((dispatch.summary as Record<string, unknown>).read || 0);
-    const pendingDelivery = Math.max(0, Number(dispatch.pendingDelivery || 0));
+    const firstDispatch = dispatches[0];
+    const accepted = Math.min(...dispatches.map((item) => Number(item.accepted || 0)));
+    const failed = Math.max(...dispatches.map((item) => Number(item.failed || 0)));
+    const skipped = Math.max(...dispatches.map((item) => Number(item.skipped || 0)));
+    const pendingDelivery = dispatches.reduce((total, item) => total + Number(item.pendingDelivery || 0), 0);
+    const delivered = dispatches.reduce(
+      (total, item) => total + Number((item.summary as Record<string, unknown>).delivered || 0),
+      0,
+    );
+    const read = dispatches.reduce(
+      (total, item) => total + Number((item.summary as Record<string, unknown>).read || 0),
+      0,
+    );
+    const freeFormSent = dispatches.reduce((total, item) => total + Number(item.freeFormSent || 0), 0);
+    const templateSent = dispatches.reduce((total, item) => total + Number(item.templateSent || 0), 0);
+    const failedRecipients = dispatches.flatMap((item) => item.failedRecipients || []);
     const status = delivered > 0
       ? pendingDelivery > 0 ? "partially_delivered" : "delivered"
-      : dispatch.failed > 0 && dispatch.accepted > 0
+      : failed > 0 && accepted > 0
         ? "partially_sent"
-        : dispatch.accepted > 0
+        : accepted > 0
           ? "sent"
           : "failed";
 
     const payload = {
-      ok: dispatch.accepted > 0,
+      ok: accepted > 0,
       campaignId,
       requestId,
-      attempted: dispatch.attempted,
-      sent: dispatch.accepted,
-      accepted: dispatch.accepted,
+      attempted: recipients.length,
+      sent: accepted,
+      accepted,
       delivered,
       read,
-      failed: dispatch.failed,
-      skipped: dispatch.skipped,
+      failed,
+      skipped,
       pendingDelivery,
-      freeFormSent: dispatch.freeFormSent,
-      templateSent: dispatch.templateSent,
+      freeFormSent,
+      templateSent,
+      messageParts: messageParts.length,
+      originalCharacterCount: message.length,
       status,
-      providerStatus: dispatch.status,
-      message: dispatch.message,
-      acceptedRecipients: dispatch.acceptedRecipients,
-      failedRecipients: dispatch.failedRecipients,
-      executionId: dispatch.executionId,
-      workflowPath: dispatch.path,
-      maiaCommandPath: dispatch.route,
+      providerStatus: dispatches.map((item) => item.status),
+      message: messageParts.length > 1
+        ? `Campaign submitted in ${messageParts.length} WhatsApp message parts.`
+        : firstDispatch.message,
+      acceptedRecipients: firstDispatch.acceptedRecipients,
+      failedRecipients,
+      executionId: dispatches.map((item) => item.executionId).join(","),
+      workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))],
+      maiaCommandPath: firstDispatch.route,
       duplicatePrevented: false,
     };
 
@@ -173,18 +199,18 @@ export async function POST(request: Request) {
       id: campaignId,
       campaign_topic: topic,
       command_id: campaignId,
-      execution_id: dispatch.executionId,
+      execution_id: payload.executionId,
       status,
-      attempted: dispatch.attempted,
-      accepted: dispatch.accepted,
+      attempted: recipients.length,
+      accepted,
       delivered,
       read,
-      failed: dispatch.failed,
-      skipped: dispatch.skipped,
+      failed,
+      skipped,
       pending_delivery: pendingDelivery,
-      accepted_recipients: dispatch.acceptedRecipients,
-      failed_recipients: dispatch.failedRecipients,
-      workflow_path: dispatch.path,
+      accepted_recipients: firstDispatch.acceptedRecipients,
+      failed_recipients: failedRecipients,
+      workflow_path: payload.workflowPath,
       created_by: createdBy,
       created_at: new Date().toISOString(),
     }).catch((error) => console.error("Campaign audit save failed.", error));
