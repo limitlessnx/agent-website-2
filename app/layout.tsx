@@ -4,6 +4,7 @@ import "./flux-theme.css";
 import "./home-responsive.css";
 import "./brand-refresh.css";
 import "./dashboard-light-fix.css";
+import "./fluxknight-unified-colors.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
