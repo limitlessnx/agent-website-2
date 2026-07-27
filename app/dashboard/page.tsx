@@ -166,7 +166,7 @@ export default async function DashboardPage() {
       <section className={styles.grid}>
         <article className={styles.panel}>
           <header className={styles.panelHeader}>
-            <div><h2>Quick Access</h2><p>Core Limitless Realty tools, minus the usual dashboard clutter humans apparently crave.</p></div>
+            <div><h2>Quick Access</h2><p>Open the core tools used for daily real estate operations.</p></div>
           </header>
           <div className={styles.actionGrid}>
             <a href="/dashboard/limitless/leads" className={styles.actionCard}>
