@@ -6,12 +6,23 @@ function clean(value: unknown) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function preserveMessage(value: unknown) {
+  return String(value || "").trim();
+}
+
 function shorten(value: string, max: number) {
   const text = clean(value);
   if (text.length <= max) return text;
   const clipped = text.slice(0, Math.max(0, max - 1));
   const boundary = Math.max(clipped.lastIndexOf(". "), clipped.lastIndexOf(", "), clipped.lastIndexOf(" "));
   return `${(boundary > max * 0.6 ? clipped.slice(0, boundary) : clipped).trim()}…`;
+}
+
+export class PropertyCampaignMessageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PropertyCampaignMessageError";
+  }
 }
 
 export type PropertyCampaignContent = {
@@ -29,6 +40,10 @@ export type PropertyCampaignContent = {
   };
 };
 
+function joinBlocks(blocks: string[]) {
+  return blocks.filter(Boolean).join("\n\n");
+}
+
 export function buildPropertyCampaignContent(
   property: PropertyRecord,
   customMessage = "",
@@ -37,41 +52,66 @@ export function buildPropertyCampaignContent(
   const propertyName = clean(property.title) || "this property";
   const location = [clean(property.location_area), clean(property.location_city)].filter(Boolean).join(", ");
   const imageUrl = clean(mediaUrl || property.drive_photos_link);
+  const personalMessage = preserveMessage(customMessage);
   const replyInstruction = `Reply “More details on ${propertyName}” and Agent Maia will continue with this exact property.`;
 
-  const facts = [
-    propertyName ? `🏡 ${propertyName}` : "",
-    location ? `📍 ${location}` : "",
-    clean(property.price) ? `💰 ${clean(property.price)}` : "",
-    clean(property.type) ? `Type: ${clean(property.type)}` : "",
-    clean(property.features) ? `Key details: ${shorten(clean(property.features), 220)}` : "",
-    clean(property.description) ? shorten(clean(property.description), 300) : "",
+  const requiredGeneratedLines = [
+    `🏡 ${propertyName}`,
     imageUrl ? `View property image: ${imageUrl}` : "",
   ].filter(Boolean);
 
-  const intro = clean(customMessage);
-  const blocks = [intro, facts.join("\n"), replyInstruction].filter(Boolean);
-  let message = blocks.join("\n\n");
+  const minimumMessage = joinBlocks([
+    personalMessage,
+    requiredGeneratedLines.join("\n"),
+    replyInstruction,
+  ]);
 
-  if (message.length > TEMPLATE_BODY_LIMIT) {
-    const fixedLength = facts.slice(0, 4).join("\n").length + imageUrl.length + replyInstruction.length + 16;
-    const descriptionBudget = Math.max(120, TEMPLATE_BODY_LIMIT - fixedLength);
-    const compactFacts = [
-      `🏡 ${propertyName}`,
-      location ? `📍 ${location}` : "",
-      clean(property.price) ? `💰 ${clean(property.price)}` : "",
-      clean(property.type) ? `Type: ${clean(property.type)}` : "",
-      clean(property.features) ? `Key details: ${shorten(clean(property.features), Math.min(220, descriptionBudget))}` : "",
-      imageUrl ? `View property image: ${imageUrl}` : "",
-    ].filter(Boolean);
-    const introBudget = Math.max(0, TEMPLATE_BODY_LIMIT - compactFacts.join("\n").length - replyInstruction.length - 4);
-    message = [introBudget > 40 ? shorten(intro, introBudget) : "", compactFacts.join("\n"), replyInstruction]
-      .filter(Boolean)
-      .join("\n\n");
+  if (minimumMessage.length > TEMPLATE_BODY_LIMIT) {
+    throw new PropertyCampaignMessageError(
+      `Your personal message is preserved exactly, but it leaves insufficient room for the required ${propertyName} property context. Reduce the personal message by at least ${minimumMessage.length - TEMPLATE_BODY_LIMIT} characters and try again.`,
+    );
   }
 
+  const optionalLines = [
+    location ? `📍 ${location}` : "",
+    clean(property.price) ? `💰 ${clean(property.price)}` : "",
+    clean(property.type) ? `Type: ${clean(property.type)}` : "",
+    clean(property.features) ? `Key details: ${clean(property.features)}` : "",
+    clean(property.description) ? clean(property.description) : "",
+  ].filter(Boolean);
+
+  const generatedLines = [...requiredGeneratedLines];
+
+  for (const line of optionalLines) {
+    const candidate = joinBlocks([
+      personalMessage,
+      [...generatedLines, line].join("\n"),
+      replyInstruction,
+    ]);
+
+    if (candidate.length <= TEMPLATE_BODY_LIMIT) {
+      generatedLines.push(line);
+      continue;
+    }
+
+    const currentMessage = joinBlocks([
+      personalMessage,
+      generatedLines.join("\n"),
+      replyInstruction,
+    ]);
+    const remaining = TEMPLATE_BODY_LIMIT - currentMessage.length - 1;
+    if (remaining >= 50) generatedLines.push(shorten(line, remaining));
+    break;
+  }
+
+  const message = joinBlocks([
+    personalMessage,
+    generatedLines.join("\n"),
+    replyInstruction,
+  ]);
+
   return {
-    message: message.slice(0, TEMPLATE_BODY_LIMIT),
+    message,
     propertyName,
     imageUrl,
     replyInstruction,
@@ -80,7 +120,7 @@ export function buildPropertyCampaignContent(
       property_name: propertyName,
       property_names: [propertyName],
       image_url: imageUrl,
-      message: message.slice(0, TEMPLATE_BODY_LIMIT),
+      message,
       reply_instruction: replyInstruction,
     },
   };
