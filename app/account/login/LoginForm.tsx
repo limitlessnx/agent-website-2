@@ -14,20 +14,28 @@ export default function ClientLoginForm() {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const data = new FormData(event.currentTarget);
-    const response = await fetch("/api/client-auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: data.get("email"), password: data.get("password") }),
-    });
-    const result = await response.json().catch(() => ({}));
-    setLoading(false);
-    if (!response.ok) {
-      setError(result.error || "Unable to sign in.");
-      return;
+
+    try {
+      const data = new FormData(event.currentTarget);
+      const response = await fetch("/api/client-auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.get("email"), password: data.get("password") }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error || "Unable to sign in.");
+        return;
+      }
+
+      router.push(result.requires_workspace_setup ? "/account/setup" : "/portal");
+      router.refresh();
+    } catch {
+      setError("We could not connect to the sign-in service. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    router.push("/portal");
-    router.refresh();
   }
 
   return (
