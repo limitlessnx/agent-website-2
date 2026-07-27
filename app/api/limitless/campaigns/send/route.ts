@@ -10,7 +10,10 @@ import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair
 import { repairMaiaCampaignFormatting } from "@/lib/maia-campaign-format-repair";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
 import { splitWhatsAppMessage } from "@/lib/whatsapp-message-splitter";
-import { buildPropertyCampaignContent } from "@/lib/property-campaign-message";
+import {
+  buildPropertyCampaignContent,
+  PropertyCampaignMessageError,
+} from "@/lib/property-campaign-message";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -230,7 +233,7 @@ export async function POST(request: Request) {
     console.error("WhatsApp campaign dispatch failed.", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Campaign dispatch failed." },
-      { status: 500 },
+      { status: error instanceof PropertyCampaignMessageError ? 400 : 500 },
     );
   }
 }
