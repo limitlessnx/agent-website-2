@@ -32,8 +32,6 @@ function replaceIfPresent(source: string, before: string, after: string) {
 }
 
 function patchCampaignCode(source: string) {
-  if (source.includes(PATCH_MARKER)) return source;
-
   let code = source;
 
   const brandedSetup = `const customMessage = params.custom_message || params.message || params.message_text || '';
@@ -78,13 +76,16 @@ const messageTemplate = campaignTitle + '\\n\\n' + campaignCoreMessage + '\\n\\n
 
   code = replaceIfPresent(code, brandedTemplateSummary, exactTemplateSummary);
 
-  // Older workflow versions may still contain the original forced template.
   code = code
     .replace(/const campaignTitle = 'Update🚨🚨';\s*/g, "")
     .replace(/const campaignFooter = 'This is Agent Maia your Real estate support assistance';\s*/g, "")
     .replace(/campaignTitle \+ '\\n\\n' \+ campaignCoreMessage \+ '\\n\\n' \+ campaignFooter/g, "campaignCoreMessage")
     .replace(/campaignTitle \+ ' ' \+ \(rawTemplateSummary \|\| 'New property updates are available from Limitless Realty\\.'\) \+ ' ' \+ campaignFooter/g, "cleanCampaignCopy(customMessage) || rawTemplateSummary || 'New property updates are available from Limitless Realty.'")
-    .replace(/safeTemplateText\(([^;]+?),\s*240\)/g, "safeTemplateText($1, 1024)");
+    .replace(/safeTemplateText\(([^;]+?),\s*240\)/g, "safeTemplateText($1, 1024)")
+    .replace(
+      /template_name:\s*params\.template_name\s*\|\|\s*'estate_brief_update',/g,
+      "template_name: params.allow_template_fallback === true ? (params.template_name || 'estate_brief_update') : '',",
+    );
 
   if (!code.includes(PATCH_MARKER)) {
     throw new Error(
@@ -126,6 +127,7 @@ export async function repairMaiaCampaignFormatting() {
     exactMessageMode: true,
     forcedHeader: false,
     forcedFooter: false,
+    legacyTemplateFallback: false,
     templateSummaryLimit: 1024,
   };
 }
