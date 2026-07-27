@@ -10,6 +10,8 @@ const CAMPAIGN_NODE = "Prepare WhatsApp Campaign";
 const PROMPT_NODE = "Build AI Prompt";
 const OPENAI_NODE = "OpenAI - Generate Response2";
 
+const TEMPLATE_MESSAGE_LIMIT = 1024;
+
 type WorkflowNode = {
   name: string;
   parameters?: Record<string, unknown>;
@@ -35,52 +37,78 @@ async function saveWorkflow(workflow: Record<string, any>, nodes: WorkflowNode[]
 function patchCampaignCode(source: string) {
   let code = source;
 
-  code = replaceRequired(
-    code,
-    `const customMessage = params.custom_message || params.message || params.message_text || '';
-const topicParts = [];`,
-    `const customMessage = params.custom_message || params.message || params.message_text || '';
+  const originalCampaignStart = `const customMessage = params.custom_message || params.message || params.message_text || '';
+const topicParts = [];`;
+  const brandedCampaignStart = `const customMessage = params.custom_message || params.message || params.message_text || '';
 const campaignTitle = 'Update🚨🚨';
 const campaignFooter = 'This is Agent Maia your Real estate support assistance';
 const cleanCampaignCopy = value => String(value || '')
   .replace(/^\\s*(?:Update🚨🚨|New Estate Brief)\\s*/i, '')
   .replace(/\\s*(?:Reply YES if you want details or VIEWING if you want to schedule an inspection\\.?|This is Agent Maia your Real estate support assistance)\\s*$/i, '')
   .trim();
-const topicParts = [];`,
-    "campaign branding constants",
-  );
+const topicParts = [];`;
+  const directCampaignStart = `const customMessage = params.custom_message || params.message || params.message_text || '';
+const cleanCampaignCopy = value => String(value || '').trim();
+const topicParts = [];`;
 
-  code = replaceRequired(
-    code,
-    `const messageTemplate = customMessage || (
+  if (code.includes(brandedCampaignStart)) {
+    code = code.replace(brandedCampaignStart, directCampaignStart);
+  } else if (code.includes(originalCampaignStart)) {
+    code = code.replace(originalCampaignStart, directCampaignStart);
+  }
+
+  const originalMessageWrapper = `const messageTemplate = customMessage || (
   'Hello {{name}}, this is Limitless Realty. Here is a quick summary of ' + topic + ':\\n\\n' +
   (propertySummary || 'I will share the matching property briefs with you shortly.') +
   '\\n\\nReply here if you want details, pricing, or inspection booking. You can also contact Limitless on +2348127753308.'
-);`,
-    `const campaignCoreMessage = cleanCampaignCopy(customMessage) || (
+);`;
+  const brandedMessageWrapper = `const campaignCoreMessage = cleanCampaignCopy(customMessage) || (
   'Hello {{name}}, this is Limitless Realty. Here is a quick summary of ' + topic + ':\\n\\n' +
   (propertySummary || 'I will share the matching property briefs with you shortly.')
 );
-const messageTemplate = campaignTitle + '\\n\\n' + campaignCoreMessage + '\\n\\n' + campaignFooter;`,
-    "campaign message wrapper",
-  );
+const messageTemplate = campaignTitle + '\\n\\n' + campaignCoreMessage + '\\n\\n' + campaignFooter;`;
+  const directMessageWrapper = `const campaignCoreMessage = cleanCampaignCopy(customMessage) || (
+  'Hello {{name}}, this is Limitless Realty. Here is a quick summary of ' + topic + ':\\n\\n' +
+  (propertySummary || 'I will share the matching property briefs with you shortly.')
+);
+const messageTemplate = campaignCoreMessage;`;
 
-  code = replaceRequired(
-    code,
-    `template_name: 'estate_brief_update',`,
-    `template_name: params.template_name || 'estate_brief_update',`,
-    "configurable template name",
-  );
+  if (code.includes(brandedMessageWrapper)) {
+    code = code.replace(brandedMessageWrapper, directMessageWrapper);
+  } else if (code.includes(originalMessageWrapper)) {
+    code = code.replace(originalMessageWrapper, directMessageWrapper);
+  }
 
-  code = replaceRequired(
-    code,
-    `const templateSummary = safeTemplateText(rawTemplateSummary || 'New property updates are available from Limitless Realty.', 240);`,
-    `const templateSummary = safeTemplateText(
+  if (code.includes(`template_name: 'estate_brief_update',`)) {
+    code = code.replace(
+      `template_name: 'estate_brief_update',`,
+      `template_name: params.template_name || 'estate_brief_update',`,
+    );
+  }
+
+  const originalTemplateSummary = `const templateSummary = safeTemplateText(rawTemplateSummary || 'New property updates are available from Limitless Realty.', 240);`;
+  const brandedTemplateSummary = `const templateSummary = safeTemplateText(
     campaignTitle + ' ' + (rawTemplateSummary || 'New property updates are available from Limitless Realty.') + ' ' + campaignFooter,
     240
-  );`,
-    "template body branding",
-  );
+  );`;
+  const directTemplateSummary = `const templateSummary = safeTemplateText(
+    cleanCampaignCopy(customMessage) || rawTemplateSummary || 'New property updates are available from Limitless Realty.',
+    ${TEMPLATE_MESSAGE_LIMIT}
+  );`;
+
+  if (code.includes(brandedTemplateSummary)) {
+    code = code.replace(brandedTemplateSummary, directTemplateSummary);
+  } else if (code.includes(originalTemplateSummary)) {
+    code = code.replace(originalTemplateSummary, directTemplateSummary);
+  }
+
+  if (!code.includes("const messageTemplate = campaignCoreMessage;")) {
+    throw new Error("Unable to patch campaign passthrough: the direct message block was not installed.");
+  }
+
+  if (!code.includes(`cleanCampaignCopy(customMessage) || rawTemplateSummary`)) {
+    throw new Error("Unable to patch campaign template fallback: full dashboard copy was not installed.");
+  }
 
   return code;
 }
@@ -137,11 +165,11 @@ const genericTokens`,
   code = replaceRequired(
     code,
     `- If the client names a property/estate, answer for that named property only. Do not substitute another estate.
-- If a close catalog match exists, use it. For example, \"Iwinosa Estate\" should match \"Iwinosa Mega City\" if that is the saved catalog title.`,
+- If a close catalog match exists, use it. For example, "Iwinosa Estate" should match "Iwinosa Mega City" if that is the saved catalog title.`,
     `- If the client names a property/estate, answer for that named property only. Do not substitute another estate.
-- STRICT CAMPAIGN CONTEXT LOCK: When the client says \"these estates\", \"those properties\", \"them\", \"more details\", \"tell me more\", \"the ones you sent\", or gives a generic reply to the latest campaign, answer only from the exact properties recorded in Recent outbound WhatsApp campaign context. Never introduce, recommend, or mention any property outside that campaign context. If several properties were sent, list those same properties briefly or ask which exact title they want expanded.
+- STRICT CAMPAIGN CONTEXT LOCK: When the client says "these estates", "those properties", "them", "more details", "tell me more", "the ones you sent", or gives a generic reply to the latest campaign, answer only from the exact properties recorded in Recent outbound WhatsApp campaign context. Never introduce, recommend, or mention any property outside that campaign context. If several properties were sent, list those same properties briefly or ask which exact title they want expanded.
 - If the campaign context contains Iwinosa properties, never replace them with Landsmith Crest or any unrelated property.
-- If a close catalog match exists, use it. For example, \"Iwinosa Estate\" should match \"Iwinosa Mega City\" if that is the saved catalog title.`,
+- If a close catalog match exists, use it. For example, "Iwinosa Estate" should match "Iwinosa Mega City" if that is the saved catalog title.`,
     "strict prompt grounding rules",
   );
 
@@ -197,8 +225,10 @@ export async function repairMaiaQuality() {
     campaignFormattingRepaired: nextCampaignCode !== campaignCode,
     campaignContextLockRepaired: nextPromptCode !== promptCode,
     modelTemperature: nextOpenAiBody.includes("temperature: 0.1") ? 0.1 : null,
-    campaignTitle: "Update🚨🚨",
-    campaignFooter: "This is Agent Maia your Real estate support assistance",
+    campaignMode: "exact_message_passthrough",
+    campaignTitle: null,
+    campaignFooter: null,
+    templateCharacterLimit: TEMPLATE_MESSAGE_LIMIT,
     approvedTemplateName: "estate_brief_update",
   };
 }
