@@ -7,7 +7,7 @@ import {
 } from "@/lib/lead-profile-service";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
 import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair";
-import { repairMaiaQuality } from "@/lib/maia-quality-repair";
+import { repairMaiaCampaignFormatting } from "@/lib/maia-campaign-format-repair";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
 
 export const runtime = "nodejs";
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     }
 
     await repairMaiaActionWorkflowInput();
-    await repairMaiaQuality();
+    await repairMaiaCampaignFormatting();
 
     const campaignId = requestId;
     const createdBy = String(
