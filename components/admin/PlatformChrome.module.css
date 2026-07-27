@@ -49,9 +49,10 @@
 .drawerBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
-  background: rgba(3,5,13,.72);
-  backdrop-filter: blur(10px);
+  z-index: 2147483600;
+  background: rgba(2,3,10,.84);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .overlay {
@@ -65,8 +66,8 @@
   overflow: hidden;
   border: 1px solid rgba(167,139,250,.32);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--admin-panel-strong) 96%, #080914);
-  box-shadow: 0 34px 120px rgba(0,0,0,.52), 0 0 60px rgba(124,58,237,.12);
+  background: #0a0714;
+  box-shadow: 0 34px 120px rgba(0,0,0,.62), 0 0 60px rgba(124,58,237,.12);
 }
 
 .searchRow {
@@ -97,7 +98,7 @@
   border: 1px solid var(--admin-border);
   border-radius: 9px;
   color: var(--admin-text-soft);
-  background: rgba(255,255,255,.02);
+  background: #120c20;
   cursor: pointer;
 }
 
@@ -146,20 +147,23 @@
 .commandList small { margin-top: 3px; color: var(--admin-text-muted); font-size: .72rem; }
 .commandList p { padding: 24px; color: var(--admin-text-muted); text-align: center; }
 
-.drawerBackdrop { z-index: 101; }
+.drawerBackdrop { z-index: 2147483601; }
 
 .drawer {
   position: fixed;
   inset: 0 0 0 auto;
-  z-index: 102;
+  z-index: 2147483602;
   width: min(420px, 94vw);
   display: flex;
   flex-direction: column;
   gap: 18px;
   padding: 22px;
-  border-left: 1px solid var(--admin-border);
-  background: color-mix(in srgb, var(--admin-sidebar-bg) 96%, #080914);
-  box-shadow: -30px 0 100px rgba(0,0,0,.42);
+  border-left: 1px solid rgba(167,139,250,.24);
+  background: #090512;
+  box-shadow: -30px 0 100px rgba(0,0,0,.68);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  isolation: isolate;
 }
 
 .drawer header {
@@ -169,21 +173,22 @@
   gap: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--admin-border);
+  background: #090512;
 }
 
 .drawer header strong,
 .drawer header span { display: block; }
 .drawer header span { margin-top: 4px; color: var(--admin-text-muted); font-size: .76rem; }
 
-.activityList { display: grid; gap: 10px; }
+.activityList { display: grid; gap: 10px; background: #090512; }
 .activityList article {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 10px;
   padding: 13px;
-  border: 1px solid var(--admin-border);
+  border: 1px solid rgba(167,139,250,.18);
   border-radius: 12px;
-  background: rgba(255,255,255,.025);
+  background: #10091e;
 }
 .activityList i { width: 8px; height: 8px; margin-top: 5px; border-radius: 999px; }
 .activityList .live { background: var(--admin-emerald); }
@@ -198,8 +203,8 @@
   padding: 11px 14px;
   border: 1px solid rgba(167,139,250,.3);
   border-radius: 10px;
-  color: #e5dcff;
-  background: rgba(124,58,237,.12);
+  color: #fff;
+  background: linear-gradient(135deg, #9b5cff, #6d36df);
   text-align: center;
   text-decoration: none;
   font-size: .82rem;
@@ -210,4 +215,19 @@
   .commandButton span,
   .commandButton kbd { display: none; }
   .commandButton { width: 40px; padding: 0; justify-content: center; }
+  .drawer {
+    top: 10px;
+    right: 8px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: auto;
+    width: min(390px, calc(100vw - 54px));
+    height: auto;
+    padding: 18px;
+    border: 1px solid rgba(167,139,250,.28);
+    border-radius: 18px;
+    background: #090512;
+  }
+  .drawerBackdrop {
+    background: rgba(2,3,10,.88);
+  }
 }
