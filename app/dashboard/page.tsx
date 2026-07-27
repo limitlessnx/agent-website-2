@@ -4,30 +4,27 @@ import {
   Bot,
   Building2,
   Database,
-  Megaphone,
+  Image,
+  MessageCircle,
   Network,
-  Send,
-  ShieldCheck,
   Users,
-  Workflow,
 } from "lucide-react";
 import {
-  getCampaignReports,
   getLeads,
   getN8nStatus,
   getProperties,
   getSupabaseReadiness,
 } from "@/lib/limitless-data";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import TimeGreeting from "@/components/admin/TimeGreeting";
 import styles from "@/app/dashboard/DashboardExecutive.module.css";
 
-const inactiveLeadStatuses = ["cold", "closed", "converted"];
+const inactiveLeadStatuses = ["cold", "closed", "converted", "lost"];
 
 export default async function DashboardPage() {
-  const [leads, properties, campaigns, n8n, supabase] = await Promise.all([
+  const [leads, properties, n8n, supabase] = await Promise.all([
     getLeads(500),
     getProperties(500),
-    getCampaignReports(50),
     getN8nStatus(),
     getSupabaseReadiness(),
   ]);
@@ -38,49 +35,48 @@ export default async function DashboardPage() {
   const newLeads = leads.filter((lead) => String(lead.status || "").toLowerCase() === "new").length;
   const activeProperties = properties.filter((property) => String(property.status || "active").toLowerCase() === "active").length;
   const missingMedia = properties.filter((property) => !property.drive_photos_link).length;
-  const campaignSent = campaigns.reduce((total, campaign) => total + Number(campaign.accepted || 0), 0);
-  const campaignFailed = campaigns.reduce((total, campaign) => total + Number(campaign.failed || 0), 0);
   const followUps = liveLeads.filter((lead) => Number(lead.follow_up_stage || 0) < 4).length;
   const systemHealth = Math.max(
     0,
-    100 - (!supabase.ready ? 22 : 0) - (n8n.error ? 18 : 0) - (missingMedia ? 10 : 0) - (campaignFailed ? 8 : 0),
+    100 - (!supabase.ready ? 28 : 0) - (n8n.error ? 22 : 0) - (missingMedia ? 8 : 0),
   );
+
   const pipeline = [
     { label: "New", value: newLeads },
     { label: "Warm", value: warmLeads },
-    { label: "Hot", value: hotLeads },
+    { label: "Qualified", value: hotLeads },
     { label: "Follow-up", value: followUps },
   ];
   const pipelineMax = Math.max(1, ...pipeline.map((item) => item.value));
 
-  const actions = [
+  const priorities = [
     {
-      label: missingMedia ? "Complete property media" : "Property media healthy",
-      detail: missingMedia ? `${missingMedia} properties need image links` : "All visible records have media",
-      href: "/dashboard/limitless/media",
-      icon: Building2,
-      value: missingMedia || "Clear",
-    },
-    {
-      label: campaignFailed ? "Review failed campaign sends" : "Campaign delivery healthy",
-      detail: campaignFailed ? `${campaignFailed} immediate failures recorded` : `${campaignSent} accepted by WhatsApp`,
-      href: "/dashboard/limitless/campaigns",
-      icon: Megaphone,
-      value: campaignFailed || campaignSent,
-    },
-    {
-      label: "Review active follow-ups",
-      detail: `${followUps} leads remain in sequence`,
-      href: "/dashboard/limitless/followups",
+      label: "Review active leads",
+      detail: `${liveLeads.length} leads currently require sales attention`,
+      href: "/dashboard/limitless/leads",
       icon: Users,
+      value: liveLeads.length,
+    },
+    {
+      label: "Complete scheduled follow-ups",
+      detail: `${followUps} leads remain in the follow-up sequence`,
+      href: "/dashboard/limitless/followups",
+      icon: MessageCircle,
       value: followUps,
     },
     {
-      label: supabase.ready ? "Data services operational" : "Repair data services",
-      detail: supabase.ready ? "Supabase readiness checks passed" : "Database configuration needs attention",
+      label: missingMedia ? "Complete property media" : "Property media is complete",
+      detail: missingMedia ? `${missingMedia} properties still need image links` : "All visible property records have media",
+      href: "/dashboard/limitless/media",
+      icon: Image,
+      value: missingMedia || "Clear",
+    },
+    {
+      label: supabase.ready ? "Workspace data is operational" : "Workspace data needs attention",
+      detail: supabase.ready ? "Limitless Realty records are connected" : "Database configuration requires review",
       href: "/dashboard/settings",
       icon: Database,
-      value: supabase.ready ? "Live" : "Action",
+      value: supabase.ready ? "Live" : "Check",
     },
   ];
 
@@ -88,63 +84,63 @@ export default async function DashboardPage() {
     <main className={`${styles.page} admin-page`}>
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>Multi-Organization AI Operations</p>
-          <h1>Operate agents, workflows and revenue from <span>one control plane.</span></h1>
-          <p>
-            Fluxknight coordinates organization data, Maia&apos;s WhatsApp operations, campaign delivery,
-            automation health and executive performance without flattening every business into one chaotic menu.
+          <p className={styles.kicker}>Limitless Realty Workspace</p>
+          <h1><TimeGreeting />.</h1>
+          <p className={styles.heroLead}>
+            Welcome back. You have <strong>{liveLeads.length} active leads</strong>, <strong>{followUps} pending follow-ups</strong> and <strong>{activeProperties} available properties</strong> in the workspace.
           </p>
           <div className={styles.heroActions}>
-            <a href="/dashboard/clients"><Building2 size={15} /> Manage organizations</a>
-            <a href="/dashboard/agents"><Bot size={15} /> Open agent registry</a>
-            <a href="/dashboard/workflows"><Workflow size={15} /> Open workflows</a>
+            <a href="/dashboard/limitless/leads"><Users size={15} /> Open leads</a>
+            <a href="/dashboard/limitless/properties"><Building2 size={15} /> View properties</a>
+            <a href="/dashboard/limitless/followups"><MessageCircle size={15} /> Review follow-ups</a>
           </div>
         </div>
-        <div className={styles.automationVisual} aria-label="Fluxknight AI automation network visual">
+
+        <div className={styles.automationVisual} aria-label="Limitless Realty AI operations visual">
           <div className={styles.orbit} />
           <div className={`${styles.orbit} ${styles.orbitTwo}`} />
           <div className={styles.core}><FluxknightLogo /></div>
           <div className={`${styles.node} ${styles.nodeOne}`}><Bot size={14} /> Maia</div>
-          <div className={`${styles.node} ${styles.nodeTwo}`}><Network size={14} /> n8n</div>
-          <div className={`${styles.node} ${styles.nodeThree}`}><Database size={14} /> Supabase</div>
+          <div className={`${styles.node} ${styles.nodeTwo}`}><Building2 size={14} /> Properties</div>
+          <div className={`${styles.node} ${styles.nodeThree}`}><Users size={14} /> CRM</div>
         </div>
       </section>
 
-      <section className={styles.metrics} aria-label="Executive KPI cards">
+      <section className={styles.metrics} aria-label="Limitless Realty overview cards">
         <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><Users size={17} /></span><small>CRM</small></div>
-          <strong>{leads.length.toLocaleString("en-NG")}</strong>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><Users size={17} /></span><small>Active leads</small></div>
+          <strong>{liveLeads.length.toLocaleString("en-NG")}</strong>
           <p>{hotLeads} hot or qualified leads</p>
         </article>
         <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><Building2 size={17} /></span><small>Catalog</small></div>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><Building2 size={17} /></span><small>Available properties</small></div>
           <strong>{activeProperties.toLocaleString("en-NG")}</strong>
-          <p>{missingMedia} missing media records</p>
+          <p>{missingMedia} records still need media</p>
         </article>
         <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><Send size={17} /></span><small>Messaging</small></div>
-          <strong>{campaignSent.toLocaleString("en-NG")}</strong>
-          <p>{campaignFailed} immediate campaign failures</p>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><MessageCircle size={17} /></span><small>Pending follow-ups</small></div>
+          <strong>{followUps.toLocaleString("en-NG")}</strong>
+          <p>Active leads still in sequence</p>
         </article>
         <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><ShieldCheck size={17} /></span><small>Platform health</small></div>
+          <div className={styles.metricTop}><span className={styles.metricIcon}><Network size={17} /></span><small>Workspace health</small></div>
           <strong>{systemHealth}%</strong>
-          <p>{n8n.activeWorkflows} active workflows visible</p>
+          <p>{n8n.error ? "Automation connection needs attention" : "Core services are connected"}</p>
         </article>
       </section>
 
       <section className={styles.grid}>
         <article className={styles.panel}>
           <header className={styles.panelHeader}>
-            <div><h2>Organization Action Center</h2><p>Compact operational actions replacing verbose status walls.</p></div>
+            <div><h2>Today&apos;s Priorities</h2><p>The items currently needing attention in Limitless Realty.</p></div>
             <a href="/dashboard/activity">View activity <ArrowUpRight size={12} /></a>
           </header>
           <div className={styles.actionGrid}>
-            {actions.map((action) => (
-              <a key={action.label} href={action.href} className={styles.actionCard}>
-                <span><action.icon size={15} /></span>
-                <span><strong>{action.label}</strong><small>{action.detail}</small></span>
-                <em>{action.value}</em>
+            {priorities.map((priority) => (
+              <a key={priority.label} href={priority.href} className={styles.actionCard}>
+                <span><priority.icon size={15} /></span>
+                <span><strong>{priority.label}</strong><small>{priority.detail}</small></span>
+                <em>{priority.value}</em>
               </a>
             ))}
           </div>
@@ -152,7 +148,7 @@ export default async function DashboardPage() {
 
         <article className={styles.panel}>
           <header className={styles.panelHeader}>
-            <div><h2>Lead Pipeline</h2><p>Limitless Realty workspace</p></div>
+            <div><h2>Lead Pipeline</h2><p>Current sales movement</p></div>
             <a href="/dashboard/limitless/leads">Open CRM</a>
           </header>
           <div className={styles.pipeline}>
@@ -170,35 +166,34 @@ export default async function DashboardPage() {
       <section className={styles.grid}>
         <article className={styles.panel}>
           <header className={styles.panelHeader}>
-            <div><h2>AI Operations Registry</h2><p>Grouped agents and workflow infrastructure.</p></div>
-            <a href="/dashboard/automations">Control center</a>
+            <div><h2>Quick Access</h2><p>Core Limitless Realty tools, minus the usual dashboard clutter humans apparently crave.</p></div>
           </header>
           <div className={styles.actionGrid}>
-            <a href="/dashboard/agents" className={styles.actionCard}>
-              <span><Bot size={15} /></span><span><strong>Customer-facing agents</strong><small>Maia and organization agent configurations</small></span><em>Open</em>
+            <a href="/dashboard/limitless/leads" className={styles.actionCard}>
+              <span><Users size={15} /></span><span><strong>Lead management</strong><small>Review and update active opportunities</small></span><em>Open</em>
             </a>
-            <a href="/dashboard/workflows" className={styles.actionCard}>
-              <span><Workflow size={15} /></span><span><strong>Workflow registry</strong><small>{n8n.workflows.length} workflows visible from n8n</small></span><em>{n8n.activeWorkflows}</em>
+            <a href="/dashboard/limitless/properties" className={styles.actionCard}>
+              <span><Building2 size={15} /></span><span><strong>Property registry</strong><small>Manage available property records</small></span><em>Open</em>
             </a>
-            <a href="/dashboard/clients" className={styles.actionCard}>
-              <span><Building2 size={15} /></span><span><strong>Organization provisioning</strong><small>Create and manage client workspaces</small></span><em>Manage</em>
+            <a href="/dashboard/limitless/followups" className={styles.actionCard}>
+              <span><MessageCircle size={15} /></span><span><strong>Follow-up center</strong><small>Continue pending lead conversations</small></span><em>Open</em>
             </a>
-            <a href="/dashboard/settings" className={styles.actionCard}>
-              <span><Database size={15} /></span><span><strong>Connections and governance</strong><small>Supabase, n8n and platform readiness</small></span><em>{supabase.ready ? "Live" : "Check"}</em>
+            <a href="/dashboard/limitless/media" className={styles.actionCard}>
+              <span><Image size={15} /></span><span><strong>Knowledge and media</strong><small>Maintain Maia&apos;s property information</small></span><em>Open</em>
             </a>
           </div>
         </article>
 
         <article className={styles.panel}>
           <header className={styles.panelHeader}>
-            <div><h2>Unified Activity</h2><p>Latest platform signals</p></div>
+            <div><h2>Recent Workspace Status</h2><p>Latest operational signals</p></div>
             <Activity size={16} />
           </header>
           <div className={styles.activity}>
-            <article><i /><div><strong>Maia WhatsApp operations connected</strong><span>Canonical action workflow available for dashboard sends.</span></div></article>
+            <article><i /><div><strong>Maia is available</strong><span>The Limitless Realty assistant remains connected to the workspace.</span></div></article>
             <article><i className={missingMedia ? styles.warning : ""} /><div><strong>Property knowledge readiness</strong><span>{missingMedia ? `${missingMedia} property records need media cleanup.` : "Property media coverage is healthy."}</span></div></article>
-            <article><i className={campaignFailed ? styles.danger : ""} /><div><strong>Campaign delivery state</strong><span>{campaignFailed ? `${campaignFailed} failures require review.` : "No immediate failure found in the visible reports."}</span></div></article>
-            <article><i className={!supabase.ready || n8n.error ? styles.warning : ""} /><div><strong>Infrastructure health</strong><span>Supabase {supabase.ready ? "ready" : "needs attention"}; n8n {n8n.error ? "needs attention" : "connected"}.</span></div></article>
+            <article><i className={!supabase.ready ? styles.warning : ""} /><div><strong>Workspace data</strong><span>Supabase is {supabase.ready ? "ready and connected" : "not fully configured"}.</span></div></article>
+            <article><i className={n8n.error ? styles.warning : ""} /><div><strong>Automation connection</strong><span>n8n is {n8n.error ? "reporting a connection issue" : "connected and available"}.</span></div></article>
           </div>
         </article>
       </section>
