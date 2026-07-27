@@ -159,7 +159,7 @@ async function authRequest(path: string, body: Record<string, unknown>) {
       projectRef,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new Error("Account creation is temporarily unavailable because Fluxknight could not reach its authentication service.");
+    throw new Error("Account service is temporarily unavailable.");
   }
 
   const result = (await response.json().catch(() => ({}))) as SupabaseAuthResponse;
@@ -189,6 +189,10 @@ export async function signUpClient(
       agent_family_name: onboarding?.agentFamilyName || onboarding?.companyName || "",
     },
   });
+}
+
+export async function resendClientVerification(email: string) {
+  return authRequest("resend", { type: "signup", email });
 }
 
 export async function signInClient(email: string, password: string) {
