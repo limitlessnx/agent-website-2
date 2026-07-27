@@ -7,6 +7,15 @@ export type N8nWorkflow = {
   nodes?: unknown[];
   connections?: Record<string, unknown>;
   settings?: Record<string, unknown>;
+  projectId?: string;
+};
+
+export type N8nProject = {
+  id: string;
+  name: string;
+  type?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type N8nExecution = {
@@ -70,8 +79,28 @@ export function getN8nBaseUrl() {
   return config().baseUrl;
 }
 
-export async function listN8nWorkflows(limit = 100) {
-  const result = await n8nRequest<{ data?: N8nWorkflow[] } | N8nWorkflow[]>(`/workflows?limit=${limit}`);
+export async function listN8nProjects(limit = 100) {
+  const result = await n8nRequest<{ data?: N8nProject[] } | N8nProject[]>(`/projects?limit=${limit}`);
+  return Array.isArray(result) ? result : result.data || [];
+}
+
+export async function createN8nProject(name: string) {
+  return n8nRequest<N8nProject>("/projects", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function findN8nProjectByName(name: string) {
+  const target = normalizedWorkflowName(name);
+  const projects = await listN8nProjects(250);
+  return projects.find((project) => normalizedWorkflowName(project.name) === target) || null;
+}
+
+export async function listN8nWorkflows(limit = 100, projectId?: string) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (projectId) params.set("projectId", projectId);
+  const result = await n8nRequest<{ data?: N8nWorkflow[] } | N8nWorkflow[]>(`/workflows?${params.toString()}`);
   return Array.isArray(result) ? result : result.data || [];
 }
 
@@ -88,8 +117,8 @@ function normalizedWorkflowName(value: string) {
     .trim();
 }
 
-export async function findN8nWorkflowByName(name: string) {
-  const workflows = await listN8nWorkflows(250);
+export async function findN8nWorkflowByName(name: string, projectId?: string) {
+  const workflows = await listN8nWorkflows(250, projectId);
   const target = normalizedWorkflowName(name);
   return workflows.find((workflow) => normalizedWorkflowName(workflow.name) === target) || null;
 }
@@ -99,6 +128,7 @@ export async function findN8nWorkflowFlexible(options: {
   requiredKeywords?: string[];
   preferredKeywords?: string[];
   workflowId?: string;
+  projectId?: string;
 }) {
   if (options.workflowId) {
     try {
@@ -108,7 +138,7 @@ export async function findN8nWorkflowFlexible(options: {
     }
   }
 
-  const workflows = await listN8nWorkflows(250);
+  const workflows = await listN8nWorkflows(250, options.projectId);
   const exactTargets = (options.exactNames || []).map(normalizedWorkflowName).filter(Boolean);
 
   const exact = workflows.find((workflow) => exactTargets.includes(normalizedWorkflowName(workflow.name)));
@@ -148,6 +178,13 @@ export async function listN8nExecutions(options: {
 
 export async function createN8nWorkflow(workflow: Omit<N8nWorkflow, "id" | "active"> & { active?: boolean }) {
   return n8nRequest<N8nWorkflow>("/workflows", { method: "POST", body: JSON.stringify(workflow) });
+}
+
+export async function transferN8nWorkflow(id: string, destinationProjectId: string) {
+  return n8nRequest<void>(`/workflows/${encodeURIComponent(id)}/transfer`, {
+    method: "PUT",
+    body: JSON.stringify({ destinationProjectId }),
+  });
 }
 
 function sanitizeWorkflowSettings(settings?: Record<string, unknown>) {
