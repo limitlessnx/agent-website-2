@@ -8,24 +8,23 @@ import { Building2 } from "lucide-react";
 export default function SignupForm() {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
-    setMessage("");
 
     try {
       const data = new FormData(event.currentTarget);
+      const email = String(data.get("email") || "").trim().toLowerCase();
       const response = await fetch("/api/client-auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: data.get("full_name"),
           company_name: data.get("company_name"),
-          email: data.get("email"),
+          email,
           password: data.get("password"),
         }),
       });
@@ -37,10 +36,7 @@ export default function SignupForm() {
       }
 
       if (result.requires_email_confirmation) {
-        setMessage(
-          result.message ||
-            "Account created. Check your email, verify your address, then sign in to finish creating your workspace.",
-        );
+        router.push(`/account/verify-email?email=${encodeURIComponent(email)}`);
         return;
       }
 
@@ -66,7 +62,6 @@ export default function SignupForm() {
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
-      {message ? <p className="admin-form-message">{message}</p> : null}
       <button type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
       <p className="admin-muted">Already registered? <Link href="/account/login">Sign in</Link></p>
     </form>
