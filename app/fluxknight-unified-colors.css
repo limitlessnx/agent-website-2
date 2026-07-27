@@ -94,12 +94,30 @@ body {
   color: var(--flux-text);
 }
 
+body {
+  background-image:
+    radial-gradient(circle at 50% -15%, rgba(126, 57, 255, 0.14), transparent 34rem),
+    linear-gradient(var(--flux-bg), var(--flux-bg));
+}
+
+html[data-theme="light"] body {
+  background-image:
+    radial-gradient(circle at 50% -15%, rgba(139, 92, 246, 0.08), transparent 34rem),
+    linear-gradient(var(--flux-bg), var(--flux-bg));
+}
+
 body,
 .admin-shell,
 .admin-login-page,
 .fluxknight-platform-shell,
-main {
+main,
+[class*="portalShell"],
+[class*="portal-shell"],
+[class*="authPage"],
+[class*="verifyPage"],
+[class*="setupPage"] {
   background-color: var(--flux-bg);
+  color: var(--flux-text);
 }
 
 .admin-shell {
@@ -125,22 +143,29 @@ nav[aria-label] {
 
 .admin-panel,
 .admin-metric-card,
+.admin-stat-card,
 .admin-login-card,
 .admin-list-row,
 .card-surface,
 [class*="card"],
 [class*="panel"] {
-  border-color: var(--flux-border);
+  border-color: var(--flux-border) !important;
 }
 
 .admin-panel,
 .admin-metric-card,
-.admin-login-card {
+.admin-stat-card,
+.admin-login-card,
+.admin-page-header {
+  color: var(--flux-text) !important;
   background: var(--flux-surface) !important;
 }
 
-.admin-list-row {
+.admin-list-row,
+[class*="listRow"],
+[class*="list-row"] {
   background: var(--flux-surface-2) !important;
+  border-color: var(--flux-border) !important;
 }
 
 .admin-login-card input,
@@ -152,14 +177,20 @@ nav[aria-label] {
 input,
 select,
 textarea {
-  color: var(--flux-text);
-  background: var(--flux-bg-soft);
-  border-color: var(--flux-border);
+  color: var(--flux-text) !important;
+  background: var(--flux-bg-soft) !important;
+  border-color: var(--flux-border) !important;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  background: #ffffff !important;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--flux-text-muted);
+  color: var(--flux-text-muted) !important;
 }
 
 button:not(.admin-text-button),
@@ -170,17 +201,23 @@ button:not(.admin-text-button),
 
 .admin-button:not(.secondary),
 .admin-login-card button[type="submit"],
-button[type="submit"] {
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--flux-primary), var(--flux-primary-bright));
-  box-shadow: 0 10px 30px var(--flux-primary-soft);
+button[type="submit"],
+[class*="primaryButton"],
+[class*="primary-button"] {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--flux-primary), var(--flux-primary-bright)) !important;
+  box-shadow: 0 10px 30px var(--flux-primary-soft) !important;
 }
 
 .admin-button.secondary,
 .admin-text-button,
-button.secondary {
-  color: var(--flux-text-soft);
-  background: var(--flux-surface-2);
+button.secondary,
+[class*="secondaryButton"],
+[class*="secondary-button"] {
+  color: var(--flux-text-soft) !important;
+  background: var(--flux-surface-2) !important;
+  border-color: var(--flux-border) !important;
+  box-shadow: none !important;
 }
 
 .admin-button:hover,
@@ -190,25 +227,35 @@ button[type="submit"]:hover {
 }
 
 .admin-brand-mark,
-.admin-login-icon {
+.admin-login-icon,
+[class*="brandIcon"],
+[class*="iconBadge"] {
   color: #ffffff !important;
   background: linear-gradient(135deg, var(--flux-primary), var(--flux-primary-bright)) !important;
-  box-shadow: 0 10px 26px var(--flux-primary-glow);
+  box-shadow: 0 10px 26px var(--flux-primary-glow) !important;
 }
 
 .admin-kicker,
 .section-label,
-.gradient-text,
+[class*="eyebrow"],
+[class*="kicker"],
 a:hover,
 .admin-nav a[aria-current="page"] {
-  color: var(--flux-primary-bright);
+  color: var(--flux-primary-bright) !important;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #ffffff 0%, var(--flux-primary-bright) 58%, var(--flux-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  background: linear-gradient(135deg, #ffffff 0%, var(--flux-primary-bright) 58%, var(--flux-primary) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+html[data-theme="light"] .gradient-text {
+  background: linear-gradient(135deg, #171020 0%, var(--flux-primary-bright) 58%, var(--flux-primary) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 .grid-pattern,
@@ -221,10 +268,12 @@ a:hover,
 
 .admin-nav a:hover,
 .admin-text-button:hover,
-.admin-nav a[aria-current="page"] {
-  color: var(--flux-text);
-  border-color: var(--flux-border-strong);
-  background: var(--flux-primary-soft);
+.admin-nav a[aria-current="page"],
+.admin-list-row:hover,
+[class*="nav"] a:hover {
+  color: var(--flux-text) !important;
+  border-color: var(--flux-border-strong) !important;
+  background: var(--flux-primary-soft) !important;
 }
 
 .admin-muted,
@@ -232,21 +281,34 @@ a:hover,
 .admin-panel-header p,
 .admin-list-row span,
 .admin-list-row em,
+label,
+[class*="muted"],
+[class*="subtitle"],
 small {
-  color: var(--flux-text-soft);
+  color: var(--flux-text-soft) !important;
 }
 
 .admin-error,
 [role="alert"] {
-  color: #fda4af;
+  color: #fda4af !important;
 }
 
 .admin-form-message {
-  color: #c4b5fd;
+  color: #c4b5fd !important;
+}
+
+.admin-status.live {
+  color: #d8c8ff !important;
+  border-color: var(--flux-border-strong) !important;
+  background: var(--flux-primary-soft) !important;
+}
+
+html[data-theme="light"] .admin-status.live {
+  color: #5b21b6 !important;
 }
 
 :focus-visible {
-  outline-color: var(--flux-primary-bright);
+  outline-color: var(--flux-primary-bright) !important;
 }
 
 ::selection {
@@ -260,4 +322,13 @@ small {
 
 ::-webkit-scrollbar-thumb {
   background: var(--flux-border-strong);
+}
+
+hr {
+  border-color: var(--flux-border) !important;
+}
+
+[class*="loading"],
+[class*="Loading"] {
+  --loader-accent: var(--flux-primary-bright);
 }
