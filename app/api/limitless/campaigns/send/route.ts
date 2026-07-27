@@ -10,6 +10,7 @@ import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair
 import { repairMaiaCampaignFormatting } from "@/lib/maia-campaign-format-repair";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
 import { splitWhatsAppMessage } from "@/lib/whatsapp-message-splitter";
+import { buildPropertyCampaignContent } from "@/lib/property-campaign-message";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,15 +73,7 @@ export async function POST(request: Request) {
     const cached = requestCache.get(requestId);
     if (cached) return NextResponse.json({ ...cached.payload, duplicatePrevented: true });
 
-    const topic = String(body.topic || "WhatsApp campaign").trim();
-    const message = String(body.message || "").trim();
-    if (!message) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
-
-    const messageParts = splitWhatsAppMessage(message);
-    if (!messageParts.length) {
-      return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
-    }
-
+    const originalMessage = String(body.message || "").trim();
     const [allLeads, properties] = await Promise.all([
       getCampaignAudienceLeads(10000),
       getProperties(500),
@@ -88,6 +81,21 @@ export async function POST(request: Request) {
 
     const selectedIds = new Set((body.selectedLeadIds || []).map(String));
     const selectedProperty = properties.find((property) => property.id === body.propertyId);
+    const propertyCampaign = selectedProperty
+      ? buildPropertyCampaignContent(selectedProperty, originalMessage, String(body.mediaUrl || ""))
+      : null;
+    const message = propertyCampaign?.message || originalMessage;
+    const topic = String(
+      body.topic || (propertyCampaign ? `${propertyCampaign.propertyName} property update` : "WhatsApp campaign"),
+    ).trim();
+
+    if (!message) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
+
+    const messageParts = splitWhatsAppMessage(message);
+    if (!messageParts.length) {
+      return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
+    }
+
     const state = text(body.state);
     const interest = text(body.interest);
     const propertyNeedle = text(selectedProperty?.title || body.propertyId);
@@ -135,7 +143,7 @@ export async function POST(request: Request) {
         topic,
         message: messageParts[index],
         recipients,
-        propertyTitle: selectedProperty?.title,
+        propertyTitle: propertyCampaign?.propertyName || selectedProperty?.title,
         createdBy,
       }));
     }
@@ -191,6 +199,8 @@ export async function POST(request: Request) {
       workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))],
       maiaCommandPath: firstDispatch.route,
       duplicatePrevented: false,
+      propertyContext: propertyCampaign?.memory || null,
+      exactPropertyReply: propertyCampaign?.replyInstruction || null,
     };
 
     requestCache.set(requestId, { expiresAt: Date.now() + 10 * 60 * 1000, payload });
