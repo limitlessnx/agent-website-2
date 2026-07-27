@@ -4,28 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
-  Bot,
-  Boxes,
-  BrainCircuit,
-  Building2,
-  ChevronDown,
-  ClipboardList,
-  CreditCard,
-  Database,
-  Home,
-  Image,
-  Layers3,
-  Megaphone,
-  Menu,
-  MessageCircle,
-  Network,
-  PlugZap,
-  Plus,
-  Settings,
-  Users,
-  Workflow,
-  X,
+  Activity, Bot, Boxes, BrainCircuit, Building2, ChevronDown, ClipboardList,
+  CreditCard, Database, Home, Image, Layers3, LineChart, Megaphone, Menu,
+  MessageCircle, Network, PlugZap, Plus, Settings, Users, Workflow, X,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -60,6 +41,15 @@ const platformGroups = [
     ],
   },
   {
+    id: "workspace-gencouv",
+    label: "Gencouv Workspace",
+    items: [
+      { href: "/dashboard/gencouv", label: "Gencouv Overview", icon: LineChart, exact: true },
+      { href: "/dashboard/gencouv/acquisition", label: "Client Acquisition", icon: Users },
+      { href: "/dashboard/gencouv/operations", label: "Trading Operations", icon: Activity },
+    ],
+  },
+  {
     id: "ai-operations",
     label: "AI Operations",
     items: [
@@ -88,39 +78,38 @@ export default function AdminSidebar({ email }: { email: string }) {
     () => platformGroups.filter((group) => group.items.some((item) => itemIsActive(pathname, item))).map((group) => group.id),
     [pathname],
   );
-  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupIds.length ? activeGroupIds : ["platform", "workspace-limitless"]);
+  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupIds.length ? activeGroupIds : ["platform"]);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => setMobileOpen(false), [pathname]);
+  useEffect(() => {
+    if (!activeGroupIds.length) return;
+    setOpenGroups((current) => Array.from(new Set([...current, ...activeGroupIds])));
+  }, [activeGroupIds]);
 
   function toggleGroup(id: string) {
     setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
   }
 
+  const workspaceName = pathname.startsWith("/dashboard/gencouv")
+    ? "Gencouv"
+    : pathname.startsWith("/dashboard/limitless")
+      ? "Limitless Realty"
+      : "Fluxknight Platform";
+
   return (
     <>
-      {!mobileOpen ? (
-        <button type="button" className={styles.mobileToggle} onClick={() => setMobileOpen(true)} aria-label="Open navigation menu">
-          <Menu size={21} />
-        </button>
-      ) : null}
+      {!mobileOpen ? <button type="button" className={styles.mobileToggle} onClick={() => setMobileOpen(true)} aria-label="Open navigation menu"><Menu size={21} /></button> : null}
       {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={() => setMobileOpen(false)} /> : null}
 
       <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
-        <div className={styles.mobileHeader}>
-          <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><X size={20} /></button>
-        </div>
+        <div className={styles.mobileHeader}><button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><X size={20} /></button></div>
+        <Link href="/dashboard" className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
 
-        <Link href="/dashboard" className={`admin-brand ${styles.brand} ${extras.brandLockup}`}>
-          <FluxknightLogo className={extras.wordmark} />
-          <small>AI Operations Platform</small>
-        </Link>
-
-        <button type="button" className={extras.workspaceSwitcher}>
+        <div className={extras.workspaceSwitcher}>
           <span className={extras.workspaceIcon}><Building2 size={16} /></span>
-          <span><small>Organization workspace</small><strong>Limitless Realty</strong></span>
-          <ChevronDown size={15} />
-        </button>
+          <span><small>Current workspace</small><strong>{workspaceName}</strong></span>
+        </div>
 
         <nav className={`admin-nav ${styles.nav}`} aria-label="Organization workspace navigation">
           {platformGroups.map((group) => {
@@ -129,17 +118,12 @@ export default function AdminSidebar({ email }: { email: string }) {
             return (
               <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
                 <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}>
-                  <span>{group.label}</span>
-                  <ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
+                  <span>{group.label}</span><ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
                 </button>
                 <div className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
                   {group.items.map((item) => {
                     const active = itemIsActive(pathname, item);
-                    return (
-                      <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}>
-                        <item.icon size={17} /><span>{item.label}</span>
-                      </Link>
-                    );
+                    return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}><item.icon size={17} /><span>{item.label}</span></Link>;
                   })}
                 </div>
               </section>
@@ -148,12 +132,8 @@ export default function AdminSidebar({ email }: { email: string }) {
         </nav>
 
         <Link href="/dashboard/clients" className={extras.addOrganization}><Plus size={15} /> Add organization</Link>
-
         <div className={`admin-sidebar-footer ${styles.footer}`}>
-          <div className={extras.userCard}>
-            <span><Database size={15} /></span>
-            <div><strong>Platform Admin</strong><small>{email}</small></div>
-          </div>
+          <div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div>
           <LogoutButton />
         </div>
       </aside>
