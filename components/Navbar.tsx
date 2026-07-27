@@ -32,14 +32,22 @@ export default function Navbar() {
   }, [pathname]);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    }
+
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [menuOpen]);
 
   return (
-    <header className={scrolled ? "site-header is-scrolled" : "site-header"}>
+    <header className={`${scrolled ? "site-header is-scrolled" : "site-header"}${menuOpen ? " menu-is-open" : ""}`}>
       <nav className="site-nav" aria-label="Primary navigation">
         <Link className="site-brand" href="/" aria-label="Fluxknight home">
           <FluxLogo />
@@ -47,11 +55,7 @@ export default function Navbar() {
 
         <div className="desktop-links">
           {navLinks.map((link) => (
-            <Link
-              className={pathname === link.href ? "active" : ""}
-              key={link.href}
-              href={link.href}
-            >
+            <Link className={pathname === link.href ? "active" : ""} key={link.href} href={link.href}>
               {link.label}
             </Link>
           ))}
@@ -65,47 +69,56 @@ export default function Navbar() {
         <button
           className="mobile-toggle"
           type="button"
-          onClick={() => setMenuOpen((value) => !value)}
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open navigation menu"
           aria-expanded={menuOpen}
         >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          <Menu size={22} />
         </button>
       </nav>
 
       <AnimatePresence>
         {menuOpen ? (
-          <>
-            <motion.button
-              className="menu-backdrop"
-              type="button"
-              aria-label="Close navigation menu"
-              onClick={() => setMenuOpen(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-            <motion.div
+          <motion.div
+            className="mobile-menu-layer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+          >
+            <motion.aside
               className="mobile-panel"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Mobile navigation"
-              initial={{ opacity: 0, x: 28 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 28 }}
-              transition={{ duration: 0.18 }}
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
             >
-              <div className="mobile-links">
-                {navLinks.map((link) => (
-                  <Link key={link.href} href={link.href}>{link.label}</Link>
-                ))}
+              <div className="mobile-panel-header">
+                <Link className="mobile-brand" href="/" aria-label="Fluxknight home">
+                  <FluxLogo />
+                </Link>
+                <button type="button" onClick={() => setMenuOpen(false)} aria-label="Close navigation menu">
+                  <X size={24} />
+                </button>
               </div>
+
+              <nav className="mobile-links" aria-label="Mobile navigation links">
+                {navLinks.map((link) => (
+                  <Link className={pathname === link.href ? "active" : ""} key={link.href} href={link.href}>
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+
               <div className="mobile-actions">
                 <Link href="/account/login">Login</Link>
                 <Link className="primary" href="/evaluation">Book a Demo</Link>
               </div>
-            </motion.div>
-          </>
+            </motion.aside>
+          </motion.div>
         ) : null}
       </AnimatePresence>
 
@@ -113,17 +126,16 @@ export default function Navbar() {
         .site-header {
           position: fixed;
           inset: 0 0 auto;
-          z-index: 2147483647;
+          z-index: 2147483000;
           padding: 16px 20px;
           pointer-events: none;
           transition: padding .25s ease;
-          isolation: isolate;
         }
         .site-header.is-scrolled { padding-top: 10px; }
         .site-nav {
           pointer-events: auto;
           position: relative;
-          z-index: 4;
+          z-index: 2;
           width: min(1120px, 100%);
           min-height: 58px;
           margin: 0 auto;
@@ -134,10 +146,11 @@ export default function Navbar() {
           gap: 18px;
           border: 1px solid rgba(190, 153, 255, .18);
           border-radius: 18px;
-          background-color: #090512;
+          background: #090512;
           box-shadow: 0 18px 55px rgba(8, 2, 18, .55), inset 0 1px rgba(255,255,255,.04);
         }
-        .site-brand {
+        .site-brand,
+        .mobile-brand {
           display: inline-flex;
           align-items: center;
           width: fit-content;
@@ -194,69 +207,101 @@ export default function Navbar() {
           border: 1px solid rgba(180,139,255,.22);
           border-radius: 12px;
           color: #fff;
-          background-color: #130b24;
+          background: #130b24;
           box-shadow: 0 8px 24px rgba(0,0,0,.28);
+          cursor: pointer;
         }
-        .menu-backdrop {
+        .mobile-menu-layer {
           pointer-events: auto;
           position: fixed;
           inset: 0;
-          z-index: 1;
-          border: 0;
-          background: rgba(2, 1, 7, .84);
-          backdrop-filter: blur(5px);
-          -webkit-backdrop-filter: blur(5px);
+          z-index: 2147483647;
+          display: flex;
+          justify-content: flex-end;
+          background: #05020a;
+          overflow: hidden;
         }
         .mobile-panel {
-          pointer-events: auto;
-          position: fixed;
-          top: 78px;
-          right: 10px;
-          bottom: max(10px, env(safe-area-inset-bottom));
-          z-index: 3;
-          width: min(370px, calc(100vw - 20px));
-          padding: 24px 18px;
+          width: min(390px, 100vw);
+          height: 100dvh;
+          min-height: 100vh;
+          padding: max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          border: 1px solid rgba(180,139,255,.28);
-          border-radius: 20px;
-          background: #090512;
-          box-shadow: -24px 24px 90px rgba(0,0,0,.72), inset 0 1px rgba(255,255,255,.04);
+          border-left: 1px solid rgba(180,139,255,.25);
+          background: #08040f;
+          box-shadow: -30px 0 100px rgba(0,0,0,.72);
           overflow-y: auto;
-          isolation: isolate;
+          overscroll-behavior: contain;
         }
-        .mobile-links { display: grid; }
+        .mobile-panel-header {
+          flex: 0 0 auto;
+          min-height: 76px;
+          padding: 0 0 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          border-bottom: 1px solid rgba(180,139,255,.16);
+        }
+        .mobile-panel-header button {
+          width: 48px;
+          height: 48px;
+          display: inline-grid;
+          place-items: center;
+          flex: 0 0 auto;
+          border: 1px solid rgba(180,139,255,.28);
+          border-radius: 14px;
+          color: #fff;
+          background: #130b24;
+          cursor: pointer;
+        }
+        .mobile-links {
+          display: grid;
+          gap: 6px;
+          padding: 24px 0;
+        }
         .mobile-links a {
-          padding: 18px 10px;
-          border-bottom: 1px solid rgba(180,139,255,.12);
+          min-height: 54px;
+          padding: 0 16px;
+          display: flex;
+          align-items: center;
+          border: 1px solid transparent;
+          border-radius: 12px;
           color: #f6f1ff;
           text-decoration: none;
           font-size: 1.05rem;
           font-weight: 650;
-          background: #090512;
+          background: #0d0717;
+        }
+        .mobile-links a.active {
+          border-color: rgba(177,132,255,.34);
+          background: linear-gradient(135deg, rgba(139,92,246,.3), rgba(83,42,156,.28));
         }
         .mobile-actions {
+          margin-top: auto;
+          padding-top: 20px;
           display: grid;
-          grid-template-columns: 1fr;
           gap: 10px;
-          margin-top: 28px;
-          padding-top: 18px;
-          border-top: 1px solid rgba(180,139,255,.12);
-          background: #090512;
+          border-top: 1px solid rgba(180,139,255,.16);
         }
         .mobile-actions a {
+          min-height: 52px;
           padding: 14px;
-          border: 1px solid rgba(180,139,255,.2);
-          border-radius: 11px;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(180,139,255,.22);
+          border-radius: 12px;
           color: #d3cae3;
           text-align: center;
           text-decoration: none;
-          background-color: #10091e;
+          font-weight: 700;
+          background: #10091e;
         }
         .mobile-actions a.primary {
           color: #fff;
           background: linear-gradient(135deg, #9b5cff, #6d36df);
+          box-shadow: 0 12px 32px rgba(91,45,190,.28);
         }
         @media (max-width: 920px) {
           .site-header { padding: 10px; }
@@ -269,10 +314,10 @@ export default function Navbar() {
           .desktop-links,
           .desktop-actions { display: none; }
           .mobile-toggle { display: grid; }
+          .menu-is-open .site-nav { visibility: hidden; }
         }
-        @media (max-width: 420px) {
-          .site-nav { min-height: 54px; }
-          .mobile-panel { top: 74px; }
+        @media (min-width: 921px) {
+          .mobile-menu-layer { display: none; }
         }
       `}</style>
     </header>
