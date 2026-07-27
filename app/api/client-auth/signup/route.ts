@@ -28,8 +28,24 @@ export async function POST(request: NextRequest) {
     if (companyName.length < 2) return NextResponse.json({ error: "Company name is required." }, { status: 400 });
     if (!companySlug) return NextResponse.json({ error: "A valid company slug is required." }, { status: 400 });
 
-    const auth = await signUpClient(email, password, fullName);
-    if (!auth.user?.id) throw new Error("Supabase did not return a user record.");
+    const auth = await signUpClient(email, password, fullName, {
+      companyName,
+      companySlug,
+      templateSlug,
+      agentFamilyName,
+    });
+
+    if (!auth.access_token) {
+      return NextResponse.json({
+        ok: true,
+        requires_email_confirmation: true,
+        message: "Account created. Check your email, verify your address, then sign in to finish creating your workspace.",
+      }, { status: 201 });
+    }
+
+    if (!auth.user?.id) {
+      throw new Error("The account was authenticated, but the user profile could not be loaded.");
+    }
 
     const provisioned = await provisionClientOrganization({
       userId: auth.user.id,
@@ -42,21 +58,19 @@ export async function POST(request: NextRequest) {
     const membership = await getPrimaryMembership(auth.user.id);
     if (!membership) throw new Error("Client membership could not be loaded after provisioning.");
 
-    if (auth.access_token) {
-      await setClientSession({
-        userId: auth.user.id,
-        email: auth.user.email || email,
-        organizationId: membership.organizationId,
-        organizationSlug: membership.organizationSlug,
-        membershipId: membership.membershipId,
-        role: membership.role,
-        issuedAt: Date.now(),
-      });
-    }
+    await setClientSession({
+      userId: auth.user.id,
+      email: auth.user.email || email,
+      organizationId: membership.organizationId,
+      organizationSlug: membership.organizationSlug,
+      membershipId: membership.membershipId,
+      role: membership.role,
+      issuedAt: Date.now(),
+    });
 
     return NextResponse.json({
       ok: true,
-      requires_email_confirmation: !auth.access_token,
+      requires_email_confirmation: false,
       organization: provisioned,
     }, { status: 201 });
   } catch (error) {
