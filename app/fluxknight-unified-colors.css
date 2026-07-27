@@ -1,0 +1,263 @@
+:root {
+  --flux-bg: #05030b;
+  --flux-bg-soft: #090611;
+  --flux-surface: #0e0a17;
+  --flux-surface-2: #151021;
+  --flux-surface-3: #1c1530;
+  --flux-border: rgba(167, 139, 250, 0.18);
+  --flux-border-strong: rgba(167, 139, 250, 0.36);
+  --flux-primary: #8b5cf6;
+  --flux-primary-bright: #a78bfa;
+  --flux-primary-soft: rgba(139, 92, 246, 0.14);
+  --flux-primary-glow: rgba(139, 92, 246, 0.28);
+  --flux-text: #f8f7ff;
+  --flux-text-soft: #c6bed8;
+  --flux-text-muted: #827791;
+
+  --bg-base: var(--flux-bg);
+  --bg-surface: var(--flux-bg-soft);
+  --bg-elevated: var(--flux-surface-2);
+  --bg-card: var(--flux-surface);
+  --border: var(--flux-border);
+  --border-bright: var(--flux-border-strong);
+  --cyan: var(--flux-primary-bright);
+  --cyan-dim: var(--flux-primary);
+  --cyan-glow: var(--flux-primary-soft);
+  --cyan-glow-strong: var(--flux-primary-glow);
+  --text-primary: var(--flux-text);
+  --text-secondary: var(--flux-text-soft);
+  --text-muted: var(--flux-text-muted);
+
+  --admin-bg: var(--flux-bg);
+  --admin-shell-bg: var(--flux-bg-soft);
+  --admin-sidebar-bg: rgba(10, 6, 18, 0.97);
+  --admin-panel-bg: rgba(14, 10, 23, 0.92);
+  --admin-panel-strong: rgba(21, 16, 33, 0.98);
+  --admin-border: var(--flux-border);
+  --admin-border-strong: var(--flux-border-strong);
+  --admin-text: var(--flux-text);
+  --admin-text-soft: var(--flux-text-soft);
+  --admin-text-muted: var(--flux-text-muted);
+  --admin-cyan: var(--flux-primary-bright);
+  --admin-violet: var(--flux-primary-bright);
+  --admin-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+}
+
+html[data-theme="light"] {
+  --flux-bg: #f7f5ff;
+  --flux-bg-soft: #f1edff;
+  --flux-surface: #ffffff;
+  --flux-surface-2: #f7f4ff;
+  --flux-surface-3: #eee8ff;
+  --flux-border: rgba(91, 55, 150, 0.15);
+  --flux-border-strong: rgba(124, 58, 237, 0.3);
+  --flux-primary: #7c3aed;
+  --flux-primary-bright: #8b5cf6;
+  --flux-primary-soft: rgba(124, 58, 237, 0.09);
+  --flux-primary-glow: rgba(124, 58, 237, 0.2);
+  --flux-text: #171020;
+  --flux-text-soft: #544a63;
+  --flux-text-muted: #82778f;
+
+  --bg-base: var(--flux-bg);
+  --bg-surface: var(--flux-bg-soft);
+  --bg-elevated: var(--flux-surface-2);
+  --bg-card: var(--flux-surface);
+  --border: var(--flux-border);
+  --border-bright: var(--flux-border-strong);
+  --cyan: var(--flux-primary);
+  --cyan-dim: var(--flux-primary);
+  --cyan-glow: var(--flux-primary-soft);
+  --cyan-glow-strong: var(--flux-primary-glow);
+  --text-primary: var(--flux-text);
+  --text-secondary: var(--flux-text-soft);
+  --text-muted: var(--flux-text-muted);
+
+  --admin-bg: var(--flux-bg);
+  --admin-shell-bg: var(--flux-bg-soft);
+  --admin-sidebar-bg: rgba(255, 255, 255, 0.96);
+  --admin-panel-bg: rgba(255, 255, 255, 0.94);
+  --admin-panel-strong: #f8f5ff;
+  --admin-border: var(--flux-border);
+  --admin-border-strong: var(--flux-border-strong);
+  --admin-text: var(--flux-text);
+  --admin-text-soft: var(--flux-text-soft);
+  --admin-text-muted: var(--flux-text-muted);
+  --admin-cyan: var(--flux-primary);
+  --admin-violet: var(--flux-primary);
+  --admin-shadow: 0 18px 55px rgba(53, 31, 86, 0.12);
+}
+
+html,
+body {
+  background: var(--flux-bg);
+  color: var(--flux-text);
+}
+
+body,
+.admin-shell,
+.admin-login-page,
+.fluxknight-platform-shell,
+main {
+  background-color: var(--flux-bg);
+}
+
+.admin-shell {
+  background: var(--flux-bg) !important;
+}
+
+.admin-sidebar,
+.admin-topbar,
+header,
+nav[aria-label] {
+  border-color: var(--flux-border);
+}
+
+.admin-sidebar {
+  background: var(--admin-sidebar-bg) !important;
+}
+
+.admin-main,
+.admin-page,
+.admin-login-page {
+  color: var(--flux-text);
+}
+
+.admin-panel,
+.admin-metric-card,
+.admin-login-card,
+.admin-list-row,
+.card-surface,
+[class*="card"],
+[class*="panel"] {
+  border-color: var(--flux-border);
+}
+
+.admin-panel,
+.admin-metric-card,
+.admin-login-card {
+  background: var(--flux-surface) !important;
+}
+
+.admin-list-row {
+  background: var(--flux-surface-2) !important;
+}
+
+.admin-login-card input,
+.admin-login-card select,
+.admin-login-card textarea,
+.admin-form input,
+.admin-form select,
+.admin-form textarea,
+input,
+select,
+textarea {
+  color: var(--flux-text);
+  background: var(--flux-bg-soft);
+  border-color: var(--flux-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--flux-text-muted);
+}
+
+button:not(.admin-text-button),
+.admin-button,
+.admin-login-card button[type="submit"] {
+  border-color: var(--flux-border-strong);
+}
+
+.admin-button:not(.secondary),
+.admin-login-card button[type="submit"],
+button[type="submit"] {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--flux-primary), var(--flux-primary-bright));
+  box-shadow: 0 10px 30px var(--flux-primary-soft);
+}
+
+.admin-button.secondary,
+.admin-text-button,
+button.secondary {
+  color: var(--flux-text-soft);
+  background: var(--flux-surface-2);
+}
+
+.admin-button:hover,
+.admin-login-card button[type="submit"]:hover,
+button[type="submit"]:hover {
+  filter: brightness(1.08);
+}
+
+.admin-brand-mark,
+.admin-login-icon {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--flux-primary), var(--flux-primary-bright)) !important;
+  box-shadow: 0 10px 26px var(--flux-primary-glow);
+}
+
+.admin-kicker,
+.section-label,
+.gradient-text,
+a:hover,
+.admin-nav a[aria-current="page"] {
+  color: var(--flux-primary-bright);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, var(--flux-primary-bright) 58%, var(--flux-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.grid-pattern,
+.admin-login-page {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.045) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.admin-nav a:hover,
+.admin-text-button:hover,
+.admin-nav a[aria-current="page"] {
+  color: var(--flux-text);
+  border-color: var(--flux-border-strong);
+  background: var(--flux-primary-soft);
+}
+
+.admin-muted,
+.admin-page-header p,
+.admin-panel-header p,
+.admin-list-row span,
+.admin-list-row em,
+small {
+  color: var(--flux-text-soft);
+}
+
+.admin-error,
+[role="alert"] {
+  color: #fda4af;
+}
+
+.admin-form-message {
+  color: #c4b5fd;
+}
+
+:focus-visible {
+  outline-color: var(--flux-primary-bright);
+}
+
+::selection {
+  color: #ffffff;
+  background: var(--flux-primary-glow);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--flux-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--flux-border-strong);
+}
