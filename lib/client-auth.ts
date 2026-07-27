@@ -39,11 +39,59 @@ type MembershipRow = {
   membership_roles: Array<{ roles: { slug: string } | { slug: string }[] | null }>;
 };
 
+function projectRefFromUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname;
+    const match = hostname.match(/^([a-z0-9]+)\.supabase\.co$/i);
+    return match?.[1] || "";
+  } catch {
+    return "";
+  }
+}
+
+function projectRefFromKey(value: string) {
+  if (!value || !value.includes(".")) return "";
+  try {
+    const payload = value.split(".")[1];
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { ref?: string };
+    return String(decoded.ref || "");
+  } catch {
+    return "";
+  }
+}
+
 function authConfig() {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.LIMITLESS_SUPABASE_URL || "").replace(/\/$/, "");
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
-  if (!url || !anonKey) throw new Error("Supabase public authentication is not configured.");
-  return { url, anonKey };
+  const url = (
+    process.env.FLUXKNIGHT_SUPABASE_URL ||
+    process.env.LIMITLESS_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    ""
+  ).trim().replace(/\/$/, "");
+
+  const anonKey = (
+    process.env.FLUXKNIGHT_SUPABASE_ANON_KEY ||
+    process.env.LIMITLESS_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    ""
+  ).trim();
+
+  if (!url || !anonKey) {
+    throw new Error("Fluxknight authentication is not configured. Add the Limitless Realty Supabase URL and public key in Vercel Production settings.");
+  }
+
+  const urlProjectRef = projectRefFromUrl(url);
+  const keyProjectRef = projectRefFromKey(anonKey);
+  if (urlProjectRef && keyProjectRef && urlProjectRef !== keyProjectRef) {
+    throw new Error(
+      `Fluxknight Supabase configuration mismatch: the URL belongs to project ${urlProjectRef}, but the authentication key belongs to ${keyProjectRef}.`,
+    );
+  }
+
+  return { url, anonKey, projectRef: urlProjectRef || keyProjectRef };
 }
 
 function sessionSecret() {
@@ -66,17 +114,28 @@ function normalizeRelation<T>(value: T | T[] | null): T | null {
 }
 
 async function authRequest(path: string, body: Record<string, unknown>) {
-  const { url, anonKey } = authConfig();
-  const response = await fetch(`${url}/auth/v1/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  const { url, anonKey, projectRef } = authConfig();
+  let response: Response;
+
+  try {
+    response = await fetch(`${url}/auth/v1/${path}`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("Fluxknight Supabase Auth connection failed", {
+      projectRef,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error("Account creation is temporarily unavailable because Fluxknight could not reach its authentication service.");
+  }
+
   const result = (await response.json().catch(() => ({}))) as SupabaseAuthResponse;
   if (!response.ok) throw new Error(result.error_description || result.msg || result.error || "Authentication failed.");
   return result;
