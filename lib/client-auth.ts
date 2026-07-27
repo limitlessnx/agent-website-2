@@ -3,7 +3,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 const CLIENT_COOKIE = "fluxknight_client_session";
+const CLIENT_SETUP_COOKIE = "fluxknight_client_setup";
 const CLIENT_SESSION_TTL = 60 * 60 * 24 * 7;
+const CLIENT_SETUP_TTL = 60 * 60;
 
 type SupabaseAuthUser = {
   id: string;
@@ -28,6 +30,12 @@ export type ClientSession = {
   organizationSlug: string;
   membershipId: string;
   role: string;
+  issuedAt: number;
+};
+
+export type PendingClientSetupSession = {
+  userId: string;
+  email: string;
   issuedAt: number;
 };
 
@@ -113,6 +121,24 @@ function normalizeRelation<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] || null : value;
 }
 
+function createSignedToken(value: Record<string, unknown>) {
+  const payload = Buffer.from(JSON.stringify(value)).toString("base64url");
+  return `${payload}.${sign(payload)}`;
+}
+
+function readSignedToken<T>(token: string | undefined, ttlSeconds: number): T | null {
+  if (!token) return null;
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature || !safeEqual(signature, sign(payload))) return null;
+  try {
+    const value = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as T & { issuedAt?: number };
+    if (!value.issuedAt || Date.now() - value.issuedAt > ttlSeconds * 1000) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 async function authRequest(path: string, body: Record<string, unknown>) {
   const { url, anonKey, projectRef } = authConfig();
   let response: Response;
@@ -141,11 +167,27 @@ async function authRequest(path: string, body: Record<string, unknown>) {
   return result;
 }
 
-export async function signUpClient(email: string, password: string, fullName: string) {
+export async function signUpClient(
+  email: string,
+  password: string,
+  fullName: string,
+  onboarding?: {
+    companyName?: string;
+    companySlug?: string;
+    templateSlug?: string;
+    agentFamilyName?: string;
+  },
+) {
   return authRequest("signup", {
     email,
     password,
-    data: { full_name: fullName },
+    data: {
+      full_name: fullName,
+      company_name: onboarding?.companyName || "",
+      company_slug: onboarding?.companySlug || "",
+      template_slug: onboarding?.templateSlug || "",
+      agent_family_name: onboarding?.agentFamilyName || onboarding?.companyName || "",
+    },
   });
 }
 
@@ -171,22 +213,13 @@ export async function getPrimaryMembership(userId: string) {
 }
 
 export function createClientSessionToken(session: ClientSession) {
-  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
-  return `${payload}.${sign(payload)}`;
+  return createSignedToken(session);
 }
 
 export function verifyClientSessionToken(token?: string): ClientSession | null {
-  if (!token) return null;
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature || !safeEqual(signature, sign(payload))) return null;
-  try {
-    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as ClientSession;
-    if (!session.userId || !session.organizationId || !session.issuedAt) return null;
-    if (Date.now() - session.issuedAt > CLIENT_SESSION_TTL * 1000) return null;
-    return session;
-  } catch {
-    return null;
-  }
+  const session = readSignedToken<ClientSession>(token, CLIENT_SESSION_TTL);
+  if (!session?.userId || !session.organizationId) return null;
+  return session;
 }
 
 export async function setClientSession(session: ClientSession) {
@@ -198,6 +231,30 @@ export async function setClientSession(session: ClientSession) {
     maxAge: CLIENT_SESSION_TTL,
     path: "/",
   });
+  store.delete(CLIENT_SETUP_COOKIE);
+}
+
+export async function setPendingClientSetupSession(session: PendingClientSetupSession) {
+  const store = await cookies();
+  store.set(CLIENT_SETUP_COOKIE, createSignedToken(session), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: CLIENT_SETUP_TTL,
+    path: "/",
+  });
+}
+
+export async function getPendingClientSetupSession() {
+  const store = await cookies();
+  const session = readSignedToken<PendingClientSetupSession>(store.get(CLIENT_SETUP_COOKIE)?.value, CLIENT_SETUP_TTL);
+  if (!session?.userId || !session.email) return null;
+  return session;
+}
+
+export async function clearPendingClientSetupSession() {
+  const store = await cookies();
+  store.delete(CLIENT_SETUP_COOKIE);
 }
 
 export async function getClientSession() {
