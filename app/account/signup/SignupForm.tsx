@@ -17,32 +17,40 @@ export default function SignupForm() {
     setError("");
     setMessage("");
 
-    const data = new FormData(event.currentTarget);
-    const response = await fetch("/api/client-auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        full_name: data.get("full_name"),
-        company_name: data.get("company_name"),
-        email: data.get("email"),
-        password: data.get("password"),
-      }),
-    });
-    const result = await response.json().catch(() => ({}));
-    setLoading(false);
+    try {
+      const data = new FormData(event.currentTarget);
+      const response = await fetch("/api/client-auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: data.get("full_name"),
+          company_name: data.get("company_name"),
+          email: data.get("email"),
+          password: data.get("password"),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      setError(result.error || "Unable to create account.");
-      return;
+      if (!response.ok) {
+        setError(result.error || "Unable to create account.");
+        return;
+      }
+
+      if (result.requires_email_confirmation) {
+        setMessage(
+          result.message ||
+            "Account created. Check your email, verify your address, then sign in to finish creating your workspace.",
+        );
+        return;
+      }
+
+      router.push("/portal");
+      router.refresh();
+    } catch {
+      setError("We could not connect to the account service. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-
-    if (result.requires_email_confirmation) {
-      setMessage("Account created. Check your email to confirm it, then sign in.");
-      return;
-    }
-
-    router.push("/portal");
-    router.refresh();
   }
 
   return (
@@ -59,7 +67,7 @@ export default function SignupForm() {
       <label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
       {message ? <p className="admin-form-message">{message}</p> : null}
-      <button type="submit" disabled={loading}>{loading ? "Creating workspace..." : "Create account"}</button>
+      <button type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
       <p className="admin-muted">Already registered? <Link href="/account/login">Sign in</Link></p>
     </form>
   );
