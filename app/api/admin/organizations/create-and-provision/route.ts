@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
+import { provisionOrganizationN8nProject } from "@/lib/n8n-organization-provisioning";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+
+type ProvisionedResult = {
+  ok?: boolean;
+  organization_id?: string;
+  organization_name?: string;
+  organization_slug?: string;
+  provisioning?: Record<string, unknown>;
+};
 
 export async function POST(request: NextRequest) {
   const session = await getAdminSession();
@@ -21,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Enter a valid business email." }, { status: 400 });
     }
 
-    const result = await supabaseServerRequest<Record<string, unknown>>(
+    const rows = await supabaseServerRequest<ProvisionedResult[]>(
       "rpc/create_and_provision_organization",
       {
         method: "POST",
@@ -37,7 +46,31 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    return NextResponse.json({ ok: true, result });
+    const result = rows[0];
+    if (!result?.organization_id || !result.organization_name || !result.organization_slug) {
+      throw new Error("Organization provisioning did not return the required organization details.");
+    }
+
+    let n8nProvisioning: Record<string, unknown>;
+    try {
+      n8nProvisioning = await provisionOrganizationN8nProject(
+        {
+          organization_id: result.organization_id,
+          organization_name: result.organization_name,
+          organization_slug: result.organization_slug,
+          provisioning: result.provisioning,
+        },
+        { timezone },
+      );
+    } catch (error) {
+      n8nProvisioning = {
+        configured: true,
+        created: false,
+        error: error instanceof Error ? error.message : "n8n project provisioning failed.",
+      };
+    }
+
+    return NextResponse.json({ ok: true, result, n8n: n8nProvisioning });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to create and provision organization." },
