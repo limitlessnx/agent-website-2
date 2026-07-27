@@ -3,6 +3,7 @@ import "./globals.css";
 import "./flux-theme.css";
 import "./home-responsive.css";
 import "./brand-refresh.css";
+import "./dashboard-light-fix.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
