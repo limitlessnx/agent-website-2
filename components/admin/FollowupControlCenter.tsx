@@ -6,10 +6,10 @@ import { ChevronDown, Clock3, Pause, Play, Plus, RotateCcw, Send, SkipForward, X
 import type { FollowupEnrollment, FollowupSequence, FollowupStep } from "@/lib/followup-control";
 
 type LeadOption = { id:string; name:string; phone:string };
-type Props = { leads:LeadOption[]; sequences:FollowupSequence[]; steps:FollowupStep[]; enrollments:FollowupEnrollment[]; configured:boolean };
-type DraftStep = { channel:string; delay_value:number; delay_unit:string; title:string; message_template:string; workflow_id:string };
+type Props = { leads:LeadOption[]; sequences:FollowupSequence[]; steps:FollowupStep[]; enrollments:FollowupEnrollment[]; configured:boolean; automationIssues:number };
+type DraftStep = { channel:string; delay_value:number; delay_unit:string; title:string; message_template:string };
 
-const blankStep = ():DraftStep => ({ channel:"whatsapp", delay_value:1, delay_unit:"days", title:"", message_template:"", workflow_id:"" });
+const blankStep = ():DraftStep => ({ channel:"whatsapp", delay_value:1, delay_unit:"days", title:"", message_template:"" });
 
 export default function FollowupControlCenter(props:Props) {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function FollowupControlCenter(props:Props) {
   async function createSequence(event:React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    await request("POST", { type:"sequence", organization_id:"limitless-realty", name:String(data.get("name")||""), description:String(data.get("description")||""), steps:steps.map((step,index)=>({ ...step, position:index+1, enabled:true })) });
+    await request("POST", { type:"sequence", organization_id:"limitless-realty", name:String(data.get("name")||""), description:String(data.get("description")||""), steps:steps.map((step,index)=>({ ...step, workflow_id:"", position:index+1, enabled:true })) });
   }
 
   async function enrollSelected() {
@@ -53,6 +53,7 @@ export default function FollowupControlCenter(props:Props) {
 
   return <div className="followup-center">
     {!props.configured ? <section className="admin-panel"><div className="admin-list-row compact"><div><strong>Follow-up setup needs attention</strong><span>Complete the platform setup before saving sequences or enrollments.</span></div><em>Setup required</em></div></section> : null}
+    {props.automationIssues > 0 ? <section className="admin-panel"><div className="admin-list-row compact attention-danger"><div><strong>Automation needs attention</strong><span>{props.automationIssues} recent follow-up action(s) failed. Review affected contacts and retry or reschedule them.</span></div><em>{props.automationIssues} issue(s)</em></div></section> : null}
 
     <section className="admin-panel followup-toolbar">
       <div className="admin-panel-header"><div><h2>Assign follow-up</h2><p>Select any leads, choose a sequence and schedule the start.</p></div><span className="admin-status live">{selected.length} selected</span></div>
