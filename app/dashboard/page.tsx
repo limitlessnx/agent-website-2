@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   const notifications = [
     ...newLeads.slice(0, 3).map((lead) => ({
       title: "New Limitless Realty lead",
-      detail: lead.name || lead.email || lead.phone || "A new lead entered the CRM",
+      detail: lead.name || lead.phone || "A new lead entered the CRM",
       href: "/dashboard/limitless/leads",
       type: "organization",
     })),
@@ -52,9 +52,7 @@ export default async function DashboardPage() {
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>Fluxknight Command Center</p>
           <h1><TimeGreeting />.</h1>
-          <p className={styles.heroLead}>
-            Manage platform automations, owned organizations and client organizations from one operational layer.
-          </p>
+          <p className={styles.heroLead}>Manage platform automations, owned organizations and client organizations from one operational layer.</p>
           <div className={styles.heroActions}>
             <Link href="/dashboard/notifications"><Bell size={15} /> View notifications</Link>
             <Link href="/dashboard/workflows"><Workflow size={15} /> Open workflows</Link>
