@@ -12,7 +12,7 @@ import styles from "@/app/dashboard/DashboardExecutive.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [leads, clients, n8n, supabase] = await Promise.all([
+  const [leads, clients, automationStatus, supabase] = await Promise.all([
     getLeads(500).catch(() => []),
     listClientOnboardingProfiles(100).catch(() => []),
     getN8nStatus().catch(() => ({ error: "Unavailable" })),
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const newLeads = leads.filter((lead) => String(lead.status || "").toLowerCase() === "new");
   const pendingClients = clients.filter((client) => !["live", "paused"].includes(client.status));
   const liveClients = clients.filter((client) => client.status === "live");
-  const systemHealth = supabase.ready && !n8n.error ? "Operational" : "Attention";
+  const systemHealth = supabase.ready && !automationStatus.error ? "Operational" : "Attention";
 
   const notifications = [
     ...newLeads.slice(0, 3).map((lead) => ({
@@ -39,11 +39,11 @@ export default async function DashboardPage() {
     })),
   ].slice(0, 6);
 
-  const workflows = [
-    { title: "Email automation", detail: "Sequences, replies and outbound delivery", href: "/dashboard/workflows/email", icon: Mail, status: "Ready" },
-    { title: "Outbound call agent", detail: "Calls, qualification and appointment handoff", href: "/dashboard/workflows/calls", icon: PhoneCall, status: "Configure" },
-    { title: "Lead scraping agent", detail: "Prospect sourcing for outbound campaigns", href: "/dashboard/workflows/scraping", icon: Search, status: "Configure" },
-    { title: "Super assistant", detail: "Dashboard control, updates and operational commands", href: "/dashboard/agents", icon: Bot, status: "Core" },
+  const operations = [
+    { title: "Follow-up center", detail: "Sequences, reminders and enrolled contacts", href: "/dashboard/limitless/followups", icon: Workflow, status: "Manage" },
+    { title: "Email automation", detail: "Sequences, replies and outbound delivery", href: "/dashboard/workflows/email", icon: Mail, status: "Manage" },
+    { title: "Outbound calls", detail: "Qualification, call queues and appointment handoff", href: "/dashboard/workflows/calls", icon: PhoneCall, status: "Manage" },
+    { title: "Lead sourcing", detail: "Prospect searches, saved lists and exports", href: "/dashboard/workflows/scraping", icon: Search, status: "Manage" },
   ];
 
   return (
@@ -52,10 +52,10 @@ export default async function DashboardPage() {
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>Fluxknight Command Center</p>
           <h1><TimeGreeting />.</h1>
-          <p className={styles.heroLead}>Manage platform automations, owned organizations and client organizations from one operational layer.</p>
+          <p className={styles.heroLead}>Manage organizations, customers, follow-ups and business automations from one operational layer.</p>
           <div className={styles.heroActions}>
             <Link href="/dashboard/notifications"><Bell size={15} /> View notifications</Link>
-            <Link href="/dashboard/workflows"><Workflow size={15} /> Open workflows</Link>
+            <Link href="/dashboard/limitless/followups"><Workflow size={15} /> Follow-up center</Link>
             <Link href="/dashboard/clients"><Users size={15} /> Client organizations</Link>
           </div>
         </div>
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
           <div className={`${styles.orbit} ${styles.orbitTwo}`} />
           <div className={styles.core}><FluxknightLogo /></div>
           <div className={`${styles.node} ${styles.nodeOne}`}><Bot size={14} /> Assistant</div>
-          <div className={`${styles.node} ${styles.nodeTwo}`}><Workflow size={14} /> Automations</div>
+          <div className={`${styles.node} ${styles.nodeTwo}`}><Workflow size={14} /> Operations</div>
           <div className={`${styles.node} ${styles.nodeThree}`}><Building2 size={14} /> Organizations</div>
         </div>
       </section>
@@ -72,8 +72,8 @@ export default async function DashboardPage() {
       <section className={styles.metrics} aria-label="Platform overview cards">
         <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Building2 size={17} /></span><small>Admin organizations</small></div><strong>2</strong><p>Limitless Realty and Gencouv</p></article>
         <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Users size={17} /></span><small>Client organizations</small></div><strong>{clients.length}</strong><p>{liveClients.length} live · {pendingClients.length} need attention</p></article>
-        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Bell size={17} /></span><small>Attention queue</small></div><strong>{notifications.length}</strong><p>Platform and owned-organization signals</p></article>
-        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Network size={17} /></span><small>Platform health</small></div><strong>{systemHealth}</strong><p>Database and automation connections</p></article>
+        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Bell size={17} /></span><small>Attention queue</small></div><strong>{notifications.length}</strong><p>Platform and organization signals</p></article>
+        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Network size={17} /></span><small>Automation health</small></div><strong>{systemHealth}</strong><p>{systemHealth === "Operational" ? "All core services responding" : "One or more services need attention"}</p></article>
       </section>
 
       <section className={styles.grid}>
@@ -89,11 +89,11 @@ export default async function DashboardPage() {
         </article>
 
         <article className={styles.panel}>
-          <header className={styles.panelHeader}><div><h2>Platform Automations</h2><p>Fluxknight workflows come before organization-specific workflows.</p></div><Link href="/dashboard/workflows">Registry</Link></header>
+          <header className={styles.panelHeader}><div><h2>Business Automations</h2><p>Manage outcomes, schedules and customer actions without exposing backend workflows.</p></div></header>
           <div className={styles.actionGrid}>
-            {workflows.map((workflow) => (
-              <Link key={workflow.title} href={workflow.href} className={styles.actionCard}>
-                <span><workflow.icon size={15} /></span><span><strong>{workflow.title}</strong><small>{workflow.detail}</small></span><em>{workflow.status}</em>
+            {operations.map((operation) => (
+              <Link key={operation.title} href={operation.href} className={styles.actionCard}>
+                <span><operation.icon size={15} /></span><span><strong>{operation.title}</strong><small>{operation.detail}</small></span><em>{operation.status}</em>
               </Link>
             ))}
           </div>
