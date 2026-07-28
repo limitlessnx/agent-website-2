@@ -22,6 +22,7 @@ import {
   UsersRound,
   Workflow,
   Wrench,
+  Zap,
 } from "lucide-react";
 import ElevenLabsConsultant from "@/components/ElevenLabsConsultant";
 
@@ -48,6 +49,11 @@ const useCases = [
     summary: "An AI property assistant can speak with prospects immediately, understand their budget and preferred location, recommend suitable listings, explain payment plans, book inspections, and keep following up until a human agent needs to step in.",
     flow: "A buyer asks about land at 11:47 p.m. → AI answers instantly → collects budget and location → suggests matching properties → books an inspection → alerts the assigned agent.",
     outcome: "Faster replies, fewer forgotten leads, more inspections, and a sales team that spends its time closing instead of repeatedly answering the same questions.",
+    visualTitle: "New property enquiry",
+    visualMessage: "I need land around Benin Airport Road. My budget is ₦12M.",
+    visualSteps: ["Budget captured", "3 properties matched", "Inspection booked"],
+    visualMetric: "Lead sent to agent",
+    visualStatus: "Qualified",
   },
   {
     icon: Hotel,
@@ -56,6 +62,11 @@ const useCases = [
     summary: "AI can answer room, menu, price, availability, location, and policy questions across your website, WhatsApp, or phone. It can take reservation details, confirm bookings, send reminders, collect guest preferences, and pass unusual requests to staff.",
     flow: "A guest asks for a room and airport pickup → AI checks the request → captures dates and guest details → confirms the reservation process → sends the information to reception.",
     outcome: "More bookings outside business hours, quicker guest service, fewer missed calls, and less pressure on reception and front-desk staff.",
+    visualTitle: "Guest reservation request",
+    visualMessage: "One deluxe room for Friday, plus airport pickup for two guests.",
+    visualSteps: ["Dates confirmed", "Guest details saved", "Reception notified"],
+    visualMetric: "Booking ready",
+    visualStatus: "Confirmed",
   },
   {
     icon: Dumbbell,
@@ -64,6 +75,11 @@ const useCases = [
     summary: "An AI membership assistant can explain plans, recommend packages, schedule facility tours or training sessions, remind prospects to complete registration, and automatically check in with inactive members before they quietly disappear.",
     flow: "A prospect asks for the monthly fee → AI explains available plans → asks about fitness goals → recommends the right option → books a tour → follows up after the visit.",
     outcome: "More membership conversions, better attendance, stronger retention, and fewer staff hours lost to repetitive enquiries and manual reminders.",
+    visualTitle: "New membership enquiry",
+    visualMessage: "I want to lose weight and train after work. Which plan suits me?",
+    visualSteps: ["Goal understood", "Plan recommended", "Tour scheduled"],
+    visualMetric: "Follow-up active",
+    visualStatus: "Warm lead",
   },
   {
     icon: Wrench,
@@ -72,6 +88,11 @@ const useCases = [
     summary: "For auto-repair shops, appliance installers, solar companies, cleaning teams, technicians, and maintenance businesses, AI can collect the customer’s problem, request photos or location details, schedule a visit, send updates, prepare estimates, and request feedback after the job.",
     flow: "A customer reports a faulty air conditioner → AI collects the issue and address → schedules a technician → sends reminders → updates the customer → requests a review after completion.",
     outcome: "Fewer missed appointments, clearer job information, faster response times, better customer trust, and a cleaner handoff between office staff and field teams.",
+    visualTitle: "Service request received",
+    visualMessage: "My air conditioner is leaking. I need a technician tomorrow morning.",
+    visualSteps: ["Issue recorded", "Technician assigned", "Customer updated"],
+    visualMetric: "Job card created",
+    visualStatus: "Scheduled",
   },
 ];
 
@@ -96,39 +117,48 @@ export default function HomePage() {
 
       <section className="brand-section" id="industries"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Industries</span><h2>Automation designed around how each business actually operates.</h2><p>No generic chatbot theatre. Each system is shaped around the lead journey, staff responsibilities, customer channels, and data already inside the business.</p></div><div className="brand-grid">{industries.map(({icon:Icon,title,text})=><article className="brand-card" key={title}><span className="brand-icon"><Icon size={21}/></span><h3>{title}</h3><p>{text}</p><Link href="/industries">Explore industry <ArrowRight size={15}/></Link></article>)}</div></div></section>
 
-      <section className="brand-section" id="use-cases">
+      <section className="brand-section use-case-section" id="use-cases">
         <div className="brand-shell">
-          <div className="brand-heading">
+          <div className="brand-heading use-case-heading">
             <span className="brand-eyebrow">How AI grows a business</span>
-            <h2>See exactly what Fluxknight can take off your team’s plate.</h2>
-            <p>AI is not a mysterious robot employee floating in the cloud. It is a practical system that responds faster, remembers every lead, performs repetitive tasks, and brings a human into the conversation when judgment is required.</p>
+            <h2>See the customer journey, not another wall of technology words.</h2>
+            <p>Fluxknight gives your business a fast digital front desk, a tireless follow-up assistant, and a connected operations layer. Here is what that looks like when an actual customer appears.</p>
           </div>
-          <div className="brand-grid">
-            {useCases.map(({ icon: Icon, tag, title, summary, flow, outcome }) => (
-              <motion.article className="brand-card" key={tag} whileHover={{ y: -8 }} transition={{ duration: .22 }}>
-                <span className="brand-icon"><Icon size={22} /></span>
-                <span className="brand-eyebrow">{tag}</span>
-                <h3>{title}</h3>
-                <p>{summary}</p>
-                <div style={{ display: "grid", gap: "12px", marginTop: "18px" }}>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                    <MessageSquareText size={18} style={{ flex: "0 0 auto", marginTop: "3px" }} />
-                    <p><strong>How it works:</strong> {flow}</p>
+          <div className="use-case-grid">
+            {useCases.map(({ icon: Icon, tag, title, summary, flow, outcome, visualTitle, visualMessage, visualSteps, visualMetric, visualStatus }, index) => (
+              <motion.article className="use-case-card" key={tag} initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .2 }} transition={{ duration: .45, delay: index * .06 }}>
+                <div className="use-case-copy">
+                  <div className="use-case-label"><span className="brand-icon"><Icon size={22} /></span><span className="brand-eyebrow">{tag}</span></div>
+                  <h3>{title}</h3>
+                  <p>{summary}</p>
+                  <div className="use-case-explainer">
+                    <div><MessageSquareText size={18} /><p><strong>What happens:</strong> {flow}</p></div>
+                    <div><CalendarCheck2 size={18} /><p><strong>What the business gains:</strong> {outcome}</p></div>
                   </div>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                    <CalendarCheck2 size={18} style={{ flex: "0 0 auto", marginTop: "3px" }} />
-                    <p><strong>Business result:</strong> {outcome}</p>
+                  <Link href="/evaluation">Build this for my business <ArrowRight size={15}/></Link>
+                </div>
+
+                <div className="use-case-visual" aria-label={`${tag} AI workflow example`}>
+                  <div className="visual-glow" />
+                  <div className="visual-topbar"><span><span className="visual-live-dot" /> AI assistant active</span><em>24/7</em></div>
+                  <div className="visual-window">
+                    <div className="visual-window-head"><span className="visual-avatar"><Icon size={18} /></span><div><strong>{visualTitle}</strong><small>Just now · WhatsApp</small></div><span className="visual-status">{visualStatus}</span></div>
+                    <div className="visual-message"><MessageSquareText size={16} /><p>{visualMessage}</p></div>
+                    <div className="visual-ai-reply"><span><Bot size={15} /> Fluxknight AI</span><p>I understand. I have collected the important details and started the next steps for you.</p></div>
+                    <div className="visual-workflow">
+                      {visualSteps.map((step, stepIndex) => <div key={step}><span>{stepIndex + 1}</span><p>{step}</p><CheckCircle2 size={16} /></div>)}
+                    </div>
+                    <div className="visual-result"><span><Zap size={16} /> Automation result</span><strong>{visualMetric}</strong></div>
                   </div>
                 </div>
-                <Link href="/evaluation">Build this for my business <ArrowRight size={15}/></Link>
               </motion.article>
             ))}
           </div>
-          <div style={{ marginTop: "34px", display: "grid", gap: "14px", textAlign: "center" }}>
-            <span className="brand-icon" style={{ margin: "0 auto" }}><UsersRound size={22} /></span>
-            <h3 style={{ margin: 0 }}>The goal is not to replace your team. It is to remove the work that slows them down.</h3>
-            <p style={{ maxWidth: "760px", margin: "0 auto" }}>Fluxknight connects AI conversations, customer records, bookings, reminders, internal alerts, and human handoffs into one operating system built around the way your business already works.</p>
-            <div className="hero-buttons" style={{ justifyContent: "center" }}><Link className="button-primary" href="/evaluation">Plan My AI System <ArrowRight size={17} /></Link></div>
+          <div className="use-case-closing">
+            <span className="brand-icon"><UsersRound size={22} /></span>
+            <h3>The goal is not to replace your team. It is to remove the work that slows them down.</h3>
+            <p>Fluxknight connects customer conversations, saved contact details, bookings, reminders, internal alerts, and human handoffs into one operating system built around the way your business already works.</p>
+            <div className="hero-buttons"><Link className="button-primary" href="/evaluation">Plan My AI System <ArrowRight size={17} /></Link></div>
           </div>
         </div>
       </section>
