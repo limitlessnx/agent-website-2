@@ -1,163 +1,102 @@
+import Link from "next/link";
 import {
-  Activity,
-  ArrowUpRight,
-  Bot,
-  Building2,
-  Database,
-  Image,
-  MessageCircle,
-  Network,
-  Users,
+  Activity, ArrowUpRight, Bell, Bot, Building2, Mail, Network, PhoneCall,
+  Search, Users, Workflow,
 } from "lucide-react";
-import {
-  getLeads,
-  getN8nStatus,
-  getProperties,
-  getSupabaseReadiness,
-} from "@/lib/limitless-data";
+import { getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-data";
+import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import TimeGreeting from "@/components/admin/TimeGreeting";
 import styles from "@/app/dashboard/DashboardExecutive.module.css";
 
-const inactiveLeadStatuses = ["cold", "closed", "converted", "lost"];
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [leads, properties, n8n, supabase] = await Promise.all([
-    getLeads(500),
-    getProperties(500),
-    getN8nStatus(),
-    getSupabaseReadiness(),
+  const [leads, clients, n8n, supabase] = await Promise.all([
+    getLeads(500).catch(() => []),
+    listClientOnboardingProfiles(100).catch(() => []),
+    getN8nStatus().catch(() => ({ error: "Unavailable" })),
+    getSupabaseReadiness().catch(() => ({ ready: false })),
   ]);
 
-  const liveLeads = leads.filter((lead) => !inactiveLeadStatuses.includes(String(lead.status || "").toLowerCase()));
-  const hotLeads = leads.filter((lead) => ["hot", "qualified"].includes(String(lead.score || lead.status || "").toLowerCase())).length;
-  const warmLeads = leads.filter((lead) => String(lead.score || "").toLowerCase() === "warm").length;
-  const newLeads = leads.filter((lead) => String(lead.status || "").toLowerCase() === "new").length;
-  const activeProperties = properties.filter((property) => String(property.status || "active").toLowerCase() === "active").length;
-  const missingMedia = properties.filter((property) => !property.drive_photos_link).length;
-  const followUps = liveLeads.filter((lead) => Number(lead.follow_up_stage || 0) < 4).length;
-  const systemHealth = Math.max(
-    0,
-    100 - (!supabase.ready ? 28 : 0) - (n8n.error ? 22 : 0) - (missingMedia ? 8 : 0),
-  );
+  const newLeads = leads.filter((lead) => String(lead.status || "").toLowerCase() === "new");
+  const pendingClients = clients.filter((client) => !["live", "paused"].includes(client.status));
+  const liveClients = clients.filter((client) => client.status === "live");
+  const systemHealth = supabase.ready && !n8n.error ? "Operational" : "Attention";
 
-  const pipeline = [
-    { label: "New", value: newLeads },
-    { label: "Warm", value: warmLeads },
-    { label: "Qualified", value: hotLeads },
-    { label: "Follow-up", value: followUps },
-  ];
-  const pipelineMax = Math.max(1, ...pipeline.map((item) => item.value));
-
-  const priorities = [
-    {
-      label: "Review active leads",
-      detail: `${liveLeads.length} leads currently require sales attention`,
+  const notifications = [
+    ...newLeads.slice(0, 3).map((lead) => ({
+      title: "New Limitless Realty lead",
+      detail: lead.name || lead.email || lead.phone || "A new lead entered the CRM",
       href: "/dashboard/limitless/leads",
-      icon: Users,
-      value: liveLeads.length,
-    },
-    {
-      label: "Complete scheduled follow-ups",
-      detail: `${followUps} leads remain in the follow-up sequence`,
-      href: "/dashboard/limitless/followups",
-      icon: MessageCircle,
-      value: followUps,
-    },
-    {
-      label: missingMedia ? "Complete property media" : "Property media is complete",
-      detail: missingMedia ? `${missingMedia} properties still need image links` : "All visible property records have media",
-      href: "/dashboard/limitless/media",
-      icon: Image,
-      value: missingMedia || "Clear",
-    },
-    {
-      label: supabase.ready ? "Workspace data is operational" : "Workspace data needs attention",
-      detail: supabase.ready ? "Limitless Realty records are connected" : "Database configuration requires review",
-      href: "/dashboard/settings",
-      icon: Database,
-      value: supabase.ready ? "Live" : "Check",
-    },
+      type: "organization",
+    })),
+    ...pendingClients.slice(0, 3).map((client) => ({
+      title: "Client workspace needs attention",
+      detail: client.business_name || client.business_email || "New client organization",
+      href: "/dashboard/clients",
+      type: "platform",
+    })),
+  ].slice(0, 6);
+
+  const workflows = [
+    { title: "Email automation", detail: "Sequences, replies and outbound delivery", href: "/dashboard/workflows/email", icon: Mail, status: "Ready" },
+    { title: "Outbound call agent", detail: "Calls, qualification and appointment handoff", href: "/dashboard/workflows/calls", icon: PhoneCall, status: "Configure" },
+    { title: "Lead scraping agent", detail: "Prospect sourcing for outbound campaigns", href: "/dashboard/workflows/scraping", icon: Search, status: "Configure" },
+    { title: "Super assistant", detail: "Dashboard control, updates and operational commands", href: "/dashboard/agents", icon: Bot, status: "Core" },
   ];
 
   return (
     <main className={`${styles.page} admin-page`}>
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>Limitless Realty Workspace</p>
+          <p className={styles.kicker}>Fluxknight Command Center</p>
           <h1><TimeGreeting />.</h1>
           <p className={styles.heroLead}>
-            Welcome back. You have <strong>{liveLeads.length} active leads</strong>, <strong>{followUps} pending follow-ups</strong> and <strong>{activeProperties} available properties</strong> in the workspace.
+            Manage platform automations, owned organizations and client organizations from one operational layer.
           </p>
           <div className={styles.heroActions}>
-            <a href="/dashboard/limitless/leads"><Users size={15} /> Open leads</a>
-            <a href="/dashboard/limitless/properties"><Building2 size={15} /> View properties</a>
-            <a href="/dashboard/limitless/followups"><MessageCircle size={15} /> Review follow-ups</a>
+            <Link href="/dashboard/notifications"><Bell size={15} /> View notifications</Link>
+            <Link href="/dashboard/workflows"><Workflow size={15} /> Open workflows</Link>
+            <Link href="/dashboard/clients"><Users size={15} /> Client organizations</Link>
           </div>
         </div>
-
-        <div className={styles.automationVisual} aria-label="Limitless Realty AI operations visual">
+        <div className={styles.automationVisual} aria-label="Fluxknight AI operations visual">
           <div className={styles.orbit} />
           <div className={`${styles.orbit} ${styles.orbitTwo}`} />
           <div className={styles.core}><FluxknightLogo /></div>
-          <div className={`${styles.node} ${styles.nodeOne}`}><Bot size={14} /> Maia</div>
-          <div className={`${styles.node} ${styles.nodeTwo}`}><Building2 size={14} /> Properties</div>
-          <div className={`${styles.node} ${styles.nodeThree}`}><Users size={14} /> CRM</div>
+          <div className={`${styles.node} ${styles.nodeOne}`}><Bot size={14} /> Assistant</div>
+          <div className={`${styles.node} ${styles.nodeTwo}`}><Workflow size={14} /> Automations</div>
+          <div className={`${styles.node} ${styles.nodeThree}`}><Building2 size={14} /> Organizations</div>
         </div>
       </section>
 
-      <section className={styles.metrics} aria-label="Limitless Realty overview cards">
-        <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><Users size={17} /></span><small>Active leads</small></div>
-          <strong>{liveLeads.length.toLocaleString("en-NG")}</strong>
-          <p>{hotLeads} hot or qualified leads</p>
-        </article>
-        <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><Building2 size={17} /></span><small>Available properties</small></div>
-          <strong>{activeProperties.toLocaleString("en-NG")}</strong>
-          <p>{missingMedia} records still need media</p>
-        </article>
-        <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><MessageCircle size={17} /></span><small>Pending follow-ups</small></div>
-          <strong>{followUps.toLocaleString("en-NG")}</strong>
-          <p>Active leads still in sequence</p>
-        </article>
-        <article className={styles.metric}>
-          <div className={styles.metricTop}><span className={styles.metricIcon}><Network size={17} /></span><small>Workspace health</small></div>
-          <strong>{systemHealth}%</strong>
-          <p>{n8n.error ? "Automation connection needs attention" : "Core services are connected"}</p>
-        </article>
+      <section className={styles.metrics} aria-label="Platform overview cards">
+        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Building2 size={17} /></span><small>Admin organizations</small></div><strong>2</strong><p>Limitless Realty and Gencouv</p></article>
+        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Users size={17} /></span><small>Client organizations</small></div><strong>{clients.length}</strong><p>{liveClients.length} live · {pendingClients.length} need attention</p></article>
+        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Bell size={17} /></span><small>Attention queue</small></div><strong>{notifications.length}</strong><p>Platform and owned-organization signals</p></article>
+        <article className={styles.metric}><div className={styles.metricTop}><span className={styles.metricIcon}><Network size={17} /></span><small>Platform health</small></div><strong>{systemHealth}</strong><p>Database and automation connections</p></article>
       </section>
 
       <section className={styles.grid}>
         <article className={styles.panel}>
-          <header className={styles.panelHeader}>
-            <div><h2>Today&apos;s Priorities</h2><p>The items currently needing attention in Limitless Realty.</p></div>
-            <a href="/dashboard/activity">View activity <ArrowUpRight size={12} /></a>
-          </header>
+          <header className={styles.panelHeader}><div><h2>Admin Notifications</h2><p>Only platform and owned-organization activity appears here.</p></div><Link href="/dashboard/notifications">View all <ArrowUpRight size={12} /></Link></header>
           <div className={styles.actionGrid}>
-            {priorities.map((priority) => (
-              <a key={priority.label} href={priority.href} className={styles.actionCard}>
-                <span><priority.icon size={15} /></span>
-                <span><strong>{priority.label}</strong><small>{priority.detail}</small></span>
-                <em>{priority.value}</em>
-              </a>
-            ))}
+            {notifications.length ? notifications.map((notification, index) => (
+              <Link key={`${notification.title}-${index}`} href={notification.href} className={styles.actionCard}>
+                <span><Bell size={15} /></span><span><strong>{notification.title}</strong><small>{notification.detail}</small></span><em>{notification.type}</em>
+              </Link>
+            )) : <div className={styles.actionCard}><span><Activity size={15} /></span><span><strong>No new alerts</strong><small>The admin attention queue is clear.</small></span><em>Clear</em></div>}
           </div>
         </article>
 
         <article className={styles.panel}>
-          <header className={styles.panelHeader}>
-            <div><h2>Lead Pipeline</h2><p>Current sales movement</p></div>
-            <a href="/dashboard/limitless/leads">Open CRM</a>
-          </header>
-          <div className={styles.pipeline}>
-            {pipeline.map((item) => (
-              <div className={styles.pipelineRow} key={item.label}>
-                <span>{item.label}</span>
-                <div className={styles.bar}><i style={{ width: `${Math.max(5, Math.round((item.value / pipelineMax) * 100))}%` }} /></div>
-                <strong>{item.value}</strong>
-              </div>
+          <header className={styles.panelHeader}><div><h2>Platform Automations</h2><p>Fluxknight workflows come before organization-specific workflows.</p></div><Link href="/dashboard/workflows">Registry</Link></header>
+          <div className={styles.actionGrid}>
+            {workflows.map((workflow) => (
+              <Link key={workflow.title} href={workflow.href} className={styles.actionCard}>
+                <span><workflow.icon size={15} /></span><span><strong>{workflow.title}</strong><small>{workflow.detail}</small></span><em>{workflow.status}</em>
+              </Link>
             ))}
           </div>
         </article>
@@ -165,35 +104,18 @@ export default async function DashboardPage() {
 
       <section className={styles.grid}>
         <article className={styles.panel}>
-          <header className={styles.panelHeader}>
-            <div><h2>Quick Access</h2><p>Open the core tools used for daily real estate operations.</p></div>
-          </header>
+          <header className={styles.panelHeader}><div><h2>Admin Organizations</h2><p>Brands owned and operated directly by Fluxknight administration.</p></div><Link href="/dashboard/organizations">Open registry</Link></header>
           <div className={styles.actionGrid}>
-            <a href="/dashboard/limitless/leads" className={styles.actionCard}>
-              <span><Users size={15} /></span><span><strong>Lead management</strong><small>Review and update active opportunities</small></span><em>Open</em>
-            </a>
-            <a href="/dashboard/limitless/properties" className={styles.actionCard}>
-              <span><Building2 size={15} /></span><span><strong>Property registry</strong><small>Manage available property records</small></span><em>Open</em>
-            </a>
-            <a href="/dashboard/limitless/followups" className={styles.actionCard}>
-              <span><MessageCircle size={15} /></span><span><strong>Follow-up center</strong><small>Continue pending lead conversations</small></span><em>Open</em>
-            </a>
-            <a href="/dashboard/limitless/media" className={styles.actionCard}>
-              <span><Image size={15} /></span><span><strong>Knowledge and media</strong><small>Maintain Maia&apos;s property information</small></span><em>Open</em>
-            </a>
+            <Link href="/dashboard/limitless/leads" className={styles.actionCard}><span><Building2 size={15} /></span><span><strong>Limitless Realty</strong><small>{newLeads.length} new leads currently visible</small></span><em>Owned</em></Link>
+            <Link href="/dashboard/gencouv" className={styles.actionCard}><span><Activity size={15} /></span><span><strong>Gencouv</strong><small>Trading onboarding and automation workspace</small></span><em>Owned</em></Link>
           </div>
         </article>
 
         <article className={styles.panel}>
-          <header className={styles.panelHeader}>
-            <div><h2>Recent Workspace Status</h2><p>Latest operational signals</p></div>
-            <Activity size={16} />
-          </header>
+          <header className={styles.panelHeader}><div><h2>Client Organizations</h2><p>Each client receives isolated notifications inside its own dashboard.</p></div><Link href="/dashboard/clients">Open clients</Link></header>
           <div className={styles.activity}>
-            <article><i /><div><strong>Maia is available</strong><span>The Limitless Realty assistant remains connected to the workspace.</span></div></article>
-            <article><i className={missingMedia ? styles.warning : ""} /><div><strong>Property knowledge readiness</strong><span>{missingMedia ? `${missingMedia} property records need media cleanup.` : "Property media coverage is healthy."}</span></div></article>
-            <article><i className={!supabase.ready ? styles.warning : ""} /><div><strong>Workspace data</strong><span>Supabase is {supabase.ready ? "ready and connected" : "not fully configured"}.</span></div></article>
-            <article><i className={n8n.error ? styles.warning : ""} /><div><strong>Automation connection</strong><span>n8n is {n8n.error ? "reporting a connection issue" : "connected and available"}.</span></div></article>
+            {clients.slice(0, 4).map((client) => <article key={client.id}><i /><div><strong>{client.business_name || "Unnamed client organization"}</strong><span>{client.status.replaceAll("_", " ")} · {client.business_email || "No email"}</span></div></article>)}
+            {!clients.length ? <article><i /><div><strong>No client organizations yet</strong><span>New signups will appear in the client registry and receive their own isolated dashboard.</span></div></article> : null}
           </div>
         </article>
       </section>
