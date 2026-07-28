@@ -5,6 +5,7 @@ import "./home-responsive.css";
 import "./brand-refresh.css";
 import "./dashboard-light-fix.css";
 import "./fluxknight-unified-colors.css";
+import "./ui-balance-fix.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
@@ -27,6 +28,11 @@ export const metadata: Metadata = {
   authors: [{ name: "Fluxknight" }],
   creator: "Fluxknight",
   metadataBase: new URL("https://fluxknight.ai"),
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+    apple: "/apple-icon.svg",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
