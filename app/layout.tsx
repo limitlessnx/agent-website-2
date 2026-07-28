@@ -7,6 +7,7 @@ import "./dashboard-light-fix.css";
 import "./fluxknight-unified-colors.css";
 import "./ui-balance-fix.css";
 import "./dashboard-responsive-v2.css";
+import "./followup-control.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
