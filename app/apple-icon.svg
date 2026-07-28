@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Fluxknight">
+  <defs>
+    <linearGradient id="bg" x1="24" y1="18" x2="158" y2="164" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#6D35E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="42" fill="#07040F"/>
+  <rect x="14" y="14" width="152" height="152" rx="34" fill="url(#bg)"/>
+  <path d="M53 48h81v23H78v23h48v23H78v39H53V48Z" fill="#fff"/>
+  <path d="M118 116l23 40h-25l-12-20-12 20H67l23-40h28Z" fill="#E9DDFF" opacity=".95"/>
+</svg>
