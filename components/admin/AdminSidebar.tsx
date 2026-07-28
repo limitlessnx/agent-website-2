@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity, Bot, Boxes, BrainCircuit, Building2, ChevronDown, ClipboardList,
+  Activity, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, Home, Image, Layers3, LineChart, Megaphone, Menu,
-  MessageCircle, Network, PlugZap, Plus, Settings, Users, Workflow, X, Bell,
-  Mail, PhoneCall, Search,
+  MessageCircle, Network, PlugZap, Plus, Settings, Users, X, Bell,
+  Mail, PhoneCall, Search, ShieldCheck,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -29,12 +29,11 @@ const platformGroups = [
     id: "platform-automations",
     label: "Platform Automations",
     items: [
-      { href: "/dashboard/automations", label: "Automation Control", icon: Network },
-      { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
+      { href: "/dashboard/automations", label: "Automation Center", icon: Network },
+      { href: "/dashboard/workflows", label: "Automation Health", icon: ShieldCheck },
       { href: "/dashboard/workflows/email", label: "Email Automation", icon: Mail },
       { href: "/dashboard/workflows/calls", label: "Outbound Call Agent", icon: PhoneCall },
       { href: "/dashboard/workflows/scraping", label: "Lead Scraping Agent", icon: Search },
-      { href: "/dashboard/platform-engine", label: "Platform Engine", icon: Boxes },
     ],
   },
   {
