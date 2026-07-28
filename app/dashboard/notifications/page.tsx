@@ -24,7 +24,7 @@ export default async function AdminNotificationsPage() {
       </div>
       <section className="admin-panel"><div className="admin-panel-header"><div><h2>Needs attention</h2><p>Open the source workspace to take action.</p></div></div><div className="admin-list">
         {pendingClients.map((client) => <Link key={client.id} href="/dashboard/clients" className="admin-list-row"><div><strong>Client workspace needs attention</strong><span>{client.business_name || client.business_email || "Unnamed organization"}</span></div><em>{client.status.replaceAll("_", " ")}</em></Link>)}
-        {newLeads.slice(0, 20).map((lead, index) => <Link key={lead.id || index} href="/dashboard/limitless/leads" className="admin-list-row"><div><strong>New Limitless Realty lead</strong><span>{lead.name || lead.email || lead.phone || "Lead record"}</span></div><em>Owned organization</em></Link>)}
+        {newLeads.slice(0, 20).map((lead, index) => <Link key={lead.id || index} href="/dashboard/limitless/leads" className="admin-list-row"><div><strong>New Limitless Realty lead</strong><span>{lead.name || lead.phone || "Lead record"}</span></div><em>Owned organization</em></Link>)}
         {!pendingClients.length && !newLeads.length ? <p className="admin-empty">No new admin notifications.</p> : null}
       </div></section>
     </div>
