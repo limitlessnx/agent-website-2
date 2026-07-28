@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity, Bot, Boxes, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, Home, Image, Layers3, LineChart, Megaphone, Menu,
-  MessageCircle, Network, PlugZap, Plus, Settings, Users, Workflow, X,
+  MessageCircle, Network, PlugZap, Plus, Settings, Users, Workflow, X, Bell,
+  Mail, PhoneCall, Search,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -15,22 +16,47 @@ import extras from "@/components/admin/AdminSidebarExtras.module.css";
 
 const platformGroups = [
   {
-    id: "platform",
-    label: "Platform",
+    id: "fluxknight-core",
+    label: "Fluxknight Platform",
     items: [
-      { href: "/dashboard", label: "Executive Overview", icon: Home, exact: true },
-      { href: "/dashboard/clients", label: "Organizations", icon: Layers3 },
-      { href: "/dashboard/onboarding", label: "Client Onboarding", icon: ClipboardList },
-      { href: "/dashboard/platform-engine", label: "Platform Engine", icon: Boxes },
-      { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
-      { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
-      { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
-      { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
+      { href: "/dashboard", label: "Command Center", icon: Home, exact: true },
+      { href: "/dashboard/notifications", label: "Admin Notifications", icon: Bell },
+      { href: "/dashboard/agents", label: "Super Assistant", icon: Bot },
+      { href: "/dashboard/activity", label: "Global Activity", icon: Activity },
     ],
   },
   {
-    id: "workspace-limitless",
-    label: "Limitless Realty Workspace",
+    id: "platform-automations",
+    label: "Platform Automations",
+    items: [
+      { href: "/dashboard/automations", label: "Automation Control", icon: Network },
+      { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
+      { href: "/dashboard/workflows/email", label: "Email Automation", icon: Mail },
+      { href: "/dashboard/workflows/calls", label: "Outbound Call Agent", icon: PhoneCall },
+      { href: "/dashboard/workflows/scraping", label: "Lead Scraping Agent", icon: Search },
+      { href: "/dashboard/platform-engine", label: "Platform Engine", icon: Boxes },
+    ],
+  },
+  {
+    id: "owned-organizations",
+    label: "Admin Organizations",
+    items: [
+      { href: "/dashboard/organizations", label: "Owned Organizations", icon: Layers3, exact: true },
+      { href: "/dashboard/limitless/leads", label: "Limitless Realty", icon: Building2 },
+      { href: "/dashboard/gencouv", label: "Gencouv", icon: LineChart },
+    ],
+  },
+  {
+    id: "client-organizations",
+    label: "Client Organizations",
+    items: [
+      { href: "/dashboard/clients", label: "Client Registry", icon: Users },
+      { href: "/dashboard/onboarding", label: "Client Onboarding", icon: ClipboardList },
+    ],
+  },
+  {
+    id: "limitless-tools",
+    label: "Limitless Realty Tools",
     items: [
       { href: "/dashboard/limitless/leads", label: "CRM · Leads", icon: Users },
       { href: "/dashboard/limitless/followups", label: "CRM · Follow-ups", icon: MessageCircle },
@@ -41,28 +67,13 @@ const platformGroups = [
     ],
   },
   {
-    id: "workspace-gencouv",
-    label: "Gencouv Workspace",
+    id: "platform-governance",
+    label: "Platform Governance",
     items: [
-      { href: "/dashboard/gencouv", label: "Gencouv Overview", icon: LineChart, exact: true },
-      { href: "/dashboard/gencouv/acquisition", label: "Client Acquisition", icon: Users },
-      { href: "/dashboard/gencouv/operations", label: "Trading Operations", icon: Activity },
-    ],
-  },
-  {
-    id: "ai-operations",
-    label: "AI Operations",
-    items: [
-      { href: "/dashboard/agents", label: "Agent Registry", icon: Bot },
-      { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
-      { href: "/dashboard/automations", label: "Automation Control", icon: Network },
-    ],
-  },
-  {
-    id: "governance",
-    label: "Governance",
-    items: [
-      { href: "/dashboard/activity", label: "Unified Activity", icon: Activity },
+      { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
+      { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
+      { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
+      { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
       { href: "/dashboard/settings", label: "Platform Settings", icon: Settings },
     ],
   },
@@ -78,7 +89,7 @@ export default function AdminSidebar({ email }: { email: string }) {
     () => platformGroups.filter((group) => group.items.some((item) => itemIsActive(pathname, item))).map((group) => group.id),
     [pathname],
   );
-  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupIds.length ? activeGroupIds : ["platform"]);
+  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupIds.length ? activeGroupIds : ["fluxknight-core", "platform-automations"]);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => setMobileOpen(false), [pathname]);
@@ -99,7 +110,9 @@ export default function AdminSidebar({ email }: { email: string }) {
     ? "Gencouv"
     : pathname.startsWith("/dashboard/limitless")
       ? "Limitless Realty"
-      : "Fluxknight Platform";
+      : pathname.startsWith("/dashboard/clients")
+        ? "Client Organizations"
+        : "Fluxknight Platform";
 
   return (
     <>
@@ -112,10 +125,10 @@ export default function AdminSidebar({ email }: { email: string }) {
 
         <div className={extras.workspaceSwitcher}>
           <span className={extras.workspaceIcon}><Building2 size={16} /></span>
-          <span><small>Current workspace</small><strong>{workspaceName}</strong></span>
+          <span><small>Current scope</small><strong>{workspaceName}</strong></span>
         </div>
 
-        <nav className={`admin-nav ${styles.nav}`} aria-label="Organization workspace navigation">
+        <nav className={`admin-nav ${styles.nav}`} aria-label="Platform and organization navigation">
           {platformGroups.map((group) => {
             const isOpen = openGroups.includes(group.id);
             const hasActiveItem = group.items.some((item) => itemIsActive(pathname, item));
@@ -135,7 +148,7 @@ export default function AdminSidebar({ email }: { email: string }) {
           })}
         </nav>
 
-        <Link href="/dashboard/clients" onClick={closeMobileMenu} className={extras.addOrganization}><Plus size={15} /> Add organization</Link>
+        <Link href="/dashboard/clients" onClick={closeMobileMenu} className={extras.addOrganization}><Plus size={15} /> Add client organization</Link>
         <div className={`admin-sidebar-footer ${styles.footer}`}>
           <div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div>
           <LogoutButton />
