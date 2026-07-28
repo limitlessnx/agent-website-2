@@ -12,7 +12,7 @@ export default async function FollowupsPage() {
 
   const active = summary.enrollments.filter((item) => item.status === "active").length;
   const scheduled = summary.enrollments.filter((item) => item.next_run_at && item.status === "active").length;
-  const attention = summary.enrollments.filter((item) => item.status === "failed").length;
+  const attention = summary.enrollments.filter((item) => item.status === "failed").length + summary.executions.filter((item) => item.status === "error").length;
 
   return (
     <div className="admin-page">
@@ -23,7 +23,7 @@ export default async function FollowupsPage() {
           <p>Manage reminders, reusable sequences and enrolled leads from one clean workspace.</p>
         </div>
         <span className={attention ? "admin-status warning" : "admin-status live"}>
-          {attention ? `${attention} need attention` : "Automation healthy"}
+          {attention ? `${attention} need attention` : "Automations healthy"}
         </span>
       </div>
 
@@ -40,6 +40,7 @@ export default async function FollowupsPage() {
         sequences={summary.sequences}
         steps={summary.steps}
         enrollments={summary.enrollments}
+        automationIssues={attention}
       />
     </div>
   );
