@@ -1,0 +1,259 @@
+:root {
+  --ui-control-height: 52px;
+  --ui-control-radius: 12px;
+  --ui-page-max: 1440px;
+  --ui-content-max: 1180px;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+main,
+.admin-main,
+.admin-page,
+.admin-login-page,
+[class*="portalShell"],
+[class*="portal-shell"] {
+  min-width: 0;
+}
+
+.admin-main {
+  width: 100%;
+  max-width: var(--ui-page-max);
+  margin-inline: auto;
+}
+
+.admin-page,
+.admin-login-card,
+[class*="content"],
+[class*="Content"] {
+  min-width: 0;
+}
+
+.admin-login-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: clamp(84px, 10vw, 132px) 20px 40px;
+}
+
+.admin-login-card {
+  width: min(100%, 620px);
+  margin: 0 auto;
+  padding: clamp(22px, 4vw, 38px);
+}
+
+.admin-login-card form,
+.admin-form {
+  width: 100%;
+}
+
+.admin-login-card label,
+.admin-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  min-width: 0;
+  height: var(--ui-control-height);
+  padding: 0 16px;
+  border-radius: var(--ui-control-radius);
+  line-height: normal;
+}
+
+textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: var(--ui-control-radius);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="search"] {
+  display: block;
+}
+
+button,
+.admin-button,
+.admin-login-card button[type="submit"] {
+  min-height: 46px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
+  text-align: center;
+}
+
+.admin-login-card button[type="submit"] {
+  width: 100%;
+  min-height: 52px;
+}
+
+.admin-page-header,
+.admin-panel-header,
+.admin-list-row,
+.admin-topbar,
+.admin-breadcrumb,
+.admin-topbar-actions {
+  min-width: 0;
+}
+
+.admin-page-header {
+  align-items: center;
+}
+
+.admin-page-header > *,
+.admin-panel-header > *,
+.admin-list-row > * {
+  min-width: 0;
+}
+
+.admin-list-row strong,
+.admin-list-row span,
+.admin-page-header p,
+.admin-panel-header p {
+  overflow-wrap: anywhere;
+}
+
+.admin-metric-grid,
+.admin-stat-grid,
+.admin-grid,
+[class*="grid"],
+[class*="Grid"] {
+  align-items: stretch;
+}
+
+.admin-panel,
+.admin-metric-card,
+.admin-stat-card,
+.card-surface,
+[class*="card"],
+[class*="Card"] {
+  min-width: 0;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+@media (min-width: 901px) {
+  .admin-main {
+    padding: 30px clamp(24px, 3vw, 42px) 48px;
+  }
+
+  .admin-page {
+    width: 100%;
+    max-width: var(--ui-content-max);
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --ui-control-height: 50px;
+  }
+
+  .admin-main {
+    width: 100%;
+    padding: 76px 14px 28px;
+  }
+
+  .admin-page {
+    width: 100%;
+    gap: 14px;
+  }
+
+  .admin-page-header,
+  .admin-panel-header,
+  .admin-list-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .admin-page-header,
+  .admin-panel,
+  .admin-login-card {
+    border-radius: 14px !important;
+  }
+
+  .admin-topbar {
+    gap: 10px;
+  }
+
+  .admin-topbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-metric-grid,
+  .admin-stat-grid,
+  .admin-grid.four,
+  .admin-grid.two {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-login-page {
+    place-items: start center;
+    padding: 92px 12px 28px;
+  }
+
+  .admin-login-card {
+    width: 100%;
+    padding: 20px 16px;
+  }
+
+  .admin-login-card h1 {
+    font-size: clamp(1.75rem, 8vw, 2.2rem);
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .admin-page-header,
+  .admin-panel {
+    padding: 16px !important;
+  }
+
+  .admin-button,
+  button {
+    max-width: 100%;
+  }
+}
