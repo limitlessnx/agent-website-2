@@ -20,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 type RequestBody = {
   requestId?: string;
+  campaignType?: "new_estate_update" | "limitless_realty_update" | "limitless_realty_reminder";
   topic?: string;
   message?: string;
   mediaUrl?: string;
@@ -31,6 +32,18 @@ type RequestBody = {
   budgetMin?: number | string;
   budgetMax?: number | string;
 };
+
+const campaignTemplates = {
+  new_estate_update: "estate_brief_update",
+  limitless_realty_update: "limitless_realty_update_v2",
+  limitless_realty_reminder: "limitless_realty_reminder",
+} as const;
+
+function campaignLabel(type: keyof typeof campaignTemplates) {
+  if (type === "new_estate_update") return "New Estate Update Campaign";
+  if (type === "limitless_realty_reminder") return "Limitless Realty Reminder";
+  return "Limitless Realty Update";
+}
 
 type CachedResponse = { expiresAt: number; payload: Record<string, unknown> };
 const globalCache = globalThis as typeof globalThis & { __maiaCampaignRequests?: Map<string, CachedResponse> };
@@ -83,6 +96,10 @@ export async function POST(request: Request) {
     ]);
 
     const selectedIds = new Set((body.selectedLeadIds || []).map(String));
+    const campaignType = body.campaignType && body.campaignType in campaignTemplates
+      ? body.campaignType
+      : "limitless_realty_update";
+    const templateName = campaignTemplates[campaignType];
     const selectedProperty = properties.find((property) => property.id === body.propertyId);
     const propertyCampaign = selectedProperty
       ? buildPropertyCampaignContent(selectedProperty, originalMessage, String(body.mediaUrl || ""))
@@ -143,6 +160,8 @@ export async function POST(request: Request) {
     for (let index = 0; index < messageParts.length; index += 1) {
       dispatches.push(await dispatchMaiaCampaignAction({
         commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`,
+        campaignType,
+        templateName,
         topic,
         message: messageParts[index],
         recipients,
@@ -178,6 +197,9 @@ export async function POST(request: Request) {
     const payload = {
       ok: accepted > 0,
       campaignId,
+      campaignType,
+      campaignTypeLabel: campaignLabel(campaignType),
+      templateName,
       requestId,
       attempted: recipients.length,
       sent: accepted,
@@ -210,6 +232,8 @@ export async function POST(request: Request) {
 
     await saveCampaignDeliveryReport({
       id: campaignId,
+      campaign_type: campaignType,
+      template_name: templateName,
       campaign_topic: topic,
       command_id: campaignId,
       execution_id: payload.executionId,

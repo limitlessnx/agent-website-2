@@ -1,5 +1,7 @@
 export type DetailedCampaignReport = {
   id: string;
+  campaign_type: string;
+  template_name: string;
   campaign_topic: string;
   status: string;
   attempted: number;
@@ -50,6 +52,8 @@ export async function getDetailedCampaignReports(limit = 50): Promise<DetailedCa
     try { content = typeof row.content === "string" ? JSON.parse(row.content) : row.content || {}; } catch {}
     return {
       id: row.id,
+      campaign_type: String(content.campaign_type || content.campaignType || "limitless_realty_update"),
+      template_name: String(content.template_name || content.templateName || ""),
       campaign_topic: String(content.campaign_topic || content.topic || "WhatsApp campaign"),
       status: String(content.status || (Number(content.failed || 0) ? "partially_sent" : "sent")),
       attempted: Number(content.attempted || 0),

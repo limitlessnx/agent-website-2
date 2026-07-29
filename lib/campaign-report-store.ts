@@ -1,5 +1,7 @@
 export type CampaignDeliveryReport = {
   id: string;
+  campaign_type?: string;
+  template_name?: string;
   campaign_topic: string;
   command_id: string;
   execution_id?: string;

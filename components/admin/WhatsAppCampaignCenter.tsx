@@ -6,6 +6,7 @@ import type { ProgressiveLead } from "@/lib/lead-profile-service";
 
 type Props = { leads: ProgressiveLead[]; properties: PropertyRecord[] };
 type AudienceMode = "all" | "manual" | "filters";
+type CampaignType = "new_estate_update" | "limitless_realty_update" | "limitless_realty_reminder";
 type CampaignResult = {
   status: string;
   attempted: number;
@@ -14,9 +15,37 @@ type CampaignResult = {
   pendingDelivery: number;
   failed: number;
   skipped: number;
+  campaignType?: string;
+  templateName?: string;
   executionId?: string;
   duplicatePrevented?: boolean;
 };
+
+const campaignTypes: Array<{
+  value: CampaignType;
+  label: string;
+  templateName: string;
+  description: string;
+}> = [
+  {
+    value: "new_estate_update",
+    label: "New Estate Update Campaign",
+    templateName: "estate_brief_update",
+    description: "Use only for a new estate or property launch/update.",
+  },
+  {
+    value: "limitless_realty_update",
+    label: "Limitless Realty Update",
+    templateName: "limitless_realty_update_v2",
+    description: "Use for normal broadcasts, price updates, promos, and market updates.",
+  },
+  {
+    value: "limitless_realty_reminder",
+    label: "Limitless Realty Reminder",
+    templateName: "limitless_realty_reminder",
+    description: "Use for reminder updates and follow-up style messages.",
+  },
+];
 
 function text(value: unknown) { return String(value || "").trim().toLowerCase(); }
 function money(value: unknown) {
@@ -30,6 +59,7 @@ function eligible(lead: ProgressiveLead) {
 
 export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
   const [audienceMode, setAudienceMode] = useState<AudienceMode>("all");
+  const [campaignType, setCampaignType] = useState<CampaignType>("limitless_realty_update");
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [state, setState] = useState("");
   const [interest, setInterest] = useState("");
@@ -47,6 +77,7 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
   const states = useMemo(() => [...new Set(leads.map((lead) => lead.location_preference).filter(Boolean) as string[])].sort(), [leads]);
   const interests = useMemo(() => [...new Set(leads.flatMap((lead) => [lead.purpose, lead.property_type, lead.property_interest]).filter(Boolean) as string[])].sort(), [leads]);
   const selectedProperty = properties.find((property) => property.id === propertyId);
+  const selectedCampaignType = campaignTypes.find((type) => type.value === campaignType) || campaignTypes[1];
 
   const audience = useMemo(() => {
     const selected = new Set(selectedLeadIds);
@@ -89,7 +120,7 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
         const response = await fetch("/api/limitless/campaigns/send", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Idempotency-Key": requestId },
-          body: JSON.stringify({ requestId, topic, message, mediaUrl, audienceMode, selectedLeadIds, state, interest, propertyId, budgetMin, budgetMax }),
+          body: JSON.stringify({ requestId, campaignType, topic, message, mediaUrl, audienceMode, selectedLeadIds, state, interest, propertyId, budgetMin, budgetMax }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Campaign failed.");
@@ -101,6 +132,8 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
           pendingDelivery: data.pendingDelivery || 0,
           failed: data.failed || 0,
           skipped: data.skipped || 0,
+          campaignType: data.campaignType,
+          templateName: data.templateName,
           executionId: data.executionId,
           duplicatePrevented: data.duplicatePrevented,
         });
@@ -131,6 +164,20 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
 
       <section className="campaign-panel">
         <div className="campaign-heading"><div><span>Message</span><h2>Compose WhatsApp campaign</h2></div><strong>Maia</strong></div>
+        <div className="campaign-type-grid">
+          {campaignTypes.map((type) => (
+            <button
+              key={type.value}
+              type="button"
+              className={campaignType === type.value ? "active" : ""}
+              onClick={() => setCampaignType(type.value)}
+            >
+              <strong>{type.label}</strong>
+              <span>{type.description}</span>
+              <small>{type.templateName}</small>
+            </button>
+          ))}
+        </div>
         <div className="compose-grid">
           <label><span>Campaign title</span><input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="New estate update" /></label>
           <label><span>Property to feature</span><select value={propertyId} onChange={(event) => setPropertyId(event.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
@@ -141,6 +188,7 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
 
         {result ? <div className={`campaign-result ${result.failed ? "warning" : "success"}`}>
           <strong>{result.status.replaceAll("_", " ")}</strong>
+          <small>{selectedCampaignType.label} · {result.templateName || selectedCampaignType.templateName}</small>
           <div className="result-grid"><span>Attempted <b>{result.attempted}</b></span><span>Sent <b>{result.sent}</b></span><span>Delivered <b>{result.delivered}</b></span><span>Pending <b>{result.pendingDelivery}</b></span><span>Failed <b>{result.failed}</b></span><span>Skipped <b>{result.skipped}</b></span></div>
           {result.executionId ? <small>n8n execution {result.executionId}</small> : null}
           {result.duplicatePrevented ? <small>Duplicate send prevented.</small> : null}
@@ -149,7 +197,7 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
       </section>
 
       <style jsx>{`
-        .campaign-center{display:grid;gap:22px}.campaign-panel{border:1px solid rgba(167,112,255,.24);border-radius:24px;background:linear-gradient(145deg,#11081f,#09050f);padding:24px}.campaign-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}.campaign-heading span,label span{display:block;color:#a99cbd;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.campaign-heading h2{margin:0;color:#fff;font-size:1.35rem}.campaign-heading strong{color:#bd8cff}.audience-tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.audience-tabs button{border:1px solid rgba(167,112,255,.24);border-radius:999px;padding:10px 15px;color:#c9bed9;background:#0d0716}.audience-tabs button.active{color:#fff;background:#7c3aed;border-color:#9f67ff}.filter-grid,.compose-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label input,label select,label textarea{width:100%;box-sizing:border-box;border:1px solid rgba(173,137,236,.24);border-radius:13px;padding:13px 14px;background:#08050e;color:#fff;font:inherit}label textarea{resize:vertical}.wide{grid-column:1/-1}.lead-picker{max-height:360px;overflow:auto;display:grid;gap:8px;padding-right:4px}.lead-row{display:flex;align-items:center;gap:12px;border:1px solid rgba(173,137,236,.16);border-radius:13px;padding:12px;background:#0a0611}.lead-row input{width:auto}.lead-row span{margin:0;text-transform:none;letter-spacing:0}.lead-row strong,.lead-row small{display:block}.lead-row small{color:#9d91ad;margin-top:4px}.campaign-submit{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:20px}.campaign-submit strong,.campaign-submit small{display:block}.campaign-submit small{color:#9d91ad;margin-top:5px}.campaign-submit button{border:0;border-radius:14px;padding:14px 18px;font-weight:800;color:white;background:linear-gradient(135deg,#9b5cff,#6d28d9)}.campaign-submit button:disabled{opacity:.45}.campaign-result{margin-top:16px;border:1px solid rgba(173,137,236,.24);border-radius:14px;padding:14px;color:#e7dcf8}.campaign-result.success{border-color:rgba(74,222,128,.35)}.campaign-result.warning{border-color:rgba(251,191,36,.35)}.campaign-result>strong{display:block;text-transform:capitalize;margin-bottom:10px}.result-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.result-grid span{display:flex;justify-content:space-between;background:#08050e;border-radius:9px;padding:8px;color:#a99cbd}.result-grid b{color:#fff}.campaign-result small{display:block;margin-top:9px;color:#9d91ad}.campaign-error{margin:16px 0 0;color:#fca5a5}@media(max-width:700px){.campaign-panel{padding:18px}.filter-grid,.compose-grid{grid-template-columns:1fr}.wide{grid-column:auto}.campaign-submit,.campaign-heading{align-items:stretch;flex-direction:column}.campaign-submit button{width:100%}.result-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .campaign-center{display:grid;gap:22px}.campaign-panel{border:1px solid rgba(167,112,255,.24);border-radius:24px;background:linear-gradient(145deg,#11081f,#09050f);padding:24px}.campaign-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}.campaign-heading span,label span{display:block;color:#a99cbd;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.campaign-heading h2{margin:0;color:#fff;font-size:1.35rem}.campaign-heading strong{color:#bd8cff}.audience-tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.audience-tabs button{border:1px solid rgba(167,112,255,.24);border-radius:999px;padding:10px 15px;color:#c9bed9;background:#0d0716}.audience-tabs button.active{color:#fff;background:#7c3aed;border-color:#9f67ff}.campaign-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:18px}.campaign-type-grid button{text-align:left;border:1px solid rgba(167,112,255,.18);border-radius:15px;padding:13px;background:#08050e;color:#d8cceb}.campaign-type-grid button.active{border-color:#9f67ff;background:rgba(124,58,237,.22)}.campaign-type-grid strong,.campaign-type-grid span,.campaign-type-grid small{display:block}.campaign-type-grid strong{font-size:.9rem;color:#fff}.campaign-type-grid span{margin-top:6px;color:#9d91ad;font-size:.76rem;line-height:1.35}.campaign-type-grid small{margin-top:8px;color:#bd8cff;font-size:.68rem;overflow-wrap:anywhere}.filter-grid,.compose-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label input,label select,label textarea{width:100%;box-sizing:border-box;border:1px solid rgba(173,137,236,.24);border-radius:13px;padding:13px 14px;background:#08050e;color:#fff;font:inherit}label textarea{resize:vertical}.wide{grid-column:1/-1}.lead-picker{max-height:360px;overflow:auto;display:grid;gap:8px;padding-right:4px}.lead-row{display:flex;align-items:center;gap:12px;border:1px solid rgba(173,137,236,.16);border-radius:13px;padding:12px;background:#0a0611}.lead-row input{width:auto}.lead-row span{margin:0;text-transform:none;letter-spacing:0}.lead-row strong,.lead-row small{display:block}.lead-row small{color:#9d91ad;margin-top:4px}.campaign-submit{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:20px}.campaign-submit strong,.campaign-submit small{display:block}.campaign-submit small{color:#9d91ad;margin-top:5px}.campaign-submit button{border:0;border-radius:14px;padding:14px 18px;font-weight:800;color:white;background:linear-gradient(135deg,#9b5cff,#6d28d9)}.campaign-submit button:disabled{opacity:.45}.campaign-result{margin-top:16px;border:1px solid rgba(173,137,236,.24);border-radius:14px;padding:14px;color:#e7dcf8}.campaign-result.success{border-color:rgba(74,222,128,.35)}.campaign-result.warning{border-color:rgba(251,191,36,.35)}.campaign-result>strong{display:block;text-transform:capitalize;margin-bottom:10px}.result-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.result-grid span{display:flex;justify-content:space-between;background:#08050e;border-radius:9px;padding:8px;color:#a99cbd}.result-grid b{color:#fff}.campaign-result small{display:block;margin-top:9px;color:#9d91ad}.campaign-error{margin:16px 0 0;color:#fca5a5}@media(max-width:820px){.campaign-type-grid{grid-template-columns:1fr}}@media(max-width:700px){.campaign-panel{padding:18px}.filter-grid,.compose-grid{grid-template-columns:1fr}.wide{grid-column:auto}.campaign-submit,.campaign-heading{align-items:stretch;flex-direction:column}.campaign-submit button{width:100%}.result-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       `}</style>
     </div>
   );

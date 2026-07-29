@@ -54,6 +54,8 @@ type CampaignSummary = {
 
 export type MaiaCampaignAction = {
   commandId: string;
+  campaignType?: string;
+  templateName?: string;
   topic: string;
   message: string;
   recipients: ProgressiveLead[];
@@ -187,6 +189,10 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       recipient_phones: phones,
       custom_message: command.message,
       message_text: command.message,
+      campaign_type: command.campaignType || "limitless_realty_update",
+      template_name: command.templateName || "limitless_realty_update_v2",
+      approved_template_name: command.templateName || "limitless_realty_update_v2",
+      allow_template_fallback: true,
       topic: command.topic,
       property_filter: command.propertyTitle || "",
       confirm_send: true,

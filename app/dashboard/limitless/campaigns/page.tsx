@@ -41,11 +41,13 @@ export default async function CampaignsPage() {
         <div className="admin-panel-header"><div><h2>Recent Campaign Reports</h2><p>Provider submission, delivery confirmation, failures, and n8n execution references.</p></div></div>
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Campaign</th><th>Status</th><th>Attempted</th><th>Sent</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Execution</th><th>Date</th></tr></thead>
+            <thead><tr><th>Campaign</th><th>Type</th><th>Template</th><th>Status</th><th>Attempted</th><th>Sent</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Execution</th><th>Date</th></tr></thead>
             <tbody>
               {campaigns.length ? campaigns.map((campaign) => (
                 <tr key={campaign.id}>
                   <td>{campaign.campaign_topic}</td>
+                  <td>{campaign.campaign_type.replaceAll("_", " ")}</td>
+                  <td>{campaign.template_name || "-"}</td>
                   <td>{campaign.status.replaceAll("_", " ")}</td>
                   <td>{campaign.attempted}</td>
                   <td>{campaign.accepted}</td>
@@ -56,7 +58,7 @@ export default async function CampaignsPage() {
                   <td>{campaign.execution_id || "-"}</td>
                   <td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString("en-NG") : "-"}</td>
                 </tr>
-              )) : <tr><td colSpan={10}>No saved campaign reports yet.</td></tr>}
+              )) : <tr><td colSpan={12}>No saved campaign reports yet.</td></tr>}
             </tbody>
           </table>
         </div>
