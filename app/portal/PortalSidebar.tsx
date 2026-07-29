@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Cable, LayoutDashboard, Menu, Settings, Workflow, X, Zap } from "lucide-react";
+import { Bot, LayoutDashboard, Menu, Settings, Workflow, X, Zap } from "lucide-react";
 import { useState } from "react";
 
 const links = [
   { href: "/portal", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/portal/agents", label: "Agents", icon: Bot },
   { href: "/portal/workflows", label: "Workflows", icon: Workflow },
-  { href: "/portal/integrations", label: "Integrations", icon: Cable },
   { href: "/portal/settings", label: "Settings", icon: Settings },
 ];
 
