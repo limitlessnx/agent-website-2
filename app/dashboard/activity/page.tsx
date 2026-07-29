@@ -51,7 +51,7 @@ export default async function UnifiedActivityPage() {
         </section>
 
         <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Workflow Activity</h2><p>Grouped n8n operational state.</p></div><Workflow size={18} /></div>
+          <div className="admin-panel-header"><div><h2>Workflow Activity</h2><p>Grouped automation operational state.</p></div><Workflow size={18} /></div>
           <div className="admin-list">
             {n8n.workflows.slice(0, 12).map((workflow) => (
               <a href="/dashboard/workflows" className="admin-list-row compact" key={workflow.id}>
@@ -59,7 +59,7 @@ export default async function UnifiedActivityPage() {
                 <em className={workflow.active ? "good" : "muted"}>{workflow.active ? "active" : "off"}</em>
               </a>
             ))}
-            {!n8n.workflows.length ? <p className="admin-empty">No workflow activity returned from n8n.</p> : null}
+            {!n8n.workflows.length ? <p className="admin-empty">No workflow activity returned from the automation engine.</p> : null}
           </div>
         </section>
       </div>

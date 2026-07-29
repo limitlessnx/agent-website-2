@@ -12,6 +12,15 @@ type Props = {
 
 const providers = ["n8n", "trigger.dev", "telegram", "whatsapp", "email", "elevenlabs", "custom"];
 const statuses: WorkflowRecord["status"][] = ["active", "paused", "draft", "error", "disabled"];
+const providerLabels: Record<string, string> = {
+  n8n: "Automation Engine",
+  "trigger.dev": "Task Runner",
+  telegram: "Telegram",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  elevenlabs: "Voice",
+  custom: "Custom",
+};
 
 function familyLabel(value: string) {
   return value
@@ -102,7 +111,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to update workflow.");
       setWorkflows((current) => current.map((item) => item.id === workflow.id ? result.workflow : item));
-      setMessage(`${workflow.name} is now ${status}${workflow.provider === "n8n" ? " in n8n and Fluxknight" : ""}.`);
+      setMessage(`${workflow.name} is now ${status}.`);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to update workflow.");
@@ -136,7 +145,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
       <div key={workflow.id} className="admin-list-row">
         <div>
           <strong>{workflow.name}</strong>
-          <span>{workflow.project_id} · {workflow.provider} · v{workflow.current_version}</span>
+          <span>{workflow.project_id} · {providerLabels[workflow.provider] || workflow.provider} · v{workflow.current_version}</span>
           <span>{workflow.description || workflow.workflow_key}</span>
         </div>
         <div className="admin-inline-actions">
@@ -174,9 +183,9 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
             <label>Workflow key<input name="workflow_key" required placeholder="maia-lead-onboarding" /></label>
             <label>Agent family / organization<input name="organization_id" defaultValue="limitless-realty" required /></label>
             <label>Project<input name="project_id" defaultValue="limitless-realty" required /></label>
-            <label>Provider<select name="provider" defaultValue="n8n">{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label>
+            <label>Provider<select name="provider" defaultValue="n8n">{providers.map((provider) => <option key={provider} value={provider}>{providerLabels[provider] || provider}</option>)}</select></label>
             <label>Status<select name="status" defaultValue="draft">{statuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-            <label>External workflow ID<input name="external_workflow_id" placeholder="n8n workflow ID" /></label>
+            <label>External workflow ID<input name="external_workflow_id" placeholder="Automation engine ID" /></label>
             <label>Endpoint URL<input name="endpoint_url" type="url" placeholder="https://..." /></label>
             <label>Timeout seconds<input name="timeout_seconds" type="number" min="5" defaultValue="60" /></label>
             <label>Maximum retries<input name="max_retries" type="number" min="0" max="10" defaultValue="2" /></label>

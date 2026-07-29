@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 const integrations = [
   { key: "supabase", label: "Supabase", icon: Database },
-  { key: "n8n", label: "n8n", icon: Workflow },
+  { key: "n8n", label: "Automation Engine", icon: Workflow },
   { key: "whatsapp", label: "WhatsApp", icon: MessageSquare },
   { key: "email", label: "Email", icon: Mail },
   { key: "elevenlabs", label: "ElevenLabs", icon: Mic },

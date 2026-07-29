@@ -1,22 +1,23 @@
 import { getSupabaseReadiness } from "@/lib/limitless-data";
 
 const settings = [
-  { keys: ["LIMITLESS_ADMIN_EMAIL"], label: "Admin login email" },
-  { keys: ["LIMITLESS_ADMIN_PASSWORD"], label: "Admin login password" },
-  { keys: ["ADMIN_SESSION_SECRET"], label: "Cookie signing secret" },
-  { keys: ["LIMITLESS_API_KEY"], label: "API key for n8n/backend requests" },
-  { keys: ["LIMITLESS_SUPABASE_URL", "SUPABASE_URL"], label: "Supabase project URL" },
+  { keys: ["LIMITLESS_ADMIN_EMAIL"], label: "Admin login email", display: "ADMIN_EMAIL" },
+  { keys: ["LIMITLESS_ADMIN_PASSWORD"], label: "Admin login password", display: "ADMIN_PASSWORD" },
+  { keys: ["ADMIN_SESSION_SECRET"], label: "Cookie signing secret", display: "SESSION_SECRET" },
+  { keys: ["LIMITLESS_API_KEY"], label: "API key for backend requests", display: "BACKEND_API_KEY" },
+  { keys: ["LIMITLESS_SUPABASE_URL", "SUPABASE_URL"], label: "Database project URL", display: "DATABASE_URL" },
   {
     keys: ["LIMITLESS_SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"],
-    label: "Supabase server key",
+    label: "Database server key",
+    display: "DATABASE_SERVER_KEY",
   },
-  { keys: ["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"], label: "Supabase public/anon key" },
-  { keys: ["N8N_BASE_URL"], label: "n8n base URL" },
-  { keys: ["N8N_EMAIL"], label: "n8n login email" },
-  { keys: ["N8N_PASSWORD"], label: "n8n login password" },
-  { keys: ["GOOGLE_SERVICE_ACCOUNT_EMAIL"], label: "Google Drive service account email" },
-  { keys: ["GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY"], label: "Google Drive service account private key" },
-  { keys: ["GOOGLE_DRIVE_PROPERTY_FOLDER_ID"], label: "Google Drive parent folder for property images" },
+  { keys: ["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"], label: "Database public key", display: "DATABASE_PUBLIC_KEY" },
+  { keys: ["N8N_BASE_URL"], label: "Automation engine base URL", display: "AUTOMATION_ENGINE_URL" },
+  { keys: ["N8N_EMAIL"], label: "Automation engine login email", display: "AUTOMATION_ENGINE_EMAIL" },
+  { keys: ["N8N_PASSWORD"], label: "Automation engine login password", display: "AUTOMATION_ENGINE_PASSWORD" },
+  { keys: ["GOOGLE_SERVICE_ACCOUNT_EMAIL"], label: "Media storage service account email", display: "MEDIA_STORAGE_EMAIL" },
+  { keys: ["GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY"], label: "Media storage service account private key", display: "MEDIA_STORAGE_PRIVATE_KEY" },
+  { keys: ["GOOGLE_DRIVE_PROPERTY_FOLDER_ID"], label: "Media storage folder for property images", display: "MEDIA_STORAGE_FOLDER_ID" },
 ];
 
 export default async function SettingsPage() {
@@ -44,7 +45,7 @@ export default async function SettingsPage() {
           {settings.map((setting) => (
             <div key={setting.keys.join("|")} className="admin-list-row">
               <div>
-                <strong>{setting.keys.join(" or ")}</strong>
+                <strong>{setting.display}</strong>
                 <span>{setting.label}</span>
               </div>
               <em>{setting.keys.some((key) => process.env[key]) ? "set" : "missing"}</em>
@@ -70,8 +71,8 @@ export default async function SettingsPage() {
           )) : (
             <div className="admin-list-row">
               <div>
-                <strong>Supabase</strong>
-                <span>Set Supabase env vars in Vercel before table checks can run.</span>
+                <strong>Database</strong>
+                <span>Set database env vars in Vercel before table checks can run.</span>
               </div>
               <em>pending</em>
             </div>

@@ -17,7 +17,7 @@ type CampaignResult = {
   skipped: number;
   campaignType?: string;
   templateName?: string;
-  executionId?: string;
+  cooldownSkipped?: number;
   duplicatePrevented?: boolean;
 };
 
@@ -132,9 +132,9 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
           pendingDelivery: data.pendingDelivery || 0,
           failed: data.failed || 0,
           skipped: data.skipped || 0,
+          cooldownSkipped: data.cooldownSkipped || 0,
           campaignType: data.campaignType,
           templateName: data.templateName,
-          executionId: data.executionId,
           duplicatePrevented: data.duplicatePrevented,
         });
       } catch (caught) {
@@ -190,7 +190,7 @@ export default function WhatsAppCampaignCenter({ leads, properties }: Props) {
           <strong>{result.status.replaceAll("_", " ")}</strong>
           <small>{selectedCampaignType.label} · {result.templateName || selectedCampaignType.templateName}</small>
           <div className="result-grid"><span>Attempted <b>{result.attempted}</b></span><span>Sent <b>{result.sent}</b></span><span>Delivered <b>{result.delivered}</b></span><span>Pending <b>{result.pendingDelivery}</b></span><span>Failed <b>{result.failed}</b></span><span>Skipped <b>{result.skipped}</b></span></div>
-          {result.executionId ? <small>n8n execution {result.executionId}</small> : null}
+          {result.cooldownSkipped ? <small>{result.cooldownSkipped} skipped because WhatsApp recently blocked delivery to the contact.</small> : null}
           {result.duplicatePrevented ? <small>Duplicate send prevented.</small> : null}
         </div> : null}
         {error ? <p className="campaign-error">{error}</p> : null}

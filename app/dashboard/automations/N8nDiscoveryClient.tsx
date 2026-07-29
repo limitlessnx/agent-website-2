@@ -7,7 +7,7 @@ type N8nWorkflow = { id: string; name: string; active: boolean; editor_url?: str
 type Props = { workflows: N8nWorkflow[]; registeredWorkflows: WorkflowRecord[]; configured: boolean };
 
 function workflowKey(name: string, id: string) {
-  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || `n8n-${id}`;
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || `automation-${id}`;
 }
 
 export default function N8nDiscoveryClient({ workflows: initialWorkflows, registeredWorkflows, configured }: Props) {
@@ -28,7 +28,7 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
     try {
       const response = await fetch("/api/admin/n8n/sync", { method: "POST" });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Unable to sync n8n workflows.");
+      if (!response.ok) throw new Error(result.error || "Unable to sync automations.");
 
       const syncedRecords = Array.isArray(result.workflows) ? result.workflows as WorkflowRecord[] : [];
       setRegisteredIds(new Set(syncedRecords.map((item) => item.external_workflow_id).filter(Boolean)));
@@ -36,9 +36,9 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
         const record = syncedRecords.find((item) => item.external_workflow_id === workflow.id);
         return record ? { ...workflow, active: record.status === "active" } : workflow;
       }));
-      setMessage(`${result.synced || 0} n8n workflows synchronized.`);
+      setMessage(`${result.synced || 0} automations synchronized.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to sync n8n workflows.");
+      setMessage(error instanceof Error ? error.message : "Unable to sync automations.");
     } finally {
       setSyncing(false);
     }
@@ -56,7 +56,7 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
           project_id: "limitless-realty",
           workflow_key: workflowKey(workflow.name, workflow.id),
           name: workflow.name,
-          description: "Imported from the connected n8n workspace.",
+          description: "Imported from the connected automation engine.",
           provider: "n8n",
           external_workflow_id: workflow.id,
           status: workflow.active ? "active" : "paused",
@@ -82,11 +82,11 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
         <div>
           <strong>{workflow.name}</strong>
           <span>External ID: {workflow.id}</span>
-          <span>{imported ? "Managed in Fluxknight registry" : "Discovered from n8n"}</span>
+          <span>{imported ? "Managed in Fluxknight registry" : "Discovered from the automation engine"}</span>
         </div>
         <div className="admin-row-actions">
           <em className={workflow.active ? "good" : "muted"}>{workflow.active ? "active" : "inactive"}</em>
-          {workflow.editor_url ? <a className="admin-button secondary" href={workflow.editor_url} target="_blank" rel="noreferrer">Open in n8n</a> : null}
+          {workflow.editor_url ? <a className="admin-button secondary" href={workflow.editor_url} target="_blank" rel="noreferrer">Open engine</a> : null}
           <button className="admin-button" type="button" disabled={imported || busyId === workflow.id} onClick={() => importWorkflow(workflow)}>
             {busyId === workflow.id ? "Importing..." : imported ? "Imported" : "Import"}
           </button>
@@ -99,11 +99,11 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
     <section className="admin-panel">
       <div className="admin-panel-header">
         <div>
-          <h2>n8n automations</h2>
-          <p>{configured ? "Automations are grouped by their current n8n activity state." : "Add n8n environment variables to enable workflow discovery."}</p>
+          <h2>Automation Engine</h2>
+          <p>{configured ? "Automations are grouped by their current activity state." : "Add automation engine environment variables to enable discovery."}</p>
         </div>
         <button className="admin-button" type="button" disabled={!configured || syncing} onClick={syncN8n}>
-          {syncing ? "Syncing..." : "Sync n8n"}
+          {syncing ? "Syncing..." : "Sync engine"}
         </button>
       </div>
       {message ? <p className="admin-form-message">{message}</p> : null}
@@ -115,7 +115,7 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
             <p>{groupedWorkflows.active.length} automation{groupedWorkflows.active.length === 1 ? "" : "s"} currently running.</p>
           </div>
         </div>
-        {groupedWorkflows.active.length ? groupedWorkflows.active.map(renderWorkflow) : <p>No active n8n automations.</p>}
+        {groupedWorkflows.active.length ? groupedWorkflows.active.map(renderWorkflow) : <p>No active automations.</p>}
       </div>
 
       <div className="admin-list" style={{ marginTop: 24 }}>
@@ -125,7 +125,7 @@ export default function N8nDiscoveryClient({ workflows: initialWorkflows, regist
             <p>{groupedWorkflows.inactive.length} paused or inactive automation{groupedWorkflows.inactive.length === 1 ? "" : "s"}.</p>
           </div>
         </div>
-        {groupedWorkflows.inactive.length ? groupedWorkflows.inactive.map(renderWorkflow) : <p>No inactive n8n automations.</p>}
+        {groupedWorkflows.inactive.length ? groupedWorkflows.inactive.map(renderWorkflow) : <p>No inactive automations.</p>}
       </div>
     </section>
   );

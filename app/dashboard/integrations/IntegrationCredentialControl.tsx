@@ -12,8 +12,8 @@ const providerFields: Record<string, Array<{ key: string; label: string; type?: 
     { key: "business_account_id", label: "Business account ID" },
   ],
   n8n: [
-    { key: "base_url", label: "n8n base URL" },
-    { key: "api_key", label: "n8n API key", type: "password" },
+    { key: "base_url", label: "Automation engine base URL" },
+    { key: "api_key", label: "Automation engine API key", type: "password" },
   ],
   elevenlabs: [{ key: "api_key", label: "ElevenLabs API key", type: "password" }],
   supabase: [

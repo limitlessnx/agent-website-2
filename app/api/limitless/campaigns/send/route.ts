@@ -14,6 +14,7 @@ import {
   buildPropertyCampaignContent,
   PropertyCampaignMessageError,
 } from "@/lib/property-campaign-message";
+import { getMetaCooldownPhones } from "@/lib/whatsapp-status-log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
     const budgetMax = money(body.budgetMax);
     const mode = body.audienceMode || "all";
 
-    const recipients = allLeads.filter((lead) => {
+    const matchedRecipients = allLeads.filter((lead) => {
       if (!isContactable(lead)) return false;
       if (mode === "manual") return selectedIds.has(String(lead.id));
       if (mode === "all") return true;
@@ -141,9 +142,21 @@ export async function POST(request: Request) {
       if (budgetMax && (!budget || budget > budgetMax)) return false;
       return true;
     });
+    const cooldowns = await getMetaCooldownPhones(matchedRecipients.map((lead) => lead.phone), 24);
+    const recipients = matchedRecipients.filter((lead) => !cooldowns.has(lead.phone.replace(/[^\d]/g, "")));
+    const cooldownSkipped = matchedRecipients.length - recipients.length;
 
     if (!recipients.length) {
-      return NextResponse.json({ error: "No campaign-eligible leads matched this audience." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: cooldownSkipped
+            ? `All matched leads are currently in WhatsApp cooldown after Meta delivery blocks. Wait before retrying or ask the contact to message Maia first.`
+            : "No campaign-eligible leads matched this audience.",
+          skipped: cooldownSkipped,
+          cooldownSkipped,
+        },
+        { status: 400 },
+      );
     }
 
     await repairMaiaActionWorkflowInput();
@@ -173,7 +186,7 @@ export async function POST(request: Request) {
     const firstDispatch = dispatches[0];
     const accepted = Math.min(...dispatches.map((item) => Number(item.accepted || 0)));
     const failed = Math.max(...dispatches.map((item) => Number(item.failed || 0)));
-    const skipped = Math.max(...dispatches.map((item) => Number(item.skipped || 0)));
+    const skipped = cooldownSkipped + Math.max(...dispatches.map((item) => Number(item.skipped || 0)));
     const pendingDelivery = dispatches.reduce((total, item) => total + Number(item.pendingDelivery || 0), 0);
     const delivered = dispatches.reduce(
       (total, item) => total + Number((item.summary as Record<string, unknown>).delivered || 0),
@@ -211,6 +224,7 @@ export async function POST(request: Request) {
       pendingDelivery,
       freeFormSent,
       templateSent,
+      cooldownSkipped,
       messageParts: messageParts.length,
       originalCharacterCount: message.length,
       status,
