@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { provisionClientOrganization } from "@/lib/client-onboarding";
-import { getPrimaryMembership, setClientSession, signUpClient } from "@/lib/client-auth";
+import { getPrimaryMembership, setClientSession, setPendingClientSetupSession, signUpClient } from "@/lib/client-auth";
 
 function slugify(value: string) {
   return value
@@ -36,10 +36,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (!auth.access_token) {
+      if (auth.user?.id) {
+        await setPendingClientSetupSession({
+          userId: auth.user.id,
+          email: auth.user.email || email,
+          issuedAt: Date.now(),
+        });
+      }
+
       return NextResponse.json({
         ok: true,
+        signed_in: false,
         requires_email_confirmation: true,
-        message: "Account created. Check your email, verify your address, then sign in to finish creating your workspace.",
+        message: "Account created. Verify your email to activate the signed-in workspace session.",
       }, { status: 201 });
     }
 
@@ -70,8 +79,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      signed_in: true,
       requires_email_confirmation: false,
       organization: provisioned,
+      redirect_to: "/portal",
     }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create account.";
