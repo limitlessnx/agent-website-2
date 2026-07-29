@@ -6,9 +6,14 @@ import Navbar from "@/components/Navbar";
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdminArea = pathname === "/login" || pathname.startsWith("/dashboard");
+  const isApplicationArea =
+    pathname === "/login" ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/portal") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/account");
 
-  if (isAdminArea) return <main>{children}</main>;
+  if (isApplicationArea) return <main>{children}</main>;
 
   return (
     <>
