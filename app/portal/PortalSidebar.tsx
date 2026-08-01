@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Cable, ChevronDown, LayoutDashboard, Menu, Settings, X, Zap } from "lucide-react";
+import { Bot, Cable, ChevronDown, LayoutDashboard, Menu, Settings, Workflow, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const links = [
@@ -58,6 +58,7 @@ export default function PortalSidebar({ organization }: { organization: string }
             <div className={agentsOpen ? "portal-nav-drawer-items open" : "portal-nav-drawer-items"}>
               <Link href="/portal/agents" className={pathname === "/portal/agents" ? "active" : ""}>All agents</Link>
               <Link href="/portal/agents/setup" className={pathname.startsWith("/portal/agents/setup") ? "active" : ""}>Setup workspace</Link>
+              <Link href="/portal/agents/workflows" className={pathname.startsWith("/portal/agents/workflows") ? "active" : ""}><Workflow size={14} />Workflow assignments</Link>
             </div>
           </section>
 
