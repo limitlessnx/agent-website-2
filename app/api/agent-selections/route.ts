@@ -44,10 +44,9 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await sessionOrThrow();
-    const body = await request.json();
-    const requested: string[] = Array.isArray(body.agent_keys)
-      ? [...new Set(body.agent_keys.map((value: unknown) => String(value)))]
-      : [];
+    const body = (await request.json()) as Record<string, unknown>;
+    const rawAgentKeys = Array.isArray(body.agent_keys) ? (body.agent_keys as unknown[]) : [];
+    const requested = Array.from(new Set<string>(rawAgentKeys.map((value) => String(value))));
     const selected = requested.filter(isAgentKey);
     if (!selected.length) return NextResponse.json({ error: "Select at least one standard agent." }, { status: 400 });
 
