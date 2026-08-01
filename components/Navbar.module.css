@@ -102,6 +102,7 @@
   display: flex;
   justify-content: flex-end;
   background: rgba(2,1,6,.88);
+  overflow: hidden;
 }
 
 .backdrop {
@@ -119,15 +120,16 @@
   position: relative;
   z-index: 1;
   width: min(390px, 100vw);
-  height: 100dvh;
-  min-height: 100vh;
-  padding: max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+  height: 100svh;
+  max-height: 100dvh;
+  min-height: 0;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(12px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   border-left: 1px solid rgba(180,139,255,.28);
   background: #08040f;
   box-shadow: -30px 0 100px rgba(0,0,0,.8);
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
 }
 
@@ -157,9 +159,15 @@
 }
 
 .mobileLinks {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
+  align-content: start;
   gap: 9px;
   padding: 22px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobileLinks a {
@@ -182,11 +190,16 @@
 }
 
 .mobileActions {
-  margin-top: auto;
-  padding-top: 20px;
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding-top: 14px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
   display: grid;
   gap: 10px;
   border-top: 1px solid rgba(180,139,255,.18);
+  background: #08040f;
 }
 
 .mobileActions a {
@@ -220,6 +233,14 @@
   .desktopLinks,
   .desktopActions { display: none; }
   .mobileToggle { display: grid; }
+}
+
+@media (max-height: 700px) and (max-width: 920px) {
+  .drawerHeader { min-height: 60px; padding-bottom: 10px; }
+  .mobileLinks { gap: 7px; padding: 12px 0; }
+  .mobileLinks a { min-height: 46px; font-size: .96rem; }
+  .mobileActions { gap: 8px; padding-top: 10px; }
+  .mobileActions a { min-height: 46px; padding: 10px; }
 }
 
 @media (min-width: 921px) {
