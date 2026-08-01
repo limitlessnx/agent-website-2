@@ -15,6 +15,10 @@ const catalog = {
 
 type AgentKey = keyof typeof catalog;
 
+function isAgentKey(value: string): value is AgentKey {
+  return Object.prototype.hasOwnProperty.call(catalog, value);
+}
+
 async function sessionOrThrow() {
   const session = await getClientSession();
   if (!session) throw new Error("Authentication required.");
@@ -41,9 +45,10 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await sessionOrThrow();
     const body = await request.json();
-    const selected = Array.isArray(body.agent_keys)
-      ? [...new Set(body.agent_keys.map(String))].filter((key): key is AgentKey => key in catalog)
+    const requested: string[] = Array.isArray(body.agent_keys)
+      ? [...new Set(body.agent_keys.map((value: unknown) => String(value)))]
       : [];
+    const selected = requested.filter(isAgentKey);
     if (!selected.length) return NextResponse.json({ error: "Select at least one standard agent." }, { status: 400 });
 
     const supabase = await createClient();
