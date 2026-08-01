@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, ChevronDown, LayoutDashboard, Menu, Settings, X, Zap } from "lucide-react";
+import { Bot, Cable, ChevronDown, LayoutDashboard, Menu, Settings, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const links = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/portal/integrations", label: "Integrations", icon: Cable },
   { href: "/portal/settings", label: "Settings", icon: Settings },
 ];
 
@@ -47,11 +48,7 @@ export default function PortalSidebar({ organization }: { organization: string }
         </Link>
 
         <nav aria-label="Client dashboard navigation">
-          {links.slice(0, 1).map((item) => {
-            const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const Icon = item.icon;
-            return <Link key={item.href} href={item.href} className={active ? "active" : ""}><Icon size={18} /><span>{item.label}</span></Link>;
-          })}
+          <Link href="/portal" className={pathname === "/portal" ? "active" : ""}><LayoutDashboard size={18} /><span>Dashboard</span></Link>
 
           <section className={`portal-nav-drawer ${agentsActive ? "active" : ""}`}>
             <button type="button" onClick={() => setAgentsOpen((current) => !current)} aria-expanded={agentsOpen}>
@@ -59,7 +56,8 @@ export default function PortalSidebar({ organization }: { organization: string }
               <ChevronDown size={16} className={agentsOpen ? "open" : ""} />
             </button>
             <div className={agentsOpen ? "portal-nav-drawer-items open" : "portal-nav-drawer-items"}>
-              <Link href="/portal/agents" className={agentsActive ? "active" : ""}>All agents</Link>
+              <Link href="/portal/agents" className={pathname === "/portal/agents" ? "active" : ""}>All agents</Link>
+              <Link href="/portal/agents/setup" className={pathname.startsWith("/portal/agents/setup") ? "active" : ""}>Setup workspace</Link>
             </div>
           </section>
 
