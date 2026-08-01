@@ -1,70 +1,14 @@
-import { KeyRound, PlugZap, ShieldCheck } from "lucide-react";
-import { getPlatformEngineSummary, humanize } from "@/lib/platform-engine";
-import IntegrationCredentialControl from "./IntegrationCredentialControl";
+import { Cable, ShieldCheck } from "lucide-react";
+import { requireTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const { integrations, errors } = await getPlatformEngineSummary();
-  const configured = integrations.filter((item) => item.has_credentials).length;
-  const connected = integrations.filter((item) => item.status === "connected").length;
-  const attention = integrations.filter((item) => ["error", "authentication_failed"].includes(item.status)).length;
+  const { supabase, organizationId } = await requireTenant();
+  const [{ data: integrations, error }, { data: bindings }] = await Promise.all([
+    supabase.from("organization_integrations").select("id,provider,display_name,status,health,last_checked_at,last_connected_at").eq("organization_id", organizationId).order("display_name"),
+    supabase.from("channel_bindings").select("id,integration_id,channel,external_identifier,status,agent_id").eq("organization_id", organizationId),
+  ]);
 
-  return (
-    <main className="admin-page">
-      <header className="admin-page-header">
-        <div>
-          <p className="admin-kicker">Platform Engine</p>
-          <h1>Integration Center</h1>
-          <p>Configure organization providers using encrypted Supabase Vault storage. Secret values are never returned to the dashboard.</p>
-        </div>
-      </header>
-
-      <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><PlugZap size={15} /> Registered</p><strong>{integrations.length}</strong><span>Organization provider records</span></article>
-        <article className="admin-metric-card"><p><KeyRound size={15} /> Configured</p><strong>{configured}</strong><span>Credentials stored in Vault</span></article>
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Connected</p><strong>{connected}</strong><span>Verified provider connections</span></article>
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Attention</p><strong>{attention}</strong><span>Authentication or provider errors</span></article>
-      </div>
-
-      <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div><h2>Organization integrations</h2><p>Configure or rotate provider credentials without exposing stored secret values.</p></div>
-          <PlugZap size={18} />
-        </div>
-        <div className="admin-list">
-          {integrations.map((item) => {
-            const healthMessage = typeof item.health?.message === "string" ? item.health.message : "No health check has run yet.";
-            return (
-              <div className="admin-list-row" key={item.id} style={{ alignItems: "start", gap: 18 }}>
-                <div style={{ flex: 1 }}>
-                  <strong>{item.display_name}</strong>
-                  <span>{item.organization_name} · {humanize(item.provider)}</span>
-                  <span>Status: {humanize(item.status)} · {healthMessage}</span>
-                  <span>
-                    Last checked {item.last_checked_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.last_checked_at)) : "not yet"}
-                    {item.last_rotated_at ? ` · Credentials rotated ${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(item.last_rotated_at))}` : ""}
-                  </span>
-                </div>
-                <IntegrationCredentialControl integration={{
-                  id: item.id,
-                  provider: item.provider,
-                  status: item.status,
-                  has_credentials: item.has_credentials,
-                  secret_keys: item.secret_keys || [],
-                }} />
-              </div>
-            );
-          })}
-          {!integrations.length ? <p className="admin-empty">No organization integrations are registered yet.</p> : null}
-        </div>
-      </section>
-
-      {errors.length ? (
-        <section className="admin-panel">
-          <div className="admin-list-row compact"><div><strong>Migration or connection setup required</strong><span>{errors.join(" · ")}</span></div><ShieldCheck size={16} /></div>
-        </section>
-      ) : null}
-    </main>
-  );
+  return <main className="admin-page"><header className="admin-page-header"><div><p className="admin-kicker">Connections</p><h1>Integrations</h1><p>Provider credentials remain server-side. This page exposes health and routing metadata only.</p></div></header>{error ? <section className="admin-panel"><p className="admin-error">{error.message}</p></section> : null}<section className="admin-grid">{integrations?.map((integration) => { const routes = bindings?.filter((binding) => binding.integration_id === integration.id) ?? []; return <article className="admin-card" key={integration.id}><Cable size={18}/><h2>{integration.display_name}</h2><p>{integration.provider}</p><div className="admin-list-row"><strong>{routes.length} channel binding{routes.length === 1 ? "" : "s"}</strong><span>{integration.status}</span></div>{routes.map((route) => <div className="admin-list-row" key={route.id}><strong>{route.channel}</strong><span>{route.external_identifier} · {route.status}</span></div>)}</article>; })}{!integrations?.length ? <article className="admin-card"><ShieldCheck size={18}/><h2>No integrations connected</h2><p>WhatsApp, email, voice and other providers will appear here after secure onboarding.</p></article> : null}</section></main>;
 }
