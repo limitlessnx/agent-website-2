@@ -1,4 +1,6 @@
-create or replace function private.assign_workflows_for_approved_agent(
+drop function if exists private.assign_workflows_for_approved_agent(uuid, uuid, uuid);
+
+create function private.assign_workflows_for_approved_agent(
   target_organization_id uuid,
   target_agent_id uuid,
   target_approval_request_id uuid
