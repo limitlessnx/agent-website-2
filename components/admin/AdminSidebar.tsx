@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
-  CreditCard, Database, Home, Image, Layers3, LineChart, Megaphone, Menu,
+  CreditCard, Database, Home, Image, Layers3, LifeBuoy, LineChart, Megaphone, Menu,
   MessageCircle, PlugZap, Plus, Settings, Users, X, Bell,
   Mail, PhoneCall, Search,
 } from "lucide-react";
@@ -20,6 +20,7 @@ const platformGroups = [
     label: "Fluxknight Platform",
     items: [
       { href: "/dashboard", label: "Command Center", icon: Home, exact: true },
+      { href: "/dashboard/support", label: "Agent Leo · AI Support", icon: LifeBuoy },
       { href: "/dashboard/notifications", label: "Admin Notifications", icon: Bell },
       { href: "/dashboard/agents", label: "Super Assistant", icon: Bot },
       { href: "/dashboard/activity", label: "Global Activity", icon: Activity },
