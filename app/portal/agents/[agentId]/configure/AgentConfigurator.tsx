@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Play, Save, Send, ShieldCheck } from "lucide-react";
 
+const channelOptions = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "email", label: "Email" },
+  { value: "web_chat", label: "Website Chat" },
+  { value: "telegram", label: "Telegram" },
+  { value: "voice", label: "Voice" },
+] as const;
+
 type AgentData = {
   id: string;
   name: string;
@@ -38,6 +46,19 @@ export default function AgentConfigurator({ agentId }: { agentId: string }) {
 
   function update<K extends keyof AgentData>(key: K, value: AgentData[K]) {
     setAgent((current) => current ? { ...current, [key]: value } : current);
+  }
+
+  function toggleChannel(channel: string) {
+    setAgent((current) => {
+      if (!current) return current;
+      const selected = Array.isArray(current.communication_channels) ? current.communication_channels : [];
+      return {
+        ...current,
+        communication_channels: selected.includes(channel)
+          ? selected.filter((value) => value !== channel)
+          : [...selected, channel],
+      };
+    });
   }
 
   async function save() {
@@ -87,6 +108,7 @@ export default function AgentConfigurator({ agentId }: { agentId: string }) {
 
   const qualification = Array.isArray(agent.configuration?.qualification_questions) ? agent.configuration.qualification_questions.join("\n") : "";
   const channels = Array.isArray(agent.communication_channels) ? agent.communication_channels : [];
+  const selectedChannelLabels = channelOptions.filter((option) => channels.includes(option.value)).map((option) => option.label);
 
   return (
     <main className="portal-page">
@@ -103,7 +125,24 @@ export default function AgentConfigurator({ agentId }: { agentId: string }) {
           <label className="admin-form-wide"><span>Description</span><textarea value={agent.description || ""} onChange={(event) => update("description", event.target.value)} /></label>
           <label className="admin-form-wide"><span>System prompt</span><textarea rows={12} value={agent.system_prompt || ""} onChange={(event) => update("system_prompt", event.target.value)} placeholder="Define the organisation, role, approved actions, restrictions and response standards." /></label>
           <label><span>Temperature: {Number(agent.temperature || 0.3).toFixed(1)}</span><input type="range" min="0" max="1" step="0.1" value={agent.temperature || 0.3} onChange={(event) => update("temperature", Number(event.target.value))} /></label>
-          <label><span>Channels</span><input value={channels.join(", ")} onChange={(event) => update("communication_channels", event.target.value.split(",").map((value) => value.trim()).filter(Boolean))} placeholder="whatsapp, email" /></label>
+          <div>
+            <span>Messaging channels</span>
+            <details className="portal-channel-multiselect">
+              <summary>{selectedChannelLabels.length ? selectedChannelLabels.join(", ") : "Select channels"}</summary>
+              <div className="portal-channel-options">
+                {channelOptions.map((option) => (
+                  <label key={option.value}>
+                    <input
+                      type="checkbox"
+                      checked={channels.includes(option.value)}
+                      onChange={() => toggleChannel(option.value)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </details>
+          </div>
           <label className="admin-form-wide"><span>Qualification questions, one per line</span><textarea value={qualification} onChange={(event) => setAgent((current) => current ? { ...current, configuration: { ...current.configuration, qualification_questions: event.target.value.split("\n").filter(Boolean) } } : current)} /></label>
           <label className="admin-form-wide"><span>Human handoff destination</span><input value={String(agent.human_handoff_destination?.contact || "")} onChange={(event) => update("human_handoff_destination", { ...agent.human_handoff_destination, contact: event.target.value })} placeholder="team email, phone or queue" /></label>
           <label className="admin-form-wide"><span>Escalation conditions</span><textarea value={String(agent.escalation_rules?.conditions || "")} onChange={(event) => update("escalation_rules", { ...agent.escalation_rules, conditions: event.target.value })} placeholder="Buyer intent, complaints, pricing exceptions, legal or sensitive requests…" /></label>
