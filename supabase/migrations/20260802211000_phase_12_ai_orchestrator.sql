@@ -119,10 +119,10 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object('id',id,'type',memory_type,'key',memory_key,'value',value,'confidence',confidence) order by updated_at desc),'[]'::jsonb)
   into v_memories from (select * from public.customer_memories where organization_id=v_exec.organization_id and agent_id=v_exec.agent_id order by updated_at desc limit 20) m;
 
-  select coalesce(jsonb_agg(jsonb_build_object('id',ks.id,'title',ks.title,'type',ks.source_type,'content',left(coalesce(ks.content,''),2000))),'[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('id',ks.id,'collection_id',ks.collection_id,'title',ks.title,'type',ks.source_type,'content',left(coalesce(ks.content,''),2000))),'[]'::jsonb)
   into v_knowledge
-  from public.agent_knowledge_bindings b join public.knowledge_sources ks on ks.organization_id=b.organization_id and ks.id=b.knowledge_source_id
-  where b.organization_id=v_exec.organization_id and b.agent_id=v_exec.agent_id and b.enabled=true and ks.status='ready';
+  from public.agent_knowledge_bindings b join public.knowledge_sources ks on ks.organization_id=b.organization_id and ks.collection_id=b.collection_id
+  where b.organization_id=v_exec.organization_id and b.agent_id=v_exec.agent_id and b.status='active' and ks.status in ('ready','active','processed');
 
   select coalesce(jsonb_agg(jsonb_build_object('key',td.tool_key,'name',td.display_name,'handler',td.handler_type,'input_schema',td.input_schema)),'[]'::jsonb)
   into v_tools
@@ -142,3 +142,40 @@ begin
 end $$;
 
 revoke all on function public.prepare_runtime_context(uuid) from public, anon, authenticated;
+
+create or replace function public.enqueue_agent_execution(
+  p_organization_id uuid,
+  p_agent_id uuid,
+  p_conversation_id uuid,
+  p_input jsonb,
+  p_idempotency_key text
+) returns uuid
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_ready boolean;
+  v_execution_id uuid;
+begin
+  select coalesce(readiness_score, 0) = 100 into v_ready
+  from public.agent_runtime_readiness
+  where organization_id=p_organization_id and agent_id=p_agent_id;
+
+  if not coalesce(v_ready, false) then raise exception 'Agent is not ready for execution'; end if;
+  if coalesce(p_idempotency_key, '') = '' then raise exception 'Idempotency key is required'; end if;
+  if p_conversation_id is not null and not exists (select 1 from public.agent_conversations where organization_id=p_organization_id and id=p_conversation_id and agent_id=p_agent_id) then
+    raise exception 'Conversation does not belong to agent organization';
+  end if;
+
+  select execution_id into v_execution_id
+  from public.command_queue
+  where organization_id=p_organization_id and idempotency_key=p_idempotency_key and execution_id is not null
+  limit 1;
+  if v_execution_id is not null then return v_execution_id; end if;
+
+  insert into public.runtime_executions(organization_id,agent_id,conversation_id,status,input)
+  values(p_organization_id,p_agent_id,p_conversation_id,'queued',coalesce(p_input,'{}'::jsonb)) returning id into v_execution_id;
+  insert into public.command_queue(organization_id,agent_id,execution_id,command_type,payload,idempotency_key)
+  values(p_organization_id,p_agent_id,v_execution_id,'agent.respond',jsonb_build_object('execution_id',v_execution_id),p_idempotency_key);
+  return v_execution_id;
+end $$;
+revoke all on function public.enqueue_agent_execution(uuid,uuid,uuid,jsonb,text) from public, anon, authenticated;
