@@ -111,6 +111,12 @@ function tenantLabel(value: string) {
 }
 
 const defaultOpenGroupIds = ["fluxknight-core", "home-agents", "tenants"];
+const defaultOpenSectionIds = ["home-agents:limitless-realty", "home-agents:gencouv"];
+
+function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
+  if (!section.label) return `${groupId}:${sectionIndex}`;
+  return `${groupId}:${section.label.toLowerCase().replaceAll(" ", "-")}`;
+}
 
 export default function AdminSidebar({ email, tenants }: { email: string; tenants: TenantNavItem[] }) {
   const pathname = usePathname();
@@ -136,10 +142,15 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     },
   ], [tenants]);
   const [openGroups, setOpenGroups] = useState<string[]>(defaultOpenGroupIds);
+  const [openSections, setOpenSections] = useState<string[]>(defaultOpenSectionIds);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   function toggleGroup(id: string) {
     setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
+  }
+
+  function toggleSection(id: string) {
+    setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]);
   }
 
   function closeMobileMenu() {
@@ -178,21 +189,39 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
                   <span>{group.label}</span><ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
                 </button>
                 <div className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
-                  {group.sections.map((section, sectionIndex) => (
-                    <div key={section.label || `${group.id}-${sectionIndex}`} className={styles.section}>
-                      {section.label ? <p className={styles.sectionLabel}>{section.label}</p> : null}
-                      {section.items.map((item) => {
-                        const active = itemIsActive(pathname, item);
-                        return (
-                          <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}>
-                            <item.icon size={17} />
-                            <span>{item.label}</span>
-                            {item.meta ? <small>{item.meta}</small> : null}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  ))}
+                  {group.sections.map((section, sectionIndex) => {
+                    const nestedSectionId = sectionId(group.id, section, sectionIndex);
+                    const hasActiveSectionItem = section.items.some((item) => itemIsActive(pathname, item));
+                    const isSectionOpen = openSections.includes(nestedSectionId) || hasActiveSectionItem;
+
+                    return (
+                      <div key={nestedSectionId} className={styles.section}>
+                        {section.label ? (
+                          <button
+                            type="button"
+                            className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`}
+                            onClick={() => toggleSection(nestedSectionId)}
+                            aria-expanded={isSectionOpen}
+                          >
+                            <span>{section.label}</span>
+                            <ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} />
+                          </button>
+                        ) : null}
+                        <div className={`${section.label ? styles.sectionItems : ""} ${!section.label || isSectionOpen ? styles.sectionItemsOpen : ""}`}>
+                          {section.items.map((item) => {
+                            const active = itemIsActive(pathname, item);
+                            return (
+                              <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}>
+                                <item.icon size={17} />
+                                <span>{item.label}</span>
+                                {item.meta ? <small>{item.meta}</small> : null}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                   {group.id === "tenants" && tenants.length === 0 ? <p className={styles.emptyState}>No tenant organizations yet.</p> : null}
                 </div>
               </section>
