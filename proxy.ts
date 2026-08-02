@@ -22,8 +22,9 @@ export async function proxy(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const hasAdminSession = Boolean(request.cookies.get("limitless_admin_session")?.value);
 
-  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (!user && !hasAdminSession && request.nextUrl.pathname.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", request.nextUrl.pathname);
