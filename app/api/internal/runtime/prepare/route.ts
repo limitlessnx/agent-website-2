@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
+import { runtimeSupabase } from "@/lib/runtime/supabase-types";
 import { prepareExecutionWithoutDispatch } from "@/lib/runtime/worker";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     const executionId = String(body.execution_id || "");
     if (!executionId) return NextResponse.json({ error: "execution_id is required." }, { status: 400 });
 
-    const result = await prepareExecutionWithoutDispatch(createAdminClient(), executionId);
+    const result = await prepareExecutionWithoutDispatch(runtimeSupabase(createAdminClient()), executionId);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to prepare runtime context.";

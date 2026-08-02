@@ -22,6 +22,10 @@ export type SupabaseLike = {
   from: <T = unknown>(table: string) => SupabaseQuery<T>;
 };
 
+export function runtimeSupabase(client: unknown): SupabaseLike {
+  return client as SupabaseLike;
+}
+
 export function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
 }

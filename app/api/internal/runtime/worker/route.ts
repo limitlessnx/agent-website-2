@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
+import { runtimeSupabase } from "@/lib/runtime/supabase-types";
 import { prepareExecutionWithoutDispatch, prepareNextQueuedExecution } from "@/lib/runtime/worker";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const executionId = body.execution_id ? String(body.execution_id) : "";
-    const supabase = createAdminClient();
+    const supabase = runtimeSupabase(createAdminClient());
     const result = executionId
       ? await prepareExecutionWithoutDispatch(supabase, executionId)
       : await prepareNextQueuedExecution(supabase);
