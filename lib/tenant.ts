@@ -5,12 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function requireTenant() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const adminSession = await getAdminSession();
 
-  if (!user) {
-    const adminSession = await getAdminSession();
-    if (!adminSession) redirect("/login");
-
+  if (adminSession) {
     const admin = createAdminClient();
     const preferredSlug = process.env.ADMIN_ORGANIZATION_SLUG || process.env.LIMITLESS_ADMIN_ORGANIZATION_SLUG || "fluxknight";
     const preferred = await admin
@@ -40,6 +37,12 @@ export async function requireTenant() {
         status: string;
       },
     };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
   }
 
   const { data: membership, error } = await supabase
