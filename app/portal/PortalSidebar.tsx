@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Cable, ChevronDown, Gauge, LayoutDashboard, Menu, Settings, Workflow, X, Zap } from "lucide-react";
+import { Activity, Bot, Cable, ChevronDown, Gauge, LayoutDashboard, Menu, Settings, Workflow, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const links = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/portal/runtime", label: "Runtime setup", icon: Gauge },
+  { href: "/portal/execution", label: "Agent execution", icon: Activity },
   { href: "/portal/integrations", label: "Integrations", icon: Cable },
   { href: "/portal/settings", label: "Settings", icon: Settings },
 ];
