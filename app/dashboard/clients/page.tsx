@@ -42,6 +42,7 @@ export default async function ClientsPage() {
           <h1>Tenant workspaces</h1>
           <p>Create an organization, then manage its business template, agents, integrations, testing and launch from one setup page.</p>
         </div>
+        <Link className="admin-button secondary" href="/dashboard/scale">Open Phase 14 Scale Center</Link>
       </div>
 
       <OrganizationCreationWizard templates={templates} />
