@@ -11,7 +11,7 @@ export async function POST(
 
   try {
     const { id } = await context.params;
-    const result = await provisionTenantSystem(id, session.userId || null);
+    const result = await provisionTenantSystem(id, null);
     return NextResponse.json({ ok: true, result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to provision this tenant system.";
