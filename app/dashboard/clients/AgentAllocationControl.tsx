@@ -22,11 +22,17 @@ const money = new Intl.NumberFormat("en-NG", {
   maximumFractionDigits: 0,
 });
 
-export default function AgentAllocationControl({ organizationId }: { organizationId: string }) {
+export default function AgentAllocationControl({
+  organizationId,
+  embedded = false,
+}: {
+  organizationId: string;
+  embedded?: boolean;
+}) {
   const [catalog, setCatalog] = useState<CatalogOffering[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [locked, setLocked] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(embedded);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,7 +57,7 @@ export default function AgentAllocationControl({ organizationId }: { organizatio
 
   useEffect(() => {
     if (open && !catalog.length) void load();
-  }, [open]);
+  }, [open, catalog.length]);
 
   function toggle(agentKey: string) {
     if (locked.includes(agentKey)) return;
@@ -85,12 +91,14 @@ export default function AgentAllocationControl({ organizationId }: { organizatio
     .reduce((sum, item) => ({ setup: sum.setup + Number(item.setup_price), monthly: sum.monthly + Number(item.monthly_price) }), { setup: 0, monthly: 0 }), [catalog, selected]);
 
   return (
-    <div style={{ minWidth: 260 }}>
-      <button className="admin-button secondary" type="button" onClick={() => setOpen((value) => !value)}>
-        <Bot size={15} /> {open ? "Close allocation" : "Allocate agents"}
-      </button>
+    <div style={{ width: "100%" }}>
+      {!embedded ? (
+        <button className="admin-button secondary" type="button" onClick={() => setOpen((value) => !value)}>
+          <Bot size={15} /> {open ? "Close allocation" : "Allocate agents"}
+        </button>
+      ) : null}
       {open ? (
-        <div className="admin-panel compact" style={{ marginTop: 10 }}>
+        <div className={embedded ? "" : "admin-panel compact"} style={embedded ? undefined : { marginTop: 10 }}>
           {loading ? <p><Loader2 className="spin" size={15} /> Loading agent catalog...</p> : null}
           {!loading ? (
             <div className="admin-list">
