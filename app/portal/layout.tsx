@@ -4,6 +4,7 @@ import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import PortalSidebar from "./PortalSidebar";
 import ClientLogoutButton from "./ClientLogoutButton";
 import "./portal.css";
+import "./marketplace.css";
 
 export const dynamic = "force-dynamic";
 
