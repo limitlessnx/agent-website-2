@@ -56,6 +56,17 @@ const dashboardUrl =
   process.env.GENCOUV_DASHBOARD_API_URL ||
   "https://n8n.srv1720757.hstgr.cloud/webhook/gencouv-dashboard-data";
 
+const TEST_MARKERS = ["codex", "test lead", "clean test", "sanitized test", "dummy", "sample lead"];
+
+function isSyntheticLead(lead: Lead) {
+  const searchable = [lead.name, lead.email, lead.phone, lead.source, lead.message]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return TEST_MARKERS.some((marker) => searchable.includes(marker)) || lead.source?.toLowerCase() === "test";
+}
+
 async function getGencouvDashboard() {
   const secret = process.env.GENCOUV_DASHBOARD_SECRET;
 
@@ -160,8 +171,8 @@ export default async function GencouvWorkspacePage() {
 
   const organization = organizations[0];
   const data = dashboard.data;
-  const hotLeads = data?.lead_boards?.hot?.slice(0, 4) || [];
-  const recentLeads = data?.recent_leads?.slice(0, 8) || [];
+  const hotLeads = (data?.lead_boards?.hot || []).filter((lead) => !isSyntheticLead(lead)).slice(0, 4);
+  const recentLeads = (data?.recent_leads || []).filter((lead) => !isSyntheticLead(lead)).slice(0, 8);
 
   return (
     <main className="admin-page">
