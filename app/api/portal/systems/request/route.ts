@@ -16,8 +16,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This system is not currently available." }, { status: 409 });
     }
 
-    const installation = await requestOrganizationSystem(session.organizationId, session.userId, system.id);
-    return NextResponse.json({ ok: true, installation, message: `${system.name} was added to your organization.` });
+    const installation = await requestOrganizationSystem(session.organizationId, session.userId, system);
+    return NextResponse.json({
+      ok: true,
+      installation,
+      message: `${system.name} was added and is awaiting Fluxknight approval.`,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to add this system." },
