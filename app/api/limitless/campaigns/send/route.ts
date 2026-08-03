@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getProperties } from "@/lib/limitless-data";
 import {
   getCampaignAudienceLeads,
+  normalizeLeadPhone,
   type ProgressiveLead,
 } from "@/lib/lead-profile-service";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
       return true;
     });
     const cooldowns = await getMetaCooldownPhones(matchedRecipients.map((lead) => lead.phone), 24);
-    const recipients = matchedRecipients.filter((lead) => !cooldowns.has(lead.phone.replace(/[^\d]/g, "")));
+    const recipients = matchedRecipients.filter((lead) => !cooldowns.has(normalizeLeadPhone(lead.phone)));
     const cooldownSkipped = matchedRecipients.length - recipients.length;
 
     if (!recipients.length) {

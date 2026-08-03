@@ -9,6 +9,23 @@ export type WhatsAppStatusLog = {
   created_at: string;
 };
 
+export function describeWhatsAppFailure(status: Partial<WhatsAppStatusLog>) {
+  const code = String(status.error_code || "");
+  if (code === "131042") {
+    return "Meta billing/payment issue. Settle the WhatsApp Business account payment before retrying campaigns.";
+  }
+  if (code === "131047") {
+    return "Outside the 24-hour WhatsApp window. This contact must receive an approved template message.";
+  }
+  if (code === "131026") {
+    return "Message undeliverable. Check that the number is valid, active on WhatsApp, and has not blocked the business.";
+  }
+  if (code === "131049") {
+    return "Meta ecosystem delivery block. Slow down sends and use opted-in contacts before retrying this recipient.";
+  }
+  return status.error_details || status.error_title || "WhatsApp provider failure.";
+}
+
 function config() {
   const url = (
     process.env.LIMITLESS_SUPABASE_URL ||

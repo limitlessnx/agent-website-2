@@ -1,4 +1,4 @@
-import { getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
+import { describeWhatsAppFailure, getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
 
 export type DetailedCampaignReport = {
   id: string;
@@ -71,7 +71,19 @@ export async function getDetailedCampaignReports(limit = 50): Promise<DetailedCa
     const immediateFailed = Number(content.failed || 0);
     const failed = immediateFailed + finalFailed.length;
     const pending = Math.max(0, Number(content.pending_delivery || content.pendingDelivery || 0) - resolvedStatuses.length);
-    const ecosystemBlocks = finalFailed.filter((status) => status?.error_code === "131049").length;
+    const failureGroups = finalFailed.reduce((map, status) => {
+      const code = status?.error_code || "unknown";
+      map.set(code, (map.get(code) || 0) + 1);
+      return map;
+    }, new Map<string, number>());
+    const failureNote = [...failureGroups.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([code, count]) => {
+        const sample = finalFailed.find((status) => status?.error_code === code);
+        return `${count} ${describeWhatsAppFailure(sample || { error_code: code })}`;
+      })
+      .join(" ");
     const status = finalFailed.length
       ? accepted > finalFailed.length ? "partially_failed_after_acceptance" : "failed_after_acceptance"
       : delivered > 0 && pending === 0 ? "delivered" : String(content.status || (failed ? "partially_sent" : "sent"));
@@ -88,9 +100,7 @@ export async function getDetailedCampaignReports(limit = 50): Promise<DetailedCa
       failed,
       skipped: Number(content.skipped || 0),
       pending_delivery: pending,
-      final_status_note: ecosystemBlocks
-        ? `${ecosystemBlocks} blocked by Meta ecosystem delivery control`
-        : finalFailed[0]?.error_details || undefined,
+      final_status_note: failureNote || finalFailed[0]?.error_details || undefined,
       execution_id: content.execution_id ? String(content.execution_id) : undefined,
       created_at: row.created_at || String(content.created_at || ""),
     };
