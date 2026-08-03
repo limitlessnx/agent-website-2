@@ -8,6 +8,8 @@ import "./fluxknight-unified-colors.css";
 import "./ui-balance-fix.css";
 import "./dashboard-responsive-v2.css";
 import "./followup-control.css";
+import "./dashboard-visual-system.css";
+import "./campaign-console.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
@@ -42,7 +44,7 @@ export const metadata: Metadata = {
     siteName: "Fluxknight",
     title: "Fluxknight — AI Employees for Growing Businesses",
     description:
-      "We build AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and custom AI systems for growing businesses.",
+      "We build AI sales agents, customer support systems, WhatsApp automation, voice agents, and CRM systems for growing businesses.",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Fluxknight" }],
   },
   twitter: {
