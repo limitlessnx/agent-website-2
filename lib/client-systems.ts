@@ -52,17 +52,40 @@ export async function getOrganizationSystems(organizationId: string) {
   return rows.map((row) => ({ ...row, system_catalog: relation(row.system_catalog) }));
 }
 
-export async function requestOrganizationSystem(organizationId: string, userId: string, systemId: string) {
+export async function requestOrganizationSystem(
+  organizationId: string,
+  userId: string,
+  system: Pick<SystemCatalogItem, "id" | "slug" | "name" | "included_agents" | "capabilities">,
+) {
   const rows = await supabaseServerRequest<OrganizationSystem[]>("organization_systems?on_conflict=organization_id,system_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify({
       organization_id: organizationId,
-      system_id: systemId,
+      system_id: system.id,
       requested_by: userId,
-      status: "setup_required",
+      status: "awaiting_approval",
       requested_at: new Date().toISOString(),
+      configuration: {
+        system_slug: system.slug,
+        system_name: system.name,
+        requested_agents: system.included_agents || [],
+        capabilities: system.capabilities || [],
+      },
+      last_error: null,
     }),
   });
+
+  await supabaseServerRequest(
+    `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        requested_agents: system.included_agents || [],
+        current_step: 5,
+      }),
+    },
+  ).catch(() => null);
+
   return rows[0];
 }
