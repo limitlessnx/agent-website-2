@@ -1,5 +1,7 @@
 import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "lucide-react";
 import MetricCard from "@/components/admin/MetricCard";
+import GencouvEmailControls from "@/components/gencouv/GencouvEmailControls";
+import GencouvLeadActions from "@/components/gencouv/GencouvLeadActions";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +40,12 @@ type DashboardData = {
   };
   lead_boards?: Record<string, Lead[]>;
   recent_leads?: Lead[];
+  email_controls?: {
+    sending_enabled?: boolean;
+    daily_send_limit?: number;
+    max_daily_limit?: number;
+    available_actions?: string[];
+  };
   warnings?: {
     email_sending_enabled?: boolean;
     note?: string;
@@ -139,6 +147,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       <p style={{ color: "var(--admin-text-muted)", fontSize: ".78rem", margin: "14px 0 0" }}>
         Last contact: {formatTime(lead.last_contact_at)}
       </p>
+      <GencouvLeadActions leadId={lead.lead_id} email={lead.email} name={lead.name} />
     </article>
   );
 }
@@ -207,6 +216,12 @@ export default async function GencouvWorkspacePage() {
           {!Object.values(data?.breakdowns?.email_sequence_status || {}).some(Boolean) ? <span>No email sequence records yet</span> : null}
         </div>
       </section>
+
+      <GencouvEmailControls
+        dailyLimit={data?.email_controls?.daily_send_limit || 10}
+        maxDailyLimit={data?.email_controls?.max_daily_limit || 10}
+        sendingEnabled={Boolean(data?.email_controls?.sending_enabled)}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         <Breakdown title="Lifecycle board" items={data?.breakdowns?.lifecycle_status} />
