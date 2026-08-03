@@ -4,11 +4,24 @@ import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 export type CampaignGroup = {
   id: string;
   name: string;
+  groupType: "manual" | "smart";
   description?: string;
   leadIds: string[];
   phones: string[];
+  rules?: CampaignGroupRules;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type CampaignGroupRules = {
+  state?: string;
+  interest?: string;
+  propertyInterest?: string;
+  status?: string;
+  score?: string;
+  budgetMin?: string;
+  budgetMax?: string;
+  campaignEligibleOnly?: boolean;
 };
 
 type GroupRow = {
@@ -31,15 +44,93 @@ function normalizeGroup(row: GroupRow): CampaignGroup {
   const phones = Array.isArray(content.phones)
     ? content.phones.map((phone) => normalizeLeadPhone(String(phone))).filter(Boolean)
     : [];
+  const groupType = content.group_type === "smart" ? "smart" : "manual";
   return {
     id: row.id,
     name: String(content.name || "Manual campaign group"),
+    groupType,
     description: String(content.description || ""),
     leadIds: [...new Set(leadIds)],
     phones: [...new Set(phones)],
+    rules: groupType === "smart" && typeof content.rules === "object" && content.rules
+      ? sanitizeRules(content.rules as Record<string, unknown>)
+      : undefined,
     createdAt: row.created_at || String(content.created_at || ""),
     updatedAt: String(content.updated_at || ""),
   };
+}
+
+function cleanText(value: unknown) {
+  return String(value || "").trim();
+}
+
+function lower(value: unknown) {
+  return cleanText(value).toLowerCase();
+}
+
+function money(value: unknown) {
+  const parsed = Number(String(value || "").replace(/[^\d.]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function sanitizeRules(input?: Record<string, unknown> | CampaignGroupRules): CampaignGroupRules {
+  const rules = input || {};
+  return Object.fromEntries(
+    Object.entries({
+      state: cleanText(rules.state),
+      interest: cleanText(rules.interest),
+      propertyInterest: cleanText(rules.propertyInterest),
+      status: cleanText(rules.status),
+      score: cleanText(rules.score),
+      budgetMin: cleanText(rules.budgetMin),
+      budgetMax: cleanText(rules.budgetMax),
+      campaignEligibleOnly: rules.campaignEligibleOnly !== false,
+    }).filter(([, value]) => value !== ""),
+  ) as CampaignGroupRules;
+}
+
+export function matchesCampaignGroupRules(
+  lead: {
+    phone?: string;
+    status?: string;
+    score?: string;
+    budget?: string;
+    location_preference?: string;
+    property_type?: string;
+    property_interest?: string;
+    purpose?: string;
+    campaign_eligible?: boolean;
+  },
+  rules?: CampaignGroupRules,
+) {
+  const normalized = sanitizeRules(rules);
+  const status = lower(lead.status);
+
+  if (normalized.campaignEligibleOnly !== false) {
+    if (!lead.phone || lead.campaign_eligible === false) return false;
+    if (["opted_out", "do_not_contact", "blocked", "invalid"].includes(status)) return false;
+  }
+
+  if (normalized.state && !lower(lead.location_preference).includes(lower(normalized.state))) return false;
+  if (normalized.status && normalized.status !== "all" && status !== lower(normalized.status)) return false;
+  if (normalized.score && normalized.score !== "all" && lower(lead.score || "unscored") !== lower(normalized.score)) return false;
+
+  if (normalized.interest) {
+    const searchable = [lead.purpose, lead.property_type, lead.property_interest].map(lower).join(" ");
+    if (!searchable.includes(lower(normalized.interest))) return false;
+  }
+
+  if (normalized.propertyInterest) {
+    const searchable = [lead.property_interest, lead.property_type, lead.purpose].map(lower).join(" ");
+    if (!searchable.includes(lower(normalized.propertyInterest))) return false;
+  }
+
+  const leadBudget = money(lead.budget);
+  const minimum = money(normalized.budgetMin);
+  const maximum = money(normalized.budgetMax);
+  if (minimum && (!leadBudget || leadBudget < minimum)) return false;
+  if (maximum && (!leadBudget || leadBudget > maximum)) return false;
+  return true;
 }
 
 export async function getCampaignGroups(limit = 100): Promise<CampaignGroup[]> {
@@ -60,22 +151,33 @@ export async function getCampaignGroup(id: string): Promise<CampaignGroup | null
 export async function saveCampaignGroup(input: {
   id?: string;
   name: string;
+  groupType?: "manual" | "smart";
   description?: string;
   leadIds?: string[];
   phones?: string[];
+  rules?: CampaignGroupRules;
 }) {
   const id = input.id || crypto.randomUUID();
+  const groupType = input.groupType === "smart" ? "smart" : "manual";
   const leadIds = [...new Set((input.leadIds || []).map(String).filter(Boolean))];
   const phones = [...new Set((input.phones || []).map((phone) => normalizeLeadPhone(String(phone))).filter(Boolean))];
   if (!String(input.name || "").trim()) throw new Error("Group name is required.");
-  if (!leadIds.length && !phones.length) throw new Error("Select leads or add phone numbers before saving a group.");
+  if (groupType === "manual" && !leadIds.length && !phones.length) {
+    throw new Error("Select leads or add phone numbers before saving a manual group.");
+  }
+  const rules = sanitizeRules(input.rules);
+  if (groupType === "smart" && !Object.entries(rules).some(([key, value]) => key !== "campaignEligibleOnly" && value)) {
+    throw new Error("Add at least one smart filter before saving a smart group.");
+  }
 
   const content = {
     type: "campaign_group",
+    group_type: groupType,
     name: String(input.name).trim(),
     description: String(input.description || "").trim(),
     lead_ids: leadIds,
     phones,
+    rules: groupType === "smart" ? rules : undefined,
     updated_at: new Date().toISOString(),
   };
 
@@ -89,7 +191,17 @@ export async function saveCampaignGroup(input: {
       content: JSON.stringify(content),
     }),
   });
-  return rows[0] ? normalizeGroup(rows[0]) : { id, ...input, leadIds, phones };
+  return rows[0]
+    ? normalizeGroup(rows[0])
+    : {
+        id,
+        name: String(input.name).trim(),
+        groupType,
+        description: String(input.description || "").trim(),
+        leadIds,
+        phones,
+        rules: groupType === "smart" ? rules : undefined,
+      };
 }
 
 export async function deleteCampaignGroup(id: string) {

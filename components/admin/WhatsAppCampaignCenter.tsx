@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import type { CampaignGroup } from "@/lib/campaign-groups";
+import { matchesCampaignGroupRules, type CampaignGroup } from "@/lib/campaign-groups";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
 import type { PropertyRecord } from "@/lib/limitless-data";
 
@@ -100,7 +100,12 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
       if (!eligible(lead)) return false;
       if (audienceMode === "all") return true;
       if (audienceMode === "manual") return selected.has(String(lead.id));
-      if (audienceMode === "group") return groupLeadIds.has(String(lead.id));
+      if (audienceMode === "group") {
+        if (!selectedGroup) return false;
+        return selectedGroup.groupType === "smart"
+          ? matchesCampaignGroupRules(lead, selectedGroup.rules)
+          : groupLeadIds.has(String(lead.id));
+      }
       if (stateNeedle && !text(lead.location_preference).includes(stateNeedle)) return false;
       if (interestNeedle) {
         const haystack = [lead.purpose, lead.property_type, lead.property_interest].map(text).join(" ");
@@ -117,7 +122,7 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
     });
   }, [audienceMode, budgetMax, budgetMin, interest, leads, selectedLeadIds, selectedGroup, selectedProperty, state]);
 
-  const groupExtraCount = audienceMode === "group" ? selectedGroup?.phones.length || 0 : 0;
+  const groupExtraCount = audienceMode === "group" && selectedGroup?.groupType === "manual" ? selectedGroup.phones.length || 0 : 0;
   const recipientCount = audience.length + groupExtraCount;
 
   const toggleLead = (id: string) => setSelectedLeadIds((current) => current.includes(id) ? current.filter((leadId) => leadId !== id) : [...current, id]);
@@ -181,8 +186,11 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
           {(["all", "manual", "group", "filters"] as AudienceMode[]).map((mode) => <button key={mode} type="button" className={audienceMode === mode ? "active" : ""} onClick={() => setAudienceMode(mode)}>{mode === "all" ? "All leads" : mode === "manual" ? "Manual selection" : mode === "group" ? "Saved group" : "Smart filters"}</button>)}
         </div>
         {audienceMode === "group" ? <div className="filter-grid">
-          <label className="wide"><span>Saved campaign group</span><select value={campaignGroupId} onChange={(event) => setCampaignGroupId(event.target.value)}><option value="">Choose saved group</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name} ({group.leadIds.length + group.phones.length})</option>)}</select></label>
-          {selectedGroup ? <p className="group-note">This group contains {selectedGroup.leadIds.length} saved lead(s) and {selectedGroup.phones.length} extra number(s).</p> : null}
+          <label className="wide"><span>Saved campaign group</span><select value={campaignGroupId} onChange={(event) => setCampaignGroupId(event.target.value)}><option value="">Choose saved group</option>{groups.map((group) => {
+            const count = group.groupType === "smart" ? leads.filter((lead) => eligible(lead) && matchesCampaignGroupRules(lead, group.rules)).length : group.leadIds.length + group.phones.length;
+            return <option key={group.id} value={group.id}>{group.name} - {group.groupType} ({count})</option>;
+          })}</select></label>
+          {selectedGroup ? <p className="group-note">{selectedGroup.groupType === "smart" ? `Smart group: ${audience.length} eligible lead(s) match right now.` : `Manual group: ${selectedGroup.leadIds.length} saved lead(s) and ${selectedGroup.phones.length} extra number(s).`}</p> : null}
         </div> : null}
         {audienceMode === "filters" ? <div className="filter-grid">
           <label><span>State or location</span><input list="campaign-states" value={state} onChange={(event) => setState(event.target.value)} placeholder="Any location" /><datalist id="campaign-states">{states.map((value) => <option key={value} value={value} />)}</datalist></label>
@@ -211,7 +219,7 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
           <label className="wide"><span>Message</span><textarea rows={8} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Write the WhatsApp message Maia should send..." /></label>
           <label className="wide"><span>Optional media URL</span><input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} placeholder={selectedProperty?.drive_photos_link || "Google Drive or public image link"} /></label>
         </div>
-        <div className="campaign-submit"><div><strong>{recipientCount} eligible recipients</strong><small>Saved groups can include selected leads and extra pasted phone numbers.</small></div><button type="button" disabled={isPending || !message.trim() || recipientCount === 0 || (audienceMode === "group" && !campaignGroupId)} onClick={sendCampaign}>{isPending ? "Sending through Maia..." : "Send WhatsApp campaign"}</button></div>
+        <div className="campaign-submit"><div><strong>{recipientCount} eligible recipients</strong><small>Saved groups can be manual contact lists or smart filter audiences.</small></div><button type="button" disabled={isPending || !message.trim() || recipientCount === 0 || (audienceMode === "group" && !campaignGroupId)} onClick={sendCampaign}>{isPending ? "Sending through Maia..." : "Send WhatsApp campaign"}</button></div>
 
         {result ? <div className={`campaign-result ${result.failed ? "warning" : "success"}`}>
           <strong>{result.status.replaceAll("_", " ")}</strong>

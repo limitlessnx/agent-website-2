@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getCampaignGroup } from "@/lib/campaign-groups";
+import { getCampaignGroup, matchesCampaignGroupRules } from "@/lib/campaign-groups";
 import { getProperties } from "@/lib/limitless-data";
 import {
   getCampaignAudienceLeads,
@@ -133,7 +133,12 @@ export async function POST(request: Request) {
     const matchedRecipients = allLeads.filter((lead) => {
       if (!isContactable(lead)) return false;
       if (mode === "manual") return selectedIds.has(String(lead.id));
-      if (mode === "group") return groupLeadIds.has(String(lead.id)) || groupPhones.has(normalizeLeadPhone(lead.phone));
+      if (mode === "group") {
+        if (!campaignGroup) return false;
+        return campaignGroup.groupType === "smart"
+          ? matchesCampaignGroupRules(lead, campaignGroup.rules)
+          : groupLeadIds.has(String(lead.id)) || groupPhones.has(normalizeLeadPhone(lead.phone));
+      }
       if (mode === "all") return true;
       if (state && !text(lead.location_preference).includes(state)) return false;
       if (interest) {
@@ -150,7 +155,7 @@ export async function POST(request: Request) {
       return true;
     });
     const matchedPhones = new Set(matchedRecipients.map((lead) => normalizeLeadPhone(lead.phone)).filter(Boolean));
-    if (mode === "group" && campaignGroup) {
+    if (mode === "group" && campaignGroup?.groupType === "manual") {
       for (const phone of groupPhones) {
         if (matchedPhones.has(phone)) continue;
         matchedRecipients.push({

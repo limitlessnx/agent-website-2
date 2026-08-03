@@ -29,9 +29,11 @@ export async function POST(request: NextRequest) {
     const group = await saveCampaignGroup({
       id: String(body.id || "").trim() || undefined,
       name: String(body.name || "").trim(),
+      groupType: body.groupType === "smart" ? "smart" : "manual",
       description: String(body.description || "").trim(),
       leadIds: Array.isArray(body.leadIds) ? body.leadIds.map(String) : [],
       phones: parsePhones(body.phones),
+      rules: body.rules && typeof body.rules === "object" ? body.rules : undefined,
     });
     return NextResponse.json({ group });
   } catch (error) {
