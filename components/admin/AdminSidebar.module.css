@@ -183,7 +183,7 @@
     backdrop-filter: blur(4px);
   }
 
-  .sidebar {
+  .sidebar.sidebar {
     position: fixed !important;
     inset: 0 auto 0 0 !important;
     z-index: 70;
@@ -201,7 +201,7 @@
     box-shadow: 24px 0 80px rgba(0, 0, 0, 0.45);
   }
 
-  .sidebarOpen {
+  .sidebar.sidebarOpen {
     transform: translateX(0);
   }
 
@@ -274,7 +274,7 @@
 }
 
 @media (max-width: 420px) {
-  .sidebar {
+  .sidebar.sidebar {
     width: min(88vw, 330px) !important;
   }
 }
