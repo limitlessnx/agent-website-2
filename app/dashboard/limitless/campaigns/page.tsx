@@ -16,51 +16,55 @@ export default async function CampaignsPage() {
 
   const eligible = leads.filter((lead) => lead.phone && lead.campaign_eligible !== false).length;
   const undocumented = leads.filter((lead) => lead.profile_status === "undocumented").length;
+  const delivered = campaigns.reduce((sum, campaign) => sum + Number(campaign.delivered || 0), 0);
+  const failed = campaigns.reduce((sum, campaign) => sum + Number(campaign.failed || 0), 0);
+  const attempted = campaigns.reduce((sum, campaign) => sum + Number(campaign.attempted || 0), 0);
+  const deliveryRate = attempted ? Math.round((delivered / attempted) * 100) : 0;
 
   return (
-    <div className="admin-page">
-      <section className="admin-hero-panel">
+    <div className="admin-page console-page">
+      <section className="console-titlebar">
         <div>
-          <p className="admin-kicker">Limitless Realty</p>
+          <p className="admin-kicker">Limitless Realty / Messaging Operations</p>
           <h1>WhatsApp Campaign Center</h1>
-          <p>
-            Send campaigns directly from Fluxknight through Maia&apos;s WhatsApp delivery engine. Target all
-            leads, manually selected contacts, or audiences filtered by state, interest, property, and budget.
-          </p>
+          <p>Build audiences, prepare campaigns, monitor delivery, and inspect provider outcomes from one operating console.</p>
         </div>
-        <div className="admin-launch-score"><span>{eligible}</span><p>Campaign-ready leads</p></div>
+        <div className="console-status-stack">
+          <span className="console-status-pill">LIVE WORKSPACE</span>
+          <small>Maia delivery engine</small>
+        </div>
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div><h2>Direct WhatsApp Campaign</h2><p>Every send now carries duplicate protection and truthful provider delivery state.</p></div>
-          <span className="admin-status live">{undocumented} undocumented</span>
-        </div>
-        <WhatsAppCampaignCenter leads={leads} properties={properties} groups={groups} />
+      <section className="console-kpi-grid">
+        <article><span>READY LEADS</span><strong>{eligible}</strong><i style={{ "--meter": `${Math.min(100, eligible ? 82 : 0)}%` } as React.CSSProperties} /></article>
+        <article><span>UNDOCUMENTED</span><strong>{undocumented}</strong><i style={{ "--meter": `${Math.min(100, eligible ? Math.round((undocumented / eligible) * 100) : 0)}%` } as React.CSSProperties} /></article>
+        <article><span>CAMPAIGNS</span><strong>{campaigns.length}</strong><i style={{ "--meter": `${Math.min(100, campaigns.length * 8)}%` } as React.CSSProperties} /></article>
+        <article><span>DELIVERY RATE</span><strong>{deliveryRate}%</strong><i style={{ "--meter": `${deliveryRate}%` } as React.CSSProperties} /></article>
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Recent Campaign Reports</h2><p>Provider submission, delivery confirmations, delivery blocks, and failures.</p></div></div>
+      <WhatsAppCampaignCenter leads={leads} properties={properties} groups={groups} />
+
+      <section className="console-panel campaign-report-panel">
+        <header className="console-panel-head">
+          <div><span>DELIVERY LOG</span><h2>Recent campaign reports</h2></div>
+          <small>{failed} failed deliveries recorded</small>
+        </header>
         <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead><tr><th>Campaign</th><th>Type</th><th>Template</th><th>Status</th><th>Attempted</th><th>Sent</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Delivery note</th><th>Date</th></tr></thead>
+          <table className="admin-table console-table">
+            <thead><tr><th>Campaign</th><th>Status</th><th>Attempted</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Date</th></tr></thead>
             <tbody>
               {campaigns.length ? campaigns.map((campaign) => (
                 <tr key={campaign.id}>
-                  <td>{campaign.campaign_topic}</td>
-                  <td>{campaign.campaign_type.replaceAll("_", " ")}</td>
-                  <td>{campaign.template_name || "-"}</td>
-                  <td>{campaign.status.replaceAll("_", " ")}</td>
+                  <td><strong>{campaign.campaign_topic}</strong><small>{campaign.template_name || campaign.campaign_type.replaceAll("_", " ")}</small></td>
+                  <td><span className={`console-table-status ${campaign.failed ? "danger" : campaign.delivered ? "success" : "pending"}`}>{campaign.status.replaceAll("_", " ")}</span></td>
                   <td>{campaign.attempted}</td>
-                  <td>{campaign.accepted}</td>
                   <td>{campaign.delivered}</td>
                   <td>{campaign.pending_delivery}</td>
                   <td>{campaign.failed}</td>
                   <td>{campaign.skipped}</td>
-                  <td>{campaign.final_status_note || "-"}</td>
                   <td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString("en-NG") : "-"}</td>
                 </tr>
-              )) : <tr><td colSpan={12}>No saved campaign reports yet.</td></tr>}
+              )) : <tr><td colSpan={8}>No saved campaign reports yet.</td></tr>}
             </tbody>
           </table>
         </div>
