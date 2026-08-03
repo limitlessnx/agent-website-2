@@ -199,7 +199,7 @@ export default async function GencouvWorkspacePage() {
         <MetricCard icon={Mail} tone="rose" label="Bounced" value={total(data, "bounced")} detail="Protect deliverability" trend="email health" />
       </div>
 
-      <section className="admin-panel">
+      <section id="sequence-status" className="admin-panel">
         <div className="admin-panel-header">
           <div>
             <h2>Email sequence status</h2>
@@ -217,19 +217,21 @@ export default async function GencouvWorkspacePage() {
         </div>
       </section>
 
-      <GencouvEmailControls
-        dailyLimit={data?.email_controls?.daily_send_limit || 10}
-        maxDailyLimit={data?.email_controls?.max_daily_limit || 10}
-        sendingEnabled={Boolean(data?.email_controls?.sending_enabled)}
-      />
+      <div id="email-control">
+        <GencouvEmailControls
+          dailyLimit={data?.email_controls?.daily_send_limit || 10}
+          maxDailyLimit={data?.email_controls?.max_daily_limit || 10}
+          sendingEnabled={Boolean(data?.email_controls?.sending_enabled)}
+        />
+      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+      <div id="operations" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         <Breakdown title="Lifecycle board" items={data?.breakdowns?.lifecycle_status} />
         <Breakdown title="Broker mix" items={data?.breakdowns?.broker} />
         <Breakdown title="Lead source" items={data?.breakdowns?.source} />
       </div>
 
-      <section className="admin-panel">
+      <section id="lead-board" className="admin-panel">
         <div className="admin-panel-header">
           <div>
             <h2><Bot size={18} /> High-priority leads</h2>
@@ -242,7 +244,7 @@ export default async function GencouvWorkspacePage() {
         </div>
       </section>
 
-      <section className="admin-panel">
+      <section id="acquisition" className="admin-panel">
         <div className="admin-panel-header">
           <div>
             <h2><LineChart size={18} /> Recent Gencouv activity</h2>

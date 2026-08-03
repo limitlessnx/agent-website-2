@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
-  CreditCard, Database, Home, Image, LifeBuoy, LineChart, Megaphone, Menu,
-  MessageCircle, PlugZap, Plus, Search, Settings, Users, Workflow, X,
+  CreditCard, Database, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
+  Menu, MessageCircle, PlugZap, Plus, Search, Settings, ShieldCheck, Users,
+  Workflow, X,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -74,8 +75,11 @@ const basePlatformGroups: NavGroup[] = [
         label: "Gencouv",
         items: [
           { href: "/dashboard/gencouv", label: "Overview", icon: LineChart, exact: true },
-          { href: "/dashboard/gencouv/acquisition", label: "Acquisition", icon: Search },
-          { href: "/dashboard/gencouv/operations", label: "Operations", icon: Activity },
+          { href: "/dashboard/gencouv#email-control", label: "Email Control", icon: Mail },
+          { href: "/dashboard/gencouv#lead-board", label: "Lead Board", icon: Users },
+          { href: "/dashboard/gencouv#sequence-status", label: "Sequence Status", icon: ShieldCheck },
+          { href: "/dashboard/gencouv#acquisition", label: "Acquisition", icon: Search },
+          { href: "/dashboard/gencouv#operations", label: "Operations", icon: Activity },
         ],
       },
     ],
