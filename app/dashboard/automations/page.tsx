@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Mail, MessageCircle, PhoneCall, Search } from "lucide-react";
+import { listAutomationProvisioningJobs, listAutomationTemplateVersions, listAutomationTemplates } from "@/lib/automation-provisioning";
 import { automationProjects } from "@/lib/limitless-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
+import AutomationTemplateManager from "./AutomationTemplateManager";
 
 export default async function AutomationsPage() {
   const registry = await getWorkflowRegistrySummary().catch(() => ({
@@ -15,6 +17,11 @@ export default async function AutomationsPage() {
   }));
 
   const needsAttention = registry.failures > 0 || !registry.configured;
+  const [automationTemplates, automationVersions, automationJobs] = await Promise.all([
+    listAutomationTemplates().catch(() => []),
+    listAutomationTemplateVersions().catch(() => []),
+    listAutomationProvisioningJobs().catch(() => []),
+  ]);
   const modules = [
     { title: "Follow-up automation", detail: "Sequences, reminders and enrolled contacts", href: "/dashboard/limitless/followups", icon: MessageCircle },
     { title: "Email automation", detail: "Campaigns, templates and scheduled email actions", href: "/dashboard/workflows/email", icon: Mail },
@@ -63,6 +70,8 @@ export default async function AutomationsPage() {
           ))}
         </div>
       </section>
+
+      <AutomationTemplateManager templates={automationTemplates} versions={automationVersions} jobs={automationJobs} />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import { queuePaidAutomationProvisioning } from "@/lib/automation-provisioning";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function validSignature(raw: string, received: string | null, secret: string) {
@@ -57,6 +58,12 @@ export async function POST(request: Request) {
         ];
         const { error: jobError } = await admin.from("provisioning_jobs").insert(jobs);
         if (jobError) throw jobError;
+
+        await queuePaidAutomationProvisioning({
+          id: payment.id,
+          organization_id: payment.organization_id,
+          quote_id: payment.quote_id,
+        });
       }
     }
 

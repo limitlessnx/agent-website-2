@@ -7,6 +7,8 @@ export type N8nWorkflow = {
   nodes?: unknown[];
   connections?: Record<string, unknown>;
   settings?: Record<string, unknown>;
+  staticData?: Record<string, unknown> | null;
+  tags?: unknown[];
   projectId?: string;
 };
 

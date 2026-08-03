@@ -87,6 +87,7 @@ const basePlatformGroups: NavGroup[] = [
       {
         items: [
           { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
+          { href: "/dashboard/automations", label: "Automation Center", icon: PlugZap },
           { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
           { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
           { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },

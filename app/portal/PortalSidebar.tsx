@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 const links = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/portal/runtime", label: "Runtime setup", icon: Gauge },
+  { href: "/portal/automations", label: "Automations", icon: Workflow },
   { href: "/portal/execution", label: "Agent execution", icon: Activity },
   { href: "/portal/integrations", label: "Integrations", icon: Cable },
   { href: "/portal/settings", label: "Settings", icon: Settings },
