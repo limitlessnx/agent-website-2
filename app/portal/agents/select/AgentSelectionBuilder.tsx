@@ -1,53 +1,104 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Bot, Check, Loader2, Settings2 } from "lucide-react";
 
-const agents = [
-  { key: "ai_sales_agent", name: "AI Sales Agent", description: "Qualifies prospects, answers objections and moves opportunities forward.", setup: 250000, monthly: 100000 },
-  { key: "customer_support_agent", name: "Customer Support Agent", description: "Answers routine questions and escalates sensitive requests.", setup: 220000, monthly: 90000 },
-  { key: "whatsapp_agent", name: "WhatsApp Agent", description: "Runs business conversations, lead capture and handover on WhatsApp.", setup: 180000, monthly: 75000 },
-  { key: "appointment_agent", name: "Appointment Agent", description: "Books, confirms and reschedules appointments.", setup: 150000, monthly: 60000 },
-  { key: "email_automation", name: "Email Follow-up Agent", description: "Runs structured follow-up sequences and stops when leads reply.", setup: 180000, monthly: 70000 },
-  { key: "voice_receptionist", name: "Voice Receptionist", description: "Handles inbound calls, qualification and call transfers.", setup: 350000, monthly: 150000 },
-  { key: "outbound_call_agent", name: "Outbound Call Agent", description: "Calls approved contacts, records outcomes and updates the CRM.", setup: 400000, monthly: 180000 },
-  { key: "crm_followup_agent", name: "CRM Follow-up Agent", description: "Tracks pipeline stages, reminders and customer follow-up tasks.", setup: 200000, monthly: 80000 },
-];
+type CatalogOffering = {
+  agent_key: string;
+  display_name: string;
+  setup_price: number;
+  monthly_price: number;
+  currency: string;
+  metadata?: Record<string, unknown>;
+};
+
+type Selection = {
+  agent_key: string;
+  status: string;
+};
 
 const money = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 });
 
+function description(item: CatalogOffering) {
+  const value = item.metadata?.description;
+  return typeof value === "string" && value.trim() ? value : "A standard Fluxknight agent configured for this business workspace.";
+}
+
 export default function AgentSelectionBuilder() {
+  const [agents, setAgents] = useState<CatalogOffering[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [locked, setLocked] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const totals = useMemo(() => agents.filter((agent) => selected.includes(agent.key)).reduce((value, agent) => ({ setup: value.setup + agent.setup, monthly: value.monthly + agent.monthly }), { setup: 0, monthly: 0 }), [selected]);
+
+  async function load() {
+    setLoading(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/agent-selections", { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Unable to load agent catalog.");
+      const selections = (result.selections || []) as Selection[];
+      setAgents(result.catalog || []);
+      setSelected(selections.map((item) => item.agent_key));
+      setLocked(selections.filter((item) => ["paid", "provisioning", "active"].includes(item.status)).map((item) => item.agent_key));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to load agent catalog.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  const totals = useMemo(() => agents
+    .filter((agent) => selected.includes(agent.agent_key))
+    .reduce((value, agent) => ({ setup: value.setup + Number(agent.setup_price), monthly: value.monthly + Number(agent.monthly_price) }), { setup: 0, monthly: 0 }), [agents, selected]);
 
   function toggle(key: string) {
+    if (locked.includes(key)) return;
     setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   }
 
   async function save() {
     setSaving(true);
     setMessage("");
-    const response = await fetch("/api/agent-selections", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agent_keys: selected }) });
-    const result = await response.json().catch(() => ({}));
-    setSaving(false);
-    setMessage(response.ok ? "Your agent package is saved. Checkout will be enabled after payment integration is approved." : result.error || "Unable to save your package.");
+    try {
+      const response = await fetch("/api/agent-selections", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent_keys: selected }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Unable to save your package.");
+      const selections = (result.selections || []) as Selection[];
+      setSelected(selections.map((item) => item.agent_key));
+      setLocked(selections.filter((item) => ["paid", "provisioning", "active"].includes(item.status)).map((item) => item.agent_key));
+      setMessage("Your agent allocation is saved. An administrator can approve and provision it without Paystack for now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save your package.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <main className="admin-page">
-      <header className="admin-page-header"><div><p className="admin-kicker">Agent marketplace</p><h1>Choose the AI employees your business needs.</h1><p>Standard agents receive fixed scope and pricing. Custom systems follow a reviewed proposal process.</p></div></header>
+      <header className="admin-page-header"><div><p className="admin-kicker">Agent marketplace</p><h1>Choose the AI employees your business needs.</h1><p>The catalog and pricing are loaded from the platform database, so the tenant and administrator use the same source of truth.</p></div></header>
       <section className="admin-panel"><div className="admin-list">
-        {agents.map((agent) => {
-          const active = selected.includes(agent.key);
-          return <button type="button" key={agent.key} className={`admin-list-row ${active ? "selected" : ""}`} onClick={() => toggle(agent.key)} style={{ width: "100%", textAlign: "left" }}>
-            <span>{active ? <Check size={18} /> : <Bot size={18} />}</span><div style={{ flex: 1 }}><strong>{agent.name}</strong><span>{agent.description}</span></div><em>{money.format(agent.setup)} setup · {money.format(agent.monthly)}/month</em>
+        {loading ? <p><Loader2 className="spin" size={16} /> Loading available agents...</p> : null}
+        {!loading && agents.map((agent) => {
+          const active = selected.includes(agent.agent_key);
+          const isLocked = locked.includes(agent.agent_key);
+          return <button type="button" key={agent.agent_key} className={`admin-list-row ${active ? "selected" : ""}`} onClick={() => toggle(agent.agent_key)} disabled={isLocked} style={{ width: "100%", textAlign: "left" }}>
+            <span>{active ? <Check size={18} /> : <Bot size={18} />}</span><div style={{ flex: 1 }}><strong>{agent.display_name}</strong><span>{description(agent)}</span></div><em>{money.format(Number(agent.setup_price))} setup · {money.format(Number(agent.monthly_price))}/month{isLocked ? " · allocated" : ""}</em>
           </button>;
         })}
+        {!loading && !agents.length ? <p>No active standard agents are available.</p> : null}
       </div></section>
-      <section className="admin-panel"><div className="admin-panel-header"><div><h2>Package summary</h2><p>{selected.length} standard agent{selected.length === 1 ? "" : "s"} selected</p></div><Settings2 size={18} /></div><div className="admin-list-row"><div><strong>{money.format(totals.setup)} setup</strong><span>{money.format(totals.monthly)} recurring monthly, excluding usage-based provider costs.</span></div><button type="button" disabled={!selected.length || saving} onClick={save}>{saving ? <Loader2 className="spin" size={16} /> : "Save package"}</button></div>{message ? <p>{message}</p> : null}</section>
+      <section className="admin-panel"><div className="admin-panel-header"><div><h2>Package summary</h2><p>{selected.length} standard agent{selected.length === 1 ? "" : "s"} selected</p></div><Settings2 size={18} /></div><div className="admin-list-row"><div><strong>{money.format(totals.setup)} setup</strong><span>{money.format(totals.monthly)} recurring monthly, excluding usage-based provider costs.</span></div><button type="button" disabled={!selected.length || saving || loading} onClick={save}>{saving ? <Loader2 className="spin" size={16} /> : "Save allocation"}</button></div>{message ? <p>{message}</p> : null}</section>
       <section className="admin-panel"><div className="admin-panel-header"><div><h2>Need something custom?</h2><p>Submit the business process, platforms, required actions, budget range and target launch date for review.</p></div><Link href="/portal/agents/custom">Request custom build</Link></div></section>
     </main>
   );
