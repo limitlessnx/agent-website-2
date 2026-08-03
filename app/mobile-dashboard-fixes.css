@@ -1,0 +1,111 @@
+/* Mobile dashboard containment and bar-first metric visuals. */
+*,*::before,*::after{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+.admin-shell,.portal-shell,.dashboard-shell,.admin-main,.portal-main,.admin-page,.portal-page,.console-page,.console-titlebar,.console-panel,.campaign-console-grid{min-width:0;max-width:100%}
+.admin-page,.portal-page,.console-page{width:100%;overflow-x:hidden}
+.console-titlebar>div,.console-panel-head>div{min-width:0}
+.console-titlebar h1,.admin-page-header h1,.portal-page-header h1,.admin-hero-panel h1,.portal-hero h1{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
+.console-titlebar p,.console-panel p{max-width:100%;overflow-wrap:anywhere}
+.campaign-console-grid{width:100%;overflow:hidden}
+.console-panel{width:100%;min-width:0;overflow:hidden}
+.console-mode-grid,.console-template-grid,.console-form-grid,.console-kpi-grid{width:100%;min-width:0}
+.console-mode-grid button,.console-template-grid button,.console-form-grid label,.console-form-grid input,.console-form-grid select,.console-form-grid textarea{min-width:0;max-width:100%}
+.console-panel-head{min-width:0;flex-wrap:wrap}
+.console-panel-head>strong,.console-panel-head>small{max-width:100%;overflow-wrap:anywhere}
+.admin-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* Replace circular dashboard visuals with horizontal analytics bars. */
+.admin-health-ring,.portal-health-ring,.progress-ring,.donut-chart,.admin-launch-score{
+  width:100%!important;
+  max-width:100%!important;
+  min-height:74px!important;
+  height:auto!important;
+  aspect-ratio:auto!important;
+  border-radius:2px!important;
+  padding:14px!important;
+  display:grid!important;
+  align-content:center!important;
+  justify-items:start!important;
+  text-align:left!important;
+  border:1px solid var(--console-line)!important;
+  background:linear-gradient(180deg,rgba(139,61,255,.08),rgba(139,61,255,.02))!important;
+  box-shadow:none!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+.admin-health-ring::after,.portal-health-ring::after,.progress-ring::after,.donut-chart::after,.admin-launch-score::after{
+  content:"";
+  display:block;
+  width:var(--progress,72%);
+  max-width:100%;
+  height:7px;
+  margin-top:10px;
+  background:repeating-linear-gradient(135deg,#fff 0 2px,transparent 2px 5px),linear-gradient(90deg,#5d1fb8,var(--console-purple-bright));
+}
+.admin-health-ring span,.portal-health-ring span,.progress-ring span,.donut-chart span,.admin-launch-score span{
+  font-size:clamp(1.7rem,7vw,2.5rem)!important;
+  line-height:1!important;
+}
+
+.console-audience-meter{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:12px!important;
+  width:100%!important;
+}
+.console-audience-meter>div{
+  width:100%!important;
+  max-width:100%!important;
+  min-height:84px!important;
+  aspect-ratio:auto!important;
+  border-radius:2px!important;
+  display:grid!important;
+  grid-template-columns:auto 1fr!important;
+  align-items:center!important;
+  justify-content:stretch!important;
+  gap:14px!important;
+  padding:14px!important;
+  background:linear-gradient(180deg,rgba(139,61,255,.1),rgba(139,61,255,.02))!important;
+  border:1px solid var(--console-line)!important;
+  box-shadow:none!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+.console-audience-meter>div::after{
+  content:"";
+  grid-column:1/-1;
+  width:min(100%,var(--bar-width,76%));
+  height:7px;
+  background:repeating-linear-gradient(135deg,#fff 0 2px,transparent 2px 5px),linear-gradient(90deg,#5d1fb8,var(--console-purple-bright));
+}
+.console-audience-meter>div strong{font-size:2rem!important}
+.console-audience-meter>div span{align-self:center!important}
+.console-audience-meter ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important}
+.console-audience-meter li{min-width:0;padding:8px;border:1px solid var(--console-line-soft);font-size:.68rem!important}
+
+@media(max-width:700px){
+  .admin-main,.portal-main{width:100%!important;max-width:100%!important;padding:12px!important;overflow-x:hidden!important}
+  .admin-page,.portal-page,.console-page{width:100%!important;max-width:100%!important;margin:0!important}
+  .console-titlebar{width:100%!important;padding:14px!important;gap:12px!important}
+  .console-titlebar h1{font-size:clamp(1.85rem,10vw,2.55rem)!important;line-height:1!important;letter-spacing:-.025em!important}
+  .console-titlebar p{font-size:.92rem!important;line-height:1.45!important}
+  .console-status-stack{width:100%!important}
+  .console-kpi-grid{grid-template-columns:1fr!important}
+  .console-kpi-grid article{width:100%!important;min-height:96px!important}
+  .campaign-console-grid{grid-template-columns:minmax(0,1fr)!important;width:100%!important}
+  .console-mode-grid{grid-template-columns:1fr 1fr!important}
+  .console-mode-grid button{width:100%!important;min-height:72px!important}
+  .console-template-grid{grid-template-columns:1fr!important}
+  .console-form-grid{grid-template-columns:minmax(0,1fr)!important}
+  .console-result>div{grid-template-columns:1fr 1fr!important}
+  .console-audience-meter ul{grid-template-columns:1fr!important}
+  .campaign-report-panel .admin-table{min-width:760px!important}
+}
+
+@media(max-width:420px){
+  .admin-main,.portal-main{padding:10px!important}
+  .console-titlebar,.console-panel,.campaign-report-panel{padding:12px!important}
+  .console-titlebar h1{font-size:2rem!important}
+  .console-mode-grid{grid-template-columns:1fr!important}
+  .console-result>div{grid-template-columns:1fr!important}
+}
