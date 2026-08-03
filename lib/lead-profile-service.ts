@@ -168,7 +168,7 @@ export async function saveProgressiveLead(input: ProgressiveLeadInput) {
       payload,
       "resolution=merge-duplicates,return=representation",
     );
-  } catch (error) {
+  } catch {
     const existing = await request<{ id: string }>(
       "leads",
       `?select=id&phone=eq.${encodeURIComponent(phone)}&limit=1`,
@@ -185,6 +185,29 @@ export async function saveProgressiveLead(input: ProgressiveLeadInput) {
 
     return adaptiveWrite<ProgressiveLead>("leads", "", "POST", payload);
   }
+}
+
+export async function updateProgressiveLead(id: string, input: ProgressiveLeadInput) {
+  if (!id) throw new Error("Lead ID is required.");
+  const payload = buildPayload(input);
+  return adaptiveWrite<ProgressiveLead>(
+    "leads",
+    `?id=eq.${encodeURIComponent(id)}`,
+    "PATCH",
+    payload,
+  );
+}
+
+export async function deleteProgressiveLead(id: string) {
+  if (!id) throw new Error("Lead ID is required.");
+  return request<ProgressiveLead>(
+    "leads",
+    `?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Prefer: "return=representation" },
+    },
+  );
 }
 
 export async function importProgressiveLeads(inputs: ProgressiveLeadInput[]) {

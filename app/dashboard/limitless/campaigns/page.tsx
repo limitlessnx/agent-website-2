@@ -1,4 +1,5 @@
 import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenter";
+import { getCampaignGroups } from "@/lib/campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import { getProperties } from "@/lib/limitless-data";
 import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
@@ -6,10 +7,11 @@ import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
-  const [campaigns, leads, properties] = await Promise.all([
+  const [campaigns, leads, properties, groups] = await Promise.all([
     getDetailedCampaignReports(50),
     getCampaignAudienceLeads(5000),
     getProperties(500),
+    getCampaignGroups(100),
   ]);
 
   const eligible = leads.filter((lead) => lead.phone && lead.campaign_eligible !== false).length;
@@ -34,7 +36,7 @@ export default async function CampaignsPage() {
           <div><h2>Direct WhatsApp Campaign</h2><p>Every send now carries duplicate protection and truthful provider delivery state.</p></div>
           <span className="admin-status live">{undocumented} undocumented</span>
         </div>
-        <WhatsAppCampaignCenter leads={leads} properties={properties} />
+        <WhatsAppCampaignCenter leads={leads} properties={properties} groups={groups} />
       </section>
 
       <section className="admin-panel">

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
+import { getCampaignGroup } from "@/lib/campaign-groups";
 import { getProperties } from "@/lib/limitless-data";
 import {
   getCampaignAudienceLeads,
@@ -26,8 +27,9 @@ type RequestBody = {
   topic?: string;
   message?: string;
   mediaUrl?: string;
-  audienceMode?: "all" | "manual" | "filters";
+  audienceMode?: "all" | "manual" | "group" | "filters";
   selectedLeadIds?: string[];
+  campaignGroupId?: string;
   state?: string;
   interest?: string;
   propertyId?: string;
@@ -98,6 +100,9 @@ export async function POST(request: Request) {
     ]);
 
     const selectedIds = new Set((body.selectedLeadIds || []).map(String));
+    const campaignGroup = body.campaignGroupId ? await getCampaignGroup(String(body.campaignGroupId)) : null;
+    const groupLeadIds = new Set(campaignGroup?.leadIds || []);
+    const groupPhones = new Set((campaignGroup?.phones || []).map(normalizeLeadPhone).filter(Boolean));
     const campaignType = body.campaignType && body.campaignType in campaignTemplates
       ? body.campaignType
       : "limitless_realty_update";
@@ -128,6 +133,7 @@ export async function POST(request: Request) {
     const matchedRecipients = allLeads.filter((lead) => {
       if (!isContactable(lead)) return false;
       if (mode === "manual") return selectedIds.has(String(lead.id));
+      if (mode === "group") return groupLeadIds.has(String(lead.id)) || groupPhones.has(normalizeLeadPhone(lead.phone));
       if (mode === "all") return true;
       if (state && !text(lead.location_preference).includes(state)) return false;
       if (interest) {
@@ -143,6 +149,22 @@ export async function POST(request: Request) {
       if (budgetMax && (!budget || budget > budgetMax)) return false;
       return true;
     });
+    const matchedPhones = new Set(matchedRecipients.map((lead) => normalizeLeadPhone(lead.phone)).filter(Boolean));
+    if (mode === "group" && campaignGroup) {
+      for (const phone of groupPhones) {
+        if (matchedPhones.has(phone)) continue;
+        matchedRecipients.push({
+          id: phone,
+          name: "there",
+          phone,
+          status: "new",
+          score: "unscored",
+          source: "manual_campaign_group",
+          campaign_eligible: true,
+        } as ProgressiveLead);
+        matchedPhones.add(phone);
+      }
+    }
     const cooldowns = await getMetaCooldownPhones(matchedRecipients.map((lead) => lead.phone), 24);
     const recipients = matchedRecipients.filter((lead) => !cooldowns.has(normalizeLeadPhone(lead.phone)));
     const cooldownSkipped = matchedRecipients.length - recipients.length;

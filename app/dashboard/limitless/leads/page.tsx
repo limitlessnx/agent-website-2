@@ -3,6 +3,7 @@ import {
   importProgressiveLeadsAction,
 } from "@/app/dashboard/progressive-lead-actions";
 import LeadsCrm from "@/components/admin/LeadsCrm";
+import { getCampaignGroups } from "@/lib/campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,10 @@ export default async function LeadsPage({
   searchParams?: Promise<{ imported?: string; skipped?: string; errors?: string; saved?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
-  const leads = await getCampaignAudienceLeads(1000);
+  const [leads, groups] = await Promise.all([
+    getCampaignAudienceLeads(1000),
+    getCampaignGroups(100),
+  ]);
   const hotLeads = leads.filter((lead) => ["hot", "qualified"].includes(String(lead.score || lead.status).toLowerCase())).length;
   const undocumented = leads.filter((lead) => lead.profile_status === "undocumented").length;
   const imported = Number(params.imported || 0);
@@ -58,7 +62,7 @@ export default async function LeadsPage({
       ) : null}
 
       <div id="lead-control">
-        <LeadsCrm leads={leads} />
+        <LeadsCrm leads={leads} groups={groups} />
       </div>
 
       <section id="lead-tools" className="admin-grid two">
