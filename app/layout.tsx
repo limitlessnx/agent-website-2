@@ -9,6 +9,7 @@ import "./ui-balance-fix.css";
 import "./dashboard-responsive-v2.css";
 import "./followup-control.css";
 import "./dashboard-visual-system.css";
+import "./campaign-console.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
