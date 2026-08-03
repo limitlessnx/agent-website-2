@@ -1,18 +1,32 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 
 type Conversation = { id: string; title: string; status: string; priority: string; updated_at: string };
 type Message = { id?: string; role: string; content: string; created_at?: string };
 type Action = { id: string; action_key: string; title: string; description: string; risk_level: string; status: string };
 
-const welcome: Message = {
-  role: "assistant",
-  content: "I’m Agent Leo, Fluxknight’s AI Operations Support Engineer. Tell me what failed, which organization is affected, and what you expected to happen. I’ll inspect the platform before suggesting a fix.",
+type AgentLeoClientProps = {
+  apiBase?: string;
+  scopeLabel?: string;
+  title?: string;
+  description?: string;
+  welcomeMessage?: string;
+  placeholder?: string;
+  typingLabel?: string;
 };
 
-export default function AgentLeoClient() {
+export default function AgentLeoClient({
+  apiBase = "/api/admin/support/leo",
+  scopeLabel = "Super Admin Support",
+  title = "Agent Leo",
+  description = "Diagnose agents, workflows, integrations, provisioning, and delivery failures from one support console.",
+  welcomeMessage = "I am Agent Leo, Fluxknight's AI Operations Support Engineer. Tell me what failed, which organization is affected, and what you expected to happen. I will inspect the platform before suggesting a fix.",
+  placeholder = "Ask Leo about a failed agent, workflow, message, organization, or integration...",
+  typingLabel = "Inspecting Fluxknight, Supabase, and n8n",
+}: AgentLeoClientProps) {
+  const welcome: Message = { role: "assistant", content: welcomeMessage };
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [conversationId, setConversationId] = useState("");
@@ -22,19 +36,21 @@ export default function AgentLeoClient() {
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { void loadConversations(); }, []);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy, actions]);
-
-  async function loadConversations() {
-    const response = await fetch("/api/admin/support/leo", { cache: "no-store" });
+  const loadConversations = useCallback(async () => {
+    const response = await fetch(apiBase, { cache: "no-store" });
     const result = await response.json().catch(() => ({}));
     if (response.ok) setConversations(result.conversations || []);
-  }
+  }, [apiBase]);
+
+  // Initial client-side load for saved support cases.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadConversations(); }, [loadConversations]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy, actions]);
 
   async function openConversation(id: string) {
     setConversationId(id);
     setError("");
-    const response = await fetch(`/api/admin/support/leo?conversationId=${encodeURIComponent(id)}`, { cache: "no-store" });
+    const response = await fetch(`${apiBase}?conversationId=${encodeURIComponent(id)}`, { cache: "no-store" });
     const result = await response.json().catch(() => ({}));
     if (response.ok) {
       setMessages(result.messages?.length ? result.messages : [welcome]);
@@ -44,7 +60,7 @@ export default function AgentLeoClient() {
 
   function newDiagnosis() {
     setConversationId("");
-    setMessages([{ role: "assistant", content: "New diagnostic session started. Describe the incident and I’ll inspect the platform." }]);
+    setMessages([{ role: "assistant", content: "New diagnostic session started. Describe the issue and I will inspect the scoped platform data." }]);
     setActions([]);
     setError("");
   }
@@ -55,11 +71,12 @@ export default function AgentLeoClient() {
     const data = new FormData(form);
     const message = String(data.get("message") || "").trim();
     if (!message || busy) return;
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     setMessages((current) => [...current, { role: "user", content: message }]);
     form.reset();
     try {
-      const response = await fetch("/api/admin/support/leo", {
+      const response = await fetch(apiBase, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, conversationId: conversationId || undefined }),
@@ -72,14 +89,16 @@ export default function AgentLeoClient() {
       await loadConversations();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Agent Leo could not respond.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function decideAction(action: Action, decision: "approve" | "reject") {
     setWorkingAction(action.id);
     setError("");
     try {
-      const response = await fetch(`/api/admin/support/leo/actions/${action.id}`, {
+      const response = await fetch(`${apiBase}/actions/${action.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision }),
@@ -91,7 +110,9 @@ export default function AgentLeoClient() {
       await loadConversations();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to update permission.");
-    } finally { setWorkingAction(""); }
+    } finally {
+      setWorkingAction("");
+    }
   }
 
   return (
@@ -106,7 +127,7 @@ export default function AgentLeoClient() {
         <div className="leo-conversations">
           {conversations.map((item) => (
             <button key={item.id} className={item.id === conversationId ? "active" : ""} type="button" onClick={() => openConversation(item.id)}>
-              <span className="leo-case-copy"><strong>{item.title}</strong><small>{item.status.replaceAll("_", " ")} · {item.priority}</small></span>
+              <span className="leo-case-copy"><strong>{item.title}</strong><small>{item.status.replaceAll("_", " ")} - {item.priority}</small></span>
               <ChevronRight size={15} />
             </button>
           ))}
@@ -118,9 +139,9 @@ export default function AgentLeoClient() {
         <header className="leo-console-head">
           <div className="leo-title-row">
             <span className="leo-avatar large"><Bot size={24} /></span>
-            <div><p className="admin-kicker">Super Admin Support</p><h1>Agent Leo</h1><p>Diagnose agents, workflows, integrations, provisioning, and delivery failures from one support console.</p></div>
+            <div><p className="admin-kicker">{scopeLabel}</p><h1>{title}</h1><p>{description}</p></div>
           </div>
-          <div className="leo-live"><span /> Live diagnostics</div>
+          <div className="leo-live"><span /> Scoped diagnostics</div>
         </header>
 
         <div className="leo-capabilities">
@@ -141,7 +162,7 @@ export default function AgentLeoClient() {
               <article className="leo-message assistant leo-typing-card">
                 <span className="leo-message-label">LEO</span>
                 <div className="leo-typing"><i /><i /><i /></div>
-                <small>Inspecting Fluxknight, Supabase, and n8n</small>
+                <small>{typingLabel}</small>
               </article>
             ) : null}
             <div ref={bottomRef} />
@@ -149,7 +170,7 @@ export default function AgentLeoClient() {
 
           {actions.length ? (
             <section className="leo-actions">
-              <div className="leo-actions-head"><div><strong>Permission center</strong><span>Leo cannot change production without your approval.</span></div><ShieldCheck size={18} /></div>
+              <div className="leo-actions-head"><div><strong>Permission center</strong><span>Leo cannot change production without approval.</span></div><ShieldCheck size={18} /></div>
               {actions.map((action) => (
                 <article key={action.id || action.action_key} className={`leo-action ${action.status}`}>
                   <div className="leo-action-copy"><span className={`leo-risk ${action.risk_level}`}>{action.risk_level} risk</span><h3>{action.title}</h3><p>{action.description}</p></div>
@@ -166,7 +187,7 @@ export default function AgentLeoClient() {
 
           {error ? <p className="admin-form-message">{error}</p> : null}
           <form className="leo-composer" onSubmit={submit}>
-            <textarea name="message" rows={3} placeholder="Ask Leo about a failed agent, workflow, message, organization, or integration..." required />
+            <textarea name="message" rows={3} placeholder={placeholder} required />
             <button type="submit" disabled={busy}><Send size={17} /> {busy ? "Leo is thinking" : "Send"}</button>
           </form>
         </div>
