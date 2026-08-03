@@ -67,6 +67,23 @@ export default function AutomationTemplateManager({
     }
   }
 
+  async function runProvisioningNow() {
+    setWorking(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/automation-provisioning/run", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to run provisioning.");
+      const processed = Number(result.processed || 0);
+      setMessage(processed ? `Provisioning ran ${processed} job${processed === 1 ? "" : "s"}.` : "No queued provisioning jobs were waiting.");
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to run provisioning.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   return (
     <>
       <section className="admin-panel">
@@ -119,7 +136,15 @@ export default function AutomationTemplateManager({
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Provisioning jobs</h2><p>Retry-safe clone jobs with redacted error recording.</p></div></div>
+        <div className="admin-panel-header">
+          <div>
+            <h2>Provisioning jobs</h2>
+            <p>Retry-safe clone jobs with redacted error recording.</p>
+          </div>
+          <button className="admin-button secondary" type="button" disabled={working} onClick={runProvisioningNow}>
+            {working ? "Running..." : "Run provisioning now"}
+          </button>
+        </div>
         <div className="admin-list">
           {jobs.map((job) => (
             <div className="admin-list-row" key={job.id}>
