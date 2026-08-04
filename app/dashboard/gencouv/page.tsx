@@ -2,6 +2,7 @@ import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, U
 import MetricCard from "@/components/admin/MetricCard";
 import GencouvEmailControls from "@/components/gencouv/GencouvEmailControls";
 import GencouvLeadActions from "@/components/gencouv/GencouvLeadActions";
+import GencouvMailLeads from "@/components/gencouv/GencouvMailLeads";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ const dashboardUrl =
   "https://n8n.srv1720757.hstgr.cloud/webhook/gencouv-dashboard-data";
 
 const TEST_MARKERS = ["codex", "test lead", "clean test", "sanitized test", "dummy", "sample lead"];
+const BLOCKED_EMAIL_STATES = ["do_not_contact", "bounced", "complained", "suppressed", "unsubscribed", "failed"];
 
 function isSyntheticLead(lead: Lead) {
   const searchable = [lead.name, lead.email, lead.phone, lead.source, lead.message]
@@ -65,6 +67,13 @@ function isSyntheticLead(lead: Lead) {
     .toLowerCase();
 
   return TEST_MARKERS.some((marker) => searchable.includes(marker)) || lead.source?.toLowerCase() === "test";
+}
+
+function hasValidEmail(lead: Lead) {
+  const email = lead.email?.trim().toLowerCase() || "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  const state = `${lead.email_sequence_status || ""} ${lead.lifecycle_status || ""} ${lead.follow_up_status || ""}`.toLowerCase();
+  return !BLOCKED_EMAIL_STATES.some((blocked) => state.includes(blocked));
 }
 
 async function getGencouvDashboard() {
@@ -164,15 +173,25 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export default async function GencouvWorkspacePage() {
-  const [organizations, dashboard] = await Promise.all([
+  const [organizations, dashboard, emailMessages] = await Promise.all([
     supabaseServerRequest<any[]>("organizations?select=id,name,slug,status,metadata&slug=eq.gencouv&limit=1").catch(() => []),
     getGencouvDashboard(),
+    supabaseServerRequest<any[]>("gencouv_email_messages?select=*&order=created_at.desc&limit=500").catch(() => []),
   ]);
 
   const organization = organizations[0];
   const data = dashboard.data;
   const hotLeads = (data?.lead_boards?.hot || []).filter((lead) => !isSyntheticLead(lead)).slice(0, 4);
   const recentLeads = (data?.recent_leads || []).filter((lead) => !isSyntheticLead(lead)).slice(0, 8);
+  const allLeads = [...Object.values(data?.lead_boards || {}).flat(), ...(data?.recent_leads || [])]
+    .filter((lead) => !isSyntheticLead(lead));
+  const uniqueMailLeads = Array.from(
+    new Map(
+      allLeads
+        .filter(hasValidEmail)
+        .map((lead) => [lead.email!.trim().toLowerCase(), { ...lead, email: lead.email!.trim().toLowerCase() }]),
+    ).values(),
+  );
 
   return (
     <main className="admin-page">
@@ -203,11 +222,11 @@ export default async function GencouvWorkspacePage() {
 
       <div className="admin-metric-grid">
         <MetricCard icon={Users} tone="cyan" label="Total records" value={total(data, "leads")} detail="CRM rows from Gencouv Leads" trend="live" />
+        <MetricCard icon={Mail} tone="rose" label="Mail leads" value={uniqueMailLeads.length} detail="Valid and eligible email contacts" trend="clean list" />
         <MetricCard icon={Flame} tone="emerald" label="Hot leads" value={total(data, "hot")} detail="Ready for fast follow-up" trend="priority" />
         <MetricCard icon={Activity} tone="amber" label="Follow-ups due" value={total(data, "follow_ups_due")} detail="Needs review or contact" trend="next action" />
         <MetricCard icon={ShieldCheck} tone="violet" label="Onboarding" value={total(data, "onboarding")} detail="Pending setup or evaluation" trend="client path" />
         <MetricCard icon={CircleDollarSign} tone="emerald" label="Onboarded" value={total(data, "onboarded")} detail="Active client base" trend="conversion" />
-        <MetricCard icon={Mail} tone="rose" label="Bounced" value={total(data, "bounced")} detail="Protect deliverability" trend="email health" />
       </div>
 
       <section id="sequence-status" className="admin-panel">
@@ -235,6 +254,8 @@ export default async function GencouvWorkspacePage() {
           sendingEnabled={Boolean(data?.email_controls?.sending_enabled)}
         />
       </div>
+
+      <GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} />
 
       <div id="operations" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         <Breakdown title="Lifecycle board" items={data?.breakdowns?.lifecycle_status} />
