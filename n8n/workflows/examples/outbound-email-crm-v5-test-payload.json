@@ -1,0 +1,19 @@
+{
+  "organization_id": "REPLACE_WITH_ORGANIZATION_UUID",
+  "agent_id": "REPLACE_WITH_OUTBOUND_EMAIL_AGENT_UUID",
+  "idempotency_key": "outbound-email-test-001",
+  "event_type": "campaign.sequence_due",
+  "campaign_id": "campaign-demo-001",
+  "sequence_step": 1,
+  "input": {
+    "customer_key": "prospect-001",
+    "full_name": "Ada Example",
+    "email": "ada@example.com",
+    "company_name": "Example Ventures",
+    "job_title": "Operations Manager",
+    "campaign_name": "AI Sales Agent Outreach",
+    "offer": "AI sales and customer support automation",
+    "context": "The company receives leads through WhatsApp and email.",
+    "preferred_send_at": "2026-08-06T09:00:00+01:00"
+  }
+}
