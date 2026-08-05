@@ -19,25 +19,12 @@ async function askLeoN8n(input: { message: string; conversationId: string; organ
   const response = await fetch(leoWebhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: input.message,
-      conversation_id: input.conversationId,
-      organization_id: input.organizationId || null,
-      actor: input.actor,
-    }),
+    body: JSON.stringify({ message: input.message, conversation_id: input.conversationId, organization_id: input.organizationId || null, actor: input.actor }),
     cache: "no-store",
     signal: AbortSignal.timeout(95000),
   });
   if (!response.ok) throw new Error(`Leo n8n engine returned ${response.status}.`);
-  return response.json() as Promise<{
-    ok?: boolean;
-    reply?: string;
-    diagnosis?: string[];
-    evidence?: string[];
-    action?: SupportAction | null;
-    approval_required?: boolean;
-    execution?: Record<string, unknown> | null;
-  }>;
+  return response.json() as Promise<{ ok?: boolean; reply?: string; diagnosis?: string[]; evidence?: string[]; action?: SupportAction | null; approval_required?: boolean; execution?: Record<string, unknown> | null }>;
 }
 
 export async function GET(request: NextRequest) {
@@ -93,7 +80,7 @@ export async function POST(request: NextRequest) {
         const rows = await supabaseServerRequest<SupportAction[]>("support_actions", { method: "POST", body: JSON.stringify({ conversation_id: conversationId, ...action }) });
         if (rows[0]) createdActions.push(rows[0]);
       }
-      await supabaseServerRequest(`support_conversations?id=eq.${encodeURIComponent(conversationId)}`, { method: "PATCH", body: JSON.stringify({ status: createdActions.length ? "waiting_approval" : "open", updated_at: new Date().toISOString()) });
+      await supabaseServerRequest(`support_conversations?id=eq.${encodeURIComponent(conversationId)}`, { method: "PATCH", body: JSON.stringify({ status: createdActions.length ? "waiting_approval" : "open", updated_at: new Date().toISOString() }) });
       return NextResponse.json({ ok: true, conversationId, reply: fallback.content, diagnostics, actions: createdActions, engine: "rule-fallback" });
     }
   } catch (error) {
