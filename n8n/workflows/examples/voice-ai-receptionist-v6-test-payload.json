@@ -1,0 +1,20 @@
+{
+  "organization_id": "REPLACE_WITH_ORGANIZATION_UUID",
+  "agent_id": "REPLACE_WITH_VOICE_AGENT_UUID",
+  "idempotency_key": "voice-test-001",
+  "event_type": "voice.transcript_received",
+  "customer_key": "+2348012345678",
+  "input": {
+    "call_id": "test-call-001",
+    "caller_phone": "+2348012345678",
+    "direction": "inbound",
+    "provider": "elevenlabs",
+    "transcript": "Hello, I want pricing and to book a consultation next Tuesday afternoon.",
+    "duration_seconds": 42,
+    "customer": {
+      "name": "Ada Example",
+      "phone": "+2348012345678",
+      "email": "ada@example.com"
+    }
+  }
+}
