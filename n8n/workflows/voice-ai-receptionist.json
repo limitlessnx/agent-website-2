@@ -1,12 +1,191 @@
 {
-  "name":"Fluxknight - Voice AI Receptionist v1",
-  "nodes":[
-    {"parameters":{"httpMethod":"POST","path":"fluxknight/voice-receptionist/v1","responseMode":"responseNode","options":{}},"id":"voice-webhook","name":"Tenant Event Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-620,0],"webhookId":"fluxknight-voice-receptionist-v1"},
-    {"parameters":{"jsCode":"const body=$json.body??$json; const missing=['organization_id','agent_id','idempotency_key'].filter(k=>!body[k]); if(missing.length) throw new Error(`Missing required tenant fields: ${missing.join(', ')}`); return [{json:{...body,workflow_key:'voice_receptionist_v1',event_type:body.event_type||'voice.call_received',input:body.input||{}}}];"},"id":"voice-validate","name":"Validate Tenant Envelope","type":"n8n-nodes-base.code","typeVersion":2,"position":[-380,0]},
-    {"parameters":{"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id||null,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:'voice',event_type:$json.event_type,customer_id:$json.customer_id||null}})}}","options":{}},"id":"voice-enqueue","name":"Queue Tenant Execution","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-120,0]},
-    {"parameters":{"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({execution_id:$json.execution_id})}}","options":{}},"id":"voice-prepare","name":"Prepare Runtime Context","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[140,0]},
-    {"parameters":{"respondWith":"json","responseBody":"={{JSON.stringify({workflow_key:'voice_receptionist_v1',status:$json.status||'prepared',execution_id:$json.execution_id||null,execution_enabled:false,next_action:'voice_provider_and_tool_dispatch_requires_explicit_activation'})}}","options":{"responseCode":202}},"id":"voice-response","name":"Return Safe Status","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[400,0]}
+  "name": "Fluxknight - Voice AI Receptionist v6",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxknight/voice-receptionist/v6",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Tenant Voice Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1000, 0],
+      "webhookId": "fluxknight-voice-receptionist-v6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body??$json; const req=['organization_id','agent_id','idempotency_key','event_type']; const m=req.filter(k=>!String(b[k]??'').trim()); if(m.length) throw new Error(`Missing: ${m.join(', ')}`); const allowed=['voice.call_started','voice.transcript_received','voice.call_completed','voice.call_failed','voice.outbound_requested']; if(!allowed.includes(b.event_type)) throw new Error('Unsupported voice event'); const input=b.input??{}; const key=String(b.customer_key||input.customer_key||input.caller_phone||input.from||input.email||'').trim(); if(!key) throw new Error('Missing customer identity'); return [{json:{organization_id:String(b.organization_id),agent_id:String(b.agent_id),conversation_id:b.conversation_id||null,customer_id:b.customer_id||null,customer_key:key,idempotency_key:String(b.idempotency_key),event_type:String(b.event_type),channel:'voice',workflow_key:'voice_receptionist_v6',input}}];"
+      },
+      "id": "validate",
+      "name": "Validate Tenant Voice Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-780, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:$json.channel,event_type:$json.event_type,customer_id:$json.customer_id,customer_key:$json.customer_key}})}}",
+        "options": {"timeout":30000}
+      },
+      "id": "enqueue",
+      "name": "Queue Tenant Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-560,0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method":"POST",
+        "url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}",
+        "sendHeaders":true,
+        "headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody":true,
+        "contentType":"raw",
+        "rawContentType":"application/json",
+        "body":"={{JSON.stringify({execution_id:$json.execution_id})}}",
+        "options":{"timeout":30000}
+      },
+      "id":"context",
+      "name":"Prepare Tenant Runtime Context",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[-340,0],
+      "retryOnFail":true,
+      "maxTries":3,
+      "waitBetweenTries":1000
+    },
+    {
+      "parameters": {
+        "method":"POST",
+        "url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/providers/execute'}}",
+        "sendHeaders":true,
+        "headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody":true,
+        "contentType":"raw",
+        "rawContentType":"application/json",
+        "body":"={{JSON.stringify({organization_id:$('Validate Tenant Voice Envelope').first().json.organization_id,agent_id:$('Validate Tenant Voice Envelope').first().json.agent_id,execution_id:$json.execution_id,response_format:'json',messages:[{role:'system',content:'You are a tenant-safe voice receptionist. Return JSON only: action,call_status,intent,department,priority,sentiment,summary,reply_text,lead_stage,qualification_score,handoff_required,handoff_reason,appointment_requested,appointment_details,follow_up_required,follow_up_at,follow_up_reason,crm_notes,memory_facts. Never invent completed bookings or actions. Escalate emergencies, legal or payment disputes, explicit human requests, and high-impact uncertainty.'},{role:'user',content:JSON.stringify({event_type:$('Validate Tenant Voice Envelope').first().json.event_type,input:$('Validate Tenant Voice Envelope').first().json.input,tenant_context:$json})}]})}}",
+        "options":{"timeout":60000}
+      },
+      "id":"ai",
+      "name":"Voice Receptionist Decision",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[-100,0],
+      "retryOnFail":true,
+      "maxTries":3,
+      "waitBetweenTries":1500
+    },
+    {
+      "parameters": {
+        "jsCode":"const e=$('Validate Tenant Voice Envelope').first().json; let r=$json.output_text??$json.text??$json.result??$json.output??$json; if(typeof r==='string'){r=JSON.parse(r.trim().replace(/^```json\\s*/i,'').replace(/```$/,''));} const d=r&&typeof r==='object'?r:{}; return [{json:{...e,execution_id:$('Prepare Tenant Runtime Context').first().json.execution_id,decision:{action:String(d.action||'respond'),call_status:String(d.call_status||'in_progress'),intent:String(d.intent||'unknown'),department:String(d.department||'general'),priority:String(d.priority||'normal'),sentiment:String(d.sentiment||'neutral'),summary:String(d.summary||'Voice event processed.'),reply_text:String(d.reply_text||'Thank you. A team member will assist you.'),lead_stage:String(d.lead_stage||'new'),qualification_score:Math.max(0,Math.min(100,Math.round(Number(d.qualification_score)||0))),handoff_required:Boolean(d.handoff_required),handoff_reason:d.handoff_reason?String(d.handoff_reason):null,appointment_requested:Boolean(d.appointment_requested),appointment_details:d.appointment_details&&typeof d.appointment_details==='object'?d.appointment_details:{},follow_up_required:Boolean(d.follow_up_required),follow_up_at:d.follow_up_at?String(d.follow_up_at):null,follow_up_reason:d.follow_up_reason?String(d.follow_up_reason):null,crm_notes:String(d.crm_notes||''),memory_facts:Array.isArray(d.memory_facts)?d.memory_facts:[]},provider_usage:$json.usage||null}}];"
+      },
+      "id":"parse",
+      "name":"Validate Voice Decision",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[140,0]
+    },
+    {
+      "parameters": {
+        "method":"POST",
+        "url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/voice-receptionist'}}",
+        "sendHeaders":true,
+        "headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody":true,
+        "contentType":"raw",
+        "rawContentType":"application/json",
+        "body":"={{JSON.stringify($json)}}",
+        "options":{"timeout":30000}
+      },
+      "id":"persist",
+      "name":"Persist Voice Outcome",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[380,0],
+      "retryOnFail":true,
+      "maxTries":3,
+      "waitBetweenTries":1000
+    },
+    {
+      "parameters": {
+        "method":"POST",
+        "url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/dispatch'}}",
+        "sendHeaders":true,
+        "headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody":true,
+        "contentType":"raw",
+        "rawContentType":"application/json",
+        "body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,idempotency_key:$json.idempotency_key,actions:$json.actions||[]})}}",
+        "options":{"timeout":30000}
+      },
+      "id":"dispatch",
+      "name":"Dispatch Tenant Voice Actions",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[620,0],
+      "retryOnFail":true,
+      "maxTries":3,
+      "waitBetweenTries":1000
+    },
+    {
+      "parameters": {
+        "method":"POST",
+        "url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/complete'}}",
+        "sendHeaders":true,
+        "headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody":true,
+        "contentType":"raw",
+        "rawContentType":"application/json",
+        "body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,status:'completed',output:$json})}}",
+        "options":{"timeout":30000}
+      },
+      "id":"complete",
+      "name":"Complete Voice Execution",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[860,0]
+    },
+    {
+      "parameters": {
+        "respondWith":"json",
+        "responseBody":"={{JSON.stringify($json)}}",
+        "options":{"responseCode":200}
+      },
+      "id":"respond",
+      "name":"Return Voice Result",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[1100,0]
+    }
   ],
-  "connections":{"Tenant Event Webhook":{"main":[[{"node":"Validate Tenant Envelope","type":"main","index":0}]]},"Validate Tenant Envelope":{"main":[[{"node":"Queue Tenant Execution","type":"main","index":0}]]},"Queue Tenant Execution":{"main":[[{"node":"Prepare Runtime Context","type":"main","index":0}]]},"Prepare Runtime Context":{"main":[[{"node":"Return Safe Status","type":"main","index":0}]]}},
-  "pinData":{},"active":false,"settings":{"executionOrder":"v1","saveExecutionProgress":true},"versionId":"66666666-6666-4666-8666-666666666666","meta":{"templateCredsSetupCompleted":false},"tags":[{"name":"fluxknight"},{"name":"tenant-safe"},{"name":"voice"}]
+  "connections": {
+    "Tenant Voice Event Webhook":{"main":[[{"node":"Validate Tenant Voice Envelope","type":"main","index":0}]]},
+    "Validate Tenant Voice Envelope":{"main":[[{"node":"Queue Tenant Execution","type":"main","index":0}]]},
+    "Queue Tenant Execution":{"main":[[{"node":"Prepare Tenant Runtime Context","type":"main","index":0}]]},
+    "Prepare Tenant Runtime Context":{"main":[[{"node":"Voice Receptionist Decision","type":"main","index":0}]]},
+    "Voice Receptionist Decision":{"main":[[{"node":"Validate Voice Decision","type":"main","index":0}]]},
+    "Validate Voice Decision":{"main":[[{"node":"Persist Voice Outcome","type":"main","index":0}]]},
+    "Persist Voice Outcome":{"main":[[{"node":"Dispatch Tenant Voice Actions","type":"main","index":0}]]},
+    "Dispatch Tenant Voice Actions":{"main":[[{"node":"Complete Voice Execution","type":"main","index":0}]]},
+    "Complete Voice Execution":{"main":[[{"node":"Return Voice Result","type":"main","index":0}]]}
+  },
+  "pinData": {},
+  "settings": {"executionOrder":"v1","saveExecutionProgress":true,"saveManualExecutions":true,"saveDataErrorExecution":"all","saveDataSuccessExecution":"all","timezone":"Africa/Lagos"},
+  "versionId": "43d034d1-4a96-4cb4-84be-cd68a7828a15",
+  "meta": {"templateCredsSetupCompleted": false},
+  "tags": [{"name":"fluxknight"},{"name":"tenant-safe"},{"name":"voice"}]
 }
