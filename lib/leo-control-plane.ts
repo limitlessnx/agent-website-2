@@ -42,7 +42,14 @@ export function isKnownLeoAction(actionKey: string) {
   return EXECUTABLE.has(actionKey);
 }
 
-async function event(action: LeoAction, eventType: string, actor?: string, details: Record<string, unknown> = {}, beforeState?: unknown, afterState?: unknown) {
+async function event(
+  action: LeoAction,
+  eventType: string,
+  actor?: string,
+  details: Record<string, unknown> = {},
+  beforeState?: unknown,
+  afterState?: unknown,
+) {
   await supabaseServerRequest("support_action_events", {
     method: "POST",
     body: JSON.stringify({
@@ -134,7 +141,10 @@ export async function executeLeoAction(action: LeoAction, actor: string) {
       case "verify_tenant_integrations": {
         const organizationId = requiredString(payload, "organization_id");
         const integrations = await supabaseServerRequest<any[]>(`organization_integrations?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=provider.asc`);
-        result = { integrations, unhealthy: integrations.filter((row) => !["connected", "active", "healthy"].includes(String(row.status).toLowerCase())) };
+        result = {
+          integrations,
+          unhealthy: integrations.filter((row) => !["connected", "active", "healthy"].includes(String(row.status).toLowerCase())),
+        };
         afterState = result;
         break;
       }
@@ -145,7 +155,10 @@ export async function executeLeoAction(action: LeoAction, actor: string) {
         if (!rows[0]) throw new Error("Tenant organization not found.");
         beforeState = rows[0];
         const status = action.action_key === "pause_tenant" ? "suspended" : "active";
-        const updated = await supabaseServerRequest<any[]>(`organizations?id=eq.${encodeURIComponent(organizationId)}`, { method: "PATCH", body: JSON.stringify({ status, updated_at: new Date().toISOString() }) });
+        const updated = await supabaseServerRequest<any[]>(`organizations?id=eq.${encodeURIComponent(organizationId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+        });
         afterState = updated[0];
         result = { organization: updated[0], verified: updated[0]?.status === status };
         break;
@@ -158,8 +171,11 @@ export async function executeLeoAction(action: LeoAction, actor: string) {
         if (!rows[0]) throw new Error("Tenant agent not found.");
         beforeState = rows[0];
         const status = action.action_key === "pause_agent" ? "paused" : String(payload.resume_status || "testing");
-        if (!["draft", "testing", "published"].includes(status)) throw new Error("Invalid agent resume status.");
-        const updated = await supabaseServerRequest<any[]>(`agents?organization_id=eq.${encodeURIComponent(organizationId)}&id=eq.${encodeURIComponent(agentId)}`, { method: "PATCH", body: JSON.stringify({ status, updated_at: new Date().toISOString() }) });
+        if (!["draft", "testing", "published", "paused"].includes(status)) throw new Error("Invalid agent status.");
+        const updated = await supabaseServerRequest<any[]>(`agents?organization_id=eq.${encodeURIComponent(organizationId)}&id=eq.${encodeURIComponent(agentId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+        });
         afterState = updated[0];
         result = { agent: updated[0], verified: updated[0]?.status === status };
         break;
@@ -172,15 +188,28 @@ export async function executeLeoAction(action: LeoAction, actor: string) {
         beforeState = rows[0];
         const n8nWorkflowId = String(payload.n8n_workflow_id || rows[0].external_workflow_id || "").trim();
         if (!n8nWorkflowId) throw new Error("No n8n workflow ID is mapped to this registry record.");
-        const n8nWorkflow = action.action_key === "activate_workflow" ? await activateN8nWorkflow(n8nWorkflowId) : await deactivateN8nWorkflow(n8nWorkflowId);
+        const n8nWorkflow = action.action_key === "activate_workflow"
+          ? await activateN8nWorkflow(n8nWorkflowId)
+          : await deactivateN8nWorkflow(n8nWorkflowId);
         const status = action.action_key === "activate_workflow" ? "active" : "paused";
-        const updated = await supabaseServerRequest<any[]>(`workflow_registry?id=eq.${encodeURIComponent(registryId)}`, { method: "PATCH", body: JSON.stringify({ status, updated_at: new Date().toISOString() }) });
-        afterState = { registry: updated[0], n8n: n8nWorkflow };
-        result = { ...afterState, verified: Boolean(n8nWorkflow.active) === (status === "active") };
+        const updated = await supabaseServerRequest<any[]>(`workflow_registry?id=eq.${encodeURIComponent(registryId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+        });
+        const workflowState: Record<string, unknown> = { registry: updated[0], n8n: n8nWorkflow };
+        afterState = workflowState;
+        result = {
+          registry: updated[0],
+          n8n: n8nWorkflow,
+          verified: Boolean(n8nWorkflow.active) === (status === "active"),
+        };
         break;
       }
       case "retry_failed_execution": {
-        result = { queued: false, note: "n8n public API does not provide a universal execution retry endpoint. The failed execution has been inspected; use the workflow webhook or n8n UI retry for this workflow." };
+        result = {
+          queued: false,
+          note: "n8n public API does not provide a universal execution retry endpoint. The failed execution has been inspected; use the workflow webhook or n8n UI retry for this workflow.",
+        };
         afterState = result;
         break;
       }
