@@ -1,99 +1,76 @@
 {
-  "name": "Fluxknight - AI Sales and Lead Qualification v1",
+  "name": "Fluxknight - AI Sales & Lead Qualification - Multi Tenant v2",
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "fluxknight/ai-sales/v1",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "ai-sales-webhook",
-      "name": "Tenant Event Webhook",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [-620, 0],
-      "webhookId": "fluxknight-ai-sales-v1"
+      "parameters": {"httpMethod":"POST","path":"fluxknight/ai-sales/v2","responseMode":"responseNode","options":{}},
+      "id":"webhook","name":"Tenant Event Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-1600,0],"webhookId":"fluxknight-ai-sales-v2"
     },
     {
-      "parameters": {
-        "jsCode": "const body = $json.body ?? $json;\nconst required = ['organization_id','agent_id','idempotency_key'];\nconst missing = required.filter((key) => !body[key]);\nif (missing.length) throw new Error(`Missing required tenant fields: ${missing.join(', ')}`);\nreturn [{ json: { ...body, workflow_key: 'ai_sales_qualification_v1', event_type: body.event_type || 'lead.message_received', input: body.input || {} } }];"
-      },
-      "id": "ai-sales-validate",
-      "name": "Validate Tenant Envelope",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-380, 0]
+      "parameters": {"jsCode":"const b=$json.body??$json; const required=['organization_id','agent_id','idempotency_key','channel','event_type','input']; const missing=required.filter(k=>b[k]===undefined||b[k]===null||b[k]===''); if(missing.length) throw new Error('Missing required tenant fields: '+missing.join(', ')); const allowed=['whatsapp','email','web_chat','telegram','voice','internal']; if(!allowed.includes(b.channel)) throw new Error('Unsupported channel'); const input=b.input||{}; const customerKey=String(b.customer_id||input.customer_key||input.email||input.phone||input.customer?.email||input.customer?.phone||'').trim(); if(!customerKey) throw new Error('customer_id or customer identifier required'); return [{json:{organization_id:String(b.organization_id),agent_id:String(b.agent_id),conversation_id:b.conversation_id||null,customer_id:b.customer_id||null,customer_key:customerKey,idempotency_key:String(b.idempotency_key),channel:b.channel,event_type:b.event_type,external_thread_key:b.external_thread_key||input.external_thread_key||null,input,received_at:new Date().toISOString(),workflow_key:'ai_sales_qualification_v2'}}];"},
+      "id":"validate","name":"Validate Tenant Envelope","type":"n8n-nodes-base.code","typeVersion":2,"position":[-1380,0]
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "x-runtime-secret", "value": "={{$env.RUNTIME_GATEWAY_SECRET}}" },
-            { "name": "content-type", "value": "application/json" }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{JSON.stringify({ organization_id: $json.organization_id, agent_id: $json.agent_id, conversation_id: $json.conversation_id || null, idempotency_key: $json.idempotency_key, input: { ...$json.input, workflow_key: $json.workflow_key, channel: $json.channel || 'internal', event_type: $json.event_type, customer_id: $json.customer_id || null } })}}",
-        "options": {}
-      },
-      "id": "ai-sales-enqueue",
-      "name": "Queue Tenant Execution",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-120, 0]
+      "parameters": {"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:$json.channel,event_type:$json.event_type,customer_id:$json.customer_id,customer_key:$json.customer_key,external_thread_key:$json.external_thread_key}})}}","options":{"timeout":30000}},
+      "id":"enqueue","name":"Queue Runtime Execution","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-1160,0],"retryOnFail":true,"maxTries":3,"waitBetweenTries":1000
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "x-runtime-secret", "value": "={{$env.RUNTIME_GATEWAY_SECRET}}" },
-            { "name": "content-type", "value": "application/json" }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{JSON.stringify({ execution_id: $json.execution_id })}}",
-        "options": {}
-      },
-      "id": "ai-sales-prepare",
-      "name": "Prepare Runtime Context",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [140, 0]
+      "parameters": {"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({execution_id:$json.execution_id})}}","options":{"timeout":60000}},
+      "id":"prepare","name":"Prepare Runtime Context","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-940,0],"retryOnFail":true,"maxTries":3,"waitBetweenTries":1500
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{JSON.stringify({ workflow_key: 'ai_sales_qualification_v1', status: $json.status || 'prepared', execution_id: $json.execution_id || null, execution_enabled: false, next_action: 'provider_and_tool_dispatch_requires_explicit_activation' })}}",
-        "options": { "responseCode": 202 }
-      },
-      "id": "ai-sales-response",
-      "name": "Return Safe Status",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [400, 0]
+      "parameters": {"jsCode":"const env=$('Validate Tenant Envelope').first().json; const executionId=$('Queue Runtime Execution').first().json.execution_id; const schema={qualification_status:'hot|warm|cold|disqualified',score:'0-100 integer',stage:'new|qualified|contacted|nurturing|appointment|disqualified',intent:'string',need:'string',budget:'string|null',timeline:'string|null',location:'string|null',objections:['string'],missing_fields:['name|email|phone|company|budget|timeline|need'],appointment_requested:'boolean',requested_datetime:'ISO datetime|null',handoff_required:'boolean',handoff_reason:'string|null',summary:'string',reply:'string',memory_facts:[{type:'preference|fact|goal|objection',summary:'string',confidence:'0-1'}]}; return [{json:{...env,execution_id:executionId,provider_input:{message:env.input.message||env.input.text||'',customer:env.input.customer||{},lead_context:env.input.lead_context||env.input,channel:env.channel,event_type:env.event_type},output_schema:schema}}];"},
+      "id":"buildprovider","name":"Build Provider Request","type":"n8n-nodes-base.code","typeVersion":2,"position":[-720,0]
+    },
+    {
+      "parameters": {"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/provider/execute'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,purpose:'ai_sales_qualification',input:$json.provider_input,output_schema:$json.output_schema})}}","options":{"timeout":90000}},
+      "id":"provider","name":"Execute Assigned AI Provider","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-500,0],"retryOnFail":true,"maxTries":3,"waitBetweenTries":2000
+    },
+    {
+      "parameters": {"jsCode":"const ctx=$('Build Provider Request').first().json; let raw=String($json.output_text||'').replace(/^```json\\s*/i,'').replace(/```$/,'').trim(); let q; try{q=JSON.parse(raw)}catch(e){throw new Error('Invalid AI JSON: '+raw.slice(0,300))} const statuses=['hot','warm','cold','disqualified']; const stages=['new','qualified','contacted','nurturing','appointment','disqualified']; q.qualification_status=statuses.includes(q.qualification_status)?q.qualification_status:'warm'; q.score=Math.max(0,Math.min(100,Math.round(Number(q.score)||0))); q.stage=stages.includes(q.stage)?q.stage:(q.score>=70?'qualified':q.score>=35?'nurturing':'new'); q.appointment_requested=Boolean(q.appointment_requested); q.handoff_required=Boolean(q.handoff_required); q.objections=Array.isArray(q.objections)?q.objections:[]; q.missing_fields=Array.isArray(q.missing_fields)?q.missing_fields:[]; q.memory_facts=Array.isArray(q.memory_facts)?q.memory_facts:[]; return [{json:{...ctx,qualification:q,provider_usage:$json.usage||{},provider_response_id:$json.response_id||null,provider:$json.provider,model:$json.model}}];"},
+      "id":"parse","name":"Parse Qualification","type":"n8n-nodes-base.code","typeVersion":2,"position":[-280,0]
+    },
+    {
+      "parameters": {"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/ai-sales'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,conversation_id:$json.conversation_id,customer_id:$json.customer_id,customer_key:$json.customer_key,channel:$json.channel,external_thread_key:$json.external_thread_key,idempotency_key:$json.idempotency_key,input:$json.input,qualification:$json.qualification,provider_usage:$json.provider_usage,provider_response_id:$json.provider_response_id})}}","options":{"timeout":60000}},
+      "id":"persist","name":"Persist Sales Decision","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-60,0],"retryOnFail":true,"maxTries":3,"waitBetweenTries":1500
+    },
+    {
+      "parameters": {"jsCode":"const r=$json; const actions=[]; if(r.handoff_required) actions.push({type:'handoff',payload:r.handoff}); if(r.appointment_required) actions.push({type:'appointment',payload:r.appointment}); if(r.follow_up_required) actions.push({type:'follow_up',payload:r.follow_up}); if(r.reply_action) actions.push({type:'reply',payload:r.reply_action}); return [{json:{...r,actions}}];"},
+      "id":"route","name":"Route Approved Actions","type":"n8n-nodes-base.code","typeVersion":2,"position":[160,0]
+    },
+    {
+      "parameters": {"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/dispatch'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,idempotency_key:$json.idempotency_key,actions:$json.actions})}}","options":{"timeout":90000}},
+      "id":"dispatch","name":"Dispatch Tenant Actions","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[380,0],"retryOnFail":true,"maxTries":3,"waitBetweenTries":2000
+    },
+    {
+      "parameters": {"jsCode":"const persisted=$('Persist Sales Decision').first().json; return [{json:{...persisted,dispatch:$json}}];"},
+      "id":"assemble","name":"Assemble Workflow Result","type":"n8n-nodes-base.code","typeVersion":2,"position":[600,0]
+    },
+    {
+      "parameters": {"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/complete'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,status:'succeeded',output:$json})}}","options":{"timeout":30000}},
+      "id":"complete","name":"Complete Runtime Execution","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[820,0],"retryOnFail":true,"maxTries":2,"waitBetweenTries":1000
+    },
+    {
+      "parameters": {"respondWith":"json","responseBody":"={{JSON.stringify($json)}}","options":{"responseCode":200}},
+      "id":"respond","name":"Return Tenant Result","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[1040,0]
     }
   ],
   "connections": {
-    "Tenant Event Webhook": { "main": [[{ "node": "Validate Tenant Envelope", "type": "main", "index": 0 }]] },
-    "Validate Tenant Envelope": { "main": [[{ "node": "Queue Tenant Execution", "type": "main", "index": 0 }]] },
-    "Queue Tenant Execution": { "main": [[{ "node": "Prepare Runtime Context", "type": "main", "index": 0 }]] },
-    "Prepare Runtime Context": { "main": [[{ "node": "Return Safe Status", "type": "main", "index": 0 }]] }
+    "Tenant Event Webhook":{"main":[[{"node":"Validate Tenant Envelope","type":"main","index":0}]]},
+    "Validate Tenant Envelope":{"main":[[{"node":"Queue Runtime Execution","type":"main","index":0}]]},
+    "Queue Runtime Execution":{"main":[[{"node":"Prepare Runtime Context","type":"main","index":0}]]},
+    "Prepare Runtime Context":{"main":[[{"node":"Build Provider Request","type":"main","index":0}]]},
+    "Build Provider Request":{"main":[[{"node":"Execute Assigned AI Provider","type":"main","index":0}]]},
+    "Execute Assigned AI Provider":{"main":[[{"node":"Parse Qualification","type":"main","index":0}]]},
+    "Parse Qualification":{"main":[[{"node":"Persist Sales Decision","type":"main","index":0}]]},
+    "Persist Sales Decision":{"main":[[{"node":"Route Approved Actions","type":"main","index":0}]]},
+    "Route Approved Actions":{"main":[[{"node":"Dispatch Tenant Actions","type":"main","index":0}]]},
+    "Dispatch Tenant Actions":{"main":[[{"node":"Assemble Workflow Result","type":"main","index":0}]]},
+    "Assemble Workflow Result":{"main":[[{"node":"Complete Runtime Execution","type":"main","index":0}]]},
+    "Complete Runtime Execution":{"main":[[{"node":"Return Tenant Result","type":"main","index":0}]]}
   },
-  "pinData": {},
   "active": false,
-  "settings": { "executionOrder": "v1", "saveExecutionProgress": true },
-  "versionId": "11111111-1111-4111-8111-111111111111",
-  "meta": { "templateCredsSetupCompleted": false },
-  "tags": [{ "name": "fluxknight" }, { "name": "tenant-safe" }, { "name": "ai-sales" }]
+  "settings": {"executionOrder":"v1","saveExecutionProgress":true,"saveManualExecutions":true,"saveDataErrorExecution":"all","saveDataSuccessExecution":"all","timezone":"Africa/Lagos"},
+  "versionId":"fec18dc9-8764-4b1f-9ced-02f16d274712",
+  "meta":{"templateCredsSetupCompleted":false},
+  "tags":[{"name":"fluxknight"},{"name":"tenant-safe"},{"name":"ai-sales"},{"name":"production-template"}]
 }
