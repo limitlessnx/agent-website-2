@@ -1,0 +1,22 @@
+{
+  "organization_id": "REPLACE_WITH_ORGANIZATION_UUID",
+  "agent_id": "REPLACE_WITH_CUSTOMER_SUPPORT_AGENT_UUID",
+  "idempotency_key": "support-test-{{$now}}",
+  "channel": "web_chat",
+  "event_type": "support.message_received",
+  "customer_id": null,
+  "external_thread_key": "support-demo-thread-001",
+  "input": {
+    "customer_key": "demo-customer@example.com",
+    "message": "I paid for my subscription but my account still shows payment pending. Can you check what I should do next?",
+    "customer": {
+      "full_name": "Demo Customer",
+      "email": "demo-customer@example.com",
+      "phone": "+2348000000000"
+    },
+    "support_context": {
+      "source": "website",
+      "page": "/dashboard/billing"
+    }
+  }
+}
