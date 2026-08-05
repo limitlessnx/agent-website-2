@@ -1,0 +1,36 @@
+{
+  "organization_id": "REPLACE_WITH_ORGANIZATION_UUID",
+  "agent_id": "REPLACE_WITH_CRM_FOLLOW_UP_AGENT_UUID",
+  "conversation_id": null,
+  "customer_id": null,
+  "lead_id": null,
+  "task_id": null,
+  "idempotency_key": "crm-follow-up-manual-test-001",
+  "channel": "email",
+  "event_type": "follow_up.manual",
+  "input": {
+    "customer_key": "ada@example.com",
+    "customer": {
+      "full_name": "Ada Example",
+      "email": "ada@example.com",
+      "phone": "+2348012345678"
+    },
+    "lead": {
+      "stage": "qualified",
+      "score": 74,
+      "summary": "Interested in an AI sales agent but requested time to review pricing."
+    },
+    "task": {
+      "type": "sales_follow_up",
+      "due_at": "2026-08-05T17:00:00.000Z",
+      "attempt_number": 1
+    },
+    "follow_up_context": {
+      "last_customer_message": "Send me the details and follow up tomorrow.",
+      "days_since_last_contact": 1,
+      "preferred_channel": "email",
+      "business_hours": true,
+      "consent_status": "subscribed"
+    }
+  }
+}
