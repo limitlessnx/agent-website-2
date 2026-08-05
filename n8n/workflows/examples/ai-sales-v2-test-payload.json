@@ -1,0 +1,28 @@
+{
+  "organization_id": "REPLACE_WITH_ORGANIZATION_UUID",
+  "agent_id": "REPLACE_WITH_AI_SALES_AGENT_UUID",
+  "conversation_id": null,
+  "customer_id": null,
+  "idempotency_key": "ai-sales-manual-test-001",
+  "channel": "web_chat",
+  "event_type": "lead.message_received",
+  "external_thread_key": "manual-test-thread-001",
+  "input": {
+    "source": "manual_n8n_test",
+    "message": "We receive around 100 WhatsApp enquiries every week and need an AI sales agent to qualify leads, answer questions and book calls. We want to launch this month and our setup budget is about NGN 750,000.",
+    "customer_key": "ada@example.com",
+    "customer": {
+      "full_name": "Ada Example",
+      "email": "ada@example.com",
+      "phone": "+2348012345678",
+      "company_name": "Example Ventures"
+    },
+    "lead_context": {
+      "product_or_service": "AI Sales and Lead Qualification",
+      "budget": "750000",
+      "currency": "NGN",
+      "timeline": "This month",
+      "location": "Lagos, Nigeria"
+    }
+  }
+}
