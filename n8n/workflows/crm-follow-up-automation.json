@@ -1,0 +1,501 @@
+{
+  "name": "Fluxknight - CRM Follow-up Automation - Multi Tenant v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxknight/crm-follow-up/v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "followup-webhook",
+      "name": "Tenant Follow-up Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        0
+      ],
+      "webhookId": "fluxknight-crm-follow-up-v3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body??$json;\nconst required=['organization_id','agent_id','idempotency_key','event_type','input'];\nconst missing=required.filter(k=>b[k]===undefined||b[k]===null||b[k]==='');\nif(missing.length) throw new Error('Missing required tenant fields: '+missing.join(', '));\nconst allowedEvents=['follow_up.due','follow_up.manual','lead.stale','task.retry'];\nif(!allowedEvents.includes(b.event_type)) throw new Error('Unsupported follow-up event');\nconst input=b.input||{};\nconst customerKey=String(b.customer_id||input.customer_key||input.email||input.phone||'').trim();\nif(!customerKey) throw new Error('customer_id or customer identifier required');\nconst channel=String(b.channel||input.preferred_channel||'internal');\nconst allowedChannels=['whatsapp','email','web_chat','telegram','voice','internal'];\nif(!allowedChannels.includes(channel)) throw new Error('Unsupported channel');\nreturn [{json:{\n  organization_id:String(b.organization_id),\n  agent_id:String(b.agent_id),\n  conversation_id:b.conversation_id||null,\n  customer_id:b.customer_id||null,\n  customer_key:customerKey,\n  lead_id:b.lead_id||input.lead_id||null,\n  task_id:b.task_id||input.task_id||null,\n  idempotency_key:String(b.idempotency_key),\n  channel,\n  event_type:b.event_type,\n  input,\n  workflow_key:'crm_follow_up_v3',\n  received_at:new Date().toISOString()\n}}];"
+      },
+      "id": "followup-validate",
+      "name": "Validate Follow-up Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({\n  organization_id:$json.organization_id,\n  agent_id:$json.agent_id,\n  conversation_id:$json.conversation_id,\n  idempotency_key:$json.idempotency_key,\n  input:{\n    ...$json.input,\n    workflow_key:$json.workflow_key,\n    channel:$json.channel,\n    event_type:$json.event_type,\n    customer_id:$json.customer_id,\n    customer_key:$json.customer_key,\n    lead_id:$json.lead_id,\n    task_id:$json.task_id\n  }\n})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "followup-enqueue",
+      "name": "Queue Follow-up Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1080,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({execution_id:$json.execution_id})}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "followup-prepare",
+      "name": "Prepare Follow-up Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -860,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/runtime_context_snapshots?organization_id=eq.' + $('Validate Follow-up Envelope').first().json.organization_id + '&execution_id=eq.' + $('Queue Follow-up Execution').first().json.execution_id + '&select=*&limit=1'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "followup-load-context",
+      "name": "Load Follow-up Snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const env=$('Validate Follow-up Envelope').first().json;\nconst rows=Array.isArray($json)?$json:[$json];\nconst snap=rows[0];\nif(!snap) throw new Error('Runtime snapshot not found');\nconst schema={\n  action:'send|reschedule|handoff|close|skip',\n  channel:'whatsapp|email|web_chat|telegram|voice|internal',\n  priority:'low|normal|high|urgent',\n  reason:'string',\n  message:'string|null',\n  subject:'string|null',\n  lead_stage:'new|contacted|qualified|nurturing|appointment|won|lost|inactive',\n  task_status:'completed|scheduled|cancelled|blocked',\n  next_follow_up_at:'ISO datetime|null',\n  handoff_required:'boolean',\n  handoff_reason:'string|null',\n  stop_sequence:'boolean',\n  memory_facts:[{type:'preference|fact|goal|objection|follow_up',summary:'string',confidence:'0-1'}]\n};\nreturn [{json:{\n  ...env,\n  execution_id:$('Queue Follow-up Execution').first().json.execution_id,\n  snapshot:snap,\n  provider_request:{\n    execution_id:$('Queue Follow-up Execution').first().json.execution_id,\n    organization_id:env.organization_id,\n    agent_id:env.agent_id,\n    instructions:snap.compiled_prompt+'\\nDecide the safest next follow-up action using tenant policy, CRM state, prior conversation, customer memory, consent, business hours, and configured channel availability. Never claim a message was sent. Never contact opted-out customers. Return strict JSON only using this schema: '+JSON.stringify(schema),\n    input:JSON.stringify({\n      event_type:env.event_type,\n      channel:env.channel,\n      customer:env.input.customer||{},\n      lead:env.input.lead||{},\n      task:env.input.task||{},\n      conversation:env.input.conversation||{},\n      follow_up_context:env.input.follow_up_context||env.input\n    })\n  }\n}}];"
+      },
+      "id": "followup-build-request",
+      "name": "Build Follow-up Decision Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/provider/execute'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify($json.provider_request)}}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "followup-ai",
+      "name": "Run Follow-up Provider",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx=$('Build Follow-up Decision Request').first().json;\nlet raw=$json.output_text||$json.text||$json.response_text;\nif(!raw&&Array.isArray($json.output)) raw=$json.output.flatMap(x=>x.content||[]).map(x=>x.text||x.output_text||'').join('');\nraw=String(raw||'').replace(/^```json\\s*/i,'').replace(/```$/,'').trim();\nlet d;\ntry{d=JSON.parse(raw)}catch(e){throw new Error('Invalid follow-up AI JSON: '+raw.slice(0,300))}\nconst actions=['send','reschedule','handoff','close','skip'];\nconst channels=['whatsapp','email','web_chat','telegram','voice','internal'];\nconst priorities=['low','normal','high','urgent'];\nconst stages=['new','contacted','qualified','nurturing','appointment','won','lost','inactive'];\nconst taskStatuses=['completed','scheduled','cancelled','blocked'];\nd.action=actions.includes(d.action)?d.action:'skip';\nd.channel=channels.includes(d.channel)?d.channel:ctx.channel;\nd.priority=priorities.includes(d.priority)?d.priority:'normal';\nd.lead_stage=stages.includes(d.lead_stage)?d.lead_stage:'nurturing';\nd.task_status=taskStatuses.includes(d.task_status)?d.task_status:(d.action==='send'?'completed':'scheduled');\nd.handoff_required=Boolean(d.handoff_required||d.action==='handoff');\nd.stop_sequence=Boolean(d.stop_sequence||d.action==='close');\nd.memory_facts=Array.isArray(d.memory_facts)?d.memory_facts:[];\nif(d.action==='send'&&!String(d.message||'').trim()) throw new Error('Follow-up send action requires message');\nreturn [{json:{...ctx,decision:d,provider_usage:$json.usage||{},provider_response_id:$json.id||null}}];"
+      },
+      "id": "followup-parse",
+      "name": "Parse Follow-up Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/crm-follow-up'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({\n  organization_id:$json.organization_id,\n  agent_id:$json.agent_id,\n  execution_id:$json.execution_id,\n  conversation_id:$json.conversation_id,\n  customer_id:$json.customer_id,\n  customer_key:$json.customer_key,\n  lead_id:$json.lead_id,\n  task_id:$json.task_id,\n  channel:$json.channel,\n  event_type:$json.event_type,\n  idempotency_key:$json.idempotency_key,\n  input:$json.input,\n  decision:$json.decision,\n  provider_usage:$json.provider_usage,\n  provider_response_id:$json.provider_response_id\n})}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "followup-persist",
+      "name": "Persist Follow-up Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$json;\nconst actions=[];\nif(r.handoff_required) actions.push({type:'handoff',payload:r.handoff});\nif(r.reschedule_action) actions.push({type:'follow_up',payload:r.reschedule_action});\nif(r.reply_action) actions.push({type:'reply',payload:r.reply_action});\nreturn [{json:{...r,actions}}];"
+      },
+      "id": "followup-route",
+      "name": "Route Follow-up Actions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/dispatch'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,idempotency_key:$json.idempotency_key,actions:$json.actions})}}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "followup-dispatch",
+      "name": "Dispatch Follow-up Actions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/complete'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,status:'succeeded',output:$json})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "followup-complete",
+      "name": "Complete Follow-up Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "followup-response",
+      "name": "Return Follow-up Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1120,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Tenant Follow-up Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Follow-up Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Follow-up Envelope": {
+      "main": [
+        [
+          {
+            "node": "Queue Follow-up Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Follow-up Execution": {
+      "main": [
+        [
+          {
+            "node": "Prepare Follow-up Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Follow-up Context": {
+      "main": [
+        [
+          {
+            "node": "Load Follow-up Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Follow-up Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Build Follow-up Decision Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Follow-up Decision Request": {
+      "main": [
+        [
+          {
+            "node": "Run Follow-up Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Follow-up Provider": {
+      "main": [
+        [
+          {
+            "node": "Parse Follow-up Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Follow-up Decision": {
+      "main": [
+        [
+          {
+            "node": "Persist Follow-up Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Follow-up Decision": {
+      "main": [
+        [
+          {
+            "node": "Route Follow-up Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Follow-up Actions": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Follow-up Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Follow-up Actions": {
+      "main": [
+        [
+          {
+            "node": "Complete Follow-up Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Follow-up Execution": {
+      "main": [
+        [
+          {
+            "node": "Return Follow-up Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Africa/Lagos"
+  },
+  "versionId": "57305ee1-f3d1-45ce-82d3-2c346fdb5d21",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "fluxknight"
+    },
+    {
+      "name": "tenant-safe"
+    },
+    {
+      "name": "crm-follow-up"
+    },
+    {
+      "name": "production-template"
+    }
+  ]
+}
