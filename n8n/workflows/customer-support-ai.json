@@ -1,12 +1,223 @@
 {
-  "name":"Fluxknight - Customer Support AI v1",
-  "nodes":[
-    {"parameters":{"httpMethod":"POST","path":"fluxknight/customer-support/v1","responseMode":"responseNode","options":{}},"id":"support-webhook","name":"Tenant Event Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-620,0],"webhookId":"fluxknight-customer-support-v1"},
-    {"parameters":{"jsCode":"const body=$json.body??$json; const missing=['organization_id','agent_id','idempotency_key'].filter(k=>!body[k]); if(missing.length) throw new Error(`Missing required tenant fields: ${missing.join(', ')}`); return [{json:{...body,workflow_key:'customer_support_v1',event_type:body.event_type||'support.message_received',input:body.input||{}}}];"},"id":"support-validate","name":"Validate Tenant Envelope","type":"n8n-nodes-base.code","typeVersion":2,"position":[-380,0]},
-    {"parameters":{"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id||null,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:$json.channel||'internal',event_type:$json.event_type,customer_id:$json.customer_id||null}})}}","options":{}},"id":"support-enqueue","name":"Queue Tenant Execution","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-120,0]},
-    {"parameters":{"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({execution_id:$json.execution_id})}}","options":{}},"id":"support-prepare","name":"Prepare Runtime Context","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[140,0]},
-    {"parameters":{"respondWith":"json","responseBody":"={{JSON.stringify({workflow_key:'customer_support_v1',status:$json.status||'prepared',execution_id:$json.execution_id||null,execution_enabled:false,next_action:'provider_and_tool_dispatch_requires_explicit_activation'})}}","options":{"responseCode":202}},"id":"support-response","name":"Return Safe Status","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[400,0]}
+  "name": "Fluxknight - Customer Support AI - Multi Tenant v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxknight/customer-support/v2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "support-webhook",
+      "name": "Tenant Support Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1500, 0],
+      "webhookId": "fluxknight-customer-support-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body??$json; const required=['organization_id','agent_id','idempotency_key','channel','input']; const missing=required.filter(k=>b[k]===undefined||b[k]===null||b[k]===''); if(missing.length) throw new Error('Missing required tenant fields: '+missing.join(', ')); const allowed=['whatsapp','email','web_chat','telegram','voice','internal']; if(!allowed.includes(b.channel)) throw new Error('Unsupported channel'); const input=b.input||{}; const customerKey=String(b.customer_id||input.customer_key||input.email||input.phone||'').trim(); if(!customerKey) throw new Error('customer_id or customer identifier required'); const message=String(input.message||input.text||'').trim(); if(!message) throw new Error('Support message is required'); return [{json:{organization_id:String(b.organization_id),agent_id:String(b.agent_id),conversation_id:b.conversation_id||null,customer_id:b.customer_id||null,customer_key:customerKey,idempotency_key:String(b.idempotency_key),channel:b.channel,event_type:b.event_type||'support.message_received',external_thread_key:b.external_thread_key||input.external_thread_key||null,input:{...input,message},received_at:new Date().toISOString(),workflow_key:'customer_support_v2'}}];"
+      },
+      "id": "support-validate",
+      "name": "Validate Support Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1280, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:$json.channel,event_type:$json.event_type,customer_id:$json.customer_id,customer_key:$json.customer_key,external_thread_key:$json.external_thread_key}})}}",
+        "options": {"timeout":30000}
+      },
+      "id": "support-enqueue",
+      "name": "Queue Support Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1060, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({execution_id:$json.execution_id})}}",
+        "options": {"timeout":60000}
+      },
+      "id": "support-prepare",
+      "name": "Prepare Support Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-840, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/runtime_context_snapshots?organization_id=eq.' + $('Validate Support Envelope').first().json.organization_id + '&execution_id=eq.' + $('Queue Support Execution').first().json.execution_id + '&select=*&limit=1'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"apikey","value":"={{$env.SUPABASE_SERVICE_ROLE_KEY}}"},{"name":"Authorization","value":"=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"}]},
+        "options": {"timeout":30000}
+      },
+      "id": "support-load-context",
+      "name": "Load Support Snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-620, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const env=$('Validate Support Envelope').first().json; const rows=Array.isArray($json)?$json:[$json]; const snap=rows[0]; if(!snap) throw new Error('Runtime snapshot not found'); const schema={category:'billing|technical|account|product|complaint|refund|general|other',priority:'low|normal|high|urgent',sentiment:'positive|neutral|frustrated|angry',resolution_status:'resolved|needs_information|action_required|human_required',confidence:'0-1 number',issue_summary:'string',reply:'string',missing_information:['string'],recommended_actions:[{type:'create_task|handoff|approval|none',title:'string',description:'string',risk_level:'low|medium|high'}],handoff_required:'boolean',handoff_reason:'string|null',follow_up_required:'boolean',follow_up_hours:'integer|null',conversation_status:'open|diagnosing|waiting_approval|resolved',memory_facts:[{type:'preference|fact|issue|resolution',summary:'string',confidence:'0-1'}]}; return [{json:{...env,execution_id:$('Queue Support Execution').first().json.execution_id,snapshot:snap,provider_request:{execution_id:$('Queue Support Execution').first().json.execution_id,organization_id:env.organization_id,agent_id:env.agent_id,instructions:snap.compiled_prompt+'\\nUse only the supplied tenant knowledge and conversation context. Never invent policies, prices, account status or completed actions. Return strict JSON only using this schema: '+JSON.stringify(schema),input:JSON.stringify({message:env.input.message,customer:env.input.customer||{},support_context:env.input.support_context||{},channel:env.channel})}}}];"
+      },
+      "id": "support-build-request",
+      "name": "Build Support Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/provider/execute'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify($json.provider_request)}}",
+        "options": {"timeout":90000}
+      },
+      "id": "support-ai",
+      "name": "Run Support Provider",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-180, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx=$('Build Support Request').first().json; let raw=$json.output_text||$json.text||$json.response_text; if(!raw&&Array.isArray($json.output)) raw=$json.output.flatMap(x=>x.content||[]).map(x=>x.text||x.output_text||'').join(''); raw=String(raw||'').replace(/^```json\\s*/i,'').replace(/```$/,'').trim(); let s; try{s=JSON.parse(raw)}catch(e){throw new Error('Invalid support AI JSON: '+raw.slice(0,300))} const categories=['billing','technical','account','product','complaint','refund','general','other']; const priorities=['low','normal','high','urgent']; const sentiments=['positive','neutral','frustrated','angry']; const resolutions=['resolved','needs_information','action_required','human_required']; const statuses=['open','diagnosing','waiting_approval','resolved']; s.category=categories.includes(s.category)?s.category:'other'; s.priority=priorities.includes(s.priority)?s.priority:'normal'; s.sentiment=sentiments.includes(s.sentiment)?s.sentiment:'neutral'; s.resolution_status=resolutions.includes(s.resolution_status)?s.resolution_status:'needs_information'; s.conversation_status=statuses.includes(s.conversation_status)?s.conversation_status:'open'; s.confidence=Math.max(0,Math.min(1,Number(s.confidence)||0)); s.handoff_required=Boolean(s.handoff_required||s.resolution_status==='human_required'||s.priority==='urgent'); s.follow_up_required=Boolean(s.follow_up_required); s.follow_up_hours=s.follow_up_required?Math.max(1,Math.min(720,Math.round(Number(s.follow_up_hours)||24))):null; s.missing_information=Array.isArray(s.missing_information)?s.missing_information:[]; s.recommended_actions=Array.isArray(s.recommended_actions)?s.recommended_actions:[]; s.memory_facts=Array.isArray(s.memory_facts)?s.memory_facts:[]; return [{json:{...ctx,support:s,provider_usage:$json.usage||{},provider_response_id:$json.id||null}}];"
+      },
+      "id": "support-parse",
+      "name": "Parse Support Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [40, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/customer-support'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,conversation_id:$json.conversation_id,customer_id:$json.customer_id,customer_key:$json.customer_key,channel:$json.channel,external_thread_key:$json.external_thread_key,idempotency_key:$json.idempotency_key,input:$json.input,support:$json.support,provider_usage:$json.provider_usage,provider_response_id:$json.provider_response_id})}}",
+        "options": {"timeout":60000}
+      },
+      "id": "support-persist",
+      "name": "Persist Support Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$json; const actions=[]; if(r.handoff_required) actions.push({type:'handoff',payload:r.handoff}); if(r.follow_up_required) actions.push({type:'follow_up',payload:r.follow_up}); for(const a of (r.approval_actions||[])) actions.push({type:'approval',payload:a}); if(r.reply_action) actions.push({type:'reply',payload:r.reply_action}); return [{json:{...r,actions}}];"
+      },
+      "id": "support-route-actions",
+      "name": "Route Support Actions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/dispatch'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,idempotency_key:$json.idempotency_key,actions:$json.actions})}}",
+        "options": {"timeout":90000}
+      },
+      "id": "support-dispatch",
+      "name": "Dispatch Support Actions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/complete'}}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,status:'succeeded',output:$json})}}",
+        "options": {"timeout":30000}
+      },
+      "id": "support-complete",
+      "name": "Complete Support Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 0]
+    },
+    {
+      "parameters": {"respondWith":"json","responseBody":"={{JSON.stringify($json)}}","options":{"responseCode":200}},
+      "id": "support-response",
+      "name": "Return Support Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1140, 0]
+    }
   ],
-  "connections":{"Tenant Event Webhook":{"main":[[{"node":"Validate Tenant Envelope","type":"main","index":0}]]},"Validate Tenant Envelope":{"main":[[{"node":"Queue Tenant Execution","type":"main","index":0}]]},"Queue Tenant Execution":{"main":[[{"node":"Prepare Runtime Context","type":"main","index":0}]]},"Prepare Runtime Context":{"main":[[{"node":"Return Safe Status","type":"main","index":0}]]}},
-  "pinData":{},"active":false,"settings":{"executionOrder":"v1","saveExecutionProgress":true},"versionId":"22222222-2222-4222-8222-222222222222","meta":{"templateCredsSetupCompleted":false},"tags":[{"name":"fluxknight"},{"name":"tenant-safe"},{"name":"customer-support"}]
+  "connections": {
+    "Tenant Support Webhook": {"main":[[{"node":"Validate Support Envelope","type":"main","index":0}]]},
+    "Validate Support Envelope": {"main":[[{"node":"Queue Support Execution","type":"main","index":0}]]},
+    "Queue Support Execution": {"main":[[{"node":"Prepare Support Context","type":"main","index":0}]]},
+    "Prepare Support Context": {"main":[[{"node":"Load Support Snapshot","type":"main","index":0}]]},
+    "Load Support Snapshot": {"main":[[{"node":"Build Support Request","type":"main","index":0}]]},
+    "Build Support Request": {"main":[[{"node":"Run Support Provider","type":"main","index":0}]]},
+    "Run Support Provider": {"main":[[{"node":"Parse Support Decision","type":"main","index":0}]]},
+    "Parse Support Decision": {"main":[[{"node":"Persist Support Decision","type":"main","index":0}]]},
+    "Persist Support Decision": {"main":[[{"node":"Route Support Actions","type":"main","index":0}]]},
+    "Route Support Actions": {"main":[[{"node":"Dispatch Support Actions","type":"main","index":0}]]},
+    "Dispatch Support Actions": {"main":[[{"node":"Complete Support Execution","type":"main","index":0}]]},
+    "Complete Support Execution": {"main":[[{"node":"Return Support Result","type":"main","index":0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder":"v1","saveExecutionProgress":true,"saveManualExecutions":true,"timezone":"Africa/Lagos"},
+  "versionId": "5a6debe6-9be8-4aa2-8f8d-8dba4124ea61",
+  "meta": {"templateCredsSetupCompleted":false},
+  "tags": [{"name":"fluxknight"},{"name":"tenant-safe"},{"name":"customer-support"},{"name":"production-template"}]
 }
