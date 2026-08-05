@@ -1,0 +1,35 @@
+{
+  "organization_id": "REPLACE_WITH_ORGANIZATION_UUID",
+  "agent_id": "REPLACE_WITH_APPOINTMENT_AGENT_UUID",
+  "conversation_id": null,
+  "customer_id": null,
+  "appointment_id": null,
+  "idempotency_key": "appointment-test-001",
+  "channel": "web_chat",
+  "event_type": "appointment.requested",
+  "input": {
+    "customer_key": "ada@example.com",
+    "customer": {
+      "name": "Ada Example",
+      "email": "ada@example.com",
+      "phone": "+2348012345678"
+    },
+    "message": "Please book a 30-minute product demo next Tuesday at 2:00 PM West Africa Time.",
+    "timezone": "Africa/Lagos",
+    "appointment": {
+      "title": "Fluxknight Product Demo",
+      "appointment_type": "product_demo",
+      "duration_minutes": 30,
+      "location_type": "virtual"
+    },
+    "requested_slots": [
+      "2026-08-11T14:00:00+01:00"
+    ],
+    "business_context": {
+      "reminder_offsets_minutes": [
+        1440,
+        60
+      ]
+    }
+  }
+}

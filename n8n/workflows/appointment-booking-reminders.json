@@ -1,12 +1,502 @@
 {
-  "name":"Fluxknight - Appointment Booking and Reminders v1",
-  "nodes":[
-    {"parameters":{"httpMethod":"POST","path":"fluxknight/appointments/v1","responseMode":"responseNode","options":{}},"id":"appointment-webhook","name":"Tenant Event Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-620,0],"webhookId":"fluxknight-appointments-v1"},
-    {"parameters":{"jsCode":"const body=$json.body??$json; const missing=['organization_id','agent_id','idempotency_key'].filter(k=>!body[k]); if(missing.length) throw new Error(`Missing required tenant fields: ${missing.join(', ')}`); return [{json:{...body,workflow_key:'appointment_booking_v1',event_type:body.event_type||'appointment.requested',input:body.input||{}}}];"},"id":"appointment-validate","name":"Validate Tenant Envelope","type":"n8n-nodes-base.code","typeVersion":2,"position":[-380,0]},
-    {"parameters":{"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id||null,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:$json.channel||'internal',event_type:$json.event_type,customer_id:$json.customer_id||null}})}}","options":{}},"id":"appointment-enqueue","name":"Queue Tenant Execution","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-120,0]},
-    {"parameters":{"method":"POST","url":"={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}","sendHeaders":true,"headerParameters":{"parameters":[{"name":"x-runtime-secret","value":"={{$env.RUNTIME_GATEWAY_SECRET}}"},{"name":"content-type","value":"application/json"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({execution_id:$json.execution_id})}}","options":{}},"id":"appointment-prepare","name":"Prepare Runtime Context","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[140,0]},
-    {"parameters":{"respondWith":"json","responseBody":"={{JSON.stringify({workflow_key:'appointment_booking_v1',status:$json.status||'prepared',execution_id:$json.execution_id||null,execution_enabled:false,next_action:'calendar_dispatch_requires_explicit_activation'})}}","options":{"responseCode":202}},"id":"appointment-response","name":"Return Safe Status","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[400,0]}
+  "name": "Fluxknight - Appointment Booking & Reminders - Multi Tenant v4",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxknight/appointments/v4",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "appointment-webhook",
+      "name": "Tenant Appointment Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1720,
+        0
+      ],
+      "webhookId": "fluxknight-appointments-v4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body??$json;\nconst required=['organization_id','agent_id','idempotency_key','channel','event_type','input'];\nconst missing=required.filter(k=>b[k]===undefined||b[k]===null||b[k]==='');\nif(missing.length) throw new Error('Missing required tenant fields: '+missing.join(', '));\n\nconst allowedChannels=['whatsapp','email','web_chat','telegram','voice','internal'];\nif(!allowedChannels.includes(b.channel)) throw new Error('Unsupported channel');\n\nconst allowedEvents=[\n  'appointment.requested',\n  'appointment.confirmed',\n  'appointment.reschedule_requested',\n  'appointment.cancel_requested',\n  'appointment.reminder_due',\n  'appointment.no_show',\n  'appointment.completed'\n];\nif(!allowedEvents.includes(b.event_type)) throw new Error('Unsupported appointment event');\n\nconst input=b.input||{};\nconst customerKey=String(b.customer_id||input.customer_key||input.email||input.phone||'').trim();\nif(!customerKey) throw new Error('customer_id or customer identifier required');\n\nreturn [{json:{\n  organization_id:String(b.organization_id),\n  agent_id:String(b.agent_id),\n  conversation_id:b.conversation_id||null,\n  customer_id:b.customer_id||null,\n  customer_key:customerKey,\n  appointment_id:b.appointment_id||input.appointment_id||null,\n  idempotency_key:String(b.idempotency_key),\n  channel:b.channel,\n  event_type:b.event_type,\n  external_thread_key:b.external_thread_key||input.external_thread_key||null,\n  input,\n  received_at:new Date().toISOString(),\n  workflow_key:'appointment_booking_v4'\n}}];"
+      },
+      "id": "appointment-validate",
+      "name": "Validate Appointment Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/enqueue'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,conversation_id:$json.conversation_id,idempotency_key:$json.idempotency_key,input:{...$json.input,workflow_key:$json.workflow_key,channel:$json.channel,event_type:$json.event_type,customer_id:$json.customer_id,customer_key:$json.customer_key,appointment_id:$json.appointment_id,external_thread_key:$json.external_thread_key}})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "appointment-enqueue",
+      "name": "Queue Appointment Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1280,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/worker'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({execution_id:$json.execution_id})}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "appointment-prepare",
+      "name": "Prepare Appointment Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1060,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/runtime_context_snapshots?organization_id=eq.' + $('Validate Appointment Envelope').first().json.organization_id + '&execution_id=eq.' + $('Queue Appointment Execution').first().json.execution_id + '&select=*&limit=1'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "appointment-load-context",
+      "name": "Load Appointment Snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const env=$('Validate Appointment Envelope').first().json;\nconst rows=Array.isArray($json)?$json:[$json];\nconst snap=rows[0];\nif(!snap) throw new Error('Runtime snapshot not found');\n\nconst schema={\n  action:'book|reschedule|cancel|confirm|remind|complete|mark_no_show|request_information|handoff|skip',\n  status:'requested|pending_availability|confirmed|rescheduled|cancelled|completed|no_show|needs_information',\n  title:'string',\n  appointment_type:'string',\n  requested_start_at:'ISO datetime|null',\n  requested_end_at:'ISO datetime|null',\n  duration_minutes:'integer|null',\n  timezone:'IANA timezone string',\n  location_type:'virtual|physical|phone|unspecified',\n  location:'string|null',\n  attendee_name:'string|null',\n  attendee_email:'string|null',\n  attendee_phone:'string|null',\n  notes:'string|null',\n  reminder_offsets_minutes:['integer'],\n  confirmation_message:'string|null',\n  reminder_message:'string|null',\n  cancellation_message:'string|null',\n  missing_information:['string'],\n  calendar_action_required:'boolean',\n  notification_required:'boolean',\n  handoff_required:'boolean',\n  handoff_reason:'string|null',\n  reason:'string',\n  confidence:'0-1 number',\n  memory_facts:[{type:'preference|appointment|availability|fact',summary:'string',confidence:'0-1'}]\n};\n\nreturn [{json:{\n  ...env,\n  execution_id:$('Queue Appointment Execution').first().json.execution_id,\n  snapshot:snap,\n  provider_request:{\n    execution_id:$('Queue Appointment Execution').first().json.execution_id,\n    organization_id:env.organization_id,\n    agent_id:env.agent_id,\n    instructions:snap.compiled_prompt+'\\nUse only supplied tenant configuration, business hours, knowledge, memory, appointment details and approved tools. Never claim a booking, cancellation, reschedule or reminder was completed unless the action dispatcher confirms it. Interpret dates in the tenant or customer timezone. Return strict JSON only using this schema: '+JSON.stringify(schema),\n    input:JSON.stringify({\n      event_type:env.event_type,\n      channel:env.channel,\n      appointment_id:env.appointment_id,\n      customer:env.input.customer||{},\n      appointment:env.input.appointment||{},\n      requested_slots:env.input.requested_slots||[],\n      message:env.input.message||env.input.text||'',\n      timezone:env.input.timezone||null,\n      business_context:env.input.business_context||{}\n    })\n  }\n}}];"
+      },
+      "id": "appointment-build-request",
+      "name": "Build Appointment Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/provider/execute'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify($json.provider_request)}}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "appointment-ai",
+      "name": "Run Appointment Provider",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -400,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx=$('Build Appointment Request').first().json;\nlet raw=$json.output_text||$json.text||$json.response_text;\nif(!raw&&Array.isArray($json.output)) raw=$json.output.flatMap(x=>x.content||[]).map(x=>x.text||x.output_text||'').join('');\nraw=String(raw||'').replace(/^```json\\s*/i,'').replace(/```$/,'').trim();\n\nlet d;\ntry{d=JSON.parse(raw)}catch(e){throw new Error('Invalid appointment AI JSON: '+raw.slice(0,300))}\n\nconst actions=['book','reschedule','cancel','confirm','remind','complete','mark_no_show','request_information','handoff','skip'];\nconst statuses=['requested','pending_availability','confirmed','rescheduled','cancelled','completed','no_show','needs_information'];\nconst locationTypes=['virtual','physical','phone','unspecified'];\n\nd.action=actions.includes(d.action)?d.action:'request_information';\nd.status=statuses.includes(d.status)?d.status:'needs_information';\nd.location_type=locationTypes.includes(d.location_type)?d.location_type:'unspecified';\nd.confidence=Math.max(0,Math.min(1,Number(d.confidence)||0));\nd.duration_minutes=d.duration_minutes==null?null:Math.max(5,Math.min(1440,Math.round(Number(d.duration_minutes)||30)));\nd.reminder_offsets_minutes=Array.isArray(d.reminder_offsets_minutes)?[...new Set(d.reminder_offsets_minutes.map(Number).filter(n=>Number.isFinite(n)&&n>0&&n<=10080).map(Math.round))].sort((a,b)=>b-a):[];\nd.missing_information=Array.isArray(d.missing_information)?d.missing_information:[];\nd.memory_facts=Array.isArray(d.memory_facts)?d.memory_facts:[];\nd.calendar_action_required=Boolean(d.calendar_action_required&&['book','reschedule','cancel','confirm'].includes(d.action));\nd.notification_required=Boolean(d.notification_required||['book','reschedule','cancel','confirm','remind'].includes(d.action));\nd.handoff_required=Boolean(d.handoff_required||d.action==='handoff');\n\nreturn [{json:{...ctx,decision:d,provider_usage:$json.usage||{},provider_response_id:$json.id||null}}];"
+      },
+      "id": "appointment-parse",
+      "name": "Parse Appointment Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/appointments'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,conversation_id:$json.conversation_id,customer_id:$json.customer_id,customer_key:$json.customer_key,appointment_id:$json.appointment_id,channel:$json.channel,event_type:$json.event_type,external_thread_key:$json.external_thread_key,idempotency_key:$json.idempotency_key,input:$json.input,decision:$json.decision,provider_usage:$json.provider_usage,provider_response_id:$json.provider_response_id})}}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "appointment-persist",
+      "name": "Persist Appointment Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$json;\nconst actions=[];\nif(r.calendar_action) actions.push({type:'appointment',payload:r.calendar_action});\nif(r.notification_action) actions.push({type:'reply',payload:r.notification_action});\nif(r.handoff) actions.push({type:'handoff',payload:r.handoff});\nfor(const reminder of (r.reminder_actions||[])) actions.push({type:'follow_up',payload:reminder});\nreturn [{json:{...r,actions}}];"
+      },
+      "id": "appointment-route-actions",
+      "name": "Route Appointment Actions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/dispatch'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,idempotency_key:$json.idempotency_key,actions:$json.actions})}}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "appointment-dispatch",
+      "name": "Dispatch Appointment Actions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/runtime/actions/complete'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-runtime-secret",
+              "value": "={{$env.RUNTIME_GATEWAY_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({organization_id:$json.organization_id,agent_id:$json.agent_id,execution_id:$json.execution_id,status:'succeeded',output:$json})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "appointment-complete",
+      "name": "Complete Appointment Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "appointment-response",
+      "name": "Return Appointment Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        920,
+        0
+      ]
+    }
   ],
-  "connections":{"Tenant Event Webhook":{"main":[[{"node":"Validate Tenant Envelope","type":"main","index":0}]]},"Validate Tenant Envelope":{"main":[[{"node":"Queue Tenant Execution","type":"main","index":0}]]},"Queue Tenant Execution":{"main":[[{"node":"Prepare Runtime Context","type":"main","index":0}]]},"Prepare Runtime Context":{"main":[[{"node":"Return Safe Status","type":"main","index":0}]]}},
-  "pinData":{},"active":false,"settings":{"executionOrder":"v1","saveExecutionProgress":true},"versionId":"44444444-4444-4444-8444-444444444444","meta":{"templateCredsSetupCompleted":false},"tags":[{"name":"fluxknight"},{"name":"tenant-safe"},{"name":"appointments"}]
+  "connections": {
+    "Tenant Appointment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Appointment Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Appointment Envelope": {
+      "main": [
+        [
+          {
+            "node": "Queue Appointment Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Appointment Execution": {
+      "main": [
+        [
+          {
+            "node": "Prepare Appointment Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Appointment Context": {
+      "main": [
+        [
+          {
+            "node": "Load Appointment Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Appointment Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Build Appointment Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Appointment Request": {
+      "main": [
+        [
+          {
+            "node": "Run Appointment Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Appointment Provider": {
+      "main": [
+        [
+          {
+            "node": "Parse Appointment Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Appointment Decision": {
+      "main": [
+        [
+          {
+            "node": "Persist Appointment Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Appointment Decision": {
+      "main": [
+        [
+          {
+            "node": "Route Appointment Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Appointment Actions": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Appointment Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Appointment Actions": {
+      "main": [
+        [
+          {
+            "node": "Complete Appointment Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Appointment Execution": {
+      "main": [
+        [
+          {
+            "node": "Return Appointment Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Africa/Lagos"
+  },
+  "versionId": "d64f80b6-0c3d-4591-a90e-2a050d40ab91",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "fluxknight"
+    },
+    {
+      "name": "tenant-safe"
+    },
+    {
+      "name": "appointments"
+    },
+    {
+      "name": "workflow-4"
+    }
+  ]
 }
