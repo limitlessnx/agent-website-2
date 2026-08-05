@@ -76,6 +76,10 @@ function hasValidEmail(lead: Lead) {
   return !BLOCKED_EMAIL_STATES.some((blocked) => state.includes(blocked));
 }
 
+function isVisibleEmailLead(lead: Lead) {
+  return !isSyntheticLead(lead) && hasValidEmail(lead);
+}
+
 async function getGencouvDashboard() {
   const secret = process.env.GENCOUV_DASHBOARD_SECRET;
 
@@ -149,7 +153,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       <div className="admin-panel-header">
         <div>
           <h2 style={{ fontSize: "1rem" }}>{lead.name || "Unknown lead"}</h2>
-          <p>{lead.email || lead.phone || "No contact captured"}</p>
+          <p>{lead.email}</p>
         </div>
         <span className={lead.dashboard_priority === "High" ? "admin-status live" : "admin-status"}>
           {lead.dashboard_priority || "Low"}
@@ -181,15 +185,13 @@ export default async function GencouvWorkspacePage() {
 
   const organization = organizations[0];
   const data = dashboard.data;
-  const hotLeads = (data?.lead_boards?.hot || []).filter((lead) => !isSyntheticLead(lead)).slice(0, 4);
-  const recentLeads = (data?.recent_leads || []).filter((lead) => !isSyntheticLead(lead)).slice(0, 8);
+  const hotLeads = (data?.lead_boards?.hot || []).filter(isVisibleEmailLead).slice(0, 4);
+  const recentLeads = (data?.recent_leads || []).filter(isVisibleEmailLead).slice(0, 8);
   const allLeads = [...Object.values(data?.lead_boards || {}).flat(), ...(data?.recent_leads || [])]
-    .filter((lead) => !isSyntheticLead(lead));
+    .filter(isVisibleEmailLead);
   const uniqueMailLeads = Array.from(
     new Map(
-      allLeads
-        .filter(hasValidEmail)
-        .map((lead) => [lead.email!.trim().toLowerCase(), { ...lead, email: lead.email!.trim().toLowerCase() }]),
+      allLeads.map((lead) => [lead.email!.trim().toLowerCase(), { ...lead, email: lead.email!.trim().toLowerCase() }]),
     ).values(),
   );
 
@@ -221,9 +223,9 @@ export default async function GencouvWorkspacePage() {
       ) : null}
 
       <div className="admin-metric-grid">
-        <MetricCard icon={Users} tone="cyan" label="Total records" value={total(data, "leads")} detail="CRM rows from Gencouv Leads" trend="live" />
+        <MetricCard icon={Users} tone="cyan" label="Total records" value={uniqueMailLeads.length} detail="Visible CRM leads with valid email addresses" trend="email-ready" />
         <MetricCard icon={Mail} tone="rose" label="Mail leads" value={uniqueMailLeads.length} detail="Valid and eligible email contacts" trend="clean list" />
-        <MetricCard icon={Flame} tone="emerald" label="Hot leads" value={total(data, "hot")} detail="Ready for fast follow-up" trend="priority" />
+        <MetricCard icon={Flame} tone="emerald" label="Hot leads" value={hotLeads.length} detail="Email-ready leads for fast follow-up" trend="priority" />
         <MetricCard icon={Activity} tone="amber" label="Follow-ups due" value={total(data, "follow_ups_due")} detail="Needs review or contact" trend="next action" />
         <MetricCard icon={ShieldCheck} tone="violet" label="Onboarding" value={total(data, "onboarding")} detail="Pending setup or evaluation" trend="client path" />
         <MetricCard icon={CircleDollarSign} tone="emerald" label="Onboarded" value={total(data, "onboarded")} detail="Active client base" trend="conversion" />
@@ -267,12 +269,12 @@ export default async function GencouvWorkspacePage() {
         <div className="admin-panel-header">
           <div>
             <h2><Bot size={18} /> High-priority leads</h2>
-            <p>Prospects the support agent identified as ready for the Get on board flow.</p>
+            <p>Prospects with valid email addresses that are ready for the Get on board flow.</p>
           </div>
           <span className="admin-status live">{hotLeads.length} visible</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 }}>
-          {hotLeads.length ? hotLeads.map((lead) => <LeadCard key={lead.lead_id || `${lead.email}-${lead.last_contact_at}`} lead={lead} />) : <p>No hot leads yet.</p>}
+          {hotLeads.length ? hotLeads.map((lead) => <LeadCard key={lead.lead_id || `${lead.email}-${lead.last_contact_at}`} lead={lead} />) : <p>No email-ready hot leads yet.</p>}
         </div>
       </section>
 
@@ -285,7 +287,7 @@ export default async function GencouvWorkspacePage() {
           <span className="admin-status">{recentLeads.length} records</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 }}>
-          {recentLeads.length ? recentLeads.map((lead) => <LeadCard key={`${lead.lead_id}-${lead.name}-${lead.last_contact_at}`} lead={lead} />) : <p>No recent leads yet.</p>}
+          {recentLeads.length ? recentLeads.map((lead) => <LeadCard key={`${lead.lead_id}-${lead.name}-${lead.last_contact_at}`} lead={lead} />) : <p>No recent email-ready leads yet.</p>}
         </div>
       </section>
     </main>
