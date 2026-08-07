@@ -42,6 +42,16 @@ const profileFields = [
   "agent_id", "completed_at", "created_at", "updated_at",
 ].join(",");
 
+async function assertOrganizationExists(organizationId: string) {
+  const rows = await supabaseServerRequest<Array<{ id: string; status?: string }>>(
+    `organizations?id=eq.${encodeURIComponent(organizationId)}&select=id,status&limit=1`,
+  );
+  if (!rows[0]?.id) {
+    throw new Error("Your organization session is no longer valid. Please sign in again.");
+  }
+  return rows[0];
+}
+
 export async function getClientOnboardingProfile(organizationId: string) {
   const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
     `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&select=${profileFields}&limit=1`,
@@ -56,6 +66,8 @@ export async function ensureClientOnboardingProfile(input: {
   businessName: string;
   email: string;
 }) {
+  await assertOrganizationExists(input.organizationId);
+
   const current = await getClientOnboardingProfile(input.organizationId);
   if (current) return current;
 
@@ -79,6 +91,8 @@ export async function saveClientOnboardingProfile(
   userId: string,
   input: SaveOnboardingInput,
 ) {
+  await assertOrganizationExists(organizationId);
+
   const allowed = {
     current_step: input.current_step,
     business_name: input.business_name,
@@ -107,6 +121,8 @@ export async function saveClientOnboardingProfile(
 }
 
 export async function completeClientOnboarding(organizationId: string, userId: string) {
+  await assertOrganizationExists(organizationId);
+
   return supabaseServerRequest<{
     onboarding_id: string;
     status: string;
