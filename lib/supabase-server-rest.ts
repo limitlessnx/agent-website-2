@@ -1,7 +1,25 @@
 type SupabaseConfig = { url: string; key: string };
 
+const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
+const RETIRED_SUPABASE_REFS = new Set(["fwhwsvetndbjaljzghpg"]);
+
+function normalizeSupabaseUrl(value: string) {
+  const url = String(value || "").trim().replace(/\/$/, "");
+  if (!url) return ACTIVE_SUPABASE_URL;
+
+  try {
+    const hostname = new URL(url).hostname;
+    const ref = hostname.match(/^([a-z0-9]+)\.supabase\.co$/i)?.[1] || "";
+    if (RETIRED_SUPABASE_REFS.has(ref)) return ACTIVE_SUPABASE_URL;
+  } catch {
+    return ACTIVE_SUPABASE_URL;
+  }
+
+  return url;
+}
+
 export function getServerSupabaseConfig(): SupabaseConfig {
-  const url =
+  const configuredUrl =
     process.env.LIMITLESS_SUPABASE_URL ||
     process.env.SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -12,7 +30,7 @@ export function getServerSupabaseConfig(): SupabaseConfig {
     process.env.SUPABASE_SECRET_KEY ||
     "";
 
-  return { url: url.replace(/\/$/, ""), key };
+  return { url: normalizeSupabaseUrl(configuredUrl), key };
 }
 
 export function isServerSupabaseConfigured() {
