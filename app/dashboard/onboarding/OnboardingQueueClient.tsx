@@ -92,8 +92,8 @@ export default function OnboardingQueueClient({ packages }: { packages: Package[
         <article className="admin-stat-card"><span>Live workspaces</span><strong>{counts.live}</strong></article>
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Create paid-client invitation</h2><p>Use this after payment has been confirmed. The client receives only the business intake form, not the machinery room.</p></div></div>
+      <section className="admin-panel" id="new-client">
+        <div className="admin-panel-header"><div><h2>Start new client</h2><p>Create the paid-client intake here. This is the single starting point so the onboarding record, tenant workspace and eventual client account can be linked instead of being created independently.</p></div></div>
         <form className="admin-form" onSubmit={createInvitation}>
           <div className="admin-form-grid">
             <label>Purchaser email<input required name="purchaserEmail" type="email" /></label>
@@ -108,7 +108,7 @@ export default function OnboardingQueueClient({ packages }: { packages: Package[
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Onboarding queue</h2><p>Review submissions, track progress, and open the deployment checklist.</p></div><button className="admin-button secondary" type="button" onClick={load}>Refresh</button></div>
+        <div className="admin-panel-header"><div><h2>Onboarding queue</h2><p>Review intake, link the tenant, complete setup, and move the client toward activation.</p></div><button className="admin-button secondary" type="button" onClick={load}>Refresh</button></div>
         <div className="admin-list">
           {loading ? <p>Loading onboarding queue...</p> : submissions.map((item) => (
             <div className="admin-list-row" key={item.id}>
