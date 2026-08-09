@@ -96,6 +96,46 @@ const useCases = [
   },
 ];
 
+const pricingPlans = [
+  {
+    icon: MessageSquareText,
+    name: "WhatsApp AI Starter",
+    firstMonth: "₦100,000",
+    ongoing: "₦50,000/month",
+    description: "A focused AI WhatsApp receptionist for businesses that want every enquiry answered, qualified, captured, and followed up without adding more manual work.",
+    features: ["24/7 WhatsApp replies", "Lead qualification", "Customer detail capture", "Automated follow-up", "Human handoff"],
+    cta: "Start with WhatsApp",
+  },
+  {
+    icon: Mic,
+    name: "AI Call Receptionist",
+    firstMonth: "₦200,000",
+    ongoing: "₦100,000/month",
+    description: "An inbound AI call agent that answers customers, understands why they are calling, qualifies opportunities, captures important details, and routes the right calls to your team.",
+    features: ["Inbound AI calls", "Lead qualification", "Call summaries", "Customer detail capture", "Human escalation"],
+    cta: "Deploy my call agent",
+  },
+  {
+    icon: Network,
+    name: "AI Front Desk Suite",
+    firstMonth: "₦400,000",
+    ongoing: "₦250,000/month",
+    description: "A connected front desk across WhatsApp, inbound calls, and email so customers can reach your business through the channel they prefer while one system keeps the conversation organized.",
+    features: ["WhatsApp AI", "Inbound AI call agent", "Email automation", "Lead qualification", "Follow-up and handoff"],
+    cta: "Build my AI front desk",
+    featured: true,
+  },
+  {
+    icon: Rocket,
+    name: "Custom AI Operations",
+    firstMonth: "Custom",
+    ongoing: "Custom",
+    description: "For organizations that need multiple agents, connected workflows, departments, branches, voice, business systems, analytics, and custom automation built around their operations.",
+    features: ["Custom AI agents", "Multi-workflow automation", "Advanced integrations", "Organization dashboards", "Managed deployment and support"],
+    cta: "Request an evaluation",
+  },
+];
+
 export default function HomePage() {
   return (
     <main className="quantix-home">
@@ -163,7 +203,34 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="brand-section" id="pricing"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Pricing</span><h2>Start with the system your business needs now.</h2><p>Pricing is scoped around channels, integrations, workflow complexity, usage, and ongoing support rather than a decorative list of meaningless tiers.</p></div><div className="brand-grid"><article className="brand-card"><span className="brand-icon"><Rocket size={21}/></span><h3>Starter System</h3><p>One core agent, lead capture, basic workflow automation, and a controlled handoff process.</p><Link href="/pricing">View pricing <ArrowRight size={15}/></Link></article><article className="brand-card"><span className="brand-icon"><Network size={21}/></span><h3>Growth System</h3><p>Multiple channels, customer-management integration, follow-up automation, reporting, and workflow monitoring.</p><Link href="/pricing">View pricing <ArrowRight size={15}/></Link></article><article className="brand-card"><span className="brand-icon"><CheckCircle2 size={21}/></span><h3>Custom Operations</h3><p>Multi-agent systems, branches, advanced workflow orchestration, voice, and custom data integrations.</p><Link href="/evaluation">Request evaluation <ArrowRight size={15}/></Link></article></div></div></section>
+      <section className="brand-section" id="pricing">
+        <div className="brand-shell">
+          <div className="brand-heading">
+            <span className="brand-eyebrow">Pricing</span>
+            <h2>Start small. Automate what matters. Expand when the business is ready.</h2>
+            <p>Your first month covers setup, configuration, deployment, and onboarding. From the second month onward, you pay the ongoing service fee for monitoring, support, and continued operation.</p>
+          </div>
+          <div className="brand-grid">
+            {pricingPlans.map(({ icon: Icon, name, firstMonth, ongoing, description, features, cta, featured }) => (
+              <article className={`brand-card ${featured ? "pricing-featured" : ""}`} key={name}>
+                <span className="brand-icon"><Icon size={21}/></span>
+                {featured && <span className="brand-eyebrow">Most complete starter</span>}
+                <h3>{name}</h3>
+                <p>{description}</p>
+                <div style={{ display: "grid", gap: 8, margin: "18px 0" }}>
+                  <div><span style={{ display: "block", fontSize: 12, opacity: .65, textTransform: "uppercase", letterSpacing: ".08em" }}>First month · setup + deployment</span><strong style={{ display: "block", fontSize: 28, marginTop: 4 }}>{firstMonth}</strong></div>
+                  <div><span style={{ display: "block", fontSize: 12, opacity: .65, textTransform: "uppercase", letterSpacing: ".08em" }}>Thereafter</span><strong style={{ display: "block", fontSize: 18, marginTop: 4 }}>{ongoing}</strong></div>
+                </div>
+                <div style={{ display: "grid", gap: 8, marginBottom: 18 }}>
+                  {features.map((feature) => <span key={feature} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}><CheckCircle2 size={15}/>{feature}</span>)}
+                </div>
+                <Link href="/evaluation">{cta} <ArrowRight size={15}/></Link>
+              </article>
+            ))}
+          </div>
+          <p style={{ marginTop: 22, opacity: .72, fontSize: 14 }}>Voice usage, messaging-provider charges, email volume, and third-party platform fees may vary by usage and are scoped during onboarding.</p>
+        </div>
+      </section>
 
       <section className="brand-section" id="about"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">About Fluxknight</span><h2>We build automation systems around business reality.</h2><p>Fluxknight combines AI agents, workflow automation, shared data, and human oversight so businesses can grow without turning their operations into a community of confusion.</p></div><div className="hero-buttons"><Link className="button-primary" href="/about">About Fluxknight <ArrowRight size={17}/></Link><Link className="button-secondary" href="/evaluation">Book a Demo</Link></div></div></section>
     </main>
