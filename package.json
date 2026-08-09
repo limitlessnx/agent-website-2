@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run test:support && tsc --noEmit",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:support": "node --test tests/support-ai-security.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
@@ -22,7 +24,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react-dom": "^19.2.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
