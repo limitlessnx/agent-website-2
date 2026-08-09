@@ -1,4 +1,5 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+import OnboardingActionsMenu from "@/components/admin/OnboardingActionsMenu";
 import OnboardingQueueClient from "./OnboardingQueueClient";
 
 type Package = { id: string; name: string; slug: string; currency: string; billing_interval: string };
@@ -20,8 +21,9 @@ export default async function OnboardingQueuePage() {
         <div>
           <p className="admin-kicker">Managed Delivery</p>
           <h1>Client Onboarding</h1>
-          <p>Move paid customers from information collection to Super Admin review, configuration, testing, and activation.</p>
+          <p>One admin flow for client intake, tenant creation, account setup, configuration, testing, and activation.</p>
         </div>
+        <OnboardingActionsMenu />
       </div>
       {error ? <section className="admin-panel"><p className="admin-form-message">{error}</p></section> : null}
       <OnboardingQueueClient packages={packages} />
