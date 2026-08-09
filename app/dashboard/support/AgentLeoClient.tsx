@@ -4,7 +4,15 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 
 type Conversation = { id: string; title: string; status: string; priority: string; updated_at: string };
-type Message = { id?: string; role: string; content: string; created_at?: string };
+type AIState = {
+  connected?: boolean;
+  model?: string | null;
+  fallbackUsed?: boolean;
+  category?: string | null;
+  confidence?: number | null;
+  needsHumanReview?: boolean;
+};
+type Message = { id?: string; role: string; content: string; created_at?: string; diagnostics?: { ai?: AIState } };
 type Action = { id: string; action_key: string; title: string; description: string; risk_level: string; status: string };
 
 type AgentLeoClientProps = {
@@ -21,16 +29,17 @@ export default function AgentLeoClient({
   apiBase = "/api/admin/support/leo",
   scopeLabel = "Super Admin Support",
   title = "Agent Leo",
-  description = "Diagnose agents, workflows, integrations, provisioning, and delivery failures from one support console.",
+  description = "Diagnose agents, automations, integrations, provisioning, and delivery failures from one support console.",
   welcomeMessage = "I am Agent Leo, Fluxknight's AI Operations Support Engineer. Tell me what failed, which organization is affected, and what you expected to happen. I will inspect the platform before suggesting a fix.",
-  placeholder = "Ask Leo about a failed agent, workflow, message, organization, or integration...",
-  typingLabel = "Inspecting Fluxknight, Supabase, and n8n",
+  placeholder = "Ask Leo about a failed agent, automation, message, organization, or connected service...",
+  typingLabel = "Inspecting Fluxknight diagnostics",
 }: AgentLeoClientProps) {
   const welcome: Message = { role: "assistant", content: welcomeMessage };
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [conversationId, setConversationId] = useState("");
   const [actions, setActions] = useState<Action[]>([]);
+  const [aiState, setAiState] = useState<AIState | null>(null);
   const [busy, setBusy] = useState(false);
   const [workingAction, setWorkingAction] = useState("");
   const [error, setError] = useState("");
@@ -53,15 +62,19 @@ export default function AgentLeoClient({
     const response = await fetch(`${apiBase}?conversationId=${encodeURIComponent(id)}`, { cache: "no-store" });
     const result = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessages(result.messages?.length ? result.messages : [welcome]);
+      const loadedMessages: Message[] = result.messages?.length ? result.messages : [welcome];
+      setMessages(loadedMessages);
       setActions(result.actions || []);
+      const latestAssistant = [...loadedMessages].reverse().find((item) => item.role === "assistant" && item.diagnostics?.ai);
+      setAiState(latestAssistant?.diagnostics?.ai || null);
     }
   }
 
   function newDiagnosis() {
     setConversationId("");
-    setMessages([{ role: "assistant", content: "New diagnostic session started. Describe the issue and I will inspect the scoped platform data." }]);
+    setMessages([{ role: "assistant", content: "New diagnostic session started. Describe the issue and I will inspect only the data available to this support scope." }]);
     setActions([]);
+    setAiState(null);
     setError("");
   }
 
@@ -84,8 +97,9 @@ export default function AgentLeoClient({
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Agent Leo could not respond.");
       setConversationId(result.conversationId);
-      setMessages((current) => [...current, { role: "assistant", content: result.reply }]);
+      setMessages((current) => [...current, { role: "assistant", content: result.reply, diagnostics: { ai: result.ai || undefined } }]);
       setActions((current) => [...(result.actions || []), ...current.filter((item) => item.status !== "proposed")]);
+      setAiState(result.ai || null);
       await loadConversations();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Agent Leo could not respond.");
@@ -141,11 +155,16 @@ export default function AgentLeoClient({
             <span className="leo-avatar large"><Bot size={24} /></span>
             <div><p className="admin-kicker">{scopeLabel}</p><h1>{title}</h1><p>{description}</p></div>
           </div>
-          <div className="leo-live"><span /> Scoped diagnostics</div>
+          <div className="leo-status-stack">
+            {aiState?.connected ? <div className="leo-live"><span /> AI connected</div> : null}
+            {aiState?.fallbackUsed ? <div className="leo-live warning"><span /> Safe diagnostic mode</div> : null}
+            {aiState?.needsHumanReview ? <div className="leo-live review"><span /> Admin review required</div> : null}
+            {!aiState ? <div className="leo-live neutral"><span /> Scoped diagnostics</div> : null}
+          </div>
         </header>
 
         <div className="leo-capabilities">
-          <span><Activity size={15} /> Workflow health</span>
+          <span><Activity size={15} /> Automation health</span>
           <span><ShieldCheck size={15} /> Approval controls</span>
           <span><AlertTriangle size={15} /> Risk detection</span>
         </div>
