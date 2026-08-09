@@ -1,0 +1,88 @@
+{
+  "name": "Fluxknight - Agent Leo AI Control Engine - Production v1",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxknight-leo-control-v1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Agent Leo Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-620, 0],
+      "webhookId": "fluxknight-leo-control-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body??$json; const message=String(b.message||'').trim(); const conversationId=String(b.conversation_id||'').trim(); const organizationId=String(b.organization_id||'').trim(); const actor=String(b.actor||'').trim(); if(!message||!conversationId||!actor) throw new Error('Missing support request fields'); return [{json:{message:message.slice(0,8000),conversationId,organizationId:organizationId||null,scope:'admin'}}];"
+      },
+      "id": "validate",
+      "name": "Validate Support Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-380, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/support/leo/generate'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name":"x-fluxknight-leo-secret","value":"={{$env.LEO_N8N_SHARED_SECRET}}"},
+            {"name":"content-type","value":"application/json"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{JSON.stringify({message:$json.message,conversationId:$json.conversationId,organizationId:$json.organizationId,scope:$json.scope})}}",
+        "options": {"timeout":30000}
+      },
+      "id": "generate",
+      "name": "Generate Safe Leo Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-120,0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const d=$json; const first=Array.isArray(d.proposedActions)&&d.proposedActions.length?d.proposedActions[0]:null; const action=first?{action_key:first.actionKey,title:first.title,description:first.description,risk_level:first.riskLevel}:null; const totals=d.diagnostics?.totals||{}; return [{json:{ok:Boolean(d.ok&&d.reply),reply:String(d.reply||'Agent Leo could not complete the diagnostic.'),diagnosis:[`Agents: ${totals.agents??0}`,`Connected services: ${totals.integrations??0}`,`Automations: ${totals.workflows??0}`,`Recent failures: ${totals.workflowFailures??0}`],evidence:[],action,approval_required:Boolean(d.needsHumanReview||(action&&action.risk_level!=='low')),execution:{engine:'fluxknight-ai-service',connected:Boolean(d.ai?.connected),model:d.ai?.model||null,fallback_used:Boolean(d.ai?.fallbackUsed),latency_ms:d.ai?.latencyMs||null}}}];"
+      },
+      "id": "format",
+      "name": "Format Agent Leo Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [140,0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json)}}",
+        "options": {"responseCode":200}
+      },
+      "id": "respond",
+      "name": "Return Agent Leo Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [390,0]
+    }
+  ],
+  "connections": {
+    "Agent Leo Webhook":{"main":[[{"node":"Validate Support Envelope","type":"main","index":0}]]},
+    "Validate Support Envelope":{"main":[[{"node":"Generate Safe Leo Reply","type":"main","index":0}]]},
+    "Generate Safe Leo Reply":{"main":[[{"node":"Format Agent Leo Response","type":"main","index":0}]]},
+    "Format Agent Leo Response":{"main":[[{"node":"Return Agent Leo Result","type":"main","index":0}]]}
+  },
+  "pinData": {},
+  "settings": {"executionOrder":"v1","saveExecutionProgress":false,"saveManualExecutions":true,"saveDataErrorExecution":"all","saveDataSuccessExecution":"none","timezone":"Africa/Lagos"},
+  "meta": {"templateCredsSetupCompleted": false},
+  "tags": [{"name":"fluxknight"},{"name":"agent-leo"},{"name":"support"}]
+}
