@@ -6,8 +6,7 @@ import { useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
-  Menu, MessageCircle, PlugZap, Plus, Search, Settings, ShieldCheck, Users,
-  Workflow, X,
+  Menu, MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -90,8 +89,6 @@ const basePlatformGroups: NavGroup[] = [
     sections: [
       {
         items: [
-          { href: "/dashboard/workflows", label: "Workflow Registry", icon: Workflow },
-          { href: "/dashboard/integrations", label: "Integration Center", icon: PlugZap },
           { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
           { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
           { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
@@ -107,15 +104,16 @@ function groupItems(group: NavGroup) {
 }
 
 function itemIsActive(pathname: string, item: { href: string; exact?: boolean }) {
-  return item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const route = item.href.split("#")[0].split("?")[0];
+  return item.exact ? pathname === route : pathname === route || pathname.startsWith(`${route}/`);
 }
 
 function tenantLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
-const defaultOpenGroupIds = ["fluxknight-core", "home-agents", "tenants"];
-const defaultOpenSectionIds = ["home-agents:limitless-realty", "home-agents:gencouv"];
+const defaultOpenGroupIds = ["fluxknight-core", "home-agents", "client-onboarding"];
+const defaultOpenSectionIds = ["home-agents:limitless-realty", "home-agents:gencouv", "client-onboarding:onboarding"];
 
 function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
   if (!section.label) return `${groupId}:${sectionIndex}`;
@@ -127,20 +125,25 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const platformGroups = useMemo<NavGroup[]>(() => [
     ...basePlatformGroups,
     {
-      id: "tenants",
-      label: "Tenants",
+      id: "client-onboarding",
+      label: "Client Onboarding",
       sections: [
         {
+          label: "Onboarding",
           items: [
-            { href: "/dashboard/clients", label: "Tenant Registry", icon: Users, exact: true },
-            { href: "/dashboard/onboarding", label: "Tenant Onboarding", icon: ClipboardList },
-            ...tenants.map((tenant) => ({
-              href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
-              label: tenant.name,
-              icon: Building2,
-              meta: tenantLabel(tenant.status),
-            })),
+            { href: "/dashboard/onboarding#new-client", label: "New Client", icon: Plus },
+            { href: "/dashboard/onboarding#queue", label: "Onboarding Queue", icon: ClipboardList },
+            { href: "/dashboard/clients", label: "Client Registry", icon: Users, exact: true },
           ],
+        },
+        {
+          label: "Client Workspaces",
+          items: tenants.map((tenant) => ({
+            href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
+            label: tenant.name,
+            icon: Building2,
+            meta: tenantLabel(tenant.status),
+          })),
         },
       ],
     },
@@ -166,7 +169,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     : pathname.startsWith("/dashboard/limitless")
       ? "Limitless Realty"
       : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding")
-        ? "Tenants"
+        ? "Client Onboarding"
         : "Fluxknight Platform";
 
   return (
@@ -183,7 +186,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
           <span><small>Current scope</small><strong>{workspaceName}</strong></span>
         </div>
 
-        <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent and tenant navigation">
+        <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent and client onboarding navigation">
           {platformGroups.map((group) => {
             const hasActiveItem = groupItems(group).some((item) => itemIsActive(pathname, item));
             const isOpen = openGroups.includes(group.id) || hasActiveItem;
@@ -226,14 +229,13 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
                       </div>
                     );
                   })}
-                  {group.id === "tenants" && tenants.length === 0 ? <p className={styles.emptyState}>No tenant organizations yet.</p> : null}
+                  {group.id === "client-onboarding" && tenants.length === 0 ? <p className={styles.emptyState}>No client organizations yet.</p> : null}
                 </div>
               </section>
             );
           })}
         </nav>
 
-        <Link href="/dashboard/clients" onClick={closeMobileMenu} className={extras.addOrganization}><Plus size={15} /> Add tenant organization</Link>
         <div className={`admin-sidebar-footer ${styles.footer}`}>
           <div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div>
           <LogoutButton />
