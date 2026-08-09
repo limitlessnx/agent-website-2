@@ -107,7 +107,8 @@ function groupItems(group: NavGroup) {
 }
 
 function itemIsActive(pathname: string, item: { href: string; exact?: boolean }) {
-  return item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const cleanHref = item.href.split("?")[0].split("#")[0];
+  return item.exact ? pathname === cleanHref : pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
 }
 
 function tenantLabel(value: string) {
@@ -115,7 +116,7 @@ function tenantLabel(value: string) {
 }
 
 const defaultOpenGroupIds = ["fluxknight-core", "home-agents", "tenants"];
-const defaultOpenSectionIds = ["home-agents:limitless-realty", "home-agents:gencouv"];
+const defaultOpenSectionIds = ["home-agents:limitless-realty", "home-agents:gencouv", "tenants:onboarding"];
 
 function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
   if (!section.label) return `${groupId}:${sectionIndex}`;
@@ -128,19 +129,24 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     ...basePlatformGroups,
     {
       id: "tenants",
-      label: "Tenants",
+      label: "Clients & Onboarding",
       sections: [
         {
+          label: "Onboarding",
           items: [
+            { href: "/dashboard/onboarding#new-client", label: "Start New Client", icon: Plus },
+            { href: "/dashboard/onboarding", label: "Onboarding Queue", icon: ClipboardList, exact: true },
             { href: "/dashboard/clients", label: "Tenant Registry", icon: Users, exact: true },
-            { href: "/dashboard/onboarding", label: "Tenant Onboarding", icon: ClipboardList },
-            ...tenants.map((tenant) => ({
-              href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
-              label: tenant.name,
-              icon: Building2,
-              meta: tenantLabel(tenant.status),
-            })),
           ],
+        },
+        {
+          label: "Client Workspaces",
+          items: tenants.map((tenant) => ({
+            href: `/dashboard/clients/${encodeURIComponent(tenant.organizationId)}/setup`,
+            label: tenant.name,
+            icon: Building2,
+            meta: tenantLabel(tenant.status),
+          })),
         },
       ],
     },
@@ -166,7 +172,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     : pathname.startsWith("/dashboard/limitless")
       ? "Limitless Realty"
       : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding")
-        ? "Tenants"
+        ? "Clients & Onboarding"
         : "Fluxknight Platform";
 
   return (
@@ -226,14 +232,14 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
                       </div>
                     );
                   })}
-                  {group.id === "tenants" && tenants.length === 0 ? <p className={styles.emptyState}>No tenant organizations yet.</p> : null}
+                  {group.id === "tenants" && tenants.length === 0 ? <p className={styles.emptyState}>No client workspaces yet.</p> : null}
                 </div>
               </section>
             );
           })}
         </nav>
 
-        <Link href="/dashboard/clients" onClick={closeMobileMenu} className={extras.addOrganization}><Plus size={15} /> Add tenant organization</Link>
+        <Link href="/dashboard/onboarding#new-client" onClick={closeMobileMenu} className={extras.addOrganization}><Plus size={15} /> Start client onboarding</Link>
         <div className={`admin-sidebar-footer ${styles.footer}`}>
           <div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div>
           <LogoutButton />
