@@ -92,11 +92,11 @@ export default function OnboardingQueueClient({ packages }: { packages: Package[
         <article className="admin-stat-card"><span>Live workspaces</span><strong>{counts.live}</strong></article>
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Create paid-client invitation</h2><p>Use this after payment has been confirmed. The client receives only the business intake form, not the machinery room.</p></div></div>
+      <section id="new-client" className="admin-panel">
+        <div className="admin-panel-header"><div><h2>New client</h2><p>Create the secure intake link after payment is confirmed. Technical setup remains inside Fluxknight.</p></div></div>
         <form className="admin-form" onSubmit={createInvitation}>
           <div className="admin-form-grid">
-            <label>Purchaser email<input required name="purchaserEmail" type="email" /></label>
+            <label>Client email<input required name="purchaserEmail" type="email" /></label>
             <label>Package<select required name="packageId" defaultValue=""><option value="" disabled>Select package</option>{packages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label>Payment provider<input name="paymentProvider" defaultValue="manual" /></label>
             <label>Payment reference<input name="paymentReference" placeholder="Optional for manual payments" /></label>
@@ -107,8 +107,8 @@ export default function OnboardingQueueClient({ packages }: { packages: Package[
         {message ? <p className="admin-form-message">{message}</p> : null}
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Onboarding queue</h2><p>Review submissions, track progress, and open the deployment checklist.</p></div><button className="admin-button secondary" type="button" onClick={load}>Refresh</button></div>
+      <section id="queue" className="admin-panel">
+        <div className="admin-panel-header"><div><h2>Onboarding queue</h2><p>Every new client stays here from intake through review, setup, testing, and activation.</p></div></div>
         <div className="admin-list">
           {loading ? <p>Loading onboarding queue...</p> : submissions.map((item) => (
             <div className="admin-list-row" key={item.id}>
