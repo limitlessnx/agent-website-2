@@ -62,8 +62,7 @@ type Agent = {
 
 type Readiness = {
   agent_id: string;
-  readiness_percentage: number | null;
-  ready_for_activation: boolean | null;
+  readiness_score: number | null;
 };
 
 type TemplateAssignment = {
@@ -100,7 +99,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
     admin.from("client_onboarding_profiles").select("id,organization_id,status,business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("organization_integrations").select("id,provider,display_name,status").eq("organization_id", organizationId).order("display_name"),
     admin.from("agents").select("id,name,status,agent_type").eq("organization_id", organizationId).order("created_at"),
-    admin.from("agent_runtime_readiness").select("agent_id,readiness_percentage,ready_for_activation").eq("organization_id", organizationId),
+    admin.from("agent_runtime_readiness").select("agent_id,readiness_score").eq("organization_id", organizationId),
     admin.from("organization_template_assignments").select("id,status,provisioned_at").eq("organization_id", organizationId).order("created_at", { ascending: false }),
     admin.from("ai_model_catalog").select("id,provider,model_key,display_name").eq("status", "active").order("provider").order("display_name"),
     admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", organizationId).maybeSingle(),
@@ -127,7 +126,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const agentsAllocated = agents.length > 0;
   const modelAssigned = Boolean(modelAssignment?.model_id);
   const integrationsConnected = integrations.length > 0 && integrations.every((item) => item.status === "connected");
-  const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => item.ready_for_activation || Number(item.readiness_percentage || 0) >= 100);
+  const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => Number(item.readiness_score || 0) >= 100);
   const isLive = profile?.status === "live";
 
   const steps = [
@@ -187,7 +186,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="agents">
         <div className="admin-panel-header">
-          <div><h2>3. Agent allocation</h2><p>Select the AI agents assigned to this tenant. Saving an allocation creates or reuses the real tenant agent, binds tenant knowledge, assigns compatible shared workflows, and prepares required integrations.</p></div>
+          <div><h2>3. Agent allocation</h2><p>Select the reusable marketplace agent(s) assigned to this tenant. The client plan controls how many can be allocated; communication channels and integrations are configured separately.</p></div>
           <Bot size={18} />
         </div>
         <AgentAllocationControl organizationId={organizationId} embedded />
@@ -214,7 +213,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="integrations">
         <div className="admin-panel-header">
-          <div><h2>5. Integrations and webhooks</h2><p>Connect the tenant-owned APIs, credentials and provider channels required by allocated agents. Credentials stay in encrypted server-side storage.</p></div>
+          <div><h2>5. Integrations and webhooks</h2><p>Connect the tenant-owned APIs, credentials and communication channels required by the allocated agents. A Support Agent, for example, can operate through WhatsApp without becoming a different marketplace product.</p></div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span>
             <Link className="admin-button secondary" href="/dashboard/integrations">Configure integrations</Link>
@@ -240,7 +239,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         <div className="admin-list">
           {agents.map((agent) => {
             const snapshot = readiness.find((item) => item.agent_id === agent.id);
-            const percentage = Number(snapshot?.readiness_percentage || 0);
+            const percentage = Number(snapshot?.readiness_score || 0);
             return (
               <div className="admin-list-row" key={agent.id}>
                 <div><strong>{agent.name}</strong><span>Configuration, knowledge, integrations, workflow assignment, testing and approval</span></div>
