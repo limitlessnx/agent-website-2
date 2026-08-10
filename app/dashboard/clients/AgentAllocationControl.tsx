@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bot, Check, Loader2 } from "lucide-react";
 
 type CatalogOffering = {
@@ -29,6 +30,7 @@ export default function AgentAllocationControl({
   organizationId: string;
   embedded?: boolean;
 }) {
+  const router = useRouter();
   const [catalog, setCatalog] = useState<CatalogOffering[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [locked, setLocked] = useState<string[]>([]);
@@ -78,7 +80,10 @@ export default function AgentAllocationControl({
       const selections = (result.selections || []) as Selection[];
       setSelected(selections.map((item) => item.agent_key));
       setLocked(selections.filter((item) => ["paid", "provisioning", "active"].includes(item.status)).map((item) => item.agent_key));
-      setMessage("Agent allocation saved.");
+      const created = Number(result.provisioning?.agents_created || 0);
+      const reused = Number(result.provisioning?.agents_reused || 0);
+      setMessage(`Allocation saved and tenant agent provisioning prepared${created || reused ? ` (${created} created, ${reused} reused)` : ""}.`);
+      router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save allocations.");
     } finally {
@@ -122,7 +127,7 @@ export default function AgentAllocationControl({
               })}
             </div>
           ) : null}
-          <div className="admin-list-row compact"><div><strong>{selected.length} allocated</strong><span>{money.format(totals.setup)} setup · {money.format(totals.monthly)}/month</span></div><button className="admin-button" type="button" disabled={!selected.length || saving} onClick={save}>{saving ? "Saving..." : "Save allocation"}</button></div>
+          <div className="admin-list-row compact"><div><strong>{selected.length} allocated</strong><span>{money.format(totals.setup)} setup · {money.format(totals.monthly)}/month</span></div><button className="admin-button" type="button" disabled={!selected.length || saving} onClick={save}>{saving ? "Provisioning..." : "Save & provision"}</button></div>
           {message ? <p className="admin-form-message">{message}</p> : null}
         </div>
       ) : null}
