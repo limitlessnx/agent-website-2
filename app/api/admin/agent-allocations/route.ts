@@ -64,7 +64,22 @@ export async function PUT(request: NextRequest) {
       allocationSource: "admin",
     });
 
-    return NextResponse.json({ ok: true, ...result });
+    const admin = createAdminClient();
+    const { data: provisioning, error: provisioningError } = await admin.rpc(
+      "provision_selected_agent_allocations",
+      {
+        p_organization_id: organizationId,
+        p_actor_user_id: null,
+      },
+    );
+    if (provisioningError) throw provisioningError;
+
+    return NextResponse.json({
+      ok: true,
+      ...result,
+      selections: await listOrganizationAgentSelections(organizationId),
+      provisioning,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save agent allocations.";
     return NextResponse.json({ error: message }, { status: message === "Unauthorized." ? 401 : 400 });
