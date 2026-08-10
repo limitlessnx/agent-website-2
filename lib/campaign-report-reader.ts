@@ -49,7 +49,15 @@ export async function getDetailedCampaignReports(limit = 50): Promise<DetailedCa
     return [];
   }
 
-  const statusByMessageId = new Map(statusLogs.filter((log) => log.message_id).map((log) => [log.message_id, log]));
+  // getRecentWhatsAppStatuses returns newest-first. Preserve the first status we see
+  // for each message ID so older `sent` callbacks cannot overwrite newer
+  // `delivered`, `read`, or `failed` callbacks.
+  const statusByMessageId = new Map<string, (typeof statusLogs)[number]>();
+  for (const log of statusLogs) {
+    if (!log.message_id || statusByMessageId.has(log.message_id)) continue;
+    statusByMessageId.set(log.message_id, log);
+  }
+
   const rows = (await response.json()) as Array<{ id: string; content?: string | Record<string, unknown>; created_at?: string }>;
   return rows.map((row) => {
     let content: Record<string, unknown> = {};
