@@ -3,17 +3,18 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   Bot,
+  BrainCircuit,
   Building2,
   CheckCircle2,
   CircleDashed,
   FlaskConical,
   PlugZap,
   Rocket,
-  Settings2,
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import AgentAllocationControl from "../../AgentAllocationControl";
+import ClientModelAssignmentControl from "../../ClientModelAssignmentControl";
 import ClientStatusControl from "../../ClientStatusControl";
 import TemplateProvisionControl from "../../TemplateProvisionControl";
 
@@ -71,6 +72,17 @@ type TemplateAssignment = {
   provisioned_at: string | null;
 };
 
+type AiModel = {
+  id: string;
+  provider: string;
+  model_key: string;
+  display_name: string;
+};
+
+type ModelAssignment = {
+  model_id: string;
+};
+
 function humanize(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -83,13 +95,15 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const { organizationId } = await params;
   const admin = createAdminClient();
 
-  const [organizationResult, profileResult, integrationsResult, agentsResult, readinessResult, templateAssignmentsResult, platform] = await Promise.all([
+  const [organizationResult, profileResult, integrationsResult, agentsResult, readinessResult, templateAssignmentsResult, modelsResult, modelAssignmentResult, platform] = await Promise.all([
     admin.from("organizations").select("id,name,slug,status").eq("id", organizationId).maybeSingle(),
     admin.from("client_onboarding_profiles").select("id,organization_id,status,business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("organization_integrations").select("id,provider,display_name,status").eq("organization_id", organizationId).order("display_name"),
     admin.from("agents").select("id,name,status,agent_type").eq("organization_id", organizationId).order("created_at"),
     admin.from("agent_runtime_readiness").select("agent_id,readiness_percentage,ready_for_activation").eq("organization_id", organizationId),
     admin.from("organization_template_assignments").select("id,status,provisioned_at").eq("organization_id", organizationId).order("created_at", { ascending: false }),
+    admin.from("ai_model_catalog").select("id,provider,model_key,display_name").eq("status", "active").order("provider").order("display_name"),
+    admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", organizationId).maybeSingle(),
     getPlatformEngineSummary(),
   ]);
 
@@ -102,6 +116,8 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const agents = (agentsResult.data || []) as Agent[];
   const readiness = (readinessResult.data || []) as Readiness[];
   const templateAssignments = (templateAssignmentsResult.data || []) as TemplateAssignment[];
+  const models = (modelsResult.data || []) as AiModel[];
+  const modelAssignment = modelAssignmentResult.data as ModelAssignment | null;
   const templates = platform.templates
     .filter((template) => template.status === "active")
     .map((template) => ({ slug: template.slug, name: template.name }));
@@ -109,6 +125,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const businessComplete = Boolean(profile?.business_name && profile?.business_email && profile?.industry && profile?.country && profile?.timezone);
   const templateProvisioned = templateAssignments.some((assignment) => assignment.status === "active" && Boolean(assignment.provisioned_at));
   const agentsAllocated = agents.length > 0;
+  const modelAssigned = Boolean(modelAssignment?.model_id);
   const integrationsConnected = integrations.length > 0 && integrations.every((item) => item.status === "connected");
   const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => item.ready_for_activation || Number(item.readiness_percentage || 0) >= 100);
   const isLive = profile?.status === "live";
@@ -117,6 +134,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
     { label: "Business", complete: businessComplete },
     { label: "Template", complete: templateProvisioned },
     { label: "Agents", complete: agentsAllocated },
+    { label: "AI model", complete: modelAssigned },
     { label: "Integrations", complete: integrationsConnected },
     { label: "Testing", complete: testsReady },
     { label: "Launch", complete: isLive },
@@ -128,7 +146,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         <div>
           <p className="admin-kicker">Tenant setup and agent allocation</p>
           <h1>{profile?.business_name || organization.name}</h1>
-          <p>Complete the tenant workspace, agents, integrations, testing and launch from one operational page.</p>
+          <p>Configure this organization in sequence: business context, workspace template, agents, AI model, integrations, testing, then launch.</p>
         </div>
         <Link className="admin-button secondary" href="/dashboard/clients"><ArrowLeft size={15} /> Back to tenants</Link>
       </header>
@@ -169,7 +187,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="agents">
         <div className="admin-panel-header">
-          <div><h2>3. Agent allocation</h2><p>Select the AI agents assigned to this tenant. Saving an allocation now creates or reuses the real tenant agent, binds tenant knowledge, assigns compatible shared workflows, and prepares required integrations.</p></div>
+          <div><h2>3. Agent allocation</h2><p>Select the AI agents assigned to this tenant. Saving an allocation creates or reuses the real tenant agent, binds tenant knowledge, assigns compatible shared workflows, and prepares required integrations.</p></div>
           <Bot size={18} />
         </div>
         <AgentAllocationControl organizationId={organizationId} embedded />
@@ -186,10 +204,21 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         ) : <p className="admin-empty">No tenant agents are provisioned yet. Save an allocation above to create them.</p>}
       </section>
 
+      <section className="admin-panel" id="ai-model">
+        <div className="admin-panel-header">
+          <div><h2>4. Organization AI model</h2><p>Choose the centrally approved model used by this organization. The current governance layer assigns one model per organization; individual agents inherit that model unless the platform policy is changed later.</p></div>
+          <span className={stageState(modelAssigned)}>{modelAssigned ? "Assigned" : "Required"}</span>
+        </div>
+        <ClientModelAssignmentControl organizationId={organizationId} models={models} currentModelId={modelAssignment?.model_id || null} />
+      </section>
+
       <section className="admin-panel" id="integrations">
         <div className="admin-panel-header">
-          <div><h2>4. Integrations</h2><p>Connect the tenant-owned communication channels and provider credentials required by allocated agents.</p></div>
-          <span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span>
+          <div><h2>5. Integrations and webhooks</h2><p>Connect the tenant-owned APIs, credentials and provider channels required by allocated agents. Credentials stay in encrypted server-side storage.</p></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span>
+            <Link className="admin-button secondary" href="/dashboard/integrations">Configure integrations</Link>
+          </div>
         </div>
         <div className="admin-list">
           {integrations.map((integration) => (
@@ -205,7 +234,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="testing">
         <div className="admin-panel-header">
-          <div><h2>5. Testing and readiness</h2><p>Every agent must reach full runtime readiness before launch.</p></div>
+          <div><h2>6. Testing and readiness</h2><p>Every agent must reach full runtime readiness before launch.</p></div>
           <FlaskConical size={18} />
         </div>
         <div className="admin-list">
@@ -225,7 +254,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="launch">
         <div className="admin-panel-header">
-          <div><h2>6. Launch control</h2><p>Move the tenant through configuration, testing, approval and live operation.</p></div>
+          <div><h2>7. Launch control</h2><p>Move the tenant through configuration, testing, approval and live operation only after the setup checks above are complete.</p></div>
           <Rocket size={18} />
         </div>
         {profile ? (
