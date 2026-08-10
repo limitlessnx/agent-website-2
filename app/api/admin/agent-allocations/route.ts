@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  getOrganizationAgentAllocationContext,
   listActiveAgentOfferings,
   listOrganizationAgentSelections,
   saveOrganizationAgentSelections,
@@ -33,13 +34,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Organization is required." }, { status: 400 });
     }
 
-    const [organization, catalog, selections] = await Promise.all([
+    const [organization, catalog, selections, allocationContext] = await Promise.all([
       ensureOrganization(organizationId),
       listActiveAgentOfferings(),
       listOrganizationAgentSelections(organizationId),
+      getOrganizationAgentAllocationContext(organizationId),
     ]);
 
-    return NextResponse.json({ organization, catalog, selections });
+    return NextResponse.json({ organization, catalog, selections, allocationContext });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load agent allocations.";
     return NextResponse.json({ error: message }, { status: message === "Unauthorized." ? 401 : 400 });
