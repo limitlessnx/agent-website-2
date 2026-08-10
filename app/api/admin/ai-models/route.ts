@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await supabaseServerRequest(
-        "organization_ai_model_assignments?on_conflict=organization_id",
+        "organization_ai_model_assignments?on_conflict=organization_id,model_id",
         {
           method: "POST",
           headers: { Prefer: "resolution=merge-duplicates,return=representation" },
@@ -49,6 +49,42 @@ export async function POST(request: NextRequest) {
       );
 
       return NextResponse.json({ ok: true, result });
+    }
+
+    if (action === "assign_models") {
+      const organizationId = String(body.organizationId || "").trim();
+      const modelIds = Array.isArray(body.modelIds)
+        ? [...new Set(body.modelIds.map((value: unknown) => String(value || "").trim()).filter(Boolean))]
+        : [];
+
+      if (!organizationId) {
+        return NextResponse.json({ error: "Organization is required." }, { status: 400 });
+      }
+      if (!modelIds.length) {
+        return NextResponse.json({ error: "Select at least one AI model." }, { status: 400 });
+      }
+
+      await supabaseServerRequest(
+        `organization_ai_model_assignments?organization_id=eq.${encodeURIComponent(organizationId)}`,
+        { method: "DELETE" },
+      );
+
+      const rows = modelIds.map((modelId) => ({
+        organization_id: organizationId,
+        model_id: modelId,
+        assigned_by: null,
+      }));
+
+      const result = await supabaseServerRequest(
+        "organization_ai_model_assignments?on_conflict=organization_id,model_id",
+        {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify(rows),
+        },
+      );
+
+      return NextResponse.json({ ok: true, result, modelIds });
     }
 
     if (action === "set_status") {
