@@ -101,6 +101,26 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
           </>
         ) : <p className="evaluation-empty">Select an evaluation request to inspect it.</p>}
       </section>
+
+      <style jsx>{`
+        .evaluation-manager{display:grid;grid-template-columns:minmax(300px,.78fr) minmax(0,1.4fr);gap:18px;align-items:start}
+        .evaluation-list-panel,.evaluation-detail-panel{border:1px solid rgba(167,139,250,.2);border-radius:16px;background:linear-gradient(145deg,rgba(20,16,39,.96),rgba(8,7,18,.98));box-shadow:0 20px 60px rgba(0,0,0,.25)}
+        .evaluation-list-panel{padding:14px}.evaluation-detail-panel{padding:22px;min-height:540px}
+        .evaluation-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:9px;margin-bottom:12px}
+        .evaluation-toolbar input,.evaluation-toolbar select,.evaluation-detail-header select{min-width:0;min-height:42px;border:1px solid rgba(167,139,250,.22);border-radius:10px;padding:0 12px;color:#f8fbff;background:#090713;font:inherit}
+        .evaluation-list{display:grid;gap:8px;max-height:660px;overflow:auto;padding-right:2px}
+        .evaluation-list button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;text-align:left;padding:13px;border:1px solid rgba(167,139,250,.14);border-radius:12px;color:#f8fbff;background:rgba(12,9,25,.72);cursor:pointer}
+        .evaluation-list button.active{border-color:rgba(167,139,250,.58);background:linear-gradient(135deg,rgba(124,58,237,.24),rgba(34,211,238,.07))}
+        .evaluation-list button div{min-width:0}.evaluation-list strong,.evaluation-list span,.evaluation-list small{display:block;overflow-wrap:anywhere}.evaluation-list span,.evaluation-list small{color:#9b91ad;font-size:.82rem}.evaluation-list small{grid-column:1;margin-top:2px}
+        .evaluation-status{grid-column:2;grid-row:1 / span 2;align-self:center;padding:5px 8px;border-radius:999px;font-size:.66rem;font-style:normal;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#c4b5fd;border:1px solid rgba(167,139,250,.28)}
+        .status-qualified,.status-converted{color:#6ee7b7;border-color:rgba(52,211,153,.35)}.status-closed{color:#94a3b8}.status-contacted{color:#67e8f9;border-color:rgba(34,211,238,.35)}
+        .evaluation-detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:18px;border-bottom:1px solid rgba(167,139,250,.16)}
+        .evaluation-detail-header span,.evaluation-section>span,.evaluation-detail-grid span{color:#8f83a4;font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.evaluation-detail-header h2{margin:5px 0 4px;font-size:1.7rem}.evaluation-detail-header p{margin:0;color:#aaa0b8}.evaluation-detail-header select{width:145px}
+        .evaluation-contact-grid,.evaluation-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.evaluation-contact-grid>* ,.evaluation-detail-grid>div{min-width:0;padding:13px;border:1px solid rgba(167,139,250,.14);border-radius:11px;color:#958aa7;background:rgba(255,255,255,.02);font-size:.76rem;line-height:1.5;text-decoration:none}.evaluation-contact-grid strong,.evaluation-detail-grid strong{color:#f8fbff;font-size:.88rem;overflow-wrap:anywhere}
+        .evaluation-section{margin-top:18px;padding-top:16px;border-top:1px solid rgba(167,139,250,.12)}.evaluation-section p{margin:8px 0 0;color:#d7d0e1;line-height:1.65}.evaluation-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.evaluation-chips b{padding:7px 9px;border:1px solid rgba(34,211,238,.22);border-radius:999px;color:#a5f3fc;background:rgba(34,211,238,.06);font-size:.76rem}.evaluation-error{color:#fda4af}.evaluation-empty{color:#93889f;text-align:center;padding:28px 12px}
+        @media(max-width:900px){.evaluation-manager{grid-template-columns:1fr}.evaluation-list{max-height:390px}}
+        @media(max-width:620px){.evaluation-list-panel,.evaluation-detail-panel{padding:12px;border-radius:12px}.evaluation-toolbar{grid-template-columns:1fr}.evaluation-detail-header{flex-direction:column}.evaluation-detail-header select{width:100%}.evaluation-contact-grid,.evaluation-detail-grid{grid-template-columns:1fr}.evaluation-list button{grid-template-columns:minmax(0,1fr) auto}.evaluation-detail-panel{min-height:0}}
+      `}</style>
     </div>
   );
 }
