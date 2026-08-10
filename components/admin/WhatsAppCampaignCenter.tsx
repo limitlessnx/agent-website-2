@@ -114,7 +114,7 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
           <label><span>Minimum budget</span><input inputMode="numeric" value={budgetMin} onChange={(event) => setBudgetMin(event.target.value)} placeholder="₦0" /></label>
           <label><span>Maximum budget</span><input inputMode="numeric" value={budgetMax} onChange={(event) => setBudgetMax(event.target.value)} placeholder="No maximum" /></label>
         </div> : null}
-        {audienceMode === "manual" ? <div className="console-lead-picker">{leads.filter(eligible).slice(0, 250).map((lead) => <label key={lead.id}><input type="checkbox" checked={selectedLeadIds.includes(String(lead.id))} onChange={() => toggleLead(String(lead.id))} /><span><strong>{lead.name}</strong><small>{lead.phone}</small></span></label>)}</div> : null}
+        {audienceMode === "manual" ? <div className="console-lead-picker">{leads.filter(eligible).slice(0, 250).map((lead) => <label className="console-lead-option" key={lead.id}><input type="checkbox" checked={selectedLeadIds.includes(String(lead.id))} onChange={() => toggleLead(String(lead.id))} /><span className="console-lead-copy"><strong>{lead.name}</strong><small>{lead.phone}</small></span></label>)}</div> : null}
         <div className="console-audience-meter"><div style={{ "--angle": `${Math.min(100, recipientCount ? 76 : 0) * 3.6}deg` } as React.CSSProperties}><strong>{recipientCount}</strong><span>RECIPIENTS</span></div><ul><li><i />Eligible audience</li><li><i />Duplicate protected</li><li><i />Provider verified</li></ul></div>
       </section>
 
@@ -131,6 +131,96 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
         {result ? <div className={`console-result ${result.failed ? "warning" : "success"}`}><header><strong>{result.status.replaceAll("_", " ")}</strong><small>{result.templateName || selectedCampaignType.templateName}</small></header><div>{[["ATTEMPTED",result.attempted],["SENT",result.sent],["DELIVERED",result.delivered],["PENDING",result.pendingDelivery],["FAILED",result.failed],["SKIPPED",result.skipped]].map(([label,value]) => <span key={String(label)}>{label}<b>{value}</b></span>)}</div></div> : null}
         {error ? <p className="campaign-error">{error}</p> : null}
       </section>
+
+      <style jsx>{`
+        .campaign-console-grid,
+        .console-panel,
+        .audience-console,
+        .console-lead-picker {
+          min-width: 0;
+          max-width: 100%;
+        }
+
+        .console-lead-picker {
+          width: 100%;
+          overflow-x: hidden;
+        }
+
+        .console-lead-option {
+          width: 100%;
+          min-width: 0;
+          display: grid;
+          grid-template-columns: 24px minmax(0, 1fr);
+          align-items: center;
+          gap: 12px;
+          padding: 13px 14px;
+          text-align: left;
+        }
+
+        .console-lead-option > input {
+          width: 20px;
+          height: 20px;
+          min-width: 20px;
+          margin: 0;
+          justify-self: start;
+        }
+
+        .console-lead-copy {
+          display: block;
+          min-width: 0;
+          width: 100%;
+          text-align: left;
+          overflow: hidden;
+        }
+
+        .console-lead-copy strong,
+        .console-lead-copy small {
+          display: block;
+          max-width: 100%;
+          text-align: left;
+          overflow-wrap: anywhere;
+          word-break: normal;
+        }
+
+        .console-lead-copy strong {
+          line-height: 1.25;
+        }
+
+        .console-lead-copy small {
+          margin-top: 4px;
+          line-height: 1.35;
+        }
+
+        @media (max-width: 640px) {
+          .console-mode-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .console-mode-grid button {
+            min-width: 0;
+            width: 100%;
+            padding: 12px 10px;
+          }
+
+          .console-panel-head {
+            min-width: 0;
+          }
+
+          .console-lead-option {
+            padding: 12px 10px;
+            gap: 10px;
+          }
+
+          .console-lead-copy strong {
+            font-size: 0.98rem;
+          }
+
+          .console-lead-copy small {
+            font-size: 0.8rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }
