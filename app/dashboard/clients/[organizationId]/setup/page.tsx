@@ -65,6 +65,12 @@ type Readiness = {
   ready_for_activation: boolean | null;
 };
 
+type TemplateAssignment = {
+  id: string;
+  status: string;
+  provisioned_at: string | null;
+};
+
 function humanize(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -77,12 +83,13 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const { organizationId } = await params;
   const admin = createAdminClient();
 
-  const [organizationResult, profileResult, integrationsResult, agentsResult, readinessResult, platform] = await Promise.all([
+  const [organizationResult, profileResult, integrationsResult, agentsResult, readinessResult, templateAssignmentsResult, platform] = await Promise.all([
     admin.from("organizations").select("id,name,slug,status").eq("id", organizationId).maybeSingle(),
     admin.from("client_onboarding_profiles").select("id,organization_id,status,business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("organization_integrations").select("id,provider,display_name,status").eq("organization_id", organizationId).order("display_name"),
     admin.from("agents").select("id,name,status,agent_type").eq("organization_id", organizationId).order("created_at"),
     admin.from("agent_runtime_readiness").select("agent_id,readiness_percentage,ready_for_activation").eq("organization_id", organizationId),
+    admin.from("organization_template_assignments").select("id,status,provisioned_at").eq("organization_id", organizationId).order("created_at", { ascending: false }),
     getPlatformEngineSummary(),
   ]);
 
@@ -94,19 +101,21 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const integrations = (integrationsResult.data || []) as Integration[];
   const agents = (agentsResult.data || []) as Agent[];
   const readiness = (readinessResult.data || []) as Readiness[];
+  const templateAssignments = (templateAssignmentsResult.data || []) as TemplateAssignment[];
   const templates = platform.templates
     .filter((template) => template.status === "active")
     .map((template) => ({ slug: template.slug, name: template.name }));
 
   const businessComplete = Boolean(profile?.business_name && profile?.business_email && profile?.industry && profile?.country && profile?.timezone);
+  const templateProvisioned = templateAssignments.some((assignment) => assignment.status === "active" && Boolean(assignment.provisioned_at));
   const agentsAllocated = agents.length > 0;
   const integrationsConnected = integrations.length > 0 && integrations.every((item) => item.status === "connected");
   const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => item.ready_for_activation || Number(item.readiness_percentage || 0) >= 100);
-  const isLive = profile?.status === "live" || organization.status === "active";
+  const isLive = profile?.status === "live";
 
   const steps = [
     { label: "Business", complete: businessComplete },
-    { label: "Template", complete: agentsAllocated },
+    { label: "Template", complete: templateProvisioned },
     { label: "Agents", complete: agentsAllocated },
     { label: "Integrations", complete: integrationsConnected },
     { label: "Testing", complete: testsReady },
@@ -153,14 +162,14 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
       <section className="admin-panel" id="template">
         <div className="admin-panel-header">
           <div><h2>2. Business template</h2><p>Apply the reusable workspace structure before configuring individual agents.</p></div>
-          <Settings2 size={18} />
+          <span className={stageState(templateProvisioned)}>{templateProvisioned ? "Provisioned" : "Required"}</span>
         </div>
         <TemplateProvisionControl organizationId={organizationId} templates={templates} />
       </section>
 
       <section className="admin-panel" id="agents">
         <div className="admin-panel-header">
-          <div><h2>3. Agent allocation</h2><p>Select the AI agents assigned to this tenant. Protected allocations remain locked once provisioning begins.</p></div>
+          <div><h2>3. Agent allocation</h2><p>Select the AI agents assigned to this tenant. Saving an allocation now creates or reuses the real tenant agent, binds tenant knowledge, assigns compatible shared workflows, and prepares required integrations.</p></div>
           <Bot size={18} />
         </div>
         <AgentAllocationControl organizationId={organizationId} embedded />
@@ -174,12 +183,12 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
               </div>
             ))}
           </div>
-        ) : <p className="admin-empty">No provisioned agents yet. Allocate agents and apply the template first.</p>}
+        ) : <p className="admin-empty">No tenant agents are provisioned yet. Save an allocation above to create them.</p>}
       </section>
 
       <section className="admin-panel" id="integrations">
         <div className="admin-panel-header">
-          <div><h2>4. Integrations</h2><p>Review the communication channels and provider connections required by this tenant.</p></div>
+          <div><h2>4. Integrations</h2><p>Connect the tenant-owned communication channels and provider credentials required by allocated agents.</p></div>
           <span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span>
         </div>
         <div className="admin-list">
@@ -190,7 +199,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
               <em className={integration.status === "connected" ? "good" : "muted"}>{humanize(integration.status)}</em>
             </div>
           ))}
-          {!integrations.length ? <p className="admin-empty">No integration placeholders exist yet. They appear after template or agent provisioning.</p> : null}
+          {!integrations.length ? <p className="admin-empty">No integration requirements yet. They are created by the business template or allocated agents that require them.</p> : null}
         </div>
       </section>
 
@@ -205,7 +214,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
             const percentage = Number(snapshot?.readiness_percentage || 0);
             return (
               <div className="admin-list-row" key={agent.id}>
-                <div><strong>{agent.name}</strong><span>Configuration, knowledge, integrations, testing and approval</span></div>
+                <div><strong>{agent.name}</strong><span>Configuration, knowledge, integrations, workflow assignment, testing and approval</span></div>
                 <em className={percentage >= 100 ? "good" : "muted"}>{percentage}% ready</em>
               </div>
             );
