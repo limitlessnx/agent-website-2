@@ -21,15 +21,102 @@ export type AgentSelection = {
   configuration: Record<string, unknown>;
 };
 
+export type AgentAllocationContext = {
+  packageName: string | null;
+  packageSlug: string | null;
+  maxAgents: number | null;
+  unlimited: boolean;
+};
+
+function marketplaceKey(slug: string) {
+  return slug.trim().toLowerCase().replace(/-/g, "_");
+}
+
 export async function listActiveAgentOfferings() {
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("agent_catalog_offerings")
-    .select("agent_key,display_name,setup_price,monthly_price,currency,metadata")
-    .eq("is_active", true)
-    .order("display_name");
+    .from("system_catalog")
+    .select("id,slug,name,summary,capabilities,setup_requirements,display_order,metadata")
+    .eq("status", "available")
+    .eq("category", "core")
+    .order("display_order");
   if (error) throw error;
-  return (data || []) as AgentCatalogOffering[];
+
+  return (data || []).map((item) => ({
+    agent_key: marketplaceKey(String(item.slug)),
+    display_name: String(item.name),
+    setup_price: 0,
+    monthly_price: 0,
+    currency: "NGN",
+    metadata: {
+      ...(item.metadata || {}),
+      catalog_source: "system_catalog",
+      system_catalog_id: item.id,
+      system_slug: item.slug,
+      summary: item.summary,
+      capabilities: item.capabilities || [],
+      setup_requirements: item.setup_requirements || [],
+      display_order: item.display_order,
+    },
+  })) as AgentCatalogOffering[];
+}
+
+export async function getOrganizationAgentAllocationContext(organizationId: string): Promise<AgentAllocationContext> {
+  const admin = createAdminClient();
+
+  const { data: submission, error: submissionError } = await admin
+    .from("client_onboarding_submissions")
+    .select("package_id")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (submissionError) throw submissionError;
+
+  if (!submission?.package_id) {
+    return { packageName: null, packageSlug: null, maxAgents: null, unlimited: false };
+  }
+
+  const { data: servicePackage, error: packageError } = await admin
+    .from("service_packages")
+    .select("name,slug")
+    .eq("id", submission.package_id)
+    .maybeSingle();
+  if (packageError) throw packageError;
+
+  const packageName = servicePackage?.name ? String(servicePackage.name) : null;
+  const packageSlug = servicePackage?.slug ? String(servicePackage.slug) : null;
+  if (!packageSlug) return { packageName, packageSlug: null, maxAgents: null, unlimited: false };
+
+  const { data: billingPlan, error: planError } = await admin
+    .from("billing_plans")
+    .select("id")
+    .eq("slug", packageSlug)
+    .eq("status", "active")
+    .maybeSingle();
+  if (planError) throw planError;
+  if (!billingPlan?.id) return { packageName, packageSlug, maxAgents: null, unlimited: false };
+
+  const { data: entitlement, error: entitlementError } = await admin
+    .from("plan_entitlements")
+    .select("enabled,limit_value")
+    .eq("plan_id", billingPlan.id)
+    .eq("feature_key", "agents")
+    .maybeSingle();
+  if (entitlementError) throw entitlementError;
+
+  if (!entitlement?.enabled) return { packageName, packageSlug, maxAgents: 0, unlimited: false };
+  if (entitlement.limit_value === null || entitlement.limit_value === undefined || entitlement.limit_value === "") {
+    return { packageName, packageSlug, maxAgents: null, unlimited: true };
+  }
+
+  const parsed = Number(entitlement.limit_value);
+  return {
+    packageName,
+    packageSlug,
+    maxAgents: Number.isFinite(parsed) ? parsed : null,
+    unlimited: false,
+  };
 }
 
 export async function listOrganizationAgentSelections(organizationId: string) {
@@ -49,10 +136,17 @@ export async function saveOrganizationAgentSelections(input: {
   allocationSource: "tenant" | "admin";
 }) {
   const admin = createAdminClient();
-  const offerings = await listActiveAgentOfferings();
+  const [offerings, allocationContext] = await Promise.all([
+    listActiveAgentOfferings(),
+    getOrganizationAgentAllocationContext(input.organizationId),
+  ]);
   const offeringMap = new Map(offerings.map((item) => [item.agent_key, item]));
   const selectedKeys = [...new Set(input.agentKeys)].filter((key) => offeringMap.has(key));
-  if (!selectedKeys.length) throw new Error("Select at least one active agent offering.");
+  if (!selectedKeys.length) throw new Error("Select at least one marketplace agent.");
+
+  if (!allocationContext.unlimited && allocationContext.maxAgents !== null && selectedKeys.length > allocationContext.maxAgents) {
+    throw new Error(`${allocationContext.packageName || "This plan"} allows ${allocationContext.maxAgents} agent${allocationContext.maxAgents === 1 ? "" : "s"}.`);
+  }
 
   const { data: existing, error: existingError } = await admin
     .from("organization_agent_selections")
@@ -69,13 +163,16 @@ export async function saveOrganizationAgentSelections(input: {
       organization_id: input.organizationId,
       agent_key: agentKey,
       display_name: offering.display_name,
-      setup_price: offering.setup_price,
-      monthly_price: offering.monthly_price,
+      setup_price: 0,
+      monthly_price: 0,
       currency: offering.currency,
       status: current && protectedStatuses.has(current.status) ? current.status : "selected",
       configuration: {
         ...(current?.configuration || {}),
         allocation_source: input.allocationSource,
+        catalog_source: "system_catalog",
+        system_catalog_id: offering.metadata.system_catalog_id,
+        system_slug: offering.metadata.system_slug,
         allocated_at: new Date().toISOString(),
       },
     };
@@ -101,5 +198,6 @@ export async function saveOrganizationAgentSelections(input: {
   return {
     selections: await listOrganizationAgentSelections(input.organizationId),
     catalog: offerings,
+    allocationContext,
   };
 }
