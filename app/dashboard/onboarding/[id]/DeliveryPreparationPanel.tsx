@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -35,13 +36,13 @@ export default function DeliveryPreparationPanel({
         body: JSON.stringify({ onboardingId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Unable to prepare delivery.");
+      if (!response.ok) throw new Error(result.error || "Unable to finalize workspace preparation.");
 
       const summary = Array.isArray(result.result) ? result.result[0] : result.result;
-      setMessage(`Delivery prepared: ${summary?.agents_updated ?? 0} agents updated and the client workspace notification drafted.`);
+      setMessage(`Workspace synchronized: ${summary?.agents_updated ?? 0} agents updated and the client notification drafted.`);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to prepare delivery.");
+      setMessage(error instanceof Error ? error.message : "Unable to finalize workspace preparation.");
     } finally {
       setBusy(false);
     }
@@ -49,22 +50,26 @@ export default function DeliveryPreparationPanel({
 
   return (
     <details className="admin-panel">
-      <summary style={{ cursor: "pointer", fontWeight: 800 }}>Final delivery preparation</summary>
+      <summary style={{ cursor: "pointer", fontWeight: 800 }}>Final workspace preparation</summary>
       <div style={{ marginTop: 16 }}>
         <div className="admin-panel-header">
           <div>
-            <h2>Prepare client workspace</h2>
-            <p>Apply the approved onboarding information to the client workspace and prepare the workspace-ready notification.</p>
+            <h2>Finalize client workspace</h2>
+            <p>This is the final synchronization step after the tenant template, agents, AI model and required integrations have been configured. It applies approved onboarding information to the provisioned agents and knowledge, then drafts the workspace-ready notification.</p>
           </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {organizationId ? <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(organizationId)}/setup`}>Open client setup</Link> : null}
           <button className="admin-button" type="button" disabled={busy || !organizationId} onClick={prepareDelivery}>
-            {busy ? "Preparing..." : "Prepare workspace"}
+            {busy ? "Finalizing..." : "Finalize preparation"}
           </button>
         </div>
 
-        {!organizationId ? <p className="admin-form-message">Create or link the organization before preparing delivery.</p> : null}
+        {!organizationId ? <p className="admin-form-message">Create or link the organization before final preparation.</p> : null}
         {message ? <p className="admin-form-message">{message}</p> : null}
 
-        <div className="admin-list">
+        <div className="admin-list" style={{ marginTop: 14 }}>
           {notifications.map((notification) => (
             <div className="admin-list-row" key={notification.id}>
               <div>
