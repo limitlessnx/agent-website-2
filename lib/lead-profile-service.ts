@@ -60,11 +60,20 @@ async function request<T>(table: string, query = "", init?: RequestInit): Promis
 }
 
 export function normalizeLeadPhone(phone: string) {
-  let digits = phone.replace(/[^\d]/g, "");
-  if (digits.startsWith("2340") && digits.length >= 14) digits = `234${digits.slice(4)}`;
+  const raw = String(phone || "").trim();
+  let digits = raw.replace(/[^\d]/g, "");
+
+  // Convert international 00-prefix notation to the canonical digits-only form.
+  if (raw.startsWith("00") && digits.startsWith("00")) digits = digits.slice(2);
+
+  // Repair Nigerian numbers incorrectly written as +2340xxxxxxxxxx.
+  if (digits.startsWith("2340") && digits.length === 14) digits = `234${digits.slice(4)}`;
+
+  // Convert only unmistakable Nigerian local mobile format (0xxxxxxxxxx).
   if (digits.startsWith("0") && digits.length === 11) return `234${digits.slice(1)}`;
-  if (digits.length === 10) return `234${digits}`;
-  if (digits.startsWith("234") && digits.length >= 13) return digits.slice(0, 13);
+
+  // Explicit international numbers are preserved as supplied after punctuation removal.
+  // Never assume an ambiguous bare 10-digit number belongs to Nigeria.
   return digits;
 }
 
