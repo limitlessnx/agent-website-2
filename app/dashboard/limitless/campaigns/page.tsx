@@ -14,6 +14,7 @@ export default async function CampaignsPage() {
     getCampaignGroups(100),
   ]);
 
+  const recentCampaigns = campaigns.slice(0, 2);
   const eligible = leads.filter((lead) => lead.phone && lead.campaign_eligible !== false).length;
   const undocumented = leads.filter((lead) => lead.profile_status === "undocumented").length;
   const delivered = campaigns.reduce((sum, campaign) => sum + Number(campaign.delivered || 0), 0);
@@ -47,13 +48,13 @@ export default async function CampaignsPage() {
       <section className="console-panel campaign-report-panel">
         <header className="console-panel-head">
           <div><span>DELIVERY LOG</span><h2>Recent campaign reports</h2></div>
-          <small>{failed} failed deliveries recorded</small>
+          <small>Showing latest {recentCampaigns.length} · {failed} failed deliveries recorded</small>
         </header>
         <div className="admin-table-wrap">
           <table className="admin-table console-table">
             <thead><tr><th>Campaign</th><th>Status</th><th>Attempted</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Date</th></tr></thead>
             <tbody>
-              {campaigns.length ? campaigns.map((campaign) => (
+              {recentCampaigns.length ? recentCampaigns.map((campaign) => (
                 <tr key={campaign.id}>
                   <td><strong>{campaign.campaign_topic}</strong><small>{campaign.template_name || campaign.campaign_type.replaceAll("_", " ")}</small></td>
                   <td><span className={`console-table-status ${campaign.failed ? "danger" : campaign.delivered ? "success" : "pending"}`}>{campaign.status.replaceAll("_", " ")}</span></td>
