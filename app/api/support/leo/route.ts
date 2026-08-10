@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { generateSupportAgentReply, SUPPORT_ACTION_KEYS, type SupportAIResponse } from "@/lib/ai/support-model";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+import { legacySupportActionPolicy, tenantLeoIdentityFromSession } from "@/lib/leo-support-policy";
+import type { LeoIdentity } from "@/lib/leo-core";
 import {
   buildSupportReply,
   collectSupportDiagnostics,
@@ -60,11 +62,14 @@ async function recordUsage(input: {
 async function storeProposedActions(input: {
   conversationId: string;
   organizationId: string;
+  identity: LeoIdentity;
   actions: SupportAIResponse["proposedActions"];
 }) {
   const created: SupportAction[] = [];
   for (const action of input.actions.slice(0, 3)) {
     if (!allowedActionKeys.has(action.actionKey)) continue;
+    const policy = legacySupportActionPolicy(input.identity, action.actionKey);
+    if (!policy) continue;
     const rows = await supabaseServerRequest<SupportAction[]>("support_actions", {
       method: "POST",
       body: JSON.stringify({
@@ -77,7 +82,10 @@ async function storeProposedActions(input: {
         status: "proposed",
         payload: {
           source: "agent-leo-ai",
-          approval_required: action.riskLevel === "medium" || action.riskLevel === "high",
+          canonical_tool_key: policy.canonicalKey,
+          approval_required: policy.approval !== "none",
+          approval_mode: policy.approval,
+          requested_by_role: input.identity.role,
         },
       }),
     });
@@ -112,9 +120,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const leoIdentity = tenantLeoIdentityFromSession(session);
 
   const requestStarted = Date.now();
-  console.info("Agent Leo tenant support request started", { organizationId: session.organizationId });
+  console.info("Agent Leo tenant support request started", {
+    organizationId: session.organizationId,
+    role: leoIdentity.role,
+  });
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -134,7 +146,12 @@ export async function POST(request: NextRequest) {
           status: "diagnosing",
           created_by: session.email,
           assigned_agent: "agent-leo",
-          metadata: { scope: "tenant", role: session.role, membership_id: session.membershipId },
+          metadata: {
+            scope: "tenant",
+            role: leoIdentity.role,
+            membership_id: session.membershipId,
+            policy: "leo-core-v2",
+          },
         }),
       });
       conversationId = rows[0]?.id || "";
@@ -167,7 +184,7 @@ export async function POST(request: NextRequest) {
     let model: string | null = null;
     let connected = false;
     let fallbackUsed = false;
-    let safeDiagnostics = aiResult.diagnostics;
+    const safeDiagnostics = aiResult.diagnostics;
 
     if (aiResult.ok) {
       connected = true;
@@ -179,6 +196,7 @@ export async function POST(request: NextRequest) {
       createdActions = await storeProposedActions({
         conversationId,
         organizationId: session.organizationId,
+        identity: leoIdentity,
         actions: aiResult.response.proposedActions,
       });
       void recordUsage({
@@ -190,6 +208,7 @@ export async function POST(request: NextRequest) {
       });
       console.info("Agent Leo tenant AI provider success", {
         organizationId: session.organizationId,
+        role: leoIdentity.role,
         provider: aiResult.provider,
         model: aiResult.model,
         latencyMs: aiResult.latencyMs,
@@ -200,6 +219,8 @@ export async function POST(request: NextRequest) {
       replyText = fallback.content;
       for (const action of fallback.actions.slice(0, 3)) {
         if (!allowedActionKeys.has(action.action_key)) continue;
+        const policy = legacySupportActionPolicy(leoIdentity, action.action_key);
+        if (!policy) continue;
         const rows = await supabaseServerRequest<SupportAction[]>("support_actions", {
           method: "POST",
           body: JSON.stringify({
@@ -210,13 +231,20 @@ export async function POST(request: NextRequest) {
             description: action.description,
             risk_level: action.risk_level,
             status: "proposed",
-            payload: { source: "agent-leo-fallback" },
+            payload: {
+              source: "agent-leo-fallback",
+              canonical_tool_key: policy.canonicalKey,
+              approval_required: policy.approval !== "none",
+              approval_mode: policy.approval,
+              requested_by_role: leoIdentity.role,
+            },
           }),
         });
         if (rows[0]) createdActions.push(rows[0]);
       }
       console.warn("Agent Leo tenant AI fallback used", {
         organizationId: session.organizationId,
+        role: leoIdentity.role,
         reason: aiResult.reason,
         latencyMs: aiResult.latencyMs,
       });
@@ -230,6 +258,8 @@ export async function POST(request: NextRequest) {
       category,
       fallbackUsed,
       needsHumanReview,
+      role: leoIdentity.role,
+      policy: "leo-core-v2",
       latencyMs: Date.now() - requestStarted,
     };
 
@@ -250,7 +280,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           status: createdActions.length || needsHumanReview ? "waiting_approval" : "open",
           updated_at: new Date().toISOString(),
-          metadata: { scope: "tenant", ai: aiMetadata },
+          metadata: { scope: "tenant", role: leoIdentity.role, ai: aiMetadata },
         }),
       },
     );
@@ -261,11 +291,13 @@ export async function POST(request: NextRequest) {
       reply: replyText,
       diagnostics: safeDiagnostics,
       actions: createdActions,
+      identity: { scope: "tenant", role: leoIdentity.role, organizationId: session.organizationId },
       ai: aiMetadata,
     });
   } catch (error) {
     console.error("Agent Leo tenant support request failed", {
       organizationId: session.organizationId,
+      role: leoIdentity.role,
       errorType: error instanceof Error ? error.name : "unknown",
       latencyMs: Date.now() - requestStarted,
     });
