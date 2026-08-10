@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Check, Loader2 } from "lucide-react";
 
 type CatalogOffering = {
   agent_key: string;
   display_name: string;
-  setup_price: number;
-  monthly_price: number;
-  currency: string;
+  metadata?: {
+    summary?: string;
+    capabilities?: string[];
+    system_slug?: string;
+  };
 };
 
 type Selection = {
@@ -17,11 +19,12 @@ type Selection = {
   status: string;
 };
 
-const money = new Intl.NumberFormat("en-NG", {
-  style: "currency",
-  currency: "NGN",
-  maximumFractionDigits: 0,
-});
+type AllocationContext = {
+  packageName: string | null;
+  packageSlug: string | null;
+  maxAgents: number | null;
+  unlimited: boolean;
+};
 
 export default function AgentAllocationControl({
   organizationId,
@@ -34,6 +37,7 @@ export default function AgentAllocationControl({
   const [catalog, setCatalog] = useState<CatalogOffering[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [locked, setLocked] = useState<string[]>([]);
+  const [allocationContext, setAllocationContext] = useState<AllocationContext>({ packageName: null, packageSlug: null, maxAgents: null, unlimited: false });
   const [open, setOpen] = useState(embedded);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,6 +54,7 @@ export default function AgentAllocationControl({
       setCatalog(result.catalog || []);
       setSelected(selections.map((item) => item.agent_key));
       setLocked(selections.filter((item) => ["paid", "provisioning", "active"].includes(item.status)).map((item) => item.agent_key));
+      setAllocationContext(result.allocationContext || { packageName: null, packageSlug: null, maxAgents: null, unlimited: false });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load allocations.");
     } finally {
@@ -63,7 +68,16 @@ export default function AgentAllocationControl({
 
   function toggle(agentKey: string) {
     if (locked.includes(agentKey)) return;
-    setSelected((current) => current.includes(agentKey) ? current.filter((key) => key !== agentKey) : [...current, agentKey]);
+    setMessage("");
+    setSelected((current) => {
+      if (current.includes(agentKey)) return current.filter((key) => key !== agentKey);
+      const limit = allocationContext.unlimited ? null : allocationContext.maxAgents;
+      if (limit !== null && current.length >= limit) {
+        setMessage(`${allocationContext.packageName || "This plan"} allows ${limit} agent${limit === 1 ? "" : "s"}. Remove one before selecting another.`);
+        return current;
+      }
+      return [...current, agentKey];
+    });
   }
 
   async function save() {
@@ -80,6 +94,7 @@ export default function AgentAllocationControl({
       const selections = (result.selections || []) as Selection[];
       setSelected(selections.map((item) => item.agent_key));
       setLocked(selections.filter((item) => ["paid", "provisioning", "active"].includes(item.status)).map((item) => item.agent_key));
+      setAllocationContext(result.allocationContext || allocationContext);
       const created = Number(result.provisioning?.agents_created || 0);
       const reused = Number(result.provisioning?.agents_reused || 0);
       setMessage(`Allocation saved and tenant agent provisioning prepared${created || reused ? ` (${created} created, ${reused} reused)` : ""}.`);
@@ -91,9 +106,11 @@ export default function AgentAllocationControl({
     }
   }
 
-  const totals = useMemo(() => catalog
-    .filter((item) => selected.includes(item.agent_key))
-    .reduce((sum, item) => ({ setup: sum.setup + Number(item.setup_price), monthly: sum.monthly + Number(item.monthly_price) }), { setup: 0, monthly: 0 }), [catalog, selected]);
+  const limitLabel = allocationContext.unlimited
+    ? "Unlimited/custom allocation"
+    : allocationContext.maxAgents !== null
+      ? `${allocationContext.maxAgents} agent${allocationContext.maxAgents === 1 ? "" : "s"}`
+      : "Allocation limit not configured";
 
   return (
     <div style={{ width: "100%" }}>
@@ -104,30 +121,48 @@ export default function AgentAllocationControl({
       ) : null}
       {open ? (
         <div className={embedded ? "" : "admin-panel compact"} style={embedded ? undefined : { marginTop: 10 }}>
-          {loading ? <p><Loader2 className="spin" size={15} /> Loading agent catalog...</p> : null}
+          {loading ? <p><Loader2 className="spin" size={15} /> Loading marketplace agents...</p> : null}
           {!loading ? (
-            <div className="admin-list">
-              {catalog.map((item) => {
-                const active = selected.includes(item.agent_key);
-                const isLocked = locked.includes(item.agent_key);
-                return (
-                  <button
-                    key={item.agent_key}
-                    type="button"
-                    className={`admin-list-row compact ${active ? "selected" : ""}`}
-                    onClick={() => toggle(item.agent_key)}
-                    disabled={isLocked}
-                    style={{ width: "100%", textAlign: "left" }}
-                  >
-                    <span>{active ? <Check size={15} /> : <Bot size={15} />}</span>
-                    <div style={{ flex: 1 }}><strong>{item.display_name}</strong><span>{money.format(Number(item.setup_price))} setup · {money.format(Number(item.monthly_price))}/month</span></div>
-                    {isLocked ? <em>locked</em> : null}
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              <div className="admin-list-row compact" style={{ marginBottom: 12 }}>
+                <div>
+                  <strong>{allocationContext.packageName || "Plan not linked"}</strong>
+                  <span>{limitLabel} · choose from the six core marketplace agents</span>
+                </div>
+                <em>{selected.length}{allocationContext.unlimited || allocationContext.maxAgents === null ? "" : `/${allocationContext.maxAgents}`} selected</em>
+              </div>
+              <div className="admin-list">
+                {catalog.map((item) => {
+                  const active = selected.includes(item.agent_key);
+                  const isLocked = locked.includes(item.agent_key);
+                  const capabilities = Array.isArray(item.metadata?.capabilities) ? item.metadata?.capabilities : [];
+                  return (
+                    <button
+                      key={item.agent_key}
+                      type="button"
+                      className={`admin-list-row ${active ? "selected" : ""}`}
+                      onClick={() => toggle(item.agent_key)}
+                      disabled={isLocked}
+                      style={{ width: "100%", textAlign: "left", alignItems: "flex-start" }}
+                    >
+                      <span>{active ? <Check size={15} /> : <Bot size={15} />}</span>
+                      <div style={{ flex: 1 }}>
+                        <strong>{item.display_name}</strong>
+                        <span>{item.metadata?.summary || "Reusable Fluxknight marketplace agent for this tenant."}</span>
+                        {capabilities.length ? <span>{capabilities.slice(0, 4).join(" · ")}</span> : null}
+                      </div>
+                      {isLocked ? <em>provisioned</em> : active ? <em>selected</em> : null}
+                    </button>
+                  );
+                })}
+                {!catalog.length ? <p className="admin-empty">No core marketplace agents are currently available.</p> : null}
+              </div>
+            </>
           ) : null}
-          <div className="admin-list-row compact"><div><strong>{selected.length} allocated</strong><span>{money.format(totals.setup)} setup · {money.format(totals.monthly)}/month</span></div><button className="admin-button" type="button" disabled={!selected.length || saving} onClick={save}>{saving ? "Provisioning..." : "Save & provision"}</button></div>
+          <div className="admin-list-row compact" style={{ marginTop: 12 }}>
+            <div><strong>{selected.length} allocated</strong><span>Agent pricing is controlled by the client plan, not by individual marketplace agent cards.</span></div>
+            <button className="admin-button" type="button" disabled={!selected.length || saving} onClick={save}>{saving ? "Provisioning..." : "Save & provision"}</button>
+          </div>
           {message ? <p className="admin-form-message">{message}</p> : null}
         </div>
       ) : null}
