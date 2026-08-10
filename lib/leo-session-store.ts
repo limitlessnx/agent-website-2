@@ -5,12 +5,8 @@ import {
   sanitizeLeoPageContext,
   type LeoConversationVisibility,
   type LeoIdentity,
-  type LeoProposedToolCall as NeverLeoProposedToolCall,
 } from "@/lib/leo-core";
 import type { LeoProposedToolCall } from "@/lib/ai/leo-model";
-
-// Keep this import-free alias check from silently drifting if leo-core later adds a similarly named type.
-void (0 as unknown as NeverLeoProposedToolCall);
 
 type LeoSessionRow = {
   id: string;
