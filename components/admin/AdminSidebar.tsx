@@ -49,6 +49,7 @@ const basePlatformGroups: NavGroup[] = [
           { href: "/dashboard", label: "Command Center", icon: Home, exact: true },
           { href: "/dashboard/support", label: "Agent Leo AI Support", icon: LifeBuoy },
           { href: "/dashboard/notifications", label: "Admin Notifications", icon: Bell },
+          { href: "/dashboard/evaluations", label: "Evaluation Leads", icon: ClipboardList },
           { href: "/dashboard/agents", label: "Super Assistant", icon: Bot },
           { href: "/dashboard/activity", label: "Global Activity", icon: Activity },
         ],
