@@ -12,11 +12,9 @@ import {
   Rocket,
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import AgentAllocationControl from "../../AgentAllocationControl";
 import ClientModelAssignmentControl from "../../ClientModelAssignmentControl";
 import ClientStatusControl from "../../ClientStatusControl";
-import TemplateProvisionControl from "../../TemplateProvisionControl";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +63,6 @@ type Readiness = {
   readiness_score: number | null;
 };
 
-type TemplateAssignment = {
-  id: string;
-  status: string;
-  provisioned_at: string | null;
-};
-
 type AiModel = {
   id: string;
   provider: string;
@@ -94,16 +86,14 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const { organizationId } = await params;
   const admin = createAdminClient();
 
-  const [organizationResult, profileResult, integrationsResult, agentsResult, readinessResult, templateAssignmentsResult, modelsResult, modelAssignmentResult, platform] = await Promise.all([
+  const [organizationResult, profileResult, integrationsResult, agentsResult, readinessResult, modelsResult, modelAssignmentsResult] = await Promise.all([
     admin.from("organizations").select("id,name,slug,status").eq("id", organizationId).maybeSingle(),
     admin.from("client_onboarding_profiles").select("id,organization_id,status,business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("organization_integrations").select("id,provider,display_name,status").eq("organization_id", organizationId).order("display_name"),
     admin.from("agents").select("id,name,status,agent_type").eq("organization_id", organizationId).order("created_at"),
     admin.from("agent_runtime_readiness").select("agent_id,readiness_score").eq("organization_id", organizationId),
-    admin.from("organization_template_assignments").select("id,status,provisioned_at").eq("organization_id", organizationId).order("created_at", { ascending: false }),
     admin.from("ai_model_catalog").select("id,provider,model_key,display_name").eq("status", "active").order("provider").order("display_name"),
-    admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", organizationId).maybeSingle(),
-    getPlatformEngineSummary(),
+    admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", organizationId).order("assigned_at"),
   ]);
 
   if (organizationResult.error) throw organizationResult.error;
@@ -114,26 +104,21 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const integrations = (integrationsResult.data || []) as Integration[];
   const agents = (agentsResult.data || []) as Agent[];
   const readiness = (readinessResult.data || []) as Readiness[];
-  const templateAssignments = (templateAssignmentsResult.data || []) as TemplateAssignment[];
   const models = (modelsResult.data || []) as AiModel[];
-  const modelAssignment = modelAssignmentResult.data as ModelAssignment | null;
-  const templates = platform.templates
-    .filter((template) => template.status === "active")
-    .map((template) => ({ slug: template.slug, name: template.name }));
+  const modelAssignments = (modelAssignmentsResult.data || []) as ModelAssignment[];
+  const currentModelIds = modelAssignments.map((assignment) => assignment.model_id);
 
-  const businessComplete = Boolean(profile?.business_name && profile?.business_email && profile?.industry && profile?.country && profile?.timezone);
-  const templateProvisioned = templateAssignments.some((assignment) => assignment.status === "active" && Boolean(assignment.provisioned_at));
+  const businessComplete = Boolean(profile?.business_name && profile?.business_email);
   const agentsAllocated = agents.length > 0;
-  const modelAssigned = Boolean(modelAssignment?.model_id);
+  const modelsAssigned = currentModelIds.length > 0;
   const integrationsConnected = integrations.length > 0 && integrations.every((item) => item.status === "connected");
   const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => Number(item.readiness_score || 0) >= 100);
   const isLive = profile?.status === "live";
 
   const steps = [
     { label: "Business", complete: businessComplete },
-    { label: "Template", complete: templateProvisioned },
     { label: "Agents", complete: agentsAllocated },
-    { label: "AI model", complete: modelAssigned },
+    { label: "AI models", complete: modelsAssigned },
     { label: "Integrations", complete: integrationsConnected },
     { label: "Testing", complete: testsReady },
     { label: "Launch", complete: isLive },
@@ -145,7 +130,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         <div>
           <p className="admin-kicker">Tenant setup and agent allocation</p>
           <h1>{profile?.business_name || organization.name}</h1>
-          <p>Configure this organization in sequence: business context, workspace template, agents, AI model, integrations, testing, then launch.</p>
+          <p>Build this workspace directly from the marketplace agents you assign. Fluxknight creates the tenant project, knowledge base, workflow bindings and required integration placeholders from those selections.</p>
         </div>
         <Link className="admin-button secondary" href="/dashboard/clients"><ArrowLeft size={15} /> Back to tenants</Link>
       </header>
@@ -163,30 +148,22 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="business">
         <div className="admin-panel-header">
-          <div><h2>1. Business details</h2><p>The tenant identity and operating context used across every allocated agent.</p></div>
-          <span className={stageState(businessComplete)}>{businessComplete ? "Complete" : "Incomplete"}</span>
+          <div><h2>1. Business details</h2><p>The tenant identity and operating context used across every allocated agent. Industry presets are not required.</p></div>
+          <span className={stageState(businessComplete)}>{businessComplete ? "Ready" : "Needs details"}</span>
         </div>
         <div className="admin-form-grid">
           <div className="admin-list-row"><Building2 size={16} /><div><strong>Organization</strong><span>{profile?.business_name || organization.name}</span></div></div>
           <div className="admin-list-row"><div><strong>Business email</strong><span>{profile?.business_email || "Not provided"}</span></div></div>
-          <div className="admin-list-row"><div><strong>Industry</strong><span>{profile?.industry || "Not provided"}</span></div></div>
+          <div className="admin-list-row"><div><strong>Industry</strong><span>{profile?.industry || "Optional / not provided"}</span></div></div>
           <div className="admin-list-row"><div><strong>Country and timezone</strong><span>{profile?.country || "Not provided"} · {profile?.timezone || "Not provided"}</span></div></div>
           <div className="admin-list-row"><div><strong>Website</strong><span>{profile?.website || "Not provided"}</span></div></div>
           <div className="admin-list-row"><div><strong>Human contact</strong><span>{profile?.human_contact_name || "Not provided"} · {profile?.human_contact_email || profile?.phone || "No contact supplied"}</span></div></div>
         </div>
       </section>
 
-      <section className="admin-panel" id="template">
-        <div className="admin-panel-header">
-          <div><h2>2. Business template</h2><p>Apply the reusable workspace structure before configuring individual agents.</p></div>
-          <span className={stageState(templateProvisioned)}>{templateProvisioned ? "Provisioned" : "Required"}</span>
-        </div>
-        <TemplateProvisionControl organizationId={organizationId} templates={templates} />
-      </section>
-
       <section className="admin-panel" id="agents">
         <div className="admin-panel-header">
-          <div><h2>3. Agent allocation</h2><p>Select the reusable marketplace agent(s) assigned to this tenant. The client plan controls how many can be allocated; communication channels and integrations are configured separately.</p></div>
+          <div><h2>2. Agent allocation and workspace build</h2><p>Select the reusable marketplace agent(s) assigned to this tenant. Saving the allocation builds or updates the workspace automatically from those selections. The client plan controls how many agents can be allocated; channels and integrations are configured separately.</p></div>
           <Bot size={18} />
         </div>
         <AgentAllocationControl organizationId={organizationId} embedded />
@@ -200,20 +177,23 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
               </div>
             ))}
           </div>
-        ) : <p className="admin-empty">No tenant agents are provisioned yet. Save an allocation above to create them.</p>}
+        ) : <p className="admin-empty">No tenant agents are provisioned yet. Choose marketplace agents above and save to build the workspace.</p>}
       </section>
 
       <section className="admin-panel" id="ai-model">
         <div className="admin-panel-header">
-          <div><h2>4. Organization AI model</h2><p>Choose the centrally approved model used by this organization. The current governance layer assigns one model per organization; individual agents inherit that model unless the platform policy is changed later.</p></div>
-          <span className={stageState(modelAssigned)}>{modelAssigned ? "Assigned" : "Required"}</span>
+          <div><h2>3. AI model access</h2><p>Assign one or more approved AI models to this organization. Model count is controlled by Super Admin and is not restricted by the client plan.</p></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <BrainCircuit size={18} />
+            <span className={stageState(modelsAssigned)}>{currentModelIds.length} assigned</span>
+          </div>
         </div>
-        <ClientModelAssignmentControl organizationId={organizationId} models={models} currentModelId={modelAssignment?.model_id || null} />
+        <ClientModelAssignmentControl organizationId={organizationId} models={models} currentModelIds={currentModelIds} />
       </section>
 
       <section className="admin-panel" id="integrations">
         <div className="admin-panel-header">
-          <div><h2>5. Integrations and webhooks</h2><p>Connect the tenant-owned APIs, credentials and communication channels required by the allocated agents. A Support Agent, for example, can operate through WhatsApp without becoming a different marketplace product.</p></div>
+          <div><h2>4. Integrations and webhooks</h2><p>Connect the tenant-owned APIs, credentials and communication channels required by the allocated agents. Agent role and communication channel are separate, so a Support Agent can use WhatsApp, email or web chat as configured.</p></div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span>
             <Link className="admin-button secondary" href="/dashboard/integrations">Configure integrations</Link>
@@ -227,13 +207,13 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
               <em className={integration.status === "connected" ? "good" : "muted"}>{humanize(integration.status)}</em>
             </div>
           ))}
-          {!integrations.length ? <p className="admin-empty">No integration requirements yet. They are created by the business template or allocated agents that require them.</p> : null}
+          {!integrations.length ? <p className="admin-empty">No integration requirements yet. Required placeholders are created from the marketplace agents you allocate.</p> : null}
         </div>
       </section>
 
       <section className="admin-panel" id="testing">
         <div className="admin-panel-header">
-          <div><h2>6. Testing and readiness</h2><p>Every agent must reach full runtime readiness before launch.</p></div>
+          <div><h2>5. Testing and readiness</h2><p>Every agent must reach full runtime readiness before launch.</p></div>
           <FlaskConical size={18} />
         </div>
         <div className="admin-list">
@@ -253,7 +233,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="launch">
         <div className="admin-panel-header">
-          <div><h2>7. Launch control</h2><p>Move the tenant through configuration, testing, approval and live operation only after the setup checks above are complete.</p></div>
+          <div><h2>6. Launch control</h2><p>Move the tenant through configuration, testing, approval and live operation only after the setup checks above are complete.</p></div>
           <Rocket size={18} />
         </div>
         {profile ? (
