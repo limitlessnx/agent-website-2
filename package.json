@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:support": "node --test tests/support-ai-security.test.mjs"
+    "test:support": "node --test tests/support-ai-security.test.mjs tests/leo-core-security.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
