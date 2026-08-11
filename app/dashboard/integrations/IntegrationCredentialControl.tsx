@@ -12,10 +12,18 @@ const providerFields: Record<string, Array<{ key: string; label: string; type?: 
     { key: "phone_number_id", label: "Phone number ID" },
     { key: "business_account_id", label: "Business account ID" },
   ],
+  telegram: [
+    { key: "bot_token", label: "Telegram bot token", type: "password" },
+    { key: "bot_username", label: "Bot username" },
+  ],
   elevenlabs: [{ key: "api_key", label: "ElevenLabs API key", type: "password" }],
   email: [
     { key: "api_key", label: "Email provider API key", type: "password" },
     { key: "from_email", label: "From email" },
+  ],
+  sms: [
+    { key: "api_key", label: "SMS provider API key", type: "password" },
+    { key: "sender_id", label: "Sender ID" },
   ],
   google_calendar: [{ key: "service_account_json", label: "Service account JSON", type: "password" }],
   google_sheets: [{ key: "service_account_json", label: "Service account JSON", type: "password" }],
@@ -33,10 +41,7 @@ type Props = {
 
 export default function IntegrationCredentialControl({ integration }: Props) {
   const router = useRouter();
-  const fields = useMemo(
-    () => providerFields[integration.provider] || [{ key: "api_key", label: "API key", type: "password" }],
-    [integration.provider],
-  );
+  const fields = useMemo(() => providerFields[integration.provider] || [{ key: "api_key", label: "API key", type: "password" }], [integration.provider]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -62,9 +67,7 @@ export default function IntegrationCredentialControl({ integration }: Props) {
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save credentials.");
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
   async function disconnect() {
@@ -79,48 +82,20 @@ export default function IntegrationCredentialControl({ integration }: Props) {
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to disconnect integration.");
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
   return (
     <div style={{ minWidth: 320 }}>
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-        <button className="admin-button secondary" type="button" onClick={() => setOpen((value) => !value)} disabled={busy}>
-          <KeyRound size={14} /> {integration.has_credentials ? "Rotate credentials" : "Configure"}
-        </button>
-        {integration.has_credentials ? (
-          <button className="admin-button secondary" type="button" onClick={disconnect} disabled={busy}>
-            {busy ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />} Disconnect
-          </button>
-        ) : null}
+        <button className="admin-button secondary" type="button" onClick={() => setOpen((value) => !value)} disabled={busy}><KeyRound size={14} /> {integration.has_credentials ? "Rotate credentials" : "Configure"}</button>
+        {integration.has_credentials ? <button className="admin-button secondary" type="button" onClick={disconnect} disabled={busy}>{busy ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />} Disconnect</button> : null}
       </div>
-
-      {open ? (
-        <form onSubmit={save} style={{ display: "grid", gap: 10, marginTop: 12 }}>
-          {fields.map((field) => (
-            <label key={field.key} style={{ display: "grid", gap: 5 }}>
-              <span className="muted">{field.label}</span>
-              <input
-                className="admin-input"
-                type={field.type || "text"}
-                value={values[field.key] || ""}
-                placeholder={integration.has_credentials ? "Enter replacement value" : field.label}
-                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
-                autoComplete="off"
-              />
-            </label>
-          ))}
-          <button className="admin-button" type="submit" disabled={busy}>
-            {busy ? <Loader2 size={14} className="spin" /> : <PlugZap size={14} />} Save securely
-          </button>
-        </form>
-      ) : null}
-
-      {integration.has_credentials && integration.secret_keys.length ? (
-        <small className="muted">Stored fields: {integration.secret_keys.join(", ").replaceAll("_", " ")}</small>
-      ) : null}
+      {open ? <form onSubmit={save} style={{ display: "grid", gap: 10, marginTop: 12 }}>
+        {fields.map((field) => <label key={field.key} style={{ display: "grid", gap: 5 }}><span className="muted">{field.label}</span><input className="admin-input" type={field.type || "text"} value={values[field.key] || ""} placeholder={integration.has_credentials ? "Enter replacement value" : field.label} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} autoComplete="off" /></label>)}
+        <button className="admin-button" type="submit" disabled={busy}>{busy ? <Loader2 size={14} className="spin" /> : <PlugZap size={14} />} Save securely</button>
+      </form> : null}
+      {integration.has_credentials && integration.secret_keys.length ? <small className="muted">Stored fields: {integration.secret_keys.join(", ").replaceAll("_", " ")}</small> : null}
       {message ? <small className="muted">{message}</small> : null}
     </div>
   );
