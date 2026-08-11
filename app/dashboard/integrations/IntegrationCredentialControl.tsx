@@ -107,7 +107,7 @@ export default function IntegrationCredentialControl({ integration }: Props) {
                 type={field.type || "text"}
                 value={values[field.key] || ""}
                 placeholder={integration.has_credentials ? "Enter replacement value" : field.label}
-                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
                 autoComplete="off"
               />
             </label>
