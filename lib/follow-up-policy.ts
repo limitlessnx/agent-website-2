@@ -41,6 +41,7 @@ export const DEFAULT_FOLLOW_UP_POLICY: FollowUpPolicy = {
     "purchase_started",
     "human_handoff",
     "opted_out",
+    "interest_unavailable",
     "lead_won",
     "lead_lost",
   ],
@@ -56,12 +57,18 @@ export const DEFAULT_FOLLOW_UP_POLICY: FollowUpPolicy = {
   },
 };
 
-function truthy(value: unknown) {
+export function truthy(value: unknown) {
   return value === true || value === "true" || value === 1 || value === "1";
 }
 
-function text(value: unknown) {
+export function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 export async function resolveFollowUpPolicy(organizationId: string, organizationKey?: string | null) {
@@ -88,6 +95,114 @@ export async function resolveFollowUpPolicy(organizationId: string, organization
   return { ...DEFAULT_FOLLOW_UP_POLICY, organization_id: organizationId };
 }
 
+function normalizedFollowInput(input: Record<string, unknown>) {
+  return record(input.follow_up_context || input);
+}
+
+export function extractFollowUpSignals(args: {
+  input: Record<string, unknown>;
+  lead?: Record<string, unknown> | null;
+  customer?: Record<string, unknown> | null;
+  conversation?: Record<string, unknown> | null;
+}) {
+  const follow = normalizedFollowInput(args.input);
+  const lead = args.lead || {};
+  const customer = args.customer || {};
+  const conversation = args.conversation || {};
+  const leadDetails = record(lead.details);
+  const customerProfile = record(customer.profile);
+  const customerMetadata = record(customer.metadata);
+
+  const campaignOnly =
+    truthy(follow.campaign_only) ||
+    text(follow.engagement_type).toLowerCase() === "campaign" ||
+    truthy(follow.campaign_message_only);
+
+  const specificInterest =
+    text(follow.property_interest) ||
+    text(follow.specific_interest) ||
+    text(follow.interest_reference) ||
+    text(leadDetails.property_interest) ||
+    text(leadDetails.specific_interest);
+
+  const meaningfulConversation =
+    truthy(follow.meaningful_conversation) ||
+    truthy(follow.sales_conversation_established) ||
+    Number(follow.customer_message_count || 0) > 0 ||
+    Number(follow.inbound_message_count || 0) > 0;
+
+  const optedOut =
+    truthy(follow.opted_out) ||
+    truthy(customerProfile.opted_out) ||
+    truthy(customerMetadata.opted_out) ||
+    truthy(customerMetadata.do_not_contact) ||
+    text(customer.status) === "do_not_contact";
+
+  const appointmentBooked =
+    truthy(follow.appointment_booked) ||
+    truthy(follow.viewing_booked) ||
+    text(lead.stage) === "appointment";
+
+  const humanHandoff =
+    truthy(conversation.ai_paused) ||
+    text(conversation.status) === "human_handoff";
+
+  const interestUnavailable =
+    truthy(follow.interest_unavailable) ||
+    truthy(leadDetails.interest_unavailable) ||
+    truthy(leadDetails.property_unavailable);
+
+  const lastCustomerMessageAt =
+    text(follow.last_customer_message_at) ||
+    text(follow.last_inbound_at) ||
+    text(follow.conversation_inactive_since) ||
+    text(follow.last_engaged_at) ||
+    text(leadDetails.last_customer_message_at);
+
+  return {
+    follow,
+    campaignOnly,
+    specificInterest,
+    meaningfulConversation,
+    optedOut,
+    appointmentBooked,
+    humanHandoff,
+    interestUnavailable,
+    lastCustomerMessageAt,
+    leadStage: text(lead.stage),
+  };
+}
+
+export function evaluateFollowUpEnrollment(args: {
+  policy: FollowUpPolicy;
+  input: Record<string, unknown>;
+  lead?: Record<string, unknown> | null;
+  customer?: Record<string, unknown> | null;
+  conversation?: Record<string, unknown> | null;
+}) {
+  const qualification = args.policy.qualification || {};
+  const signals = extractFollowUpSignals(args);
+  const reasons: string[] = [];
+
+  if (truthy(qualification.exclude_campaign_only) && signals.campaignOnly) reasons.push("campaign_only");
+  if (truthy(qualification.require_specific_interest) && !signals.specificInterest) reasons.push("no_specific_interest");
+  if (truthy(qualification.require_meaningful_conversation) && !signals.meaningfulConversation) reasons.push("no_meaningful_conversation");
+  if (signals.optedOut) reasons.push("opted_out");
+  if (signals.appointmentBooked) reasons.push("appointment_booked");
+  if (signals.humanHandoff) reasons.push("human_handoff");
+  if (signals.interestUnavailable) reasons.push("interest_unavailable");
+  if (["won", "lost", "disqualified"].includes(signals.leadStage)) reasons.push(`lead_${signals.leadStage}`);
+
+  return {
+    eligible: reasons.length === 0,
+    reasons,
+    specific_interest: signals.specificInterest || null,
+    meaningful_conversation: signals.meaningfulConversation,
+    campaign_only: signals.campaignOnly,
+    last_customer_message_at: signals.lastCustomerMessageAt || null,
+  };
+}
+
 export function evaluateFollowUpEligibility(args: {
   policy: FollowUpPolicy;
   input: Record<string, unknown>;
@@ -95,49 +210,16 @@ export function evaluateFollowUpEligibility(args: {
   customer?: Record<string, unknown> | null;
   conversation?: Record<string, unknown> | null;
 }) {
-  const { policy, input } = args;
-  const qualification = policy.qualification || {};
-  const follow = (input.follow_up_context && typeof input.follow_up_context === "object" && !Array.isArray(input.follow_up_context))
-    ? input.follow_up_context as Record<string, unknown>
-    : input;
-  const lead = args.lead || {};
-  const customer = args.customer || {};
-  const conversation = args.conversation || {};
-  const reasons: string[] = [];
+  const enrollment = evaluateFollowUpEnrollment(args);
+  const qualification = args.policy.qualification || {};
+  const signals = extractFollowUpSignals(args);
+  const reasons = [...enrollment.reasons];
 
-  const campaignOnly = truthy(follow.campaign_only) || text(follow.engagement_type) === "campaign" || truthy(follow.campaign_message_only);
-  if (truthy(qualification.exclude_campaign_only) && campaignOnly) reasons.push("campaign_only");
-
-  const specificInterest =
-    text(follow.property_interest) ||
-    text(follow.specific_interest) ||
-    text(follow.interest_reference) ||
-    text(lead.property_interest) ||
-    text((lead.details as Record<string, unknown> | undefined)?.property_interest);
-  if (truthy(qualification.require_specific_interest) && !specificInterest) reasons.push("no_specific_interest");
-
-  const meaningfulConversation =
-    truthy(follow.meaningful_conversation) ||
-    truthy(follow.sales_conversation_established) ||
-    Number(follow.customer_message_count || 0) > 0 ||
-    Number(follow.inbound_message_count || 0) > 0;
-  if (truthy(qualification.require_meaningful_conversation) && !meaningfulConversation) reasons.push("no_meaningful_conversation");
-
-  const optedOut = truthy(follow.opted_out) || truthy(customer.opted_out) || truthy((customer.profile as Record<string, unknown> | undefined)?.opted_out) || truthy((customer.metadata as Record<string, unknown> | undefined)?.do_not_contact);
-  if (optedOut) reasons.push("opted_out");
-
-  const appointmentBooked = truthy(follow.appointment_booked) || truthy(follow.viewing_booked) || text(lead.stage) === "appointment";
-  if (appointmentBooked) reasons.push("appointment_booked");
-
-  if (["won", "lost", "disqualified"].includes(text(lead.stage))) reasons.push(`lead_${text(lead.stage)}`);
-  if (truthy(conversation.ai_paused) || text(conversation.status) === "human_handoff") reasons.push("human_handoff");
-
-  const lastCustomerMessageAt = text(follow.last_customer_message_at) || text(follow.last_inbound_at) || text(follow.conversation_inactive_since) || text(follow.last_engaged_at);
   const inactivityHours = Math.max(1, Number(qualification.inactivity_hours || 24));
-  if (!lastCustomerMessageAt) {
+  if (!signals.lastCustomerMessageAt) {
     reasons.push("missing_last_customer_message_at");
   } else {
-    const last = new Date(lastCustomerMessageAt);
+    const last = new Date(signals.lastCustomerMessageAt);
     if (Number.isNaN(last.getTime())) {
       reasons.push("invalid_last_customer_message_at");
     } else if (Date.now() - last.getTime() < inactivityHours * 60 * 60 * 1000) {
@@ -148,13 +230,104 @@ export function evaluateFollowUpEligibility(args: {
   return {
     eligible: reasons.length === 0,
     reasons,
-    specific_interest: specificInterest || null,
+    specific_interest: enrollment.specific_interest,
     inactivity_hours: inactivityHours,
-    timezone: policy.timezone,
-    preferred_send_time: policy.preferred_send_time,
-    sequence: policy.sequence,
-    stop_conditions: policy.stop_conditions,
-    channel_policy: policy.channel_policy,
-    message_strategy: policy.message_strategy,
+    timezone: args.policy.timezone,
+    preferred_send_time: args.policy.preferred_send_time,
+    sequence: args.policy.sequence,
+    stop_conditions: args.policy.stop_conditions,
+    channel_policy: args.policy.channel_policy,
+    message_strategy: args.policy.message_strategy,
   };
+}
+
+function zonedParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return {
+    year: value("year"),
+    month: value("month"),
+    day: value("day"),
+    hour: value("hour"),
+    minute: value("minute"),
+    second: value("second"),
+  };
+}
+
+function zoneOffsetMs(date: Date, timeZone: string) {
+  const p = zonedParts(date, timeZone);
+  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return asUtc - date.getTime();
+}
+
+function zonedLocalToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  timeZone: string,
+) {
+  let guess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  for (let i = 0; i < 3; i += 1) {
+    const offset = zoneOffsetMs(new Date(guess), timeZone);
+    guess = Date.UTC(year, month - 1, day, hour, minute, 0) - offset;
+  }
+  return new Date(guess);
+}
+
+function preferredClock(policy: FollowUpPolicy) {
+  const [hourRaw, minuteRaw] = String(policy.preferred_send_time || "10:30").split(":");
+  return {
+    hour: Math.max(0, Math.min(23, Number(hourRaw) || 10)),
+    minute: Math.max(0, Math.min(59, Number(minuteRaw) || 30)),
+  };
+}
+
+function addLocalDays(parts: { year: number; month: number; day: number }, days: number) {
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days, 12, 0, 0));
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+export function computeInitialFollowUpDueAt(policy: FollowUpPolicy, lastCustomerMessageAt: string | Date) {
+  const last = new Date(lastCustomerMessageAt);
+  if (Number.isNaN(last.getTime())) throw new Error("Invalid last customer message time.");
+  const inactivityHours = Math.max(1, Number(policy.qualification?.inactivity_hours || 24));
+  const eligibleAt = new Date(last.getTime() + inactivityHours * 60 * 60 * 1000);
+  const timeZone = policy.timezone || "UTC";
+  const local = zonedParts(eligibleAt, timeZone);
+  const clock = preferredClock(policy);
+  let candidate = zonedLocalToUtc(local.year, local.month, local.day, clock.hour, clock.minute, timeZone);
+
+  if (candidate.getTime() < eligibleAt.getTime()) {
+    const next = addLocalDays(local, 1);
+    candidate = zonedLocalToUtc(next.year, next.month, next.day, clock.hour, clock.minute, timeZone);
+  }
+  return candidate.toISOString();
+}
+
+export function computeSequenceStepDueAt(
+  policy: FollowUpPolicy,
+  sequenceAnchorAt: string | Date,
+  stepNumber: number,
+) {
+  const sequence = Array.isArray(policy.sequence) ? policy.sequence : [];
+  const step = sequence.find((entry) => Number(entry.step) === stepNumber);
+  if (!step) return null;
+  const anchor = new Date(sequenceAnchorAt);
+  if (Number.isNaN(anchor.getTime())) return null;
+  const timeZone = policy.timezone || "UTC";
+  const anchorLocal = zonedParts(anchor, timeZone);
+  const localDate = addLocalDays(anchorLocal, Math.max(0, Number(step.day || stepNumber) - 1));
+  const clock = preferredClock(policy);
+  return zonedLocalToUtc(localDate.year, localDate.month, localDate.day, clock.hour, clock.minute, timeZone).toISOString();
 }
