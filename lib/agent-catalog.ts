@@ -144,7 +144,9 @@ export async function saveOrganizationAgentSelections(input: {
   const selectedKeys = [...new Set(input.agentKeys)].filter((key) => offeringMap.has(key));
   if (!selectedKeys.length) throw new Error("Select at least one marketplace agent.");
 
-  if (!allocationContext.unlimited && allocationContext.maxAgents !== null && selectedKeys.length > allocationContext.maxAgents) {
+  // Commercial plan limits may still be used for tenant self-service, but a Super Admin
+  // can allocate whatever workforce the organization actually needs.
+  if (input.allocationSource !== "admin" && !allocationContext.unlimited && allocationContext.maxAgents !== null && selectedKeys.length > allocationContext.maxAgents) {
     throw new Error(`${allocationContext.packageName || "This plan"} allows ${allocationContext.maxAgents} agent${allocationContext.maxAgents === 1 ? "" : "s"}.`);
   }
 
@@ -170,6 +172,7 @@ export async function saveOrganizationAgentSelections(input: {
       configuration: {
         ...(current?.configuration || {}),
         allocation_source: input.allocationSource,
+        admin_plan_override: input.allocationSource === "admin",
         catalog_source: "system_catalog",
         system_catalog_id: offering.metadata.system_catalog_id,
         system_slug: offering.metadata.system_slug,
