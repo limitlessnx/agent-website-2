@@ -11,6 +11,8 @@ type CatalogOffering = {
     summary?: string;
     capabilities?: string[];
     system_slug?: string;
+    supported_channels?: string[];
+    channel_mode?: string;
   };
 };
 
@@ -25,6 +27,12 @@ type AllocationContext = {
   maxAgents: number | null;
   unlimited: boolean;
 };
+
+function humanizeChannel(value: string) {
+  if (value === "web") return "Web chat";
+  if (value === "whatsapp") return "WhatsApp";
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
 export default function AgentAllocationControl({
   organizationId,
@@ -41,6 +49,7 @@ export default function AgentAllocationControl({
   const [open, setOpen] = useState(embedded);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   async function load() {
@@ -66,20 +75,15 @@ export default function AgentAllocationControl({
     if (open && !catalog.length) void load();
   }, [open, catalog.length]);
 
-  function toggle(agentKey: string) {
-    if (locked.includes(agentKey)) return;
-    setMessage("");
-    setSelected((current) => current.includes(agentKey) ? current.filter((key) => key !== agentKey) : [...current, agentKey]);
-  }
-
-  async function save() {
+  async function persist(nextSelected: string[], changedAgentKey?: string) {
     setSaving(true);
+    setSavingKey(changedAgentKey || null);
     setMessage("");
     try {
       const response = await fetch("/api/admin/agent-allocations", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ organizationId, agentKeys: selected }),
+        body: JSON.stringify({ organizationId, agentKeys: nextSelected }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Unable to save allocations.");
@@ -89,13 +93,24 @@ export default function AgentAllocationControl({
       setAllocationContext(result.allocationContext || allocationContext);
       const created = Number(result.provisioning?.agents_created || 0);
       const reused = Number(result.provisioning?.agents_reused || 0);
-      setMessage(`Allocation saved and tenant agent provisioning prepared${created || reused ? ` (${created} created, ${reused} reused)` : ""}.`);
+      setMessage(`Agent allocation saved${created || reused ? ` (${created} created, ${reused} reused)` : ""}.`);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save allocations.");
+      await load();
     } finally {
       setSaving(false);
+      setSavingKey(null);
     }
+  }
+
+  function toggle(agentKey: string) {
+    if (locked.includes(agentKey) || saving) return;
+    const nextSelected = selected.includes(agentKey)
+      ? selected.filter((key) => key !== agentKey)
+      : [...selected, agentKey];
+    setSelected(nextSelected);
+    void persist(nextSelected, agentKey);
   }
 
   return (
@@ -113,31 +128,34 @@ export default function AgentAllocationControl({
               <div className="admin-list-row compact" style={{ marginBottom: 12 }}>
                 <div>
                   <strong>Super Admin allocation</strong>
-                  <span>{allocationContext.packageName ? `${allocationContext.packageName} client · ` : ""}assign any marketplace agents required for this organization.</span>
+                  <span>{allocationContext.packageName ? `${allocationContext.packageName} client · ` : ""}showing the six core marketplace agents. Tap an agent to assign and provision it immediately.</span>
                 </div>
-                <em>{selected.length} selected</em>
+                <em>{selected.length} assigned</em>
               </div>
               <div className="admin-list">
                 {catalog.map((item) => {
                   const active = selected.includes(item.agent_key);
                   const isLocked = locked.includes(item.agent_key);
-                  const capabilities = Array.isArray(item.metadata?.capabilities) ? item.metadata?.capabilities : [];
+                  const isSaving = savingKey === item.agent_key;
+                  const capabilities = Array.isArray(item.metadata?.capabilities) ? item.metadata.capabilities : [];
+                  const supportedChannels = Array.isArray(item.metadata?.supported_channels) ? item.metadata.supported_channels : [];
                   return (
                     <button
                       key={item.agent_key}
                       type="button"
                       className={`admin-list-row ${active ? "selected" : ""}`}
                       onClick={() => toggle(item.agent_key)}
-                      disabled={isLocked}
+                      disabled={isLocked || saving}
                       style={{ width: "100%", textAlign: "left", alignItems: "flex-start" }}
                     >
-                      <span>{active ? <Check size={15} /> : <Bot size={15} />}</span>
+                      <span>{isSaving ? <Loader2 className="spin" size={15} /> : active ? <Check size={15} /> : <Bot size={15} />}</span>
                       <div style={{ flex: 1 }}>
                         <strong>{item.display_name}</strong>
                         <span>{item.metadata?.summary || "Reusable Fluxknight marketplace agent for this tenant."}</span>
                         {capabilities.length ? <span>{capabilities.slice(0, 4).join(" · ")}</span> : null}
+                        {supportedChannels.length ? <span>Supported channels: {supportedChannels.map(humanizeChannel).join(" · ")}</span> : null}
                       </div>
-                      {isLocked ? <em>provisioned</em> : active ? <em>selected</em> : null}
+                      {isSaving ? <em>saving...</em> : isLocked ? <em>provisioned</em> : active ? <em>assigned</em> : null}
                     </button>
                   );
                 })}
@@ -146,8 +164,10 @@ export default function AgentAllocationControl({
             </>
           ) : null}
           <div className="admin-list-row compact" style={{ marginTop: 12 }}>
-            <div><strong>{selected.length} allocated</strong><span>Super Admin allocation is not restricted by the client's commercial plan.</span></div>
-            <button className="admin-button" type="button" disabled={!selected.length || saving} onClick={save}>{saving ? "Provisioning..." : "Save & provision"}</button>
+            <div>
+              <strong>{selected.length} assigned</strong>
+              <span>Assignments save automatically. Super Admin allocation is not restricted by the client&apos;s commercial plan.</span>
+            </div>
           </div>
           {message ? <p className="admin-form-message">{message}</p> : null}
         </div>
