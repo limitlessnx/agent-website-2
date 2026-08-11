@@ -4,22 +4,15 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, Loader2, PlugZap, Trash2 } from "lucide-react";
 
+const PLATFORM_MANAGED_PROVIDERS = new Set(["openai", "n8n", "supabase"]);
+
 const providerFields: Record<string, Array<{ key: string; label: string; type?: string }>> = {
-  openai: [{ key: "api_key", label: "OpenAI API key", type: "password" }],
   whatsapp: [
     { key: "access_token", label: "Access token", type: "password" },
     { key: "phone_number_id", label: "Phone number ID" },
     { key: "business_account_id", label: "Business account ID" },
   ],
-  n8n: [
-    { key: "base_url", label: "Automation engine base URL" },
-    { key: "api_key", label: "Automation engine API key", type: "password" },
-  ],
   elevenlabs: [{ key: "api_key", label: "ElevenLabs API key", type: "password" }],
-  supabase: [
-    { key: "project_url", label: "Supabase project URL" },
-    { key: "service_role_key", label: "Service role key", type: "password" },
-  ],
   email: [
     { key: "api_key", label: "Email provider API key", type: "password" },
     { key: "from_email", label: "From email" },
@@ -48,6 +41,8 @@ export default function IntegrationCredentialControl({ integration }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  if (PLATFORM_MANAGED_PROVIDERS.has(integration.provider)) return null;
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -112,7 +107,7 @@ export default function IntegrationCredentialControl({ integration }: Props) {
                 type={field.type || "text"}
                 value={values[field.key] || ""}
                 placeholder={integration.has_credentials ? "Enter replacement value" : field.label}
-                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
+                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))
                 autoComplete="off"
               />
             </label>
