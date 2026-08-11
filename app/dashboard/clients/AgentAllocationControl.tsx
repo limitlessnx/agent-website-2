@@ -69,15 +69,7 @@ export default function AgentAllocationControl({
   function toggle(agentKey: string) {
     if (locked.includes(agentKey)) return;
     setMessage("");
-    setSelected((current) => {
-      if (current.includes(agentKey)) return current.filter((key) => key !== agentKey);
-      const limit = allocationContext.unlimited ? null : allocationContext.maxAgents;
-      if (limit !== null && current.length >= limit) {
-        setMessage(`${allocationContext.packageName || "This plan"} allows ${limit} agent${limit === 1 ? "" : "s"}. Remove one before selecting another.`);
-        return current;
-      }
-      return [...current, agentKey];
-    });
+    setSelected((current) => current.includes(agentKey) ? current.filter((key) => key !== agentKey) : [...current, agentKey]);
   }
 
   async function save() {
@@ -106,12 +98,6 @@ export default function AgentAllocationControl({
     }
   }
 
-  const limitLabel = allocationContext.unlimited
-    ? "Unlimited/custom allocation"
-    : allocationContext.maxAgents !== null
-      ? `${allocationContext.maxAgents} agent${allocationContext.maxAgents === 1 ? "" : "s"}`
-      : "Allocation limit not configured";
-
   return (
     <div style={{ width: "100%" }}>
       {!embedded ? (
@@ -126,10 +112,10 @@ export default function AgentAllocationControl({
             <>
               <div className="admin-list-row compact" style={{ marginBottom: 12 }}>
                 <div>
-                  <strong>{allocationContext.packageName || "Plan not linked"}</strong>
-                  <span>{limitLabel} · choose from the six core marketplace agents</span>
+                  <strong>Super Admin allocation</strong>
+                  <span>{allocationContext.packageName ? `${allocationContext.packageName} client · ` : ""}assign any marketplace agents required for this organization.</span>
                 </div>
-                <em>{selected.length}{allocationContext.unlimited || allocationContext.maxAgents === null ? "" : `/${allocationContext.maxAgents}`} selected</em>
+                <em>{selected.length} selected</em>
               </div>
               <div className="admin-list">
                 {catalog.map((item) => {
@@ -160,7 +146,7 @@ export default function AgentAllocationControl({
             </>
           ) : null}
           <div className="admin-list-row compact" style={{ marginTop: 12 }}>
-            <div><strong>{selected.length} allocated</strong><span>Agent pricing is controlled by the client plan, not by individual marketplace agent cards.</span></div>
+            <div><strong>{selected.length} allocated</strong><span>Super Admin allocation is not restricted by the client's commercial plan.</span></div>
             <button className="admin-button" type="button" disabled={!selected.length || saving} onClick={save}>{saving ? "Provisioning..." : "Save & provision"}</button>
           </div>
           {message ? <p className="admin-form-message">{message}</p> : null}
