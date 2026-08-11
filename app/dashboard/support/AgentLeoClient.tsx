@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, Send, ShieldCheck, Sparkles, X } from "lucide-react";
+import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 
 type Conversation = { id: string; title: string; status: string; priority: string; updated_at: string };
 type AIState = {
@@ -207,7 +208,10 @@ export default function AgentLeoClient({
           {error ? <p className="admin-form-message">{error}</p> : null}
           <form className="leo-composer" onSubmit={submit}>
             <textarea name="message" rows={3} placeholder={placeholder} required />
-            <button type="submit" disabled={busy}><Send size={17} /> {busy ? "Leo is thinking" : "Send"}</button>
+            <div className="leo-composer-actions">
+              <LeoRealtimeVoice sessionId={conversationId || undefined} />
+              <button type="submit" disabled={busy}><Send size={17} /> {busy ? "Leo is thinking" : "Send"}</button>
+            </div>
           </form>
         </div>
       </section>
