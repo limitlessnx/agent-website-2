@@ -82,7 +82,6 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
 
       const audio = document.createElement("audio");
       audio.autoplay = true;
-      audio.playsInline = true;
       audioRef.current = audio;
       peer.ontrack = (event) => {
         audio.srcObject = event.streams[0];
