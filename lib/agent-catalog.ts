@@ -163,6 +163,7 @@ export async function saveOrganizationAgentSelections(input: {
     const current = existingMap.get(agentKey);
     return {
       organization_id: input.organizationId,
+      system_catalog_id: offering.metadata.system_catalog_id,
       agent_key: agentKey,
       display_name: offering.display_name,
       setup_price: 0,
