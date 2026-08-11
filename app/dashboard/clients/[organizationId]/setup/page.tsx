@@ -18,6 +18,14 @@ import ClientStatusControl from "../../ClientStatusControl";
 
 export const dynamic = "force-dynamic";
 
+const TENANT_CONFIGURABLE_PROVIDERS = new Set([
+  "whatsapp",
+  "email",
+  "elevenlabs",
+  "google_calendar",
+  "google_sheets",
+]);
+
 type SetupPageProps = {
   params: Promise<{ organizationId: string }>;
 };
@@ -101,7 +109,8 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
   const organization = organizationResult.data as Organization;
   const profile = profileResult.data as OnboardingProfile | null;
-  const integrations = (integrationsResult.data || []) as Integration[];
+  const allIntegrations = (integrationsResult.data || []) as Integration[];
+  const integrations = allIntegrations.filter((item) => TENANT_CONFIGURABLE_PROVIDERS.has(item.provider));
   const agents = (agentsResult.data || []) as Agent[];
   const readiness = (readinessResult.data || []) as Readiness[];
   const models = (modelsResult.data || []) as AiModel[];
@@ -111,7 +120,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const businessComplete = Boolean(profile?.business_name && profile?.business_email);
   const agentsAllocated = agents.length > 0;
   const modelsAssigned = currentModelIds.length > 0;
-  const integrationsConnected = integrations.length > 0 && integrations.every((item) => item.status === "connected");
+  const integrationsConnected = integrations.length === 0 || integrations.every((item) => item.status === "connected");
   const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => Number(item.readiness_score || 0) >= 100);
   const isLive = profile?.status === "live";
 
@@ -119,7 +128,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
     { label: "Business", complete: businessComplete },
     { label: "Agents", complete: agentsAllocated },
     { label: "AI models", complete: modelsAssigned },
-    { label: "Integrations", complete: integrationsConnected },
+    { label: "Connections", complete: integrationsConnected },
     { label: "Testing", complete: testsReady },
     { label: "Launch", complete: isLive },
   ];
@@ -130,7 +139,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         <div>
           <p className="admin-kicker">Tenant setup and agent allocation</p>
           <h1>{profile?.business_name || organization.name}</h1>
-          <p>Build this workspace directly from the marketplace agents you assign. Fluxknight creates the tenant project, knowledge base, workflow bindings and required integration placeholders from those selections.</p>
+          <p>Build this workspace directly from the marketplace agents you assign. Platform infrastructure is shared centrally; only tenant-owned channels, credentials, knowledge and operating rules are configured per client.</p>
         </div>
         <Link className="admin-button secondary" href="/dashboard/clients"><ArrowLeft size={15} /> Back to tenants</Link>
       </header>
@@ -163,7 +172,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="agents">
         <div className="admin-panel-header">
-          <div><h2>2. Agent allocation and workspace build</h2><p>Select the reusable marketplace agent(s) assigned to this tenant. Saving the allocation builds or updates the workspace automatically from those selections. The client plan controls how many agents can be allocated; channels and integrations are configured separately.</p></div>
+          <div><h2>2. Agent allocation and workspace build</h2><p>Select any reusable marketplace agents this organization needs. Super Admin allocation is not restricted by the client's plan. Saving builds or updates the tenant workspace automatically.</p></div>
           <Bot size={18} />
         </div>
         <AgentAllocationControl organizationId={organizationId} embedded />
@@ -182,7 +191,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="ai-model">
         <div className="admin-panel-header">
-          <div><h2>3. AI model access</h2><p>Assign one or more approved AI models to this organization. Model count is controlled by Super Admin and is not restricted by the client plan.</p></div>
+          <div><h2>3. AI model access</h2><p>Assign one or more approved platform models to this organization. You do not enter an OpenAI API key here for every tenant; model access is managed centrally.</p></div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <BrainCircuit size={18} />
             <span className={stageState(modelsAssigned)}>{currentModelIds.length} assigned</span>
@@ -193,10 +202,10 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="integrations">
         <div className="admin-panel-header">
-          <div><h2>4. Integrations and webhooks</h2><p>Connect the tenant-owned APIs, credentials and communication channels required by the allocated agents. Agent role and communication channel are separate, so a Support Agent can use WhatsApp, email or web chat as configured.</p></div>
+          <div><h2>4. Tenant connections</h2><p>Configure only credentials owned by this client, such as WhatsApp, email, voice or Calendar. Fluxknight's Supabase, n8n and platform AI credentials are shared infrastructure and are not configured per tenant.</p></div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span>
-            <Link className="admin-button secondary" href="/dashboard/integrations">Configure integrations</Link>
+            <Link className="admin-button secondary" href={`/dashboard/integrations?organizationId=${encodeURIComponent(organizationId)}`}>Configure connections</Link>
           </div>
         </div>
         <div className="admin-list">
@@ -207,7 +216,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
               <em className={integration.status === "connected" ? "good" : "muted"}>{humanize(integration.status)}</em>
             </div>
           ))}
-          {!integrations.length ? <p className="admin-empty">No integration requirements yet. Required placeholders are created from the marketplace agents you allocate.</p> : null}
+          {!integrations.length ? <p className="admin-empty">No client-owned connection is required yet. Relevant connection forms appear when the assigned agents need them.</p> : null}
         </div>
       </section>
 
@@ -222,7 +231,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
             const percentage = Number(snapshot?.readiness_score || 0);
             return (
               <div className="admin-list-row" key={agent.id}>
-                <div><strong>{agent.name}</strong><span>Configuration, knowledge, integrations, workflow assignment, testing and approval</span></div>
+                <div><strong>{agent.name}</strong><span>Configuration, knowledge, client-owned connections, workflow assignment, testing and approval</span></div>
                 <em className={percentage >= 100 ? "good" : "muted"}>{percentage}% ready</em>
               </div>
             );
