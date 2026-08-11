@@ -58,10 +58,11 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
 
   async function submitWorkflow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setSaving(true);
     setMessage("");
 
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(form);
     const payload = {
       organization_id: String(data.get("organization_id") || "limitless-realty"),
       project_id: String(data.get("project_id") || "limitless-realty"),
@@ -89,7 +90,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
         const others = current.filter((item) => item.id !== result.workflow.id);
         return [result.workflow, ...others];
       });
-      event.currentTarget.reset();
+      form.reset();
       setMessage("Workflow registered successfully.");
       router.refresh();
     } catch (error) {
