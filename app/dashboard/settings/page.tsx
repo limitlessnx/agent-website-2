@@ -1,4 +1,6 @@
 import { getSupabaseReadiness } from "@/lib/limitless-data";
+import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
+import WorkflowRegistryClient from "@/app/dashboard/automations/WorkflowRegistryClient";
 
 const settings = [
   { keys: ["LIMITLESS_ADMIN_EMAIL"], label: "Admin login email", display: "ADMIN_EMAIL" },
@@ -21,20 +23,49 @@ const settings = [
 ];
 
 export default async function SettingsPage() {
-  const supabase = await getSupabaseReadiness();
+  const [supabase, registry] = await Promise.all([
+    getSupabaseReadiness(),
+    getWorkflowRegistrySummary().catch(() => ({
+      configured: false,
+      workflows: [],
+      runs: [],
+      active: 0,
+      paused: 0,
+      failures: 0,
+      successRate: 0,
+    })),
+  ]);
 
   return (
     <div className="admin-page">
       <div className="admin-page-header">
         <div>
-          <p className="admin-kicker">Backend</p>
+          <p className="admin-kicker">Platform Control</p>
           <h1>Settings</h1>
-          <p>Environment variables required for production control.</p>
+          <p>Environment, database, automation engine and workflow mappings in one place.</p>
         </div>
         <span className={supabase.ready ? "admin-status live" : "admin-status warning"}>
           {supabase.ready ? "Database live" : "Database schema pending"}
         </span>
       </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Automation Engine & Workflow Mapping</h2>
+            <p>Connect each Fluxknight workflow to its real n8n workflow ID, manage status and retry failed runs.</p>
+          </div>
+        </div>
+        <p style={{ marginBottom: 18 }}>
+          For Workflow 3, register the workflow key <strong>crm_follow_up_v3</strong> with the n8n External workflow ID <strong>n153Nrwf90vI1SJ2</strong>.
+        </p>
+      </section>
+
+      <WorkflowRegistryClient
+        initialWorkflows={registry.workflows}
+        initialRuns={registry.runs}
+        configured={registry.configured}
+      />
 
       <section className="admin-panel">
         <div className="admin-panel-header">
