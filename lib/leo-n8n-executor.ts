@@ -19,8 +19,8 @@ function executorUrl() {
 }
 
 export async function executeLeoEnvelopeViaN8n(envelope: LeoExecutionEnvelope): Promise<LeoN8nExecutionResult> {
-  const secret = (process.env.LEO_N8N_SHARED_SECRET || "").trim();
-  if (!secret) throw new Error("LEO_N8N_SHARED_SECRET is not configured.");
+  const secret = (process.env.LEO_N8N_SHARED_SECRET || process.env.RUNTIME_GATEWAY_SECRET || "").trim();
+  if (!secret) throw new Error("Leo executor shared secret is not configured.");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 95000);

@@ -152,7 +152,7 @@ async function delegateFollowUp(identity: LeoIdentity, args: Record<string, unkn
       lead_id: text(args.lead_id) || null,
       task_id: text(args.task_id) || null,
       idempotency_key: text(args.idempotency_key) || `leo-followup-${randomUUID()}`,
-      channel: text(args.channel) || identity.channel === "voice" ? "voice" : "internal",
+      channel: text(args.channel) || (identity.channel === "voice" ? "voice" : "internal"),
       event_type: "follow_up.manual",
       input: { ...input, requested_by_leo: true, message: text(args.message) || undefined },
     },

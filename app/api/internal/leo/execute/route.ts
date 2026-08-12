@@ -6,7 +6,7 @@ import { leoApprovalFor } from "@/lib/leo-core";
 import { auditLeoEvent } from "@/lib/leo-session-store";
 
 function authorizeBridge(request: NextRequest) {
-  const expected = (process.env.LEO_N8N_SHARED_SECRET || "").trim();
+  const expected = (process.env.LEO_N8N_SHARED_SECRET || process.env.RUNTIME_GATEWAY_SECRET || "").trim();
   const supplied = request.headers.get("x-fluxknight-leo-secret") || "";
   return Boolean(expected && secureEqual(expected, supplied));
 }
