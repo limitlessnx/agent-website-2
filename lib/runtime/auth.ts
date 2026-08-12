@@ -16,6 +16,7 @@ export function assertRuntimeSecret(supplied: string | null) {
 export function runtimeSecretFromHeaders(headers: Headers) {
   const auth = headers.get("authorization") || "";
   if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+  if (auth.trim()) return auth.trim();
   return headers.get("x-runtime-secret");
 }
 
