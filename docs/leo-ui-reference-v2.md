@@ -1,1 +1,0 @@
-Leo UI visual direction approved.
