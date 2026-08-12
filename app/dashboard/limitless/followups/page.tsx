@@ -11,7 +11,9 @@ export default async function FollowupsPage() {
   ]);
 
   const active = summary.enrollments.filter((item) => item.status === "active").length;
-  const scheduled = summary.enrollments.filter((item) => item.next_run_at && item.status === "active").length;
+  const scheduled = summary.statusSummary.upcoming;
+  const dueNow = summary.statusSummary.due;
+  const overdue = summary.statusSummary.overdue;
   const attention = summary.enrollments.filter((item) => item.status === "failed").length + summary.executions.filter((item) => item.status === "error").length;
 
   return (
@@ -29,7 +31,9 @@ export default async function FollowupsPage() {
 
       <div className="admin-metric-grid">
         <article className="admin-metric-card"><p>Active follow-ups</p><strong>{active}</strong><span>Currently inside a sequence</span></article>
-        <article className="admin-metric-card"><p>Scheduled next</p><strong>{scheduled}</strong><span>Waiting for the next action</span></article>
+        <article className="admin-metric-card"><p>Upcoming</p><strong>{scheduled}</strong><span>Waiting for the next action</span></article>
+        <article className="admin-metric-card"><p>Due now</p><strong>{dueNow}</strong><span>Ready for today&apos;s step</span></article>
+        <article className="admin-metric-card"><p>Overdue</p><strong>{overdue}</strong><span>Missed by more than 24 hours</span></article>
         <article className="admin-metric-card"><p>Sequences</p><strong>{summary.sequences.length}</strong><span>Reusable follow-up plans</span></article>
         <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed actions requiring review</span></article>
       </div>

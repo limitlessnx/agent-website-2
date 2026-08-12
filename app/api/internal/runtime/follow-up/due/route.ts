@@ -1,19 +1,31 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { assertRuntimeSecret } from "@/lib/runtime/auth";
+import { assertRuntimeSecretFromHeaders } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateFollowUpEligibility, resolveFollowUpPolicy, text } from "@/lib/follow-up-policy";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+function boolFrom(value: unknown) {
+  return value === true || value === "true" || value === "1";
+}
+
 export async function POST(request: NextRequest) {
+  const executionId = randomUUID();
+  const startedAt = new Date();
+
   try {
-    assertRuntimeSecret(request.headers.get("x-runtime-secret"));
+    assertRuntimeSecretFromHeaders(request.headers);
     const body = record(await request.json().catch(() => ({})));
+    const dryRun = boolFrom(body.dryRun) || boolFrom(request.nextUrl.searchParams.get("dryRun"));
     const limit = Math.max(1, Math.min(250, Number(body.limit) || 100));
     const supabase = createAdminClient();
-    const now = new Date().toISOString();
+    const now = startedAt.toISOString();
 
     const tasks = await supabase
       .from("crm_tasks")
@@ -26,13 +38,17 @@ export async function POST(request: NextRequest) {
     if (tasks.error) throw tasks.error;
 
     const items: Record<string, unknown>[] = [];
+    const skipped: Array<{ task_id: string; reason: string; reasons?: string[] }> = [];
     for (const task of tasks.data || []) {
       const meta = record(task.metadata);
       const organizationId = text(task.organization_id);
       const agentId = text(task.assigned_agent_id);
       const customerId = text(task.customer_id);
       const leadId = text(task.lead_id);
-      if (!organizationId || !agentId || !customerId) continue;
+      if (!organizationId || !agentId || !customerId) {
+        skipped.push({ task_id: String(task.id), reason: "missing_required_task_context" });
+        continue;
+      }
 
       const [customerResult, leadResult] = await Promise.all([
         supabase.from("crm_customers").select("*").eq("id", customerId).eq("organization_id", organizationId).maybeSingle(),
@@ -42,7 +58,10 @@ export async function POST(request: NextRequest) {
       ]);
       if (customerResult.error) throw customerResult.error;
       if (leadResult.error) throw leadResult.error;
-      if (!customerResult.data) continue;
+      if (!customerResult.data) {
+        skipped.push({ task_id: String(task.id), reason: "customer_not_found" });
+        continue;
+      }
 
       let conversationId = text(meta.conversation_id);
       let conversation: Record<string, unknown> | null = null;
@@ -117,15 +136,19 @@ export async function POST(request: NextRequest) {
       });
 
       if (!eligibility.eligible) {
-        await supabase
-          .from("crm_tasks")
-          .update({
-            status: "cancelled",
-            metadata: { ...meta, cancelled_at: now, cancellation_reasons: eligibility.reasons },
-            updated_at: now,
-          })
-          .eq("id", task.id)
-          .eq("organization_id", organizationId);
+        skipped.push({ task_id: String(task.id), reason: "not_eligible", reasons: eligibility.reasons });
+        if (!dryRun) {
+          const cancelled = await supabase
+            .from("crm_tasks")
+            .update({
+              status: "cancelled",
+              metadata: { ...meta, cancelled_at: now, cancellation_reasons: eligibility.reasons },
+              updated_at: now,
+            })
+            .eq("id", task.id)
+            .eq("organization_id", organizationId);
+          if (cancelled.error) throw cancelled.error;
+        }
         continue;
       }
 
@@ -148,9 +171,38 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ ok: true, count: items.length, items });
+    const runtimeLog = {
+      source: String(body.source || "runtime"),
+      checked: tasks.data?.length || 0,
+      eligible: items.length,
+      skipped: skipped.length,
+      dry_run: dryRun,
+      started_at: startedAt.toISOString(),
+      completed_at: new Date().toISOString(),
+    };
+    console.info("crm_followup_due_runtime", { execution_id: executionId, ...runtimeLog });
+
+    return NextResponse.json({
+      ok: true,
+      status: dryRun ? "dry_run" : "due_loaded",
+      execution_id: executionId,
+      dryRun,
+      checked: tasks.data?.length || 0,
+      due: items.length,
+      count: dryRun ? 0 : items.length,
+      processed: 0,
+      simulated: dryRun ? items.length : 0,
+      completed: 0,
+      failed: 0,
+      skipped,
+      runtimeLog,
+      items: dryRun ? [] : items,
+      wouldProcess: dryRun ? items : undefined,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load due follow-ups.";
-    return NextResponse.json({ error: message }, { status: message === "Unauthorized." ? 401 : 500 });
+    const status = message === "Unauthorized." ? 401 : 500;
+    console.error("crm_followup_due_runtime_failed", { execution_id: executionId, error: message });
+    return NextResponse.json({ ok: false, error: message, execution_id: executionId }, { status });
   }
 }

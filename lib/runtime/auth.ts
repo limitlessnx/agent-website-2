@@ -12,3 +12,13 @@ export function assertRuntimeSecret(supplied: string | null) {
     throw new Error("Unauthorized.");
   }
 }
+
+export function runtimeSecretFromHeaders(headers: Headers) {
+  const auth = headers.get("authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+  return headers.get("x-runtime-secret");
+}
+
+export function assertRuntimeSecretFromHeaders(headers: Headers) {
+  assertRuntimeSecret(runtimeSecretFromHeaders(headers));
+}

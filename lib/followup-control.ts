@@ -1,5 +1,6 @@
 import { isServerSupabaseConfigured, supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { isN8nApiConfigured, listN8nExecutions, listN8nWorkflows } from "@/lib/n8n-api";
+import { summarizeFollowupStatuses } from "@/lib/followup-runtime";
 
 export type FollowupSequence = { id:string; organization_id:string; name:string; description:string|null; status:"draft"|"active"|"paused"|"archived"; stop_on_reply:boolean; stop_on_qualified:boolean; stop_on_appointment:boolean; created_at:string; updated_at:string };
 export type FollowupStep = { id:string; sequence_id:string; position:number; channel:"whatsapp"|"email"|"call"|"telegram"|"task"; delay_value:number; delay_unit:"minutes"|"hours"|"days"; title:string|null; message_template:string|null; workflow_id:string|null; enabled:boolean };
@@ -21,7 +22,7 @@ export async function getFollowupControlSummary(organizationId = "limitless-real
   const followupWorkflows = workflows.filter((item) => /follow|remind|sequence|nurture/i.test(item.name));
   const relevantIds = new Set(followupWorkflows.map((item) => item.id));
   const n8nExecutions = executions.filter((item) => relevantIds.has(item.workflowId) || item.status === "waiting" || item.status === "running");
-  return { configured, sequences, steps, enrollments, logs, workflows: followupWorkflows, executions: n8nExecutions };
+  return { configured, sequences, steps, enrollments, logs, workflows: followupWorkflows, executions: n8nExecutions, statusSummary: summarizeFollowupStatuses(enrollments) };
 }
 
 export async function createSequence(input:{organization_id:string;name:string;description?:string;steps:Array<Omit<FollowupStep,"id"|"sequence_id">>}) {

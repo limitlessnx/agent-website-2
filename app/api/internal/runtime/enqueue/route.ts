@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertRuntimeSecret } from "@/lib/runtime/auth";
+import { assertRuntimeSecretFromHeaders } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   try {
-    assertRuntimeSecret(request.headers.get("x-runtime-secret"));
+    assertRuntimeSecretFromHeaders(request.headers);
 
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const organizationId = String(body.organization_id || "");
