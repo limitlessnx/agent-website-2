@@ -57,7 +57,11 @@ function recommendPlan(args: Record<string, unknown>) {
   let key = "whatsapp-ai-starter";
   if (channels.includes("phone") || channels.includes("voice")) key = "ai-call-receptionist";
   if (multiChannel || volume >= 1000 || /front desk|support and sales|multiple channel/.test(pain)) key = "ai-front-desk-suite";
-  if (/multiple branch|department|custom integration|enterprise|complex workflow/.test(pain) || volume >= 5000) key = "custom-ai-operations";
+  if (
+    /multiple branch|department|custom integration|enterprise|complex workflow|website|web site|landing page|dashboard|portal|ai integration/.test(pain)
+    || /website|web site|dashboard|portal|ai integration/.test(channels)
+    || volume >= 5000
+  ) key = "custom-ai-operations";
   const plan = LEO_PUBLIC_KNOWLEDGE.plans.find((item) => item.key === key) || LEO_PUBLIC_KNOWLEDGE.plans[0];
   return { plan, rationale: `Recommended from the supplied channels, enquiry volume and primary operational need.` };
 }
