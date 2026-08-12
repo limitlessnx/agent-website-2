@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Bot, Building2, CalendarCheck2, CheckCircle2, Database, Dumbbell, Headphones, Hotel, MessageSquareText, Mic, Network, Rocket, Sparkles, UsersRound, Workflow, Wrench, Zap } from "lucide-react";
-import ElevenLabsConsultant from "@/components/ElevenLabsConsultant";
+import PublicLeoConsultant from "@/components/PublicLeoConsultant";
 import IndustryCarousel from "@/components/IndustryCarousel";
 
 const services = [
@@ -31,7 +31,7 @@ const pricingPlans = [
 
 export default function HomePage() {
   return <main className="quantix-home">
-    <ElevenLabsConsultant />
+    <PublicLeoConsultant />
     <section className="quantix-hero"><div className="hero-stars"/><div className="violet-arc"/><div className="hero-haze"/><motion.div className="hero-content" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:.7}}><div className="hero-pill"><Sparkles size={13}/> Coordinate your AI workforce</div><h1>Build a business that runs through <span>connected AI automation.</span></h1><p>Deploy intelligent sales, support, voice, lead-generation, and workflow agents through one secure operating system built around your actual business.</p><div className="hero-buttons"><Link className="button-primary" href="/evaluation">Book a Demo <ArrowRight size={17}/></Link><Link className="button-secondary" href="/services">Explore Services <ArrowRight size={16}/></Link></div></motion.div><motion.div className="product-shot" initial={{opacity:0,y:42,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.9,delay:.25}}><img src="/flux-dashboard.svg" alt="Fluxknight AI operations dashboard"/></motion.div></section>
     <section className="brand-section" id="services"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Services</span><h2>Every major automation capability in one coherent system.</h2><p>Separate agents can work independently while sharing permissions, data, workflow monitoring, and human escalation rules.</p></div><div className="brand-grid">{services.map(({icon:Icon,title,text})=><article className="brand-card" key={title}><span className="brand-icon"><Icon size={21}/></span><h3>{title}</h3><p>{text}</p><Link href="/services">View service <ArrowRight size={15}/></Link></article>)}</div></div></section>
     <IndustryCarousel />

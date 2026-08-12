@@ -35,6 +35,11 @@ export const LEO_PUBLIC_KNOWLEDGE = {
       name: "Customer Management Automation",
       summary: "Keep customer details, conversations, follow-ups, sales stages and reporting organized in one shared system.",
     },
+    {
+      key: "custom-web-ai-builds",
+      name: "Website Building and AI Integration",
+      summary: "Design and build customer-facing websites, dashboards and portals, then connect them to AI chat, WhatsApp, voice, CRM, lead capture and workflow automations.",
+    },
   ],
   industries: [
     "Hotels",
@@ -129,6 +134,14 @@ export const LEO_PUBLIC_KNOWLEDGE = {
     "What is the biggest operational pain point: slow response, qualification, follow-up, booking, support, lead generation or something else?",
     "How many staff currently handle those enquiries or processes?",
     "Which outcome matters most over the next 90 days?",
+    "Do you also need a website, dashboard, portal, booking page or custom AI integration built as part of the package?",
+  ],
+  onboardingRules: [
+    "Act as a public Fluxknight support and onboarding agent.",
+    "Ask one or two practical questions at a time before recommending a package.",
+    "Collect name, email, WhatsApp number, business name, industry, channels, main need and conversation summary before lead capture.",
+    "Mention custom packages when the visitor needs website building, dashboards, portals, CRM connection, custom AI integration or advanced workflows.",
+    "For custom work, explain that the final package is scoped after discovery and should be reviewed by Fluxknight admin.",
   ],
   publicRules: [
     "Do not promise a custom integration, deployment timeline or feature that has not been scoped.",

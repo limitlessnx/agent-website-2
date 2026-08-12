@@ -1,10 +1,14 @@
 import EvaluationLeadsManager from "@/components/admin/EvaluationLeadsManager";
 import { getEvaluationLeads } from "@/lib/evaluation-leads";
+import { getLeoPublicLeads } from "@/lib/leo-public-leads";
 
 export const dynamic = "force-dynamic";
 
 export default async function EvaluationsPage() {
-  const leads = await getEvaluationLeads(500);
+  const [leads, leoLeads] = await Promise.all([
+    getEvaluationLeads(500),
+    getLeoPublicLeads(100).catch(() => []),
+  ]);
   const total = leads.length;
   const newCount = leads.filter((lead) => lead.status === "new").length;
   const qualified = leads.filter((lead) => lead.status === "qualified").length;
@@ -29,6 +33,37 @@ export default async function EvaluationsPage() {
       </section>
 
       <EvaluationLeadsManager initialLeads={leads} />
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Leo Website Leads</h2>
+            <p>Summaries captured by the public Leo support and onboarding assistant on the Fluxknight homepage.</p>
+          </div>
+          <span className="admin-status live">{leoLeads.length} captured</span>
+        </div>
+        <div className="admin-list">
+          {leoLeads.slice(0, 25).map((lead) => {
+            const qualification = lead.qualification || {};
+            const need = String(qualification.business_need || lead.notes || "").slice(0, 260);
+            return (
+              <article key={lead.id} className="admin-list-row">
+                <div>
+                  <strong>{lead.full_name || "Website visitor"}</strong>
+                  <span>{lead.company_name || "No business name"} · {lead.industry || "Industry pending"} · {lead.recommended_plan || "Package pending"}</span>
+                  <span>{need || "No summary saved yet."}</span>
+                </div>
+                <div>
+                  <em>{lead.phone || "No WhatsApp"}</em>
+                  <em>{lead.email || "No email"}</em>
+                  <em>{new Date(lead.created_at).toLocaleString("en-NG")}</em>
+                </div>
+              </article>
+            );
+          })}
+          {!leoLeads.length ? <p className="admin-empty">No public Leo leads yet.</p> : null}
+        </div>
+      </section>
     </div>
   );
 }
