@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, Send, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, MessageCircle, Plus, Radio, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 
 type Conversation = { id: string; title: string; status: string; priority: string; updated_at: string };
@@ -28,12 +28,12 @@ type AgentLeoClientProps = {
 
 export default function AgentLeoClient({
   apiBase = "/api/admin/support/leo",
-  scopeLabel = "Super Admin Support",
-  title = "Agent Leo",
-  description = "Diagnose agents, automations, integrations, provisioning, and delivery failures from one support console.",
-  welcomeMessage = "I am Agent Leo, Fluxknight's AI Operations Support Engineer. Tell me what failed, which organization is affected, and what you expected to happen. I will inspect the platform before suggesting a fix.",
-  placeholder = "Ask Leo about a failed agent, automation, message, organization, or connected service...",
-  typingLabel = "Inspecting Fluxknight diagnostics",
+  scopeLabel = "Fluxknight Intelligence",
+  title = "Leo",
+  description = "Your AI operations copilot for CRM, automations, connected services, and platform diagnostics.",
+  welcomeMessage = "Hi, I am Leo. Tell me what you need handled today. I can inspect Fluxknight, diagnose issues, and prepare safe actions for your approval.",
+  placeholder = "Message Leo...",
+  typingLabel = "Leo is inspecting Fluxknight",
 }: AgentLeoClientProps) {
   const welcome: Message = { role: "assistant", content: welcomeMessage };
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -73,7 +73,7 @@ export default function AgentLeoClient({
 
   function newDiagnosis() {
     setConversationId("");
-    setMessages([{ role: "assistant", content: "New diagnostic session started. Describe the issue and I will inspect only the data available to this support scope." }]);
+    setMessages([{ role: "assistant", content: "New session started. Tell me what you want to inspect or handle." }]);
     setActions([]);
     setAiState(null);
     setError("");
@@ -130,59 +130,85 @@ export default function AgentLeoClient({
     }
   }
 
+  const statusLabel = aiState?.fallbackUsed ? "Safe mode" : aiState?.needsHumanReview ? "Review needed" : aiState?.connected ? "Leo online" : "Ready";
+
   return (
     <div className="leo-workspace">
-      <aside className="leo-history admin-panel">
-        <div className="leo-history-head">
-          <span className="leo-avatar"><Bot size={20} /></span>
-          <div><strong>Agent Leo</strong><small>AI Operations Support</small></div>
+      <div className="leo-ambient leo-ambient-one" aria-hidden="true" />
+      <div className="leo-ambient leo-ambient-two" aria-hidden="true" />
+
+      <aside className="leo-history">
+        <div className="leo-brand-row">
+          <div className="leo-mark"><Bot size={19} /></div>
+          <div><strong>Leo</strong><small>Fluxknight AI</small></div>
+          <span className="leo-online-dot" title="Leo is available" />
         </div>
-        <button className="leo-new" type="button" onClick={newDiagnosis}><Sparkles size={16} /> New diagnosis</button>
-        <div className="leo-history-label">Recent cases</div>
+
+        <button className="leo-new" type="button" onClick={newDiagnosis}><Plus size={17} /> New conversation</button>
+
+        <div className="leo-history-label">Recent</div>
         <div className="leo-conversations">
           {conversations.map((item) => (
             <button key={item.id} className={item.id === conversationId ? "active" : ""} type="button" onClick={() => openConversation(item.id)}>
-              <span className="leo-case-copy"><strong>{item.title}</strong><small>{item.status.replaceAll("_", " ")} - {item.priority}</small></span>
-              <ChevronRight size={15} />
+              <MessageCircle size={15} className="leo-case-icon" />
+              <span className="leo-case-copy"><strong>{item.title}</strong><small>{item.status.replaceAll("_", " ")} · {item.priority}</small></span>
+              <ChevronRight size={14} />
             </button>
           ))}
-          {!conversations.length ? <p className="leo-empty">No saved support conversations yet.</p> : null}
+          {!conversations.length ? <div className="leo-empty"><Sparkles size={16} /><p>Your Leo conversations will appear here.</p></div> : null}
+        </div>
+
+        <div className="leo-history-footer">
+          <ShieldCheck size={15} />
+          <span>Actions require approval</span>
         </div>
       </aside>
 
-      <section className="leo-console admin-panel">
+      <main className="leo-console">
         <header className="leo-console-head">
-          <div className="leo-title-row">
-            <span className="leo-avatar large"><Bot size={24} /></span>
-            <div><p className="admin-kicker">{scopeLabel}</p><h1>{title}</h1><p>{description}</p></div>
+          <div>
+            <p className="leo-kicker">{scopeLabel}</p>
+            <h1>{title}</h1>
           </div>
-          <div className="leo-status-stack">
-            {aiState?.connected ? <div className="leo-live"><span /> AI connected</div> : null}
-            {aiState?.fallbackUsed ? <div className="leo-live warning"><span /> Safe diagnostic mode</div> : null}
-            {aiState?.needsHumanReview ? <div className="leo-live review"><span /> Admin review required</div> : null}
-            {!aiState ? <div className="leo-live neutral"><span /> Scoped diagnostics</div> : null}
-          </div>
+          <div className={`leo-live ${aiState?.fallbackUsed ? "warning" : aiState?.needsHumanReview ? "review" : ""}`}><span /> {statusLabel}</div>
         </header>
 
-        <div className="leo-capabilities">
-          <span><Activity size={15} /> Automation health</span>
-          <span><ShieldCheck size={15} /> Approval controls</span>
-          <span><AlertTriangle size={15} /> Risk detection</span>
-        </div>
+        <section className="leo-intelligence-card">
+          <div className="leo-orb-wrap" aria-hidden="true">
+            <div className={`leo-orb ${busy ? "thinking" : ""}`}>
+              <div className="leo-orb-ring ring-one" />
+              <div className="leo-orb-ring ring-two" />
+              <div className="leo-orb-ring ring-three" />
+              <div className="leo-orb-core"><Radio size={28} /></div>
+            </div>
+          </div>
+          <div className="leo-intelligence-copy">
+            <p>{busy ? "Thinking across your workspace" : "AI operations copilot"}</p>
+            <h2>{busy ? "Leo is working on it." : "How can I help you today?"}</h2>
+            <span>{description}</span>
+          </div>
+          <div className="leo-capabilities">
+            <span><Activity size={14} /> Automation health</span>
+            <span><ShieldCheck size={14} /> Safe actions</span>
+            <span><AlertTriangle size={14} /> Risk detection</span>
+          </div>
+        </section>
 
-        <div className="leo-chat-shell">
+        <section className="leo-chat-shell">
           <div className="leo-messages">
             {messages.map((message, index) => (
               <article key={`${message.role}-${index}`} className={`leo-message ${message.role}`}>
-                <span className="leo-message-label">{message.role === "assistant" ? "LEO" : "YOU"}</span>
-                <p>{message.content}</p>
+                {message.role === "assistant" ? <span className="leo-message-avatar"><Bot size={14} /></span> : null}
+                <div className="leo-message-body">
+                  <span className="leo-message-label">{message.role === "assistant" ? "LEO" : "YOU"}</span>
+                  <p>{message.content}</p>
+                </div>
               </article>
             ))}
             {busy ? (
               <article className="leo-message assistant leo-typing-card">
-                <span className="leo-message-label">LEO</span>
-                <div className="leo-typing"><i /><i /><i /></div>
-                <small>{typingLabel}</small>
+                <span className="leo-message-avatar"><Bot size={14} /></span>
+                <div className="leo-message-body"><div className="leo-typing"><i /><i /><i /></div><small>{typingLabel}</small></div>
               </article>
             ) : null}
             <div ref={bottomRef} />
@@ -190,7 +216,7 @@ export default function AgentLeoClient({
 
           {actions.length ? (
             <section className="leo-actions">
-              <div className="leo-actions-head"><div><strong>Permission center</strong><span>Leo cannot change production without approval.</span></div><ShieldCheck size={18} /></div>
+              <div className="leo-actions-head"><div><strong>Permission center</strong><span>Review Leo&apos;s proposed production actions.</span></div><ShieldCheck size={18} /></div>
               {actions.map((action) => (
                 <article key={action.id || action.action_key} className={`leo-action ${action.status}`}>
                   <div className="leo-action-copy"><span className={`leo-risk ${action.risk_level}`}>{action.risk_level} risk</span><h3>{action.title}</h3><p>{action.description}</p></div>
@@ -205,16 +231,19 @@ export default function AgentLeoClient({
             </section>
           ) : null}
 
-          {error ? <p className="admin-form-message">{error}</p> : null}
+          {error ? <p className="admin-form-message leo-error">{error}</p> : null}
           <form className="leo-composer" onSubmit={submit}>
-            <textarea name="message" rows={3} placeholder={placeholder} required />
-            <div className="leo-composer-actions">
-              <LeoRealtimeVoice sessionId={conversationId || undefined} />
-              <button type="submit" disabled={busy}><Send size={17} /> {busy ? "Leo is thinking" : "Send"}</button>
+            <div className="leo-input-shell">
+              <textarea name="message" rows={1} placeholder={placeholder} required />
+              <div className="leo-composer-actions">
+                <LeoRealtimeVoice sessionId={conversationId || undefined} />
+                <button className="leo-send" type="submit" disabled={busy} aria-label="Send message"><Send size={18} /></button>
+              </div>
             </div>
+            <small>Leo can inspect and recommend. Sensitive production actions still require your approval.</small>
           </form>
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }
