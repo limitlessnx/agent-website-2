@@ -209,6 +209,23 @@ function responseUsage(payload: UnknownRecord) {
   };
 }
 
+function chatUsage(payload: UnknownRecord) {
+  const usage = isRecord(payload.usage) ? payload.usage : null;
+  if (!usage) return undefined;
+  return {
+    inputTokens: typeof usage.prompt_tokens === "number" ? usage.prompt_tokens : undefined,
+    outputTokens: typeof usage.completion_tokens === "number" ? usage.completion_tokens : undefined,
+    totalTokens: typeof usage.total_tokens === "number" ? usage.total_tokens : undefined,
+  };
+}
+
+function extractChatText(payload: UnknownRecord) {
+  const choices = Array.isArray(payload.choices) ? payload.choices : [];
+  const first = choices.find(isRecord);
+  const message = isRecord(first?.message) ? first.message : null;
+  return typeof message?.content === "string" ? message.content : "";
+}
+
 export async function generateLeoReasoning(input: {
   identity: LeoIdentity;
   message: string;
@@ -258,7 +275,64 @@ export async function generateLeoReasoning(input: {
     });
 
     if (!response.ok) {
-      return { ok: false, provider: "openai", model, reason: "provider_error", latencyMs: Date.now() - startedAt };
+      const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: process.env.LEO_CHAT_FALLBACK_MODEL?.trim() || model,
+          messages: [
+            { role: "system", content: buildLeoSystemPrompt(input.identity, input.context || {}) },
+            ...(input.history || [])
+              .filter((item) => item.role === "user" || item.role === "assistant")
+              .slice(-16)
+              .map((item) => ({ role: item.role, content: String(item.content || "").slice(0, 3000) })),
+            { role: "user", content: input.message.trim().slice(0, 8000) },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "fluxknight_leo_response",
+              strict: true,
+              schema: responseSchema,
+            },
+          },
+        }),
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      if (!fallbackResponse.ok) {
+        return { ok: false, provider: "openai", model, reason: "provider_error", latencyMs: Date.now() - startedAt };
+      }
+
+      const fallbackPayload = (await fallbackResponse.json().catch(() => null)) as UnknownRecord | null;
+      if (!fallbackPayload) {
+        return { ok: false, provider: "openai", model, reason: "invalid_response", latencyMs: Date.now() - startedAt };
+      }
+
+      let parsed: unknown = null;
+      try {
+        const text = extractChatText(fallbackPayload);
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = null;
+      }
+      const validated = validateModelOutput(input.identity, parsed);
+      if (!validated) {
+        return { ok: false, provider: "openai", model, reason: "invalid_response", latencyMs: Date.now() - startedAt };
+      }
+
+      return {
+        ok: true,
+        provider: "openai",
+        model,
+        ...validated,
+        usage: chatUsage(fallbackPayload),
+        latencyMs: Date.now() - startedAt,
+      };
     }
 
     const payload = (await response.json().catch(() => null)) as UnknownRecord | null;
