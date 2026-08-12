@@ -140,23 +140,9 @@ Uncomment the Supabase block in `app/api/contact/route.ts`.
 
 ---
 
-## Enable ElevenLabs Voice Consultant
+## Public Leo Support
 
-The homepage includes `components/ElevenLabsConsultant.tsx`, which loads the official ElevenLabs Conversational AI widget.
-
-Add this environment variable in Vercel:
-
-```bash
-NEXT_PUBLIC_ELEVENLABS_AGENT_ID=agent_4501kxv503fheb69mwxp40xeam5e
-```
-
-Use the agent ID from the ElevenLabs `Fluxbio` agent Deploy/Widget panel. The n8n post-call webhook for this voice agent is:
-
-```text
-https://n8n.srv1720757.hstgr.cloud/webhook/fluxagents/elevenlabs/post-call
-```
-
-The full workflow handoff is in `../fluxagents-voice-ai/README.md`.
+The homepage includes `components/PublicLeoConsultant.tsx`, a Fluxknight-owned Leo assistant for public chat, voice, package guidance, and lead capture. Voice uses the internal OpenAI Realtime route at `/api/leo/realtime/call`; no third-party homepage widget is embedded.
 
 ---
 
