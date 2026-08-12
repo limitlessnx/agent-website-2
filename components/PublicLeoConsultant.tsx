@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { Bot, Loader2, MessageCircle, Send, UserRound, X } from "lucide-react";
+import { Bot, MessageCircle, Send, UserRound, X } from "lucide-react";
 
 type ChatMessage = {
   role: "assistant" | "user";
@@ -87,7 +87,6 @@ export default function PublicLeoConsultant() {
             <span><Bot size={18} /></span>
             <div>
               <strong>Leo</strong>
-              <small>Fluxknight support and onboarding</small>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close Leo"><X size={18} /></button>
           </header>
@@ -99,7 +98,12 @@ export default function PublicLeoConsultant() {
                 <p>{message.content}</p>
               </div>
             ))}
-            {isThinking ? <div className="public-leo-message assistant thinking"><Loader2 size={14} /><p>Leo is thinking...</p></div> : null}
+            {isThinking ? (
+              <div className="public-leo-message assistant thinking">
+                <Bot size={14} />
+                <p className="public-leo-dots" aria-label="Leo is typing"><i /><i /><i /></p>
+              </div>
+            ) : null}
           </div>
 
           <form onSubmit={sendMessage} className="public-leo-input">
@@ -111,22 +115,21 @@ export default function PublicLeoConsultant() {
         <button type="button" className="public-leo-launcher" onClick={() => setOpen(true)}>
           <span className="public-leo-pulse" aria-hidden="true" />
           <MessageCircle size={22} />
-          <span className="public-leo-launcher-copy"><strong>Leo</strong><small>Chat</small></span>
         </button>
       )}
 
       <style jsx>{`
         .public-leo{position:fixed;right:20px;bottom:20px;z-index:80;color:#f8fbff;font-family:inherit}
-        .public-leo-launcher{position:relative;min-width:74px;min-height:74px;display:grid;place-items:center;gap:3px;padding:9px;border:1px solid rgba(226,232,240,.28);border-radius:999px;color:#fff;background:linear-gradient(145deg,rgba(226,232,240,.18),rgba(124,58,237,.62) 42%,rgba(15,23,42,.82));box-shadow:0 18px 55px rgba(15,23,42,.38),inset 0 1px 0 rgba(255,255,255,.28);backdrop-filter:blur(18px) saturate(1.35);cursor:pointer}
-        .public-leo-launcher svg{position:relative;z-index:2}.public-leo-launcher-copy{position:relative;z-index:2;display:grid;text-align:center;line-height:1.05}.public-leo-launcher-copy strong{font-size:.74rem}.public-leo-launcher-copy small{margin-top:2px;color:#ddd6fe;font-size:.58rem;font-weight:800}.public-leo-pulse{position:absolute;inset:-7px;border:1px solid rgba(167,139,250,.28);border-radius:inherit;animation:leoLauncherPulse 2.2s ease-out infinite}
+        .public-leo-launcher{position:relative;width:62px;height:62px;display:grid;place-items:center;padding:0;border:1px solid rgba(226,232,240,.28);border-radius:999px;color:#fff;background:linear-gradient(145deg,rgba(226,232,240,.18),rgba(124,58,237,.62) 42%,rgba(15,23,42,.82));box-shadow:0 18px 55px rgba(15,23,42,.38),inset 0 1px 0 rgba(255,255,255,.28);backdrop-filter:blur(18px) saturate(1.35);cursor:pointer}
+        .public-leo-launcher svg{position:relative;z-index:2}.public-leo-pulse{position:absolute;inset:-7px;border:1px solid rgba(167,139,250,.28);border-radius:inherit;animation:leoLauncherPulse 2.2s ease-out infinite}
         .public-leo-panel{width:min(360px,calc(100vw - 28px));max-height:min(480px,calc(100vh - 120px));display:grid;grid-template-rows:auto minmax(150px,1fr) auto;border:1px solid rgba(226,232,240,.22);border-radius:20px;overflow:hidden;background:linear-gradient(145deg,rgba(248,250,252,.14),rgba(30,41,59,.72) 42%,rgba(15,23,42,.86));box-shadow:0 24px 80px rgba(2,6,23,.44),inset 0 1px 0 rgba(255,255,255,.22);backdrop-filter:blur(24px) saturate(1.35)}
         .public-leo-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid rgba(226,232,240,.14);background:rgba(255,255,255,.06)}
-        .public-leo-header>span{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;color:#f8fbff;background:rgba(148,163,184,.26);border:1px solid rgba(226,232,240,.2)}.public-leo-header strong,.public-leo-header small{display:block}.public-leo-header strong{font-size:.9rem}.public-leo-header small{color:#cbd5e1;font-size:.68rem}.public-leo-header button{width:32px;height:32px;border:1px solid rgba(226,232,240,.16);border-radius:10px;color:#f8fbff;background:rgba(255,255,255,.06);cursor:pointer}
+        .public-leo-header>span{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;color:#f8fbff;background:rgba(148,163,184,.26);border:1px solid rgba(226,232,240,.2)}.public-leo-header strong{display:block;font-size:.9rem}.public-leo-header button{width:32px;height:32px;border:1px solid rgba(226,232,240,.16);border-radius:10px;color:#f8fbff;background:rgba(255,255,255,.06);cursor:pointer}
         .public-leo-messages{display:grid;align-content:start;gap:9px;overflow:auto;padding:12px;background:radial-gradient(circle at 88% 18%,rgba(203,213,225,.12),transparent 32%)}
-        .public-leo-message{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;align-items:start}.public-leo-message svg{margin-top:8px;color:#c4b5fd}.public-leo-message.user svg{color:#93c5fd}.public-leo-message p{margin:0;padding:9px 11px;border:1px solid rgba(226,232,240,.14);border-radius:14px;color:#f8fafc;background:rgba(15,23,42,.42);line-height:1.45;font-size:.82rem;overflow-wrap:anywhere}.public-leo-message.user p{background:rgba(148,163,184,.16);border-color:rgba(226,232,240,.18)}.thinking svg{animation:spin 1s linear infinite}
+        .public-leo-message{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;align-items:start}.public-leo-message svg{margin-top:8px;color:#c4b5fd}.public-leo-message.user svg{color:#93c5fd}.public-leo-message p{margin:0;padding:9px 11px;border:1px solid rgba(226,232,240,.14);border-radius:14px;color:#f8fafc;background:rgba(15,23,42,.42);line-height:1.45;font-size:.82rem;overflow-wrap:anywhere}.public-leo-message.user p{background:rgba(148,163,184,.16);border-color:rgba(226,232,240,.18)}.public-leo-dots{display:flex;align-items:center;gap:5px;width:max-content;min-width:46px;min-height:34px}.public-leo-dots i{width:6px;height:6px;border-radius:999px;background:#d8b4fe;animation:leoTypingDots 1.05s ease-in-out infinite}.public-leo-dots i:nth-child(2){animation-delay:.15s}.public-leo-dots i:nth-child(3){animation-delay:.3s}
         .public-leo-input{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:8px;padding:10px;border-top:1px solid rgba(226,232,240,.14);background:rgba(15,23,42,.32)}.public-leo-input input{min-width:0;height:40px;padding:0 12px;border:1px solid rgba(226,232,240,.16);border-radius:12px;color:#f8fbff;background:rgba(2,6,23,.42);font:inherit}.public-leo-input input::placeholder{color:#aeb8c7}.public-leo-input button{border:0;border-radius:12px;color:#fff;background:linear-gradient(145deg,#8b5cf6,#6366f1);display:grid;place-items:center;cursor:pointer}.public-leo-input button:disabled{opacity:.5;cursor:not-allowed}
-        @keyframes spin{to{transform:rotate(360deg)}}@keyframes leoLauncherPulse{0%{transform:scale(.94);opacity:.75}100%{transform:scale(1.22);opacity:0}}
-        @media(max-width:620px){.public-leo{right:12px;bottom:12px}.public-leo.open{left:auto;right:12px;bottom:12px}.public-leo-panel{width:min(340px,calc(100vw - 24px));max-height:min(430px,calc(100vh - 120px));border-radius:18px}.public-leo-launcher{min-width:70px;min-height:70px}.public-leo-message p{font-size:.8rem}}
+        @keyframes leoLauncherPulse{0%{transform:scale(.94);opacity:.75}100%{transform:scale(1.22);opacity:0}}@keyframes leoTypingDots{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
+        @media(max-width:620px){.public-leo{right:12px;bottom:12px}.public-leo.open{left:auto;right:12px;bottom:12px}.public-leo-panel{width:min(340px,calc(100vw - 24px));max-height:min(430px,calc(100vh - 120px));border-radius:18px}.public-leo-launcher{width:58px;height:58px}.public-leo-message p{font-size:.8rem}}
       `}</style>
     </aside>
   );
