@@ -6,7 +6,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "fluxknight-leo-executor-v2",
-        "responseMode": "responseNode",
+        "responseMode": "lastNode",
         "options": {}
       },
       "id": "leo-v2-webhook",
@@ -18,7 +18,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const root=$json; const headers=root.headers||{}; const body=root.body??root; const supplied=String(headers['x-fluxknight-leo-secret']||headers['X-Fluxknight-Leo-Secret']||''); const expected=String($env.LEO_N8N_SHARED_SECRET||$env.RUNTIME_GATEWAY_SECRET||''); if(!expected||supplied!==expected) throw new Error('Unauthorized Leo executor request'); const required=['version','requestId','issuedAt','expiresAt','channel','toolKey','identity','signature']; const missing=required.filter(k=>body[k]===undefined||body[k]===null||body[k]===''); if(missing.length) throw new Error('Missing Leo executor fields: '+missing.join(', ')); if(Number(body.version)!==2) throw new Error('Unsupported Leo execution envelope version'); if(Date.now()>Number(body.expiresAt)) throw new Error('Leo execution envelope expired before n8n execution'); if(!['chat','voice','api'].includes(String(body.channel))) throw new Error('Unsupported Leo channel'); return [{json:{envelope:body,request_id:String(body.requestId),tool_key:String(body.toolKey),scope:String(body.identity?.scope||''),role:String(body.identity?.role||''),organization_id:body.identity?.organizationId||null,channel:String(body.channel),received_at:new Date().toISOString()}}];"
+        "jsCode": "const root=$json; const headers=root.headers||{}; const body=root.body??root; const supplied=String(headers['x-fluxknight-leo-secret']||headers['X-Fluxknight-Leo-Secret']||'').trim(); if(!supplied) throw new Error('Missing Leo executor bridge secret'); const required=['version','requestId','issuedAt','expiresAt','channel','toolKey','identity','signature']; const missing=required.filter(k=>body[k]===undefined||body[k]===null||body[k]===''); if(missing.length) throw new Error('Missing Leo executor fields: '+missing.join(', ')); if(Number(body.version)!==2) throw new Error('Unsupported Leo execution envelope version'); if(Date.now()>Number(body.expiresAt)) throw new Error('Leo execution envelope expired before n8n execution'); if(!['chat','voice','api'].includes(String(body.channel))) throw new Error('Unsupported Leo channel'); return [{json:{envelope:body,bridge_secret:supplied,request_id:String(body.requestId),tool_key:String(body.toolKey),scope:String(body.identity?.scope||''),role:String(body.identity?.role||''),organization_id:body.identity?.organizationId||null,channel:String(body.channel),received_at:new Date().toISOString()}}];"
       },
       "id": "leo-v2-validate",
       "name": "Validate Signed Leo Envelope",
@@ -29,11 +29,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.FLUXKNIGHT_APP_URL + '/api/internal/leo/execute'}}",
+        "url": "https://limitlessnx-agent-website-2.vercel.app/api/internal/leo/execute",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "x-fluxknight-leo-secret", "value": "={{$env.LEO_N8N_SHARED_SECRET || $env.RUNTIME_GATEWAY_SECRET}}"},
+            {"name": "x-fluxknight-leo-secret", "value": "={{$json.bridge_secret}}"},
             {"name": "content-type", "value": "application/json"}
           ]
         },
@@ -85,9 +85,9 @@
     "Execute Authorized Leo Tool": {
       "main": [[{"node": "Format Leo Execution Result", "type": "main", "index": 0}]]
     },
-    "Format Leo Execution Result": {
-      "main": [[{"node": "Return Leo Execution Result", "type": "main", "index": 0}]]
-    }
+      "Format Leo Execution Result": {
+        "main": [[]]
+      }
   },
   "pinData": {},
   "settings": {
