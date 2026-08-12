@@ -26,6 +26,20 @@ type AgentLeoClientProps = {
   typingLabel?: string;
 };
 
+function friendlyLeoText(value: string) {
+  const text = String(value || "");
+  if (/missing_model|model parameter|invalid_request_error|wss:\/\/api\.openai|api\.openai\.com\/v1\/realtime/i.test(text)) {
+    return "Leo voice hit a realtime model configuration issue. I have updated the model setting, so please try again after the latest deployment finishes.";
+  }
+  if (/insufficient_quota|credit_balance_exhausted/i.test(text)) {
+    return "Leo is connected to OpenAI, but that OpenAI project has no usable credits right now. Tools and diagnostics can still work while billing is fixed.";
+  }
+  if (/Leo AI engine is not connected|Engine error:/i.test(text)) {
+    return "Leo's AI engine could not answer directly, so I switched to safe diagnostic mode. I can still inspect connected systems and prepare approval-gated actions.";
+  }
+  return text;
+}
+
 export default function AgentLeoClient({
   apiBase = "/api/admin/support/leo",
   scopeLabel = "Fluxknight Intelligence",
@@ -96,14 +110,14 @@ export default function AgentLeoClient({
         body: JSON.stringify({ message, conversationId: conversationId || undefined }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "Agent Leo could not respond.");
+      if (!response.ok) throw new Error(friendlyLeoText(result.error || "Agent Leo could not respond."));
       setConversationId(result.conversationId);
       setMessages((current) => [...current, { role: "assistant", content: result.reply, diagnostics: { ai: result.ai || undefined } }]);
       setActions((current) => [...(result.actions || []), ...current.filter((item) => item.status !== "proposed")]);
       setAiState(result.ai || null);
       await loadConversations();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Agent Leo could not respond.");
+      setError(friendlyLeoText(cause instanceof Error ? cause.message : "Agent Leo could not respond."));
     } finally {
       setBusy(false);
     }
@@ -151,7 +165,7 @@ export default function AgentLeoClient({
           {conversations.map((item) => (
             <button key={item.id} className={item.id === conversationId ? "active" : ""} type="button" onClick={() => openConversation(item.id)}>
               <MessageCircle size={15} className="leo-case-icon" />
-              <span className="leo-case-copy"><strong>{item.title}</strong><small>{item.status.replaceAll("_", " ")} · {item.priority}</small></span>
+              <span className="leo-case-copy"><strong>{item.title}</strong><small>{item.status.replaceAll("_", " ")} - {item.priority}</small></span>
               <ChevronRight size={14} />
             </button>
           ))}
@@ -165,6 +179,11 @@ export default function AgentLeoClient({
       </aside>
 
       <main className="leo-console">
+        <div className="leo-mobile-toolbar" aria-hidden="true">
+          <div className="leo-mobile-icon"><span /> </div>
+          <strong>Get Pulse <Sparkles size={13} /></strong>
+          <div className="leo-mobile-icon"><Radio size={14} /></div>
+        </div>
         <header className="leo-console-head">
           <div>
             <p className="leo-kicker">{scopeLabel}</p>
@@ -201,7 +220,7 @@ export default function AgentLeoClient({
                 {message.role === "assistant" ? <span className="leo-message-avatar"><Bot size={14} /></span> : null}
                 <div className="leo-message-body">
                   <span className="leo-message-label">{message.role === "assistant" ? "LEO" : "YOU"}</span>
-                  <p>{message.content}</p>
+                  <p>{friendlyLeoText(message.content)}</p>
                 </div>
               </article>
             ))}

@@ -12,6 +12,20 @@ type RealtimeToolEvent = {
   arguments?: string;
 };
 
+function friendlyVoiceError(value: string) {
+  const text = String(value || "");
+  if (/missing_model|model parameter|invalid_request_error/i.test(text)) {
+    return "Leo voice needs a valid realtime model configured. I have updated the server default; please try voice again after the latest deployment.";
+  }
+  if (/insufficient_quota|credit_balance_exhausted|429/i.test(text)) {
+    return "Leo voice is connected, but the OpenAI project needs available credits before voice can start.";
+  }
+  if (/OpenAI Realtime is not configured/i.test(text)) {
+    return "Leo voice is not connected to an OpenAI key yet.";
+  }
+  return text.length > 180 ? "Leo voice could not start. Please try again in a moment." : text || "Leo voice could not start.";
+}
+
 export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
@@ -112,11 +126,11 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
         body: offer.sdp || "",
       });
       const answerSdp = await response.text();
-      if (!response.ok) throw new Error(answerSdp || "Unable to start Leo voice.");
+      if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice."));
       await peer.setRemoteDescription({ type: "answer", sdp: answerSdp });
     } catch (cause) {
       stop(false);
-      setError(cause instanceof Error ? cause.message : "Unable to start Leo voice.");
+      setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice."));
       setState("error");
     }
   }

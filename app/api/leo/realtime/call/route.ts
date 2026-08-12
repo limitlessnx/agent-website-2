@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const session = {
     type: "realtime",
-    model: process.env.LEO_REALTIME_MODEL?.trim() || "gpt-realtime",
+    model: process.env.LEO_REALTIME_MODEL?.trim() || "gpt-realtime-2.1",
     instructions: voiceInstructions(identity),
     output_modalities: ["audio"],
     audio: {

@@ -180,11 +180,8 @@ export async function POST(request: NextRequest) {
       const diagnostics = await collectSupportDiagnostics("admin", organizationId);
       const fallback = buildSupportReply(message, diagnostics, history.slice(0, -1));
       const visibleReply = [
-        "Leo AI engine is not connected for this response.",
+        "Leo switched to safe diagnostic mode for this response.",
         "",
-        `Engine error: ${reason}`,
-        "",
-        "Fallback diagnostic:",
         fallback.content,
       ].join("\n");
 
