@@ -12,6 +12,11 @@ function eventStatus(type: string) {
   return type.replace(/^email\./, "");
 }
 
+function firstEmail(value: unknown) {
+  if (Array.isArray(value)) return String(value[0] || "").trim().toLowerCase();
+  return String(value || "").trim().toLowerCase();
+}
+
 export async function POST(request: Request) {
   try {
     const expectedToken = process.env.GENCOUV_RESEND_WEBHOOK_TOKEN;
@@ -26,18 +31,47 @@ export async function POST(request: Request) {
     const providerEmailId = String(data?.email_id || data?.id || "");
     const occurredAt = iso(payload?.created_at || data?.created_at);
     const providerEventId = String(payload?.id || `${type}:${providerEmailId}:${occurredAt}`);
+    const status = eventStatus(type);
 
     const existing = await supabaseServerRequest<any[]>(
       `gencouv_email_events?select=id&provider_event_id=eq.${encodeURIComponent(providerEventId)}&limit=1`,
     );
     if (existing.length) return NextResponse.json({ success: true, duplicate: true });
 
-    const messages = providerEmailId
+    let messages = providerEmailId
       ? await supabaseServerRequest<any[]>(
-          `gencouv_email_messages?select=id&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`,
+          `gencouv_email_messages?select=*&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`,
         )
       : [];
-    const message = messages[0];
+    let message = messages[0];
+
+    // Resend Automations can send outside Fluxknight, so those messages may not
+    // already exist in gencouv_email_messages. Create the missing record from
+    // the webhook itself so the dashboard remains a true mirror of Resend.
+    if (!message && providerEmailId) {
+      const outboundRecipient = firstEmail(data?.to);
+      const inboundSender = firstEmail(data?.from);
+      const recipientEmail = type === "email.received" ? inboundSender : outboundRecipient;
+      const created = await supabaseServerRequest<any[]>("gencouv_email_messages", {
+        method: "POST",
+        body: JSON.stringify({
+          organization_id: GENCOUV_ORG_ID,
+          provider: "resend",
+          provider_email_id: providerEmailId,
+          recipient_email: recipientEmail || null,
+          subject: String(data?.subject || ""),
+          status,
+          scheduled_at: status === "scheduled" ? occurredAt : null,
+          sent_at: ["sent", "delivered", "opened", "clicked", "bounced", "complained", "failed", "suppressed"].includes(status)
+            ? occurredAt
+            : null,
+          last_event_at: occurredAt,
+          created_at: occurredAt,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      message = created[0];
+    }
 
     await supabaseServerRequest("gencouv_email_events", {
       method: "POST",
@@ -54,13 +88,13 @@ export async function POST(request: Request) {
     });
 
     if (message?.id) {
-      const status = eventStatus(type);
       const patch: Record<string, unknown> = {
         status,
         last_event_at: occurredAt,
         updated_at: new Date().toISOString(),
       };
       const timestampColumns: Record<string, string> = {
+        scheduled: "scheduled_at",
         sent: "sent_at",
         delivered: "delivered_at",
         opened: "opened_at",
@@ -81,7 +115,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, synced_message: Boolean(message?.id) });
   } catch (error) {
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Webhook processing failed." },
