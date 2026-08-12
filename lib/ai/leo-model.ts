@@ -226,6 +226,15 @@ function extractChatText(payload: UnknownRecord) {
   return typeof message?.content === "string" ? message.content : "";
 }
 
+function providerErrorSummary(payload: unknown) {
+  const error = isRecord(payload) && isRecord(payload.error) ? payload.error : {};
+  return {
+    type: typeof error.type === "string" ? error.type : undefined,
+    code: typeof error.code === "string" ? error.code : undefined,
+    param: typeof error.param === "string" ? error.param : undefined,
+  };
+}
+
 export async function generateLeoReasoning(input: {
   identity: LeoIdentity;
   message: string;
@@ -275,6 +284,12 @@ export async function generateLeoReasoning(input: {
     });
 
     if (!response.ok) {
+      const primaryError = await response.json().catch(() => null);
+      console.warn("Leo Responses API failed", {
+        status: response.status,
+        model,
+        error: providerErrorSummary(primaryError),
+      });
       const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -305,6 +320,12 @@ export async function generateLeoReasoning(input: {
       });
 
       if (!fallbackResponse.ok) {
+        const fallbackError = await fallbackResponse.json().catch(() => null);
+        console.warn("Leo Chat Completions API failed", {
+          status: fallbackResponse.status,
+          model,
+          error: providerErrorSummary(fallbackError),
+        });
         return { ok: false, provider: "openai", model, reason: "provider_error", latencyMs: Date.now() - startedAt };
       }
 
