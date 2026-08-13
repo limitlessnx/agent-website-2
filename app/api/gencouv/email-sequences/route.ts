@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const sequenceId = cleanText(body.sequence_id, 100);
     const senderName = cleanText(body.sender_name, 120) || "Gencouv";
-    const senderEmail = cleanText(body.sender_email, 200) || "onboarding@gencouv.com";
+    const senderEmail = cleanText(body.sender_email, 200) || "info@gencouv.com";
     const replyToEmail = cleanText(body.reply_to_email, 200) || "support@gencouv.com";
     const name = cleanText(body.name, 160) || "Gencouv email sequence";
     const description = cleanText(body.description, 1000);

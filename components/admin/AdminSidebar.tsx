@@ -76,6 +76,7 @@ const basePlatformGroups: NavGroup[] = [
         items: [
           { href: "/dashboard/gencouv", label: "Overview", icon: LineChart, exact: true },
           { href: "/dashboard/gencouv#email-control", label: "Email Control", icon: Mail },
+          { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", icon: MessageCircle },
           { href: "/dashboard/gencouv#lead-board", label: "Lead Board", icon: Users },
           { href: "/dashboard/gencouv#sequence-status", label: "Sequence Status", icon: ShieldCheck },
           { href: "/dashboard/gencouv#acquisition", label: "Acquisition", icon: Search },

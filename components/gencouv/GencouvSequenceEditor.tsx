@@ -49,7 +49,7 @@ const blankSequence: Sequence = {
   description: "Welcome, qualification and onboarding messages sent through Resend.",
   status: "draft",
   sender_name: "Gencouv",
-  sender_email: "onboarding@gencouv.com",
+  sender_email: "info@gencouv.com",
   reply_to_email: "support@gencouv.com",
   daily_limit: 10,
   steps: [blankStep(0)],

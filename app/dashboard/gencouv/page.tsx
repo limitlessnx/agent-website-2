@@ -1,6 +1,8 @@
 import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "lucide-react";
 import MetricCard from "@/components/admin/MetricCard";
+import GencouvCohorts from "@/components/gencouv/GencouvCohorts";
 import GencouvEmailControls from "@/components/gencouv/GencouvEmailControls";
+import GencouvInbox from "@/components/gencouv/GencouvInbox";
 import GencouvLeadActions from "@/components/gencouv/GencouvLeadActions";
 import GencouvMailLeads from "@/components/gencouv/GencouvMailLeads";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
@@ -51,6 +53,24 @@ type DashboardData = {
     email_sending_enabled?: boolean;
     note?: string;
   };
+};
+
+type EmailMessage = {
+  id?: string;
+  recipient_email?: string;
+  status?: string;
+  direction?: string;
+  is_auto_reply?: boolean;
+  sent_at?: string;
+  delivered_at?: string;
+  bounced_at?: string;
+  complained_at?: string;
+  failed_at?: string;
+  suppressed_at?: string;
+  opened_at?: string;
+  clicked_at?: string;
+  last_event_at?: string;
+  created_at?: string;
 };
 
 const dashboardUrl =
@@ -147,6 +167,10 @@ function Breakdown({ title, items }: { title: string; items?: Record<string, num
   );
 }
 
+function countMessages(messages: EmailMessage[], predicate: (message: EmailMessage) => boolean) {
+  return messages.reduce((total, message) => total + (predicate(message) ? 1 : 0), 0);
+}
+
 function LeadCard({ lead }: { lead: Lead }) {
   return (
     <article className="admin-panel" style={{ minHeight: 220 }}>
@@ -177,10 +201,11 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export default async function GencouvWorkspacePage() {
-  const [organizations, dashboard, emailMessages] = await Promise.all([
+  const [organizations, dashboard, emailMessages, campaignEnrollments] = await Promise.all([
     supabaseServerRequest<any[]>("organizations?select=id,name,slug,status,metadata&slug=eq.gencouv&limit=1").catch(() => []),
     getGencouvDashboard(),
     supabaseServerRequest<any[]>("gencouv_email_messages?select=*&order=created_at.desc&limit=500").catch(() => []),
+    supabaseServerRequest<any[]>("gencouv_campaign_enrollments?select=*&order=cohort_date.desc,created_at.desc&limit=500").catch(() => []),
   ]);
 
   const organization = organizations[0];
@@ -194,6 +219,19 @@ export default async function GencouvWorkspacePage() {
       allLeads.map((lead) => [lead.email!.trim().toLowerCase(), { ...lead, email: lead.email!.trim().toLowerCase() }]),
     ).values(),
   );
+  const outboundMessages = emailMessages.filter((message: EmailMessage) => message.direction !== "inbound");
+  const inboundMessages = emailMessages.filter((message: EmailMessage) => message.direction === "inbound");
+  const emailMetrics = {
+    sent: countMessages(outboundMessages, (message) => Boolean(message.sent_at) || ["sent", "delivered", "opened", "clicked", "replied"].includes(message.status || "")),
+    delivered: countMessages(outboundMessages, (message) => Boolean(message.delivered_at) || ["delivered", "opened", "clicked", "replied"].includes(message.status || "")),
+    bounced: countMessages(outboundMessages, (message) => Boolean(message.bounced_at) || message.status === "bounced"),
+    suppressed: countMessages(outboundMessages, (message) => Boolean(message.suppressed_at) || message.status === "suppressed"),
+    failed: countMessages(outboundMessages, (message) => Boolean(message.failed_at) || message.status === "failed"),
+    complained: countMessages(outboundMessages, (message) => Boolean(message.complained_at) || message.status === "complained"),
+    replies: inboundMessages.length,
+    genuineReplies: countMessages(inboundMessages, (message) => !message.is_auto_reply),
+    autoReplies: countMessages(inboundMessages, (message) => Boolean(message.is_auto_reply)),
+  };
 
   return (
     <main className="admin-page">
@@ -231,6 +269,14 @@ export default async function GencouvWorkspacePage() {
         <MetricCard icon={CircleDollarSign} tone="emerald" label="Onboarded" value={total(data, "onboarded")} detail="Active client base" trend="conversion" />
       </div>
 
+      <div className="admin-metric-grid">
+        <MetricCard icon={Mail} tone="cyan" label="Sent" value={emailMetrics.sent} detail="Recorded outbound Resend messages" trend="provider events" />
+        <MetricCard icon={ShieldCheck} tone="emerald" label="Delivered" value={emailMetrics.delivered} detail="Confirmed or progressed delivery events" trend="provider events" />
+        <MetricCard icon={Activity} tone="amber" label="Bounced" value={emailMetrics.bounced} detail="Blocked from further nurture" trend="stop condition" />
+        <MetricCard icon={Activity} tone="rose" label="Suppressed/failed" value={emailMetrics.suppressed + emailMetrics.failed + emailMetrics.complained} detail="Suppressed, failed or complained contacts" trend="do not contact" />
+        <MetricCard icon={Users} tone="violet" label="Replies" value={emailMetrics.replies} detail={`${emailMetrics.genuineReplies} genuine, ${emailMetrics.autoReplies} auto`} trend="inbox" />
+      </div>
+
       <section id="sequence-status" className="admin-panel">
         <div className="admin-panel-header">
           <div>
@@ -258,6 +304,10 @@ export default async function GencouvWorkspacePage() {
       </div>
 
       <GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} />
+
+      <GencouvInbox messages={emailMessages} />
+
+      <GencouvCohorts enrollments={campaignEnrollments} />
 
       <div id="operations" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         <Breakdown title="Lifecycle board" items={data?.breakdowns?.lifecycle_status} />

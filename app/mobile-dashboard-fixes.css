@@ -13,6 +13,8 @@ html,body{max-width:100%;overflow-x:hidden}
 .console-panel-head{min-width:0;flex-wrap:wrap}
 .console-panel-head>strong,.console-panel-head>small{max-width:100%;overflow-wrap:anywhere}
 .admin-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.gencouv-inbox-grid{display:grid;grid-template-columns:minmax(220px,.9fr) minmax(280px,1.3fr);gap:14px;min-width:0;max-width:100%}
+.gencouv-inbox-grid>*{min-width:0}
 
 /* Replace circular dashboard visuals with horizontal analytics bars. */
 .admin-health-ring,.portal-health-ring,.progress-ring,.donut-chart,.admin-launch-score{
@@ -100,6 +102,7 @@ html,body{max-width:100%;overflow-x:hidden}
   .console-result>div{grid-template-columns:1fr 1fr!important}
   .console-audience-meter ul{grid-template-columns:1fr!important}
   .campaign-report-panel .admin-table{min-width:760px!important}
+  .gencouv-inbox-grid{grid-template-columns:minmax(0,1fr)!important}
 }
 
 @media(max-width:420px){
