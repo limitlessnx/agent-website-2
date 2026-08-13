@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
-  CreditCard, Database, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
+  CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
   Menu, MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
@@ -100,6 +100,14 @@ const basePlatformGroups: NavGroup[] = [
   },
 ];
 
+const publicSiteLinks = [
+  { href: "/", label: "Homepage" },
+  { href: "/services", label: "Services" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/industries", label: "Industries" },
+  { href: "/evaluation", label: "Evaluation" },
+];
+
 function groupItems(group: NavGroup) {
   return group.sections.flatMap((section) => section.items);
 }
@@ -152,6 +160,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const [openGroups, setOpenGroups] = useState<string[]>(defaultOpenGroupIds);
   const [openSections, setOpenSections] = useState<string[]>(defaultOpenSectionIds);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [publicSiteOpen, setPublicSiteOpen] = useState(false);
 
   function toggleGroup(id: string) {
     setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
@@ -187,7 +196,26 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
           <span><small>Current scope</small><strong>{workspaceName}</strong></span>
         </div>
 
-        <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent and client onboarding navigation">
+        <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent, client onboarding and public website navigation">
+          <section className={styles.group}>
+            <button type="button" className={styles.trigger} onClick={() => setPublicSiteOpen((current) => !current)} aria-expanded={publicSiteOpen}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Globe2 size={15} /> Public Website</span>
+              <ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} />
+            </button>
+            <div className={`${styles.items} ${publicSiteOpen ? styles.itemsOpen : ""}`}>
+              <div className={styles.section}>
+                <div className={styles.sectionItemsOpen}>
+                  {publicSiteLinks.map((item) => (
+                    <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMobileMenu}>
+                      <ExternalLink size={16} />
+                      <span>{item.label}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {platformGroups.map((group) => {
             const hasActiveItem = groupItems(group).some((item) => itemIsActive(pathname, item));
             const isOpen = openGroups.includes(group.id) || hasActiveItem;
