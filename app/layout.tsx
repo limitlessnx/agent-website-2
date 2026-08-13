@@ -11,6 +11,7 @@ import "./followup-control.css";
 import "./dashboard-visual-system.css";
 import "./campaign-console.css";
 import "./mobile-dashboard-fixes.css";
+import "./public-color-unification.css";
 import SiteShell from "@/components/SiteShell";
 
 export const metadata: Metadata = {
