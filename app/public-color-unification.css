@@ -1,0 +1,212 @@
+:root {
+  --public-bg: #05030b;
+  --public-bg-soft: #090611;
+  --public-panel: #0e0a17;
+  --public-panel-2: #151021;
+  --public-border: rgba(167, 139, 250, 0.20);
+  --public-border-strong: rgba(167, 139, 250, 0.40);
+  --public-accent: #8b5cf6;
+  --public-accent-bright: #c084fc;
+  --public-accent-soft: rgba(139, 92, 246, 0.14);
+  --public-text: #f8f7ff;
+  --public-text-soft: #c6bed8;
+  --public-text-muted: #887d98;
+}
+
+/* Shared public identity */
+body:not(:has(.admin-shell)) .section-label,
+body:not(:has(.admin-shell)) [class*="eyebrow"],
+body:not(:has(.admin-shell)) [class*="kicker"] {
+  color: var(--public-accent-bright) !important;
+}
+
+body:not(:has(.admin-shell)) .gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #d8b4fe 42%, #8b5cf6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+body:not(:has(.admin-shell)) a.button-primary,
+body:not(:has(.admin-shell)) .button-primary,
+body:not(:has(.admin-shell)) a[class*="primary"],
+body:not(:has(.admin-shell)) button[type="submit"] {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--public-accent), var(--public-accent-bright)) !important;
+  border-color: var(--public-border-strong) !important;
+  box-shadow: 0 12px 34px rgba(126, 34, 206, .24) !important;
+}
+
+/* SERVICES */
+body:has(.service-card) {
+  background: var(--public-bg) !important;
+}
+
+body:has(.service-card) > div > main,
+body:has(.service-card) main,
+body:has(.service-card) section {
+  background-color: var(--public-bg) !important;
+  border-color: var(--public-border) !important;
+}
+
+body:has(.service-card) section:first-of-type {
+  background: radial-gradient(circle at 50% 0%, rgba(126,34,206,.20), transparent 42%), linear-gradient(180deg,#0c0618 0%,#05030b 100%) !important;
+}
+
+body:has(.service-card) .service-card {
+  background: var(--public-panel) !important;
+  border-color: var(--public-border) !important;
+  box-shadow: 0 22px 70px rgba(0,0,0,.28) !important;
+}
+
+body:has(.service-card) .service-card div[style*="rgba(0,212,255"] {
+  background: var(--public-accent-soft) !important;
+  border-color: var(--public-border-strong) !important;
+}
+
+body:has(.service-card) .service-card svg[style],
+body:has(.service-card) .service-card svg {
+  color: var(--public-accent-bright) !important;
+  stroke: var(--public-accent-bright) !important;
+}
+
+body:has(.service-card) .service-card p[style*="#00d4ff"] {
+  color: var(--public-accent-bright) !important;
+}
+
+body:has(.service-card) .service-card p,
+body:has(.service-card) .service-card li {
+  color: var(--public-text-soft) !important;
+}
+
+body:has(.service-card) .service-card h2,
+body:has(.service-card) .service-card h3 {
+  color: var(--public-text) !important;
+}
+
+body:has(.service-card) .service-card a[href="/evaluation"],
+body:has(.service-card) section:last-of-type a[href="/evaluation"] {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--public-accent), #7c3aed) !important;
+  border: 1px solid var(--public-border-strong) !important;
+  box-shadow: 0 12px 34px rgba(126,34,206,.22) !important;
+}
+
+/* ABOUT */
+body:has(.about-grid) {
+  background: var(--public-bg) !important;
+}
+
+body:has(.about-grid) section {
+  border-color: var(--public-border) !important;
+}
+
+body:has(.about-grid) section:first-of-type {
+  background: radial-gradient(circle at 50% 0%, rgba(126,34,206,.18), transparent 42%), linear-gradient(180deg,#0c0618 0%,#05030b 100%) !important;
+}
+
+body:has(.about-grid) section[style*="#0d1117"] {
+  background: var(--public-bg-soft) !important;
+}
+
+body:has(.about-grid) div[style*="#0f1620"] {
+  background: var(--public-panel) !important;
+  border-color: var(--public-border) !important;
+}
+
+body:has(.about-grid) div[style*="rgba(0,212,255"] {
+  background: var(--public-accent-soft) !important;
+  border-color: var(--public-border-strong) !important;
+}
+
+body:has(.about-grid) svg {
+  color: var(--public-accent-bright) !important;
+  stroke: var(--public-accent-bright) !important;
+}
+
+body:has(.about-grid) a[href="/evaluation"] {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--public-accent), #7c3aed) !important;
+  box-shadow: 0 12px 34px rgba(126,34,206,.22) !important;
+}
+
+body:has(.about-grid) p,
+body:has(.about-grid) span[style*="#4d6478"] {
+  color: var(--public-text-soft) !important;
+}
+
+/* CONTACT */
+body:has(.contact-grid) {
+  background: var(--public-bg) !important;
+}
+
+body:has(.contact-grid) section {
+  border-color: var(--public-border) !important;
+}
+
+body:has(.contact-grid) section:first-of-type {
+  background: radial-gradient(circle at 50% 0%, rgba(126,34,206,.18), transparent 42%), linear-gradient(180deg,#0c0618 0%,#05030b 100%) !important;
+}
+
+body:has(.contact-grid) div[style*="#0f1620"] {
+  background: var(--public-panel) !important;
+  border-color: var(--public-border) !important;
+}
+
+body:has(.contact-grid) div[style*="rgba(0,212,255"] {
+  background: var(--public-accent-soft) !important;
+  border-color: var(--public-border-strong) !important;
+}
+
+body:has(.contact-grid) svg {
+  color: var(--public-accent-bright) !important;
+  stroke: var(--public-accent-bright) !important;
+}
+
+body:has(.contact-grid) a[href^="mailto:"] {
+  color: var(--public-accent-bright) !important;
+}
+
+body:has(.contact-grid) input:focus,
+body:has(.contact-grid) textarea:focus,
+body:has(.contact-grid) select:focus {
+  border-color: var(--public-accent-bright) !important;
+  box-shadow: 0 0 0 3px var(--public-accent-soft) !important;
+}
+
+/* Pricing, industries and evaluation already use violet. Normalize surfaces and borders only. */
+body:has(.quantix-home) .brand-card,
+body:has(.ind-card) .ind-card,
+body:has(.evaluation-grid) .evaluation-grid > * {
+  border-color: var(--public-border) !important;
+}
+
+/* Legacy cyan inline accents on public pages become Fluxknight violet. */
+body:not(:has(.admin-shell)) [style*="color: rgb(0, 212, 255)"],
+body:not(:has(.admin-shell)) [style*="color:#00d4ff"],
+body:not(:has(.admin-shell)) [style*="color: #00d4ff"] {
+  color: var(--public-accent-bright) !important;
+}
+
+body:not(:has(.admin-shell)) [style*="background:#00d4ff"],
+body:not(:has(.admin-shell)) [style*="background: #00d4ff"] {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--public-accent), #7c3aed) !important;
+}
+
+body:not(:has(.admin-shell)) [style*="border:1px solid #1e2d3d"],
+body:not(:has(.admin-shell)) [style*="border: 1px solid #1e2d3d"] {
+  border-color: var(--public-border) !important;
+}
+
+@media (max-width: 768px) {
+  body:has(.service-card) .service-card {
+    padding: 26px 22px !important;
+    gap: 28px !important;
+  }
+
+  body:has(.about-grid) section,
+  body:has(.contact-grid) section {
+    background-color: var(--public-bg) !important;
+  }
+}
