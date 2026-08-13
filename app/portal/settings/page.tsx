@@ -1,4 +1,4 @@
-import { Building2, Mail, Phone, ShieldCheck, User } from "lucide-react";
+import { Building2, Mail, Phone, ShieldCheck, User } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary } from "@/lib/client-portal-data";
 

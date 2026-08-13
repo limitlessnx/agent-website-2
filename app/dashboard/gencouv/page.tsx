@@ -1,4 +1,4 @@
-import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "lucide-react";
+import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import GencouvCohorts from "@/components/gencouv/GencouvCohorts";
 import GencouvEmailControls from "@/components/gencouv/GencouvEmailControls";
@@ -71,6 +71,34 @@ type EmailMessage = {
   clicked_at?: string;
   last_event_at?: string;
   created_at?: string;
+};
+
+type PipelineLead = {
+  id?: string;
+  email?: string;
+  normalized_email?: string;
+  campaign_status?: string;
+  validation_status?: string;
+  qualification_status?: string;
+  cohort_date?: string;
+  created_at?: string;
+};
+
+type DailyCohort = {
+  cohort_date?: string;
+  raw_generated?: number;
+  rejected?: number;
+  qualified?: number;
+  campaign_enrolled?: number;
+  daily_new_lead_limit?: number;
+  status?: string;
+};
+
+type CampaignSettings = {
+  daily_send_limit?: number;
+  daily_new_lead_limit?: number;
+  sending_enabled?: boolean;
+  status?: string;
 };
 
 const dashboardUrl =
@@ -201,11 +229,16 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export default async function GencouvWorkspacePage() {
-  const [organizations, dashboard, emailMessages, campaignEnrollments] = await Promise.all([
+  const [organizations, dashboard, emailMessages, campaignEnrollments, rawLeads, rejectedLeads, qualifiedLeads, dailyCohorts, campaignSettings] = await Promise.all([
     supabaseServerRequest<any[]>("organizations?select=id,name,slug,status,metadata&slug=eq.gencouv&limit=1").catch(() => []),
     getGencouvDashboard(),
     supabaseServerRequest<any[]>("gencouv_email_messages?select=*&order=created_at.desc&limit=500").catch(() => []),
     supabaseServerRequest<any[]>("gencouv_campaign_enrollments?select=*&order=cohort_date.desc,created_at.desc&limit=500").catch(() => []),
+    supabaseServerRequest<PipelineLead[]>("gencouv_raw_leads?select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
+    supabaseServerRequest<PipelineLead[]>("gencouv_rejected_leads?select=id,email,normalized_email,processing_status,validation_result,created_at&order=created_at.desc&limit=1000").catch(() => []),
+    supabaseServerRequest<PipelineLead[]>("gencouv_qualified_leads?select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
+    supabaseServerRequest<DailyCohort[]>("gencouv_daily_cohorts?select=*&order=cohort_date.desc&limit=30").catch(() => []),
+    supabaseServerRequest<CampaignSettings[]>("gencouv_campaign_settings?select=*&campaign_key=eq.gencouv_long_form_copy_trading&limit=1").catch(() => []),
   ]);
 
   const organization = organizations[0];
@@ -232,6 +265,18 @@ export default async function GencouvWorkspacePage() {
     genuineReplies: countMessages(inboundMessages, (message) => !message.is_auto_reply),
     autoReplies: countMessages(inboundMessages, (message) => Boolean(message.is_auto_reply)),
   };
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const latestCohort = dailyCohorts.find((cohort) => cohort.cohort_date === today) || dailyCohorts[0];
+  const settings = campaignSettings[0] || {};
+  const rawToday = rawLeads.filter((lead) => lead.cohort_date === today || lead.created_at?.startsWith(today)).length;
+  const rejectedToday = rejectedLeads.filter((lead) => lead.created_at?.startsWith(today)).length;
+  const qualifiedToday = qualifiedLeads.filter((lead) => lead.cohort_date === today || lead.created_at?.startsWith(today)).length;
+  const enrolledToday = campaignEnrollments.filter((row: any) => row.cohort_date === today).length;
 
   return (
     <main className="admin-page">
@@ -261,10 +306,10 @@ export default async function GencouvWorkspacePage() {
       ) : null}
 
       <div className="admin-metric-grid">
-        <MetricCard icon={Users} tone="cyan" label="Total records" value={uniqueMailLeads.length} detail="Visible CRM leads with valid email addresses" trend="email-ready" />
-        <MetricCard icon={Mail} tone="rose" label="Mail leads" value={uniqueMailLeads.length} detail="Valid and eligible email contacts" trend="clean list" />
-        <MetricCard icon={Flame} tone="emerald" label="Hot leads" value={hotLeads.length} detail="Email-ready leads for fast follow-up" trend="priority" />
-        <MetricCard icon={Activity} tone="amber" label="Follow-ups due" value={total(data, "follow_ups_due")} detail="Needs review or contact" trend="next action" />
+        <MetricCard icon={Users} tone="cyan" label="Raw leads today" value={latestCohort?.raw_generated ?? rawToday} detail="Candidates generated before validation" trend="Supabase" />
+        <MetricCard icon={ShieldCheck} tone="emerald" label="Qualified today" value={latestCohort?.qualified ?? qualifiedToday} detail="Passed validation and qualification" trend="post-validation" />
+        <MetricCard icon={Activity} tone="amber" label="Rejected today" value={latestCohort?.rejected ?? rejectedToday} detail="Blocked before campaign enrollment" trend="safeguards" />
+        <MetricCard icon={Mail} tone="rose" label="Enrolled today" value={latestCohort?.campaign_enrolled ?? enrolledToday} detail="New campaign cohort reservations" trend={`${settings.daily_new_lead_limit || 30}/day cap`} />
         <MetricCard icon={ShieldCheck} tone="violet" label="Onboarding" value={total(data, "onboarding")} detail="Pending setup or evaluation" trend="client path" />
         <MetricCard icon={CircleDollarSign} tone="emerald" label="Onboarded" value={total(data, "onboarded")} detail="Active client base" trend="conversion" />
       </div>
@@ -297,15 +342,36 @@ export default async function GencouvWorkspacePage() {
 
       <div id="email-control">
         <GencouvEmailControls
-          dailyLimit={data?.email_controls?.daily_send_limit || 10}
-          maxDailyLimit={data?.email_controls?.max_daily_limit || 10}
-          sendingEnabled={Boolean(data?.email_controls?.sending_enabled)}
+          dailyLimit={settings.daily_send_limit || data?.email_controls?.daily_send_limit || 10}
+          maxDailyLimit={30}
+          sendingEnabled={Boolean(settings.sending_enabled || data?.email_controls?.sending_enabled)}
         />
       </div>
 
       <GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} />
 
       <GencouvInbox messages={emailMessages} />
+
+      <section id="daily-cohort-summary" className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Daily cohort summary</h2>
+            <p>Supabase-backed lead generation and enrollment totals. Follow-up emails from older cohorts are not counted as new leads.</p>
+          </div>
+          <span className="admin-status">{dailyCohorts.length} cohorts</span>
+        </div>
+        <div className="admin-checklist">
+          {dailyCohorts.length ? dailyCohorts.slice(0, 10).map((cohort) => (
+            <span key={`${cohort.cohort_date}-${cohort.status}`}>
+              {cohort.cohort_date || "No date"}:
+              {" "}raw {cohort.raw_generated || 0},
+              {" "}rejected {cohort.rejected || 0},
+              {" "}qualified {cohort.qualified || 0},
+              {" "}enrolled {cohort.campaign_enrolled || 0}/{cohort.daily_new_lead_limit || 30}
+            </span>
+          )) : <span>No Supabase cohorts recorded yet</span>}
+        </div>
+      </section>
 
       <GencouvCohorts enrollments={campaignEnrollments} />
 

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight } from "@/components/admin/ServerIcons";
 
 function FadeUp({ children, delay=0 }: { children:React.ReactNode; delay?:number }) {
   return (

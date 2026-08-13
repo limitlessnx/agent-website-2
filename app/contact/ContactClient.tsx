@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useState } from "react";
-import { CheckCircle, AlertCircle, ArrowRight, MessageSquare, Clock, Zap } from "lucide-react";
+import { CheckCircle, AlertCircle, ArrowRight, MessageSquare, Clock, Zap } from "@/components/admin/ServerIcons";
 
 type FormState = "idle" | "loading" | "success" | "error";
 

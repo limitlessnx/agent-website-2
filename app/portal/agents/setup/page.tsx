@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, CheckCircle2, CircleDashed, Database, PlugZap, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, CircleDashed, Database, PlugZap, ShieldCheck } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { createClient } from "@/lib/supabase/server";
 

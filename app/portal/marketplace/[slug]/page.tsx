@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Bot, CheckCircle2, ClipboardList } from "lucide-react";
+import { ArrowLeft, Bot, CheckCircle2, ClipboardList } from "@/components/admin/ServerIcons";
 import { notFound } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getMarketplaceSystem, getOrganizationSystems } from "@/lib/client-systems";

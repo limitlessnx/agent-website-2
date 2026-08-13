@@ -11,7 +11,7 @@ import {
   PlugZap,
   Rocket,
   Workflow,
-} from "lucide-react";
+} from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AgentAllocationControl from "../../AgentAllocationControl";
 import AgentConfigurationControl from "../../AgentConfigurationControl";

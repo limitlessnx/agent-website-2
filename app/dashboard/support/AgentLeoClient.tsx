@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, MessageCircle, Plus, Radio, Send, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, MessageCircle, Plus, Radio, Send, ShieldCheck, Sparkles, X } from "@/components/admin/ServerIcons";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 
 type Conversation = { id: string; title: string; status: string; priority: string; updated_at: string };

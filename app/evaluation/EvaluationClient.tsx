@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { AlertCircle, ArrowRight, CheckCircle, Clock, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle, Clock, Search, ShieldCheck, Sparkles } from "@/components/admin/ServerIcons";
 import { useState } from "react";
 
 type FormState = "idle" | "loading" | "success" | "error";

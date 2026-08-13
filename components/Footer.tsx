@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, Globe2, Mail } from "lucide-react";
+import { ExternalLink, Globe2, Mail } from "@/components/admin/ServerIcons";
 import FluxLogo from "@/components/FluxLogo";
 
 const groups = [

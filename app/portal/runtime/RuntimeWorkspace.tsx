@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, Bot, Cable, CheckCircle2, Loader2, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { BookOpen, Bot, Cable, CheckCircle2, Loader2, RefreshCw, Save, ShieldCheck } from "@/components/admin/ServerIcons";
 
 type Agent = { id: string; name: string; status: string; agent_type: string | null; current_version: number; communication_channels: string[] };
 type PromptBlock = { id?: string; agent_id: string; block_key: string; title: string; content: string; sort_order: number; status: string };

@@ -103,6 +103,48 @@ async function syncEventToN8n(payload: unknown, eventType: string, providerEvent
   }
 }
 
+async function upsertSuppression(email: string, reason: string, eventType: string, providerEmailId: string, payload: unknown) {
+  if (!email) return;
+  await supabaseServerRequest("gencouv_suppression_list?on_conflict=organization_id,normalized_email", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({
+      organization_id: GENCOUV_ORG_ID,
+      normalized_email: email,
+      reason,
+      source: "resend",
+      event_type: eventType,
+      provider_email_id: providerEmailId || null,
+      payload,
+      updated_at: new Date().toISOString(),
+    }),
+  }).catch(() => undefined);
+}
+
+async function updateEnrollment(email: string, patch: Record<string, unknown>) {
+  if (!email) return;
+  await supabaseServerRequest(
+    `gencouv_campaign_enrollments?organization_id=eq.${GENCOUV_ORG_ID}&normalized_email=eq.${encodeURIComponent(email)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      }),
+    },
+  ).catch(() => undefined);
+  await supabaseServerRequest(
+    `gencouv_qualified_leads?organization_id=eq.${GENCOUV_ORG_ID}&normalized_email=eq.${encodeURIComponent(email)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      }),
+    },
+  ).catch(() => undefined);
+}
+
 export async function POST(request: Request) {
   try {
     const expectedToken = process.env.GENCOUV_RESEND_WEBHOOK_TOKEN;
@@ -187,6 +229,13 @@ export async function POST(request: Request) {
           }),
         });
       }
+      await updateEnrollment(inboundSender, {
+        reply_status: autoReply ? "auto_reply" : "genuine_reply",
+        replied_at: occurredAt,
+        last_event_at: occurredAt,
+        campaign_status: autoReply ? undefined : "human_follow_up",
+        stop_reason: autoReply ? undefined : "genuine_reply",
+      });
     }
 
     // Resend Automations can send outside Fluxknight, so those messages may not
@@ -266,6 +315,46 @@ export async function POST(request: Request) {
         body: JSON.stringify(patch),
       });
     }
+
+    const affectedEmail = isInbound ? firstEmail(data?.from) : firstEmail(data?.to);
+    const enrollmentPatch: Record<string, unknown> = {
+      last_delivery_status: status,
+      last_event_at: occurredAt,
+    };
+    if (status === "sent") enrollmentPatch.last_email_sent_at = occurredAt;
+    if (status === "delivered") enrollmentPatch.last_delivery_status = "delivered";
+    if (status === "bounced") {
+      enrollmentPatch.bounce_status = "bounced";
+      enrollmentPatch.campaign_status = "stopped";
+      enrollmentPatch.do_not_contact = true;
+      enrollmentPatch.stop_reason = "bounced";
+      await upsertSuppression(affectedEmail, "bounced", type, providerEmailId, payload);
+    }
+    if (status === "complained") {
+      enrollmentPatch.campaign_status = "stopped";
+      enrollmentPatch.do_not_contact = true;
+      enrollmentPatch.stop_reason = "complained";
+      await upsertSuppression(affectedEmail, "complained", type, providerEmailId, payload);
+    }
+    if (status === "suppressed") {
+      enrollmentPatch.suppression_status = "suppressed";
+      enrollmentPatch.campaign_status = "stopped";
+      enrollmentPatch.do_not_contact = true;
+      enrollmentPatch.stop_reason = "suppressed";
+      await upsertSuppression(affectedEmail, "suppressed", type, providerEmailId, payload);
+    }
+    if (status === "failed") {
+      enrollmentPatch.campaign_status = "paused";
+      enrollmentPatch.stop_reason = "failed";
+    }
+    if (type === "email.unsubscribed") {
+      enrollmentPatch.unsubscribe_status = "unsubscribed";
+      enrollmentPatch.campaign_status = "stopped";
+      enrollmentPatch.do_not_contact = true;
+      enrollmentPatch.stop_reason = "unsubscribed";
+      await upsertSuppression(affectedEmail, "unsubscribed", type, providerEmailId, payload);
+    }
+    await updateEnrollment(affectedEmail, enrollmentPatch);
 
     const sheetSync = await syncEventToN8n(payload, type, providerEventId);
 

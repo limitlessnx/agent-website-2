@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Loader2, Play, Save, Send, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, Play, Save, Send, ShieldCheck } from "@/components/admin/ServerIcons";
 
 const channelOptions = [
   { value: "whatsapp", label: "WhatsApp" },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Bot, CircleAlert, Clock3, MessagesSquare, RefreshCw } from "lucide-react";
+import { Activity, Bot, CircleAlert, Clock3, MessagesSquare, RefreshCw } from "@/components/admin/ServerIcons";
 
 type Overview = {
   conversations: Array<{ id:string; channel:string; status:string; current_stage:string|null; ai_paused:boolean; last_message_at:string|null }>;

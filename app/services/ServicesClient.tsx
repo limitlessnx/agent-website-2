@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Bot, Headphones, MessageSquare, Mic, Database, FileText,
   BarChart2, Calendar, ArrowRight, CheckCircle,
-} from "lucide-react";
+} from "@/components/admin/ServerIcons";
 
 function FadeUp({ children, delay=0 }: { children:React.ReactNode; delay?:number }) {
   return (

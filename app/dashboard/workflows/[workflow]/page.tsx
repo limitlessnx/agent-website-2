@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Mail, PhoneCall, Search, Workflow } from "lucide-react";
+import { Bot, Mail, PhoneCall, Search, Workflow } from "@/components/admin/ServerIcons";
 
 const workflowMap = {
   email: { title: "Email automation", description: "Manage outbound sequences, delivery, replies, lead state updates and follow-up rules.", icon: Mail, modules: ["Lead source", "Sequence builder", "Sending account", "Reply detection", "CRM update"] },

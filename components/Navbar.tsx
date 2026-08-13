@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "@/components/admin/ServerIcons";
 import FluxLogo from "@/components/FluxLogo";
 import styles from "@/components/Navbar.module.css";
 

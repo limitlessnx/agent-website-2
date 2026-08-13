@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Mic, MicOff, LoaderCircle } from "lucide-react";
+import { Mic, MicOff, LoaderCircle } from "@/components/admin/ServerIcons";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
 

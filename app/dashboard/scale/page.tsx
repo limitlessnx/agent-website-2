@@ -1,4 +1,4 @@
-import { Building2, CreditCard, Gauge, Layers3 } from "lucide-react";
+import { Building2, CreditCard, Gauge, Layers3 } from "@/components/admin/ServerIcons";
 import { getPhase14Summary } from "@/lib/phase-14";
 import SubscriptionControl from "./SubscriptionControl";
 

@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, ShieldCheck } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 

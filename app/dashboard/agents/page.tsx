@@ -1,4 +1,4 @@
-import { Bot, Network, ShieldCheck, Workflow } from "lucide-react";
+import { Bot, Network, ShieldCheck, Workflow } from "@/components/admin/ServerIcons";
 import AgentManagementCenter from "@/components/admin/AgentManagementCenter";
 import MetricCard from "@/components/admin/MetricCard";
 import { getAgentManagementSummary } from "@/lib/agent-management";

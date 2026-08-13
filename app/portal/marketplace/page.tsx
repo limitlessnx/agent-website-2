@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Boxes, Building2, PlusCircle, Sparkles } from "lucide-react";
+import { Boxes, Building2, PlusCircle, Sparkles } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getMarketplaceSystems, getOrganizationSystems } from "@/lib/client-systems";
 import SystemRequestButton from "./SystemRequestButton";

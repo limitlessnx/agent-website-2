@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, Building2, CalendarCheck2, CheckCircle2, Database, Dumbbell, Headphones, Hotel, MessageSquareText, Mic, Network, Rocket, Sparkles, UsersRound, Workflow, Wrench, Zap } from "lucide-react";
+import { ArrowRight, Bot, Building2, CalendarCheck2, CheckCircle2, Database, Dumbbell, Headphones, Hotel, MessageSquareText, Mic, Network, Rocket, Sparkles, UsersRound, Workflow, Wrench, Zap } from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
 import IndustryCarousel from "@/components/IndustryCarousel";
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@/components/admin/ServerIcons";
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 

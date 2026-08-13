@@ -1,4 +1,4 @@
-import { ExternalLink, ImagePlus } from "lucide-react";
+import { ExternalLink, ImagePlus } from "@/components/admin/ServerIcons";
 import { isGoogleDriveConfigured } from "@/lib/google-drive";
 import { getProperties } from "@/lib/limitless-data";
 import PropertyImageUploader from "./PropertyImageUploader";

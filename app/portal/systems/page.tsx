@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock3, PauseCircle, Settings2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, PauseCircle, Settings2 } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationSystems, type SystemCatalogItem } from "@/lib/client-systems";
 

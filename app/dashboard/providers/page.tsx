@@ -1,4 +1,4 @@
-import { BrainCircuit, Mic2, ShieldCheck } from "lucide-react";
+import { BrainCircuit, Mic2, ShieldCheck } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";

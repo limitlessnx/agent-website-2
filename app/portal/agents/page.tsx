@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Settings2, ShieldCheck } from "lucide-react";
+import { Bot, Settings2, ShieldCheck } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary } from "@/lib/client-portal-data";
 

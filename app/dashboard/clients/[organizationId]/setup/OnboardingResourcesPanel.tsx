@@ -1,4 +1,4 @@
-import { Download, ExternalLink, FileText } from "lucide-react";
+import { Download, ExternalLink, FileText } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function parseFileName(resources: unknown) {

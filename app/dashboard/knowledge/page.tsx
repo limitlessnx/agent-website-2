@@ -1,4 +1,4 @@
-import { Database, FileText } from "lucide-react";
+import { Database, FileText } from "@/components/admin/ServerIcons";
 import { getPlatformEngineSummary, humanize } from "@/lib/platform-engine";
 
 export const dynamic = "force-dynamic";

@@ -1,4 +1,4 @@
-import { Activity, Bot, Building2, Database, Megaphone, Workflow } from "lucide-react";
+import { Activity, Bot, Building2, Database, Megaphone, Workflow } from "@/components/admin/ServerIcons";
 import { getCampaignReports, getLeads, getN8nStatus, getProperties, getSupabaseReadiness } from "@/lib/limitless-data";
 
 export const dynamic = "force-dynamic";

@@ -1,4 +1,4 @@
-import { BrainCircuit, History } from "lucide-react";
+import { BrainCircuit, History } from "@/components/admin/ServerIcons";
 import { getPlatformEngineSummary, humanize } from "@/lib/platform-engine";
 
 export const dynamic = "force-dynamic";

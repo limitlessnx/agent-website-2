@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Mail, MessageCircle, PhoneCall, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Mail, MessageCircle, PhoneCall, Search } from "@/components/admin/ServerIcons";
 import { automationProjects } from "@/lib/limitless-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 

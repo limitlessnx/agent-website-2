@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Loader2, PlugZap, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, PlugZap, Trash2 } from "@/components/admin/ServerIcons";
 
 const PLATFORM_MANAGED_PROVIDERS = new Set(["openai", "n8n", "supabase"]);
 

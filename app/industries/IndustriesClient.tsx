@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Building2, ShoppingCart, Stethoscope, Truck, Briefcase, ArrowRight, CheckCircle } from "lucide-react";
+import { Building2, ShoppingCart, Stethoscope, Truck, Briefcase, ArrowRight, CheckCircle } from "@/components/admin/ServerIcons";
 
 function FadeUp({ children, delay=0 }: { children:React.ReactNode; delay?:number }) {
   return (

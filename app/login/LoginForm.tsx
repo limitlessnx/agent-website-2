@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "@/components/admin/ServerIcons";
 
 export default function LoginForm() {
   const router = useRouter();

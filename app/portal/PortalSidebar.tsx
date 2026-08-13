@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Boxes, ChevronDown, LayoutDashboard, LifeBuoy, Menu, Settings, ShoppingBag, X, Zap } from "lucide-react";
+import { Bot, Boxes, ChevronDown, LayoutDashboard, LifeBuoy, Menu, Settings, ShoppingBag, X, Zap } from "@/components/admin/ServerIcons";
 import { useState } from "react";
 
 export default function PortalSidebar({ organization }: { organization: string }) {

@@ -1,4 +1,4 @@
-import { GitBranch, LockKeyhole, Workflow } from "lucide-react";
+import { GitBranch, LockKeyhole, Workflow } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { createClient } from "@/lib/supabase/server";
 

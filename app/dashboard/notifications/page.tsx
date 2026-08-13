@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Building2, Users, Workflow } from "lucide-react";
+import { Bell, Building2, Users, Workflow } from "@/components/admin/ServerIcons";
 import { getLeads } from "@/lib/limitless-data";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 

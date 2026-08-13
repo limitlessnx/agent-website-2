@@ -1,4 +1,4 @@
-import { CreditCard, BellRing, WalletCards, AlertTriangle } from "lucide-react";
+import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
 import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
 import { createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";

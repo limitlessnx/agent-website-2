@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Bot, Check, Loader2, Settings2 } from "lucide-react";
+import { Bot, Check, Loader2, Settings2 } from "@/components/admin/ServerIcons";
 
 type CatalogOffering = {
   agent_key: string;

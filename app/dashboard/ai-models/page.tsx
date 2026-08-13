@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BrainCircuit, ShieldCheck } from "lucide-react";
+import { BrainCircuit, ShieldCheck } from "@/components/admin/ServerIcons";
 import { getAiModelControlData } from "@/lib/ai-model-control";
 import AiModelControl from "./AiModelControl";
 

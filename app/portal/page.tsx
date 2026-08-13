@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Bot, CheckCircle2, Clock3, Workflow } from "lucide-react";
+import { Activity, Bot, CheckCircle2, Clock3, Workflow } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary } from "@/lib/client-portal-data";
 

@@ -7,7 +7,7 @@ import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
   Menu, MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
-} from "lucide-react";
+} from "@/components/admin/ServerIcons";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import styles from "@/components/admin/AdminSidebar.module.css";

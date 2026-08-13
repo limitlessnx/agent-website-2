@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, CheckCircle2, Loader2, Rocket } from "lucide-react";
+import { Building2, CheckCircle2, Loader2, Rocket } from "@/components/admin/ServerIcons";
 
 type TemplateOption = {
   slug: string;

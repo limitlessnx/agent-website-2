@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BrainCircuit, Check } from "lucide-react";
+import { BrainCircuit, Check } from "@/components/admin/ServerIcons";
 
 type ModelOption = {
   id: string;

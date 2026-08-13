@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { Bot, MessageCircle, Send, UserRound, X } from "lucide-react";
+import { Bot, MessageCircle, Send, UserRound, X } from "@/components/admin/ServerIcons";
 
 type ChatMessage = {
   role: "assistant" | "user";

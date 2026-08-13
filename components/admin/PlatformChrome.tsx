@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, X } from "lucide-react";
+import { Activity, X } from "@/components/admin/ServerIcons";
 import styles from "@/components/admin/PlatformChrome.module.css";
 
 export default function PlatformChrome() {

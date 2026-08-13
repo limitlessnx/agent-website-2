@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Clock3, Pause, Play, Plus, RotateCcw, Send, SkipForward, XCircle } from "lucide-react";
+import { ChevronDown, Clock3, Pause, Play, Plus, RotateCcw, Send, SkipForward, XCircle } from "@/components/admin/ServerIcons";
 import type { FollowupEnrollment, FollowupSequence, FollowupStep } from "@/lib/followup-control";
 
 type LeadOption = { id:string; name:string; phone:string };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bot, CheckCircle2, Link2, Loader2, Save, Trash2 } from "lucide-react";
+import { Bot, CheckCircle2, Link2, Loader2, Save, Trash2 } from "@/components/admin/ServerIcons";
 
 type Agent = {
   id: string;

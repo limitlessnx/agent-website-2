@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Building2, LineChart } from "lucide-react";
+import { Activity, Building2, LineChart } from "@/components/admin/ServerIcons";
 
 const organizations = [
   { name: "Limitless Realty", type: "Owned organization", description: "Real estate CRM, Maia, property campaigns, follow-ups and revenue operations.", href: "/dashboard/limitless/leads", icon: Building2 },

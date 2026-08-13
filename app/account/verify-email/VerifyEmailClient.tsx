@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { MailCheck } from "lucide-react";
+import { MailCheck } from "@/components/admin/ServerIcons";
 
 const COOLDOWN_SECONDS = 60;
 

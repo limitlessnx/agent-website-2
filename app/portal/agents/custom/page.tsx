@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/admin/ServerIcons";
 
 export default function CustomAgentRequestPage() {
   const [saving, setSaving] = useState(false);

@@ -1,4 +1,4 @@
-import { Bot, Building2, Search, Users, Workflow } from "lucide-react";
+import { Bot, Building2, Search, Users, Workflow } from "@/components/admin/ServerIcons";
 import { getLeads, getN8nStatus, getProperties } from "@/lib/limitless-data";
 
 export const dynamic = "force-dynamic";

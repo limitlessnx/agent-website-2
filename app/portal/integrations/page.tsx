@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Cable, CheckCircle2, CircleDashed, LockKeyhole, TriangleAlert } from "lucide-react";
+import { Cable, CheckCircle2, CircleDashed, LockKeyhole, TriangleAlert } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { createClient } from "@/lib/supabase/server";
 

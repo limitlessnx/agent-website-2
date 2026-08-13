@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KeyRound, PlugZap, ShieldCheck } from "lucide-react";
+import { KeyRound, PlugZap, ShieldCheck } from "@/components/admin/ServerIcons";
 import { getPlatformEngineSummary, humanize } from "@/lib/platform-engine";
 import IntegrationCredentialControl from "./IntegrationCredentialControl";
 

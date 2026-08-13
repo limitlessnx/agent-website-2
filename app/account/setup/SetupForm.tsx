@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Building2 } from "@/components/admin/ServerIcons";
 
 export default function SetupForm() {
   const router = useRouter();

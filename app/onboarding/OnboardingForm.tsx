@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "@/components/admin/ServerIcons";
 import type { ClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 
 const goalOptions = [["generate_leads", "Generate leads"], ["qualify_prospects", "Qualify prospects"], ["book_appointments", "Book appointments"], ["answer_questions", "Answer customer questions"], ["follow_up_leads", "Follow up leads"], ["send_reminders", "Send reminders"], ["make_outbound_calls", "Make outbound calls"], ["manage_customer_records", "Manage customer records"]];

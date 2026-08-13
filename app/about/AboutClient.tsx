@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Zap, Target, Layers, Clock } from "lucide-react";
+import { ArrowRight, Zap, Target, Layers, Clock } from "@/components/admin/ServerIcons";
 
 function FadeUp({ children, delay=0 }: { children:React.ReactNode; delay?:number }) {
   return (

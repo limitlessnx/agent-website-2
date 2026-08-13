@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Building2, Clock3, Mail, Settings2, Users } from "lucide-react";
+import { Bot, Building2, Clock3, Mail, Settings2, Users } from "@/components/admin/ServerIcons";
 import { listClientOnboardingProfiles, type ClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 
 export const dynamic = "force-dynamic";

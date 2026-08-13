@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalendarDays, ExternalLink, House } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
@@ -43,14 +42,14 @@ export default async function AdminShell({ children }: { children: React.ReactNo
                 style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none" }}
                 className="admin-period"
               >
-                <House size={15} />
+                <span aria-hidden="true">Home</span>
                 <span>Homepage</span>
-                <ExternalLink size={13} />
+                <span aria-hidden="true">Open</span>
               </Link>
               <PlatformChrome />
               <ThemeToggle />
               <div className="admin-period">
-                <CalendarDays size={15} />
+                <span aria-hidden="true">Live</span>
                 <span>Live Ops</span>
               </div>
             </div>

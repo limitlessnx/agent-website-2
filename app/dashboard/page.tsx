@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Activity, ArrowUpRight, Bell, Bot, Building2, Mail, Network, PhoneCall,
   Search, Users, Workflow,
-} from "lucide-react";
+} from "@/components/admin/ServerIcons";
 import { getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-data";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";

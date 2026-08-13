@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, MessageSquareText, Mic, Network, Rocket } from "lucide-react";
+import { ArrowRight, CheckCircle2, MessageSquareText, Mic, Network, Rocket } from "@/components/admin/ServerIcons";
 const plans=[
 {icon:MessageSquareText,name:"WhatsApp AI Starter",first:"₦100,000",ongoing:"₦50,000/month",tag:"One focused AI receptionist for WhatsApp.",features:["24/7 WhatsApp AI receptionist","Answers approved customer questions","Lead qualification","Customer detail capture","Automated follow-up","Human handoff when needed","Basic dashboard access"]},
 {icon:Mic,name:"AI Call Receptionist",first:"₦200,000",ongoing:"₦100,000/month",tag:"An inbound AI receptionist that never leaves the phone unattended.",features:["24/7 inbound AI call answering","Answers approved FAQs","Caller qualification","Customer detail capture","Appointment booking where configured","Human transfer or escalation","Call summaries","Leads saved to dashboard"]},

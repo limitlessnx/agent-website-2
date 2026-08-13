@@ -941,6 +941,19 @@ body {
   background: color-mix(in srgb, currentColor 15%, transparent);
 }
 
+.server-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: currentColor;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
 .admin-metric-topline em {
   color: currentColor;
   font-size: 0.75rem;
