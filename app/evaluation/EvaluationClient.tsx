@@ -2,26 +2,12 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import {
-  AlertCircle,
-  ArrowRight,
-  Bot,
-  CheckCircle,
-  Clock,
-  Headphones,
-  Mail,
-  MessageCircle,
-  PhoneCall,
-  PhoneOutgoing,
-  Repeat,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle, Clock, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
-interface EvaluationForm {
+type EvaluationForm = {
   name: string;
   email: string;
   phone: string;
@@ -35,46 +21,7 @@ interface EvaluationForm {
   budget: string;
   preferredContactTime: string;
   consent: boolean;
-}
-
-const agentOptions = [
-  {
-    value: "Outbound Call Agent",
-    label: "Outbound Call Agent",
-    desc: "Calls leads, qualifies interest, and books appointments.",
-    icon: PhoneOutgoing,
-  },
-  {
-    value: "Email Automation",
-    label: "Email Automation",
-    desc: "Sends nurture, reply, and sales sequences automatically.",
-    icon: Mail,
-  },
-  {
-    value: "Follow-up Agent",
-    label: "Follow-up Agent",
-    desc: "Re-engages leads across call, email, WhatsApp, or CRM.",
-    icon: Repeat,
-  },
-  {
-    value: "WhatsApp Agent",
-    label: "WhatsApp Agent",
-    desc: "Handles WhatsApp inquiries, FAQs, and bookings.",
-    icon: MessageCircle,
-  },
-  {
-    value: "Customer Support Agent",
-    label: "Support Agent",
-    desc: "Answers customer questions and escalates urgent issues.",
-    icon: Headphones,
-  },
-  {
-    value: "Custom AI Agent",
-    label: "Custom AI Agent",
-    desc: "A tailored agent for your exact workflow.",
-    icon: Bot,
-  },
-];
+};
 
 const businessTypes = [
   "Real Estate",
@@ -84,32 +31,14 @@ const businessTypes = [
   "Logistics",
   "Professional Services",
   "Agency / Consulting",
+  "Hospitality",
+  "Construction",
   "Other",
 ];
 
-const leadVolumes = [
-  "Under 25 leads/month",
-  "25-100 leads/month",
-  "100-500 leads/month",
-  "500+ leads/month",
-  "Not sure yet",
-];
-
-const timelines = [
-  "Immediately",
-  "This month",
-  "1-3 months",
-  "Just exploring",
-];
-
-const budgetRanges = [
-  "Under $1,000",
-  "$1,000 - $3,000",
-  "$3,000 - $6,000",
-  "$6,000 - $10,000",
-  "$10,000+",
-  "Not sure yet",
-];
+const leadVolumes = ["Under 25 leads/month", "25-100 leads/month", "100-500 leads/month", "500+ leads/month", "Not sure yet"];
+const timelines = ["Immediately", "This month", "1-3 months", "Just exploring"];
+const budgetRanges = ["Under $1,000", "$1,000 - $3,000", "$3,000 - $6,000", "$6,000 - $10,000", "$10,000+", "Not sure yet"];
 
 const initialForm: EvaluationForm = {
   name: "",
@@ -127,6 +56,19 @@ const initialForm: EvaluationForm = {
   consent: false,
 };
 
+const palette = {
+  page: "#090510",
+  panel: "#10091a",
+  panelSoft: "#140c20",
+  border: "rgba(168,85,247,.28)",
+  borderStrong: "rgba(168,85,247,.48)",
+  text: "#f7f0ff",
+  muted: "#b9a8c9",
+  accent: "#a855f7",
+  accent2: "#8b5cf6",
+  danger: "#f87171",
+};
+
 export default function EvaluationClient() {
   const [form, setForm] = useState<EvaluationForm>(initialForm);
   const [status, setStatus] = useState<FormState>("idle");
@@ -137,50 +79,32 @@ export default function EvaluationClient() {
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
-  const toggleAgentType = (agentType: string) => {
-    update(
-      "agentTypes",
-      form.agentTypes.includes(agentType)
-        ? form.agentTypes.filter((item) => item !== agentType)
-        : [...form.agentTypes, agentType]
-    );
-  };
-
   const validate = () => {
     const nextErrors: Partial<Record<keyof EvaluationForm, string>> = {};
-
     if (!form.name.trim()) nextErrors.name = "Name is required";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      nextErrors.email = "Valid email is required";
-    }
-    if (!form.phone.trim()) nextErrors.phone = "Phone number is required for the AI call";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) nextErrors.email = "Valid email is required";
+    if (!form.phone.trim()) nextErrors.phone = "Phone number is required";
     if (!form.businessName.trim()) nextErrors.businessName = "Business name is required";
     if (!form.businessType) nextErrors.businessType = "Select your business type";
-    if (form.agentTypes.length === 0) nextErrors.agentTypes = "Choose at least one agent type";
-    if (form.mainGoal.trim().length < 15) {
-      nextErrors.mainGoal = "Describe the outcome you want in at least 15 characters";
-    }
+    if (form.mainGoal.trim().length < 20) nextErrors.mainGoal = "Tell us a little more about the problem or outcome you want";
     if (!form.leadVolume) nextErrors.leadVolume = "Select your monthly lead volume";
     if (!form.timeline) nextErrors.timeline = "Select your timeline";
     if (!form.budget) nextErrors.budget = "Select a budget range";
-    if (!form.consent) nextErrors.consent = "Consent is required before the AI call agent can contact you";
-
+    if (!form.consent) nextErrors.consent = "Consent is required before our evaluation system can contact you";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
   const submit = async () => {
     if (!validate()) return;
-
     setStatus("loading");
     try {
-      const res = await fetch("/api/evaluation", {
+      const response = await fetch("/api/evaluation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-
-      setStatus(res.ok ? "success" : "error");
+      setStatus(response.ok ? "success" : "error");
     } catch {
       setStatus("error");
     }
@@ -188,282 +112,116 @@ export default function EvaluationClient() {
 
   const inputStyle = (field: keyof EvaluationForm): React.CSSProperties => ({
     width: "100%",
-    background: "#0d1117",
-    border: `1px solid ${errors[field] ? "#ef4444" : "#1e2d3d"}`,
-    borderRadius: "10px",
-    padding: "12px 16px",
-    fontSize: "0.9rem",
-    color: "#f0f6ff",
+    background: palette.page,
+    border: `1px solid ${errors[field] ? palette.danger : palette.border}`,
+    borderRadius: 12,
+    padding: "13px 15px",
+    fontSize: ".94rem",
+    color: palette.text,
     outline: "none",
-    transition: "border-color 0.2s",
   });
 
   const labelStyle: React.CSSProperties = {
     display: "block",
-    fontSize: "0.76rem",
-    fontWeight: 700,
-    letterSpacing: "0.05em",
-    color: "#8ba3bd",
-    marginBottom: "8px",
+    fontSize: ".75rem",
+    fontWeight: 800,
+    letterSpacing: ".08em",
+    color: palette.muted,
+    marginBottom: 8,
     textTransform: "uppercase",
   };
 
-  const fieldWrap: React.CSSProperties = { marginBottom: "20px" };
-
-  const errorMessage = (field: keyof EvaluationForm) =>
-    errors[field] ? (
-      <p style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "6px" }}>
-        {errors[field]}
-      </p>
-    ) : null;
+  const errorMessage = (field: keyof EvaluationForm) => errors[field] ? <p style={{ color: palette.danger, fontSize: ".75rem", marginTop: 6 }}>{errors[field]}</p> : null;
 
   if (status === "success") {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "120px 24px" }}>
-        <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: "520px", textAlign: "center" }}>
-          <div style={{ width: "68px", height: "68px", borderRadius: "50%", background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-            <CheckCircle size={30} color="#00d4ff" />
-          </div>
-          <h1 style={{ fontSize: "2.1rem", fontWeight: 900, color: "#f0f6ff", letterSpacing: "-0.03em", marginBottom: "14px" }}>
-            Evaluation request received
-          </h1>
-          <p style={{ color: "#8ba3bd", lineHeight: 1.75, marginBottom: "30px" }}>
-            Your details were submitted. Our AI evaluation system will qualify the request and route the summary to our team for next steps.
-          </p>
-          <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px", background: "#00d4ff", color: "#06080f", borderRadius: "10px", fontSize: "0.9rem", fontWeight: 700, textDecoration: "none" }}>
-            Back to home <ArrowRight size={15} />
-          </Link>
+      <main style={{ minHeight: "100vh", background: palette.page, display: "grid", placeItems: "center", padding: "120px 24px" }}>
+        <motion.div initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: 560, textAlign: "center" }}>
+          <div style={{ width: 68, height: 68, borderRadius: "50%", background: "rgba(168,85,247,.12)", border: `1px solid ${palette.borderStrong}`, display: "grid", placeItems: "center", margin: "0 auto 24px" }}><CheckCircle size={30} color={palette.accent} /></div>
+          <h1 style={{ fontSize: "2.1rem", fontWeight: 900, color: palette.text, letterSpacing: "-.03em", marginBottom: 14 }}>Evaluation request received</h1>
+          <p style={{ color: palette.muted, lineHeight: 1.75, marginBottom: 30 }}>We have your business context. Fluxknight can now evaluate the problem first and recommend the right combination of agents, channels and workflows afterward.</p>
+          <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: `linear-gradient(135deg,${palette.accent},${palette.accent2})`, color: "white", borderRadius: 10, fontWeight: 800, textDecoration: "none" }}>Back to home <ArrowRight size={15} /></Link>
         </motion.div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div>
-      <section style={{ padding: "140px 24px 76px", background: "linear-gradient(180deg,#0d1117 0%,#06080f 100%)", borderBottom: "1px solid #1e2d3d" }}>
-        <div style={{ maxWidth: "860px", margin: "0 auto", textAlign: "center" }}>
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
-            <p className="section-label" style={{ marginBottom: "16px" }}>AI Evaluation Call</p>
-            <h1 style={{ fontSize: "clamp(2.1rem,5vw,4.1rem)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.08, color: "#f0f6ff", marginBottom: "20px" }}>
-              Get matched with the right <span className="gradient-text">AI agent system</span>
-            </h1>
-            <p style={{ maxWidth: "660px", margin: "0 auto", color: "#8ba3bd", fontSize: "1.05rem", lineHeight: 1.75 }}>
-              Share what you want built. The evaluation flow captures the details our team needs to scope your outbound calling, email, follow-up, WhatsApp, support, or custom AI agent.
-            </p>
+    <main style={{ minHeight: "100vh", background: palette.page, color: palette.text }}>
+      <section style={{ padding: "144px 24px 82px", background: "radial-gradient(circle at 50% 0%,rgba(168,85,247,.16),transparent 42%),linear-gradient(180deg,#10091a 0%,#090510 100%)", borderBottom: `1px solid ${palette.border}` }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}>
+            <p style={{ color: "#c084fc", fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", fontSize: ".78rem", marginBottom: 16 }}>Business AI Evaluation</p>
+            <h1 style={{ fontSize: "clamp(2.25rem,5vw,4.35rem)", lineHeight: 1.04, letterSpacing: "-.045em", fontWeight: 950, marginBottom: 20 }}>Tell us what your business needs. <span style={{ color: "#c084fc" }}>We&apos;ll design the right AI system.</span></h1>
+            <p style={{ maxWidth: 720, margin: "0 auto", color: palette.muted, fontSize: "1.04rem", lineHeight: 1.75 }}>You do not need to know which agent, workflow or channel to choose. Describe the problem, bottleneck or outcome you want. We evaluate the request and recommend the system that fits your operation.</p>
           </motion.div>
         </div>
       </section>
 
-      <section style={{ padding: "64px 24px 100px" }}>
-        <div className="evaluation-grid" style={{ maxWidth: "1120px", margin: "0 auto", display: "grid", gridTemplateColumns: "0.82fr 1.5fr", gap: "56px", alignItems: "start" }}>
-          <motion.aside initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55, delay: 0.1 }}>
-            <div style={{ display: "grid", gap: "22px" }}>
+      <section style={{ padding: "64px 24px 110px" }}>
+        <div className="evaluation-grid" style={{ maxWidth: 1160, margin: "0 auto", display: "grid", gridTemplateColumns: ".78fr 1.5fr", gap: 48, alignItems: "start" }}>
+          <motion.aside initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .45 }}>
+            <div style={{ position: "sticky", top: 110, display: "grid", gap: 18 }}>
               {[
-                {
-                  icon: PhoneCall,
-                  title: "Call-ready intake",
-                  desc: "We collect phone, consent, goals, and agent type before any AI call is triggered.",
-                },
-                {
-                  icon: Sparkles,
-                  title: "Qualified requirements",
-                  desc: "The system turns every request into a clear build brief instead of a vague contact form.",
-                },
-                {
-                  icon: ShieldCheck,
-                  title: "Consent first",
-                  desc: "Clients must agree to be contacted before an AI call agent reaches out.",
-                },
-                {
-                  icon: Clock,
-                  title: "Fast routing",
-                  desc: "Submissions can be sent to Supabase, n8n, Telegram, email, and your sales workflow.",
-                },
+                { icon: Search, title: "Problem first", desc: "Tell us what is slow, repetitive, expensive or being missed. You do not have to diagnose the technology yourself." },
+                { icon: Sparkles, title: "System recommendation", desc: "We evaluate whether the solution needs one agent, several agents, workflow automation, or a mix of channels." },
+                { icon: ShieldCheck, title: "Human-reviewed setup", desc: "Your request becomes a practical implementation brief before anything is deployed." },
+                { icon: Clock, title: "Clear next step", desc: "We use the evaluation to determine scope, integrations, timeline and the most useful starting point." },
               ].map(({ icon: Icon, title, desc }) => (
-                <div key={title} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                  <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon size={18} color="#00d4ff" />
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: "0.96rem", fontWeight: 700, color: "#f0f6ff", marginBottom: "6px" }}>{title}</h2>
-                    <p style={{ fontSize: "0.86rem", color: "#8ba3bd", lineHeight: 1.65 }}>{desc}</p>
-                  </div>
+                <div key={title} style={{ display: "flex", gap: 14, padding: 18, borderRadius: 14, background: palette.panel, border: `1px solid ${palette.border}` }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(168,85,247,.12)", border: `1px solid ${palette.border}`, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon size={18} color="#c084fc" /></div>
+                  <div><h2 style={{ fontSize: ".96rem", marginBottom: 5 }}>{title}</h2><p style={{ color: palette.muted, fontSize: ".86rem", lineHeight: 1.62 }}>{desc}</p></div>
                 </div>
               ))}
             </div>
           </motion.aside>
 
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
-            <div style={{ background: "#0f1620", border: "1px solid #1e2d3d", borderRadius: "16px", padding: "38px" }}>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#f0f6ff", marginBottom: "28px" }}>
-                Tell us what you want built
-              </h2>
+          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .45, delay: .08 }}>
+            <div style={{ background: palette.panelSoft, border: `1px solid ${palette.borderStrong}`, borderRadius: 18, padding: "clamp(22px,4vw,40px)", boxShadow: "0 24px 80px rgba(0,0,0,.24)" }}>
+              <h2 style={{ fontSize: "1.35rem", marginBottom: 8 }}>Describe your business and what you want to improve</h2>
+              <p style={{ color: palette.muted, lineHeight: 1.65, marginBottom: 28 }}>We&apos;ll decide which AI agents, channels and workflows suit the request after reviewing this information.</p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", ...fieldWrap }} className="evaluation-two-col">
-                <div>
-                  <label style={labelStyle} htmlFor="name">Full Name *</label>
-                  <input id="name" value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Your name" style={inputStyle("name")} />
-                  {errorMessage("name")}
-                </div>
-                <div>
-                  <label style={labelStyle} htmlFor="businessName">Business Name *</label>
-                  <input id="businessName" value={form.businessName} onChange={(e) => update("businessName", e.target.value)} placeholder="Company or brand" style={inputStyle("businessName")} />
-                  {errorMessage("businessName")}
-                </div>
+              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <div><label style={labelStyle} htmlFor="name">Full name *</label><input id="name" value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Your name" style={inputStyle("name")} />{errorMessage("name")}</div>
+                <div><label style={labelStyle} htmlFor="businessName">Business name *</label><input id="businessName" value={form.businessName} onChange={(e) => update("businessName", e.target.value)} placeholder="Company or brand" style={inputStyle("businessName")} />{errorMessage("businessName")}</div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", ...fieldWrap }} className="evaluation-two-col">
-                <div>
-                  <label style={labelStyle} htmlFor="email">Email *</label>
-                  <input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@company.com" style={inputStyle("email")} />
-                  {errorMessage("email")}
-                </div>
-                <div>
-                  <label style={labelStyle} htmlFor="phone">Phone / WhatsApp *</label>
-                  <input id="phone" type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+1 234 567 8900" style={inputStyle("phone")} />
-                  {errorMessage("phone")}
-                </div>
+              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <div><label style={labelStyle} htmlFor="email">Email *</label><input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@company.com" style={inputStyle("email")} />{errorMessage("email")}</div>
+                <div><label style={labelStyle} htmlFor="phone">Phone / WhatsApp *</label><input id="phone" type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+234... / +1..." style={inputStyle("phone")} />{errorMessage("phone")}</div>
               </div>
 
-              <div style={fieldWrap}>
-                <label style={labelStyle} htmlFor="businessType">Business Type *</label>
-                <select id="businessType" value={form.businessType} onChange={(e) => update("businessType", e.target.value)} style={{ ...inputStyle("businessType"), cursor: "pointer" }}>
-                  <option value="" disabled>Select your industry</option>
-                  {businessTypes.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-                {errorMessage("businessType")}
+              <div style={{ marginBottom: 20 }}><label style={labelStyle} htmlFor="businessType">Business type *</label><select id="businessType" value={form.businessType} onChange={(e) => update("businessType", e.target.value)} style={{ ...inputStyle("businessType"), cursor: "pointer" }}><option value="" disabled>Select your industry</option>{businessTypes.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("businessType")}</div>
+
+              <div style={{ marginBottom: 20 }}><label style={labelStyle} htmlFor="mainGoal">What do you want to improve, automate or solve? *</label><textarea id="mainGoal" rows={7} value={form.mainGoal} onChange={(e) => update("mainGoal", e.target.value)} placeholder="Example: We receive enquiries from WhatsApp and Instagram, but leads are replied to late and follow-up is inconsistent. I want faster responses, automatic qualification, booking and a clear handoff to my team." style={{ ...inputStyle("mainGoal"), resize: "vertical", lineHeight: 1.6 }} />{errorMessage("mainGoal")}</div>
+
+              <div style={{ marginBottom: 20 }}><label style={labelStyle} htmlFor="currentTools">How do you currently handle this?</label><textarea id="currentTools" rows={4} value={form.currentTools} onChange={(e) => update("currentTools", e.target.value)} placeholder="Tell us about WhatsApp, email, calls, spreadsheets, CRM, staff process, existing tools or anything else involved." style={{ ...inputStyle("currentTools"), resize: "vertical", lineHeight: 1.6 }} /></div>
+
+              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <div><label style={labelStyle}>Lead / enquiry volume *</label><select value={form.leadVolume} onChange={(e) => update("leadVolume", e.target.value)} style={{ ...inputStyle("leadVolume"), cursor: "pointer" }}><option value="" disabled>Select volume</option>{leadVolumes.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("leadVolume")}</div>
+                <div><label style={labelStyle}>Timeline *</label><select value={form.timeline} onChange={(e) => update("timeline", e.target.value)} style={{ ...inputStyle("timeline"), cursor: "pointer" }}><option value="" disabled>Select timeline</option>{timelines.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("timeline")}</div>
               </div>
 
-              <div style={fieldWrap}>
-                <label style={labelStyle}>What kind of agent do you want? *</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "12px" }} className="agent-type-grid">
-                  {agentOptions.map(({ value, label, desc, icon: Icon }) => {
-                    const selected = form.agentTypes.includes(value);
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => toggleAgentType(value)}
-                        style={{
-                          textAlign: "left",
-                          background: selected ? "rgba(0,212,255,0.1)" : "#0d1117",
-                          border: selected ? "1px solid rgba(0,212,255,0.55)" : "1px solid #1e2d3d",
-                          borderRadius: "12px",
-                          padding: "16px",
-                          color: "#f0f6ff",
-                          cursor: "pointer",
-                          minHeight: "126px",
-                        }}
-                        aria-pressed={selected}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                          <Icon size={18} color="#00d4ff" />
-                          <span style={{ fontSize: "0.9rem", fontWeight: 700 }}>{label}</span>
-                        </div>
-                        <p style={{ color: "#8ba3bd", fontSize: "0.8rem", lineHeight: 1.55 }}>{desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                {errorMessage("agentTypes")}
+              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 22 }}>
+                <div><label style={labelStyle}>Budget range *</label><select value={form.budget} onChange={(e) => update("budget", e.target.value)} style={{ ...inputStyle("budget"), cursor: "pointer" }}><option value="" disabled>Select budget</option>{budgetRanges.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("budget")}</div>
+                <div><label style={labelStyle} htmlFor="preferredContactTime">Preferred contact time</label><input id="preferredContactTime" value={form.preferredContactTime} onChange={(e) => update("preferredContactTime", e.target.value)} placeholder="e.g. Weekdays after 2pm" style={inputStyle("preferredContactTime")} /></div>
               </div>
 
-              <div style={fieldWrap}>
-                <label style={labelStyle} htmlFor="mainGoal">Main Goal *</label>
-                <textarea
-                  id="mainGoal"
-                  value={form.mainGoal}
-                  onChange={(e) => update("mainGoal", e.target.value)}
-                  placeholder="Example: We want an outbound agent to call old real estate leads, qualify buyers, and book viewing appointments."
-                  rows={4}
-                  style={{ ...inputStyle("mainGoal"), resize: "vertical", lineHeight: 1.6 }}
-                />
-                {errorMessage("mainGoal")}
-              </div>
+              <label style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 16, border: `1px solid ${errors.consent ? palette.danger : palette.border}`, borderRadius: 12, background: "rgba(168,85,247,.06)", cursor: "pointer" }}>
+                <input type="checkbox" checked={form.consent} onChange={(e) => update("consent", e.target.checked)} style={{ marginTop: 4 }} />
+                <span style={{ color: palette.muted, lineHeight: 1.55, fontSize: ".9rem" }}>I agree to be contacted about this request, including by an AI evaluation call agent at the phone number provided. Consent is not required to purchase.</span>
+              </label>
+              {errorMessage("consent")}
 
-              <div style={fieldWrap}>
-                <label style={labelStyle} htmlFor="currentTools">Current Tools</label>
-                <input id="currentTools" value={form.currentTools} onChange={(e) => update("currentTools", e.target.value)} placeholder="CRM, email platform, calendar, WhatsApp, spreadsheets..." style={inputStyle("currentTools")} />
-              </div>
+              {status === "error" ? <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 18, padding: 14, borderRadius: 10, border: "1px solid rgba(248,113,113,.35)", background: "rgba(248,113,113,.08)", color: "#fca5a5" }}><AlertCircle size={17} />The evaluation request could not be sent. Please try again.</div> : null}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", ...fieldWrap }} className="evaluation-two-col">
-                <div>
-                  <label style={labelStyle} htmlFor="leadVolume">Lead Volume *</label>
-                  <select id="leadVolume" value={form.leadVolume} onChange={(e) => update("leadVolume", e.target.value)} style={{ ...inputStyle("leadVolume"), cursor: "pointer" }}>
-                    <option value="" disabled>Select monthly volume</option>
-                    {leadVolumes.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
-                  {errorMessage("leadVolume")}
-                </div>
-                <div>
-                  <label style={labelStyle} htmlFor="timeline">Timeline *</label>
-                  <select id="timeline" value={form.timeline} onChange={(e) => update("timeline", e.target.value)} style={{ ...inputStyle("timeline"), cursor: "pointer" }}>
-                    <option value="" disabled>Select timeline</option>
-                    {timelines.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
-                  {errorMessage("timeline")}
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", ...fieldWrap }} className="evaluation-two-col">
-                <div>
-                  <label style={labelStyle} htmlFor="budget">Budget *</label>
-                  <select id="budget" value={form.budget} onChange={(e) => update("budget", e.target.value)} style={{ ...inputStyle("budget"), cursor: "pointer" }}>
-                    <option value="" disabled>Select budget range</option>
-                    {budgetRanges.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
-                  {errorMessage("budget")}
-                </div>
-                <div>
-                  <label style={labelStyle} htmlFor="preferredContactTime">Best Time To Call</label>
-                  <input id="preferredContactTime" value={form.preferredContactTime} onChange={(e) => update("preferredContactTime", e.target.value)} placeholder="Example: Weekdays after 2pm" style={inputStyle("preferredContactTime")} />
-                </div>
-              </div>
-
-              <div style={{ ...fieldWrap, padding: "16px", background: "rgba(0,212,255,0.06)", border: `1px solid ${errors.consent ? "#ef4444" : "rgba(0,212,255,0.18)"}`, borderRadius: "12px" }}>
-                <label style={{ display: "flex", gap: "12px", alignItems: "flex-start", color: "#8ba3bd", fontSize: "0.82rem", lineHeight: 1.6, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={form.consent}
-                    onChange={(e) => update("consent", e.target.checked)}
-                    style={{ marginTop: "4px", accentColor: "#00d4ff" }}
-                  />
-                  <span>
-                    I agree to be contacted about this request, including by an AI evaluation call agent at the phone number provided. Consent is not required to purchase.
-                  </span>
-                </label>
-                {errorMessage("consent")}
-              </div>
-
-              {status === "error" && (
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "10px", padding: "12px 14px", marginBottom: "20px" }}>
-                  <AlertCircle size={17} color="#ef4444" />
-                  <p style={{ color: "#ef4444", fontSize: "0.85rem" }}>The evaluation request could not be sent. Please try again.</p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={submit}
-                disabled={status === "loading"}
-                style={{ width: "100%", padding: "15px", border: "none", borderRadius: "10px", background: status === "loading" ? "rgba(0,212,255,0.45)" : "#00d4ff", color: "#06080f", fontSize: "0.96rem", fontWeight: 800, cursor: status === "loading" ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 0 24px rgba(0,212,255,0.2)" }}
-              >
-                {status === "loading" ? "Submitting..." : <>Start AI Evaluation <ArrowRight size={16} /></>}
+              <button type="button" onClick={submit} disabled={status === "loading"} style={{ width: "100%", marginTop: 22, border: 0, borderRadius: 12, padding: "15px 20px", fontWeight: 900, fontSize: "1rem", color: "white", background: `linear-gradient(135deg,${palette.accent},${palette.accent2})`, cursor: status === "loading" ? "wait" : "pointer", opacity: status === "loading" ? .7 : 1 }}>
+                {status === "loading" ? "Submitting evaluation..." : "Request AI Evaluation"} <ArrowRight size={16} style={{ display: "inline", verticalAlign: "middle", marginLeft: 6 }} />
               </button>
             </div>
           </motion.div>
         </div>
       </section>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .evaluation-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 640px) {
-          .evaluation-two-col, .agent-type-grid { grid-template-columns: 1fr !important; }
-        }
-        select option { background: #0d1117; color: #f0f6ff; }
-      `}</style>
-    </div>
+    </main>
   );
 }
