@@ -76,6 +76,9 @@ async function findThreadMessage(data: Record<string, unknown>, senderEmail: str
 }
 
 async function syncEventToN8n(payload: unknown, eventType: string, providerEventId: string) {
+  const enabled = process.env.GENCOUV_RESEND_N8N_SYNC_ENABLED === "true";
+  if (!enabled) return { attempted: false, ok: false, disabled: true };
+
   const url = process.env.GENCOUV_RESEND_N8N_SYNC_URL || "";
   const secret = process.env.GENCOUV_EMAIL_EVENT_SECRET || process.env.GENCOUV_DASHBOARD_SECRET || "";
   if (!url || !secret) return { attempted: false, ok: false };
