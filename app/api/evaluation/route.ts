@@ -49,9 +49,7 @@ async function saveToSupabase(row: Record<string, unknown>) {
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    return { configured: false };
-  }
+  if (!supabaseUrl || !serviceRoleKey) return { configured: false };
 
   const res = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/evaluation_leads`, {
     method: "POST",
@@ -64,20 +62,13 @@ async function saveToSupabase(row: Record<string, unknown>) {
     body: JSON.stringify(row),
   });
 
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(`Supabase save failed: ${message}`);
-  }
-
+  if (!res.ok) throw new Error(`Supabase save failed: ${await res.text()}`);
   return { configured: true, data: await res.json() };
 }
 
 async function sendToN8n(payload: Record<string, unknown>) {
   const webhookUrl = process.env.N8N_EVALUATION_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    return { configured: false };
-  }
+  if (!webhookUrl) return { configured: false };
 
   const res = await fetch(webhookUrl, {
     method: "POST",
@@ -85,11 +76,7 @@ async function sendToN8n(payload: Record<string, unknown>) {
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(`n8n webhook failed: ${message}`);
-  }
-
+  if (!res.ok) throw new Error(`n8n webhook failed: ${await res.text()}`);
   return { configured: true };
 }
 
@@ -103,9 +90,7 @@ export async function POST(req: NextRequest) {
       phone: sanitizeString(body.phone),
       businessName: sanitizeString(body.businessName),
       businessType: sanitizeString(body.businessType),
-      agentTypes: Array.isArray(body.agentTypes)
-        ? body.agentTypes.map(sanitizeString).filter(Boolean)
-        : [],
+      agentTypes: Array.isArray(body.agentTypes) ? body.agentTypes.map(sanitizeString).filter(Boolean) : [],
       mainGoal: sanitizeString(body.mainGoal),
       currentTools: sanitizeString(body.currentTools),
       leadVolume: sanitizeString(body.leadVolume),
@@ -116,21 +101,15 @@ export async function POST(req: NextRequest) {
     };
 
     for (const field of requiredStringFields) {
-      if (!normalized[field]) {
-        return NextResponse.json({ error: `${field} is required` }, { status: 400 });
-      }
+      if (!normalized[field]) return NextResponse.json({ error: `${field} is required` }, { status: 400 });
     }
 
     if (!isValidEmail(normalized.email || "")) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
     }
 
-    if (!normalized.agentTypes?.length) {
-      return NextResponse.json({ error: "At least one agent type is required" }, { status: 400 });
-    }
-
     if (!normalized.consent) {
-      return NextResponse.json({ error: "Consent is required before an AI call can be triggered" }, { status: 400 });
+      return NextResponse.json({ error: "Consent is required before an AI evaluation call can be triggered" }, { status: 400 });
     }
 
     const now = new Date().toISOString();
@@ -140,7 +119,7 @@ export async function POST(req: NextRequest) {
       phone: normalized.phone,
       business_name: normalized.businessName,
       business_type: normalized.businessType,
-      agent_types: normalized.agentTypes,
+      agent_types: normalized.agentTypes || [],
       main_goal: normalized.mainGoal,
       current_tools: normalized.currentTools || null,
       lead_volume: normalized.leadVolume,
@@ -154,33 +133,16 @@ export async function POST(req: NextRequest) {
     };
 
     const supabaseResult = await saveToSupabase(lead);
-    const n8nResult = await sendToN8n({
-      event: "evaluation_request_created",
-      lead,
-      createdAt: now,
-    });
+    const n8nResult = await sendToN8n({ event: "evaluation_request_created", lead, createdAt: now });
 
     if (!supabaseResult.configured && !n8nResult.configured && process.env.NODE_ENV === "production") {
-      return NextResponse.json(
-        { error: "No evaluation destination is configured" },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "No evaluation destination is configured" }, { status: 503 });
     }
 
-    if (process.env.NODE_ENV === "development") {
-      console.log("[Evaluation Request]", lead);
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        destinations: {
-          supabase: supabaseResult.configured,
-          n8n: n8nResult.configured,
-        },
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      destinations: { supabase: supabaseResult.configured, n8n: n8nResult.configured },
+    });
   } catch (error) {
     console.error("[Evaluation API Error]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
