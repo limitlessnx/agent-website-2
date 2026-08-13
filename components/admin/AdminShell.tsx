@@ -1,5 +1,6 @@
+import Link from "next/link";
+import { CalendarDays, ExternalLink, House } from "lucide-react";
 import { redirect } from "next/navigation";
-import { CalendarDays } from "lucide-react";
 import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import AdminSearch from "@/components/admin/AdminSearch";
@@ -34,6 +35,18 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             </div>
             <AdminSearch />
             <div className="admin-topbar-actions">
+              <Link
+                href="/"
+                target="_blank"
+                rel="noreferrer"
+                title="Open Fluxknight homepage in a new tab"
+                style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none" }}
+                className="admin-period"
+              >
+                <House size={15} />
+                <span>Homepage</span>
+                <ExternalLink size={13} />
+              </Link>
               <PlatformChrome />
               <ThemeToggle />
               <div className="admin-period">
