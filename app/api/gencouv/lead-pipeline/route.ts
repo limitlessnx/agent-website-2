@@ -271,9 +271,13 @@ export async function POST(request: Request) {
 
   const summary = {
     raw_received: leads.length,
+    raw_preview: 0,
     raw_stored: 0,
+    rejected_preview: 0,
     rejected: 0,
+    qualified_preview: 0,
     qualified: 0,
+    enrollment_preview: 0,
     enrolled_reserved: 0,
     duplicates: 0,
     dry_run: dryRun,
@@ -288,19 +292,24 @@ export async function POST(request: Request) {
 
   for (const raw of leads) {
     const lead = extractLead(raw, cohortDate);
-    const insertedRaw = await supabaseServerRequest<any[]>("gencouv_raw_leads", {
-      method: "POST",
-      body: JSON.stringify(lead),
-    }).catch(() => []);
-    const rawRow = insertedRaw[0];
-    if (rawRow?.id) summary.raw_stored += 1;
+    summary.raw_preview += 1;
+    let rawRow: any = null;
+    if (!dryRun) {
+      const insertedRaw = await supabaseServerRequest<any[]>("gencouv_raw_leads", {
+        method: "POST",
+        body: JSON.stringify(lead),
+      }).catch(() => []);
+      rawRow = insertedRaw[0];
+      if (rawRow?.id) summary.raw_stored += 1;
+    }
 
     const existing = lead.email ? await existingEmail(lead.email) : { qualified: null, enrollment: null, suppressed: null, rejected: null };
     const reasons = validateLead(lead, existing);
     if (reasons.includes("duplicate_or_previously_enrolled")) summary.duplicates += 1;
 
     if (reasons.length) {
-      summary.rejected += 1;
+      summary.rejected_preview += 1;
+      if (!dryRun) summary.rejected += 1;
       if (!dryRun) await insertRejected(lead, reasons);
       if (summary.rejected_samples.length < 10) {
         summary.rejected_samples.push({ email: lead.email, reason: reasons.join(", ") });
@@ -320,7 +329,8 @@ export async function POST(request: Request) {
       continue;
     }
 
-    summary.qualified += 1;
+    summary.qualified_preview += 1;
+    if (!dryRun) summary.qualified += 1;
 
     if (!dryRun) {
       await supabaseServerRequest("gencouv_qualified_leads?on_conflict=organization_id,normalized_email", {
@@ -343,7 +353,8 @@ export async function POST(request: Request) {
     if (enrolledToday >= dailyLimit) continue;
 
     enrolledToday += 1;
-    summary.enrolled_reserved += 1;
+    summary.enrollment_preview += 1;
+    if (!dryRun) summary.enrolled_reserved += 1;
     summary.ready_for_resend.push({
       email: lead.email,
       first_name: lead.first_name || "there",
