@@ -1,5 +1,3 @@
-import { randomUUID } from "crypto";
-
 const DEFAULT_BUCKET = "limitless-public-media";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -56,7 +54,8 @@ export async function uploadPublicImage(file: File, folder = "properties") {
   const { url, key } = supabaseConfig();
   if (!url || !key) throw new Error("Supabase Storage is not configured on the server.");
 
-  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${extensionFor(file)}`;
+  const id = globalThis.crypto.randomUUID();
+  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${id}.${extensionFor(file)}`;
   const response = await fetch(`${url}/storage/v1/object/${DEFAULT_BUCKET}/${encodePath(path)}`, {
     method: "POST",
     headers: {
