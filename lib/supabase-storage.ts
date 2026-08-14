@@ -44,6 +44,14 @@ function validateImage(file: File) {
   }
 }
 
+function createStorageId() {
+  const runtimeCrypto = globalThis.crypto;
+  if (runtimeCrypto && typeof runtimeCrypto.randomUUID === "function") {
+    return runtimeCrypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export function isSupabaseStorageConfigured() {
   const { url, key } = supabaseConfig();
   return Boolean(url && key);
@@ -54,8 +62,7 @@ export async function uploadPublicImage(file: File, folder = "properties") {
   const { url, key } = supabaseConfig();
   if (!url || !key) throw new Error("Supabase Storage is not configured on the server.");
 
-  const id = globalThis.crypto.randomUUID();
-  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${id}.${extensionFor(file)}`;
+  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${createStorageId()}.${extensionFor(file)}`;
   const response = await fetch(`${url}/storage/v1/object/${DEFAULT_BUCKET}/${encodePath(path)}`, {
     method: "POST",
     headers: {
