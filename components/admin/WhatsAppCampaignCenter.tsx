@@ -39,6 +39,9 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
   const [topic, setTopic] = useState("");
   const [message, setMessage] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState("");
+  const [mediaUploading, setMediaUploading] = useState(false);
   const [result, setResult] = useState<CampaignResult | null>(null);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -77,6 +80,33 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
   const recipientCount = audience.length + groupExtraCount;
   const toggleLead = (id: string) => setSelectedLeadIds((current) => current.includes(id) ? current.filter((leadId) => leadId !== id) : [...current, id]);
 
+  const chooseMedia = (file: File | null) => {
+    setError("");
+    setMediaFile(file);
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaPreview(file ? URL.createObjectURL(file) : "");
+  };
+
+  const uploadSelectedMedia = async () => {
+    if (!mediaFile) return mediaUrl.trim();
+    setMediaUploading(true);
+    const body = new FormData();
+    body.set("file", mediaFile);
+    body.set("channel", "whatsapp");
+    if (propertyId) body.set("property_id", propertyId);
+    if (message.trim()) body.set("caption", message.trim());
+    try {
+      const response = await fetch("/api/admin/media/upload", { method: "POST", body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Media upload failed with status ${response.status}.`);
+      setMediaUrl(String(data.url || ""));
+      setMediaFile(null);
+      return String(data.url || "");
+    } finally {
+      setMediaUploading(false);
+    }
+  };
+
   const sendCampaign = () => {
     if (sendingRef.current || isPending) return;
     sendingRef.current = true;
@@ -85,10 +115,11 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
     const requestId = crypto.randomUUID();
     startTransition(async () => {
       try {
+        const uploadedMediaUrl = await uploadSelectedMedia();
         const response = await fetch("/api/limitless/campaigns/send", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Idempotency-Key": requestId },
-          body: JSON.stringify({ requestId, campaignType, topic, message, mediaUrl, audienceMode, selectedLeadIds, campaignGroupId, state, interest, propertyId, budgetMin, budgetMax }),
+          body: JSON.stringify({ requestId, campaignType, topic, message, mediaUrl: uploadedMediaUrl, audienceMode, selectedLeadIds, campaignGroupId, state, interest, propertyId, budgetMin, budgetMax }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Campaign failed.");
@@ -125,9 +156,14 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
           <label><span>Campaign title</span><input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="New estate update" /></label>
           <label><span>Featured property</span><select value={propertyId} onChange={(event) => setPropertyId(event.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
           <label className="wide"><span>Message</span><textarea rows={7} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Write the WhatsApp message Maia should send..." /></label>
-          <label className="wide"><span>Optional media URL</span><input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} placeholder={selectedProperty?.drive_photos_link || "Google Drive or public image link"} /></label>
+          <label className="wide"><span>Attach image directly</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={isPending || mediaUploading} onChange={(event) => chooseMedia(event.target.files?.[0] || null)} />
+            <small>{mediaFile ? `${mediaFile.name} selected. It will be stored in Supabase and sent as media.` : "Images are stored in Supabase Storage. No Google Drive link is required."}</small>
+          </label>
+          {mediaPreview ? <div className="wide campaign-media-preview"><img src={mediaPreview} alt="Selected campaign media preview" /><button type="button" onClick={() => chooseMedia(null)} disabled={isPending || mediaUploading}>Remove image</button></div> : null}
+          <label className="wide"><span>Or use an existing public image URL</span><input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} placeholder={selectedProperty?.drive_photos_link || "https://..."} /></label>
         </div>
-        <div className="console-sendbar"><div><strong>{recipientCount} READY</strong><small>{selectedCampaignType.templateName}</small></div><button type="button" disabled={isPending || !message.trim() || recipientCount === 0 || (audienceMode === "group" && !campaignGroupId)} onClick={sendCampaign}>{isPending ? "TRANSMITTING..." : "SEND CAMPAIGN"}</button></div>
+        <div className="console-sendbar"><div><strong>{recipientCount} READY</strong><small>{selectedCampaignType.templateName}{mediaFile ? " · IMAGE ATTACHED" : ""}</small></div><button type="button" disabled={isPending || mediaUploading || !message.trim() || recipientCount === 0 || (audienceMode === "group" && !campaignGroupId)} onClick={sendCampaign}>{mediaUploading ? "UPLOADING MEDIA..." : isPending ? "TRANSMITTING..." : "SEND CAMPAIGN"}</button></div>
         {result ? <div className={`console-result ${result.failed ? "warning" : "success"}`}><header><strong>{result.status.replaceAll("_", " ")}</strong><small>{result.templateName || selectedCampaignType.templateName}</small></header><div>{[["ATTEMPTED",result.attempted],["SENT",result.sent],["DELIVERED",result.delivered],["PENDING",result.pendingDelivery],["FAILED",result.failed],["SKIPPED",result.skipped]].map(([label,value]) => <span key={String(label)}>{label}<b>{value}</b></span>)}</div></div> : null}
         {error ? <p className="campaign-error">{error}</p> : null}
       </section>
@@ -182,43 +218,31 @@ export default function WhatsAppCampaignCenter({ leads, properties, groups }: Pr
           word-break: normal;
         }
 
-        .console-lead-copy strong {
-          line-height: 1.25;
+        .console-lead-copy strong { line-height: 1.25; }
+        .console-lead-copy small { margin-top: 4px; line-height: 1.35; }
+
+        .campaign-media-preview {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          flex-wrap: wrap;
         }
 
-        .console-lead-copy small {
-          margin-top: 4px;
-          line-height: 1.35;
+        .campaign-media-preview img {
+          width: 180px;
+          height: 140px;
+          object-fit: cover;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.12);
         }
 
         @media (max-width: 640px) {
-          .console-mode-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
-          }
-
-          .console-mode-grid button {
-            min-width: 0;
-            width: 100%;
-            padding: 12px 10px;
-          }
-
-          .console-panel-head {
-            min-width: 0;
-          }
-
-          .console-lead-option {
-            padding: 12px 10px;
-            gap: 10px;
-          }
-
-          .console-lead-copy strong {
-            font-size: 0.98rem;
-          }
-
-          .console-lead-copy small {
-            font-size: 0.8rem;
-          }
+          .console-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+          .console-mode-grid button { min-width: 0; width: 100%; padding: 12px 10px; }
+          .console-panel-head { min-width: 0; }
+          .console-lead-option { padding: 12px 10px; gap: 10px; }
+          .console-lead-copy strong { font-size: 0.98rem; }
+          .console-lead-copy small { font-size: 0.8rem; }
         }
       `}</style>
     </div>
