@@ -207,6 +207,7 @@ export async function POST(request: Request) {
         message: messageParts[index],
         recipients,
         propertyTitle: propertyCampaign?.propertyName || selectedProperty?.title,
+        mediaUrl: String(body.mediaUrl || "").trim() || undefined,
         createdBy,
       }));
     }
@@ -268,6 +269,7 @@ export async function POST(request: Request) {
       duplicatePrevented: false,
       propertyContext: propertyCampaign?.memory || null,
       exactPropertyReply: propertyCampaign?.replyInstruction || null,
+      mediaUrl: String(body.mediaUrl || "").trim() || null,
     };
 
     requestCache.set(requestId, { expiresAt: Date.now() + 10 * 60 * 1000, payload });
