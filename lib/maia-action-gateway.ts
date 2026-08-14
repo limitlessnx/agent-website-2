@@ -60,6 +60,7 @@ export type MaiaCampaignAction = {
   message: string;
   recipients: ProgressiveLead[];
   propertyTitle?: string;
+  mediaUrl?: string;
   createdBy?: string;
 };
 
@@ -174,6 +175,7 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       .map((lead) => normalizeLeadPhone(String(lead.phone || "")))
       .filter(Boolean),
   )];
+  const mediaUrl = String(command.mediaUrl || "").trim();
 
   return {
     source: "fluxknight_dashboard",
@@ -185,6 +187,10 @@ function buildCampaignInput(command: MaiaCampaignAction) {
     action_type: "send_whatsapp_campaign",
     operation: "send_whatsapp_campaign",
     has_action: true,
+    has_media: Boolean(mediaUrl),
+    media_url: mediaUrl || undefined,
+    media_type: mediaUrl ? "image" : undefined,
+    image_url: mediaUrl || undefined,
     action_params: {
       recipient_phones: phones,
       custom_message: command.message,
@@ -195,12 +201,18 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       allow_template_fallback: true,
       topic: command.topic,
       property_filter: command.propertyTitle || "",
+      media_url: mediaUrl || "",
+      image_url: mediaUrl || "",
+      media_type: mediaUrl ? "image" : "",
+      has_media: Boolean(mediaUrl),
       confirm_send: true,
       confirm_real_client_broadcast: true,
       include_incomplete_leads: true,
       max_recipients: phones.length,
     },
-    natural_response: "Send the approved WhatsApp campaign from the Fluxknight dashboard.",
+    natural_response: mediaUrl
+      ? "Send the approved WhatsApp campaign with the attached Supabase-hosted image from the Fluxknight dashboard."
+      : "Send the approved WhatsApp campaign from the Fluxknight dashboard.",
   };
 }
 
