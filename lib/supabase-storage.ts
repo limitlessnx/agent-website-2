@@ -66,7 +66,7 @@ export async function uploadPublicImage(file: File, folder = "properties") {
       "x-upsert": "true",
       "cache-control": "31536000",
     },
-    body: Buffer.from(await file.arrayBuffer()),
+    body: await file.arrayBuffer(),
     cache: "no-store",
   });
 
@@ -90,9 +90,7 @@ export async function uploadPublicImages(files: File[], folder = "properties") {
   if (!validFiles.length) throw new Error("Choose at least one property image.");
 
   const uploads = [];
-  for (const file of validFiles) {
-    uploads.push(await uploadPublicImage(file, folder));
-  }
+  for (const file of validFiles) uploads.push(await uploadPublicImage(file, folder));
   return uploads;
 }
 
