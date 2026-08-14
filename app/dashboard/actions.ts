@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
-import { uploadPropertyImagesToDrive } from "@/lib/google-drive";
+import { uploadPublicImages } from "@/lib/supabase-storage";
 import { getAdminSession } from "@/lib/admin-auth";
-import { createLead, createProperty, importLeads, updateProperty, updatePropertyImageLink, type Lead } from "@/lib/limitless-data";
+import { createLead, createProperty, importLeads, updateProperty, updatePropertyImageLinks, type Lead } from "@/lib/limitless-data";
 
 async function requireAdmin() {
   const session = await getAdminSession();
@@ -126,9 +126,15 @@ export async function importLeadsAction(formData: FormData) {
   redirect(`/dashboard/limitless/leads?imported=${result.imported}&skipped=${result.skipped}&errors=${result.errors.length}`);
 }
 
+function getPropertyFiles(formData: FormData) {
+  return formData.getAll("property_images").filter((value): value is File => value instanceof File && value.size > 0);
+}
+
 export async function createPropertyAction(formData: FormData) {
   await requireAdmin();
   const title = String(formData.get("title") || "");
+  const files = getPropertyFiles(formData);
+  const uploads = files.length ? await uploadPublicImages(files, "properties") : [];
   const created = await createProperty({
     title,
     location_area: String(formData.get("location_area") || ""),
@@ -139,13 +145,13 @@ export async function createPropertyAction(formData: FormData) {
     drive_brochure_link: String(formData.get("drive_brochure_link") || ""),
     features: String(formData.get("features") || ""),
     description: String(formData.get("description") || ""),
+    image_urls: uploads.map((upload) => upload.url),
+    cover_image_url: uploads[0]?.url || "",
   });
-  const files = formData.getAll("property_images").filter((value): value is File => value instanceof File && value.size > 0);
-  const propertyId = created[0]?.id;
 
-  if (files.length && propertyId) {
-    const driveLink = await uploadPropertyImagesToDrive(title || created[0].title, files);
-    await updatePropertyImageLink(propertyId, driveLink);
+  const propertyId = created[0]?.id;
+  if (propertyId && uploads.length) {
+    await updatePropertyImageLinks(propertyId, uploads.map((upload) => upload.url), uploads[0]?.url || "");
   }
 
   revalidatePath("/dashboard/limitless/properties");
@@ -177,14 +183,13 @@ export async function updatePropertyAction(formData: FormData) {
 export async function uploadPropertyImagesAction(formData: FormData) {
   await requireAdmin();
   const propertyId = String(formData.get("property_id") || "");
-  const propertyTitle = String(formData.get("property_title") || "Property");
-  const files = formData.getAll("property_images").filter((value): value is File => value instanceof File && value.size > 0);
+  const files = getPropertyFiles(formData);
 
   if (!propertyId) throw new Error("Choose a property before uploading images.");
   if (!files.length) throw new Error("Choose at least one image.");
 
-  const driveLink = await uploadPropertyImagesToDrive(propertyTitle, files);
-  await updatePropertyImageLink(propertyId, driveLink);
+  const uploads = await uploadPublicImages(files, `properties/${propertyId}`);
+  await updatePropertyImageLinks(propertyId, uploads.map((upload) => upload.url), uploads[0]?.url || "");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/limitless/properties");
   revalidatePath("/dashboard/limitless/media");
