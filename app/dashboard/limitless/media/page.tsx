@@ -1,5 +1,4 @@
 import { ExternalLink, ImagePlus } from "@/components/admin/ServerIcons";
-import { isGoogleDriveConfigured } from "@/lib/google-drive";
 import { getProperties } from "@/lib/limitless-data";
 import PropertyImageUploader from "./PropertyImageUploader";
 
@@ -13,7 +12,7 @@ function PropertyMediaCard({ property, linked = false }: { property: Awaited<Ret
         <h3>{property.title}</h3>
         <p>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "No location saved"}</p>
         {linked && property.drive_photos_link ? (
-          <a href={property.drive_photos_link} target="_blank" rel="noreferrer">Open Drive folder <ExternalLink size={14} /></a>
+          <a href={property.drive_photos_link} target="_blank" rel="noreferrer">Open image <ExternalLink size={14} /></a>
         ) : null}
       </div>
       <PropertyImageUploader propertyId={property.id} propertyTitle={property.title} existingLink={property.drive_photos_link} />
@@ -23,7 +22,6 @@ function PropertyMediaCard({ property, linked = false }: { property: Awaited<Ret
 
 export default async function MediaPage() {
   const properties = await getProperties(200);
-  const driveReady = isGoogleDriveConfigured();
   const missing = properties.filter((property) => !property.drive_photos_link);
   const linked = properties.filter((property) => property.drive_photos_link);
 
@@ -33,24 +31,20 @@ export default async function MediaPage() {
         <div>
           <p className="admin-kicker">Limitless Realty</p>
           <h1>Property Media</h1>
-          <p>Upload property images directly. Images are compressed first, then saved to Google Drive and attached to the correct property.</p>
+          <p>Upload property images directly into Fluxknight. Images are compressed in the browser, stored in Supabase Storage, and linked to the correct property for website and WhatsApp use.</p>
         </div>
-        <span className={driveReady ? "admin-status live" : "admin-status warning"}>
-          {driveReady ? "Google Drive ready" : "Drive setup required"}
-        </span>
+        <span className="admin-status live">Supabase Storage ready</span>
       </div>
 
       <div className="admin-metric-grid">
-        <div className="admin-metric-card"><p>Linked images</p><strong>{linked.length}</strong><span>Maia can share media</span></div>
+        <div className="admin-metric-card"><p>Linked images</p><strong>{linked.length}</strong><span>Ready for website + WhatsApp</span></div>
         <div className="admin-metric-card"><p>Missing images</p><strong>{missing.length}</strong><span>Needs upload</span></div>
       </div>
 
-      {!driveReady ? (
-        <section className="admin-panel media-config-warning">
-          <ImagePlus size={22} />
-          <div><h2>Google Drive is not configured</h2><p>Add the service-account email and private key in Vercel before uploading images.</p></div>
-        </section>
-      ) : null}
+      <section className="admin-panel media-config-warning">
+        <ImagePlus size={22} />
+        <div><h2>One media system</h2><p>Supabase Storage is now the source of truth for property images. No Google Drive setup is required for image uploads.</p></div>
+      </section>
 
       <section className="admin-panel">
         <div className="admin-panel-header">
@@ -64,7 +58,7 @@ export default async function MediaPage() {
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <div><h2>Linked Media</h2><p>Review existing folders or add more images to a property.</p></div>
+          <div><h2>Linked Media</h2><p>Review existing public images or add more images to a property.</p></div>
         </div>
         <div className="property-media-grid">
           {linked.map((property) => <PropertyMediaCard key={property.id} property={property} linked />)}
