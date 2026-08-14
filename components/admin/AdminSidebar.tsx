@@ -64,6 +64,7 @@ const basePlatformGroups: NavGroup[] = [
         label: "Limitless Realty",
         items: [
           { href: "/dashboard/limitless/leads", label: "Leads", icon: Users },
+          { href: "/dashboard/limitless/daily-briefs", label: "Daily Briefs", icon: ClipboardList },
           { href: "/dashboard/limitless/followups", label: "Follow-ups", icon: MessageCircle },
           { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
           { href: "/dashboard/limitless/media", label: "Knowledge & Media", icon: Image },

@@ -1,0 +1,213 @@
+.dateForm {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.dateForm label {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  color: var(--admin-text-soft);
+  background: var(--admin-panel-bg);
+}
+
+.dateForm input {
+  min-width: 145px;
+  border: 0;
+  outline: 0;
+  color: var(--admin-text);
+  background: transparent;
+  font: inherit;
+}
+
+.dateForm button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  color: #061018;
+  background: var(--admin-cyan);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.panel {
+  overflow: hidden;
+}
+
+.candleChart {
+  min-height: 280px;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(34px, 1fr));
+  gap: 10px;
+  align-items: end;
+  padding: 18px 6px 10px;
+  border-top: 1px solid var(--admin-border);
+  background:
+    linear-gradient(to top, color-mix(in srgb, var(--admin-border) 70%, transparent) 1px, transparent 1px) 0 0 / 100% 25%,
+    linear-gradient(180deg, color-mix(in srgb, var(--admin-panel-strong) 42%, transparent), transparent);
+  overflow-x: auto;
+}
+
+.candleSlot {
+  min-width: 34px;
+  height: 230px;
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr 22px 28px;
+  justify-items: center;
+}
+
+.candleTrack {
+  width: 100%;
+  position: relative;
+}
+
+.candleWick {
+  position: absolute;
+  top: var(--wick-top);
+  bottom: var(--wick-bottom);
+  left: 50%;
+  width: 2px;
+  min-height: 8px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--admin-text-soft) 72%, transparent);
+}
+
+.candleBody {
+  position: absolute;
+  top: var(--body-top);
+  bottom: var(--body-bottom);
+  left: 50%;
+  width: min(24px, 66%);
+  min-height: 10px;
+  transform: translateX(-50%);
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, currentColor 70%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.up {
+  color: var(--admin-emerald);
+  background: color-mix(in srgb, var(--admin-emerald) 72%, transparent);
+}
+
+.down {
+  color: var(--admin-rose);
+  background: color-mix(in srgb, var(--admin-rose) 72%, transparent);
+}
+
+.candleSlot strong {
+  color: var(--admin-text);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.candleSlot em {
+  color: var(--admin-text-muted);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+}
+
+.clientList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.clientCard {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--admin-panel-strong) 72%, transparent);
+}
+
+.clientHead {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.clientHead strong,
+.clientHead p {
+  display: block;
+}
+
+.clientHead p {
+  margin: 3px 0 0;
+  color: var(--admin-text-muted);
+  font-size: 0.82rem;
+}
+
+.clientHead em {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 999px;
+  color: var(--admin-cyan);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.clientMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.clientMeta span {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  color: var(--admin-text-soft);
+  background: color-mix(in srgb, var(--admin-panel-bg) 78%, transparent);
+  font-size: 0.76rem;
+}
+
+.clientMessage {
+  margin: 0;
+  color: var(--admin-text-soft);
+  line-height: 1.55;
+}
+
+.clientAction {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--admin-emerald) 28%, transparent);
+  border-radius: 8px;
+  color: var(--admin-emerald);
+  background: color-mix(in srgb, var(--admin-emerald) 8%, transparent);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 780px) {
+  .dateForm,
+  .clientList {
+    grid-template-columns: 1fr;
+  }
+
+  .dateForm {
+    display: grid;
+  }
+}
