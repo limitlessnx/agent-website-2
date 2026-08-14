@@ -25,11 +25,6 @@ async function compressImage(file: File) {
   return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
 }
 
-function folderIdFromLink(link?: string) {
-  if (!link) return "";
-  return link.match(/folders\/([a-zA-Z0-9_-]+)/)?.[1] || "";
-}
-
 export default function PropertyImageUploader({ propertyId, propertyTitle, existingLink }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -44,7 +39,6 @@ export default function PropertyImageUploader({ propertyId, propertyTitle, exist
     setBusy(true);
     setError("");
     setMessage("Preparing images…");
-    let folderId = folderIdFromLink(existingLink);
 
     try {
       for (let index = 0; index < files.length; index += 1) {
@@ -53,14 +47,12 @@ export default function PropertyImageUploader({ propertyId, propertyTitle, exist
         const body = new FormData();
         body.set("property_id", propertyId);
         body.set("property_title", propertyTitle);
-        body.set("folder_id", folderId);
         body.set("property_image", compressed);
         const response = await fetch("/api/admin/property-images", { method: "POST", body });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || `Upload failed with status ${response.status}.`);
-        folderId = result.folderId || folderId;
       }
-      setMessage(`${files.length} image${files.length === 1 ? "" : "s"} uploaded successfully.`);
+      setMessage(`${files.length} image${files.length === 1 ? "" : "s"} uploaded to Supabase successfully.`);
       setFiles([]);
       window.location.reload();
     } catch (cause) {
