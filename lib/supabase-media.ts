@@ -59,6 +59,42 @@ export function getPublicMediaUrl(path: string) {
     .join("/")}`;
 }
 
+export async function addPropertyImageUrl(propertyId: string, imageUrl: string) {
+  if (!propertyId) throw new Error("Property ID is missing.");
+  if (!imageUrl) throw new Error("Image URL is missing.");
+
+  const supabase = adminClient();
+  const { data: current, error: readError } = await supabase
+    .from("properties")
+    .select("id, image_urls, cover_image_url, drive_photos_link")
+    .eq("id", propertyId)
+    .maybeSingle();
+
+  if (readError) throw new Error(`Property image metadata read failed: ${readError.message}`);
+  if (!current) throw new Error("Property was not found.");
+
+  const existing = Array.isArray(current.image_urls)
+    ? current.image_urls.filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+    : [];
+  const imageUrls = [...new Set([...existing, imageUrl])];
+  const coverImageUrl = String(current.cover_image_url || current.drive_photos_link || imageUrls[0] || imageUrl);
+
+  const { data, error } = await supabase
+    .from("properties")
+    .update({
+      image_urls: imageUrls,
+      cover_image_url: coverImageUrl,
+      // Legacy compatibility: older property/campaign code reads this field.
+      drive_photos_link: coverImageUrl,
+    })
+    .eq("id", propertyId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw new Error(`Property image metadata update failed: ${error.message}`);
+  return data;
+}
+
 export async function uploadPublicImage(file: File, options: MediaUploadOptions = {}) {
   if (!(file instanceof File) || file.size <= 0) throw new Error("Choose an image to upload.");
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
