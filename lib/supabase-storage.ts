@@ -95,3 +95,30 @@ export async function uploadPublicImages(files: File[], folder = "properties") {
   }
   return uploads;
 }
+
+export async function updatePropertyImages(propertyId: string, imageUrls: string[], coverImageUrl = "") {
+  const { url, key } = supabaseConfig();
+  if (!url || !key) throw new Error("Supabase is not configured on the server.");
+  if (!propertyId) throw new Error("Property ID is required to save images.");
+
+  const response = await fetch(`${url}/rest/v1/properties?id=eq.${encodeURIComponent(propertyId)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      apikey: key,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      image_urls: imageUrls,
+      cover_image_url: coverImageUrl || imageUrls[0] || null,
+      drive_photos_link: coverImageUrl || imageUrls[0] || null,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Supabase property image record update failed (${response.status}). ${detail}`.trim());
+  }
+}
