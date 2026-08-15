@@ -102,6 +102,31 @@ function parseCsvLine(line: string) {
   return cells;
 }
 
+function parseVCard(text: string): ProgressiveLeadInput[] {
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const cards = normalized.split(/\n(?=BEGIN:VCARD)/i).filter((card) => /BEGIN:VCARD/i.test(card));
+
+  return cards.map((card) => {
+    const lines = card.split("\n");
+    const valueFor = (prefixes: string[]) => {
+      const line = lines.find((entry) => prefixes.some((prefix) => entry.toUpperCase().startsWith(prefix)));
+      if (!line) return "";
+      return line.slice(line.indexOf(":") + 1).trim().replace(/\\[nN]/g, " ").replace(/\\,/g, ",").replace(/\\;/g, ";");
+    };
+
+    const name = valueFor(["FN:", "N:"]);
+    const phone = valueFor(["TEL", "TEL;", "TEL:"]);
+    const email = valueFor(["EMAIL", "EMAIL;", "EMAIL:"]);
+    return {
+      name,
+      phone,
+      email: email || undefined,
+      status: "new",
+      source: "admin_dashboard_phone_contacts",
+    };
+  }).filter((lead) => lead.name || lead.phone || lead.email);
+}
+
 async function parseFile(file: File) {
   const filename = file.name.toLowerCase();
   if (filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
@@ -112,7 +137,10 @@ async function parseFile(file: File) {
     return mapRows(rows.map((row) => row.map((cell) => String(cell || "").trim())).filter((row) => row.some(Boolean)));
   }
 
-  const rows = (await file.text())
+  const text = await file.text();
+  if (filename.endsWith(".vcf") || /BEGIN:VCARD/i.test(text)) return parseVCard(text);
+
+  const rows = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
@@ -123,9 +151,12 @@ async function parseFile(file: File) {
 export async function importProgressiveLeadsAction(formData: FormData) {
   await requireAdmin();
   const file = formData.get("contacts_file");
-  if (!(file instanceof File) || file.size === 0) throw new Error("Upload a CSV or Excel contact file first.");
+  if (!(file instanceof File) || file.size === 0) throw new Error("Upload a CSV, Excel, or phone contacts (.vcf) file first.");
 
-  const result = await importProgressiveLeadsInBatches(await parseFile(file));
+  const leads = await parseFile(file);
+  if (!leads.length) throw new Error("No usable contacts were found in this file.");
+
+  const result = await importProgressiveLeadsInBatches(leads);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/limitless/leads");
   revalidatePath("/dashboard/limitless/campaigns");
