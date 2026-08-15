@@ -34,7 +34,7 @@ export default async function LeadsPage({
           <p>Review names and lead status first. Expand a record only when you need the full profile or actions.</p>
           <div className="admin-hero-actions">
             <a href="#lead-control">Review pipeline</a>
-            <a href="#lead-tools">Add or import leads</a>
+            <a href="#lead-tools">Add or import contacts</a>
           </div>
         </div>
         <div className="admin-launch-score">
@@ -67,11 +67,11 @@ export default async function LeadsPage({
 
       <section id="lead-tools" className="admin-grid two">
         <details className="admin-form-disclosure">
-          <summary>Add a lead <span className="admin-status warning">{undocumented} undocumented</span></summary>
+          <summary>Add a contact <span className="admin-status warning">{undocumented} undocumented</span></summary>
           <div className="admin-form-disclosure-body">
             <form action={createProgressiveLeadAction} className="admin-form-grid">
               <input name="name" placeholder="Name" required />
-              <input name="phone" placeholder="WhatsApp phone e.g. 234..." required />
+              <input name="phone" placeholder="WhatsApp phone e.g. +234..." required />
               <input name="email" type="email" placeholder="Email (optional)" />
               <input name="budget" placeholder="Budget (optional)" />
               <input name="location_preference" placeholder="State or location (optional)" />
@@ -91,19 +91,25 @@ export default async function LeadsPage({
                 <option value="warm">warm</option>
                 <option value="hot">hot</option>
               </select>
-              <button type="submit">Save lead</button>
+              <button type="submit">Save contact</button>
             </form>
           </div>
         </details>
 
         <details className="admin-form-disclosure">
-          <summary>Import contacts</summary>
+          <summary>Import contacts from a file or phone</summary>
           <div className="admin-form-disclosure-body">
             <form action={importProgressiveLeadsAction} className="admin-import-form">
               <label className="admin-file-field">
-                <span>CSV or Excel file, up to 1,000 contacts</span>
-                <input name="contacts_file" type="file" accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required />
+                <span>CSV, Excel, or phone contacts (.vcf), up to 1,000 contacts</span>
+                <input
+                  name="contacts_file"
+                  type="file"
+                  accept=".csv,.xlsx,.xls,.vcf,text/csv,text/vcard,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  required
+                />
               </label>
+              <p className="admin-form-help">On phones, export or share your contacts as a .vcf file, then select it here. This keeps the import compatible with iPhone and Android instead of relying on a browser feature that only some devices support.</p>
               <button type="submit">Import contacts</button>
             </form>
           </div>
