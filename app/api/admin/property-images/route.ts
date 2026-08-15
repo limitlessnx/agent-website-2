@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { uploadPublicImage } from "@/lib/supabase-media";
-import { addPropertyImageUrl } from "@/lib/limitless-data";
+import { updatePropertyImageLink } from "@/lib/limitless-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       channel: "whatsapp",
     });
 
-    const property = await addPropertyImageUrl(propertyId, uploaded.url);
+    const property = await updatePropertyImageLink(propertyId, uploaded.url);
 
     return NextResponse.json({
       ok: true,
