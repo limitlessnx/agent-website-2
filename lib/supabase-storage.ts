@@ -105,6 +105,12 @@ export async function updatePropertyImages(propertyId: string, imageUrls: string
   if (!url || !key) throw new Error("Supabase is not configured on the server.");
   if (!propertyId) throw new Error("Property ID is required to save images.");
 
+  const imageUrl = coverImageUrl || imageUrls[0] || "";
+  if (!imageUrl) throw new Error("No uploaded property image URL was provided.");
+
+  // The Limitless Realty properties table uses one image field for the property preview.
+  // Do not send image_urls or cover_image_url here because those columns are not part of
+  // the current schema and cause Supabase to reject the PATCH after the file upload succeeds.
   const response = await fetch(`${url}/rest/v1/properties?id=eq.${encodeURIComponent(propertyId)}`, {
     method: "PATCH",
     headers: {
@@ -113,11 +119,7 @@ export async function updatePropertyImages(propertyId: string, imageUrls: string
       "Content-Type": "application/json",
       Prefer: "return=minimal",
     },
-    body: JSON.stringify({
-      image_urls: imageUrls,
-      cover_image_url: coverImageUrl || imageUrls[0] || null,
-      drive_photos_link: coverImageUrl || imageUrls[0] || null,
-    }),
+    body: JSON.stringify({ drive_photos_link: imageUrl }),
     cache: "no-store",
   });
 
