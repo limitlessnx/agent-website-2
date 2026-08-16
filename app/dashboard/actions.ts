@@ -5,107 +5,20 @@ import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
 import { uploadPublicImages, updatePropertyImages } from "@/lib/supabase-storage";
 import { getAdminSession } from "@/lib/admin-auth";
-import { createLead, createProperty, importLeads, updateProperty, type Lead } from "@/lib/limitless-data";
+import { createLead, createProperty, deleteLead, deleteProperty, importLeads, updateProperty, type Lead } from "@/lib/limitless-data";
 
-async function requireAdmin() {
-  const session = await getAdminSession();
-  if (!session) redirect("/login?next=/dashboard");
-}
-
-export async function createLeadAction(formData: FormData) {
-  await requireAdmin();
-  await createLead({
-    name: String(formData.get("name") || ""), phone: String(formData.get("phone") || ""),
-    status: String(formData.get("status") || "new"), score: String(formData.get("score") || "unscored"),
-    budget: String(formData.get("budget") || ""), location_preference: String(formData.get("location_preference") || ""),
-    property_type: String(formData.get("property_type") || ""), purpose: String(formData.get("purpose") || ""),
-  });
-  revalidatePath("/dashboard/limitless/leads");
-}
-
-function parseCsvLine(line: string) {
-  const cells: string[] = []; let current = ""; let quoted = false;
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index], next = line[index + 1];
-    if (char === '"' && quoted && next === '"') { current += '"'; index += 1; }
-    else if (char === '"') quoted = !quoted;
-    else if (char === "," && !quoted) { cells.push(current.trim()); current = ""; }
-    else current += char;
-  }
-  cells.push(current.trim()); return cells;
-}
-function normalizeHeader(header: string) { return header.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); }
-function pick(row: Record<string, string>, keys: string[]) { for (const key of keys) if (row[key]) return row[key]; return ""; }
-function mapLeadRows(rows: string[][]): Partial<Lead>[] {
-  if (!rows.length) return [];
-  const firstRow = rows[0].map((cell) => String(cell || "").trim());
-  const hasHeader = firstRow.some((cell) => /name|phone|whatsapp|budget|location|status|score/i.test(cell));
-  const headers = hasHeader ? firstRow.map(normalizeHeader) : ["name", "phone", "budget", "location_preference", "property_type", "purpose", "status", "score"];
-  const dataRows = hasHeader ? rows.slice(1) : rows;
-  return dataRows.map((cells) => {
-    const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""]));
-    return {
-      name: pick(row, ["name", "full_name", "client_name", "customer_name"]) || "Unknown",
-      phone: pick(row, ["phone", "whatsapp", "whatsapp_phone", "mobile", "number", "contact"]),
-      budget: pick(row, ["budget", "price_range", "price"]), location_preference: pick(row, ["location_preference", "preferred_location", "location", "area"]),
-      property_type: pick(row, ["property_type", "type"]), purpose: pick(row, ["purpose", "interest"]),
-      status: pick(row, ["status", "lead_status"]) || "new", score: pick(row, ["score", "lead_score"]) || "unscored",
-    };
-  });
-}
-function parseCsvLeadImport(text: string): Partial<Lead>[] { return mapLeadRows(text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map(parseCsvLine)); }
-async function parseLeadImportFile(file: File): Promise<Partial<Lead>[]> {
-  const filename = file.name.toLowerCase();
-  if (filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
-    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; if (!sheet) return [];
-    const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, blankrows: false, defval: "" });
-    return mapLeadRows(rows.map((row) => row.map((cell) => String(cell || "").trim())).filter((row) => row.some(Boolean)));
-  }
-  return parseCsvLeadImport(await file.text());
-}
-export async function importLeadsAction(formData: FormData) {
-  await requireAdmin(); const file = formData.get("contacts_file");
-  if (!(file instanceof File) || file.size === 0) throw new Error("Upload a CSV or Excel contact file first.");
-  const result = await importLeads(await parseLeadImportFile(file));
-  revalidatePath("/dashboard/limitless/leads"); revalidatePath("/dashboard");
-  redirect(`/dashboard/limitless/leads?imported=${result.imported}&skipped=${result.skipped}&errors=${result.errors.length}`);
-}
-function getPropertyFiles(formData: FormData) { return formData.getAll("property_images").filter((value): value is File => value instanceof File && value.size > 0); }
-
-export async function createPropertyAction(formData: FormData) {
-  await requireAdmin();
-  const files = getPropertyFiles(formData);
-  const uploads = files.length ? await uploadPublicImages(files, "properties") : [];
-  const created = await createProperty({
-    title: String(formData.get("title") || ""), location_area: String(formData.get("location_area") || ""), location_city: String(formData.get("location_city") || ""),
-    price: String(formData.get("price") || ""), type: String(formData.get("type") || ""), status: String(formData.get("status") || "active"),
-    drive_brochure_link: String(formData.get("drive_brochure_link") || ""), features: String(formData.get("features") || ""), description: String(formData.get("description") || ""),
-  });
-  const propertyId = created[0]?.id;
-  if (propertyId && uploads.length) await updatePropertyImages(propertyId, uploads.map((upload) => upload.url), uploads[0]?.url || "");
-  revalidatePath("/dashboard/limitless/properties"); revalidatePath("/dashboard/limitless/media"); revalidatePath("/dashboard");
-}
-
-export async function updatePropertyAction(formData: FormData) {
-  await requireAdmin(); const propertyId = String(formData.get("property_id") || "");
-  await updateProperty(propertyId, {
-    title: String(formData.get("title") || ""), location_area: String(formData.get("location_area") || ""), location_city: String(formData.get("location_city") || ""),
-    price: String(formData.get("price") || ""), type: String(formData.get("type") || ""), status: String(formData.get("status") || "active"),
-    drive_brochure_link: String(formData.get("drive_brochure_link") || ""), features: String(formData.get("features") || ""), description: String(formData.get("description") || ""),
-  });
-  const files = getPropertyFiles(formData);
-  if (files.length) {
-    const uploads = await uploadPublicImages(files, `properties/${propertyId}`);
-    await updatePropertyImages(propertyId, uploads.map((upload) => upload.url), uploads[0]?.url || "");
-  }
-  revalidatePath("/dashboard"); revalidatePath("/dashboard/limitless/properties"); revalidatePath("/dashboard/limitless/media");
-}
-
-export async function uploadPropertyImagesAction(formData: FormData) {
-  await requireAdmin(); const propertyId = String(formData.get("property_id") || ""); const files = getPropertyFiles(formData);
-  if (!propertyId) throw new Error("Choose a property before uploading images.");
-  if (!files.length) throw new Error("Choose at least one image.");
-  const uploads = await uploadPublicImages(files, `properties/${propertyId}`);
-  await updatePropertyImages(propertyId, uploads.map((upload) => upload.url), uploads[0]?.url || "");
-  revalidatePath("/dashboard"); revalidatePath("/dashboard/limitless/properties"); revalidatePath("/dashboard/limitless/media");
-}
+async function requireAdmin() { const session = await getAdminSession(); if (!session) redirect("/login?next=/dashboard"); }
+export async function createLeadAction(formData: FormData) { await requireAdmin(); await createLead({name:String(formData.get("name")||""),phone:String(formData.get("phone")||""),status:String(formData.get("status")||"new"),score:String(formData.get("score")||"unscored"),budget:String(formData.get("budget")||""),location_preference:String(formData.get("location_preference")||""),property_type:String(formData.get("property_type")||""),purpose:String(formData.get("purpose")||"")}); revalidatePath("/dashboard/limitless/leads"); }
+function parseCsvLine(line:string){const cells:string[]=[];let current="";let quoted=false;for(let index=0;index<line.length;index+=1){const char=line[index],next=line[index+1];if(char==='"'&&quoted&&next==='"'){current+='"';index+=1;}else if(char==='"')quoted=!quoted;else if(char===","&&!quoted){cells.push(current.trim());current="";}else current+=char;}cells.push(current.trim());return cells;}
+function normalizeHeader(header:string){return header.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");}
+function pick(row:Record<string,string>,keys:string[]){for(const key of keys)if(row[key])return row[key];return "";}
+function mapLeadRows(rows:string[][]):Partial<Lead>[] {if(!rows.length)return [];const firstRow=rows[0].map(cell=>String(cell||"").trim());const hasHeader=firstRow.some(cell=>/name|phone|whatsapp|budget|location|status|score/i.test(cell));const headers=hasHeader?firstRow.map(normalizeHeader):["name","phone","budget","location_preference","property_type","purpose","status","score"];const dataRows=hasHeader?rows.slice(1):rows;return dataRows.map(cells=>{const row=Object.fromEntries(headers.map((header,index)=>[header,cells[index]||""]));return{name:pick(row,["name","full_name","client_name","customer_name"])||"Unknown",phone:pick(row,["phone","whatsapp","whatsapp_phone","mobile","number","contact"]),budget:pick(row,["budget","price_range","price"]),location_preference:pick(row,["location_preference","preferred_location","location","area"]),property_type:pick(row,["property_type","type"]),purpose:pick(row,["purpose","interest"]),status:pick(row,["status","lead_status"])||"new",score:pick(row,["score","lead_score"])||"unscored"};});}
+function parseCsvLeadImport(text:string):Partial<Lead>[] {return mapLeadRows(text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(parseCsvLine));}
+async function parseLeadImportFile(file:File):Promise<Partial<Lead>[]> {const filename=file.name.toLowerCase();if(filename.endsWith(".xlsx")||filename.endsWith(".xls")){const workbook=XLSX.read(await file.arrayBuffer(),{type:"array"});const sheet=workbook.Sheets[workbook.SheetNames[0]];if(!sheet)return [];const rows=XLSX.utils.sheet_to_json<string[]>(sheet,{header:1,blankrows:false,defval:""});return mapLeadRows(rows.map(row=>row.map(cell=>String(cell||"").trim())).filter(row=>row.some(Boolean)));}return parseCsvLeadImport(await file.text());}
+export async function importLeadsAction(formData:FormData){await requireAdmin();const file=formData.get("contacts_file");if(!(file instanceof File)||file.size===0)throw new Error("Upload a CSV or Excel contact file first.");const result=await importLeads(await parseLeadImportFile(file));revalidatePath("/dashboard/limitless/leads");revalidatePath("/dashboard");redirect(`/dashboard/limitless/leads?imported=${result.imported}&skipped=${result.skipped}&errors=${result.errors.length}`);}
+function getPropertyFiles(formData:FormData){return formData.getAll("property_images").filter((value):value is File=>value instanceof File&&value.size>0);}
+export async function createPropertyAction(formData:FormData){await requireAdmin();const files=getPropertyFiles(formData);const uploads=files.length?await uploadPublicImages(files,"properties"):[];const created=await createProperty({title:String(formData.get("title")||""),location_area:String(formData.get("location_area")||""),location_city:String(formData.get("location_city")||""),price:String(formData.get("price")||""),type:String(formData.get("type")||""),status:String(formData.get("status")||"active"),drive_brochure_link:String(formData.get("drive_brochure_link")||""),features:String(formData.get("features")||""),description:String(formData.get("description")||"")});const propertyId=created[0]?.id;if(propertyId&&uploads.length)await updatePropertyImages(propertyId,[uploads[0].url],uploads[0].url);revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");revalidatePath("/dashboard");}
+export async function updatePropertyAction(formData:FormData){await requireAdmin();const propertyId=String(formData.get("property_id")||"");await updateProperty(propertyId,{title:String(formData.get("title")||""),location_area:String(formData.get("location_area")||""),location_city:String(formData.get("location_city")||""),price:String(formData.get("price")||""),type:String(formData.get("type")||""),status:String(formData.get("status")||"active"),drive_brochure_link:String(formData.get("drive_brochure_link")||""),features:String(formData.get("features")||""),description:String(formData.get("description")||"")});const files=getPropertyFiles(formData);if(files.length){const uploads=await uploadPublicImages(files,`properties/${propertyId}`);await updatePropertyImages(propertyId,[uploads[0].url],uploads[0].url);}revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
+export async function uploadPropertyImagesAction(formData:FormData){await requireAdmin();const propertyId=String(formData.get("property_id")||"");const files=getPropertyFiles(formData);if(!propertyId)throw new Error("Choose a property before uploading an image.");if(!files.length)throw new Error("Choose an image.");const uploads=await uploadPublicImages([files[0]],`properties/${propertyId}`);await updatePropertyImages(propertyId,[uploads[0].url],uploads[0].url);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
+export async function deletePropertyAction(formData:FormData){await requireAdmin();const propertyId=String(formData.get("property_id")||"");if(!propertyId)throw new Error("Property ID is missing.");await deleteProperty(propertyId);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
+export async function deleteLeadAction(formData:FormData){await requireAdmin();const leadId=String(formData.get("lead_id")||"");if(!leadId)throw new Error("Lead ID is missing.");await deleteLead(leadId);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/leads");revalidatePath("/dashboard/limitless/campaigns");}
