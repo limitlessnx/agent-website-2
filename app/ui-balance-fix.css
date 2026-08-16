@@ -49,6 +49,34 @@ main,
   padding: clamp(22px, 4vw, 38px);
 }
 
+/* Keep the login icon compact. This prevents global styles from turning it into a full-width bar. */
+.admin-login-icon {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  max-width: 46px !important;
+  max-height: 46px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  margin-bottom: 18px;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.admin-login-icon .server-icon,
+.admin-login-icon svg {
+  display: block !important;
+  width: 22px !important;
+  height: 22px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+  flex: 0 0 22px !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+}
+
 .admin-login-card form,
 .admin-form {
   width: 100%;
@@ -76,6 +104,7 @@ select {
   padding: 0 16px;
   border-radius: var(--ui-control-radius);
   line-height: normal;
+  box-sizing: border-box;
 }
 
 textarea {
@@ -85,6 +114,7 @@ textarea {
   border-radius: var(--ui-control-radius);
   line-height: 1.55;
   resize: vertical;
+  box-sizing: border-box;
 }
 
 input::placeholder,
@@ -235,10 +265,20 @@ svg {
   .admin-login-card {
     width: 100%;
     padding: 20px 16px;
+    box-sizing: border-box;
   }
 
   .admin-login-card h1 {
     font-size: clamp(1.75rem, 8vw, 2.2rem);
+  }
+
+  .admin-login-icon {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
   }
 
   input,
