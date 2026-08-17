@@ -91,10 +91,25 @@ export default function GlobalLoadingProvider({ children }: { children: React.Re
       const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
       const body = init?.body;
       const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method) || body instanceof FormData;
-      if (!isMutation) return originalFetch(...args);
+      const requestUrl = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input instanceof Request
+            ? input.url
+            : "";
+      const isSupportChatRequest = /\/api\/(admin\/support\/leo|support\/leo)(?:[/?#]|$)/.test(requestUrl);
+
+      // Support conversations have their own chat UX and typing state.
+      // They must never trigger the global navigation/loading overlay.
+      if (!isMutation || isSupportChatRequest) return originalFetch(...args);
+
       startLoading();
-      try { return await originalFetch(...args); }
-      finally { stopLoading(); }
+      try {
+        return await originalFetch(...args);
+      } finally {
+        stopLoading();
+      }
     };
     return () => { window.fetch = originalFetch; };
   }, [startLoading, stopLoading]);
@@ -103,11 +118,9 @@ export default function GlobalLoadingProvider({ children }: { children: React.Re
 
   return <LoadingContext.Provider value={value}>
     {children}
-    {visible && <div className={`flux-global-loading ${active ? "is-active" : ""}`} role="status" aria-live="polite" aria-label="Fluxknight is working">
+    {visible && <div className={`flux-global-loading ${active ? "is-active" : ""}`} role="status" aria-live="polite" aria-label="Fluxknight loading">
       <div className="flux-loading-core">
-        <div className="flux-loading-orbit" aria-hidden="true" />
         <FluxLogo className="flux-loading-logo" />
-        <span className="flux-loading-label">Fluxknight is working</span>
         <span className="flux-loading-dots" aria-hidden="true"><i /><i /><i /></span>
       </div>
     </div>}
