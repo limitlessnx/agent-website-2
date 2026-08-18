@@ -24,7 +24,7 @@ export default function PortalSidebar({ organization }: { organization: string }
         <nav aria-label="Client dashboard navigation">
           <Link href="/portal" className={active("/portal", true) ? "active" : ""} onClick={() => setOpen(false)}><LayoutDashboard size={18} /><span>Dashboard</span></Link>
           <Link href="/portal/systems" className={active("/portal/systems") ? "active" : ""} onClick={() => setOpen(false)}><Boxes size={18} /><span>My Systems</span></Link>
-          <Link href="/portal/marketplace" className={active("/portal/marketplace") ? "active" : ""} onClick={() => setOpen(false)}><ShoppingBag size={18} /><span>Marketplace</span></Link>
+          <Link href="/portal/marketplace" className={active("/portal/marketplace") ? "active" : ""} onClick={() => setOpen(false)}><ShoppingBag size={18} /><span>AI Agents Systems</span></Link>
           <section className={`portal-nav-drawer ${agentsActive ? "active" : ""}`}>
             <button type="button" onClick={() => setAgentsOpen((current) => !current)} aria-expanded={drawerOpen}><span><Bot size={18} />Agents</span><ChevronDown size={16} className={drawerOpen ? "open" : ""} /></button>
             <div className={drawerOpen ? "portal-nav-drawer-items open" : "portal-nav-drawer-items"}>
