@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase-server-rest";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
+import { getClientSession } from "@/lib/client-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,8 @@ type Session = {
   amount: number;
   currency: string;
   status: string;
+  organization_id?: string | null;
+  customer_email: string;
 };
 
 type VerificationResponse = {
@@ -55,18 +58,51 @@ export async function GET(request: Request) {
       Number(payment.amount) >= Number(session.amount),
     );
 
+    if (valid) {
+      const clientSession = await getClientSession();
+      const sameCustomer = clientSession && clientSession.email.toLowerCase() === session.customer_email.toLowerCase();
+
+      if (clientSession && !sameCustomer) {
+        destination.searchParams.set("payment", "account_mismatch");
+        destination.searchParams.set("tx_ref", txRef);
+        return NextResponse.redirect(destination);
+      }
+
+      await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "successful",
+          organization_id: clientSession?.organizationId || session.organization_id || null,
+          provider_transaction_id: payment?.id ? String(payment.id) : transactionId,
+          provider_reference: payment?.flw_ref || null,
+          provider_payload: verification,
+          paid_at: new Date().toISOString(),
+        }),
+      });
+
+      if (clientSession) {
+        const onboarding = new URL("/onboarding", url.origin);
+        onboarding.searchParams.set("tx_ref", txRef);
+        return NextResponse.redirect(onboarding);
+      }
+
+      const login = new URL("/account/login", url.origin);
+      login.searchParams.set("tx_ref", txRef);
+      login.searchParams.set("next", "/onboarding");
+      return NextResponse.redirect(login);
+    }
+
     await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: valid ? "successful" : "verification_failed",
+        status: "verification_failed",
         provider_transaction_id: payment?.id ? String(payment.id) : transactionId,
         provider_reference: payment?.flw_ref || null,
         provider_payload: verification,
-        paid_at: valid ? new Date().toISOString() : null,
       }),
     });
 
-    destination.searchParams.set("payment", valid ? "success" : "failed");
+    destination.searchParams.set("payment", "failed");
     destination.searchParams.set("tx_ref", txRef);
     return NextResponse.redirect(destination);
   } catch (error) {
