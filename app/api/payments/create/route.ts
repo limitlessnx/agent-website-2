@@ -4,6 +4,7 @@ import { supabaseRest } from "@/lib/supabase-server-rest";
 import { getPublicPlan } from "@/lib/payments/catalog";
 import { currencyForRegion, resolveBillingRegionFromHeaders } from "@/lib/payments/region";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
+import { getClientSession } from "@/lib/client-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,9 @@ export async function POST(request: Request) {
     const planSlug = typeof body?.planSlug === "string" ? body.planSlug.trim() : "";
     const billingType = body?.billingType === "subscription" ? "subscription" : "setup";
     const customerName = typeof body?.customer?.name === "string" ? body.customer.name.trim() : "";
-    const customerEmail = typeof body?.customer?.email === "string" ? body.customer.email.trim().toLowerCase() : "";
     const customerPhone = typeof body?.customer?.phone === "string" ? body.customer.phone.trim() : null;
+    const clientSession = await getClientSession();
+    const customerEmail = clientSession?.email || (typeof body?.customer?.email === "string" ? body.customer.email.trim().toLowerCase() : "");
 
     if (!planSlug || !customerName || !emailPattern.test(customerEmail)) {
       return NextResponse.json({ error: "Plan, customer name and a valid email are required." }, { status: 400 });
@@ -83,8 +85,13 @@ export async function POST(request: Request) {
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
+        organization_id: clientSession?.organizationId || null,
         provider: "flutterwave",
-        metadata: { source: "fluxknight_public_pricing", currency_locked: true },
+        metadata: {
+          source: clientSession ? "fluxknight_client_marketplace" : "fluxknight_public_pricing",
+          currency_locked: true,
+          organization_id: clientSession?.organizationId || null,
+        },
       }),
     });
 
@@ -109,6 +116,7 @@ export async function POST(request: Request) {
         plan_slug: plan.slug,
         billing_type: billingType,
         billing_region: region,
+        organization_id: clientSession?.organizationId || null,
       },
     };
 
@@ -127,7 +135,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({ checkout_url: checkoutUrl, provider_payload: response }),
       });
 
-      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true });
+      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true, authenticated: Boolean(clientSession) });
     } catch (error) {
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, {
         method: "PATCH",
