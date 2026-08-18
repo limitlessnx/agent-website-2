@@ -1,128 +1,35 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import FluxLogo from "@/components/FluxLogo";
+import { createContext, useContext, useMemo } from "react";
 
-type LoadingContextValue = { startLoading: () => void; stopLoading: () => void; isLoading: boolean };
-const LoadingContext = createContext<LoadingContextValue | null>(null);
+type LoadingContextValue = {
+  startLoading: () => void;
+  stopLoading: () => void;
+  isLoading: boolean;
+};
+
+const LoadingContext = createContext<LoadingContextValue>({
+  startLoading: () => undefined,
+  stopLoading: () => undefined,
+  isLoading: false,
+});
 
 export function useGlobalLoading() {
-  const value = useContext(LoadingContext);
-  if (!value) throw new Error("useGlobalLoading must be used inside GlobalLoadingProvider");
-  return value;
+  return useContext(LoadingContext);
 }
 
+/**
+ * Global route/loading animation was intentionally retired.
+ * Navigation, form submissions, API calls and Leo chat must not display
+ * the old full-screen Fluxknight animation. The context remains available
+ * so existing components that call useGlobalLoading() continue to work.
+ */
 export default function GlobalLoadingProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [active, setActive] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const pendingRef = useRef(0);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const safetyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navigationRef = useRef(false);
-  const lastPath = useRef(pathname);
+  const value = useMemo<LoadingContextValue>(() => ({
+    startLoading: () => undefined,
+    stopLoading: () => undefined,
+    isLoading: false,
+  }), []);
 
-  const stopLoading = useCallback(() => {
-    pendingRef.current = Math.max(0, pendingRef.current - 1);
-    if (pendingRef.current > 0 || navigationRef.current) return;
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => {
-      setActive(false);
-      setTimeout(() => setVisible(false), 220);
-    }, 140);
-  }, []);
-
-  const startLoading = useCallback(() => {
-    pendingRef.current += 1;
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    if (safetyTimer.current) clearTimeout(safetyTimer.current);
-    setVisible(true);
-    requestAnimationFrame(() => setActive(true));
-    safetyTimer.current = setTimeout(() => {
-      pendingRef.current = 0;
-      navigationRef.current = false;
-      setActive(false);
-      setTimeout(() => setVisible(false), 220);
-    }, 15000);
-  }, []);
-
-  useEffect(() => {
-    if (lastPath.current !== pathname) {
-      lastPath.current = pathname;
-      navigationRef.current = false;
-      pendingRef.current = 0;
-      if (safetyTimer.current) clearTimeout(safetyTimer.current);
-      setActive(false);
-      setTimeout(() => setVisible(false), 220);
-    }
-  }, [pathname]);
-
-  useEffect(() => {
-    const onClick = (event: MouseEvent) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const target = event.target as Element | null;
-      const link = target?.closest("a[href]") as HTMLAnchorElement | null;
-      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
-      const url = new URL(link.href, window.location.href);
-      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
-      navigationRef.current = true;
-      startLoading();
-      pendingRef.current = 1;
-    };
-    const onSubmit = (event: Event) => {
-      const form = event.target as HTMLFormElement | null;
-      if (!form || event.defaultPrevented) return;
-      startLoading();
-    };
-    document.addEventListener("click", onClick, true);
-    document.addEventListener("submit", onSubmit, true);
-    return () => {
-      document.removeEventListener("click", onClick, true);
-      document.removeEventListener("submit", onSubmit, true);
-    };
-  }, [startLoading]);
-
-  useEffect(() => {
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      const input = args[0];
-      const init = args[1];
-      const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
-      const body = init?.body;
-      const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method) || body instanceof FormData;
-      const requestUrl = typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input instanceof Request
-            ? input.url
-            : "";
-      const isSupportChatRequest = /\/api\/(admin\/support\/leo|support\/leo)(?:[/?#]|$)/.test(requestUrl);
-
-      // Support conversations have their own chat UX and typing state.
-      // They must never trigger the global navigation/loading overlay.
-      if (!isMutation || isSupportChatRequest) return originalFetch(...args);
-
-      startLoading();
-      try {
-        return await originalFetch(...args);
-      } finally {
-        stopLoading();
-      }
-    };
-    return () => { window.fetch = originalFetch; };
-  }, [startLoading, stopLoading]);
-
-  const value = useMemo(() => ({ startLoading, stopLoading, isLoading: visible }), [startLoading, stopLoading, visible]);
-
-  return <LoadingContext.Provider value={value}>
-    {children}
-    {visible && <div className={`flux-global-loading ${active ? "is-active" : ""}`} role="status" aria-live="polite" aria-label="Fluxknight loading">
-      <div className="flux-loading-core">
-        <FluxLogo className="flux-loading-logo" />
-        <span className="flux-loading-dots" aria-hidden="true"><i /><i /><i /></span>
-      </div>
-    </div>}
-  </LoadingContext.Provider>;
+  return <LoadingContext.Provider value={value}>{children}</LoadingContext.Provider>;
 }
