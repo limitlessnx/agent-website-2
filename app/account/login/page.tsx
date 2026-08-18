@@ -2,10 +2,11 @@ import ClientLoginForm from "./LoginForm";
 
 export const metadata = { title: "Client Login | Fluxknight" };
 
-export default function ClientLoginPage() {
+export default async function ClientLoginPage({ searchParams }: { searchParams: Promise<{ tx_ref?: string; next?: string }> }) {
+  const params = await searchParams;
   return (
     <section className="admin-login-page">
-      <ClientLoginForm />
+      <ClientLoginForm txRef={String(params.tx_ref || "")} nextPath={String(params.next || "/portal")} />
     </section>
   );
 }
