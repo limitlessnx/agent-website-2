@@ -77,6 +77,25 @@ export default function ClientReviews() {
 
         <p className="client-review-note">Illustrative client-style perspectives for the website presentation. They are not presented as verified testimonials.</p>
       </div>
+      <style jsx>{`
+        .client-reviews-section { padding-top: 82px; padding-bottom: 82px; overflow: hidden; }
+        .client-reviews-heading { text-align: center; margin: 0 auto 38px; }
+        .client-reviews-heading h2 { margin: 0; font-size: clamp(2rem, 4vw, 3.35rem); line-height: 1.05; letter-spacing: -.045em; }
+        .client-reviews-track { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; overscroll-behavior-x: contain; padding: 2px 2px 10px; }
+        .client-reviews-track::-webkit-scrollbar { display: none; }
+        .client-review-card { flex: 0 0 calc((100% - 36px) / 3); min-height: 290px; display: flex; flex-direction: column; scroll-snap-align: start; padding: 28px 22px 24px; border: 1px solid var(--flux-line); border-radius: 18px; background: linear-gradient(145deg, rgba(24,12,43,.96), rgba(11,6,20,.94)); box-shadow: inset 0 1px rgba(255,255,255,.03); }
+        .client-review-quote { color: var(--flux-purple); font-size: 4.1rem; line-height: .7; height: 50px; font-family: Georgia, serif; font-weight: 900; }
+        .client-review-card p { margin: 4px 0 24px; color: #d7cde2; font-size: .92rem; line-height: 1.7; }
+        .client-review-person { margin-top: auto; display: grid; gap: 4px; }
+        .client-review-person strong { color: var(--flux-text); font-size: .88rem; }
+        .client-review-person span { color: #756985; font-size: .73rem; }
+        .client-review-dots { display: flex; justify-content: center; align-items: center; gap: 7px; margin-top: 26px; }
+        .client-review-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 999px; background: rgba(255,255,255,.24); cursor: pointer; transition: width .2s ease, background .2s ease, transform .2s ease; }
+        .client-review-dots button.active { width: 30px; background: var(--flux-purple); box-shadow: 0 0 18px var(--flux-glow); }
+        .client-review-note { margin: 18px auto 0; max-width: 760px; text-align: center; color: #665a73; font-size: .68rem; line-height: 1.5; }
+        @media (max-width: 900px) { .client-review-card { flex-basis: calc((100% - 18px) / 2); } }
+        @media (max-width: 640px) { .client-reviews-section { padding: 64px 18px; } .client-reviews-heading { margin-bottom: 28px; } .client-review-card { flex-basis: 86%; min-height: 270px; padding: 25px 20px 22px; } .client-review-card p { font-size: .9rem; } .client-review-dots { gap: 6px; } .client-review-dots button.active { width: 24px; } }
+      `}</style>
     </section>
   );
 }
