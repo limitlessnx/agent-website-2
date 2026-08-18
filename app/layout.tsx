@@ -3,6 +3,7 @@ import "./globals.css";
 import "./flux-theme.css";
 import "./home-responsive.css";
 import "./brand-refresh.css";
+import "./checkout-mobile-fix.css";
 import "./dashboard-light-fix.css";
 import "./fluxknight-unified-colors.css";
 import "./ui-balance-fix.css";
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://fluxknight.ai"), alternates: { canonical: "/" }, category: "technology",
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: "/icon.svg", apple: "/apple-icon.svg" },
   openGraph: { type: "website", locale: "en_US", url: "https://fluxknight.ai", siteName: "Fluxknight", title: "Fluxknight — AI Agents & Business Automation for Growing Companies", description: "Deploy AI sales, customer support, WhatsApp, voice, lead generation, email, CRM, and workflow automation through one connected business operating system.", images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Fluxknight AI agents and business automation" }] },
-  twitter: { card: "summary_large_image", title: "Fluxknight — AI Agents & Business Automation", description: "AI agents for sales, support, WhatsApp, voice, lead generation, email, CRM and workflow automation.", images: ["/og-image.png"] },
+  twitter: { card: "summary_large_image", title: "Fluxknight — AI Agents & Business Automation", description: "AI agents for sales, customer support, WhatsApp, voice, lead generation, email, CRM and workflow automation.", images: ["/og-image.png"] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
 };
 
