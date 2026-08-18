@@ -56,7 +56,7 @@ export default function CheckoutClient({ plan, customer }: Props) {
   }
 
   return (
-    <section className="brand-grid" style={{ marginTop: "3rem", gridTemplateColumns: "minmax(0, 1.15fr) minmax(280px, .85fr)" }}>
+    <section className="checkout-layout">
       <article className="brand-card pricing-featured">
         <span className="brand-eyebrow">{plan.currency} · payment required before onboarding</span>
         <h2>{plan.name}</h2>
