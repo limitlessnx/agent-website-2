@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/industries", label: "Industries" },
   { href: "/case-studies", label: "Case Studies" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/faq", label: "FAQ" },
   { href: "/evaluation", label: "Business AI Evaluation" },
   { href: "/about", label: "About" },
 ];
