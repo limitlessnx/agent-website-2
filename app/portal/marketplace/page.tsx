@@ -50,7 +50,7 @@ export default async function MarketplacePage() {
                 <strong>{money(plan.installationFee, plan.currency)} setup</strong>
                 <span>{money(plan.recurringFee, plan.currency)} / month from month 2</span>
               </div>
-              <Link className="portal-button" href={`/pricing?plan=${encodeURIComponent(plan.slug)}`}>View plan</Link>
+              <Link className="portal-button" href={`/checkout?plan=${encodeURIComponent(plan.slug)}`}>Get started</Link>
             </article>
           ))}
         </div>
