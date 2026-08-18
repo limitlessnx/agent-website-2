@@ -1,0 +1,43 @@
+/* Mobile checkout layout: keep the summary and form in a clean single column. */
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+  gap: 18px;
+  margin-top: 3rem;
+}
+
+.checkout-layout > .brand-card {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+    max-width: 100%;
+    gap: 16px;
+    margin-top: 1.5rem;
+  }
+
+  .checkout-layout > .brand-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .checkout-layout > .brand-card h2 {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-layout {
+    gap: 14px;
+  }
+
+  .checkout-layout > .brand-card {
+    padding: 20px;
+    border-radius: 18px;
+  }
+}
