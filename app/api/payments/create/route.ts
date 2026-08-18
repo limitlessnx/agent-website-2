@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase-server-rest";
 import { getPublicPlan } from "@/lib/payments/catalog";
-import { getRequestBillingRegion } from "@/lib/payments/region";
+import { currencyForRegion, resolveBillingRegionFromHeaders } from "@/lib/payments/region";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
 
 export const dynamic = "force-dynamic";
@@ -42,14 +42,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Plan, customer name and a valid email are required." }, { status: 400 });
     }
 
-    const { region, currency } = (() => {
-      const country = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toUpperCase();
-      const language = (request.headers.get("accept-language") || "").toLowerCase();
-      const nigeria = country === "NG" || ["en-ng", "yo-ng", "ig-ng", "ha-ng"].some((v) => language.includes(v));
-      return { region: nigeria ? "NG" as const : "INTERNATIONAL" as const, currency: nigeria ? "NGN" as const : "USD" as const };
-    })();
-
+    const region = resolveBillingRegionFromHeaders(request.headers);
+    const currency = currencyForRegion(region);
     const plan = await getPublicPlan(planSlug, region);
+
     if (!plan) {
       return NextResponse.json({ error: currency === "USD" ? "This international price is not configured yet." : "That plan is unavailable." }, { status: 409 });
     }
@@ -58,11 +54,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Custom AI Operations requires an evaluation before payment." }, { status: 409 });
     }
 
-    if (billingType === "subscription") {
-      const paymentPlanId = Number((plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[currency.toLowerCase()]);
-      if (!paymentPlanId) {
-        return NextResponse.json({ error: "Recurring billing is not configured for this plan yet. Complete the payment-plan provisioning first." }, { status: 409 });
-      }
+    const paymentPlanId = Number(
+      (plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[currency.toLowerCase()],
+    );
+
+    if (billingType === "subscription" && !paymentPlanId) {
+      return NextResponse.json(
+        { error: "Recurring billing is not configured for this plan yet. Complete payment-plan provisioning first." },
+        { status: 409 },
+      );
     }
 
     const txRef = `FK-${plan.slug}-${crypto.randomUUID()}`;
@@ -91,9 +91,7 @@ export async function POST(request: Request) {
     const session = inserted[0];
     if (!session) throw new Error("Unable to create checkout session.");
 
-    const paymentPlanId = Number((plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[currency.toLowerCase()]);
     const paymentOptions = currency === "NGN" && billingType === "setup" ? "card, banktransfer, ussd" : "card";
-
     const payload: Record<string, unknown> = {
       tx_ref: txRef,
       amount,
@@ -121,7 +119,6 @@ export async function POST(request: Request) {
         method: "POST",
         body: JSON.stringify(payload),
       });
-
       const checkoutUrl = response.data?.link;
       if (!checkoutUrl) throw new Error("Flutterwave did not return a checkout link.");
 
@@ -130,13 +127,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({ checkout_url: checkoutUrl, provider_payload: response }),
       });
 
-      return NextResponse.json({
-        checkoutUrl,
-        txRef,
-        region,
-        currency,
-        currencyLocked: true,
-      });
+      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true });
     } catch (error) {
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, {
         method: "PATCH",
