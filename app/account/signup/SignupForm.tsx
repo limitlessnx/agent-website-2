@@ -5,10 +5,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2 } from "@/components/admin/ServerIcons";
 
-export default function SignupForm() {
+export default function SignupForm({ txRef = "", nextPath = "/portal" }: { txRef?: string; nextPath?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const safeNext = nextPath.startsWith("/") ? nextPath : "/portal";
+  const loginHref = txRef
+    ? `/account/login?tx_ref=${encodeURIComponent(txRef)}&next=${encodeURIComponent(safeNext)}`
+    : "/account/login";
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,6 +31,8 @@ export default function SignupForm() {
           company_name: data.get("company_name"),
           email,
           password: data.get("password"),
+          payment_tx_ref: txRef || undefined,
+          post_signup_path: safeNext,
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -36,11 +43,17 @@ export default function SignupForm() {
       }
 
       if (result.requires_email_confirmation) {
-        router.push(`/account/verify-email?email=${encodeURIComponent(email)}`);
+        const verify = new URL("/account/verify-email", window.location.origin);
+        verify.searchParams.set("email", email);
+        if (txRef) verify.searchParams.set("tx_ref", txRef);
+        if (safeNext) verify.searchParams.set("next", safeNext);
+        router.push(`${verify.pathname}${verify.search}`);
         return;
       }
 
-      router.push("/portal");
+      const destination = new URL(result.redirect_to || safeNext, window.location.origin);
+      if (txRef && safeNext === "/onboarding") destination.searchParams.set("tx_ref", txRef);
+      router.push(`${destination.pathname}${destination.search}`);
       router.refresh();
     } catch {
       setError("We could not connect to the account service. Check your connection and try again.");
@@ -57,13 +70,14 @@ export default function SignupForm() {
         <h1>Create your workspace</h1>
         <p className="admin-muted">Create your company account and owner access.</p>
       </div>
+      {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue to onboarding.</p> : null}
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
       <button type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
-      <p className="admin-muted">Already registered? <Link href="/account/login">Sign in</Link></p>
+      <p className="admin-muted">Already registered? <Link href={loginHref}>Sign in</Link></p>
     </form>
   );
 }
