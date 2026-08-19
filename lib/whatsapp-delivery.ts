@@ -9,6 +9,8 @@ type SendInput = {
   to: string;
   text?: string;
   lastCustomerMessageAt?: string | null;
+  /** auto = use direct text inside the 24h window and an approved template outside it. */
+  deliveryMode?: "auto" | "direct" | "template";
   forceTemplate?: boolean;
   templatePurpose?: string;
   variables?: Record<string, string | number | null | undefined>;
@@ -78,7 +80,14 @@ export async function sendWhatsAppMessage(input: SendInput) {
   const to = normalizePhone(input.to);
   if (!to) throw new Error("A valid WhatsApp recipient is required.");
 
-  const useTemplate = Boolean(input.forceTemplate) || outsideCustomerWindow(input.lastCustomerMessageAt);
+  const isOutsideWindow = outsideCustomerWindow(input.lastCustomerMessageAt);
+  const requestedMode = input.deliveryMode || "auto";
+  const useTemplate = Boolean(input.forceTemplate) || requestedMode === "template" || (requestedMode === "auto" && isOutsideWindow);
+
+  if (requestedMode === "direct" && isOutsideWindow) {
+    throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open. Choose the appropriate approved campaign template instead.");
+  }
+
   let requestPayload: Record<string, unknown>;
   let templateName: string | null = null;
 
@@ -109,7 +118,8 @@ export async function sendWhatsAppMessage(input: SendInput) {
       recipient_type: "individual",
       to,
       type: "text",
-      text: { preview_url: false, body: input.text.trim() },
+      // Preserve the approved campaign copy exactly. preview_url only controls the link preview.
+      text: { preview_url: true, body: input.text },
     };
   }
 
