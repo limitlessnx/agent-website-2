@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessHuman, queueLimitlessFollowup, shouldFollowUp, shouldHandoff, LIMITLESS_REALTY_HUMAN_WHATSAPP } from "@/lib/ai/limitless-realty-maia";
 
 export const dynamic = "force-dynamic";
+const CANONICAL_CHANNEL = "whatsapp";
+const CANONICAL_TRANSPORT = "existing-limitless-realty-maia-n8n";
 
 function extractPhone(body: Record<string, unknown>) {
   return String(body.customerPhone || body.phone || body.from || body.whatsapp || "").replace(/[^\d]/g, "");
@@ -60,7 +62,10 @@ export async function POST(request: NextRequest) {
       "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:",
       JSON.stringify(propertyContext),
       "",
+      "OPERATING MODE: You are the existing Limitless Realty Maia WhatsApp agent. This request is being processed by Maia's agentic runtime behind the existing production WhatsApp/n8n transport. Do not create or reference another Maia, WhatsApp number, transport or tenant.",
+      `CANONICAL TRANSPORT: ${CANONICAL_TRANSPORT}`,
       "PROPERTY MATCHING RULE: when a client states a budget, prioritize verified properties at or below that budget. You may recommend relevant alternatives up to 20% above the stated budget, but label them clearly as above-budget alternatives. Never invent availability or pricing.",
+      "CONVERSATION RULE: answer naturally and intelligently using the conversation context, the assigned agent configuration, approved Limitless Realty knowledge, and verified property results. Do not expose internal tools, model selection, database details or workflow mechanics to the client.",
       "HANDOFF RULE: if human assistance is requested or escalation is necessary, prepare a concise summary of the conversation and only claim handoff after delivery to the configured human destination is confirmed.",
       "FOLLOW-UP RULE: if the client explicitly asks for a follow-up/reminder, schedule it and preserve the requested context. Stop follow-ups on opt-out, resolution, or human handoff.",
     ].join("\n");
@@ -70,9 +75,9 @@ export async function POST(request: NextRequest) {
       agentId: agent.id,
       message: enrichedMessage,
       sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
-      channel: typeof body.channel === "string" ? body.channel : "whatsapp",
+      channel: CANONICAL_CHANNEL,
       externalConversationId: customerPhone || undefined,
-      autonomous: false,
+      autonomous: true,
     });
 
     let followup: unknown = null;
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
       handoff = await handoffToLimitlessHuman({ organizationId: organization.id, agentId: agent.id, sessionId: result.sessionId, customerName, customerPhone, reason: "Maia human escalation", summary });
     }
 
-    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, propertyContext, followup, handoff });
+    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, handoff });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Limitless Maia request failed." }, { status: 500 });
   }
