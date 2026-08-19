@@ -1,34 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  Bot,
-  BrainCircuit,
-  Building2,
-  CheckCircle2,
-  CircleDashed,
-  FlaskConical,
-  PlugZap,
-  Rocket,
-  Workflow,
-} from "@/components/admin/ServerIcons";
+import { ArrowLeft, Bot, BrainCircuit, Building2, CheckCircle2, CircleDashed, FlaskConical, PlugZap, Rocket, Workflow } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AgentAllocationControl from "../../AgentAllocationControl";
 import AgentConfigurationControl from "../../AgentConfigurationControl";
 import ClientModelAssignmentControl from "../../ClientModelAssignmentControl";
 import ClientStatusControl from "../../ClientStatusControl";
+import MaiaRuntimeControl from "../../MaiaRuntimeControl";
 
 export const dynamic = "force-dynamic";
 
-const TENANT_CONFIGURABLE_PROVIDERS = new Set([
-  "whatsapp",
-  "telegram",
-  "email",
-  "elevenlabs",
-  "google_calendar",
-  "google_sheets",
-  "sms",
-]);
+const TENANT_CONFIGURABLE_PROVIDERS = new Set(["whatsapp", "telegram", "email", "elevenlabs", "google_calendar", "google_sheets", "sms"]);
 
 type SetupPageProps = { params: Promise<{ organizationId: string }> };
 type OnboardingProfile = { id: string; organization_id: string; status: string; business_name: string | null; business_email: string | null; industry: string | null; website: string | null; country: string | null; timezone: string | null; phone: string | null; human_contact_name: string | null; human_contact_email: string | null };
@@ -81,6 +63,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
     { label: "Business", complete: businessComplete },
     { label: "Agents", complete: agentsAllocated },
     { label: "Configure", complete: agentsConfigured },
+    { label: "Agentic runtime", complete: agentsConfigured },
     { label: "AI models", complete: modelsAssigned },
     { label: "Connections", complete: integrationsConnected },
     { label: "Testing", complete: testsReady },
@@ -93,7 +76,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         <div>
           <p className="admin-kicker">Tenant setup and agent orchestration</p>
           <h1>{profile?.business_name || organization.name}</h1>
-          <p>Build this workspace directly from marketplace agents. Configure each agent's system message, channels and workflow routes from the client's submitted business context.</p>
+          <p>Build this workspace directly from marketplace agents. Configure each agent's system message, channels, workflows and agentic runtime from the client's submitted business context.</p>
         </div>
         <Link className="admin-button secondary" href="/dashboard/clients"><ArrowLeft size={15} /> Back to tenants</Link>
       </header>
@@ -123,27 +106,32 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
       </section>
 
       <section className="admin-panel" id="agent-configuration">
-        <div className="admin-panel-header"><div><h2>3. Agent configuration and orchestration</h2><p>Configure each agent's system message from onboarding details, choose its channels, attach shared workflows and route outputs to other agents, workflows or channels.</p></div><Workflow size={18} /></div>
+        <div className="admin-panel-header"><div><h2>3. Agent configuration and orchestration</h2><p>Configure each assigned agent's system message from onboarding details, choose its channels, attach relevant shared workflows and route outputs to other assigned agents.</p></div><Workflow size={18} /></div>
         <AgentConfigurationControl organizationId={organizationId} />
       </section>
 
+      <section className="admin-panel" id="agentic-intelligence">
+        <div className="admin-panel-header"><div><h2>4. Agentic intelligence</h2><p>This is the autonomous layer. Each assigned agent can use the approved tenant models, tenant-scoped memory, relevant tools and agent-to-agent handoffs. Maia uses this same runtime when Maia is assigned to the organization.</p></div><BrainCircuit size={18} /></div>
+        {agents.length ? agents.map((agent) => <div key={agent.id} style={{ marginBottom: 16 }}><MaiaRuntimeControl organizationId={organizationId} agentId={agent.id} agentName={agent.name} /></div>) : <p className="admin-empty">Assign a marketplace agent first. Maia becomes available here when it is assigned to the tenant.</p>}
+      </section>
+
       <section className="admin-panel" id="ai-model">
-        <div className="admin-panel-header"><div><h2>4. AI model access</h2><p>Assign one or more approved platform models to this organization. Platform model credentials remain centralized.</p></div><div style={{ display: "flex", alignItems: "center", gap: 10 }}><BrainCircuit size={18} /><span className={stageState(modelsAssigned)}>{currentModelIds.length} assigned</span></div></div>
+        <div className="admin-panel-header"><div><h2>5. AI model access</h2><p>Assign one or more approved platform models to this organization. Platform model credentials remain centralized.</p></div><div style={{ display: "flex", alignItems: "center", gap: 10 }}><BrainCircuit size={18} /><span className={stageState(modelsAssigned)}>{currentModelIds.length} assigned</span></div></div>
         <ClientModelAssignmentControl organizationId={organizationId} models={models} currentModelIds={currentModelIds} />
       </section>
 
       <section className="admin-panel" id="integrations">
-        <div className="admin-panel-header"><div><h2>5. Tenant connections</h2><p>Configure only client-owned connections such as WhatsApp, Telegram, email, voice or Calendar. Fluxknight's Supabase, n8n and platform AI credentials remain shared infrastructure.</p></div><div style={{ display: "flex", alignItems: "center", gap: 10 }}><span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span><Link className="admin-button secondary" href={`/dashboard/integrations?organizationId=${encodeURIComponent(organizationId)}`}>Configure connections</Link></div></div>
+        <div className="admin-panel-header"><div><h2>6. Tenant connections</h2><p>Configure only client-owned connections such as WhatsApp, Telegram, email, voice or Calendar. Fluxknight's Supabase, n8n and platform AI credentials remain shared infrastructure.</p></div><div style={{ display: "flex", alignItems: "center", gap: 10 }}><span className={stageState(integrationsConnected)}>{integrations.filter((item) => item.status === "connected").length}/{integrations.length} connected</span><Link className="admin-button secondary" href={`/dashboard/integrations?organizationId=${encodeURIComponent(organizationId)}`}>Configure connections</Link></div></div>
         <div className="admin-list">{integrations.map((integration) => <div className="admin-list-row" key={integration.id}><PlugZap size={16} /><div><strong>{integration.display_name}</strong><span>{humanize(integration.provider)}</span></div><em className={integration.status === "connected" ? "good" : "muted"}>{humanize(integration.status)}</em></div>)}{!integrations.length ? <p className="admin-empty">Relevant connection forms appear when configured agent channels require them.</p> : null}</div>
       </section>
 
       <section className="admin-panel" id="testing">
-        <div className="admin-panel-header"><div><h2>6. Testing and readiness</h2><p>Every agent must reach full runtime readiness before launch.</p></div><FlaskConical size={18} /></div>
-        <div className="admin-list">{agents.map((agent) => { const snapshot = readiness.find((item) => item.agent_id === agent.id); const percentage = Number(snapshot?.readiness_score || 0); return <div className="admin-list-row" key={agent.id}><div><strong>{agent.name}</strong><span>Prompt, knowledge, channels, workflows, testing and approval</span></div><em className={percentage >= 100 ? "good" : "muted"}>{percentage}% ready</em></div>; })}{!agents.length ? <p className="admin-empty">Testing becomes available after agents are provisioned.</p> : null}</div>
+        <div className="admin-panel-header"><div><h2>7. Testing and readiness</h2><p>Every agent must reach full runtime readiness before launch.</p></div><FlaskConical size={18} /></div>
+        <div className="admin-list">{agents.map((agent) => { const snapshot = readiness.find((item) => item.agent_id === agent.id); const percentage = Number(snapshot?.readiness_score || 0); return <div className="admin-list-row" key={agent.id}><div><strong>{agent.name}</strong><span>Prompt, knowledge, channels, workflows, model access, tools and testing</span></div><em className={percentage >= 100 ? "good" : "muted"}>{percentage}% ready</em></div>; })}{!agents.length ? <p className="admin-empty">Testing becomes available after agents are provisioned.</p> : null}</div>
       </section>
 
       <section className="admin-panel" id="launch">
-        <div className="admin-panel-header"><div><h2>7. Launch control</h2><p>Move the tenant through configuration, testing, approval and live operation only after setup is complete.</p></div><Rocket size={18} /></div>
+        <div className="admin-panel-header"><div><h2>8. Launch control</h2><p>Move the tenant through configuration, testing, approval and live operation only after setup is complete.</p></div><Rocket size={18} /></div>
         {profile ? <div className="admin-list-row"><div><strong>Deployment status</strong><span>Current stage: {humanize(profile.status)}</span></div><ClientStatusControl id={profile.id} value={profile.status} /></div> : <p className="admin-empty">No onboarding profile is attached to this organization.</p>}
         {!testsReady && profile?.status === "live" ? <p className="admin-form-message">Warning: this tenant is marked live but one or more agents have not reached 100% readiness.</p> : null}
       </section>
