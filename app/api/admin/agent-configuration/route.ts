@@ -45,6 +45,20 @@ async function ensureOrg(admin: ReturnType<typeof createAdminClient>, organizati
   if (!data) throw new Error("Organization not found.");
 }
 
+async function assignedAgentIds(admin: ReturnType<typeof createAdminClient>, organizationId: string) {
+  const { data, error } = await admin.from("organization_agent_selections").select("configuration,status").eq("organization_id", organizationId);
+  if (error) throw error;
+  return (data || [])
+    .filter((row) => ["selected", "provisioning", "paid", "active"].includes(text(row.status)))
+    .map((row) => text((row.configuration as Record<string, unknown> | null)?.provisioned_agent_id))
+    .filter(Boolean);
+}
+
+async function ensureAssignedAgent(admin: ReturnType<typeof createAdminClient>, organizationId: string, agentId: string) {
+  const ids = await assignedAgentIds(admin, organizationId);
+  if (!ids.includes(agentId)) throw new Error("Only marketplace agents assigned to this tenant can be configured.");
+}
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
@@ -52,9 +66,10 @@ export async function GET(request: NextRequest) {
     if (!organizationId) return NextResponse.json({ error: "Organization is required." }, { status: 400 });
     const admin = createAdminClient();
     await ensureOrg(admin, organizationId);
+    const ids = await assignedAgentIds(admin, organizationId);
 
     const [agentsResult, submissionResult, workflowsResult, assignmentsResult, routesResult] = await Promise.all([
-      admin.from("agents").select("id,name,agent_type,status,system_prompt,communication_channels").eq("organization_id", organizationId).order("created_at"),
+      ids.length ? admin.from("agents").select("id,name,agent_type,status,system_prompt,communication_channels").eq("organization_id", organizationId).in("id", ids).order("created_at") : Promise.resolve({ data: [], error: null }),
       admin.from("client_onboarding_submissions").select("business_information,business_services,communication_details,automation_requirements,business_resources").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("workflow_definitions").select("id,workflow_key,name,description,provider,agent_type,channel,role,status").eq("status", "ready").order("name"),
       admin.from("agent_workflow_assignments").select("id,agent_id,workflow_definition_id,role,status").eq("organization_id", organizationId),
@@ -80,10 +95,7 @@ export async function PATCH(request: NextRequest) {
     const workflowIds = Array.isArray(body.workflowDefinitionIds) ? [...new Set(body.workflowDefinitionIds.map(String).filter(Boolean))] : [];
     const admin = createAdminClient();
     await ensureOrg(admin, organizationId);
-
-    const { data: agent, error: agentError } = await admin.from("agents").select("id").eq("id", agentId).eq("organization_id", organizationId).maybeSingle();
-    if (agentError) throw agentError;
-    if (!agent) throw new Error("Agent not found for this organization.");
+    await ensureAssignedAgent(admin, organizationId, agentId);
 
     const { error: updateError } = await admin.from("agents").update({
       system_prompt: text(body.systemPrompt),
@@ -111,14 +123,7 @@ export async function PATCH(request: NextRequest) {
     for (const channel of channels) {
       const provider = providerMap[channel];
       if (!provider) continue;
-      const { error } = await admin.from("organization_integrations").upsert({
-        organization_id: organizationId,
-        provider,
-        display_name: provider === "elevenlabs" ? "ElevenLabs" : provider.charAt(0).toUpperCase() + provider.slice(1),
-        status: "disconnected",
-        configuration: { required_by_agent_configuration: true },
-        health: { state: "not_checked" },
-      }, { onConflict: "organization_id,provider", ignoreDuplicates: true });
+      const { error } = await admin.from("organization_integrations").upsert({ organization_id: organizationId, provider, display_name: provider === "elevenlabs" ? "ElevenLabs" : provider.charAt(0).toUpperCase() + provider.slice(1), status: "disconnected", configuration: { required_by_agent_configuration: true }, health: { state: "not_checked" } }, { onConflict: "organization_id,provider", ignoreDuplicates: true });
       if (error) throw error;
     }
 
@@ -139,20 +144,11 @@ export async function POST(request: NextRequest) {
     if (!organizationId || !sourceAgentId || !["agent", "workflow", "channel"].includes(targetType)) return NextResponse.json({ error: "A valid route source and target are required." }, { status: 400 });
     const admin = createAdminClient();
     await ensureOrg(admin, organizationId);
+    await ensureAssignedAgent(admin, organizationId, sourceAgentId);
     const targetChannel = text(body.targetChannel);
     if (targetType === "channel" && !ALLOWED_CHANNELS.has(targetChannel)) throw new Error("Unsupported target channel.");
-    const { data, error } = await admin.from("agent_orchestration_routes").insert({
-      organization_id: organizationId,
-      source_agent_id: sourceAgentId,
-      source_workflow_definition_id: text(body.sourceWorkflowDefinitionId) || null,
-      target_type: targetType,
-      target_agent_id: targetType === "agent" ? text(body.targetAgentId) || null : null,
-      target_workflow_definition_id: targetType === "workflow" ? text(body.targetWorkflowDefinitionId) || null : null,
-      target_channel: targetType === "channel" ? targetChannel : null,
-      trigger_event: text(body.triggerEvent) || "success",
-      status: "active",
-      configuration: { source: "super_admin" },
-    }).select("*").single();
+    if (targetType === "agent") await ensureAssignedAgent(admin, organizationId, text(body.targetAgentId));
+    const { data, error } = await admin.from("agent_orchestration_routes").insert({ organization_id: organizationId, source_agent_id: sourceAgentId, source_workflow_definition_id: text(body.sourceWorkflowDefinitionId) || null, target_type: targetType, target_agent_id: targetType === "agent" ? text(body.targetAgentId) || null : null, target_workflow_definition_id: targetType === "workflow" ? text(body.targetWorkflowDefinitionId) || null : null, target_channel: targetType === "channel" ? targetChannel : null, trigger_event: text(body.triggerEvent) || "success", status: "active", configuration: { source: "super_admin" } }).select("*").single();
     if (error) throw error;
     return NextResponse.json({ ok: true, route: data });
   } catch (error) {
