@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 const LIMITLESS_REALTY_SLUG = "limitless-realty";
+const CANONICAL_ROUTE = "existing-limitless-realty-maia-n8n";
 
 function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -11,21 +12,12 @@ function authorized(request: NextRequest) {
   return Boolean(supplied && supplied === secret);
 }
 
-async function sendWhatsApp(to: string, message: string) {
-  const webhook = process.env.LIMITLESS_REALTY_FOLLOWUP_WEBHOOK_URL?.trim() || process.env.LIMITLESS_REALTY_N8N_FOLLOWUP_WEBHOOK_URL?.trim();
-  if (webhook) {
-    const response = await fetch(webhook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel: "whatsapp", to, message, source: "maia_followup", tenant: LIMITLESS_REALTY_SLUG }), cache: "no-store" });
-    if (!response.ok) throw new Error(`Follow-up webhook failed (${response.status}).`);
-    return "webhook";
-  }
-  const token = process.env.META_WHATSAPP_ACCESS_TOKEN?.trim();
-  const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID?.trim();
-  if (token && phoneNumberId) {
-    const response = await fetch(`https://graph.facebook.com/v23.0/${phoneNumberId}/messages`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: message } }), cache: "no-store" });
-    if (!response.ok) throw new Error(`WhatsApp follow-up failed (${response.status}).`);
-    return "meta_whatsapp";
-  }
-  throw new Error("No Limitless Realty WhatsApp delivery provider is configured.");
+async function sendViaCanonicalMaia(to: string, message: string) {
+  const webhook = process.env.LIMITLESS_REALTY_MAIA_N8N_WEBHOOK_URL?.trim() || process.env.LIMITLESS_REALTY_N8N_WEBHOOK_URL?.trim() || process.env.N8N_LIMITLESS_REALTY_MAIA_WEBHOOK_URL?.trim();
+  if (!webhook) throw new Error("Canonical Limitless Realty Maia n8n webhook is not configured. Follow-up was not sent through another WhatsApp route.");
+  const response = await fetch(webhook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel: "whatsapp", to, message, source: "maia_followup", tenant: LIMITLESS_REALTY_SLUG, agent: "maia", route: CANONICAL_ROUTE }), cache: "no-store" });
+  if (!response.ok) throw new Error(`Canonical Maia WhatsApp workflow failed (${response.status}).`);
+  return CANONICAL_ROUTE;
 }
 
 export async function POST(request: NextRequest) {
@@ -47,7 +39,7 @@ export async function POST(request: NextRequest) {
         results.push({ id: row.id, status: "cancelled", reason: !phone ? "missing_phone" : (lead as any)?.opted_out ? "opted_out" : "human_handoff" });
         continue;
       }
-      const provider = await sendWhatsApp(phone, String(row.message_sent || ""));
+      const provider = await sendViaCanonicalMaia(phone, String(row.message_sent || ""));
       await admin.from("follow_ups").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "pending");
       results.push({ id: row.id, status: "sent", provider });
     } catch (error) {
