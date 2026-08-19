@@ -135,9 +135,11 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
 }
 
 export function shouldHandoff(message: string, reply: string) {
-  return /human|agent|representative|speak to someone|call me|manager|escalat/i.test(`${message} ${reply}`);
+  const userRequested = /\b(human|representative|manager|real person|speak to (a )?(person|someone)|talk to (a )?(person|someone)|customer service)\b|\b(please|can you)\s+(connect|transfer)\b/i.test(message);
+  const agentEscalated = /\b(human handoff|human team|connect you with (our|a) human|escalat(?:e|ion)|requires human assistance)\b/i.test(reply);
+  return userRequested || agentEscalated;
 }
 
 export function shouldFollowUp(message: string) {
-  return /follow.?up|remind me|reminder|check back|contact me later|call me (back|later)/i.test(message);
+  return /follow.?up|remind me|reminder|check back|contact me later|call me (back|later)/i.test(message) && !/do not|don't|no need|stop/i.test(message);
 }
