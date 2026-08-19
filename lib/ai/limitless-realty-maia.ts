@@ -127,7 +127,7 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
     }
   }
   if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling a follow-up.");
-  const { data: followup, error } = await admin.from("follow_ups").insert({ lead_id: leadId, stage: 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id").single();
+  const { data: followup, error } = await admin.from("follow_ups").insert({ organization_id: args.organizationId, lead_id: leadId, stage: 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id,organization_id").single();
   if (error) throw error;
   const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || phone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${phone}. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: phone } }).select("id,status,next_run_at").single();
   if (goalError) throw goalError;
