@@ -195,10 +195,16 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       recipient_phones: phones,
       custom_message: command.message,
       message_text: command.message,
+      preserve_exact_message: true,
+      message_delivery_mode: "exact",
       campaign_type: command.campaignType || "limitless_realty_update",
       template_name: command.templateName || "limitless_realty_update_v2",
       approved_template_name: command.templateName || "limitless_realty_update_v2",
-      allow_template_fallback: true,
+      // Do not silently substitute an approved Meta template for an approved
+      // campaign body. If the 24-hour window has closed, Meta may reject the
+      // exact free-form message. That failure must be surfaced rather than
+      // letting Maia rewrite the campaign to fit a template.
+      allow_template_fallback: false,
       topic: command.topic,
       property_filter: command.propertyTitle || "",
       media_url: mediaUrl || "",
@@ -211,8 +217,8 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       max_recipients: phones.length,
     },
     natural_response: mediaUrl
-      ? "Send the approved WhatsApp campaign with the attached Supabase-hosted image from the Fluxknight dashboard."
-      : "Send the approved WhatsApp campaign from the Fluxknight dashboard.",
+      ? "Send the approved WhatsApp campaign exactly as written with the attached Supabase-hosted image. Do not regenerate or rewrite the campaign body."
+      : "Send the approved WhatsApp campaign exactly as written from the Fluxknight dashboard. Do not regenerate or rewrite the campaign body.",
   };
 }
 
