@@ -22,6 +22,18 @@ function nextFollowupAt(message: string) {
   return new Date(now + 24 * 60 * 60 * 1000).toISOString();
 }
 
+function hasQualifiedPropertyInterest(message: string, propertyContext: { matches?: Array<{ title?: string | null }> }, reply: string) {
+  if (!reply.trim() || message.trim().length < 8) return false;
+  const lower = message.toLowerCase();
+  const exactPropertyMention = (propertyContext.matches || []).some((property) => {
+    const title = String(property.title || "").trim().toLowerCase();
+    return title.length >= 5 && lower.includes(title);
+  });
+  const specificReference = /\b(this|that|the)\s+(property|estate|land|plot|house|apartment)\b|\b(property|estate|land|plot|house|apartment)\s+(you|u)\s+(sent|mentioned|showed)\b/i.test(message);
+  const meaningfulIntent = /\b(interested|interest|like|love|want|looking to buy|looking for|how much|price|payment|installment|inspection|title|documentation|documents|location|availability|reserve|book|pay|purchase)\b/i.test(message);
+  return (exactPropertyMention || specificReference) && meaningfulIntent;
+}
+
 async function loadRecentConversation(organizationId: string, agentId: string, sessionId: string) {
   const admin = createAdminClient();
   const { data } = await admin.from("agent_runtime_messages").select("role,content,created_at").eq("organization_id", organizationId).eq("agent_id", agentId).eq("session_id", sessionId).order("created_at", { ascending: false }).limit(12);
@@ -67,7 +79,7 @@ export async function POST(request: NextRequest) {
       "PROPERTY MATCHING RULE: when a client states a budget, prioritize verified properties at or below that budget. You may recommend relevant alternatives up to 20% above the stated budget, but label them clearly as above-budget alternatives. Never invent availability or pricing.",
       "CONVERSATION RULE: answer naturally and intelligently using the conversation context, the assigned agent configuration, approved Limitless Realty knowledge, and verified property results. Do not expose internal tools, model selection, database details or workflow mechanics to the client.",
       "HANDOFF RULE: if human assistance is requested or escalation is necessary, prepare a concise summary of the conversation and only claim handoff after delivery to the configured human destination is confirmed.",
-      "FOLLOW-UP RULE: if the client explicitly asks for a follow-up/reminder, schedule it and preserve the requested context. Stop follow-ups on opt-out, resolution, or human handoff.",
+      "FOLLOW-UP RULE: automatically qualify specific property interest when the client refers to a specific catalog property or clearly refers to a property Maia showed them and expresses meaningful buying intent. Do not start a sequence for generic browsing or campaign-only contacts. A qualified sequence waits for at least 24 hours of inactivity before the first follow-up and uses the tenant policy cadence of days 1, 3, 7, 14, 21 and 30. Stop on reply, appointment, purchase, won/lost, opt-out, human handoff or resolution.",
     ].join("\n");
 
     const result = await runMaia({
@@ -80,15 +92,17 @@ export async function POST(request: NextRequest) {
       autonomous: true,
     });
 
+    const explicitFollowup = shouldFollowUp(message);
+    const qualifiedPropertyInterest = hasQualifiedPropertyInterest(message, propertyContext, result.reply);
     let followup: unknown = null;
-    if (shouldFollowUp(message)) {
+    if (explicitFollowup || qualifiedPropertyInterest) {
       followup = await queueLimitlessFollowup({
         organizationId: organization.id,
         agentId: agent.id,
         customerPhone,
         customerName,
-        when: nextFollowupAt(message),
-        message: `Follow up with ${customerName || "the client"} about the Limitless Realty enquiry. Reference the verified property context from the conversation and do not invent availability or pricing.`,
+        when: nextFollowupAt(explicitFollowup ? message : ""),
+        message: `Follow up with ${customerName || "the client"} about the Limitless Realty property enquiry. Preserve the specific property/context discussed, use current verified catalog data, and do not invent availability or pricing.`,
       });
     }
 
@@ -99,7 +113,7 @@ export async function POST(request: NextRequest) {
       handoff = await handoffToLimitlessHuman({ organizationId: organization.id, agentId: agent.id, sessionId: result.sessionId, customerName, customerPhone, reason: "Maia human escalation", summary });
     }
 
-    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, handoff });
+    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest }, handoff });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Limitless Maia request failed." }, { status: 500 });
   }
