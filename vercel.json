@@ -3,6 +3,10 @@
     {
       "path": "/api/maia/autonomous",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/limitless/maia/followups",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
