@@ -55,20 +55,39 @@ export function buildPropertyCampaignContent(
   const personalMessage = preserveMessage(customMessage);
   const replyInstruction = `Reply “More details on ${propertyName}” and Agent Maia will continue with this exact property.`;
 
+  // An explicitly written campaign is immutable. Property context, links and
+  // reply instructions are stored as structured metadata instead of being
+  // appended to the customer's approved message.
+  if (personalMessage) {
+    return {
+      message: personalMessage,
+      propertyName,
+      imageUrl,
+      replyInstruction,
+      memory: {
+        property_id: property.id,
+        property_name: propertyName,
+        property_names: [propertyName],
+        image_url: imageUrl,
+        message: personalMessage,
+        reply_instruction: replyInstruction,
+      },
+    };
+  }
+
   const requiredGeneratedLines = [
     `🏡 ${propertyName}`,
     imageUrl ? `View property image: ${imageUrl}` : "",
   ].filter(Boolean);
 
   const minimumMessage = joinBlocks([
-    personalMessage,
     requiredGeneratedLines.join("\n"),
     replyInstruction,
   ]);
 
   if (minimumMessage.length > TEMPLATE_BODY_LIMIT) {
     throw new PropertyCampaignMessageError(
-      `Your personal message is preserved exactly, but it leaves insufficient room for the required ${propertyName} property context. Reduce the personal message by at least ${minimumMessage.length - TEMPLATE_BODY_LIMIT} characters and try again.`,
+      `The generated property campaign for ${propertyName} exceeds the supported template message length.`,
     );
   }
 
@@ -84,8 +103,8 @@ export function buildPropertyCampaignContent(
 
   for (const line of optionalLines) {
     const candidate = joinBlocks([
-      personalMessage,
-      [...generatedLines, line].join("\n"),
+      generatedLines.join("\n"),
+      line,
       replyInstruction,
     ]);
 
@@ -95,7 +114,6 @@ export function buildPropertyCampaignContent(
     }
 
     const currentMessage = joinBlocks([
-      personalMessage,
       generatedLines.join("\n"),
       replyInstruction,
     ]);
@@ -105,7 +123,6 @@ export function buildPropertyCampaignContent(
   }
 
   const message = joinBlocks([
-    personalMessage,
     generatedLines.join("\n"),
     replyInstruction,
   ]);
