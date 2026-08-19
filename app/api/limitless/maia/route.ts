@@ -1,0 +1,101 @@
+import { NextRequest, NextResponse } from "next/server";
+import { runMaia } from "@/lib/ai/maia-runtime";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessHuman, queueLimitlessFollowup, shouldFollowUp, shouldHandoff, LIMITLESS_REALTY_HUMAN_WHATSAPP } from "@/lib/ai/limitless-realty-maia";
+
+export const dynamic = "force-dynamic";
+
+function extractPhone(body: Record<string, unknown>) {
+  return String(body.customerPhone || body.phone || body.from || body.whatsapp || "").replace(/[^\d]/g, "");
+}
+
+function nextFollowupAt(message: string) {
+  const now = Date.now();
+  const hour = message.match(/in\s+(\d+)\s*hours?/i);
+  const day = message.match(/in\s+(\d+)\s*days?/i);
+  if (hour) return new Date(now + Number(hour[1]) * 60 * 60 * 1000).toISOString();
+  if (day) return new Date(now + Number(day[1]) * 24 * 60 * 60 * 1000).toISOString();
+  if (/tomorrow/i.test(message)) return new Date(now + 24 * 60 * 60 * 1000).toISOString();
+  if (/next week/i.test(message)) return new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+  return new Date(now + 24 * 60 * 60 * 1000).toISOString();
+}
+
+async function loadRecentConversation(organizationId: string, agentId: string, sessionId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin.from("agent_runtime_messages").select("role,content,created_at").eq("organization_id", organizationId).eq("agent_id", agentId).eq("session_id", sessionId).order("created_at", { ascending: false }).limit(12);
+  return (data || []).reverse();
+}
+
+function buildHandoffSummary(name: string, phone: string, history: Array<{ role: string; content: string | null }>, propertyContext: unknown, reason: string) {
+  const transcript = history.map((row) => `${row.role.toUpperCase()}: ${row.content || ""}`).join("\n").slice(-6500);
+  return [
+    "LIMITLESS REALTY — MAIA HUMAN HANDOFF",
+    `Client: ${name || "Not provided"}`,
+    `Phone: ${phone || "Not provided"}`,
+    `Reason: ${reason}`,
+    "",
+    "Conversation summary / recent context:",
+    transcript || "No previous transcript available.",
+    "",
+    "Verified property context Maia used:",
+    JSON.stringify(propertyContext).slice(0, 4500),
+    "",
+    `Human handover destination: ${LIMITLESS_REALTY_HUMAN_WHATSAPP}`,
+  ].join("\n");
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+    const { organization, agent } = await getLimitlessMaiaContext();
+    const message = String(body.message || body.text || "").trim();
+    if (!message) return NextResponse.json({ error: "message is required" }, { status: 400 });
+
+    const propertyContext = await searchLimitlessProperties(message);
+    const customerName = String(body.customerName || body.name || "");
+    const customerPhone = extractPhone(body);
+    const enrichedMessage = [
+      message,
+      "",
+      "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:",
+      JSON.stringify(propertyContext),
+      "",
+      "PROPERTY MATCHING RULE: when a client states a budget, prioritize verified properties at or below that budget. You may recommend relevant alternatives up to 20% above the stated budget, but label them clearly as above-budget alternatives. Never invent availability or pricing.",
+      "HANDOFF RULE: if human assistance is requested or escalation is necessary, prepare a concise summary of the conversation and only claim handoff after delivery to the configured human destination is confirmed.",
+      "FOLLOW-UP RULE: if the client explicitly asks for a follow-up/reminder, schedule it and preserve the requested context. Stop follow-ups on opt-out, resolution, or human handoff.",
+    ].join("\n");
+
+    const result = await runMaia({
+      organizationId: organization.id,
+      agentId: agent.id,
+      message: enrichedMessage,
+      sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
+      channel: typeof body.channel === "string" ? body.channel : "whatsapp",
+      externalConversationId: customerPhone || undefined,
+      autonomous: false,
+    });
+
+    let followup: unknown = null;
+    if (shouldFollowUp(message)) {
+      followup = await queueLimitlessFollowup({
+        organizationId: organization.id,
+        agentId: agent.id,
+        customerPhone,
+        customerName,
+        when: nextFollowupAt(message),
+        message: `Follow up with ${customerName || "the client"} about the Limitless Realty enquiry. Reference the verified property context from the conversation and do not invent availability or pricing.`,
+      });
+    }
+
+    let handoff: unknown = null;
+    if (shouldHandoff(message, result.reply)) {
+      const history = await loadRecentConversation(organization.id, agent.id, result.sessionId);
+      const summary = buildHandoffSummary(customerName, customerPhone, history, propertyContext, "Client requested human assistance or Maia determined escalation was appropriate.");
+      handoff = await handoffToLimitlessHuman({ organizationId: organization.id, agentId: agent.id, sessionId: result.sessionId, customerName, customerPhone, reason: "Maia human escalation", summary });
+    }
+
+    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, propertyContext, followup, handoff });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Limitless Maia request failed." }, { status: 500 });
+  }
+}
