@@ -55,7 +55,7 @@ export async function searchLimitlessProperties(message: string) {
       else score -= 100;
     }
     return { property, price, score };
-  }).filter((row) => budget === null || row.price === null || row.price <= budget * 1.2)
+  }).filter((row) => budget === null || (row.price !== null && row.price <= budget * 1.2))
     .sort((a, b) => b.score - a.score || (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER));
 
   return {
