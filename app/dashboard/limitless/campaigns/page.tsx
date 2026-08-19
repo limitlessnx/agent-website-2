@@ -1,4 +1,4 @@
-import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenter";
+import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenterV2";
 import { getCampaignGroups } from "@/lib/campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import { getProperties } from "@/lib/limitless-data";
@@ -28,12 +28,9 @@ export default async function CampaignsPage() {
         <div>
           <p className="admin-kicker">Limitless Realty / Messaging Operations</p>
           <h1>WhatsApp Campaign Center</h1>
-          <p>Build audiences, prepare campaigns, monitor delivery, and inspect provider outcomes from one operating console.</p>
+          <p>Build audiences, select the correct WhatsApp route, monitor delivery, and inspect provider outcomes from one operating console.</p>
         </div>
-        <div className="console-status-stack">
-          <span className="console-status-pill">LIVE WORKSPACE</span>
-          <small>Maia delivery engine</small>
-        </div>
+        <div className="console-status-stack"><span className="console-status-pill">LIVE WORKSPACE</span><small>Maia delivery engine</small></div>
       </section>
 
       <section className="console-kpi-grid">
@@ -46,29 +43,8 @@ export default async function CampaignsPage() {
       <WhatsAppCampaignCenter leads={leads} properties={properties} groups={groups} />
 
       <section className="console-panel campaign-report-panel">
-        <header className="console-panel-head">
-          <div><span>DELIVERY LOG</span><h2>Recent campaign reports</h2></div>
-          <small>Showing latest {recentCampaigns.length} · {failed} failed deliveries recorded</small>
-        </header>
-        <div className="admin-table-wrap">
-          <table className="admin-table console-table">
-            <thead><tr><th>Campaign</th><th>Status</th><th>Attempted</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Date</th></tr></thead>
-            <tbody>
-              {recentCampaigns.length ? recentCampaigns.map((campaign) => (
-                <tr key={campaign.id}>
-                  <td><strong>{campaign.campaign_topic}</strong><small>{campaign.template_name || campaign.campaign_type.replaceAll("_", " ")}</small></td>
-                  <td><span className={`console-table-status ${campaign.failed ? "danger" : campaign.delivered ? "success" : "pending"}`}>{campaign.status.replaceAll("_", " ")}</span></td>
-                  <td>{campaign.attempted}</td>
-                  <td>{campaign.delivered}</td>
-                  <td>{campaign.pending_delivery}</td>
-                  <td>{campaign.failed}</td>
-                  <td>{campaign.skipped}</td>
-                  <td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString("en-NG") : "-"}</td>
-                </tr>
-              )) : <tr><td colSpan={8}>No saved campaign reports yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        <header className="console-panel-head"><div><span>DELIVERY LOG</span><h2>Recent campaign reports</h2></div><small>Showing latest {recentCampaigns.length} · {failed} failed deliveries recorded</small></header>
+        <div className="admin-table-wrap"><table className="admin-table console-table"><thead><tr><th>Campaign</th><th>Status</th><th>Attempted</th><th>Delivered</th><th>Pending</th><th>Failed</th><th>Skipped</th><th>Date</th></tr></thead><tbody>{recentCampaigns.length ? recentCampaigns.map((campaign) => <tr key={campaign.id}><td><strong>{campaign.campaign_topic}</strong><small>{campaign.template_name || campaign.campaign_type.replaceAll("_", " ")}</small></td><td><span className={`console-table-status ${campaign.failed ? "danger" : campaign.delivered ? "success" : "pending"}`}>{campaign.status.replaceAll("_", " ")}</span></td><td>{campaign.attempted}</td><td>{campaign.delivered}</td><td>{campaign.pending_delivery}</td><td>{campaign.failed}</td><td>{campaign.skipped}</td><td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString("en-NG") : "-"}</td></tr>) : <tr><td colSpan={8}>No saved campaign reports yet.</td></tr>}</tbody></table></div>
       </section>
     </div>
   );
