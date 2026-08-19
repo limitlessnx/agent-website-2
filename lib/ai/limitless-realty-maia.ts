@@ -115,9 +115,21 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
   const admin = createAdminClient();
   const scheduledAt = new Date(args.when);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error("Invalid follow-up time.");
-  const { data: followup, error } = await admin.from("follow_ups").insert({ lead_id: args.leadId || null, stage: 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status").single();
+  let leadId = args.leadId || null;
+  const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
+  if (!leadId && phone) {
+    const { data: existing } = await admin.from("leads").select("id,opted_out").eq("phone", phone).maybeSingle();
+    if (existing?.id) leadId = existing.id;
+    else {
+      const { data: created, error: createError } = await admin.from("leads").insert({ name: args.customerName || "Limitless Realty prospect", phone, status: "follow_up_pending", source: "maia", opted_out: false, agent_notified: false, conversation_log: [] }).select("id").single();
+      if (createError) throw createError;
+      leadId = created.id;
+    }
+  }
+  if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling a follow-up.");
+  const { data: followup, error } = await admin.from("follow_ups").insert({ lead_id: leadId, stage: 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id").single();
   if (error) throw error;
-  const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || args.customerPhone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${args.customerPhone || "not supplied"}. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: args.customerPhone || null } }).select("id,status,next_run_at").single();
+  const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || phone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${phone}. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: phone } }).select("id,status,next_run_at").single();
   if (goalError) throw goalError;
   return { followup, autonomousGoal: goal };
 }
