@@ -14,35 +14,72 @@ async function authorized(request: NextRequest) {
   return !error && data === true;
 }
 
-async function isAssigned(admin: ReturnType<typeof createAdminClient>, organizationId: string, agentId: string) {
-  const { data } = await admin.from("organization_agent_selections").select("configuration,status").eq("organization_id", organizationId);
-  return (data || []).some((row) => ["selected", "provisioning", "paid", "active"].includes(String(row.status || "")) && String((row.configuration as Record<string, unknown> | null)?.provisioned_agent_id || "") === agentId);
-}
-
 export async function POST(request: NextRequest) {
   if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  const admin = createAdminClient();
-  const now = new Date().toISOString();
-  const { data: goals, error } = await admin.from("agent_runtime_goals").select("id,organization_id,agent_id,title,input,priority").eq("status", "queued").or(`next_run_at.is.null,next_run_at.lte.${now}`).order("priority", { ascending: false }).order("created_at").limit(10);
-  if (error) return NextResponse.json({ error: "Unable to load autonomous goals." }, { status: 500 });
 
+  const admin = createAdminClient();
   const results: Array<Record<string, unknown>> = [];
-  for (const goal of goals || []) {
-    const claimed = await admin.from("agent_runtime_goals").update({ status: "running", updated_at: new Date().toISOString() }).eq("id", goal.id).eq("status", "queued").select("id").maybeSingle();
-    if (!claimed.data) continue;
+
+  for (let i = 0; i < 10; i += 1) {
+    const { data: claimed, error: claimError } = await admin.rpc("claim_next_maia_autonomous_goal");
+    if (claimError) return NextResponse.json({ error: "Unable to claim autonomous goal.", detail: claimError.message }, { status: 500 });
+    if (!claimed) break;
+
+    const goal = claimed as {
+      id: string;
+      organization_id: string;
+      agent_id: string;
+      title: string;
+      input: Record<string, unknown> | null;
+      priority: number | null;
+    };
+
     try {
-      if (!(await isAssigned(admin, goal.organization_id, goal.agent_id))) throw new Error("Autonomous goal target is no longer assigned to this organization.");
-      const input = goal.input && typeof goal.input === "object" ? goal.input as Record<string, unknown> : {};
-      const instructions = typeof input.instructions === "string" ? input.instructions : "Complete the queued autonomous task using approved tenant tools and stop when the goal is satisfied.";
-      const result = await runMaia({ organizationId: goal.organization_id, agentId: goal.agent_id, message: `AUTONOMOUS GOAL: ${goal.title}\n\n${instructions}`, channel: "autonomous", autonomous: true });
-      await admin.from("agent_runtime_goals").update({ status: "completed", output: { result }, updated_at: new Date().toISOString() }).eq("id", goal.id);
+      const { data: assignmentRows } = await admin
+        .from("organization_agent_selections")
+        .select("configuration,status")
+        .eq("organization_id", goal.organization_id);
+
+      const assigned = (assignmentRows || []).some(
+        (row) =>
+          ["selected", "provisioning", "paid", "active"].includes(String(row.status || "")) &&
+          String((row.configuration as Record<string, unknown> | null)?.provisioned_agent_id || "") === goal.agent_id,
+      );
+
+      if (!assigned) throw new Error("Autonomous goal target is no longer assigned to this organization.");
+
+      const input = goal.input && typeof goal.input === "object" ? goal.input : {};
+      const instructions =
+        typeof input.instructions === "string"
+          ? input.instructions
+          : "Complete the queued autonomous task using approved tenant tools and stop when the goal is satisfied.";
+
+      const result = await runMaia({
+        organizationId: goal.organization_id,
+        agentId: goal.agent_id,
+        message: `AUTONOMOUS GOAL: ${goal.title}\n\n${instructions}`,
+        channel: "autonomous",
+        autonomous: true,
+      });
+
+      await admin
+        .from("agent_runtime_goals")
+        .update({ status: "completed", output: { result }, updated_at: new Date().toISOString() })
+        .eq("id", goal.id)
+        .eq("status", "running");
+
       results.push({ id: goal.id, status: "completed", steps: result.steps });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "Autonomous goal failed.";
-      await admin.from("agent_runtime_goals").update({ status: "failed", output: { error: message }, updated_at: new Date().toISOString() }).eq("id", goal.id);
+      await admin
+        .from("agent_runtime_goals")
+        .update({ status: "failed", output: { error: message }, updated_at: new Date().toISOString() })
+        .eq("id", goal.id)
+        .eq("status", "running");
       results.push({ id: goal.id, status: "failed", error: message });
     }
   }
+
   return NextResponse.json({ ok: true, processed: results.length, results });
 }
 
