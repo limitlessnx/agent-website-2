@@ -84,7 +84,7 @@ export async function handoffToLimitlessHuman(args: { organizationId: string; ag
   return { handedOff: true, pending: false, destination: LIMITLESS_REALTY_HUMAN_WHATSAPP, delivery, handoff };
 }
 
-export async function queueLimitlessFollowup(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; when: string; message: string }) {
+export async function queueLimitlessFollowup(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; when: string; message: string; stage?: number }) {
   const admin = createAdminClient();
   const scheduledAt = new Date(args.when);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error("Invalid follow-up time.");
@@ -100,11 +100,40 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
     }
   }
   if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling a follow-up.");
-  const { data: followup, error } = await admin.from("follow_ups").insert({ organization_id: args.organizationId, lead_id: leadId, stage: 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id,organization_id").single();
+  const { data: followup, error } = await admin.from("follow_ups").insert({ organization_id: args.organizationId, lead_id: leadId, stage: args.stage || 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id,organization_id,stage").single();
   if (error) throw error;
   const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || phone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${phone}. Send through the canonical Limitless Realty Maia WhatsApp workflow only. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: phone, delivery_route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE } }).select("id,status,next_run_at").single();
   if (goalError) throw goalError;
   return { followup, autonomousGoal: goal };
+}
+
+export async function queueLimitlessPropertyFollowupSequence(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; propertyContext: unknown }) {
+  const admin = createAdminClient();
+  const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
+  if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
+  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("phone", phone).maybeSingle();
+  if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
+  const leadId = existingLead?.id || args.leadId || undefined;
+  if (leadId) await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
+
+  const stages = [1, 3, 7, 14, 21, 30];
+  const propertyText = JSON.stringify(args.propertyContext).slice(0, 3500);
+  const created: unknown[] = [];
+  for (const [index, days] of stages.entries()) {
+    const when = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const result = await queueLimitlessFollowup({
+      organizationId: args.organizationId,
+      agentId: args.agentId,
+      leadId,
+      customerPhone: phone,
+      customerName: args.customerName,
+      when,
+      stage: index + 1,
+      message: `Follow up with ${args.customerName || "the client"} about the property enquiry. Stage ${index + 1} of the 30-day sequence. Use the latest verified Limitless Realty catalogue data and the conversation context. Property context captured when the sequence started: ${propertyText}. If the client has replied, bought, opted out, requested a human, or the enquiry is resolved, stop instead of sending this message.`,
+    });
+    created.push(result);
+  }
+  return { created: created.length, sequenceDays: stages, followups: created };
 }
 
 export function shouldHandoff(message: string, reply: string) {
