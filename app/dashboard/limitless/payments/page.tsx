@@ -2,6 +2,8 @@ import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/a
 import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
 import { createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
+import PaymentRecordActions from "./PaymentRecordActions";
+import PaymentSubmitButton from "./PaymentSubmitButton";
 import "./payments.css";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export default async function PaymentsPage() {
   const paid = plans.reduce((sum, plan) => sum + Number(plan.total_paid || 0), 0);
   const outstanding = plans.reduce((sum, plan) => sum + Number(plan.outstanding_balance || 0), 0);
   const overdue = plans.filter((plan) => plan.status === "overdue").length;
+  const planById = new Map(plans.map((plan) => [plan.id, plan]));
 
   return (
     <div className="admin-page payment-page">
@@ -55,7 +58,7 @@ export default async function PaymentsPage() {
             <input name="assigned_agent" placeholder="Assigned agent" />
             <textarea name="notes" placeholder="Notes" rows={3} />
             <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
-            <button className="admin-button" type="submit">Create plan</button>
+            <PaymentSubmitButton>Create plan</PaymentSubmitButton>
           </form>
         </section>
 
@@ -68,7 +71,7 @@ export default async function PaymentsPage() {
             <select name="payment_method"><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="other">Other</option></select>
             <input name="payment_reference" placeholder="Payment reference" />
             <textarea name="notes" placeholder="Payment notes" rows={3} />
-            <button className="admin-button" type="submit">Record payment</button>
+            <PaymentSubmitButton>Record payment</PaymentSubmitButton>
           </form>
         </section>
       </div>
@@ -80,7 +83,7 @@ export default async function PaymentsPage() {
             <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
             <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
             <div className="payment-meta"><span>Next due: {plan.next_due_date || "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Enabled" : "Paused"}</span></div>
-            <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select><button type="submit">Update</button></form>
+            <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select><PaymentSubmitButton className="payment-status-button">Update</PaymentSubmitButton></form>
           </article>)}
           {!plans.length && !error ? <p className="admin-empty">No payment plans created yet.</p> : null}
         </div>
@@ -93,14 +96,25 @@ export default async function PaymentsPage() {
             <input type="hidden" name="template_id" value={template.id}/><input name="name" defaultValue={template.name}/><input name="position" type="number" min="1" defaultValue={template.position}/>
             <select name="timing_direction" defaultValue={template.timing_direction}><option value="before">Before due date</option><option value="on">On due date</option><option value="after">After due date</option></select>
             <input name="timing_days" type="number" min="0" defaultValue={template.timing_days}/><select name="channel" defaultValue={template.channel}><option value="placeholder">Placeholder</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="sms">SMS</option></select>
-            <textarea name="message_template" rows={4} defaultValue={template.message_template}/><input name="escalation_action" defaultValue={template.escalation_action}/><label className="payment-check"><input name="enabled" type="checkbox" defaultChecked={template.enabled}/> Enabled</label><button className="admin-button secondary" type="submit">Save placeholder</button>
+            <textarea name="message_template" rows={4} defaultValue={template.message_template}/><input name="escalation_action" defaultValue={template.escalation_action}/><label className="payment-check"><input name="enabled" type="checkbox" defaultChecked={template.enabled}/> Enabled</label><PaymentSubmitButton className="admin-button secondary">Save placeholder</PaymentSubmitButton>
           </form>)}
         </div>
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Recent payment records</h2><p>Latest entries across all plans.</p></div></div>
-        <div className="admin-list">{records.slice(0,20).map((record)=><div key={record.id} className="admin-list-row compact"><div><strong>{formatNaira(record.amount)}</strong><span>{record.payment_date} · {record.payment_method || "Method not set"} · {record.payment_reference || "No reference"}</span></div></div>)}{!records.length && !error ? <p className="admin-empty">No payments recorded yet.</p> : null}</div>
+        <div className="admin-panel-header"><div><h2>Recent payment records</h2><p>Edit or delete an entry when a payment was recorded incorrectly. Totals recalculate automatically.</p></div></div>
+        <div className="admin-list">
+          {records.slice(0,20).map((record)=>{
+            const plan = planById.get(record.payment_plan_id);
+            return (
+              <div key={record.id} className="admin-list-row compact payment-record-row">
+                <PaymentRecordActions record={record} />
+                {plan ? <span className="payment-record-client">{plan.client_name} · {plan.property_title}</span> : null}
+              </div>
+            );
+          })}
+          {!records.length && !error ? <p className="admin-empty">No payments recorded yet.</p> : null}
+        </div>
       </section>
     </div>
   );
