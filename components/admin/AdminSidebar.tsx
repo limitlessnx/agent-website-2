@@ -69,6 +69,7 @@ const basePlatformGroups: NavGroup[] = [
           { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
           { href: "/dashboard/limitless/media", label: "Knowledge & Media", icon: Image },
           { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
+          { href: "/dashboard/limitless/agentic", label: "Agentic Intelligence", icon: BrainCircuit },
           { href: "/dashboard/limitless/payments", label: "Payments", icon: CreditCard },
         ],
       },
