@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
-import { createPaymentPlan, createPaymentRecord, updatePaymentPlan, createReminderTemplate, updateReminderTemplate } from "@/lib/limitless-payments";
+import { createPaymentPlan, createPaymentRecord, deletePaymentRecord, updatePaymentRecord, updatePaymentPlan, createReminderTemplate, updateReminderTemplate } from "@/lib/limitless-payments";
 
 async function requireAdmin() {
   const session = await getAdminSession();
@@ -54,6 +54,29 @@ export async function recordPaymentAction(formData: FormData) {
     notes: String(formData.get("notes") || "").trim() || null,
     created_by: session.email,
   });
+  revalidatePath("/dashboard/limitless/payments");
+}
+
+export async function updatePaymentRecordAction(formData: FormData) {
+  await requireAdmin();
+  const recordId = String(formData.get("payment_record_id") || "");
+  const amount = money(formData.get("amount"));
+  if (!recordId || amount <= 0) throw new Error("A valid payment record and amount are required.");
+  await updatePaymentRecord(recordId, {
+    amount,
+    payment_date: String(formData.get("payment_date") || "").trim() || new Date().toISOString().slice(0, 10),
+    payment_method: String(formData.get("payment_method") || "").trim() || null,
+    payment_reference: String(formData.get("payment_reference") || "").trim() || null,
+    notes: String(formData.get("notes") || "").trim() || null,
+  });
+  revalidatePath("/dashboard/limitless/payments");
+}
+
+export async function deletePaymentRecordAction(formData: FormData) {
+  await requireAdmin();
+  const recordId = String(formData.get("payment_record_id") || "");
+  if (!recordId) throw new Error("Payment record is required.");
+  await deletePaymentRecord(recordId);
   revalidatePath("/dashboard/limitless/payments");
 }
 
