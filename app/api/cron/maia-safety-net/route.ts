@@ -1,24 +1,41 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Daily Hobby-plan safety net for Maia's autonomous and follow-up engines.
+ * Maia scheduler gateway.
  *
- * The primary high-frequency scheduler is intentionally external to Vercel
- * because Hobby deployments only support daily cron schedules. This endpoint
- * is therefore a reconciliation pass, not the primary scheduler.
+ * - Vercel Hobby invokes this route once daily as a safety net using CRON_SECRET.
+ * - Supabase Cron invokes it frequently using the private scheduler token stored
+ *   in Supabase Vault. The token is verified server-side through a privileged RPC.
+ *
+ * This keeps high-frequency scheduling off Vercel while preserving the existing
+ * autonomous and follow-up engines.
  */
 export async function GET(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
+  const cronSecret = process.env.CRON_SECRET?.trim();
   const authorization = request.headers.get("authorization");
+  const suppliedCronSecret = authorization?.replace(/^Bearer\s+/i, "").trim();
+  const schedulerToken = request.headers.get("x-maia-scheduler-token")?.trim();
 
-  if (cronSecret && authorization !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let authorized = Boolean(cronSecret && suppliedCronSecret === cronSecret);
+
+  if (!authorized && schedulerToken) {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("verify_maia_scheduler_secret", {
+      candidate: schedulerToken,
+    });
+    authorized = !error && data === true;
   }
 
+  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const baseUrl = new URL(request.url).origin;
-  const headers: HeadersInit = cronSecret
-    ? { authorization: `Bearer ${cronSecret}` }
-    : {};
+  const internalSecret = cronSecret;
+  if (!internalSecret) {
+    return NextResponse.json({ error: "CRON_SECRET is not configured." }, { status: 500 });
+  }
+
+  const headers: HeadersInit = { authorization: `Bearer ${internalSecret}` };
 
   const results = await Promise.allSettled([
     fetch(`${baseUrl}/api/maia/autonomous`, { method: "GET", headers, cache: "no-store" }),
@@ -34,7 +51,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: summary.every((item) => item.ok),
-    mode: "daily-safety-net",
+    mode: schedulerToken && suppliedCronSecret !== cronSecret ? "external-scheduler" : "daily-safety-net",
     results: summary,
   });
 }
