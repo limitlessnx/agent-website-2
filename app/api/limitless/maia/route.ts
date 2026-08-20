@@ -40,6 +40,14 @@ async function loadRecentConversation(organizationId: string, agentId: string, s
   return (data || []).reverse();
 }
 
+async function resolveSessionId(organizationId: string, agentId: string, customerPhone: string, suppliedSessionId?: string) {
+  if (suppliedSessionId) return suppliedSessionId;
+  if (!customerPhone) return undefined;
+  const admin = createAdminClient();
+  const { data } = await admin.from("agent_runtime_sessions").select("id").eq("organization_id", organizationId).eq("agent_id", agentId).eq("external_conversation_id", customerPhone).eq("status", "active").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  return data?.id;
+}
+
 async function cancelPendingFollowupsForInbound(organizationId: string, customerPhone: string) {
   if (!customerPhone) return 0;
   const admin = createAdminClient();
@@ -78,6 +86,7 @@ export async function POST(request: NextRequest) {
     const customerName = String(body.customerName || body.name || "");
     const customerPhone = extractPhone(body);
     const cancelledOnReply = await cancelPendingFollowupsForInbound(organization.id, customerPhone);
+    const existingSessionId = await resolveSessionId(organization.id, agent.id, customerPhone, typeof body.sessionId === "string" ? body.sessionId : undefined);
     const enrichedMessage = [
       message,
       "",
@@ -96,7 +105,7 @@ export async function POST(request: NextRequest) {
       organizationId: organization.id,
       agentId: agent.id,
       message: enrichedMessage,
-      sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
+      sessionId: existingSessionId,
       channel: CANONICAL_CHANNEL,
       externalConversationId: customerPhone || undefined,
       autonomous: true,
