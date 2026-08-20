@@ -4,6 +4,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import WorkspaceRail from "@/components/admin/WorkspaceRail";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
@@ -30,7 +31,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
           <header className="admin-topbar">
             <div className="admin-breadcrumb">
               <strong>Fluxknight</strong>
-              <span>Limitless Realty / Operations</span>
+              <span>Workspace Operations</span>
             </div>
             <AdminSearch />
             <div className="admin-topbar-actions">
@@ -54,6 +55,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
               </div>
             </div>
           </header>
+          <WorkspaceRail />
           {children}
           <EnterpriseTableEnhancer />
         </section>
