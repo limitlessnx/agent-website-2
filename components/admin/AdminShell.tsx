@@ -9,6 +9,7 @@ import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
+import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
 
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
@@ -16,7 +17,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   const tenants = await listClientOnboardingProfiles(100).catch(() => []);
 
   return (
-    <div className={enterprise.platform}>
+    <div className={`${enterprise.platform} ${mobileChrome.shell}`}>
       <div className="admin-shell fluxknight-platform-shell">
         <AdminSidebar
           email={session.email}
