@@ -29,6 +29,7 @@ export type PaymentRecord = {
   payment_method: string | null;
   payment_reference: string | null;
   notes: string | null;
+  created_by?: string | null;
   created_at: string;
 };
 
@@ -62,6 +63,14 @@ export async function createPaymentPlan(payload: Record<string, unknown>) {
 
 export async function createPaymentRecord(payload: Record<string, unknown>) {
   return supabaseServerRequest<PaymentRecord[]>("payment_records", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function updatePaymentRecord(recordId: string, payload: Record<string, unknown>) {
+  return supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export async function deletePaymentRecord(recordId: string) {
+  return supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, { method: "DELETE" });
 }
 
 export async function updatePaymentPlan(planId: string, payload: Record<string, unknown>) {
