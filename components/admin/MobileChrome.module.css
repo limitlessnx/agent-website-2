@@ -1,0 +1,45 @@
+@media (max-width: 900px) {
+  .shell :global(.admin-topbar) {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto !important;
+    grid-template-rows:52px 44px !important;
+    align-items:center !important;
+    gap:8px !important;
+    padding:8px 14px 9px 68px !important;
+    min-height:104px !important;
+    background:#0b0d18 !important;
+    border-bottom:1px solid rgba(139,92,246,.18) !important;
+  }
+  .shell :global(.admin-breadcrumb) { display:flex !important; align-items:center !important; min-width:0 !important; }
+  .shell :global(.admin-breadcrumb strong) { font-size:16px !important; color:#f4f1ff !important; letter-spacing:-.02em !important; }
+  .shell :global(.admin-breadcrumb span) { display:none !important; }
+  .shell :global(.admin-topbar-actions) { display:flex !important; grid-column:2 !important; grid-row:1 !important; align-items:center !important; gap:8px !important; overflow:visible !important; padding:0 !important; }
+  .shell :global(.admin-topbar-actions > .admin-period), .shell :global(.admin-topbar-actions > a) { display:none !important; }
+  .shell :global(.admin-topbar-actions > *) { flex:0 0 auto !important; }
+  .shell :global(.admin-search) {
+    grid-column:1 / -1 !important;
+    grid-row:2 !important;
+    width:100% !important;
+    height:42px !important;
+    min-height:42px !important;
+    margin:0 !important;
+    padding:0 10px !important;
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    border:1px solid rgba(139,92,246,.28) !important;
+    border-radius:9px !important;
+    background:rgba(20,16,40,.88) !important;
+    box-shadow:0 0 20px rgba(124,58,237,.12) !important;
+  }
+  .shell :global(.admin-search input) { min-width:0 !important; width:100% !important; height:40px !important; font-size:11px !important; color:#f4f1ff !important; }
+  .shell :global(.admin-search button) { width:28px !important; min-width:28px !important; height:28px !important; padding:0 !important; font-size:0 !important; border:1px solid rgba(139,92,246,.2) !important; background:rgba(139,92,246,.08) !important; }
+  .shell :global(.admin-search button)::after { content:'⌘K'; font-size:9px; color:#8e899d; }
+  .shell :global(.admin-main) { min-width:0 !important; width:100% !important; overflow:hidden !important; }
+  .shell :global(.admin-shell) { width:100% !important; }
+}
+
+@media (max-width: 620px) {
+  .shell :global(.admin-topbar) { padding-left:66px !important; padding-right:14px !important; }
+  .shell :global(.admin-search) { height:40px !important; min-height:40px !important; }
+}
