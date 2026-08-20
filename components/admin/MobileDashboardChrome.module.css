@@ -1,0 +1,43 @@
+@media (max-width: 900px) {
+  .shell :global(.admin-topbar) {
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    padding: 8px 12px 8px 70px;
+    align-items: center;
+  }
+  .shell :global(.admin-topbar .admin-search) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    margin: 0;
+    min-height: 48px;
+  }
+  .shell :global(.admin-topbar-actions) {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    overflow: visible;
+    padding: 0;
+  }
+  .shell :global(.admin-topbar-actions > *) { flex: 0 0 auto; }
+}
+
+@media (max-width: 520px) {
+  .shell :global(.admin-topbar) {
+    padding: 8px 10px 8px 64px;
+    gap: 7px;
+  }
+  .shell :global(.admin-breadcrumb strong) { font-size: .72rem; }
+  .shell :global(.admin-breadcrumb span) { display: none; }
+  .shell :global(.admin-topbar-actions) { gap: 5px; }
+  .shell :global(.admin-topbar-actions > a),
+  .shell :global(.admin-topbar-actions > .admin-period) { display: none; }
+  .shell :global(.admin-topbar .admin-search) { min-height: 48px; }
+  .shell :global(.admin-search input) { font-size: .72rem; }
+  .shell :global(.admin-search button) { min-width: 0; padding: 0 7px; font-size: .6rem; }
+}
