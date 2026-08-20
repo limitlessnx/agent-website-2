@@ -13,120 +13,79 @@ import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import styles from "@/components/admin/AdminSidebar.module.css";
 import extras from "@/components/admin/AdminSidebarExtras.module.css";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: ComponentType<{ size?: number }>;
-  exact?: boolean;
-  meta?: string;
-};
-
-type NavSection = {
-  label?: string;
-  items: NavItem[];
-};
-
-type NavGroup = {
-  id: string;
-  label: string;
-  sections: NavSection[];
-};
-
-export type TenantNavItem = {
-  id: string;
-  organizationId: string;
-  name: string;
-  status: string;
-};
+type NavItem = { href: string; label: string; icon: ComponentType<{ size?: number }>; exact?: boolean; meta?: string };
+type NavSection = { label?: string; items: NavItem[] };
+type NavGroup = { id: string; label: string; sections: NavSection[] };
+export type TenantNavItem = { id: string; organizationId: string; name: string; status: string };
 
 const basePlatformGroups: NavGroup[] = [
   {
     id: "fluxknight-core",
     label: "Fluxknight Platform",
-    sections: [
-      {
-        items: [
-          { href: "/dashboard", label: "Command Center", icon: Home, exact: true },
-          { href: "/dashboard/support", label: "Agent Leo AI Support", icon: LifeBuoy },
-          { href: "/dashboard/notifications", label: "Admin Notifications", icon: Bell },
-          { href: "/dashboard/evaluations", label: "Evaluation Leads", icon: ClipboardList },
-          { href: "/dashboard/agents", label: "Super Assistant", icon: Bot },
-          { href: "/dashboard/activity", label: "Global Activity", icon: Activity },
-        ],
-      },
-    ],
+    sections: [{ items: [
+      { href: "/dashboard", label: "Command Center", icon: Home, exact: true },
+      { href: "/dashboard/support", label: "Agent Leo AI Support", icon: LifeBuoy },
+      { href: "/dashboard/notifications", label: "Admin Notifications", icon: Bell },
+      { href: "/dashboard/evaluations", label: "Evaluation Leads", icon: ClipboardList },
+      { href: "/dashboard/agents", label: "Super Assistant", icon: Bot },
+      { href: "/dashboard/activity", label: "Global Activity", icon: Activity },
+    ] }],
   },
   {
     id: "home-agents",
     label: "Home Agents",
     sections: [
-      {
-        label: "Limitless Realty",
-        items: [
-          { href: "/dashboard/limitless/leads", label: "Leads", icon: Users },
-          { href: "/dashboard/limitless/daily-briefs", label: "Daily Briefs", icon: ClipboardList },
-          { href: "/dashboard/limitless/followups", label: "Follow-ups", icon: MessageCircle },
-          { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
-          { href: "/dashboard/limitless/media", label: "Knowledge & Media", icon: Image },
-          { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
-          { href: "/dashboard/limitless/agentic", label: "Agentic Systems", icon: BrainCircuit },
-          { href: "/dashboard/workflows", label: "Workflows", icon: Activity },
-          { href: "/dashboard/limitless/payments", label: "Payments", icon: CreditCard },
-        ],
-      },
-      {
-        label: "Gencouv",
-        items: [
-          { href: "/dashboard/gencouv", label: "Overview", icon: LineChart, exact: true },
-          { href: "/dashboard/gencouv#email-control", label: "Email Control", icon: Mail },
-          { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", icon: MessageCircle },
-          { href: "/dashboard/gencouv#lead-board", label: "Lead Board", icon: Users },
-          { href: "/dashboard/gencouv#sequence-status", label: "Sequence Status", icon: ShieldCheck },
-          { href: "/dashboard/gencouv#acquisition", label: "Acquisition", icon: Search },
-          { href: "/dashboard/gencouv#operations", label: "Operations", icon: Activity },
-        ],
-      },
+      { label: "Limitless Realty", items: [
+        { href: "/dashboard/limitless/leads", label: "Leads", icon: Users },
+        { href: "/dashboard/limitless/daily-briefs", label: "Daily Briefs", icon: ClipboardList },
+        { href: "/dashboard/limitless/followups", label: "Follow-ups", icon: MessageCircle },
+        { href: "/dashboard/limitless/properties", label: "Properties", icon: Building2 },
+        { href: "/dashboard/limitless/media", label: "Knowledge & Media", icon: Image },
+        { href: "/dashboard/limitless/campaigns", label: "Campaigns", icon: Megaphone },
+        { href: "/dashboard/limitless/agentic", label: "Agentic Systems", icon: BrainCircuit },
+        { href: "/dashboard/workflows", label: "Workflows", icon: Activity },
+        { href: "/dashboard/limitless/payments", label: "Payments", icon: CreditCard },
+      ] },
+      { label: "Gencouv", items: [
+        { href: "/dashboard/gencouv", label: "Overview", icon: LineChart, exact: true },
+        { href: "/dashboard/gencouv#email-control", label: "Email Control", icon: Mail },
+        { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", icon: MessageCircle },
+        { href: "/dashboard/gencouv#lead-board", label: "Lead Board", icon: Users },
+        { href: "/dashboard/gencouv#sequence-status", label: "Sequence Status", icon: ShieldCheck },
+        { href: "/dashboard/gencouv#acquisition", label: "Acquisition", icon: Search },
+        { href: "/dashboard/gencouv#operations", label: "Operations", icon: Activity },
+      ] },
     ],
   },
   {
     id: "platform-governance",
     label: "Platform Governance",
-    sections: [
-      {
-        items: [
-          { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
-          { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
-          { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
-          { href: "/dashboard/settings", label: "Platform Settings", icon: Settings },
-        ],
-      },
-    ],
+    sections: [{ items: [
+      { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
+      { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
+      { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
+      { href: "/dashboard/settings", label: "Platform Settings", icon: Settings },
+    ] }],
   },
 ];
 
 const publicSiteLinks = [
-  { href: "/", label: "Homepage" },
-  { href: "/services", label: "Services" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/industries", label: "Industries" },
-  { href: "/evaluation", label: "Evaluation" },
+  { href: "/", label: "Homepage" }, { href: "/services", label: "Services" }, { href: "/pricing", label: "Pricing" },
+  { href: "/industries", label: "Industries" }, { href: "/evaluation", label: "Evaluation" },
 ];
 
-function groupItems(group: NavGroup) {
-  return group.sections.flatMap((section) => section.items);
-}
-
+function groupItems(group: NavGroup) { return group.sections.flatMap((section) => section.items); }
 function itemIsActive(pathname: string, item: { href: string; exact?: boolean }) {
   const route = item.href.split("#")[0].split("?")[0];
   return item.exact ? pathname === route : pathname === route || pathname.startsWith(`${route}/`);
 }
+function tenantLabel(value: string) { return value.replaceAll("_", " "); }
 
-function tenantLabel(value: string) {
-  return value.replaceAll("_", " ");
-}
-
-const defaultOpenGroupIds = ["fluxknight-core", "home-agents", "client-onboarding"];
-const defaultOpenSectionIds = ["home-agents:limitless-realty", "home-agents:gencouv", "client-onboarding:onboarding"];
+// Main groups and nested sections are intentionally closed on first render.
+// Users open only the branch they are working in, instead of the sidebar
+// expanding into a small novella on every page load.
+const defaultOpenGroupIds: string[] = [];
+const defaultOpenSectionIds: string[] = [];
 
 function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
   if (!section.label) return `${groupId}:${sectionIndex}`;
@@ -141,26 +100,19 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
       id: "client-onboarding",
       label: "Client Onboarding",
       sections: [
-        {
-          label: "Onboarding",
-          items: [
-            { href: "/dashboard/onboarding#new-client", label: "New Client", icon: Plus },
-            { href: "/dashboard/onboarding#queue", label: "Onboarding Queue", icon: ClipboardList },
-            { href: "/dashboard/clients", label: "Client Registry", icon: Users, exact: true },
-          ],
-        },
-        {
-          label: "Client Workspaces",
-          items: tenants.map((tenant) => ({
-            href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
-            label: tenant.name,
-            icon: Building2,
-            meta: tenantLabel(tenant.status),
-          })),
-        },
+        { label: "Onboarding", items: [
+          { href: "/dashboard/onboarding#new-client", label: "New Client", icon: Plus },
+          { href: "/dashboard/onboarding#queue", label: "Onboarding Queue", icon: ClipboardList },
+          { href: "/dashboard/clients", label: "Client Registry", icon: Users, exact: true },
+        ] },
+        { label: "Client Workspaces", items: tenants.map((tenant) => ({
+          href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
+          label: tenant.name, icon: Building2, meta: tenantLabel(tenant.status),
+        })) },
       ],
     },
   ], [tenants]);
+
   const [openGroups, setOpenGroups] = useState<string[]>(defaultOpenGroupIds);
   const [openSections, setOpenSections] = useState<string[]>(defaultOpenSectionIds);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -169,14 +121,10 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   function toggleGroup(id: string) {
     setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
   }
-
   function toggleSection(id: string) {
     setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]);
   }
-
-  function closeMobileMenu() {
-    setMobileOpen(false);
-  }
+  function closeMobileMenu() { setMobileOpen(false); }
 
   const workspaceName = pathname.startsWith("/dashboard/gencouv")
     ? "Gencouv"
@@ -190,7 +138,6 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     <>
       {!mobileOpen ? <button type="button" className={styles.mobileToggle} onClick={() => setMobileOpen(true)} aria-label="Open navigation menu"><Menu size={21} /></button> : null}
       {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={closeMobileMenu} /> : null}
-
       <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.mobileHeader}><button type="button" onClick={closeMobileMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
         <Link href="/dashboard" onClick={closeMobileMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
@@ -207,22 +154,17 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
               <ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} />
             </button>
             <div className={`${styles.items} ${publicSiteOpen ? styles.itemsOpen : ""}`}>
-              <div className={styles.section}>
-                <div className={styles.sectionItemsOpen}>
-                  {publicSiteLinks.map((item) => (
-                    <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMobileMenu}>
-                      <ExternalLink size={16} />
-                      <span>{item.label}</span>
-                    </a>
-                  ))}
-                </div>
-              </div>
+              <div className={styles.section}><div className={styles.sectionItemsOpen}>
+                {publicSiteLinks.map((item) => <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMobileMenu}><ExternalLink size={16} /><span>{item.label}</span></a>)}
+              </div></div>
             </div>
           </section>
 
           {platformGroups.map((group) => {
             const hasActiveItem = groupItems(group).some((item) => itemIsActive(pathname, item));
-            const isOpen = openGroups.includes(group.id) || hasActiveItem;
+            // Do not auto-expand because the current route is active. Clicking
+            // the group trigger is the only thing that opens/closes it.
+            const isOpen = openGroups.includes(group.id);
             return (
               <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
                 <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}>
@@ -232,31 +174,18 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
                   {group.sections.map((section, sectionIndex) => {
                     const nestedSectionId = sectionId(group.id, section, sectionIndex);
                     const hasActiveSectionItem = section.items.some((item) => itemIsActive(pathname, item));
-                    const isSectionOpen = openSections.includes(nestedSectionId) || hasActiveSectionItem;
-
+                    const isSectionOpen = openSections.includes(nestedSectionId);
                     return (
                       <div key={nestedSectionId} className={styles.section}>
-                        {section.label ? (
-                          <button
-                            type="button"
-                            className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`}
-                            onClick={() => toggleSection(nestedSectionId)}
-                            aria-expanded={isSectionOpen}
-                          >
-                            <span>{section.label}</span>
-                            <ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} />
-                          </button>
-                        ) : null}
+                        {section.label ? <button type="button" className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`} onClick={() => toggleSection(nestedSectionId)} aria-expanded={isSectionOpen}>
+                          <span>{section.label}</span><ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} />
+                        </button> : null}
                         <div className={`${section.label ? styles.sectionItems : ""} ${!section.label || isSectionOpen ? styles.sectionItemsOpen : ""}`}>
                           {section.items.map((item) => {
                             const active = itemIsActive(pathname, item);
-                            return (
-                              <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}>
-                                <item.icon size={17} />
-                                <span>{item.label}</span>
-                                {item.meta ? <small>{item.meta}</small> : null}
-                              </Link>
-                            );
+                            return <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}>
+                              <item.icon size={17} /><span>{item.label}</span>{item.meta ? <small>{item.meta}</small> : null}
+                            </Link>;
                           })}
                         </div>
                       </div>
