@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runMaia } from "@/lib/ai/maia-runtime";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessHuman, queueLimitlessFollowup, shouldFollowUp, shouldHandoff, LIMITLESS_REALTY_HUMAN_WHATSAPP } from "@/lib/ai/limitless-realty-maia";
+import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessHuman, queueLimitlessFollowup, queueLimitlessPropertyFollowupSequence, shouldFollowUp, shouldHandoff, LIMITLESS_REALTY_HUMAN_WHATSAPP } from "@/lib/ai/limitless-realty-maia";
 
 export const dynamic = "force-dynamic";
 const CANONICAL_CHANNEL = "whatsapp";
@@ -40,6 +40,15 @@ async function loadRecentConversation(organizationId: string, agentId: string, s
   return (data || []).reverse();
 }
 
+async function cancelPendingFollowupsForInbound(organizationId: string, customerPhone: string) {
+  if (!customerPhone) return 0;
+  const admin = createAdminClient();
+  const { data: lead } = await admin.from("leads").select("id").eq("phone", customerPhone).maybeSingle();
+  if (!lead?.id) return 0;
+  const { data } = await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", organizationId).eq("lead_id", lead.id).eq("status", "pending").select("id");
+  return data?.length || 0;
+}
+
 function buildHandoffSummary(name: string, phone: string, history: Array<{ role: string; content: string | null }>, propertyContext: unknown, reason: string) {
   const transcript = history.map((row) => `${row.role.toUpperCase()}: ${row.content || ""}`).join("\n").slice(-6500);
   return [
@@ -68,6 +77,7 @@ export async function POST(request: NextRequest) {
     const propertyContext = await searchLimitlessProperties(message);
     const customerName = String(body.customerName || body.name || "");
     const customerPhone = extractPhone(body);
+    const cancelledOnReply = await cancelPendingFollowupsForInbound(organization.id, customerPhone);
     const enrichedMessage = [
       message,
       "",
@@ -79,7 +89,7 @@ export async function POST(request: NextRequest) {
       "PROPERTY MATCHING RULE: when a client states a budget, prioritize verified properties at or below that budget. You may recommend relevant alternatives up to 20% above the stated budget, but label them clearly as above-budget alternatives. Never invent availability or pricing.",
       "CONVERSATION RULE: answer naturally and intelligently using the conversation context, the assigned agent configuration, approved Limitless Realty knowledge, and verified property results. Do not expose internal tools, model selection, database details or workflow mechanics to the client.",
       "HANDOFF RULE: if human assistance is requested or escalation is necessary, prepare a concise summary of the conversation and only claim handoff after delivery to the configured human destination is confirmed.",
-      "FOLLOW-UP RULE: automatically qualify specific property interest when the client refers to a specific catalog property or clearly refers to a property Maia showed them and expresses meaningful buying intent. Do not start a sequence for generic browsing or campaign-only contacts. A qualified sequence waits for at least 24 hours of inactivity before the first follow-up and uses the tenant policy cadence of days 1, 3, 7, 14, 21 and 30. Stop on reply, appointment, purchase, won/lost, opt-out, human handoff or resolution.",
+      "FOLLOW-UP RULE: automatically qualify specific property interest when the client refers to a specific catalog property or clearly refers to a property Maia showed them and expresses meaningful buying intent. Do not start a sequence for generic browsing or campaign-only contacts. A qualified property sequence uses stages at days 1, 3, 7, 14, 21 and 30. Stop on reply, appointment, purchase, won/lost, opt-out, human handoff or resolution.",
     ].join("\n");
 
     const result = await runMaia({
@@ -95,14 +105,16 @@ export async function POST(request: NextRequest) {
     const explicitFollowup = shouldFollowUp(message);
     const qualifiedPropertyInterest = hasQualifiedPropertyInterest(message, propertyContext, result.reply);
     let followup: unknown = null;
-    if (explicitFollowup || qualifiedPropertyInterest) {
+    if (qualifiedPropertyInterest) {
+      followup = await queueLimitlessPropertyFollowupSequence({ organizationId: organization.id, agentId: agent.id, customerPhone, customerName, propertyContext });
+    } else if (explicitFollowup) {
       followup = await queueLimitlessFollowup({
         organizationId: organization.id,
         agentId: agent.id,
         customerPhone,
         customerName,
-        when: nextFollowupAt(explicitFollowup ? message : ""),
-        message: `Follow up with ${customerName || "the client"} about the Limitless Realty property enquiry. Preserve the specific property/context discussed, use current verified catalog data, and do not invent availability or pricing.`,
+        when: nextFollowupAt(message),
+        message: `Follow up with ${customerName || "the client"} about the Limitless Realty enquiry. Preserve the context discussed, use current verified catalog data, and do not invent availability or pricing.`,
       });
     }
 
@@ -113,7 +125,7 @@ export async function POST(request: NextRequest) {
       handoff = await handoffToLimitlessHuman({ organizationId: organization.id, agentId: agent.id, sessionId: result.sessionId, customerName, customerPhone, reason: "Maia human escalation", summary });
     }
 
-    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest }, handoff });
+    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest, cancelledOnReply }, handoff });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Limitless Maia request failed." }, { status: 500 });
   }
