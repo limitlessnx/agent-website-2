@@ -4,10 +4,12 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import WorkspaceRail from "@/components/admin/WorkspaceRail";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
+import chrome from "@/components/admin/MobileChrome.module.css";
 
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
@@ -16,7 +18,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
 
   return (
     <div className={enterprise.platform}>
-      <div className="admin-shell fluxknight-platform-shell">
+      <div className={`admin-shell fluxknight-platform-shell ${chrome.shell}`}>
         <AdminSidebar
           email={session.email}
           tenants={tenants.map((tenant) => ({
@@ -30,30 +32,19 @@ export default async function AdminShell({ children }: { children: React.ReactNo
           <header className="admin-topbar">
             <div className="admin-breadcrumb">
               <strong>Fluxknight</strong>
-              <span>Limitless Realty / Operations</span>
+              <span>Workspace Operations</span>
             </div>
             <AdminSearch />
             <div className="admin-topbar-actions">
-              <Link
-                href="/"
-                target="_blank"
-                rel="noreferrer"
-                title="Open Fluxknight homepage in a new tab"
-                style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none" }}
-                className="admin-period"
-              >
-                <span aria-hidden="true">Home</span>
-                <span>Homepage</span>
-                <span aria-hidden="true">Open</span>
+              <Link href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage" className="admin-period">
+                <span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span>
               </Link>
               <PlatformChrome />
               <ThemeToggle />
-              <div className="admin-period">
-                <span aria-hidden="true">Live</span>
-                <span>Live Ops</span>
-              </div>
+              <div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
+          <WorkspaceRail />
           {children}
           <EnterpriseTableEnhancer />
         </section>

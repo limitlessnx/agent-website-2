@@ -1,0 +1,1 @@
+This endpoint is the Vercel Hobby daily safety net for Maia. It runs at 10:00 UTC and invokes the existing autonomous and follow-up handlers once as a reconciliation pass. High-frequency execution should come from the external scheduler/workflow engine, not Vercel Hobby cron.

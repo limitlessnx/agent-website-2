@@ -5,11 +5,16 @@ export const dynamic = "force-dynamic";
 const LIMITLESS_REALTY_SLUG = "limitless-realty";
 const CANONICAL_ROUTE = "existing-limitless-realty-maia-n8n";
 
-function authorized(request: NextRequest) {
+async function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
-  return Boolean(supplied && supplied === secret);
+  if (secret && supplied && supplied === secret) return true;
+
+  const schedulerToken = request.headers.get("x-maia-scheduler-token")?.trim();
+  if (!schedulerToken) return false;
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("verify_maia_scheduler_secret", { candidate: schedulerToken });
+  return !error && data === true;
 }
 
 async function sendViaCanonicalMaia(to: string, message: string) {
@@ -21,7 +26,7 @@ async function sendViaCanonicalMaia(to: string, message: string) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const admin = createAdminClient();
   const { data: organization } = await admin.from("organizations").select("id").eq("slug", LIMITLESS_REALTY_SLUG).maybeSingle();
   if (!organization) return NextResponse.json({ error: "Limitless Realty organization is not configured." }, { status: 500 });

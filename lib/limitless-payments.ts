@@ -58,31 +58,58 @@ export async function getReminderTemplates() {
 }
 
 export async function createPaymentPlan(payload: Record<string, unknown>) {
-  return supabaseServerRequest<PaymentPlan[]>("payment_plans", { method: "POST", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentPlan[]>("payment_plans", { method: "POST", body: JSON.stringify(payload) });
+  if (!rows[0]) throw new Error("Payment plan was not created. No record was returned by the database.");
+  return rows[0];
 }
 
 export async function createPaymentRecord(payload: Record<string, unknown>) {
-  return supabaseServerRequest<PaymentRecord[]>("payment_records", { method: "POST", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentRecord[]>("payment_records", { method: "POST", body: JSON.stringify(payload) });
+  if (!rows[0]) throw new Error("Payment was not recorded. No record was returned by the database.");
+  return rows[0];
 }
 
 export async function updatePaymentRecord(recordId: string, payload: Record<string, unknown>) {
-  return supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+  if (rows.length !== 1) {
+    throw new Error(rows.length === 0
+      ? "Payment could not be updated. The record no longer exists or the database rejected the target row."
+      : "Payment update returned an unexpected number of records.");
+  }
+  return rows[0];
 }
 
 export async function deletePaymentRecord(recordId: string) {
-  return supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, { method: "DELETE" });
+  const rows = await supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, {
+    method: "DELETE",
+  });
+  if (rows.length !== 1) {
+    throw new Error(rows.length === 0
+      ? "Payment could not be deleted. The record no longer exists or the database rejected the target row."
+      : "Payment delete returned an unexpected number of records.");
+  }
+  return rows[0];
 }
 
 export async function updatePaymentPlan(planId: string, payload: Record<string, unknown>) {
-  return supabaseServerRequest<PaymentPlan[]>(`payment_plans?id=eq.${encodeURIComponent(planId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentPlan[]>(`payment_plans?id=eq.${encodeURIComponent(planId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  if (rows.length !== 1) throw new Error("Payment plan could not be updated. The target plan was not found.");
+  return rows[0];
 }
 
 export async function createReminderTemplate(payload: Record<string, unknown>) {
-  return supabaseServerRequest<ReminderTemplate[]>("reminder_templates", { method: "POST", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<ReminderTemplate[]>("reminder_templates", { method: "POST", body: JSON.stringify(payload) });
+  if (!rows[0]) throw new Error("Reminder template was not saved.");
+  return rows[0];
 }
 
 export async function updateReminderTemplate(templateId: string, payload: Record<string, unknown>) {
-  return supabaseServerRequest<ReminderTemplate[]>(`reminder_templates?id=eq.${encodeURIComponent(templateId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<ReminderTemplate[]>(`reminder_templates?id=eq.${encodeURIComponent(templateId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  if (rows.length !== 1) throw new Error("Reminder template could not be updated. The target template was not found.");
+  return rows[0];
 }
 
 export function formatNaira(value: number | string | null | undefined) {

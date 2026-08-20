@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, ArrowUpRight, Bot, CircleAlert, Goal, Gauge, Network, Play, ShieldCheck } from "@/components/admin/ServerIcons";
+import { Activity, ArrowUpRight, Bot, CircleAlert, Gauge, Network, Play, ShieldCheck, Target } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +44,7 @@ export default async function AgentOperationsPage() {
     </div>
 
     <div className="admin-grid-2">
-      <section className="admin-panel"><header className="admin-panel-header"><div><h2>Autonomous operation</h2><p>Goals Maia can execute without a human manually starting each action.</p></div><Goal size={18}/></header>
+      <section className="admin-panel"><header className="admin-panel-header"><div><h2>Autonomous operation</h2><p>Goals Maia can execute without a human manually starting each action.</p></div><Target size={18}/></header>
         <div className="admin-list">{data.goals.slice(0, 10).map((goal) => <article className="admin-list-row" key={goal.id}><span className="admin-list-icon"><Play size={13}/></span><div><strong>{goal.title}</strong><small>{goal.goal_type} · priority {goal.priority} · {goal.status}</small></div><em>{goal.next_run_at ? new Date(goal.next_run_at).toLocaleString() : "No next run"}</em></article>)}{!data.goals.length && <p className="admin-empty">No autonomous goals have been recorded yet.</p>}</div>
       </section>
 
@@ -58,6 +58,6 @@ export default async function AgentOperationsPage() {
       <section className="admin-panel"><header className="admin-panel-header"><div><h2>Agent readiness</h2><p>Operational blockers before autonomous agents are allowed to run.</p></div><Gauge size={18}/></header><div className="admin-list">{data.readiness.map((item) => <article className="admin-list-row" key={item.agent_id}><span className="admin-list-icon"><Bot size={13}/></span><div><strong>Agent {String(item.agent_id).slice(0, 8)}</strong><small>{item.readiness_score}% ready · integrations {item.integrations_ready ? "ready" : "blocked"} · workflow {item.workflow_ready ? "ready" : "blocked"}</small></div><em>{item.blockers && Object.keys(item.blockers as object).length ? "Needs attention" : "Ready"}</em></article>)}{!data.readiness.length && <p className="admin-empty">No readiness record exists yet.</p>}</div></section>
     </div>
 
-    <section className="admin-panel"><header className="admin-panel-header"><div><h2>Operations controls</h2><p>Jump directly into the systems that create autonomous outcomes.</p></div><ArrowUpRight size={18}/></header><div className="admin-action-grid"><Link href="/dashboard/limitless/followups"><Goal size={15}/><span>Follow-up engine<small>Sequences and scheduled client actions</small></span></Link><Link href="/dashboard/clients"><Bot size={15}/><span>Agent assignments<small>Control which agents belong to each tenant</small></span></Link><Link href="/dashboard/workflows"><Network size={15}/><span>Workflow orchestration<small>Connect actions and automation routes</small></span></Link></div></section>
+    <section className="admin-panel"><header className="admin-panel-header"><div><h2>Operations controls</h2><p>Jump directly into the systems that create autonomous outcomes.</p></div><ArrowUpRight size={18}/></header><div className="admin-action-grid"><Link href="/dashboard/limitless/followups"><Target size={15}/><span>Follow-up engine<small>Sequences and scheduled client actions</small></span></Link><Link href="/dashboard/clients"><Bot size={15}/><span>Agent assignments<small>Control which agents belong to each tenant</small></span></Link><Link href="/dashboard/workflows"><Network size={15}/><span>Workflow orchestration<small>Connect actions and automation routes</small></span></Link></div></section>
   </main>;
 }
