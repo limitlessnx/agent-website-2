@@ -1,17 +1,19 @@
 export const dynamic = "force-dynamic";
 
-import { Activity, BrainCircuit, Clock3, Database, MessageCircle, ShieldCheck, Zap } from "@/components/admin/ServerIcons";
+import Link from "next/link";
+import { Activity, BrainCircuit, ChevronDown, MessageCircle, ShieldCheck, Target, Zap } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
+import styles from "./MaiaAgentic.module.css";
 
 const ORG_SLUG = "limitless-realty";
 
 export default async function LimitlessAgenticPage() {
   const admin = createAdminClient();
   const { data: organization } = await admin.from("organizations").select("id,name,status").eq("slug", ORG_SLUG).maybeSingle();
-  if (!organization) return <div className="admin-page"><section className="maia-empty"><h1>Maia Agentic Intelligence</h1><p>Limitless Realty is not provisioned yet.</p></section></div>;
+  if (!organization) return <main className={styles.page}><section className={styles.analytics}><h1>Maia Agentic Intelligence</h1><p>Limitless Realty is not provisioned yet.</p></section></main>;
 
   const { data: maia } = await admin.from("agents").select("id,name,slug,status").eq("organization_id", organization.id).eq("slug", "maia").maybeSingle();
-  if (!maia) return <div className="admin-page"><section className="maia-empty"><h1>Maia Agentic Intelligence</h1><p>The canonical Maia agent is missing.</p></section></div>;
+  if (!maia) return <main className={styles.page}><section className={styles.analytics}><h1>Maia Agentic Intelligence</h1><p>The canonical Maia agent is missing.</p></section></main>;
 
   const [profileResult, readinessResult, sessionsResult, toolRunsResult, goalsResult, followupsResult] = await Promise.all([
     admin.from("agent_runtime_profiles").select("enabled,autonomy_mode,max_steps,model_strategy,memory_enabled").eq("organization_id", organization.id).eq("agent_id", maia.id).maybeSingle(),
@@ -32,48 +34,37 @@ export default async function LimitlessAgenticPage() {
   const completedGoals = goals.filter((g) => ["completed", "done", "success"].includes(String(g.status))).length;
   const failedGoals = goals.filter((g) => ["failed", "error", "timeout"].includes(String(g.status))).length;
   const readinessScore = Number(readiness?.readiness_score || 0);
-  const online = Boolean(profile?.enabled && maia.status && maia.status !== "inactive");
   const toolFailures = tools.filter((t) => ["failed", "error", "timeout"].includes(String(t.status))).length;
   const successRate = tools.length ? Math.max(0, Math.round(((tools.length - toolFailures) / tools.length) * 100)) : 100;
-  const recentTools = tools.slice(0, 4);
+  const recentTools = tools.slice(0, 3);
+  const total = goals.length;
+  const pct = (n: number) => total ? Math.round((n / total) * 100) : 0;
 
-  return <div className="admin-page maia-command">
-    <section className="maia-hero">
-      <div className="maia-hero-avatar"><div className="avatar-glow"/><img src="/maia-robot.svg" alt="Maia robotic AI assistant" /></div>
-      <div className="maia-hero-copy">
-        <div className="maia-eyebrow"><span className="maia-dot"/> Limitless Realty · Maia <b>Autonomous</b></div>
+  return <main className={styles.page}>
+    <section className={styles.hero}>
+      <div className={styles.portrait}><img src="/maia-portrait.svg" alt="Maia AI" /></div>
+      <div className={styles.copy}>
+        <div className={styles.eyebrow}>Limitless Realty · Maia <span className={styles.badge}><i className={styles.dot}/>Autonomous</span></div>
         <h1>Agentic Intelligence</h1>
         <p>Maia's operating brain, tools, memory, autonomous goals, property reasoning and WhatsApp route in one control surface.</p>
       </div>
-      <div className="maia-brain" aria-hidden="true"><div className="brain-grid"/><div className="brain-core"/><span/><span/><span/><span/><span/><span/></div>
+      <div className={styles.brain} aria-hidden="true"><svg viewBox="0 0 220 150" fill="none"><path d="M42 78C27 52 50 26 82 34C99 10 139 14 151 39C186 32 204 59 187 83C198 111 168 132 141 119C122 145 84 139 77 116C48 122 27 101 42 78Z" stroke="#a855f7" strokeWidth="2.4" opacity=".95"/><path d="M56 73L82 53L111 67L139 43L174 62M74 100L105 82L141 96L170 83M111 67L105 82M139 43L141 96" stroke="#c084fc" strokeWidth="1" opacity=".75"/><g fill="#e9d5ff">{[[56,73],[82,53],[111,67],[139,43],[174,62],[74,100],[105,82],[141,96],[170,83]].map(([cx,cy],i)=><circle key={i} cx={cx} cy={cy} r="3"/> )}</g><ellipse cx="112" cy="133" rx="66" ry="7" fill="#8b5cf6" opacity=".18"/></svg></div>
     </section>
 
-    <nav className="maia-module-nav" aria-label="Limitless Realty modules">
-      <a className="active" href="/dashboard/limitless"><BrainCircuit/><span>Overview</span></a>
-      <a href="/dashboard/organizations"><Database/><span>Organizations</span></a>
-      <a href="/dashboard/limitless/leads"><MessageCircle/><span>Leads</span></a>
-      <a href="/dashboard/limitless/properties"><Database/><span>Properties</span></a>
-      <a href="/dashboard/limitless/agentic"><BrainCircuit/><span>Maia</span></a>
-      <a href="/dashboard/limitless/conversations"><MessageCircle/><span>Conversations</span></a>
-      <a href="/dashboard/workflows"><Zap/><span>Automations</span></a>
-      <a href="/dashboard/analytics"><Activity/><span>Analytics</span></a>
-      <a href="/dashboard/settings"><ShieldCheck/><span>Settings</span></a>
-    </nav>
+    <section className={styles.stats}>
+      <article className={`${styles.card} ${styles.stat}`}><div className={styles.statTop}><span>Autonomy</span><Zap size={17}/></div><strong className={styles.green}>{profile?.autonomy_mode === "autonomous" ? "ON" : "OFF"}</strong><small>{profile?.max_steps || 0} max steps</small></article>
+      <article className={`${styles.card} ${styles.stat}`}><div className={styles.statTop}><span>Readiness</span><ShieldCheck size={17}/></div><strong>{readinessScore}%</strong><small>{readinessScore >= 90 ? "Fully operational" : "Needs attention"}</small></article>
+      <article className={`${styles.card} ${styles.stat}`}><div className={styles.statTop}><span>Runtime Sessions</span><MessageCircle size={17}/></div><strong>{sessions.length}</strong><small>Recent sessions</small></article>
+      <article className={`${styles.card} ${styles.stat}`}><div className={styles.statTop}><span>Active Goals</span><Target size={17}/></div><strong>{activeGoals}</strong><small className={styles.green}>Running</small></article>
+    </section>
 
-    <div className="maia-stat-grid">
-      <article><span><Activity/> Autonomy</span><strong className="green">{profile?.autonomy_mode === "autonomous" ? "ON" : "OFF"}</strong><small>{profile?.max_steps || 0} max steps</small></article>
-      <article><span><ShieldCheck/> Readiness</span><strong>{readinessScore}%</strong><small>{readinessScore >= 90 ? "Fully operational" : "Needs attention"}</small></article>
-      <article><span><MessageCircle/> Runtime Sessions</span><strong>{sessions.length}</strong><small>Recent sessions</small></article>
-      <article><span><Zap/> Active Goals</span><strong>{activeGoals}</strong><small className="green">Running</small></article>
-    </div>
+    <section className={styles.health}><div className={styles.healthHeader}><div className={styles.healthTitle}><Activity size={17}/>System Health</div><div className={styles.healthy}>All systems operational <i className={styles.dot}/></div></div><div className={styles.healthItems}><div className={styles.healthItem}><i className={styles.check}>✓</i><span><b>Scheduler</b><small>Every 5 min</small></span></div><div className={styles.healthItem}><i className={styles.check}>✓</i><span><b>Maia Gateway</b><small>Online</small></span></div><div className={styles.healthItem}><i className={styles.check}>✓</i><span><b>Autonomous</b><small>Online</small></span></div><div className={styles.healthItem}><i className={styles.check}>✓</i><span><b>Follow-ups</b><small>{followups.length ? "Online" : "Ready"}</small></span></div></div></section>
 
-    <section className="maia-system"><header><div><Activity/><strong>System Health</strong></div><span><i/> All systems operational</span></header><div className="maia-health-grid"><div><b>✓</b><span>Scheduler<small>Every 5 min</small></span></div><div><b>✓</b><span>Maia Gateway<small>Online</small></span></div><div><b>✓</b><span>Autonomous<small>Online</small></span></div><div><b>✓</b><span>Follow-ups<small>{followups.length ? "Online" : "Ready"}</small></span></div></div></section>
-
-    <div className="maia-content-grid">
-      <section className="maia-panel"><header><div><h2>Goal Execution</h2></div><button>7 days⌄</button></header><div className="goal-visual"><div className="goal-ring"><div><strong>{goals.length}</strong><small>Total</small></div></div><div className="goal-legend"><span><i className="done"/> Completed <b>{completedGoals} ({goals.length ? Math.round(completedGoals / goals.length * 100) : 0}%)</b></span><span><i className="run"/> Running <b>{activeGoals} ({goals.length ? Math.round(activeGoals / goals.length * 100) : 0}%)</b></span><span><i className="fail"/> Failed <b>{failedGoals} ({goals.length ? Math.round(failedGoals / goals.length * 100) : 0}%)</b></span></div></div></section>
-      <section className="maia-panel"><header><div><h2>Recent Activity</h2></div><button>View all</button></header><div className="activity-list">{recentTools.map((run) => <div key={run.id}><b>{run.status === "failed" ? "!" : "✓"}</b><span><strong>{run.tool_name}</strong><small>{run.status === "completed" ? "Autonomous goal completed" : String(run.status)}</small></span><em>{run.started_at ? new Date(run.started_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : ""}</em></div>)}{!recentTools.length && <div className="maia-empty-inline">No recent activity yet.</div>}</div><a className="view-link" href="/dashboard/limitless/followups">View all activity →</a></section>
-      <section className="maia-panel"><header><div><h2>Automation Usage</h2></div><button>7 days⌄</button></header><div className="usage-number">{successRate}<small>% success rate</small></div><div className="usage-chart"><i/><i/><i/><i/><i/><i/><i/><i/></div></section>
-      <section className="maia-panel"><header><div><h2>Maia Status</h2></div><span className="online-pill"><i/> Online</span></header><div className="status-grid"><div>Last run<strong>{tools[0]?.started_at ? new Date(tools[0].started_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : "No runs"}</strong></div><div>Next run<strong>In 3 min</strong></div><div>Environment<strong>Production</strong></div><div>Version<strong>v1.4.2</strong></div></div></section>
-    </div>
-  </div>;
+    <section className={styles.analyticsGrid}>
+      <article className={styles.analytics}><header className={styles.analyticsHeader}><span>Goal Execution</span><button>7 days <ChevronDown size={11}/></button></header><div className={styles.goal}><div className={styles.ring}><div className={styles.ringInner}><strong>{total}</strong><small>Total</small></div></div><div className={styles.legend}><div className={styles.legendRow}><i className={styles.legendDot} style={{background:"#7c3aed"}}/><span>Completed</span><b>{completedGoals} ({pct(completedGoals)}%)</b></div><div className={styles.legendRow}><i className={styles.legendDot} style={{background:"#35d46f"}}/><span>Running</span><b>{activeGoals} ({pct(activeGoals)}%)</b></div><div className={styles.legendRow}><i className={styles.legendDot} style={{background:"#eab308"}}/><span>Failed</span><b>{failedGoals} ({pct(failedGoals)}%)</b></div></div></div></article>
+      <article className={styles.analytics}><header className={styles.analyticsHeader}><span>Recent Activity</span><Link href="/dashboard/limitless/followups">View all</Link></header><div className={styles.activity}>{recentTools.length ? recentTools.map((run)=><div className={styles.activityRow} key={run.id}><span className={styles.activityIcon}><Activity size={13}/></span><span className={styles.activityText}><b>{run.tool_name}</b><small>{run.status === "completed" ? "Autonomous goal completed" : String(run.status)}</small></span><time>{run.started_at ? new Date(run.started_at).toLocaleTimeString("en-NG",{hour:"2-digit",minute:"2-digit"}) : ""}</time></div>) : <div className={styles.empty}>No recent activity yet.</div>}</div><Link className={styles.view} href="/dashboard/limitless/followups">View all activity →</Link></article>
+      <article className={styles.analytics}><header className={styles.analyticsHeader}><span>Automation Usage</span><button>7 days <ChevronDown size={11}/></button></header><div className={styles.usage}><strong>{successRate}%</strong><small>Success rate</small><div className={styles.chart}/></div></article>
+      <article className={styles.analytics}><header className={styles.analyticsHeader}><span>Maia Status</span><em className={styles.online}>Online</em></header><div className={styles.statusGrid}><div className={styles.statusCell}><small>Last run</small><b>{tools[0]?.started_at ? new Date(tools[0].started_at).toLocaleTimeString("en-NG",{hour:"2-digit",minute:"2-digit"}) : "No runs"}</b></div><div className={styles.statusCell}><small>Next run</small><b>In 3 min</b></div><div className={styles.statusCell}><small>Environment</small><b>Production</b></div><div className={styles.statusCell}><small>Version</small><b>Agentic</b></div></div></article>
+    </section>
+  </main>;
 }
