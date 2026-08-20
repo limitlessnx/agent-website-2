@@ -2,38 +2,40 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Activity, BarChart2, BrainCircuit, Building2, Home, MessageCircle, Settings, Users, Zap } from "lucide-react";
 import styles from "@/components/admin/WorkspaceRail.module.css";
 
-type Item = { href: string; label: string };
+type Item = { href: string; label: string; Icon: typeof Activity };
 
 const limitless: Item[] = [
-  { href: "/dashboard/limitless/agentic", label: "Maia" },
-  { href: "/dashboard/limitless/leads", label: "Leads" },
-  { href: "/dashboard/limitless/properties", label: "Properties" },
-  { href: "/dashboard/limitless/followups", label: "Follow-ups" },
-  { href: "/dashboard/workflows", label: "Workflows" },
-  { href: "/dashboard/limitless/payments", label: "Payments" },
-  { href: "/dashboard/limitless/campaigns", label: "Campaigns" },
-  { href: "/dashboard/limitless/media", label: "Knowledge" },
+  { href: "/dashboard/limitless", label: "Overview", Icon: Home },
+  { href: "/dashboard/organizations", label: "Organizations", Icon: Building2 },
+  { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
+  { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
+  { href: "/dashboard/limitless/agentic", label: "Maia", Icon: BrainCircuit },
+  { href: "/dashboard/limitless/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
+  { href: "/dashboard/analytics", label: "Analytics", Icon: BarChart2 },
+  { href: "/dashboard/settings", label: "Settings", Icon: Settings },
 ];
 
 const gencouv: Item[] = [
-  { href: "/dashboard/gencouv", label: "Overview" },
-  { href: "/dashboard/gencouv#email-control", label: "Email" },
-  { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox" },
-  { href: "/dashboard/gencouv#lead-board", label: "Leads" },
-  { href: "/dashboard/gencouv#sequence-status", label: "Sequences" },
-  { href: "/dashboard/gencouv#acquisition", label: "Acquisition" },
-  { href: "/dashboard/gencouv#operations", label: "Operations" },
+  { href: "/dashboard/gencouv", label: "Overview", Icon: Home },
+  { href: "/dashboard/gencouv#email-control", label: "Email", Icon: MessageCircle },
+  { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", Icon: MessageCircle },
+  { href: "/dashboard/gencouv#lead-board", label: "Leads", Icon: Users },
+  { href: "/dashboard/gencouv#sequence-status", label: "Sequences", Icon: Activity },
+  { href: "/dashboard/gencouv#acquisition", label: "Acquisition", Icon: BarChart2 },
+  { href: "/dashboard/gencouv#operations", label: "Operations", Icon: Zap },
 ];
 
 const platform: Item[] = [
-  { href: "/dashboard", label: "Command" },
-  { href: "/dashboard/agents", label: "Agents" },
-  { href: "/dashboard/activity", label: "Activity" },
-  { href: "/dashboard/knowledge", label: "Knowledge" },
-  { href: "/dashboard/memory", label: "Memory" },
-  { href: "/dashboard/settings", label: "Settings" },
+  { href: "/dashboard", label: "Command", Icon: Home },
+  { href: "/dashboard/agents", label: "Agents", Icon: BrainCircuit },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/knowledge", label: "Knowledge", Icon: Building2 },
+  { href: "/dashboard/memory", label: "Memory", Icon: BrainCircuit },
+  { href: "/dashboard/settings", label: "Settings", Icon: Settings },
 ];
 
 function active(pathname: string, href: string) {
@@ -48,12 +50,10 @@ export default function WorkspaceRail() {
   const name = isLimitless ? "Limitless Realty" : isGencouv ? "Gencouv" : "Fluxknight";
   const items = isLimitless ? limitless : isGencouv ? gencouv : platform;
 
-  return (
-    <nav className={styles.rail} aria-label={`${name} quick navigation`}>
-      <div className={styles.identity}><span className={styles.dot} /> <strong>{name}</strong><small>Workspace</small></div>
-      <div className={styles.items}>
-        {items.map((item) => <Link key={item.href} href={item.href} className={active(pathname, item.href) ? styles.active : ""}>{item.label}</Link>)}
-      </div>
-    </nav>
-  );
+  return <nav className={styles.rail} aria-label={`${name} dashboard navigation`}>
+    <div className={styles.identity}><span className={styles.dot}/><strong>{name}</strong></div>
+    <div className={styles.items}>
+      {items.map(({ href, label, Icon }) => <Link key={href} href={href} className={active(pathname, href) ? styles.active : ""}><Icon size={16}/><span>{label}</span></Link>)}
+    </div>
+  </nav>;
 }
