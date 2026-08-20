@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runMaia } from "@/lib/ai/maia-runtime";
 
-function authorized(request: NextRequest) {
+async function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
-  return Boolean(secret && supplied && supplied === secret);
+  if (secret && supplied && supplied === secret) return true;
+
+  const schedulerToken = request.headers.get("x-maia-scheduler-token")?.trim();
+  if (!schedulerToken) return false;
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("verify_maia_scheduler_secret", { candidate: schedulerToken });
+  return !error && data === true;
 }
 
 async function isAssigned(admin: ReturnType<typeof createAdminClient>, organizationId: string, agentId: string) {
@@ -14,7 +20,7 @@ async function isAssigned(admin: ReturnType<typeof createAdminClient>, organizat
 }
 
 export async function POST(request: NextRequest) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const admin = createAdminClient();
   const now = new Date().toISOString();
   const { data: goals, error } = await admin.from("agent_runtime_goals").select("id,organization_id,agent_id,title,input,priority").eq("status", "queued").or(`next_run_at.is.null,next_run_at.lte.${now}`).order("priority", { ascending: false }).order("created_at").limit(10);
