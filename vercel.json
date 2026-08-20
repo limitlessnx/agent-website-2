@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/maia/autonomous",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/limitless/maia/followups",
-      "schedule": "*/5 * * * *"
+      "path": "/api/cron/maia-safety-net",
+      "schedule": "0 10 * * *"
     }
   ]
 }
