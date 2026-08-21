@@ -50,7 +50,7 @@ export default function WorkspaceRail() {
   const name = isLimitless ? "Limitless Realty" : isGencouv ? "Gencouv" : "Fluxknight";
   const items = isLimitless ? limitless : isGencouv ? gencouv : platform;
 
-  return <nav className={styles.rail} aria-label={`${name} dashboard navigation`}>
+  return <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} dashboard navigation`}>
     <div className={styles.identity}><span className={styles.dot}/><strong>{name}</strong></div>
     <div className={styles.items}>
       {items.map(({ href, label, Icon }) => <Link key={href} href={href} className={active(pathname, href) ? styles.active : ""}><Icon size={16}/><span>{label}</span></Link>)}
