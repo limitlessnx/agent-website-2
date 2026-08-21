@@ -1,6 +1,7 @@
 @media (max-width: 900px) {
   .shell :global(.admin-topbar) { display: none !important; }
-  .shell :global(.admin-sidebar) { display: none !important; }
+  /* Keep the real mobile drawer alive. AdminSidebar owns its open/close state. */
+  .shell :global(.admin-sidebar) { display: block !important; }
   .shell :global(.admin-main) { min-width: 0; width: 100%; }
   .shell :global(.admin-main > .workspace-rail) { display: none !important; }
   .shell :global(.admin-main > .admin-page) { width: 100%; }
