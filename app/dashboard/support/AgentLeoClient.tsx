@@ -49,9 +49,8 @@ export default function AgentLeoClient({
   placeholder = "Message Leo...",
   typingLabel = "Leo is inspecting Fluxknight",
 }: AgentLeoClientProps) {
-  const welcome: Message = { role: "assistant", content: welcomeMessage };
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>([welcome]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState("");
   const [actions, setActions] = useState<Action[]>([]);
   const [aiState, setAiState] = useState<AIState | null>(null);
@@ -77,7 +76,7 @@ export default function AgentLeoClient({
     const response = await fetch(`${apiBase}?conversationId=${encodeURIComponent(id)}`, { cache: "no-store" });
     const result = await response.json().catch(() => ({}));
     if (response.ok) {
-      const loadedMessages: Message[] = result.messages?.length ? result.messages : [welcome];
+      const loadedMessages: Message[] = result.messages || [];
       setMessages(loadedMessages);
       setActions(result.actions || []);
       const latestAssistant = [...loadedMessages].reverse().find((item) => item.role === "assistant" && item.diagnostics?.ai);
@@ -87,7 +86,7 @@ export default function AgentLeoClient({
 
   function newDiagnosis() {
     setConversationId("");
-    setMessages([{ role: "assistant", content: "New session started. Tell me what you want to inspect or handle." }]);
+    setMessages([]);
     setActions([]);
     setAiState(null);
     setError("");
@@ -203,7 +202,7 @@ export default function AgentLeoClient({
           </div>
           <div className="leo-intelligence-copy">
             <p>{busy ? "Thinking across your workspace" : "AI operations copilot"}</p>
-            <h2>{busy ? "Leo is working on it." : "How can I help you today?"}</h2>
+            <h2>How can I help you today?</h2>
             <span>{description}</span>
           </div>
           <div className="leo-capabilities">
@@ -215,6 +214,12 @@ export default function AgentLeoClient({
 
         <section className="leo-chat-shell">
           <div className="leo-messages">
+            {!messages.length && !busy ? (
+              <div className="leo-empty-chat">
+                <h2>How can I help you today?</h2>
+                <p>Ask Leo to inspect, diagnose, or handle something in Fluxknight.</p>
+              </div>
+            ) : null}
             {messages.map((message, index) => (
               <article key={`${message.role}-${index}`} className={`leo-message ${message.role}`}>
                 {message.role === "assistant" ? <span className="leo-message-avatar"><Bot size={14} /></span> : null}
