@@ -50,6 +50,33 @@ function scopeToolArguments(identity: LeoIdentity, args: Record<string, unknown>
   return scoped;
 }
 
+/** Keep Leo's normal answers concise without damaging structured/tool output. */
+function conciseLeoReply(reply: string) {
+  const text = reply.trim();
+  if (text.length <= 900) return text;
+
+  const paragraphs = text.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
+  let output = "";
+  for (const paragraph of paragraphs) {
+    const candidate = output ? `${output}\n\n${paragraph}` : paragraph;
+    if (candidate.length > 900) break;
+    output = candidate;
+    if (output.length >= 650) break;
+  }
+
+  if (output.length >= 120) return `${output.replace(/[\s,;:]+$/, "")}…`;
+
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  let compact = "";
+  for (const sentence of sentences) {
+    const candidate = `${compact}${compact ? " " : ""}${sentence.trim()}`;
+    if (candidate.length > 700) break;
+    compact = candidate;
+    if (compact.length >= 450) break;
+  }
+  return `${(compact || text.slice(0, 700)).replace(/[\s,;:]+$/, "")}…`;
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const channel = validChannel(body.channel);
@@ -107,6 +134,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const reply = conciseLeoReply(result.reply);
   const toolCalls = result.toolCalls.map((call) => ({
     ...call,
     arguments: scopeToolArguments(identity, call.arguments),
@@ -117,7 +145,7 @@ export async function POST(request: NextRequest) {
     identity,
     session,
     role: "assistant",
-    content: result.reply,
+    content: reply,
     metadata: {
       intent: result.intent,
       confidence: result.confidence,
@@ -144,7 +172,7 @@ export async function POST(request: NextRequest) {
     sessionId: session.id,
     persistence: session.persisted ? "database" : "ephemeral",
     visibility: session.visibility,
-    reply: result.reply,
+    reply,
     intent: result.intent,
     confidence: result.confidence,
     needsHumanReview: result.needsHumanReview,
