@@ -1,7 +1,5 @@
 // Central icon exports for the admin/client portal.
-// The previous implementation intentionally rendered two-letter text fallbacks
-// (e.g. "LI", "LC", "MA") inside the icon slots. Those fallbacks were being
-// displayed as real UI text. Use the actual Lucide SVG icons instead.
+// Use actual Lucide SVG icons so icon slots never render text fallbacks.
 export {
   Activity,
   AlertCircle,
@@ -49,6 +47,7 @@ export {
   GitBranch,
   Globe2,
   Headphones,
+  History,
   Home,
   Hotel,
   House,
