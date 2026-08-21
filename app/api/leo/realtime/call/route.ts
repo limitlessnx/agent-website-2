@@ -56,6 +56,25 @@ function upstreamErrorBody(value: string) {
   return { message: value.slice(0, 500) || "OpenAI rejected the realtime session.", type: null, code: null };
 }
 
+function buildRealtimeMultipart(sdp: string, session: object) {
+  // OpenAI expects the SDP as a multipart field with Content-Type application/sdp,
+  // not as a file upload. Construct the multipart body explicitly so Node's File
+  // serialization cannot add a filename and make the API ignore the field.
+  const boundary = `----FluxknightLeo${crypto.randomUUID().replaceAll("-", "")}`;
+  const body = [
+    `--${boundary}\r\n`,
+    `Content-Disposition: form-data; name="sdp"\r\n`,
+    `Content-Type: application/sdp\r\n\r\n`,
+    sdp,
+    `\r\n--${boundary}\r\n`,
+    `Content-Disposition: form-data; name="session"\r\n`,
+    `Content-Type: application/json\r\n\r\n`,
+    JSON.stringify(session),
+    `\r\n--${boundary}--\r\n`,
+  ].join("");
+  return { boundary, body };
+}
+
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return new Response("OpenAI Realtime is not configured.", { status: 503 });
@@ -73,10 +92,6 @@ export async function POST(request: NextRequest) {
   const configuredVoice = process.env.LEO_REALTIME_VOICE?.trim();
   const voice = configuredVoice || "marin";
 
-  // Keep the initial WebRTC handshake deliberately small. OpenAI's /realtime/calls
-  // endpoint is responsible for accepting the SDP and creating the session. Tooling
-  // is still included here, but the request uses the exact multipart shape expected
-  // by the API and explicitly asks for an SDP response.
   const session = {
     type: "realtime",
     model,
@@ -103,17 +118,15 @@ export async function POST(request: NextRequest) {
     tool_choice: "auto",
   };
 
-  const form = new FormData();
-  form.set("sdp", new File([sdp], "offer.sdp", { type: "application/sdp" }));
-  form.set("session", new File([JSON.stringify(session)], "session.json", { type: "application/json" }));
-
+  const multipart = buildRealtimeMultipart(sdp, session);
   const response = await fetch("https://api.openai.com/v1/realtime/calls", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       Accept: "application/sdp",
+      "Content-Type": `multipart/form-data; boundary=${multipart.boundary}`,
     },
-    body: form,
+    body: multipart.body,
     cache: "no-store",
   });
 
