@@ -4,6 +4,9 @@ import { listLeoToolsForIdentity, resolveLeoIdentity } from "@/lib/leo-core";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const DEFAULT_REALTIME_MODEL = "gpt-realtime";
+const SUPPORTED_REALTIME_MODELS = new Set(["gpt-realtime", "gpt-realtime-2.1", "gpt-realtime-2.1-mini"]);
+
 function voiceInstructions(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>) {
   const tools = listLeoToolsForIdentity(identity).map((tool) => ({
     key: tool.key,
@@ -43,15 +46,20 @@ export async function POST(request: NextRequest) {
   const sdp = await request.text();
   if (!sdp.trim()) return new Response("SDP offer is required.", { status: 400 });
 
+  const configuredModel = process.env.LEO_REALTIME_MODEL?.trim();
+  const model = configuredModel && SUPPORTED_REALTIME_MODELS.has(configuredModel)
+    ? configuredModel
+    : DEFAULT_REALTIME_MODEL;
+  const configuredVoice = process.env.LEO_REALTIME_VOICE?.trim();
+  const voice = configuredVoice || "marin";
+
   const session = {
     type: "realtime",
-    model: process.env.LEO_REALTIME_MODEL?.trim() || "gpt-realtime-2.1",
+    model,
     instructions: voiceInstructions(identity),
     output_modalities: ["audio"],
     audio: {
-      output: {
-        voice: process.env.LEO_REALTIME_VOICE?.trim() || "marin",
-      },
+      output: { voice },
     },
     tools: [
       {
@@ -87,7 +95,7 @@ export async function POST(request: NextRequest) {
   const answer = await response.text();
   if (!response.ok) return new Response(answer || "Unable to create Leo Realtime call.", { status: response.status });
 
-  const headers = new Headers({ "content-type": "application/sdp", "cache-control": "no-store" });
+  const headers = new Headers({ "content-type": "application/sdp", "cache-control": "no-store", "x-leo-realtime-model": model });
   const location = response.headers.get("location");
   if (location) headers.set("x-leo-realtime-call", location);
   return new Response(answer, { status: 200, headers });
