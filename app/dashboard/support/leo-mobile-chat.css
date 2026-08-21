@@ -1,0 +1,21 @@
+/* Mobile Leo chat sizing: keep the conversation area content-sized instead of filling the viewport. */
+@media (max-width:760px){
+  .leo-chat-shell{
+    flex:0 0 auto;
+    min-height:0;
+    overflow:visible;
+    margin-top:10px;
+  }
+  .leo-messages{
+    flex:0 0 auto;
+    min-height:0;
+    max-height:38vh;
+    overflow:auto;
+    padding:8px 2px 10px;
+  }
+}
+
+@media (max-width:480px){
+  .leo-chat-shell{margin-top:8px}
+  .leo-messages{max-height:34vh;padding-top:6px;padding-bottom:8px}
+}
