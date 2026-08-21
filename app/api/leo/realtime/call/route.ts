@@ -4,11 +4,11 @@ import { listLeoToolsForIdentity, resolveLeoIdentity } from "@/lib/leo-core";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_REALTIME_MODEL = "gpt-realtime";
+const DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1";
 const SUPPORTED_REALTIME_MODELS = new Set([
-  "gpt-realtime",
   "gpt-realtime-2.1",
   "gpt-realtime-2.1-mini",
+  "gpt-realtime",
 ]);
 
 function voiceInstructions(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>) {
@@ -27,8 +27,9 @@ function voiceInstructions(identity: NonNullable<Awaited<ReturnType<typeof resol
 
   return [
     "You are Leo, Fluxknight's voice and chat operating assistant.",
+    "Speak ONLY in natural, clear English unless the user explicitly asks you to switch languages. Do not automatically switch languages based on accent, names, or detected locale.",
+    "Use the Marin voice. Keep spoken replies short and natural unless the user asks for detail.",
     scopeRule,
-    "Speak naturally, clearly and concisely. Keep spoken replies short unless the user asks for detail. Do not read JSON or internal identifiers aloud.",
     "The application permission engine determines authority. You cannot grant yourself permissions.",
     "Use the leo_execute_tool function only with a tool_key listed below.",
     "For approval=confirm tools: first call the tool with confirmed=false. If the tool reports confirmation_required, clearly summarize the exact action and ask the user to confirm. Only after the user explicitly confirms should you call the same tool again with confirmed=true.",
@@ -57,9 +58,6 @@ function upstreamErrorBody(value: string) {
 }
 
 function buildRealtimeMultipart(sdp: string, session: object) {
-  // OpenAI expects the SDP as a multipart field with Content-Type application/sdp,
-  // not as a file upload. Construct the multipart body explicitly so Node's File
-  // serialization cannot add a filename and make the API ignore the field.
   const boundary = `----FluxknightLeo${crypto.randomUUID().replaceAll("-", "")}`;
   const body = [
     `--${boundary}\r\n`,
@@ -151,6 +149,7 @@ export async function POST(request: NextRequest) {
     "content-type": "application/sdp",
     "cache-control": "no-store",
     "x-leo-realtime-model": model,
+    "x-leo-realtime-voice": voice,
   });
   const location = response.headers.get("location");
   if (location) headers.set("x-leo-realtime-call", location);
