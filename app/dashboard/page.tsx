@@ -7,6 +7,8 @@ import { getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-da
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import TimeGreeting from "@/components/admin/TimeGreeting";
+import AdminSearch from "@/components/admin/AdminSearch";
+import WorkspaceRail from "@/components/admin/WorkspaceRail";
 import styles from "@/app/dashboard/DashboardExecutive.module.css";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +41,15 @@ export default async function DashboardPage() {
 
   return (
     <main className={`${styles.page} admin-page`}>
+      <section className={styles.mobileIntro}>
+        <p className={styles.mobileKicker}>Fluxknight</p>
+        <h1>Welcome back, Victor</h1>
+        <p>Here’s what’s happening with your AI workforce today.</p>
+        <AdminSearch />
+        <div className={styles.mobileWorkspaceLabel}>Your workspace</div>
+        <div className={styles.mobileRail}><WorkspaceRail /></div>
+      </section>
+
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>Fluxknight Command Center</p><h1><TimeGreeting />.</h1>
