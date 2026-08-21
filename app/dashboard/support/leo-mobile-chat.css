@@ -1,21 +1,31 @@
-/* Mobile Leo chat sizing: keep the conversation area content-sized instead of filling the viewport. */
+/* Mobile Leo chat: compact, balanced conversation surface. */
 @media (max-width:760px){
-  .leo-chat-shell{
-    flex:0 0 auto;
-    min-height:0;
-    overflow:visible;
-    margin-top:10px;
-  }
-  .leo-messages{
-    flex:0 0 auto;
-    min-height:0;
-    max-height:38vh;
-    overflow:auto;
-    padding:8px 2px 10px;
-  }
+  .leo-workspace{min-height:auto;overflow:visible;border-radius:18px}
+  .leo-console{min-height:auto;padding:12px 10px 16px}
+  .leo-console-head{padding:0 4px 10px}
+  .leo-console-head h1{font-size:1.1rem}
+  .leo-intelligence-card{min-height:0;padding:14px;border-radius:18px}
+  .leo-orb-wrap{height:66px}
+  .leo-orb{width:58px;height:58px}
+  .leo-orb-core{width:34px;height:34px}
+  .leo-orb-core svg{width:18px;height:18px}
+  .leo-intelligence-copy>p,.leo-intelligence-copy>span,.leo-capabilities,.leo-intelligence-copy h2{display:none}
+  .leo-chat-shell{flex:none;min-height:0;margin-top:10px;overflow:visible}
+  .leo-messages{flex:none;min-height:150px;max-height:42vh;padding:0 2px 8px;justify-content:center}
+  .leo-empty-chat{display:grid;place-items:center;align-content:center;min-height:150px;padding:18px 16px;text-align:center}
+  .leo-empty-chat h2{margin:0;max-width:300px;color:#f7f4ff;font-size:clamp(1.45rem,6.5vw,2rem);line-height:1.12;letter-spacing:-.045em}
+  .leo-empty-chat p{max-width:300px;margin:8px 0 0;color:#85879a;font-size:.72rem;line-height:1.45}
+  .leo-composer{margin-top:2px;padding:0}
+  .leo-input-shell{align-items:center;gap:7px;padding:7px 7px 7px 12px;border-radius:17px}
+  .leo-composer textarea{min-height:40px;max-height:84px;padding:8px 0;font-size:.78rem}
+  .leo-composer-actions{align-self:center;gap:6px}
+  .leo-voice-button,.leo-send{width:42px;min-width:42px;height:42px;min-height:42px;padding:0;border-radius:11px}
+  .leo-voice-button span,.leo-voice-button label{display:none}
+  .leo-composer>small{display:none}
+  .leo-error{margin-bottom:7px}
 }
-
-@media (max-width:480px){
-  .leo-chat-shell{margin-top:8px}
-  .leo-messages{max-height:34vh;padding-top:6px;padding-bottom:8px}
+@media (max-width:390px){
+  .leo-console{padding-left:8px;padding-right:8px}
+  .leo-messages,.leo-empty-chat{min-height:130px}
+  .leo-empty-chat h2{font-size:1.4rem}
 }
