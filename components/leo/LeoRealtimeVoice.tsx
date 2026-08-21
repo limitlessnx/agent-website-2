@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Mic, MicOff, LoaderCircle } from "@/components/admin/ServerIcons";
+import { useEffect, useRef, useState } from "react";
+import { LoaderCircle, Mic, MicOff, PhoneOff, Volume2 } from "@/components/admin/ServerIcons";
+import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
-
 type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string };
 
 function friendlyVoiceError(value: string) {
@@ -19,6 +19,7 @@ function friendlyVoiceError(value: string) {
 export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
+  const [muted, setMuted] = useState(false);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RTCDataChannel | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -35,11 +36,7 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
     try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
     let output: Record<string, unknown>;
     try {
-      const response = await fetch("/api/leo/tool", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ channel: "voice", sessionId: sessionId || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }),
-      });
+      const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: sessionId || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) });
       const result = await response.json().catch(() => ({}));
       output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." };
     } catch (cause) { output = { ok: false, error: cause instanceof Error ? cause.message : "Leo tool execution failed." }; }
@@ -49,24 +46,20 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
 
   async function start() {
     if (state === "connecting" || state === "live") return;
-    setState("connecting"); setError("");
+    setState("connecting"); setError(""); setMuted(false);
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser.");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const peer = new RTCPeerConnection();
-      peerRef.current = peer;
+      const peer = new RTCPeerConnection(); peerRef.current = peer;
       for (const track of stream.getTracks()) peer.addTrack(track, stream);
-      const audio = document.createElement("audio");
-      audio.autoplay = true; audioRef.current = audio;
+      const audio = document.createElement("audio"); audio.autoplay = true; audioRef.current = audio;
       peer.ontrack = (event) => { audio.srcObject = event.streams[0]; void audio.play().catch(() => null); };
-      const dataChannel = peer.createDataChannel("oai-events");
-      channelRef.current = dataChannel;
+      const dataChannel = peer.createDataChannel("oai-events"); channelRef.current = dataChannel;
       dataChannel.onmessage = (message) => { try { const event = JSON.parse(String(message.data)) as RealtimeToolEvent; if (event.type === "response.function_call_arguments.done") void handleToolCall(event); } catch {} };
       dataChannel.onopen = () => setState("live");
       dataChannel.onerror = () => { setError("Leo voice connection encountered an error."); setState("error"); };
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
+      const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
       const response = await fetch("/api/leo/realtime/call", { method: "POST", headers: { "content-type": "application/sdp" }, body: offer.sdp || "" });
       const answerSdp = await response.text();
       if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice."));
@@ -80,9 +73,35 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
     channelRef.current?.close(); channelRef.current = null; peerRef.current?.close(); peerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null;
     if (audioRef.current) { audioRef.current.srcObject = null; audioRef.current.remove(); audioRef.current = null; }
-    if (resetState) { setError(""); setState("idle"); }
+    setMuted(false); if (resetState) { setError(""); setState("idle"); }
   }
 
+  function toggleMute() {
+    const next = !muted;
+    streamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; });
+    setMuted(next);
+  }
+
+  useEffect(() => () => stop(false), []);
+
+  if (state === "error") return <div className={styles.errorCard} role="alert"><span>{error}</span><button type="button" onClick={() => void start()}>Try again</button></div>;
+  if (state === "idle") return <button type="button" className={styles.launchButton} onClick={() => void start()}><span className={styles.launchIcon}><Mic size={18} /></span><span><strong>Talk to Leo</strong><small>Start voice conversation</small></span></button>;
+
   const live = state === "live";
-  return <div className="leo-realtime-voice"><button type="button" className={live ? "leo-voice-button live" : "leo-voice-button"} onClick={() => live ? stop() : void start()} disabled={state === "connecting"} aria-pressed={live} title={live ? "End voice conversation with Leo" : "Talk to Leo"}>{state === "connecting" ? <LoaderCircle size={17} className="spin" /> : live ? <MicOff size={17} /> : <Mic size={17} />}{state === "connecting" ? "Connecting" : live ? "End voice" : "Talk to Leo"}</button>{error ? <small className="leo-voice-error">{error}</small> : null}</div>;
+  return (
+    <section className={styles.voicePanel} aria-label="Leo voice call">
+      <div className={styles.topbar}><div><span className={styles.statusDot} /> {live ? "Leo is listening" : "Connecting to Leo"}</div><span className={styles.liveBadge}>{live ? "LIVE" : "CONNECTING"}</span></div>
+      <div className={`${styles.orbStage} ${live ? styles.live : ""}`}>
+        <div className={`${styles.ring} ${styles.ringOne}`} /><div className={`${styles.ring} ${styles.ringTwo}`} /><div className={`${styles.ring} ${styles.ringThree}`} />
+        <div className={styles.orb}><Volume2 size={28} /></div><div className={`${styles.pulse} ${styles.pulseOne}`} /><div className={`${styles.pulse} ${styles.pulseTwo}`} />
+      </div>
+      <div className={styles.identity}><h3>Leo</h3><p>{live ? "I'm listening. Speak naturally." : "Establishing secure voice connection…"}</p></div>
+      <div className={styles.controls}>
+        <button type="button" className={`${styles.control} ${muted ? styles.activeControl : ""}`} onClick={toggleMute}>{muted ? <MicOff size={21} /> : <Mic size={21} />}<span>{muted ? "Unmute" : "Mute"}</span></button>
+        <button type="button" className={styles.endCall} onClick={() => stop()}><PhoneOff size={21} /><span>End call</span></button>
+      </div>
+      <p className={styles.hint}>Leo can use authorized Fluxknight tools during the call.</p>
+      {state === "connecting" ? <LoaderCircle size={16} className={styles.spinner} /> : null}
+    </section>
+  );
 }
