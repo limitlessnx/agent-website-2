@@ -1,40 +1,16 @@
 @media (max-width: 900px) {
   .shell :global(.admin-topbar) { display: none !important; }
-  .shell :global(.fluxknight-platform-shell > aside) { display: none !important; }
+  .shell :global(.admin-sidebar) { display: none !important; }
   .shell :global(.admin-main) { min-width: 0; width: 100%; }
-  .shell :global(.admin-main > .rail) { display: none !important; }
+  .shell :global(.admin-main > .workspace-rail) { display: none !important; }
   .shell :global(.admin-main > .admin-page) { width: 100%; }
-  .mobileHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 42px;
-    padding: 8px 14px;
-    margin: 0;
-    border-bottom: 1px solid rgba(139,92,246,.12);
-    background: #090914;
-  }
+  .mobileHeader { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 8px 14px; margin: 0; border-bottom: 1px solid rgba(139,92,246,.12); background: #090914; }
   .mobileLogo { width: 126px; height: 24px; color: #f4f1ff; }
-  .mobileAvatar {
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(167,139,250,.3);
-    border-radius: 50%;
-    color: #eee8ff;
-    background: linear-gradient(145deg, rgba(124,58,237,.38), rgba(34,211,238,.12));
-    font-size: .68rem;
-    font-weight: 900;
-  }
+  .mobileAvatar { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(167,139,250,.3); border-radius: 50%; color: #eee8ff; background: linear-gradient(145deg, rgba(124,58,237,.38), rgba(34,211,238,.12)); font-size: .68rem; font-weight: 900; }
 }
-
 @media (max-width: 520px) {
   .mobileHeader { min-height: 40px; padding: 7px 12px; }
   .mobileLogo { width: 112px; height: 22px; }
   .mobileAvatar { width: 28px; height: 28px; font-size: .64rem; }
 }
-
-@media (min-width: 901px) {
-  .mobileHeader { display: none; }
-}
+@media (min-width: 901px) { .mobileHeader { display: none; } }
