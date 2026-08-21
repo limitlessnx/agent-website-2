@@ -7,12 +7,12 @@ type TimeGreetingProps = {
 };
 
 function getGreeting(hour: number) {
-  if (hour >= 5 && hour < 12) return "Good Morning";
-  if (hour >= 12 && hour < 17) return "Good Afternoon";
-  return "Good Evening";
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
-export default function TimeGreeting({ name = "Newton" }: TimeGreetingProps) {
+export default function TimeGreeting({ name = "Limitless" }: TimeGreetingProps) {
   const [greeting, setGreeting] = useState("Welcome back");
 
   useEffect(() => {
