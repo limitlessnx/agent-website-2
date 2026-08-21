@@ -1,20 +1,6 @@
 .page { display: grid; gap: 20px; }
-
-.hero {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
-  gap: 26px;
-  padding: 26px;
-  border: 1px solid rgba(167,139,250,.24);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 75% 18%, rgba(124,58,237,.24), transparent 36%),
-    radial-gradient(circle at 90% 80%, rgba(34,211,238,.12), transparent 30%),
-    linear-gradient(145deg, rgba(18,19,42,.95), rgba(9,11,24,.94));
-  box-shadow: 0 24px 90px rgba(0,0,0,.3);
-}
+.mobileIntro { display: none; }
+.hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr); gap: 26px; padding: 26px; border: 1px solid rgba(167,139,250,.24); border-radius: 18px; background: radial-gradient(circle at 75% 18%, rgba(124,58,237,.24), transparent 36%), radial-gradient(circle at 90% 80%, rgba(34,211,238,.12), transparent 30%), linear-gradient(145deg, rgba(18,19,42,.95), rgba(9,11,24,.94)); box-shadow: 0 24px 90px rgba(0,0,0,.3); }
 .heroCopy { position: relative; z-index: 2; }
 .kicker { margin: 0; color: #bca7ff; font-size: .7rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
 .hero h1 { max-width: 760px; margin: 8px 0 12px; font-size: clamp(2rem, 4vw, 3.7rem); line-height: .98; letter-spacing: -.05em; }
@@ -67,4 +53,28 @@
 .activity span { margin-top: 3px; color: var(--admin-text-muted); font-size: .68rem; line-height: 1.4; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 1020px) { .hero, .grid { grid-template-columns: 1fr; } .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media (max-width: 620px) { .hero { padding: 20px; } .automationVisual { min-height: 210px; } .metrics, .actionGrid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .page { gap: 10px; }
+  .mobileIntro { display: block; padding: 12px 12px 0; }
+  .mobileKicker { margin: 0 0 5px; color: #a78bfa; font-size: .58rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+  .mobileIntro h1 { margin: 0; font-size: 1.55rem; line-height: 1.05; letter-spacing: -.04em; color: var(--admin-text); }
+  .mobileIntro > p:not(.mobileKicker) { margin: 5px 0 10px; color: var(--admin-text-muted); font-size: .68rem; line-height: 1.4; }
+  .mobileIntro > .admin-search { width: 100%; min-height: 42px; margin: 0; }
+  .mobileIntro > .admin-search input { font-size: .68rem; }
+  .mobileIntro > .admin-search button { min-width: 0; padding: 0 7px; font-size: .58rem; }
+  .mobileWorkspaceLabel { margin: 12px 0 0; color: var(--admin-text); font-size: .72rem; font-weight: 900; }
+  .mobileRail { margin: 0 -4px; }
+  .mobileRail > nav { margin: 2px 0 0; border-bottom: 1px solid rgba(139,92,246,.14); }
+  .mobileRail > nav .items a { min-width: 58px; min-height: 54px; padding: 6px 5px 7px; font-size: 9px; }
+  .mobileRail > nav .identity { display: none; }
+  .hero { display: none; }
+  .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; padding: 0 12px; }
+  .metric { min-width: 0; padding: 11px; border-radius: 11px; }
+  .metricIcon { width: 28px; height: 28px; }
+  .metric small { font-size: .56rem; letter-spacing: .04em; }
+  .metric strong { margin-top: 9px; font-size: 1.35rem; }
+  .metric p { margin-top: 5px; font-size: .61rem; line-height: 1.3; }
+  .grid { gap: 9px; padding: 0 12px; }
+  .panel { padding: 12px; border-radius: 11px; }
+  .actionGrid { grid-template-columns: 1fr; }
+}
