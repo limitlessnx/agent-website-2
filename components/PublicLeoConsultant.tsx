@@ -13,7 +13,7 @@ type RealtimeEvent = {
   name?: string;
   call_id?: string;
   arguments?: string;
-  item?: { call_id?: string; name?: string; arguments?: string };
+  item?: { type?: string; call_id?: string; name?: string; arguments?: string };
 };
 
 const initialMessages: ChatMessage[] = [
@@ -134,19 +134,22 @@ export default function PublicLeoConsultant() {
         }),
       });
       const data = await response.json().catch(() => ({}));
-      const output = JSON.stringify(data);
       sendRealtimeEvent({
         type: "conversation.item.create",
-        item: { type: "function_call_output", call_id: callId, output },
+        item: { type: "function_call_output", call_id: callId, output: JSON.stringify(data) },
       });
       sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
     } catch (error) {
-      const output = JSON.stringify({ ok: false, error: error instanceof Error ? error.message : "Tool execution failed." });
-      sendRealtimeEvent({
-        type: "conversation.item.create",
-        item: { type: "function_call_output", call_id: callId, output },
-      });
-      sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
+      const output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
+      try {
+        sendRealtimeEvent({
+          type: "conversation.item.create",
+          item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) },
+        });
+        sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
+      } catch {
+        setCallError(output.error);
+      }
     }
   }
 
@@ -158,7 +161,7 @@ export default function PublicLeoConsultant() {
       return;
     }
 
-    if (event.type === "response.function_call_arguments.done") {
+    if (event.type === "response.function_call_arguments.done" || (event.type === "response.output_item.done" && event.item?.type === "function_call")) {
       void executeVoiceTool(event);
       return;
     }
@@ -201,19 +204,6 @@ export default function PublicLeoConsultant() {
       dataChannelRef.current = dataChannel;
       dataChannel.addEventListener("message", (event) => handleRealtimeMessage(String(event.data)));
       dataChannel.addEventListener("error", () => setCallError("Leo's voice connection encountered an error."));
-
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-
-      const response = await fetch("/api/leo/realtime/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/sdp" },
-        body: offer.sdp || "",
-      });
-      const answer = await response.text();
-      if (!response.ok) throw new Error(answer || "Leo could not start the call.");
-
-      await peer.setRemoteDescription({ type: "answer", sdp: answer });
       dataChannel.addEventListener("open", () => {
         try {
           sendRealtimeEvent({
@@ -227,6 +217,19 @@ export default function PublicLeoConsultant() {
           // The connection can close between the event and the open callback.
         }
       });
+
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+
+      const response = await fetch("/api/leo/realtime/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: offer.sdp || "",
+      });
+      const answer = await response.text();
+      if (!response.ok) throw new Error(answer || "Leo could not start the call.");
+
+      await peer.setRemoteDescription({ type: "answer", sdp: answer });
     } catch (error) {
       stopCall();
       setCallError(error instanceof Error ? error.message : "Leo could not start the call.");
