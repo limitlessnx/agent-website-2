@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createPropertyAction, deletePropertyAction, updatePropertyAction, uploadPropertyImagesAction } from "@/app/dashboard/actions";
 import DeletePropertyButton from "./DeletePropertyButton";
 import { isGoogleDriveConfigured } from "@/lib/google-drive";
