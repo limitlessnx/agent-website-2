@@ -16,7 +16,7 @@ function friendlyVoiceError(value: string) {
   return text.length > 180 ? "Leo voice could not start. Please try again in a moment." : text || "Leo voice could not start.";
 }
 
-export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) {
+export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessionId?: string; mode?: "panel" | "orb" }) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
@@ -84,12 +84,17 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
 
   useEffect(() => () => stop(false), []);
 
+  if (mode === "orb") {
+    if (state === "error") return <div className={styles.orbError} role="alert"><span>{error}</span><button type="button" onClick={() => void start()}>Try again</button></div>;
+    if (state === "idle") return <button type="button" className={styles.orbLauncher} onClick={() => void start()} aria-label="Start Leo voice call"><span className={styles.orbStage}><span className={styles.ring + " " + styles.ringOne} /><span className={styles.ring + " " + styles.ringTwo} /><span className={styles.ring + " " + styles.ringThree} /><span className={styles.orb}><Volume2 size={34} /><span className={styles.orbShimmer} /></span><span className={styles.pulse + " " + styles.pulseOne} /><span className={styles.pulse + " " + styles.pulseTwo} /></span><span className={styles.orbLabel}>Leo</span><span className={styles.orbHint}>Tap to talk</span></button>;
+  }
+
   if (state === "error") return <div className={styles.errorCard} role="alert"><span>{error}</span><button type="button" onClick={() => void start()}>Try again</button></div>;
   if (state === "idle") return <button type="button" className={styles.launchButton} onClick={() => void start()}><span className={styles.launchIcon}><Mic size={18} /></span><span><strong>Talk to Leo</strong><small>Start voice conversation</small></span></button>;
 
   const live = state === "live";
   return (
-    <section className={styles.voicePanel} aria-label="Leo voice call">
+    <section className={`${styles.voicePanel} ${mode === "orb" ? styles.embeddedVoicePanel : ""}`} aria-label="Leo voice call">
       <div className={styles.topbar}><div><span className={styles.statusDot} /> {live ? "Leo is listening" : "Connecting to Leo"}</div><span className={styles.liveBadge}>{live ? "LIVE" : "CONNECTING"}</span></div>
       <div className={`${styles.orbStage} ${live ? styles.live : ""}`}>
         <div className={`${styles.ring} ${styles.ringOne}`} /><div className={`${styles.ring} ${styles.ringTwo}`} /><div className={`${styles.ring} ${styles.ringThree}`} />
