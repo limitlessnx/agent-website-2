@@ -16,6 +16,7 @@ export type LeoReasoningContext = {
   publicKnowledge?: Record<string, unknown>;
   tenantSnapshot?: Record<string, unknown>;
   adminSnapshot?: Record<string, unknown>;
+  readResults?: Record<string, unknown>;
 };
 
 export type LeoProposedToolCall = {
@@ -99,6 +100,7 @@ function buildLeoSystemPrompt(identity: LeoIdentity, context: LeoReasoningContex
     "If the request crosses the current scope, refuse that portion and stay inside the current scope.",
     "For write, bulk, destructive, billing, workflow-control, communication-send, or production-changing actions, respect the approval value supplied for that tool.",
     "Use tool proposals only when an action or fresh private data is actually needed. Answer directly when the supplied safe context is sufficient.",
+    "When READ TOOL RESULTS are supplied, treat them as verified, sanitized, bounded observations from authorized tools. Use them to answer the user's question, but do not expose secrets, hidden fields, or internal implementation details.",
     "For public visitors, focus on understanding their business, identifying needs, explaining approved Fluxknight services, recommending a suitable plan, and moving qualified visitors toward lead capture or a demo.",
     "For public Fluxknight website visitors, behave as a support and onboarding agent: ask focused qualification questions, mention website building and custom AI integration when relevant, recommend a package from approved public plans, and propose leo.public.lead.capture once name plus email or WhatsApp and a useful conversation summary are available.",
     "For tenant users, act as a business copilot inside their own organization and respect their role-based tool limits.",
@@ -111,6 +113,7 @@ function buildLeoSystemPrompt(identity: LeoIdentity, context: LeoReasoningContex
     `PUBLIC KNOWLEDGE: ${safeJson(context.publicKnowledge || {}, 18000)}`,
     `TENANT SNAPSHOT: ${safeJson(context.tenantSnapshot || {}, 18000)}`,
     `ADMIN SNAPSHOT: ${safeJson(context.adminSnapshot || {}, 18000)}`,
+    `READ TOOL RESULTS: ${safeJson(context.readResults || {}, 24000)}`,
   ].join("\n");
 }
 
@@ -261,113 +264,29 @@ export async function generateLeoReasoning(input: {
       body: JSON.stringify({
         model,
         input: [
-          {
-            role: "system",
-            content: [{ type: "input_text", text: buildLeoSystemPrompt(input.identity, input.context || {}) }],
-          },
+          { role: "system", content: [{ type: "input_text", text: buildLeoSystemPrompt(input.identity, input.context || {}) }] },
           ...historyForModel(input.history || []),
-          {
-            role: "user",
-            content: [{ type: "input_text", text: input.message.trim().slice(0, 8000) }],
-          },
+          { role: "user", content: [{ type: "input_text", text: input.message.slice(0, 8000) }] },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "fluxknight_leo_response",
-            strict: true,
-            schema: responseSchema,
-          },
-        },
+        temperature: 0.2,
+        max_output_tokens: 1200,
+        text: { format: { type: "json_schema", name: "leo_response", strict: true, schema: responseSchema } },
       }),
       signal: controller.signal,
-      cache: "no-store",
     });
 
+    const payload = (await response.json().catch(() => ({}))) as UnknownRecord;
     if (!response.ok) {
-      const primaryError = await response.json().catch(() => null);
-      console.warn("Leo Responses API failed", {
-        status: response.status,
-        model,
-        error: providerErrorSummary(primaryError),
-      });
-      const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: process.env.LEO_CHAT_FALLBACK_MODEL?.trim() || model,
-          messages: [
-            { role: "system", content: buildLeoSystemPrompt(input.identity, input.context || {}) },
-            ...(input.history || [])
-              .filter((item) => item.role === "user" || item.role === "assistant")
-              .slice(-16)
-              .map((item) => ({ role: item.role, content: String(item.content || "").slice(0, 3000) })),
-            { role: "user", content: input.message.trim().slice(0, 8000) },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "fluxknight_leo_response",
-              strict: true,
-              schema: responseSchema,
-            },
-          },
-        }),
-        signal: controller.signal,
-        cache: "no-store",
-      });
-
-      if (!fallbackResponse.ok) {
-        const fallbackError = await fallbackResponse.json().catch(() => null);
-        console.warn("Leo Chat Completions API failed", {
-          status: fallbackResponse.status,
-          model,
-          error: providerErrorSummary(fallbackError),
-        });
-        return { ok: false, provider: "openai", model, reason: "provider_error", latencyMs: Date.now() - startedAt };
-      }
-
-      const fallbackPayload = (await fallbackResponse.json().catch(() => null)) as UnknownRecord | null;
-      if (!fallbackPayload) {
-        return { ok: false, provider: "openai", model, reason: "invalid_response", latencyMs: Date.now() - startedAt };
-      }
-
-      let parsed: unknown = null;
-      try {
-        const text = extractChatText(fallbackPayload);
-        parsed = text ? JSON.parse(text) : null;
-      } catch {
-        parsed = null;
-      }
-      const validated = validateModelOutput(input.identity, parsed);
-      if (!validated) {
-        return { ok: false, provider: "openai", model, reason: "invalid_response", latencyMs: Date.now() - startedAt };
-      }
-
-      return {
-        ok: true,
-        provider: "openai",
-        model,
-        ...validated,
-        usage: chatUsage(fallbackPayload),
-        latencyMs: Date.now() - startedAt,
-      };
+      console.error("[leo] provider error", { status: response.status, ...providerErrorSummary(payload) });
+      return { ok: false, provider: "openai", model, reason: "provider_error", latencyMs: Date.now() - startedAt };
     }
 
-    const payload = (await response.json().catch(() => null)) as UnknownRecord | null;
-    if (!payload) {
+    const outputText = extractOutputText(payload);
+    if (!outputText) {
       return { ok: false, provider: "openai", model, reason: "invalid_response", latencyMs: Date.now() - startedAt };
     }
-    const text = extractOutputText(payload);
-    let parsed: unknown = null;
-    try {
-      parsed = text ? JSON.parse(text) : null;
-    } catch {
-      parsed = null;
-    }
+
+    const parsed = JSON.parse(outputText) as unknown;
     const validated = validateModelOutput(input.identity, parsed);
     if (!validated) {
       return { ok: false, provider: "openai", model, reason: "invalid_response", latencyMs: Date.now() - startedAt };
@@ -378,18 +297,15 @@ export async function generateLeoReasoning(input: {
       provider: "openai",
       model,
       ...validated,
-      usage: responseUsage(payload),
       latencyMs: Date.now() - startedAt,
+      usage: responseUsage(payload),
     };
   } catch (error) {
-    const timedOut = error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
-    return {
-      ok: false,
-      provider: "openai",
-      model,
-      reason: timedOut ? "timeout" : "provider_error",
-      latencyMs: Date.now() - startedAt,
-    };
+    if (error instanceof Error && error.name === "AbortError") {
+      return { ok: false, provider: "openai", model, reason: "timeout", latencyMs: Date.now() - startedAt };
+    }
+    console.error("[leo] reasoning error", error);
+    return { ok: false, provider: "openai", model, reason: "provider_error", latencyMs: Date.now() - startedAt };
   } finally {
     clearTimeout(timeout);
   }
