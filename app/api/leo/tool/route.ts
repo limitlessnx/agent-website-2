@@ -38,7 +38,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, result: boundLeoReadResult(result), approval, channel: identity.channel, scope: identity.scope });
     }
 
-    if (approval === "confirm" && !confirmed) {
+    if (approval === "admin" && identity.scope !== "super_admin") {
+      await auditLeoEvent({ identity, eventType: "admin_approval_denied", toolKey: tool.key, details: { channel: identity.channel } });
+      return NextResponse.json({ error: "This Leo action requires Fluxknight Super Admin approval." }, { status: 403 });
+    }
+
+    if ((approval === "confirm" || approval === "admin") && !confirmed) {
       return NextResponse.json({
         ok: true,
         status: "confirmation_required",
@@ -75,6 +80,6 @@ export async function POST(request: NextRequest) {
     }, { status: result.ok ? 200 : 502 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Leo could not execute this action.";
-    return NextResponse.json({ error: message }, { status: /not permitted|Cross-tenant|Unauthorized/i.test(message) ? 403 : 500 });
+    return NextResponse.json({ error: message }, { status: /not permitted|Cross-tenant|Unauthorized|Super Admin/i.test(message) ? 403 : 500 });
   }
 }
