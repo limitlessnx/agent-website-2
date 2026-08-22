@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     <main className={`${styles.page} admin-page`}>
       <section className={styles.mobileIntro}>
         <p className={styles.mobileKicker}>Fluxknight</p>
-        <h1>Welcome back, Victor</h1>
+        <h1><TimeGreeting />.</h1>
         <p>Here’s what’s happening with your AI workforce today.</p>
         <AdminSearch />
         <div className={styles.mobileWorkspaceLabel}>Your workspace</div>
