@@ -129,7 +129,10 @@ export function createLeoExecutionEnvelope(input: {
 
   if (input.identity.scope === "tenant") {
     scopedArguments = enforceTenantResourceScope(input.identity, scopedArguments);
-    enforceLeoOrganizationScope(input.identity, scopedArguments.organization_id);
+    enforceLeoOrganizationScope(
+      input.identity,
+      typeof scopedArguments.organization_id === "string" ? scopedArguments.organization_id : undefined,
+    );
   } else if (input.identity.scope === "public") {
     scopedArguments = enforcePublicResourceScope(scopedArguments);
   }
@@ -190,7 +193,10 @@ export function verifyLeoExecutionEnvelope(value: unknown): {
     if (normalizedArguments.organization_id !== envelope.arguments.organization_id) {
       throw new Error("Leo tenant resource scope is not canonical.");
     }
-    enforceLeoOrganizationScope(identity, envelope.arguments.organization_id);
+    enforceLeoOrganizationScope(
+      identity,
+      typeof envelope.arguments.organization_id === "string" ? envelope.arguments.organization_id : undefined,
+    );
   } else if (identity.scope === "public") {
     if (readTenantScopeValues(envelope.arguments).length > 0) {
       throw new Error("Public Leo execution contains tenant resource scope.");
