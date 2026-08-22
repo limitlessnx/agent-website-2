@@ -20,10 +20,54 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
+  const [voiceLevel, setVoiceLevel] = useState(0);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RTCDataChannel | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationRef = useRef<number | null>(null);
+
+  function stopMeter() {
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    animationRef.current = null;
+    analyserRef.current = null;
+    setVoiceLevel(0);
+  }
+
+  function startMeter(stream: MediaStream) {
+    try {
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return;
+      const context = new AudioContextCtor();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.72;
+      const source = context.createMediaStreamSource(stream);
+      source.connect(analyser);
+      audioContextRef.current = context;
+      analyserRef.current = analyser;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        const activeAnalyser = analyserRef.current;
+        if (!activeAnalyser) return;
+        activeAnalyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (const sample of data) {
+          const normalized = (sample - 128) / 128;
+          sum += normalized * normalized;
+        }
+        const rms = Math.min(1, Math.sqrt(sum / data.length) * 3.2);
+        setVoiceLevel((previous) => previous * 0.72 + rms * 0.28);
+        animationRef.current = requestAnimationFrame(tick);
+      };
+      void context.resume().catch(() => null);
+      animationRef.current = requestAnimationFrame(tick);
+    } catch {
+      stopMeter();
+    }
+  }
 
   function sendEvent(event: Record<string, unknown>) {
     const channel = channelRef.current;
@@ -46,7 +90,7 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
 
   async function start() {
     if (state === "connecting" || state === "live") return;
-    setState("connecting"); setError(""); setMuted(false);
+    setState("connecting"); setError(""); setMuted(false); setVoiceLevel(0);
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser.");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -54,7 +98,11 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
       const peer = new RTCPeerConnection(); peerRef.current = peer;
       for (const track of stream.getTracks()) peer.addTrack(track, stream);
       const audio = document.createElement("audio"); audio.autoplay = true; audioRef.current = audio;
-      peer.ontrack = (event) => { audio.srcObject = event.streams[0]; void audio.play().catch(() => null); };
+      peer.ontrack = (event) => {
+        audio.srcObject = event.streams[0];
+        startMeter(event.streams[0]);
+        void audio.play().catch(() => null);
+      };
       const dataChannel = peer.createDataChannel("oai-events"); channelRef.current = dataChannel;
       dataChannel.onmessage = (message) => { try { const event = JSON.parse(String(message.data)) as RealtimeToolEvent; if (event.type === "response.function_call_arguments.done") void handleToolCall(event); } catch {} };
       dataChannel.onopen = () => setState("live");
@@ -73,6 +121,9 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
     channelRef.current?.close(); channelRef.current = null; peerRef.current?.close(); peerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null;
     if (audioRef.current) { audioRef.current.srcObject = null; audioRef.current.remove(); audioRef.current = null; }
+    stopMeter();
+    void audioContextRef.current?.close().catch(() => null);
+    audioContextRef.current = null;
     setMuted(false); if (resetState) { setError(""); setState("idle"); }
   }
 
@@ -88,14 +139,20 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
   if (state === "idle") return <button type="button" className={styles.launchButton} onClick={() => void start()}><span className={styles.launchIcon}><Mic size={18} /></span><span><strong>Talk to Leo</strong><small>Start voice conversation</small></span></button>;
 
   const live = state === "live";
+  const orbScale = 1 + voiceLevel * 0.18;
+  const pulseOpacity = 0.18 + voiceLevel * 0.55;
   return (
     <section className={styles.voicePanel} aria-label="Leo voice call">
       <div className={styles.topbar}><div><span className={styles.statusDot} /> {live ? "Leo is listening" : "Connecting to Leo"}</div><span className={styles.liveBadge}>{live ? "LIVE" : "CONNECTING"}</span></div>
       <div className={`${styles.orbStage} ${live ? styles.live : ""}`}>
-        <div className={`${styles.ring} ${styles.ringOne}`} /><div className={`${styles.ring} ${styles.ringTwo}`} /><div className={`${styles.ring} ${styles.ringThree}`} />
-        <div className={styles.orb}><Volume2 size={28} /></div><div className={`${styles.pulse} ${styles.pulseOne}`} /><div className={`${styles.pulse} ${styles.pulseTwo}`} />
+        <div className={`${styles.ring} ${styles.ringOne}`} style={{ transform: `scale(${1 + voiceLevel * 0.06})`, opacity: 0.55 + voiceLevel * 0.45 }} />
+        <div className={`${styles.ring} ${styles.ringTwo}`} style={{ transform: `scale(${1 + voiceLevel * 0.1})`, opacity: 0.55 + voiceLevel * 0.45 }} />
+        <div className={`${styles.ring} ${styles.ringThree}`} style={{ transform: `scale(${1 + voiceLevel * 0.14})`, opacity: 0.55 + voiceLevel * 0.45 }} />
+        <div className={styles.orb} style={{ transform: `scale(${orbScale})` }}><Volume2 size={28} /></div>
+        <div className={styles.pulse} style={{ inset: `${28 - voiceLevel * 10}%`, opacity: pulseOpacity }} />
+        <div className={styles.pulse} style={{ inset: `${12 - voiceLevel * 7}%`, opacity: pulseOpacity * 0.75, animationDelay: "0.5s" }} />
       </div>
-      <div className={styles.identity}><h3>Leo</h3><p>{live ? "I'm listening. Speak naturally." : "Establishing secure voice connection…"}</p></div>
+      <div className={styles.identity}><h3>Leo</h3><p>{live ? (voiceLevel > 0.035 ? "Leo is speaking…" : "I'm listening. Speak naturally.") : "Establishing secure voice connection…"}</p></div>
       <div className={styles.controls}>
         <button type="button" className={`${styles.control} ${muted ? styles.activeControl : ""}`} onClick={toggleMute}>{muted ? <MicOff size={21} /> : <Mic size={21} />}<span>{muted ? "Unmute" : "Mute"}</span></button>
         <button type="button" className={styles.endCall} onClick={() => stop()}><PhoneOff size={21} /><span>End call</span></button>
