@@ -6,6 +6,7 @@ import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessH
 export const dynamic = "force-dynamic";
 const CANONICAL_CHANNEL = "whatsapp";
 const CANONICAL_TRANSPORT = "existing-limitless-realty-maia-n8n";
+const LIMITLESS_REALTY_CHANNEL_URL = "https://whatsapp.com/channel/0029Vas58FFInlqLq2KyeI2F";
 
 function extractPhone(body: Record<string, unknown>) {
   return String(body.customerPhone || body.phone || body.from || body.whatsapp || "").replace(/[^\d]/g, "");
@@ -97,6 +98,10 @@ export async function POST(request: NextRequest) {
       `CANONICAL TRANSPORT: ${CANONICAL_TRANSPORT}`,
       "PROPERTY MATCHING RULE: when a client states a budget, prioritize verified properties at or below that budget. You may recommend relevant alternatives up to 20% above the stated budget, but label them clearly as above-budget alternatives. Never invent availability or pricing.",
       "CONVERSATION RULE: answer naturally and intelligently using the conversation context, the assigned agent configuration, approved Limitless Realty knowledge, and verified property results. Do not expose internal tools, model selection, database details or workflow mechanics to the client.",
+      "CHANNEL GROWTH RULE: Limitless Realty's official WhatsApp Channel is a core customer value channel. When relevant to the conversation, proactively invite the client to join and give a concrete, truthful reason: new property deals, estate launches, price changes, verified property updates and useful real-estate information. Do not repeat the invitation mechanically on every turn or use pressure. Make it natural and relevant to the client's interests.",
+      `OFFICIAL LIMITLESS REALTY WHATSAPP CHANNEL: ${LIMITLESS_REALTY_CHANNEL_URL}`,
+      `CHANNEL LINK RULE: if a client asks to join, says YES to joining, asks for the channel link, or accepts the invitation, send the exact official channel URL above. Do not invent, shorten or substitute another URL. If the client is responding to a campaign, preserve the campaign context and answer the requested next step within the active WhatsApp conversation window when available.`,
+      "CAMPAIGN RESPONSE RULE: if a client replies MORE INFO to a Limitless Realty campaign, use the current conversation and campaign context to explain what the campaign was about. If it was a property campaign, provide verified property details; if it was a news, market or general update, explain the update instead of pretending it was a property.",
       "HANDOFF RULE: if human assistance is requested or escalation is necessary, prepare a concise summary of the conversation and only claim handoff after delivery to the configured human destination is confirmed.",
       "FOLLOW-UP RULE: automatically qualify specific property interest when the client refers to a specific catalog property or clearly refers to a property Maia showed them and expresses meaningful buying intent. Do not start a sequence for generic browsing or campaign-only contacts. A qualified property sequence uses stages at days 1, 3, 7, 14, 21 and 30. Stop on reply, appointment, purchase, won/lost, opt-out, human handoff or resolution.",
     ].join("\n");
@@ -134,7 +139,7 @@ export async function POST(request: NextRequest) {
       handoff = await handoffToLimitlessHuman({ organizationId: organization.id, agentId: agent.id, sessionId: result.sessionId, customerName, customerPhone, reason: "Maia human escalation", summary });
     }
 
-    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest, cancelledOnReply }, handoff });
+    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest, cancelledOnReply }, handoff, channelUrl: LIMITLESS_REALTY_CHANNEL_URL });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Limitless Maia request failed." }, { status: 500 });
   }
