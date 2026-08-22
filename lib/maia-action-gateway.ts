@@ -55,28 +55,38 @@ export async function ensureMaiaActionWebhook() {
   return { workflowId: workflow.id, workflowName: workflow.name, webhookPath: ACTION_WEBHOOK_PATH, entryNode: ACTION_ENTRY_NODE, repaired: needsUpdate };
 }
 
+function splitCampaignParagraphs(message: string) {
+  return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
+}
+
 function buildTemplateComponents(command: MaiaCampaignAction, mediaUrl: string) {
-  const paragraphs = command.message
-    .split(/\n\s*\n/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const body = [
-    String(command.recipients[0]?.name || "there").trim() || "there",
-    paragraphs[0] || command.message.trim(),
-    paragraphs.slice(1).join("\n\n") || "",
+  const paragraphs = splitCampaignParagraphs(command.message);
+  const bodyParameters = [
+    { type: "text", text: "{{recipient_name}}" },
+    { type: "text", text: paragraphs[0] || command.message.trim() },
+    { type: "text", text: paragraphs.slice(1).join("\n\n") || "" },
   ];
-  return {
-    body_parameters: body.map((text) => ({ type: "text", text })),
-    button_parameters: mediaUrl
-      ? [{ type: "text", text: mediaUrl }]
-      : [],
+  const components = [
+    { type: "body", parameters: bodyParameters },
+    ...(mediaUrl
+      ? [{ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: mediaUrl }] }]
+      : []),
+  ];
+  const byRecipient = command.recipients.map((lead) => ({
+    phone: normalizeLeadPhone(String(lead.phone || "")),
+    name: String(lead.name || "there").trim() || "there",
     components: [
-      { type: "body", parameters: body.map((text) => ({ type: "text", text })) },
+      { type: "body", parameters: [
+        { type: "text", text: String(lead.name || "there").trim() || "there" },
+        { type: "text", text: paragraphs[0] || command.message.trim() },
+        { type: "text", text: paragraphs.slice(1).join("\n\n") || "" },
+      ] },
       ...(mediaUrl
         ? [{ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: mediaUrl }] }]
         : []),
     ],
-  };
+  }));
+  return { body_parameters: bodyParameters, button_parameters: mediaUrl ? [{ type: "text", text: mediaUrl }] : [], components, components_by_recipient: byRecipient };
 }
 
 function buildCampaignInput(command: MaiaCampaignAction) {
@@ -97,13 +107,14 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       template_components: templateComponents.components,
       template_body_parameters: templateComponents.body_parameters,
       template_button_parameters: templateComponents.button_parameters,
+      template_components_by_recipient: templateComponents.components_by_recipient,
       template_url_parameter: mediaUrl || "",
       confirm_send: true, confirm_real_client_broadcast: true, include_incomplete_leads: true, max_recipients: phones.length,
     },
     natural_response: isDirect
       ? "Send this direct WhatsApp message exactly as written. Do not rewrite it. Direct mode is only valid for contacts inside the 24-hour customer service window."
       : mediaUrl
-        ? "Send the campaign with approved Meta template components. Map body {{1}} to the recipient name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and map the URL button component separately to the supplied campaign URL. Do not put the URL into a body variable."
+        ? "Send the campaign with approved Meta template components. Map body {{1}} to each recipient's name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and map the URL button component separately to the supplied campaign URL. Do not put the URL into a body variable. Use template_components_by_recipient so every recipient receives their own name."
         : "Send the campaign using its configured approved Meta template outside the 24-hour window when required. Do not regenerate the campaign message.",
   };
 }
