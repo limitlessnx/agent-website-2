@@ -9,6 +9,7 @@ import {
 import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
 import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
 import { auditLeoEvent } from "@/lib/leo-session-store";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function channel(value: unknown): LeoChannel {
   return value === "voice" ? "voice" : value === "api" ? "api" : "chat";
@@ -16,6 +17,49 @@ function channel(value: unknown): LeoChannel {
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+async function globalSystemSnapshot() {
+  const supabase = createAdminClient();
+  const [organizations, agents, integrations, workflows, runs] = await Promise.all([
+    supabase.from("organizations").select("id,name,slug,status").order("name").limit(100),
+    supabase.from("agents").select("id,organization_id,name,status,agent_type,updated_at").order("updated_at", { ascending: false }).limit(150),
+    supabase.from("organization_integrations").select("id,organization_id,provider,display_name,status,last_checked_at").order("provider").limit(150),
+    supabase.from("workflow_registry").select("id,organization_uuid,name,workflow_key,status,provider,last_run_at,last_error_at").order("last_error_at", { ascending: false, nullsFirst: false }).limit(150),
+    supabase.from("workflow_runs").select("id,organization_uuid,workflow_key,status,error_message,created_at").order("created_at", { ascending: false }).limit(75),
+  ]);
+  for (const item of [organizations, agents, integrations, workflows, runs]) {
+    if (item.error) throw item.error;
+  }
+  const orgs = organizations.data || [];
+  const agentRows = agents.data || [];
+  const integrationRows = integrations.data || [];
+  const workflowRows = workflows.data || [];
+  const runRows = runs.data || [];
+  const failedRuns = runRows.filter((row) => ["failed", "timed_out", "error"].includes(String(row.status || "").toLowerCase()));
+  const unhealthyIntegrations = integrationRows.filter((row) => !["connected", "active", "healthy", "ok"].includes(String(row.status || "").toLowerCase()));
+  const inactiveAgents = agentRows.filter((row) => !["active", "running", "online"].includes(String(row.status || "").toLowerCase()));
+  const unhealthyWorkflows = workflowRows.filter((row) => ["failed", "error", "disabled", "inactive"].includes(String(row.status || "").toLowerCase()) || row.last_error_at);
+  return {
+    scope: "global",
+    summary: {
+      organizations: orgs.length,
+      agents: agentRows.length,
+      inactive_agents: inactiveAgents.length,
+      integrations: integrationRows.length,
+      unhealthy_integrations: unhealthyIntegrations.length,
+      workflows: workflowRows.length,
+      unhealthy_workflows: unhealthyWorkflows.length,
+      recent_runs: runRows.length,
+      failed_recent_runs: failedRuns.length,
+      overall_status: failedRuns.length || unhealthyWorkflows.length || unhealthyIntegrations.length ? "attention_required" : "healthy",
+    },
+    organizations: orgs,
+    agents: agentRows,
+    integrations: integrationRows,
+    workflows: workflowRows,
+    recentRuns: runRows,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -40,6 +84,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const args = object(body.arguments);
+    if (tool.key === "leo.tenant.inspect" && identity.scope === "super_admin" && !String(args.organization_id || "").trim()) {
+      const snapshot = await globalSystemSnapshot();
+      await auditLeoEvent({
+        identity,
+        eventType: "tool_execution_completed",
+        toolKey: tool.key,
+        details: { channel: identity.channel, scope: identity.scope, global: true },
+      });
+      return NextResponse.json({ ok: true, result: snapshot, approval, channel: identity.channel, scope: identity.scope }, { status: 200 });
+    }
+
     const requestId = String(body.requestId || body.request_id || randomUUID()).trim();
     const sessionId = String(body.sessionId || body.session_id || "").trim() || null;
     const envelope = createLeoExecutionEnvelope({
@@ -47,7 +103,7 @@ export async function POST(request: NextRequest) {
       sessionId,
       identity,
       toolKey: tool.key,
-      arguments: object(body.arguments),
+      arguments: args,
       approvalGranted: approval === "none" || confirmed,
     });
 
