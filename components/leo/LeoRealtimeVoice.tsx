@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Mic, MicOff, PhoneOff, Volume2 } from "@/components/admin/ServerIcons";
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
-type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string };
+type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string; transcript?: string; item_id?: string; response_id?: string };
+type PageContext = { pathname?: string; section?: string; resourceType?: string; resourceId?: string; resourceLabel?: string; timeOfDay?: string; localTime?: string; timeZone?: string };
 
 function friendlyVoiceError(value: string) {
   const text = String(value || "");
@@ -16,7 +17,25 @@ function friendlyVoiceError(value: string) {
   return text.length > 180 ? "Leo voice could not start. Please try again in a moment." : text || "Leo voice could not start.";
 }
 
-export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) {
+function contextInstruction(context: PageContext) {
+  return [
+    "CURRENT FLUXKNIGHT DASHBOARD CONTEXT:",
+    JSON.stringify(context),
+    "Treat this as live navigation context. If the user moves to another dashboard page, use the newest context supplied by session.update.",
+  ].join("\n");
+}
+
+export default function LeoRealtimeVoice({
+  sessionId,
+  pageContext,
+  onActiveChange,
+  onSessionIdChange,
+}: {
+  sessionId?: string;
+  pageContext?: PageContext;
+  onActiveChange?: (active: boolean) => void;
+  onSessionIdChange?: (sessionId: string) => void;
+}) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
@@ -28,6 +47,17 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
+  const sessionIdRef = useRef(sessionId || "");
+
+  const currentContext = useMemo(() => ({
+    ...pageContext,
+    localTime: pageContext?.localTime || new Date().toISOString(),
+    timeZone: pageContext?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+  }), [pageContext]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId || sessionIdRef.current;
+  }, [sessionId]);
 
   function stopMeter() {
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
@@ -74,13 +104,24 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
     if (channel?.readyState === "open") channel.send(JSON.stringify(event));
   }
 
+  async function persistTranscript(role: "user" | "assistant", transcript: string) {
+    const content = transcript.trim();
+    const activeSessionId = sessionIdRef.current;
+    if (!content || !activeSessionId) return;
+    await fetch("/api/leo/voice/transcript", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: activeSessionId, role, content, pageContext: currentContext }),
+    }).catch(() => null);
+  }
+
   async function handleToolCall(event: RealtimeToolEvent) {
     if (event.name !== "leo_execute_tool" || !event.call_id) return;
     let args: Record<string, unknown> = {};
     try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
     let output: Record<string, unknown>;
     try {
-      const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: sessionId || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) });
+      const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: sessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true, pageContext: currentContext }) });
       const result = await response.json().catch(() => ({}));
       output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." };
     } catch (cause) { output = { ok: false, error: cause instanceof Error ? cause.message : "Leo tool execution failed." }; }
@@ -104,16 +145,30 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
         void audio.play().catch(() => null);
       };
       const dataChannel = peer.createDataChannel("oai-events"); channelRef.current = dataChannel;
-      dataChannel.onmessage = (message) => { try { const event = JSON.parse(String(message.data)) as RealtimeToolEvent; if (event.type === "response.function_call_arguments.done") void handleToolCall(event); } catch {} };
-      dataChannel.onopen = () => setState("live");
-      dataChannel.onerror = () => { setError("Leo voice connection encountered an error."); setState("error"); };
+      dataChannel.onmessage = (message) => {
+        try {
+          const event = JSON.parse(String(message.data)) as RealtimeToolEvent;
+          if (event.type === "response.function_call_arguments.done") void handleToolCall(event);
+          if (event.type === "conversation.item.input_audio_transcription.completed" && event.transcript) void persistTranscript("user", event.transcript);
+          if (event.type === "response.audio_transcript.done" && event.transcript) void persistTranscript("assistant", event.transcript);
+        } catch {}
+      };
+      dataChannel.onopen = () => {
+        setState("live");
+        onActiveChange?.(true);
+        sendEvent({ type: "session.update", session: { instructions: contextInstruction(currentContext) } });
+        sendEvent({ type: "response.create" });
+      };
+      dataChannel.onerror = () => { setError("Leo voice connection encountered an error."); setState("error"); onActiveChange?.(false); };
       const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
-      const response = await fetch("/api/leo/realtime/call", { method: "POST", headers: { "content-type": "application/sdp" }, body: offer.sdp || "" });
+      const response = await fetch("/api/leo/realtime/call", { method: "POST", headers: { "content-type": "application/sdp", "x-leo-session-id": sessionIdRef.current || "", "x-leo-page-context": JSON.stringify(currentContext) }, body: offer.sdp || "" });
       const answerSdp = await response.text();
       if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice."));
+      const serverSessionId = response.headers.get("x-leo-session-id") || "";
+      if (serverSessionId) { sessionIdRef.current = serverSessionId; onSessionIdChange?.(serverSessionId); }
       await peer.setRemoteDescription({ type: "answer", sdp: answerSdp });
     } catch (cause) {
-      stop(false); setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice.")); setState("error");
+      stop(false); setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice.")); setState("error"); onActiveChange?.(false);
     }
   }
 
@@ -124,7 +179,7 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
     stopMeter();
     void audioContextRef.current?.close().catch(() => null);
     audioContextRef.current = null;
-    setMuted(false); if (resetState) { setError(""); setState("idle"); }
+    setMuted(false); onActiveChange?.(false); if (resetState) { setError(""); setState("idle"); }
   }
 
   function toggleMute() {
@@ -132,6 +187,11 @@ export default function LeoRealtimeVoice({ sessionId }: { sessionId?: string }) 
     streamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; });
     setMuted(next);
   }
+
+  useEffect(() => {
+    if (state !== "live") return;
+    sendEvent({ type: "session.update", session: { instructions: contextInstruction(currentContext) } });
+  }, [currentContext, state]);
 
   useEffect(() => () => stop(false), []);
 
