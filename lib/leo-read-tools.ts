@@ -3,6 +3,8 @@ import { enforceLeoOrganizationScope, type LeoIdentity } from "@/lib/leo-core";
 import { getAgentManagementSummary } from "@/lib/agent-management";
 import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
+import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
+import { getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
 
 function safeText(value: unknown, max = 500) {
   if (typeof value !== "string") return value;
@@ -118,12 +120,38 @@ export async function executeLeoReadTool(input: LeoReadToolInput): Promise<LeoRe
   }
 
   if (toolKey === "leo.tenant.inspect") {
-    const [agents, workflows, integrations]: [LeoReadToolResult, LeoReadToolResult, LeoReadToolResult] = await Promise.all([
+    const [agents, workflows, integrations] = await Promise.all([
       executeLeoReadTool({ identity, toolKey: "leo.agent.inspect", arguments: {} }),
       executeLeoReadTool({ identity, toolKey: "leo.workflow.inspect_failures", arguments: {} }),
       executeLeoReadTool({ identity, toolKey: "leo.integration.inspect", arguments: {} }),
     ]);
-    return { tool: toolKey, scope: organizationId || identity.scope, agents, workflows, integrations };
+    const diagnosticFocus = String(args.focus || args.query || "").toLowerCase();
+    const shouldInspectMessaging = identity.scope === "super_admin" || /campaign|message|whatsapp|delivery|template|follow.?up/.test(diagnosticFocus);
+    const campaignReports = shouldInspectMessaging ? await getDetailedCampaignReports(50).catch(() => []) : [];
+    const whatsappStatuses = shouldInspectMessaging ? await getRecentWhatsAppStatuses(250).catch(() => []) : [];
+    const failures = whatsappStatuses.filter((status) => status.status === "failed").slice(0, 40).map((status) => safeRow({ messageId: status.message_id, recipientId: status.recipient_id, status: status.status, errorCode: status.error_code, errorTitle: status.error_title, errorDetails: status.error_details, createdAt: status.created_at }));
+    const campaignSummary = campaignReports.reduce((summary, report) => ({
+      total: summary.total + 1,
+      attempted: summary.attempted + report.attempted,
+      accepted: summary.accepted + report.accepted,
+      delivered: summary.delivered + report.delivered,
+      failed: summary.failed + report.failed,
+      skipped: summary.skipped + report.skipped,
+      pending: summary.pending + report.pending_delivery,
+    }), { total: 0, attempted: 0, accepted: 0, delivered: 0, failed: 0, skipped: 0, pending: 0 });
+    return {
+      tool: toolKey,
+      scope: organizationId || identity.scope,
+      diagnosticFocus: diagnosticFocus || "workspace health",
+      agents,
+      workflows,
+      integrations,
+      messagingDiagnostics: shouldInspectMessaging ? {
+        campaignSummary,
+        recentCampaigns: campaignReports.slice(0, 20).map((report) => safeRow(report as unknown as Record<string, unknown>)),
+        recentWhatsAppFailures: failures,
+      } : null,
+    };
   }
 
   if (toolKey === "leo.platform.organizations.read") {
