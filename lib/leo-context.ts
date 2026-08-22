@@ -7,6 +7,8 @@ import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 import { getAgentManagementSummary } from "@/lib/agent-management";
 import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
+import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
+import { getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
 
 async function tenantContext(identity: LeoIdentity) {
   const organizationId = enforceLeoOrganizationScope(identity);
@@ -78,12 +80,41 @@ async function adminContext(identity: LeoIdentity, pageContext?: unknown) {
   if (identity.scope !== "super_admin") throw new Error("Super-admin Leo context requires super-admin scope.");
   const diagnostics = await collectSupportDiagnostics("admin");
   const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
-  const [organizations, usage, resourceContext] = await Promise.all([
+  const [organizations, usage, resourceContext, campaignReports, whatsappStatuses] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>("organizations?select=id,name,slug,status&order=created_at.desc&limit=100").catch(() => []),
     supabaseServerRequest<Record<string, unknown>[]>("usage_ledger?select=organization_id,usage_type,quantity,occurred_at&order=occurred_at.desc&limit=100").catch(() => []),
     dashboardResourceContext(pageContext).catch(() => ({ type: "dashboard", available: false, selected: null })),
+    getDetailedCampaignReports(50).catch(() => []),
+    getRecentWhatsAppStatuses(250).catch(() => []),
   ]);
-  return { diagnostics: safe, platform: { organizationCount: organizations.length, activeOrganizationCount: organizations.filter((item) => String(item.status || "").toLowerCase() === "active").length, recentUsageEvents: usage.length }, dashboardResourceContext: resourceContext } as Record<string, unknown>;
+  const campaignSummary = {
+    total: campaignReports.length,
+    attempted: campaignReports.reduce((sum, report) => sum + report.attempted, 0),
+    accepted: campaignReports.reduce((sum, report) => sum + report.accepted, 0),
+    delivered: campaignReports.reduce((sum, report) => sum + report.delivered, 0),
+    failed: campaignReports.reduce((sum, report) => sum + report.failed, 0),
+    skipped: campaignReports.reduce((sum, report) => sum + report.skipped, 0),
+    pending: campaignReports.reduce((sum, report) => sum + report.pending_delivery, 0),
+  };
+  const recentFailures = whatsappStatuses
+    .filter((status) => status.status === "failed")
+    .slice(0, 40)
+    .map((status) => ({ messageId: status.message_id, recipientId: status.recipient_id, errorCode: status.error_code, errorTitle: status.error_title, errorDetails: status.error_details, createdAt: status.created_at }));
+  return {
+    diagnostics: safe,
+    platform: {
+      organizationCount: organizations.length,
+      activeOrganizationCount: organizations.filter((item) => String(item.status || "").toLowerCase() === "active").length,
+      recentUsageEvents: usage.length,
+    },
+    dashboardResourceContext: resourceContext,
+    messagingDiagnostics: {
+      campaignSummary,
+      recentCampaigns: campaignReports.slice(0, 20),
+      recentWhatsAppFailures: recentFailures,
+      deliveryEvidence: campaignReports.slice(0, 10).map((report) => ({ id: report.id, topic: report.campaign_topic, template: report.template_name, status: report.status, attempted: report.attempted, accepted: report.accepted, delivered: report.delivered, read: report.read, failed: report.failed, skipped: report.skipped, pending: report.pending_delivery, note: report.final_status_note, executionId: report.execution_id, createdAt: report.created_at })),
+    },
+  } as Record<string, unknown>;
 }
 
 export async function buildLeoReasoningContext(input: { identity: LeoIdentity; pageContext?: unknown }): Promise<LeoReasoningContext> {
