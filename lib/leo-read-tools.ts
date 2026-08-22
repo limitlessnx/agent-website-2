@@ -20,7 +20,9 @@ function scopedQuery(identity: LeoIdentity, base: string) {
   return `${base}${base.includes("?") ? "&" : "?"}organization_id=eq.${encodeURIComponent(organizationId)}`;
 }
 
-export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey: string; arguments?: Record<string, unknown> }) {
+type LeoReadToolResult = Record<string, unknown>;
+
+export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey: string; arguments?: Record<string, unknown> }): Promise<LeoReadToolResult> {
   const { identity, toolKey } = input;
   const args = input.arguments || {};
   const requestedId = typeof args.id === "string" ? args.id.trim() : "";
@@ -67,7 +69,7 @@ export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey
   }
 
   if (toolKey === "leo.tenant.inspect") {
-    const [agents, workflows, integrations] = await Promise.all([
+    const [agents, workflows, integrations]: [LeoReadToolResult, LeoReadToolResult, LeoReadToolResult] = await Promise.all([
       executeLeoReadTool({ identity, toolKey: "leo.agent.inspect", arguments: {} }),
       executeLeoReadTool({ identity, toolKey: "leo.workflow.inspect_failures", arguments: {} }),
       executeLeoReadTool({ identity, toolKey: "leo.integration.inspect", arguments: {} }),
