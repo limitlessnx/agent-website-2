@@ -118,7 +118,10 @@ export async function POST(request: NextRequest) {
     model,
     instructions: voiceInstructions(identity, pageContext, history),
     output_modalities: ["audio"],
-    audio: { output: { voice } },
+    audio: {
+      input: { transcription: { model: "gpt-4o-mini-transcribe" } },
+      output: { voice },
+    },
     tools: [
       {
         type: "function",
