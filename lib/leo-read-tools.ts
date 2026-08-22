@@ -22,31 +22,70 @@ function scopedQuery(identity: LeoIdentity, base: string) {
 
 type LeoReadToolResult = Record<string, unknown>;
 
-export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey: string; arguments?: Record<string, unknown> }): Promise<LeoReadToolResult> {
+type LeoReadToolInput = {
+  identity: LeoIdentity;
+  toolKey: string;
+  arguments?: Record<string, unknown>;
+};
+
+export async function executeLeoReadTool(input: LeoReadToolInput): Promise<LeoReadToolResult> {
   const { identity, toolKey } = input;
   const args = input.arguments || {};
   const requestedId = typeof args.id === "string" ? args.id.trim() : "";
-  const organizationId = enforceLeoOrganizationScope(identity, typeof args.organizationId === "string" ? args.organizationId : undefined);
+  const organizationId = enforceLeoOrganizationScope(
+    identity,
+    typeof args.organizationId === "string" ? args.organizationId : undefined,
+  );
 
   if (toolKey === "leo.agent.inspect") {
     const summary = await getAgentManagementSummary();
     const selected = requestedId ? summary.agents.find((agent) => agent.id === requestedId) : null;
-    return { tool: toolKey, scope: organizationId || identity.scope, selected: selected ? safeRow(selected as unknown as Record<string, unknown>) : null, summary: { total: summary.agents.length, configured: summary.configured, active: summary.agents.filter((agent) => agent.status === "active").length, paused: summary.agents.filter((agent) => agent.status === "paused").length, errors: summary.agents.filter((agent) => agent.status === "error").length } };
+    return {
+      tool: toolKey,
+      scope: organizationId || identity.scope,
+      selected: selected ? safeRow(selected as unknown as Record<string, unknown>) : null,
+      summary: {
+        total: summary.agents.length,
+        configured: summary.configured,
+        active: summary.agents.filter((agent) => agent.status === "active").length,
+        paused: summary.agents.filter((agent) => agent.status === "paused").length,
+        errors: summary.agents.filter((agent) => agent.status === "error").length,
+      },
+    };
   }
 
   if (toolKey === "leo.workflow.inspect" || toolKey === "leo.workflow.inspect_failures") {
     const summary = await getWorkflowRegistrySummary();
     const selected = requestedId ? summary.workflows.find((workflow) => workflow.id === requestedId) : null;
     const runs = selected ? summary.runs.filter((run) => run.workflow_id === selected.id) : summary.runs;
-    const filteredRuns = toolKey === "leo.workflow.inspect_failures" ? runs.filter((run) => ["failed", "error", "timed_out"].includes(String(run.status).toLowerCase())) : runs;
-    return { tool: toolKey, scope: organizationId || identity.scope, selected: selected ? safeRow(selected as unknown as Record<string, unknown>) : null, summary: { configured: summary.configured, active: summary.active, paused: summary.paused, failures: summary.failures, successRate: summary.successRate }, runs: filteredRuns.slice(0, 25).map((run) => safeRow(run as unknown as Record<string, unknown>)) };
+    const filteredRuns = toolKey === "leo.workflow.inspect_failures"
+      ? runs.filter((run) => ["failed", "error", "timed_out"].includes(String(run.status).toLowerCase()))
+      : runs;
+    return {
+      tool: toolKey,
+      scope: organizationId || identity.scope,
+      selected: selected ? safeRow(selected as unknown as Record<string, unknown>) : null,
+      summary: {
+        configured: summary.configured,
+        active: summary.active,
+        paused: summary.paused,
+        failures: summary.failures,
+        successRate: summary.successRate,
+      },
+      runs: filteredRuns.slice(0, 25).map((run) => safeRow(run as unknown as Record<string, unknown>)),
+    };
   }
 
   if (toolKey === "leo.integration.inspect") {
     const summary = await getPlatformEngineSummary();
     const selected = requestedId ? summary.integrations.find((integration) => integration.id === requestedId) : null;
     const integrations = selected ? [selected] : summary.integrations;
-    return { tool: toolKey, scope: organizationId || identity.scope, selected: selected ? safeRow(selected as unknown as Record<string, unknown>) : null, integrations: integrations.slice(0, 50).map((integration) => safeRow(integration as unknown as Record<string, unknown>)) };
+    return {
+      tool: toolKey,
+      scope: organizationId || identity.scope,
+      selected: selected ? safeRow(selected as unknown as Record<string, unknown>) : null,
+      integrations: integrations.slice(0, 50).map((integration) => safeRow(integration as unknown as Record<string, unknown>)),
+    };
   }
 
   if (toolKey === "leo.crm.leads.read") {
@@ -54,7 +93,12 @@ export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey
     const query = scopedQuery(identity, `crm_leads?select=id,title,status,stage,source,created_at,customer_id&order=created_at.desc&limit=${limit}`);
     const leads = await supabaseServerRequest<Record<string, unknown>[]>(query);
     const filtered = requestedId ? leads.filter((lead) => String(lead.id) === requestedId) : leads;
-    return { tool: toolKey, scope: organizationId || identity.scope, count: filtered.length, leads: filtered.map(safeRow) };
+    return {
+      tool: toolKey,
+      scope: organizationId || identity.scope,
+      count: filtered.length,
+      leads: filtered.map(safeRow),
+    };
   }
 
   if (toolKey === "leo.billing.inspect") {
@@ -65,7 +109,12 @@ export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey
       supabaseServerRequest<Record<string, unknown>[]>(query),
       supabaseServerRequest<Record<string, unknown>[]>("billing_plans?select=id,name,status&order=created_at.asc"),
     ]);
-    return { tool: toolKey, scope: organizationId || identity.scope, subscriptions: subscriptions.map(safeRow), plans: plans.map(safeRow) };
+    return {
+      tool: toolKey,
+      scope: organizationId || identity.scope,
+      subscriptions: subscriptions.map(safeRow),
+      plans: plans.map(safeRow),
+    };
   }
 
   if (toolKey === "leo.tenant.inspect") {
@@ -79,7 +128,12 @@ export async function executeLeoReadTool(input: { identity: LeoIdentity; toolKey
 
   if (toolKey === "leo.platform.organizations.read") {
     const organizations = await supabaseServerRequest<Record<string, unknown>[]>("organizations?select=id,name,slug,status&order=created_at.desc&limit=100");
-    return { tool: toolKey, scope: identity.scope, count: organizations.length, organizations: organizations.map(safeRow) };
+    return {
+      tool: toolKey,
+      scope: identity.scope,
+      count: organizations.length,
+      organizations: organizations.map(safeRow),
+    };
   }
 
   throw new Error(`Leo read tool is not implemented: ${toolKey}`);
