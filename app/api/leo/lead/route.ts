@@ -9,7 +9,7 @@ type LeadPayload = {
   email?: unknown;
   phone?: unknown;
   organization?: unknown;
-  sessionId?: unknown;
+  consent?: unknown;
 };
 
 function clean(value: unknown, max = 180) {
@@ -27,13 +27,15 @@ export async function POST(request: NextRequest) {
     const email = clean(body.email, 240).toLowerCase();
     const phone = clean(body.phone, 80);
     const organization = clean(body.organization);
-    const sessionId = clean(body.sessionId, 80);
 
     if (!name || !email || !phone || !organization) {
       return NextResponse.json({ error: "Name, email, phone and organization are required." }, { status: 400 });
     }
     if (!validEmail(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+    if (body.consent !== true) {
+      return NextResponse.json({ error: "Please confirm that Fluxknight may contact you about this enquiry." }, { status: 400 });
     }
 
     const now = new Date().toISOString();
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
         timeline: null,
         budget: null,
         preferred_contact_time: null,
-        consent_given: false,
+        consent_given: true,
         source: "public_leo",
         status: "new",
         submitted_at: now,
@@ -60,24 +62,6 @@ export async function POST(request: NextRequest) {
     });
 
     const leadId = rows[0]?.id || null;
-
-    if (sessionId) {
-      await supabaseServerRequest(`leo_sessions?id=eq.${encodeURIComponent(sessionId)}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          metadata: {
-            public_lead_id: leadId,
-            lead_name: name,
-            lead_email: email,
-            lead_phone: phone,
-            lead_organization: organization,
-            lead_captured_at: now,
-          },
-          updated_at: now,
-        }),
-      }).catch(() => null);
-    }
-
     return NextResponse.json({ ok: true, leadId, capturedAt: now });
   } catch (error) {
     console.error("[Leo Lead Capture]", error);
