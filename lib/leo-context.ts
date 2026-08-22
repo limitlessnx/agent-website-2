@@ -106,6 +106,7 @@ async function adminContext(identity: LeoIdentity, pageContext?: unknown) {
       organizationCount: organizations.length,
       activeOrganizationCount: organizations.filter((item) => String(item.status || "").toLowerCase() === "active").length,
       recentUsageEvents: usage.length,
+      organizations: organizations.slice(0, 100),
     },
     dashboardResourceContext: resourceContext,
     messagingDiagnostics: {
