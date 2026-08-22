@@ -18,12 +18,28 @@ type LeoAction = {
 };
 type LeoMessage = { role: "user" | "assistant"; content: string };
 
-function pageContext(pathname: string) {
+type LeoPageContext = {
+  pathname: string;
+  section: string;
+  resourceType: string;
+  resourceId?: string;
+  localTime: string;
+  timeZone: string;
+};
+
+function pageContext(pathname: string): LeoPageContext {
   const parts = pathname.split("/").filter(Boolean);
   const section = parts[1] || "dashboard";
   const resourceType = parts[2] || section;
   const resourceId = parts[3] || undefined;
-  return { pathname, section, resourceType, resourceId };
+  return {
+    pathname,
+    section,
+    resourceType,
+    resourceId,
+    localTime: new Date().toString(),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
 }
 
 function actionFromToolCall(call: {
@@ -50,6 +66,7 @@ export default function LeoDrawer() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [voice, setVoice] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
   const [messages, setMessages] = useState<LeoMessage[]>([]);
   const [conversationId, setConversationId] = useState("");
   const [actions, setActions] = useState<LeoAction[]>([]);
@@ -104,6 +121,7 @@ export default function LeoDrawer() {
           confirmed: true,
           sessionId: conversationId || undefined,
           channel: "chat",
+          pageContext: context,
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -124,6 +142,7 @@ export default function LeoDrawer() {
   }
 
   function reset() {
+    if (voiceActive) return;
     setMessages([]);
     setActions([]);
     setConversationId("");
@@ -131,22 +150,24 @@ export default function LeoDrawer() {
     setVoice(false);
   }
 
+  const showChatbox = open || voice;
+
   return (
     <>
-      <button type="button" className={styles.floating} onClick={() => setOpen((value) => !value)} aria-label="Open Leo">
-        <Bot size={17} /><span>Leo</span>
+      <button type="button" className={`${styles.floating} ${voiceActive ? styles.floatingLive : ""}`} onClick={() => setOpen((value) => !value)} aria-label={voiceActive ? "Open Leo live call" : "Open Leo"}>
+        <Bot size={17} /><span>{voiceActive ? "Leo • Live" : "Leo"}</span>
       </button>
 
-      {open ? (
-        <section className={styles.chatbox} aria-label="Leo AI assistant">
+      {showChatbox ? (
+        <section className={`${styles.chatbox} ${!open && voice ? styles.chatboxMinimized : ""}`} aria-label="Leo AI assistant">
           <header className={styles.header}>
             <div className={styles.identity}>
               <span className={styles.avatar}><Bot size={18} /></span>
               <span><strong>Leo</strong><small>Fluxknight operator</small></span>
             </div>
             <div className={styles.headerActions}>
-              <button type="button" onClick={reset} aria-label="New Leo conversation"><MessageCircle size={15} /></button>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close Leo"><X size={17} /></button>
+              <button type="button" onClick={reset} disabled={voiceActive} aria-label="New Leo conversation"><MessageCircle size={15} /></button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Minimize Leo"><X size={17} /></button>
             </div>
           </header>
 
@@ -154,8 +175,13 @@ export default function LeoDrawer() {
 
           {voice ? (
             <div className={styles.voiceArea}>
-              <LeoRealtimeVoice sessionId={conversationId || undefined} />
-              <button type="button" className={styles.backToChat} onClick={() => setVoice(false)}>Back to chat</button>
+              <LeoRealtimeVoice
+                sessionId={conversationId || undefined}
+                pageContext={context}
+                onActiveChange={(active) => { setVoiceActive(active); if (!active) setVoice(false); }}
+                onSessionIdChange={setConversationId}
+              />
+              {open ? <button type="button" className={styles.backToChat} onClick={() => { if (!voiceActive) setVoice(false); }}>Back to chat</button> : null}
             </div>
           ) : (
             <>
