@@ -2,7 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bot, Check, ChevronRight, Loader2, MessageCircle, Send, ShieldCheck, X } from "@/components/admin/ServerIcons";
+import { Bot, Check, ChevronRight, Loader2, MessageCircle, Mic, Send, ShieldCheck, X } from "@/components/admin/ServerIcons";
+import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 import styles from "./LeoDrawer.module.css";
 
 type LeoAction = { id: string; title: string; description: string; risk_level: string; status: string };
@@ -19,6 +20,7 @@ function pageContext(pathname: string) {
 export default function LeoDrawer() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [voice, setVoice] = useState(false);
   const [messages, setMessages] = useState<LeoMessage[]>([]);
   const [conversationId, setConversationId] = useState("");
   const [actions, setActions] = useState<LeoAction[]>([]);
@@ -79,27 +81,57 @@ export default function LeoDrawer() {
     setActions([]);
     setConversationId("");
     setError("");
+    setVoice(false);
   }
 
   return (
     <>
-      <button type="button" className={styles.floating} onClick={() => setOpen(true)} aria-label="Open Leo support"><Bot size={17} /><span>Leo</span></button>
-      {open ? <div className={styles.backdrop} onClick={() => setOpen(false)} aria-hidden="true" /> : null}
-      <aside className={`${styles.drawer} ${open ? styles.open : ""}`} aria-label="Leo contextual support">
-        <header className={styles.header}>
-          <div className={styles.identity}><span className={styles.avatar}><Bot size={18} /></span><span><strong>Leo</strong><small>Fluxknight operator</small></span></div>
-          <div className={styles.headerActions}><button type="button" onClick={reset} aria-label="New Leo conversation"><MessageCircle size={15} /></button><button type="button" onClick={() => setOpen(false)} aria-label="Close Leo"><X size={17} /></button></div>
-        </header>
-        <div className={styles.contextBar}><span className={styles.statusDot} /><span>Context: <strong>{context.section}</strong></span><ChevronRight size={12} /><span>{context.resourceType}</span></div>
-        <section className={styles.body}>
-          {!messages.length ? <div className={styles.welcome}><span className={styles.welcomeIcon}><Bot size={20} /></span><h2>What needs attention?</h2><p>Leo can inspect this part of Fluxknight, explain problems, and prepare approved actions.</p></div> : null}
-          {messages.map((message, index) => <article key={`${message.role}-${index}`} className={`${styles.message} ${message.role === "user" ? styles.user : ""}`}>{message.role === "assistant" ? <span className={styles.messageAvatar}><Bot size={13} /></span> : null}<div><small>{message.role === "assistant" ? "LEO" : "YOU"}</small><p>{message.content}</p></div></article>)}
-          {busy ? <div className={styles.typing}><Loader2 size={14} className={styles.spin} /> Leo is inspecting Fluxknight...</div> : null}
-          {actions.length ? <section className={styles.actions}><header><span><ShieldCheck size={14} /> Approval center</span></header>{actions.map((action) => <article key={action.id}><div><strong>{action.title}</strong><p>{action.description}</p><small>{action.risk_level} risk · {action.status}</small></div>{action.status === "proposed" ? <div className={styles.actionButtons}><button type="button" disabled={busy} onClick={() => decide(action, "reject")}><X size={13} /> Reject</button><button type="button" disabled={busy} onClick={() => decide(action, "approve")}><Check size={13} /> Approve</button></div> : null}</article>)}</section> : null}
-          {error ? <p className={styles.error}>{error}</p> : null}
+      <button type="button" className={styles.floating} onClick={() => setOpen((value) => !value)} aria-label="Open Leo">
+        <Bot size={17} /><span>Leo</span>
+      </button>
+
+      {open ? (
+        <section className={styles.chatbox} aria-label="Leo AI assistant">
+          <header className={styles.header}>
+            <div className={styles.identity}>
+              <span className={styles.avatar}><Bot size={18} /></span>
+              <span><strong>Leo</strong><small>Fluxknight operator</small></span>
+            </div>
+            <div className={styles.headerActions}>
+              <button type="button" onClick={reset} aria-label="New Leo conversation"><MessageCircle size={15} /></button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close Leo"><X size={17} /></button>
+            </div>
+          </header>
+
+          <div className={styles.contextBar}><span className={styles.statusDot} /><span>Context: <strong>{context.section}</strong></span><ChevronRight size={12} /><span>{context.resourceType}</span></div>
+
+          {voice ? (
+            <div className={styles.voiceArea}>
+              <LeoRealtimeVoice sessionId={conversationId || undefined} />
+              <button type="button" className={styles.backToChat} onClick={() => setVoice(false)}>Back to chat</button>
+            </div>
+          ) : (
+            <>
+              <section className={styles.body}>
+                {!messages.length ? <div className={styles.welcome}><span className={styles.welcomeIcon}><Bot size={20} /></span><h2>What needs attention?</h2><p>Leo can inspect Fluxknight, explain problems, and prepare approved actions.</p></div> : null}
+                {messages.map((message, index) => <article key={`${message.role}-${index}`} className={`${styles.message} ${message.role === "user" ? styles.user : ""}`}>{message.role === "assistant" ? <span className={styles.messageAvatar}><Bot size={13} /></span> : null}<div><small>{message.role === "assistant" ? "LEO" : "YOU"}</small><p>{message.content}</p></div></article>)}
+                {busy ? <div className={styles.typing}><Loader2 size={14} className={styles.spin} /> Leo is inspecting Fluxknight...</div> : null}
+                {actions.length ? <section className={styles.actions}><header><span><ShieldCheck size={14} /> Approval center</span></header>{actions.map((action) => <article key={action.id}><div><strong>{action.title}</strong><p>{action.description}</p><small>{action.risk_level} risk · {action.status}</small></div>{action.status === "proposed" ? <div className={styles.actionButtons}><button type="button" disabled={busy} onClick={() => decide(action, "reject")}><X size={13} /> Reject</button><button type="button" disabled={busy} onClick={() => decide(action, "approve")}><Check size={13} /> Approve</button></div> : null}</article>)}</section> : null}
+                {error ? <p className={styles.error}>{error}</p> : null}
+              </section>
+
+              <form className={styles.composer} onSubmit={submit}>
+                <div>
+                  <textarea name="message" rows={1} placeholder="Ask Leo about this workspace..." required />
+                  <button type="button" className={styles.voiceButton} onClick={() => setVoice(true)} aria-label="Start voice chat"><Mic size={16} /></button>
+                  <button type="submit" disabled={busy} aria-label="Send"><Send size={16} /></button>
+                </div>
+                <small><ShieldCheck size={11} /> Sensitive actions remain approval-gated.</small>
+              </form>
+            </>
+          )}
         </section>
-        <form className={styles.composer} onSubmit={submit}><div><textarea name="message" rows={1} placeholder="Ask Leo about this workspace..." required /><button type="submit" disabled={busy} aria-label="Send"><Send size={16} /></button></div><small><ShieldCheck size={11} /> Sensitive actions remain approval-gated.</small></form>
-      </aside>
+      ) : null}
     </>
   );
 }
