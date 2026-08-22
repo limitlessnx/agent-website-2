@@ -12,6 +12,7 @@ import { auditLeoEvent } from "@/lib/leo-session-store";
 import { executeLeoReadTool } from "@/lib/leo-read-tools";
 import { boundLeoReadResult } from "@/lib/leo-read-output";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
+import type { ProgressiveLead } from "@/lib/lead-profile-service";
 
 type LeoArguments = Record<string, unknown>;
 
@@ -58,12 +59,20 @@ async function executeApprovedLimitlessFollowup(identity: Awaited<ReturnType<typ
   const name = String(lead.name || lead.display_name || lead.title || "client").trim();
   if (!phone) throw new Error(`The Limitless Realty lead "${name}" has no contactable phone number.`);
 
+  const recipient: ProgressiveLead = {
+    id: String(lead.id || phone),
+    name,
+    phone,
+    status: String(lead.status || "new"),
+    campaign_eligible: true,
+  };
+
   const result = await dispatchMaiaCampaignAction({
     commandId: String(args.commandId || randomUUID()),
     campaignType: "limitless_realty_reminder",
     topic: String(args.topic || "Limitless Realty client follow-up"),
     message,
-    recipients: [{ id: String(lead.id || phone), name, phone, status: String(lead.status || "new"), campaign_eligible: true } as never],
+    recipients: [recipient],
     mediaUrl: String(args.mediaUrl || "").trim() || undefined,
     createdBy: identity.email || "fluxknight_super_admin",
   });
