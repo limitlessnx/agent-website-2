@@ -31,7 +31,7 @@ async function resolveActionWorkflow() {
   if (!summary) throw new Error(`The proven n8n workflow "${ACTION_WORKFLOW_NAME}" was not found.`);
   return getN8nWorkflow(summary.id);
 }
-function targets(connection?: WorkflowConnection) { return (connection?.main || []).flat().map((item) => item.node); }
+
 export async function ensureMaiaActionWebhook() {
   const workflow = await resolveActionWorkflow();
   const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as WorkflowNode[];
@@ -55,11 +55,36 @@ export async function ensureMaiaActionWebhook() {
   return { workflowId: workflow.id, workflowName: workflow.name, webhookPath: ACTION_WEBHOOK_PATH, entryNode: ACTION_ENTRY_NODE, repaired: needsUpdate };
 }
 
+function buildTemplateComponents(command: MaiaCampaignAction, mediaUrl: string) {
+  const paragraphs = command.message
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const body = [
+    String(command.recipients[0]?.name || "there").trim() || "there",
+    paragraphs[0] || command.message.trim(),
+    paragraphs.slice(1).join("\n\n") || "",
+  ];
+  return {
+    body_parameters: body.map((text) => ({ type: "text", text })),
+    button_parameters: mediaUrl
+      ? [{ type: "text", text: mediaUrl }]
+      : [],
+    components: [
+      { type: "body", parameters: body.map((text) => ({ type: "text", text })) },
+      ...(mediaUrl
+        ? [{ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: mediaUrl }] }]
+        : []),
+    ],
+  };
+}
+
 function buildCampaignInput(command: MaiaCampaignAction) {
   const phones = [...new Set(command.recipients.map((lead) => normalizeLeadPhone(String(lead.phone || ""))).filter(Boolean))];
   const mediaUrl = String(command.mediaUrl || "").trim();
   const isDirect = command.campaignType === "direct_message";
   const defaultTemplate = command.templateName || "limitless_realty_update_v2";
+  const templateComponents = buildTemplateComponents(command, mediaUrl);
   return {
     source: "fluxknight_dashboard", command_id: command.commandId, chat_id: command.createdBy || "fluxknight_dashboard", user_id: command.createdBy || "fluxknight_dashboard", text: command.message, original_text: command.message,
     action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: Boolean(mediaUrl), media_url: mediaUrl || undefined, media_type: mediaUrl ? "image" : undefined, image_url: mediaUrl || undefined,
@@ -69,12 +94,16 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       campaign_type: command.campaignType || "limitless_realty_update", template_name: defaultTemplate, approved_template_name: defaultTemplate,
       allow_template_fallback: !isDirect, use_approved_template_outside_24h: !isDirect,
       topic: command.topic, property_filter: command.propertyTitle || "", media_url: mediaUrl || "", image_url: mediaUrl || "", media_type: mediaUrl ? "image" : "", has_media: Boolean(mediaUrl),
+      template_components: templateComponents.components,
+      template_body_parameters: templateComponents.body_parameters,
+      template_button_parameters: templateComponents.button_parameters,
+      template_url_parameter: mediaUrl || "",
       confirm_send: true, confirm_real_client_broadcast: true, include_incomplete_leads: true, max_recipients: phones.length,
     },
     natural_response: isDirect
       ? "Send this direct WhatsApp message exactly as written. Do not rewrite it. Direct mode is only valid for contacts inside the 24-hour customer service window."
       : mediaUrl
-        ? "Send the campaign using its approved Meta template outside the 24-hour window when required, with the attached Supabase-hosted image. Preserve the approved campaign intent and do not regenerate the message."
+        ? "Send the campaign with approved Meta template components. Map body {{1}} to the recipient name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and map the URL button component separately to the supplied campaign URL. Do not put the URL into a body variable."
         : "Send the campaign using its configured approved Meta template outside the 24-hour window when required. Do not regenerate the campaign message.",
   };
 }
