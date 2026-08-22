@@ -6,7 +6,16 @@ import { Bot, Check, ChevronRight, Loader2, MessageCircle, Mic, Send, ShieldChec
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 import styles from "./LeoDrawer.module.css";
 
-type LeoAction = { id: string; title: string; description: string; risk_level: string; status: string };
+type LeoAction = {
+  id: string;
+  toolKey: string;
+  arguments: Record<string, unknown>;
+  title: string;
+  description: string;
+  risk_level: string;
+  status: string;
+  approval?: "none" | "confirm" | "admin";
+};
 type LeoMessage = { role: "user" | "assistant"; content: string };
 
 function pageContext(pathname: string) {
@@ -15,6 +24,26 @@ function pageContext(pathname: string) {
   const resourceType = parts[2] || section;
   const resourceId = parts[3] || undefined;
   return { pathname, section, resourceType, resourceId };
+}
+
+function actionFromToolCall(call: {
+  toolKey: string;
+  arguments?: Record<string, unknown>;
+  reason: string;
+  approval: "none" | "confirm" | "admin";
+}, index: number): LeoAction {
+  const title = call.toolKey.split(".").slice(-2).map((part) => part.replace(/_/g, " ")).join(" ");
+  const risk = call.approval === "admin" ? "high" : call.approval === "confirm" ? "medium" : "low";
+  return {
+    id: `${call.toolKey}-${index}`,
+    toolKey: call.toolKey,
+    arguments: call.arguments || {},
+    title: title.charAt(0).toUpperCase() + title.slice(1),
+    description: call.reason,
+    risk_level: risk,
+    status: "proposed",
+    approval: call.approval,
+  };
 }
 
 export default function LeoDrawer() {
@@ -39,16 +68,16 @@ export default function LeoDrawer() {
     setError("");
     setMessages((current) => [...current, { role: "user", content: message }]);
     try {
-      const response = await fetch("/api/admin/support/leo", {
+      const response = await fetch("/api/leo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, conversationId: conversationId || undefined, pageContext: context }),
+        body: JSON.stringify({ message, sessionId: conversationId || undefined, pageContext: context, channel: "chat" }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Leo could not respond.");
-      setConversationId(result.conversationId || "");
+      setConversationId(result.sessionId || "");
       setMessages((current) => [...current, { role: "assistant", content: result.reply || "Leo returned no response." }]);
-      setActions(result.actions || []);
+      setActions((result.toolCalls || []).map((call: { toolKey: string; arguments?: Record<string, unknown>; reason: string; approval: "none" | "confirm" | "admin" }, index: number) => actionFromToolCall(call, index)));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Leo could not respond.");
     } finally {
@@ -57,20 +86,38 @@ export default function LeoDrawer() {
   }
 
   async function decide(action: LeoAction, decision: "approve" | "reject") {
+    if (decision === "reject") {
+      setActions((current) => current.filter((item) => item.id !== action.id));
+      setMessages((current) => [...current, { role: "assistant", content: `Rejected: ${action.title}. No production change was made.` }]);
+      return;
+    }
+
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(`/api/admin/support/leo/actions/${encodeURIComponent(action.id)}`, {
+      const response = await fetch("/api/leo/tool", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision }),
+        body: JSON.stringify({
+          toolKey: action.toolKey,
+          arguments: action.arguments,
+          confirmed: true,
+          sessionId: conversationId || undefined,
+          channel: "chat",
+        }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "Unable to update the action.");
-      setActions((current) => current.map((item) => item.id === action.id ? result.action : item));
-      if (result.message) setMessages((current) => [...current, { role: "assistant", content: result.message }]);
+      if (!response.ok) throw new Error(result.error || "Leo could not execute the approved action.");
+      const success = result.ok !== false;
+      setActions((current) => current.map((item) => item.id === action.id ? { ...item, status: success ? "completed" : "failed" } : item));
+      setMessages((current) => [...current, {
+        role: "assistant",
+        content: success
+          ? `${action.title} completed. ${result.result?.message || result.status || "Leo received a successful execution response."}`
+          : `${action.title} failed. ${result.error || "The execution service returned a failure."}`,
+      }]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to update the action.");
+      setError(cause instanceof Error ? cause.message : "Leo could not execute the approved action.");
     } finally {
       setBusy(false);
     }
