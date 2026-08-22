@@ -1,7 +1,5 @@
 import { getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-data";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
-import AdminSearch from "@/components/admin/AdminSearch";
-import WorkspaceRail from "@/components/admin/WorkspaceRail";
 import LeoOverview from "@/components/admin/LeoOverview";
 import styles from "@/app/dashboard/DashboardExecutive.module.css";
 
@@ -26,14 +24,6 @@ export default async function DashboardPage() {
 
   return (
     <main className={`${styles.page} admin-page`}>
-      <section className={styles.mobileIntro}>
-        <p className={styles.mobileKicker}>Fluxknight</p>
-        <h1>Welcome back, Limitless</h1>
-        <p>Here’s what’s happening with your AI workforce today.</p>
-        <AdminSearch />
-        <div className={styles.mobileWorkspaceLabel}>Your workspace</div>
-        <div className={styles.mobileRail}><WorkspaceRail /></div>
-      </section>
       <LeoOverview
         newLeads={newLeads.length}
         clients={clients.map((client) => ({ id: client.id, business_name: client.business_name, business_email: client.business_email, status: client.status }))}
