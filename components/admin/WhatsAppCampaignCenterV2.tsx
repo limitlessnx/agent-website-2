@@ -92,11 +92,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
     startTransition(async () => {
       try {
         const endpoint = campaignType === "direct_message" ? "/api/limitless/campaigns/direct" : "/api/limitless/campaigns/send";
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Idempotency-Key": requestId },
-          body: JSON.stringify({ requestId, campaignType, topic, message: outboundMessage, mediaUrl, audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId, budgetMin, budgetMax }),
-        });
+        const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestId }, body: JSON.stringify({ requestId, campaignType, topic, message: outboundMessage, mediaUrl, audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId, budgetMin, budgetMax }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Campaign failed.");
         setResult({ status: data.status, attempted: data.attempted || 0, sent: data.sent || 0, delivered: data.delivered || 0, pendingDelivery: data.pendingDelivery || 0, failed: data.failed || 0, skipped: data.skipped || 0, templateName: data.templateName });
@@ -113,9 +109,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
       <div className="campaign-v2-grid">
         <section className="campaign-card">
           <header><span>AUDIENCE</span><h2>Select recipients</h2><strong>{recipientCount}</strong></header>
-          <div className="audience-tabs">
-            {(["all", "manual", "group", "filters"] as AudienceMode[]).map((mode) => <button key={mode} type="button" className={audienceMode === mode ? "active" : ""} onClick={() => setAudienceMode(mode)}>{mode === "all" ? "All leads" : mode === "manual" ? "Manual" : mode === "group" ? "Saved group" : "Smart filters"}</button>)}
-          </div>
+          <div className="audience-tabs">{(["all", "manual", "group", "filters"] as AudienceMode[]).map((mode) => <button key={mode} type="button" className={audienceMode === mode ? "active" : ""} onClick={() => setAudienceMode(mode)}>{mode === "all" ? "All leads" : mode === "manual" ? "Manual" : mode === "group" ? "Saved group" : "Smart filters"}</button>)}</div>
           {audienceMode === "group" && <label>Saved group<select value={groupId} onChange={(e) => setGroupId(e.target.value)}><option value="">Choose group</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>}
           {audienceMode === "filters" && <div className="filters"><label>Location<input value={state} onChange={(e) => setState(e.target.value)} placeholder="Any" /></label><label>Interest<input value={interest} onChange={(e) => setInterest(e.target.value)} placeholder="Any" /></label><label>Property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">Any property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label><label>Min budget<input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} /></label><label>Max budget<input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} /></label></div>}
           {audienceMode === "manual" && <div className="lead-list">{leads.filter(eligible).slice(0, 300).map((lead) => <label key={lead.id}><input type="checkbox" checked={selectedLeadIds.includes(String(lead.id))} onChange={() => setSelectedLeadIds((current) => current.includes(String(lead.id)) ? current.filter((id) => id !== String(lead.id)) : [...current, String(lead.id)])} /><span>{lead.name}<small>{lead.phone}</small></span></label>)}</div>}
@@ -130,17 +124,17 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
             <>
               <div className="template-contract">
                 <div><strong>Limitless Realty Update v2</strong><span>Four body variables. No URL CTA. The WhatsApp Channel invitation is already part of the approved template.</span></div>
-                <div className="variable-row"><b>{{1}}</b><span>Customer first name</span></div>
-                <div className="variable-row"><b>{{2}}</b><span>Main campaign update</span></div>
-                <div className="variable-row"><b>{{3}}</b><span>Supporting paragraph</span></div>
-                <div className="variable-row"><b>{{4}}</b><span>Context-specific response prompt</span></div>
+                <div className="variable-row"><b>{"{{1}}"}</b><span>Customer first name</span></div>
+                <div className="variable-row"><b>{"{{2}}"}</b><span>Main campaign update</span></div>
+                <div className="variable-row"><b>{"{{3}}"}</b><span>Supporting paragraph</span></div>
+                <div className="variable-row"><b>{"{{4}}"}</b><span>Context-specific response prompt</span></div>
               </div>
               <div className="form-grid">
                 <label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Campaign title" /></label>
                 <label>Featured property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
-                <label className="wide">Main update · {{2}}<textarea rows={5} value={mainUpdate} onChange={(e) => setMainUpdate(e.target.value)} placeholder="The main announcement, property update, market news or campaign message." /></label>
-                <label className="wide">Supporting paragraph · {{3}}<textarea rows={4} value={supportingUpdate} onChange={(e) => setSupportingUpdate(e.target.value)} placeholder="Additional context, details, benefits or explanation." /></label>
-                <label className="wide">Response prompt · {{4}}<textarea rows={3} value={responsePrompt} onChange={(e) => setResponsePrompt(e.target.value)} placeholder="Example: Reply MORE INFO if you'd like more information about this update." /></label>
+                <label className="wide">Main update · {"{{2}}"}<textarea rows={5} value={mainUpdate} onChange={(e) => setMainUpdate(e.target.value)} placeholder="The main announcement, property update, market news or campaign message." /></label>
+                <label className="wide">Supporting paragraph · {"{{3}}"}<textarea rows={4} value={supportingUpdate} onChange={(e) => setSupportingUpdate(e.target.value)} placeholder="Additional context, details, benefits or explanation." /></label>
+                <label className="wide">Response prompt · {"{{4}}"}<textarea rows={3} value={responsePrompt} onChange={(e) => setResponsePrompt(e.target.value)} placeholder="Example: Reply MORE INFO if you'd like more information about this update." /></label>
                 <label className="wide">Campaign image URL · optional<input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder={selectedProperty?.drive_photos_link || "https://..."} /></label>
               </div>
               <div className="channel-contract"><div><strong>Permanent channel invitation</strong><span>{CHANNEL_INVITE}</span></div><small>Channel URL is handled by Maia when the client replies YES. It is not sent as a template button.</small><code>{CHANNEL_URL}</code></div>
