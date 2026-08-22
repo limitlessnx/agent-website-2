@@ -5,6 +5,7 @@ import { getPlatformEngineSummary } from "@/lib/platform-engine";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
 import { getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 
 function safeText(value: unknown, max = 500) {
   if (typeof value !== "string") return value;
@@ -29,6 +30,20 @@ type LeoReadToolInput = {
   toolKey: string;
   arguments?: Record<string, unknown>;
 };
+
+function searchText(args: Record<string, unknown>) {
+  return String(args.query || args.search || args.name || "").trim().toLowerCase().slice(0, 120);
+}
+
+function matchesSearch(row: Record<string, unknown>, query: string, fields: string[]) {
+  if (!query) return true;
+  return fields.some((field) => String(row[field] || "").toLowerCase().includes(query));
+}
+
+function isLimitlessRealtyRequest(args: Record<string, unknown>) {
+  const value = String(args.organizationName || args.organization_name || args.organizationSlug || args.organization_slug || args.organizationKey || args.organization_key || "").trim().toLowerCase();
+  return value === "limitless realty" || value === "limitless-realty" || value === "limitless_realty";
+}
 
 export async function executeLeoReadTool(input: LeoReadToolInput): Promise<LeoReadToolResult> {
   const { identity, toolKey } = input;
@@ -92,14 +107,60 @@ export async function executeLeoReadTool(input: LeoReadToolInput): Promise<LeoRe
 
   if (toolKey === "leo.crm.leads.read") {
     const limit = Math.min(Math.max(Number(args.limit) || 25, 1), 100);
-    const query = scopedQuery(identity, `crm_leads?select=id,title,status,stage,source,created_at,customer_id&order=created_at.desc&limit=${limit}`);
-    const leads = await supabaseServerRequest<Record<string, unknown>[]>(query);
-    const filtered = requestedId ? leads.filter((lead) => String(lead.id) === requestedId) : leads;
+    const query = scopedQuery(identity, `crm_leads?select=id,organization_id,customer_id,stage,source,created_at,updated_at,summary,details&order=created_at.desc&limit=${limit}`);
+    const crmLeads = await supabaseServerRequest<Record<string, unknown>[]>(query).catch(() => []);
+    const queryText = searchText(args);
+    let leads = crmLeads;
+
+    // Limitless Realty's existing campaign center uses the legacy `leads` store.
+    // Super Admin Leo may inspect that source only when the request explicitly resolves to Limitless Realty.
+    if (identity.scope === "super_admin" && isLimitlessRealtyRequest(args)) {
+      const legacyLeads = await getCampaignAudienceLeads(Math.min(limit, 100)).catch(() => []);
+      leads = legacyLeads
+        .filter((lead) => matchesSearch(lead as unknown as Record<string, unknown>, queryText, ["name", "phone", "email", "property_interest", "property_type"]))
+        .map((lead) => ({
+          id: lead.id,
+          source: "limitless_realty_campaign_leads",
+          name: lead.name,
+          phone: lead.phone,
+          email: lead.email,
+          status: lead.status,
+          score: lead.score,
+          propertyInterest: lead.property_interest,
+          propertyType: lead.property_type,
+          budget: lead.budget,
+          locationPreference: lead.location_preference,
+          campaignEligible: lead.campaign_eligible,
+          profileStatus: lead.profile_status,
+          followUpStage: (lead as Record<string, unknown>).follow_up_stage,
+          lastFollowUpAt: (lead as Record<string, unknown>).last_follow_up_at,
+          createdAt: lead.created_at,
+        }));
+    } else if (queryText) {
+      leads = leads.filter((lead) => matchesSearch(lead, queryText, ["id", "stage", "source", "summary", "customer_id"]));
+    }
+
+    const phoneCandidates = leads.map((lead) => String(lead.phone || "").trim()).filter(Boolean).slice(0, 20);
+    const paymentQuery = identity.scope === "tenant" && organizationId
+      ? `payment_plans?select=id,client_name,client_phone,property_title,agreed_price,total_paid,outstanding_balance,status,next_due_date,final_due_date&organization_id=eq.${encodeURIComponent(organizationId)}&limit=100`
+      : "payment_plans?select=id,organization_id,client_name,client_phone,property_title,agreed_price,total_paid,outstanding_balance,status,next_due_date,final_due_date&limit=100";
+    const paymentPlans = phoneCandidates.length
+      ? await supabaseServerRequest<Record<string, unknown>[]>(paymentQuery).catch(() => [])
+      : [];
+    const paymentByPhone = new Map(paymentPlans.map((plan) => [String(plan.client_phone || "").replace(/\D/g, ""), safeRow(plan)]));
+
+    const enriched = leads.map((lead) => {
+      const phone = String(lead.phone || "").replace(/\D/g, "");
+      return { ...safeRow(lead), paymentPlan: phone ? paymentByPhone.get(phone) || null : null };
+    });
+
     return {
       tool: toolKey,
       scope: organizationId || identity.scope,
-      count: filtered.length,
-      leads: filtered.map(safeRow),
+      requestedOrganization: isLimitlessRealtyRequest(args) ? "Limitless Realty" : organizationId || null,
+      search: queryText || null,
+      count: enriched.length,
+      leads: enriched,
     };
   }
 
@@ -155,12 +216,16 @@ export async function executeLeoReadTool(input: LeoReadToolInput): Promise<LeoRe
   }
 
   if (toolKey === "leo.platform.organizations.read") {
-    const organizations = await supabaseServerRequest<Record<string, unknown>[]>("organizations?select=id,name,slug,status&order=created_at.desc&limit=100");
+    const queryText = searchText(args);
+    const organizations = await supabaseServerRequest<Record<string, unknown>[]>("organizations?select=id,name,slug,status,created_at,updated_at&order=created_at.desc&limit=100");
+    const filtered = organizations.filter((organization) => matchesSearch(organization, queryText, ["id", "name", "slug", "status"]));
     return {
       tool: toolKey,
       scope: identity.scope,
-      count: organizations.length,
-      organizations: organizations.map(safeRow),
+      search: queryText || null,
+      exactMatches: filtered.filter((organization) => String(organization.name || "").toLowerCase() === queryText || String(organization.slug || "").toLowerCase() === queryText),
+      count: filtered.length,
+      organizations: filtered.map(safeRow),
     };
   }
 
