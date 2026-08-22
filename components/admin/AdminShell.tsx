@@ -39,7 +39,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
               <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
-          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header"><FluxknightLogo className={mobileChrome.mobileLogo} /><div className={mobileChrome.mobileAvatar} aria-label="Victor account">V</div></header>
+          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header"><FluxknightLogo className={mobileChrome.mobileLogo} /><div className={mobileChrome.mobileAvatar} aria-label="Limitless account">L</div></header>
           <WorkspaceRail />
           {children}
           <EnterpriseTableEnhancer />
