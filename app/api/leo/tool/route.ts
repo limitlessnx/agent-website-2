@@ -10,6 +10,7 @@ import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
 import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
 import { auditLeoEvent } from "@/lib/leo-session-store";
 import { executeLeoReadTool } from "@/lib/leo-read-tools";
+import { boundLeoReadResult } from "@/lib/leo-read-output";
 
 function channel(value: unknown): LeoChannel {
   return value === "voice" ? "voice" : value === "api" ? "api" : "chat";
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (tool.readOnly) {
       const result = await executeLeoReadTool({ identity, toolKey: tool.key, arguments: object(body.arguments) });
       await auditLeoEvent({ identity, eventType: "read_tool_executed", toolKey: tool.key, details: { channel: identity.channel } });
-      return NextResponse.json({ ok: true, result, approval, channel: identity.channel, scope: identity.scope });
+      return NextResponse.json({ ok: true, result: boundLeoReadResult(result), approval, channel: identity.channel, scope: identity.scope });
     }
 
     if (approval === "confirm" && !confirmed) {
