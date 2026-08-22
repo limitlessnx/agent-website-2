@@ -24,7 +24,6 @@ const basePlatformGroups: NavGroup[] = [
     label: "Fluxknight Platform",
     sections: [{ items: [
       { href: "/dashboard", label: "Command Center", icon: Home, exact: true },
-      { href: "/dashboard/support", label: "Agent Leo AI Support", icon: LifeBuoy },
       { href: "/dashboard/notifications", label: "Admin Notifications", icon: Bell },
       { href: "/dashboard/evaluations", label: "Evaluation Leads", icon: ClipboardList },
       { href: "/dashboard/agents", label: "Super Assistant", icon: Bot },
@@ -61,6 +60,7 @@ const basePlatformGroups: NavGroup[] = [
     id: "platform-governance",
     label: "Platform Governance",
     sections: [{ items: [
+      { href: "/dashboard/support", label: "Leo", icon: LifeBuoy },
       { href: "/dashboard/ai-models", label: "AI Model Control", icon: BrainCircuit },
       { href: "/dashboard/knowledge", label: "Knowledge Center", icon: Database },
       { href: "/dashboard/memory", label: "Memory Center", icon: BrainCircuit },
@@ -81,9 +81,6 @@ function itemIsActive(pathname: string, item: { href: string; exact?: boolean })
 }
 function tenantLabel(value: string) { return value.replaceAll("_", " "); }
 
-// Main groups and nested sections are intentionally closed on first render.
-// Users open only the branch they are working in, instead of the sidebar
-// expanding into a small novella on every page load.
 const defaultOpenGroupIds: string[] = [];
 const defaultOpenSectionIds: string[] = [];
 
@@ -118,12 +115,8 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const [mobileOpen, setMobileOpen] = useState(false);
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
 
-  function toggleGroup(id: string) {
-    setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
-  }
-  function toggleSection(id: string) {
-    setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]);
-  }
+  function toggleGroup(id: string) { setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]); }
+  function toggleSection(id: string) { setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]); }
   function closeMobileMenu() { setMobileOpen(false); }
 
   const workspaceName = pathname.startsWith("/dashboard/gencouv")
@@ -141,67 +134,38 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
       <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.mobileHeader}><button type="button" onClick={closeMobileMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
         <Link href="/dashboard" onClick={closeMobileMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
-
-        <div className={extras.workspaceSwitcher}>
-          <span className={extras.workspaceIcon}><Building2 size={16} /></span>
-          <span><small>Current scope</small><strong>{workspaceName}</strong></span>
-        </div>
-
+        <div className={extras.workspaceSwitcher}><span className={extras.workspaceIcon}><Building2 size={16} /></span><span><small>Current scope</small><strong>{workspaceName}</strong></span></div>
         <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent, client onboarding and public website navigation">
           <section className={styles.group}>
-            <button type="button" className={styles.trigger} onClick={() => setPublicSiteOpen((current) => !current)} aria-expanded={publicSiteOpen}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Globe2 size={15} /> Public Website</span>
-              <ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} />
-            </button>
-            <div className={`${styles.items} ${publicSiteOpen ? styles.itemsOpen : ""}`}>
-              <div className={styles.section}><div className={styles.sectionItemsOpen}>
-                {publicSiteLinks.map((item) => <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMobileMenu}><ExternalLink size={16} /><span>{item.label}</span></a>)}
-              </div></div>
-            </div>
+            <button type="button" className={styles.trigger} onClick={() => setPublicSiteOpen((current) => !current)} aria-expanded={publicSiteOpen}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Globe2 size={15} /> Public Website</span><ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} /></button>
+            <div className={`${styles.items} ${publicSiteOpen ? styles.itemsOpen : ""}`}><div className={styles.section}><div className={styles.sectionItemsOpen}>{publicSiteLinks.map((item) => <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMobileMenu}><ExternalLink size={16} /><span>{item.label}</span></a>)}</div></div></div>
           </section>
-
           {platformGroups.map((group) => {
             const hasActiveItem = groupItems(group).some((item) => itemIsActive(pathname, item));
-            // Do not auto-expand because the current route is active. Clicking
-            // the group trigger is the only thing that opens/closes it.
             const isOpen = openGroups.includes(group.id);
-            return (
-              <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
-                <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}>
-                  <span>{group.label}</span><ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
-                </button>
-                <div className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
-                  {group.sections.map((section, sectionIndex) => {
-                    const nestedSectionId = sectionId(group.id, section, sectionIndex);
-                    const hasActiveSectionItem = section.items.some((item) => itemIsActive(pathname, item));
-                    const isSectionOpen = openSections.includes(nestedSectionId);
-                    return (
-                      <div key={nestedSectionId} className={styles.section}>
-                        {section.label ? <button type="button" className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`} onClick={() => toggleSection(nestedSectionId)} aria-expanded={isSectionOpen}>
-                          <span>{section.label}</span><ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} />
-                        </button> : null}
-                        <div className={`${section.label ? styles.sectionItems : ""} ${!section.label || isSectionOpen ? styles.sectionItemsOpen : ""}`}>
-                          {section.items.map((item) => {
-                            const active = itemIsActive(pathname, item);
-                            return <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}>
-                              <item.icon size={17} /><span>{item.label}</span>{item.meta ? <small>{item.meta}</small> : null}
-                            </Link>;
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {group.id === "client-onboarding" && tenants.length === 0 ? <p className={styles.emptyState}>No client organizations yet.</p> : null}
-                </div>
-              </section>
-            );
+            return <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
+              <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}><span>{group.label}</span><ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} /></button>
+              <div className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
+                {group.sections.map((section, sectionIndex) => {
+                  const nestedSectionId = sectionId(group.id, section, sectionIndex);
+                  const hasActiveSectionItem = section.items.some((item) => itemIsActive(pathname, item));
+                  const isSectionOpen = openSections.includes(nestedSectionId);
+                  return <div key={nestedSectionId} className={styles.section}>
+                    {section.label ? <button type="button" className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`} onClick={() => toggleSection(nestedSectionId)} aria-expanded={isSectionOpen}><span>{section.label}</span><ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} /></button> : null}
+                    <div className={`${section.label ? styles.sectionItems : ""} ${!section.label || isSectionOpen ? styles.sectionItemsOpen : ""}`}>
+                      {section.items.map((item) => {
+                        const active = itemIsActive(pathname, item);
+                        return <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}><item.icon size={17} /><span>{item.label}</span>{item.meta ? <small>{item.meta}</small> : null}</Link>;
+                      })}
+                    </div>
+                  </div>;
+                })}
+                {group.id === "client-onboarding" && tenants.length === 0 ? <p className={styles.emptyState}>No client organizations yet.</p> : null}
+              </div>
+            </section>;
           })}
         </nav>
-
-        <div className={`admin-sidebar-footer ${styles.footer}`}>
-          <div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div>
-          <LogoutButton />
-        </div>
+        <div className={`admin-sidebar-footer ${styles.footer}`}><div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div><LogoutButton /></div>
       </aside>
     </>
   );

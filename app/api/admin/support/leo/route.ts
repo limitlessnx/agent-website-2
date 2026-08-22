@@ -18,6 +18,30 @@ async function requireAdmin() {
   return (await getAdminSession()) || null;
 }
 
+type DashboardPageContext = {
+  pathname: string;
+  section: string;
+  resourceType: string;
+  resourceId?: string;
+};
+
+function sanitizePageContext(value: unknown): DashboardPageContext {
+  const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const safe = (candidate: unknown, fallback: string, max: number) => {
+    const text = typeof candidate === "string" ? candidate.trim() : "";
+    return (text || fallback).slice(0, max);
+  };
+  const resourceId = typeof input.resourceId === "string" && input.resourceId.trim()
+    ? input.resourceId.trim().slice(0, 120)
+    : undefined;
+  return {
+    pathname: safe(input.pathname, "/dashboard", 300),
+    section: safe(input.section, "dashboard", 80),
+    resourceType: safe(input.resourceType, "dashboard", 80),
+    resourceId,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -49,6 +73,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const message = String(body.message || "").trim();
     const organizationId = String(body.organizationId || "").trim() || undefined;
+    const dashboardContext = sanitizePageContext(body.pageContext);
     let conversationId = String(body.conversationId || "").trim();
     if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
 
@@ -64,7 +89,7 @@ export async function POST(request: NextRequest) {
           status: "diagnosing",
           created_by: session.email,
           assigned_agent: "agent-leo",
-          metadata: { scope: "admin", engine: "shared-leo-ai-runtime" },
+          metadata: { scope: "admin", engine: "shared-leo-ai-runtime", dashboard_context: dashboardContext },
         }),
       });
       conversationId = rows[0]?.id || "";
@@ -78,20 +103,9 @@ export async function POST(request: NextRequest) {
 
     try {
       const identity = await resolveLeoIdentity({ channel: "chat", allowPublic: false });
-      if (!identity || identity.scope !== "super_admin") {
-        throw new Error("Super Admin Leo identity could not be resolved.");
-      }
+      if (!identity || identity.scope !== "super_admin") throw new Error("Super Admin Leo identity could not be resolved.");
 
-      const context = await buildLeoReasoningContext({
-        identity,
-        pageContext: {
-          pathname: "/dashboard/support",
-          section: "super-admin-leo",
-          resourceType: "admin_support",
-          resourceId: organizationId,
-        },
-      });
-
+      const context = await buildLeoReasoningContext({ identity, pageContext: dashboardContext });
       const history = await supabaseServerRequest<SupportMessage[]>(
         `support_messages?select=*&conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`,
       ).catch(() => []);
@@ -99,16 +113,11 @@ export async function POST(request: NextRequest) {
       const result = await generateLeoReasoning({
         identity,
         message,
-        history: history.map((item) => ({
-          role: item.role === "assistant" ? "assistant" : "user",
-          content: String(item.content || "").slice(0, 3000),
-        })),
+        history: history.map((item) => ({ role: item.role === "assistant" ? "assistant" : "user", content: String(item.content || "").slice(0, 3000) })),
         context,
       });
 
-      if (!result.ok) {
-        throw new Error(`Shared Leo AI runtime failed: ${result.reason}.`);
-      }
+      if (!result.ok) throw new Error(`Shared Leo AI runtime failed: ${result.reason}.`);
 
       const diagnostics = {
         engine: "shared-leo-ai-runtime",
@@ -119,16 +128,12 @@ export async function POST(request: NextRequest) {
         confidence: result.confidence,
         needs_human_review: result.needsHumanReview,
         tool_proposals: result.toolCalls,
+        dashboard_context: dashboardContext,
       };
 
       await supabaseServerRequest("support_messages", {
         method: "POST",
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          role: "assistant",
-          content: result.reply,
-          diagnostics,
-        }),
+        body: JSON.stringify({ conversation_id: conversationId, role: "assistant", content: result.reply, diagnostics }),
       });
 
       await supabaseServerRequest(`support_conversations?id=eq.${encodeURIComponent(conversationId)}`, {
@@ -136,7 +141,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           status: result.toolCalls.some((tool) => tool.approval !== "none") ? "waiting_approval" : "open",
           updated_at: new Date().toISOString(),
-          metadata: { scope: "admin", engine: "shared-leo-ai-runtime", model: result.model },
+          metadata: { scope: "admin", engine: "shared-leo-ai-runtime", model: result.model, dashboard_context: dashboardContext },
         }),
       });
 
@@ -166,7 +171,7 @@ export async function POST(request: NextRequest) {
 
       await supabaseServerRequest("support_messages", {
         method: "POST",
-        body: JSON.stringify({ conversation_id: conversationId, role: "assistant", content: visibleReply, diagnostics: { ...diagnostics, engine: "rule-fallback", fallback_reason: reason } }),
+        body: JSON.stringify({ conversation_id: conversationId, role: "assistant", content: visibleReply, diagnostics: { ...diagnostics, engine: "rule-fallback", fallback_reason: reason, dashboard_context: dashboardContext } }),
       });
 
       const createdActions: SupportAction[] = [];
@@ -182,16 +187,13 @@ export async function POST(request: NextRequest) {
         ok: true,
         conversationId,
         reply: visibleReply,
-        diagnostics: { ...diagnostics, fallback_reason: reason },
+        diagnostics: { ...diagnostics, fallback_reason: reason, dashboard_context: dashboardContext },
         actions: createdActions,
         engine: "rule-fallback",
         ai: { connected: false },
       });
     }
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Agent Leo could not complete the diagnostic." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Agent Leo could not complete the diagnostic." }, { status: 500 });
   }
 }

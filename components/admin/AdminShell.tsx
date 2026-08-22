@@ -5,6 +5,7 @@ import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding"
 import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import WorkspaceRail from "@/components/admin/WorkspaceRail";
+import LeoDrawer from "@/components/admin/LeoDrawer";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
@@ -55,6 +56,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
           {children}
           <EnterpriseTableEnhancer />
         </section>
+        <LeoDrawer />
       </div>
     </div>
   );

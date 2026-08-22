@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateLeoReasoning, type LeoChatMessage } from "@/lib/ai/leo-model";
 import { buildLeoReasoningContext } from "@/lib/leo-context";
+import { executeLeoReadTool } from "@/lib/leo-read-tools";
 import {
+  assertLeoToolAllowed,
   buildLeoPolicySnapshot,
   enforceLeoOrganizationScope,
   resolveLeoIdentity,
@@ -48,6 +50,14 @@ function scopeToolArguments(identity: LeoIdentity, args: Record<string, unknown>
     delete scoped.tenantId;
   }
   return scoped;
+}
+
+function isReadOnlyTool(identity: LeoIdentity, toolKey: string) {
+  try {
+    return assertLeoToolAllowed(identity, toolKey).readOnly;
+  } catch {
+    return false;
+  }
 }
 
 /** Keep Leo's normal answers concise without damaging structured/tool output. */
@@ -106,38 +116,95 @@ export async function POST(request: NextRequest) {
     details: { channel, persisted: session.persisted },
   });
 
-  const context = await buildLeoReasoningContext({ identity, pageContext });
-  const result = await generateLeoReasoning({
+  const baseContext = await buildLeoReasoningContext({ identity, pageContext });
+  const firstResult = await generateLeoReasoning({
     identity,
     message,
     history,
-    context,
+    context: baseContext,
   });
 
-  if (!result.ok) {
+  if (!firstResult.ok) {
     void auditLeoEvent({
       identity,
       session,
       eventType: "reasoning_failed",
-      details: { reason: result.reason, model: result.model, latency_ms: result.latencyMs },
+      details: { reason: firstResult.reason, model: firstResult.model, latency_ms: firstResult.latencyMs },
     });
-    const status = result.reason === "not_configured" ? 503 : result.reason === "timeout" ? 504 : 502;
+    const status = firstResult.reason === "not_configured" ? 503 : firstResult.reason === "timeout" ? 504 : 502;
     return NextResponse.json(
       {
         error: "Leo could not complete this response.",
-        reason: result.reason,
+        reason: firstResult.reason,
         sessionId: session.id,
         persistence: session.persisted ? "database" : "ephemeral",
-        ai: { connected: false, model: result.model, latencyMs: result.latencyMs },
+        ai: { connected: false, model: firstResult.model, latencyMs: firstResult.latencyMs },
       },
       { status },
     );
   }
 
-  const reply = conciseLeoReply(result.reply);
-  const toolCalls = result.toolCalls.map((call) => ({
+  const scopedFirstTools = firstResult.toolCalls.map((call) => ({
     ...call,
     arguments: scopeToolArguments(identity, call.arguments),
+  }));
+  const readCalls = scopedFirstTools.filter((call) => isReadOnlyTool(identity, call.toolKey));
+  const nonReadCalls = scopedFirstTools.filter((call) => !isReadOnlyTool(identity, call.toolKey));
+
+  let result = firstResult;
+  let readResults: Record<string, unknown> = {};
+
+  if (readCalls.length > 0) {
+    const entries = await Promise.all(readCalls.slice(0, 4).map(async (call) => {
+      try {
+        const output = await executeLeoReadTool({
+          identity,
+          toolKey: call.toolKey,
+          arguments: call.arguments,
+        });
+        return [call.toolKey, output] as const;
+      } catch (error) {
+        return [call.toolKey, { error: "Read tool failed safely." }] as const;
+      }
+    }));
+
+    readResults = Object.fromEntries(entries);
+    void auditLeoEvent({
+      identity,
+      session,
+      eventType: "read_tools_executed",
+      details: { tool_count: entries.length, tool_keys: entries.map(([key]) => key) },
+    });
+
+    const secondContext = {
+      ...baseContext,
+      readResults,
+    };
+    const secondResult = await generateLeoReasoning({
+      identity,
+      message,
+      history,
+      context: secondContext,
+    });
+
+    if (secondResult.ok) {
+      result = secondResult;
+    } else {
+      void auditLeoEvent({
+        identity,
+        session,
+        eventType: "reasoning_failed",
+        details: { reason: secondResult.reason, model: secondResult.model, latency_ms: secondResult.latencyMs, phase: "read_result_reasoning" },
+      });
+    }
+  }
+
+  const reply = conciseLeoReply(result.reply);
+  const toolCalls = (result === firstResult ? nonReadCalls : result.toolCalls.map((call) => ({
+    ...call,
+    arguments: scopeToolArguments(identity, call.arguments),
+  }))).map((call) => ({
+    ...call,
     status: "proposed" as const,
   }));
 
@@ -151,6 +218,7 @@ export async function POST(request: NextRequest) {
       confidence: result.confidence,
       needs_human_review: result.needsHumanReview,
       model: result.model,
+      read_tool_count: readCalls.length,
     },
   });
   await storeLeoToolProposals({ identity, session, toolCalls });
@@ -162,6 +230,7 @@ export async function POST(request: NextRequest) {
       intent: result.intent,
       confidence: result.confidence,
       tool_count: toolCalls.length,
+      read_tool_count: readCalls.length,
       model: result.model,
       latency_ms: result.latencyMs,
     },
@@ -178,6 +247,7 @@ export async function POST(request: NextRequest) {
     needsHumanReview: result.needsHumanReview,
     toolCalls,
     executionMode: "proposal_only",
+    readToolsExecuted: readCalls.map((call) => call.toolKey),
     identity: {
       scope: identity.scope,
       role: identity.role,
