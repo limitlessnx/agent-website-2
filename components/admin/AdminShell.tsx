@@ -5,6 +5,7 @@ import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding"
 import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import WorkspaceRail from "@/components/admin/WorkspaceRail";
+import LeoFloatingButton from "@/components/admin/LeoFloatingButton";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
@@ -31,30 +32,19 @@ export default async function AdminShell({ children }: { children: React.ReactNo
         />
         <section className="admin-main">
           <header className="admin-topbar">
-            <div className="admin-breadcrumb">
-              <strong>Fluxknight</strong>
-              <span>Workspace Operations</span>
-            </div>
+            <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
             <AdminSearch />
             <div className="admin-topbar-actions">
-              <Link href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none" }} className="admin-period">
-                <span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span>
-              </Link>
-              <PlatformChrome />
-              <ThemeToggle />
-              <div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
+              <Link href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none" }} className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></Link>
+              <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
-
-          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header">
-            <FluxknightLogo className={mobileChrome.mobileLogo} />
-            <div className={mobileChrome.mobileAvatar} aria-label="Victor account">V</div>
-          </header>
-
+          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header"><FluxknightLogo className={mobileChrome.mobileLogo} /><div className={mobileChrome.mobileAvatar} aria-label="Victor account">V</div></header>
           <WorkspaceRail />
           {children}
           <EnterpriseTableEnhancer />
         </section>
+        <LeoFloatingButton />
       </div>
     </div>
   );
