@@ -6,6 +6,7 @@ import {
   Activity, AlertTriangle, ArrowUpRight, Bot, CheckCircle2, Clock3,
   Gauge, MessageSquareText, Play, RefreshCw, Sparkles, Target, Users, Workflow,
 } from "@/components/admin/ServerIcons";
+import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 import styles from "./LeoOverview.module.css";
 
 type Notice = { title: string; detail: string; href: string; type: string };
@@ -44,6 +45,10 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
 
   return (
     <section className={styles.shell} aria-label="Fluxknight workforce overview">
+      <div className={styles.leoPresence}>
+        <LeoRealtimeVoice mode="orb" />
+      </div>
+
       <div className={styles.hero}>
         <div className={styles.heroCopy}>
           <div className={styles.eyebrow}><span className={styles.liveDot} /> Fluxknight Command Center</div>
@@ -51,7 +56,6 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
           <p>Here’s what’s happening with your AI workforce today.</p>
           <div className={styles.heroMeta}><span><Gauge size={14} /> {healthPercent}% workforce health</span><span><Bot size={14} /> AI workforce operational</span><span><Clock3 size={14} /> Live operational view</span></div>
         </div>
-        <div className={styles.heroOrb} aria-hidden="true"><div className={styles.ring} /><div className={styles.ringSmall} /><div className={styles.heroCore}><Bot size={30} /></div><span className={styles.signalOne}>Agents</span><span className={styles.signalTwo}>Automations</span><span className={styles.signalThree}>Leads</span></div>
       </div>
 
       <div className={styles.commandBar}>
