@@ -75,6 +75,47 @@ function safeEqual(left: string, right: string) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+const TENANT_SCOPE_KEYS = [
+  "organization_id",
+  "organizationId",
+  "tenant_id",
+  "tenantId",
+  "resource_organization_id",
+  "resourceOrganizationId",
+  "owner_organization_id",
+  "ownerOrganizationId",
+] as const;
+
+type TenantScopeKey = (typeof TENANT_SCOPE_KEYS)[number];
+
+function readTenantScopeValues(args: Record<string, unknown>) {
+  return TENANT_SCOPE_KEYS
+    .map((key) => ({ key, value: typeof args[key] === "string" ? String(args[key]).trim() : undefined }))
+    .filter((entry): entry is { key: TenantScopeKey; value: string } => Boolean(entry.value));
+}
+
+function enforceTenantResourceScope(identity: LeoIdentity, args: Record<string, unknown>) {
+  if (identity.scope !== "tenant") return args;
+  if (!identity.organizationId) throw new Error("Tenant Leo identity has no organization scope.");
+
+  const supplied = readTenantScopeValues(args);
+  const conflicting = supplied.find((entry) => entry.value !== identity.organizationId);
+  if (conflicting) {
+    throw new Error(`Cross-tenant Leo resource access was blocked via ${conflicting.key}.`);
+  }
+
+  const scoped = { ...args };
+  for (const key of TENANT_SCOPE_KEYS) delete scoped[key];
+  scoped.organization_id = identity.organizationId;
+  return scoped;
+}
+
+function enforcePublicResourceScope(args: Record<string, unknown>) {
+  const scoped = { ...args };
+  for (const key of TENANT_SCOPE_KEYS) delete scoped[key];
+  return scoped;
+}
+
 export function createLeoExecutionEnvelope(input: {
   requestId: string;
   sessionId?: string | null;
@@ -84,18 +125,13 @@ export function createLeoExecutionEnvelope(input: {
   approvalGranted?: boolean;
 }) {
   const tool = assertLeoToolAllowed(input.identity, input.toolKey);
-  const scopedArguments = { ...input.arguments };
+  let scopedArguments = { ...input.arguments };
+
   if (input.identity.scope === "tenant") {
-    scopedArguments.organization_id = enforceLeoOrganizationScope(
-      input.identity,
-      typeof scopedArguments.organization_id === "string" ? scopedArguments.organization_id : undefined,
-    );
-  }
-  if (input.identity.scope === "public") {
-    delete scopedArguments.organization_id;
-    delete scopedArguments.organizationId;
-    delete scopedArguments.tenant_id;
-    delete scopedArguments.tenantId;
+    scopedArguments = enforceTenantResourceScope(input.identity, scopedArguments);
+    enforceLeoOrganizationScope(input.identity, scopedArguments.organization_id);
+  } else if (input.identity.scope === "public") {
+    scopedArguments = enforcePublicResourceScope(scopedArguments);
   }
 
   const issuedAt = Date.now();
@@ -148,11 +184,18 @@ export function verifyLeoExecutionEnvelope(value: unknown): {
     globalScope: Boolean(envelope.identity.globalScope),
   };
   assertLeoToolAllowed(identity, envelope.toolKey);
+
   if (identity.scope === "tenant") {
-    enforceLeoOrganizationScope(
-      identity,
-      typeof envelope.arguments.organization_id === "string" ? envelope.arguments.organization_id : undefined,
-    );
+    const normalizedArguments = enforceTenantResourceScope(identity, envelope.arguments);
+    if (normalizedArguments.organization_id !== envelope.arguments.organization_id) {
+      throw new Error("Leo tenant resource scope is not canonical.");
+    }
+    enforceLeoOrganizationScope(identity, envelope.arguments.organization_id);
+  } else if (identity.scope === "public") {
+    if (readTenantScopeValues(envelope.arguments).length > 0) {
+      throw new Error("Public Leo execution contains tenant resource scope.");
+    }
   }
+
   return { envelope, identity };
 }
