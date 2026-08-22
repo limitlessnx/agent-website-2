@@ -43,7 +43,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This Leo action requires Fluxknight Super Admin approval." }, { status: 403 });
     }
 
-    if ((approval === "confirm" || approval === "admin") && !confirmed) {
+    if (approval === "confirm" && !confirmed) {
+      return NextResponse.json({
+        ok: true,
+        status: "confirmation_required",
+        toolKey: tool.key,
+        title: tool.title,
+        message: `Confirm ${tool.title.toLowerCase()} before Leo executes it.`,
+      });
+    }
+
+    if (approval === "admin" && !confirmed) {
       return NextResponse.json({
         ok: true,
         status: "confirmation_required",
