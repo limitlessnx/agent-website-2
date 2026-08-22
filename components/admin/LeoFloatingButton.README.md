@@ -1,0 +1,1 @@
+LeoFloatingButton is the persistent super-admin Agent Leo launcher. Import and render it from the super-admin dashboard shell/layout so it appears across dashboard pages.
