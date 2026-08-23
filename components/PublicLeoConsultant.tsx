@@ -202,7 +202,14 @@ export default function PublicLeoConsultant() {
     const callId = event.call_id || event.item?.call_id;
     const toolName = event.name || event.item?.name;
     const rawArguments = event.arguments || event.item?.arguments || "{}";
-    if (!callId || toolName !== "leo_execute_tool") return;
+    if (!callId) return;
+
+    if (toolName === "leo_end_call") {
+      stopCall();
+      return;
+    }
+
+    if (toolName !== "leo_execute_tool") return;
 
     let payload: { tool_key?: string; arguments?: Record<string, unknown>; confirmed?: boolean } = {};
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
@@ -281,7 +288,7 @@ export default function PublicLeoConsultant() {
             type: "response.create",
             response: {
               output_modalities: ["audio"],
-              instructions: "You are speaking with a new public Fluxknight visitor. Do not show or request a form. Have a natural conversation and collect these four lead details conversationally, one at a time: full name, email address, phone number, and organization/business. Start by asking for their full name. After all four are provided, use leo_execute_tool with tool_key leo.public.lead.capture and arguments containing name, email, phone, and organization. Do not ask them to click anything to provide the details. Once the lead is captured, continue the business conversation. Keep replies short and natural.",
+              instructions: "You are speaking with a new public Fluxknight visitor. Do not show or request a form. Have a natural conversation and collect these four lead details conversationally, one at a time: full name, email address, phone number, and organization/business. Start by asking for their full name. After all four are provided, use leo_execute_tool with tool_key leo.public.lead.capture and arguments containing name, email, phone, and organization. Do not ask them to click anything to provide the details. Once the lead is captured, continue the business conversation. If the user says end the call, hang up, disconnect, goodbye, or otherwise clearly asks to terminate the call, briefly acknowledge them and immediately use leo_end_call. Do not continue speaking after requesting the hangup. Keep replies short and natural.",
             },
           });
         } catch {
