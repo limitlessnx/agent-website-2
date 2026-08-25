@@ -4,7 +4,7 @@ import { listLeoToolsForIdentity, resolveLeoIdentity } from "@/lib/leo-core";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1";
+const DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1-mini";
 const SUPPORTED_REALTIME_MODELS = new Set([
   "gpt-realtime-2.1",
   "gpt-realtime-2.1-mini",
