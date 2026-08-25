@@ -52,7 +52,6 @@ if (updateV2Params && (updateV2Params.template_name === 'limitless_realty_update
   updateV2Params.force_template_body_only = true;
   updateV2Params.template_parameter_count = 4;
 }`;
-`;
 
 export async function repairMaiaActionWorkflowInput() {
   const workflow = await getN8nWorkflow(ACTION_WORKFLOW_ID);
