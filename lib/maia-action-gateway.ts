@@ -18,7 +18,6 @@ const ACTION_ENTRY_NODE = "Route Delete Request";
 const CAMPAIGN_SUMMARY_NODE = "Campaign Send Summary";
 const EXECUTION_TIMEOUT_MS = 60000;
 const POLL_INTERVAL_MS = 750;
-const LIMITLESS_REALTY_CHANNEL_URL = "https://whatsapp.com/channel/0029Vas58FFInlqLq2KyeI2F";
 
 type WorkflowNode = { id?: string; name: string; type: string; typeVersion?: number; position?: number[]; parameters?: Record<string, unknown>; [key: string]: unknown };
 type WorkflowConnection = { main?: Array<Array<{ node: string; type: string; index: number }>>; [key: string]: unknown };
@@ -58,43 +57,31 @@ export async function ensureMaiaActionWebhook() {
 
 function splitCampaignParagraphs(message: string) { return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean); }
 
-function buildTemplateComponents(command: MaiaCampaignAction, urlParameter: string) {
+function buildTemplateComponents(command: MaiaCampaignAction) {
   const paragraphs = splitCampaignParagraphs(command.message);
-  const bodyParameters = [
-    { type: "text", text: "{{recipient_name}}" },
+  const bodyFor = (leadName?: string) => [
+    { type: "text", text: String(leadName || "there").trim() || "there" },
     { type: "text", text: paragraphs[0] || command.message.trim() },
     { type: "text", text: paragraphs[1] || "" },
     { type: "text", text: paragraphs[2] || "" },
   ];
-  const components = [
-    { type: "body", parameters: bodyParameters },
-    { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: urlParameter }] },
-  ];
+  const bodyParameters = bodyFor();
+  // limitless_realty_update_v2 is approved with four BODY variables and no CTA/media component.
+  const components = [{ type: "body", parameters: bodyParameters }];
   const byRecipient = command.recipients.map((lead) => ({
     phone: normalizeLeadPhone(String(lead.phone || "")),
     name: String(lead.name || "there").trim() || "there",
-    components: [
-      { type: "body", parameters: [
-        { type: "text", text: String(lead.name || "there").trim() || "there" },
-        { type: "text", text: paragraphs[0] || command.message.trim() },
-        { type: "text", text: paragraphs[1] || "" },
-        { type: "text", text: paragraphs[2] || "" },
-      ] },
-      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: urlParameter }] },
-    ],
+    components: [{ type: "body", parameters: bodyFor(String(lead.name || "there").trim()) }],
   }));
-  return { body_parameters: bodyParameters, button_parameters: [{ type: "text", text: urlParameter }], components, components_by_recipient: byRecipient };
+  return { body_parameters: bodyParameters, components, components_by_recipient: byRecipient };
 }
 
 function buildCampaignInput(command: MaiaCampaignAction) {
   const phones = [...new Set(command.recipients.map((lead) => normalizeLeadPhone(String(lead.phone || ""))).filter(Boolean))];
   const isUpdateTemplate = command.campaignType === "limitless_realty_update" || command.templateName === "limitless_realty_update_v2";
-  // Limitless Realty Update v2 has a dynamic URL action button. The dynamic value is always
-  // the official Limitless Realty WhatsApp Channel link, never a media attachment or user-entered image URL.
-  const urlParameter = isUpdateTemplate ? LIMITLESS_REALTY_CHANNEL_URL : String(command.mediaUrl || "").trim();
   const isDirect = command.campaignType === "direct_message";
   const defaultTemplate = command.templateName || "limitless_realty_update_v2";
-  const templateComponents = buildTemplateComponents(command, urlParameter);
+  const templateComponents = buildTemplateComponents(command);
   return {
     source: "fluxknight_dashboard", command_id: command.commandId, chat_id: command.createdBy || "fluxknight_dashboard", user_id: command.createdBy || "fluxknight_dashboard", text: command.message, original_text: command.message,
     action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: false,
@@ -106,19 +93,17 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       topic: command.topic, property_filter: command.propertyTitle || "", media_url: "", image_url: "", media_type: "", has_media: false,
       template_components: templateComponents.components,
       template_body_parameters: templateComponents.body_parameters,
-      template_button_parameters: templateComponents.button_parameters,
       template_components_by_recipient: templateComponents.components_by_recipient,
-      template_url_parameter: urlParameter,
-      dynamic_url: urlParameter,
-      action_button_url: urlParameter,
+      // Intentionally omit template_button_parameters/dynamic_url/action_button_url.
+      // The Channel link is delivered only after a client replies YES.
       confirm_send: true, confirm_real_client_broadcast: true, include_incomplete_leads: true, max_recipients: phones.length,
     },
     natural_response: isDirect
       ? "Send this direct WhatsApp message exactly as written. Do not rewrite it. Direct mode is only valid for contacts inside the 24-hour customer service window."
       : isUpdateTemplate
-        ? `Send limitless_realty_update_v2 using exactly four body parameters: body {{1}} recipient name, body {{2}} main campaign update, body {{3}} supporting paragraph, body {{4}} context-specific response prompt. The approved template has a dynamic URL action button. Pass ${LIMITLESS_REALTY_CHANNEL_URL} as the URL button parameter. Do not send any media attachment, do not put the channel URL into a body variable, and do not replace it with a campaign image/property URL.`
+        ? "Send limitless_realty_update_v2 using exactly four BODY parameters: {{1}} recipient name, {{2}} main campaign update, {{3}} supporting paragraph, {{4}} response prompt. The approved template has NO URL button and NO media component. Do not send any URL, media attachment, or extra template component. The Limitless Realty WhatsApp Channel link is sent separately only when the client replies YES."
         : command.mediaUrl
-          ? "Send the campaign with approved Meta template components. Map body {{1}} to each recipient's name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and map the URL button component separately to the supplied campaign URL. Do not put the URL into a body variable. Use template_components_by_recipient so every recipient receives their own name."
+          ? "Send the campaign with approved Meta template components. Map body {{1}} to each recipient's name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and use the configured URL button only if the approved template defines one. Do not put URLs into body variables."
           : "Send the campaign using its configured approved Meta template outside the 24-hour window when required. Do not regenerate the campaign message.",
   };
 }
