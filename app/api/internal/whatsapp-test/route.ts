@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
+import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair";
 
 const TEST_TOKEN = "fluxknight-wa-test-8f3c2a91";
 
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   if (token !== TEST_TOKEN) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
+    const repair = await repairMaiaActionWorkflowInput();
     const result = await dispatchMaiaCampaignAction({
       commandId: `manual-test-${Date.now()}`,
       campaignType: "limitless_realty_update",
@@ -20,7 +22,7 @@ export async function GET(request: Request) {
       recipients: [{ id: "test-limitless", name: "Limitless", phone: "2348127753308", status: "test" } as any],
       createdBy: "fluxknight_manual_test",
     });
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json({ ok: true, repair, result });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
