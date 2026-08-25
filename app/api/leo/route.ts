@@ -50,6 +50,22 @@ function scopeToolArguments(identity: LeoIdentity, args: Record<string, unknown>
   return scoped;
 }
 
+function publicSalesDirective(leadCaptured: boolean, leadProfile: unknown) {
+  if (!leadCaptured) return "";
+  const profile = leadProfile && typeof leadProfile === "object" ? JSON.stringify(leadProfile).slice(0, 1600) : "{}";
+  return [
+    "PUBLIC SALES MODE IS ACTIVE.",
+    "The visitor's contact details have already been collected. Do not ask for them again.",
+    "Do not dump, enumerate, or pitch every Fluxknight package. The visitor should receive one clear recommendation, not a catalogue.",
+    "Qualify before recommending: understand the organization/business, the exact process they want automated, current customer channels, approximate enquiry/lead volume, desired outcome, timeline, and budget when useful.",
+    "Ask ONE focused qualification question at a time. Wait for the visitor's answer before asking the next question. Do not combine multiple qualification questions in one response.",
+    "Do not recommend a package until you have enough information to make a defensible recommendation. If information is missing, ask the single most useful next question instead.",
+    "Once qualified, recommend ONE primary approved package and explain why it fits. Mention at most two other approved alternatives only when budget, scope, or channel requirements make them genuinely relevant, and explain the trade-off briefly.",
+    "Use only package names, capabilities and prices present in the approved public knowledge. Never invent or guess them.",
+    `CAPTURED LEAD PROFILE: ${profile}`,
+  ].join("\n");
+}
+
 /** Keep Leo's normal answers concise without damaging structured/tool output. */
 function conciseLeoReply(reply: string) {
   const text = reply.trim();
@@ -107,9 +123,12 @@ export async function POST(request: NextRequest) {
   });
 
   const context = await buildLeoReasoningContext({ identity, pageContext });
+  const leadCaptured = body.leadCaptured === true || Boolean(body.leadProfile);
+  const directive = publicSalesDirective(leadCaptured, body.leadProfile);
+  const modelMessage = directive ? `${directive}\n\nVISITOR'S LATEST MESSAGE:\n${message}` : message;
   const result = await generateLeoReasoning({
     identity,
-    message,
+    message: modelMessage,
     history,
     context,
   });
