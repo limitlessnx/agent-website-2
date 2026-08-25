@@ -14,6 +14,7 @@ type SendInput = {
   templatePurpose?: string;
   variables?: Record<string, string | number | null | undefined>;
   propertyImageUrls?: string[];
+  propertyVideoUrls?: string[];
 };
 
 type MetaResponse = {
@@ -64,30 +65,39 @@ function isDirectPublicImageUrl(value: unknown): value is string {
   return /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value);
 }
 
-async function resolvePropertyImagesFromText(text: string): Promise<string[]> {
-  if (!text?.trim()) return [];
+function isDirectPublicVideoUrl(value: unknown): value is string {
+  if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return false;
+  if (/google\.(com|[a-z.]+)\/|drive\.google\.com|youtube\.com|youtu\.be/i.test(value)) return false;
+  return /\.(?:mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(value);
+}
+
+function publicStorageUrl(bucket: unknown, path: unknown): string | null {
+  const { url } = supabaseConfig();
+  if (!url || typeof bucket !== "string" || typeof path !== "string" || !bucket || !path) return null;
+  return `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
+}
+
+async function resolvePropertyMediaFromText(text: string): Promise<{ videos: string[]; images: string[] }> {
+  if (!text?.trim()) return { videos: [], images: [] };
   try {
-    const rows = await supabaseRequest<Array<{ title?: string; cover_image_url?: string | null; image_urls?: unknown; drive_photos_link?: string | null }>>("properties?select=title,cover_image_url,image_urls,drive_photos_link&limit=500");
+    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>("properties?select=id,title,cover_image_url,image_urls&limit=500");
     const lower = text.toLowerCase();
-    const images: string[] = [];
     for (const row of rows) {
       const title = String(row.title || "").trim();
-      if (title.length < 5 || !lower.includes(title.toLowerCase())) continue;
+      if (title.length < 5 || !lower.includes(title.toLowerCase()) || !row.id) continue;
+      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null; created_at?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type,created_at&order=created_at.desc&limit=20`);
+      const videos = assets.map((asset) => publicStorageUrl(asset.storage_bucket, asset.storage_path)).filter((url): url is string => Boolean(url) && /video\//i.test(String(assets.find((a) => publicStorageUrl(a.storage_bucket, a.storage_path) === url)?.mime_type || "")) && isDirectPublicVideoUrl(url)).slice(0, 3);
+      if (videos.length) return { videos, images: [] };
       const candidates: unknown[] = [row.cover_image_url];
       if (Array.isArray(row.image_urls)) candidates.push(...row.image_urls);
       else if (typeof row.image_urls === "string") {
         try { const parsed = JSON.parse(row.image_urls); if (Array.isArray(parsed)) candidates.push(...parsed); } catch {}
       }
-      candidates.push(row.drive_photos_link);
-      for (const candidate of candidates) {
-        if (isDirectPublicImageUrl(candidate) && !images.includes(candidate)) images.push(candidate);
-      }
-      if (images.length >= 3) break;
+      const images = candidates.filter(isDirectPublicImageUrl).slice(0, 3);
+      return { videos: [], images };
     }
-    return images.slice(0, 3);
-  } catch {
-    return [];
-  }
+  } catch {}
+  return { videos: [], images: [] };
 }
 
 async function sendWhatsAppImage(to: string, imageUrl: string, phoneNumberId: string, accessToken: string, graphVersion: string) {
@@ -100,15 +110,23 @@ async function sendWhatsAppImage(to: string, imageUrl: string, phoneNumberId: st
   return { ok: true, providerMessageId };
 }
 
+async function sendWhatsAppVideo(to: string, videoUrl: string, phoneNumberId: string, accessToken: string, graphVersion: string) {
+  const payload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "video", video: { link: videoUrl } };
+  const response = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}/messages`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
+  const result = await response.json().catch(() => ({})) as MetaResponse;
+  const providerMessageId = result.messages?.[0]?.id || null;
+  await recordAttempt({ organization_id: "limitless-realty", recipient: to, message_type: "video", template_name: null, provider_message_id: providerMessageId, status: response.ok ? "accepted" : "failed", error_code: result.error?.code ? String(result.error.code) : null, error_message: result.error?.error_data?.details || result.error?.message || null, request_payload: payload, response_payload: result });
+  if (!response.ok) return { ok: false, providerMessageId, error: result.error?.error_data?.details || result.error?.message || `WhatsApp video send failed (${response.status}).` };
+  return { ok: true, providerMessageId };
+}
+
 export async function sendWhatsAppMessage(input: SendInput) {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN || "";
   const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
   if (!phoneNumberId || !accessToken) throw new Error("WhatsApp Cloud API credentials are not configured.");
-
   const to = normalizePhone(input.to);
   if (!to) throw new Error("A valid WhatsApp recipient is required.");
-
   const isOutsideWindow = outsideCustomerWindow(input.lastCustomerMessageAt);
   const requestedMode = input.deliveryMode || "auto";
   const useTemplate = Boolean(input.forceTemplate) || requestedMode === "template" || (requestedMode === "auto" && isOutsideWindow);
@@ -116,7 +134,6 @@ export async function sendWhatsAppMessage(input: SendInput) {
 
   let requestPayload: Record<string, unknown>;
   let templateName: string | null = null;
-
   if (useTemplate) {
     const purpose = input.templatePurpose || "follow_up_outside_24h";
     const config = await getTemplateConfig(input.organizationId, purpose);
@@ -131,9 +148,14 @@ export async function sendWhatsAppMessage(input: SendInput) {
   }
 
   if (!useTemplate && input.organizationId === "limitless-realty") {
-    const imageUrls = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
-    const resolvedImages = imageUrls.length ? imageUrls : await resolvePropertyImagesFromText(input.text || "");
-    for (const imageUrl of resolvedImages) await sendWhatsAppImage(to, imageUrl, phoneNumberId, accessToken, graphVersion);
+    const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
+    const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
+    const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.text || "");
+    if (media.videos.length) {
+      for (const videoUrl of media.videos) await sendWhatsAppVideo(to, videoUrl, phoneNumberId, accessToken, graphVersion);
+    } else {
+      for (const imageUrl of media.images) await sendWhatsAppImage(to, imageUrl, phoneNumberId, accessToken, graphVersion);
+    }
   }
 
   const response = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}/messages`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestPayload), cache: "no-store" });
@@ -141,14 +163,11 @@ export async function sendWhatsAppMessage(input: SendInput) {
   const providerMessageId = result.messages?.[0]?.id || null;
   const errorCode = result.error?.code ? String(result.error.code) : null;
   const errorMessage = result.error?.error_data?.details || result.error?.message || null;
-
   await recordAttempt({ organization_id: input.organizationId, recipient: to, message_type: useTemplate ? "template" : "text", template_name: templateName, provider_message_id: providerMessageId, status: response.ok ? "accepted" : errorCode === "131026" ? "blocked" : "failed", error_code: errorCode, error_message: errorMessage, request_payload: requestPayload, response_payload: result });
-
   if (!response.ok) {
     const error = new Error(errorMessage || `WhatsApp Cloud API returned ${response.status}.`);
     Object.assign(error, { status: response.status, code: errorCode, response: result });
     throw error;
   }
-
   return { ok: true, messageType: useTemplate ? "template" : "text", templateName, providerMessageId, response: result };
 }
