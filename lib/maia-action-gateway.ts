@@ -55,9 +55,7 @@ export async function ensureMaiaActionWebhook() {
   return { workflowId: workflow.id, workflowName: workflow.name, webhookPath: ACTION_WEBHOOK_PATH, entryNode: ACTION_ENTRY_NODE, repaired: needsUpdate };
 }
 
-function splitCampaignParagraphs(message: string) {
-  return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
-}
+function splitCampaignParagraphs(message: string) { return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean); }
 
 function buildTemplateComponents(command: MaiaCampaignAction, urlParameter: string) {
   const paragraphs = splitCampaignParagraphs(command.message);
@@ -89,20 +87,21 @@ function buildTemplateComponents(command: MaiaCampaignAction, urlParameter: stri
 
 function buildCampaignInput(command: MaiaCampaignAction) {
   const phones = [...new Set(command.recipients.map((lead) => normalizeLeadPhone(String(lead.phone || ""))).filter(Boolean))];
-  const mediaUrl = String(command.mediaUrl || "").trim();
-  const urlParameter = command.campaignType === "limitless_realty_update" ? "" : mediaUrl;
+  const linkUrl = String(command.mediaUrl || "").trim();
+  // Limitless Realty Update v2 uses a URL button/link parameter, never a media attachment.
+  const urlParameter = linkUrl;
   const isDirect = command.campaignType === "direct_message";
   const defaultTemplate = command.templateName || "limitless_realty_update_v2";
   const templateComponents = buildTemplateComponents(command, urlParameter);
   return {
     source: "fluxknight_dashboard", command_id: command.commandId, chat_id: command.createdBy || "fluxknight_dashboard", user_id: command.createdBy || "fluxknight_dashboard", text: command.message, original_text: command.message,
-    action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: Boolean(mediaUrl), media_url: mediaUrl || undefined, media_type: mediaUrl ? "image" : undefined, image_url: mediaUrl || undefined,
+    action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: false,
     action_params: {
       recipient_phones: phones, custom_message: command.message, message_text: command.message, preserve_exact_message: true,
       message_delivery_mode: isDirect ? "direct" : "auto",
       campaign_type: command.campaignType || "limitless_realty_update", template_name: defaultTemplate, approved_template_name: defaultTemplate,
       allow_template_fallback: !isDirect, use_approved_template_outside_24h: !isDirect,
-      topic: command.topic, property_filter: command.propertyTitle || "", media_url: mediaUrl || "", image_url: mediaUrl || "", media_type: mediaUrl ? "image" : "", has_media: Boolean(mediaUrl),
+      topic: command.topic, property_filter: command.propertyTitle || "", media_url: "", image_url: "", media_type: "", has_media: false,
       template_components: templateComponents.components,
       template_body_parameters: templateComponents.body_parameters,
       template_button_parameters: templateComponents.button_parameters,
@@ -113,7 +112,7 @@ function buildCampaignInput(command: MaiaCampaignAction) {
     natural_response: isDirect
       ? "Send this direct WhatsApp message exactly as written. Do not rewrite it. Direct mode is only valid for contacts inside the 24-hour customer service window."
       : command.campaignType === "limitless_realty_update"
-        ? "Send limitless_realty_update_v2 using exactly four body parameters: body {{1}} recipient name, body {{2}} main campaign update, body {{3}} supporting paragraph, body {{4}} context-specific response prompt. The approved template contains the permanent Limitless Realty WhatsApp Channel invitation in its body. Do not add a URL button or put the channel URL into a body variable."
+        ? "Send limitless_realty_update_v2 using exactly four body parameters: body {{1}} recipient name, body {{2}} main campaign update, body {{3}} supporting paragraph, body {{4}} context-specific response prompt. The approved template contains the permanent Limitless Realty WhatsApp Channel invitation in its body. If a campaign link is supplied, pass it only as the approved URL button parameter. Never send it as a media attachment and never put it into a body variable."
         : mediaUrl
           ? "Send the campaign with approved Meta template components. Map body {{1}} to each recipient's name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and map the URL button component separately to the supplied campaign URL. Do not put the URL into a body variable. Use template_components_by_recipient so every recipient receives their own name."
           : "Send the campaign using its configured approved Meta template outside the 24-hour window when required. Do not regenerate the campaign message.",
@@ -148,5 +147,11 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
   if (!response.ok) throw new Error(`Maia action webhook rejected the campaign: ${response.status}${responseText ? ` ${responseText}` : ""}`);
   const execution = await waitForCampaignExecution(route.workflowId, command.commandId, startedAt);
   const summary = execution.summary;
-  return { route, executionId: execution.executionId, path: execution.path, summary, attempted: Number(summary.attempted || command.recipients.length), accepted: Number(summary.accepted_by_whatsapp_api || summary.submitted || 0), failed: Number(summary.immediate_failed || 0), skipped: Number(summary.skipped || 0), pendingDelivery: Number(summary.pending_delivery_confirmation || 0), freeFormSent: Number(summary.free_form_sent || 0), templateSent: Number(summary.template_sent || 0), acceptedRecipients: summary.accepted_recipients || [], failedRecipients: summary.failed_recipients || [], status: String(summary.status || "submitted"), message: String(summary.message || "Campaign submitted to WhatsApp.") };
+  const failedRecipients = summary.failed_recipients || [];
+  const immediateFailed = Number(summary.immediate_failed || failedRecipients.length || 0);
+  if (immediateFailed > 0 && Number(summary.accepted_by_whatsapp_api || summary.submitted || 0) === 0) {
+    const details = failedRecipients.map((item) => String(item.error || item.reason || item.message || JSON.stringify(item))).filter(Boolean).join("; ");
+    throw new Error(`WhatsApp rejected the campaign: ${details || summary.message || `${immediateFailed} recipient(s) failed.`}`);
+  }
+  return { route, executionId: execution.executionId, path: execution.path, summary, attempted: Number(summary.attempted || command.recipients.length), accepted: Number(summary.accepted_by_whatsapp_api || summary.submitted || 0), failed: immediateFailed, skipped: Number(summary.skipped || 0), pendingDelivery: Number(summary.pending_delivery_confirmation || 0), freeFormSent: Number(summary.free_form_sent || 0), templateSent: Number(summary.template_sent || 0), acceptedRecipients: summary.accepted_recipients || [], failedRecipients, status: String(summary.status || "submitted"), message: String(summary.message || "Campaign submitted to WhatsApp.") };
 }
