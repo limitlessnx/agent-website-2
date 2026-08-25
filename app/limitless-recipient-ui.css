@@ -1,0 +1,36 @@
+/* Limitless Realty recipient selector polish. */
+.campaign-v2 .campaign-card:first-child{background:linear-gradient(180deg,rgba(22,17,39,.96),rgba(12,9,24,.96));border-color:rgba(168,120,255,.18);box-shadow:0 18px 45px rgba(0,0,0,.18)}
+.campaign-v2 .campaign-card:first-child header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.campaign-v2 .campaign-card:first-child header>strong{position:static!important;flex:0 0 auto;display:grid;place-items:center;min-width:48px;height:36px;padding:0 12px;border:1px solid rgba(168,120,255,.28);border-radius:999px;background:rgba(139,92,246,.12);color:#fff;font-size:15px!important;line-height:1}
+.campaign-v2 .campaign-card:first-child header h2{font-size:24px!important;letter-spacing:-.02em}
+.campaign-v2 .campaign-card:first-child header span{font-size:9px!important;letter-spacing:.18em!important;color:#9b8db4!important}
+.campaign-v2 .audience-tabs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:4px 0 16px}
+.campaign-v2 .audience-tabs button{position:relative;min-height:58px!important;padding:12px 14px!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:14px!important;background:rgba(255,255,255,.025)!important;color:#aaa0b9!important;font-size:12px!important;font-weight:650!important;text-align:left!important;transition:transform .15s ease,border-color .15s ease,background .15s ease}
+.campaign-v2 .audience-tabs button:hover{transform:translateY(-1px);border-color:rgba(168,120,255,.28)!important;background:rgba(139,92,246,.07)!important}
+.campaign-v2 .audience-tabs button.active{border-color:rgba(168,120,255,.72)!important;background:linear-gradient(135deg,rgba(139,92,246,.22),rgba(139,92,246,.08))!important;color:#fff!important;box-shadow:inset 0 0 0 1px rgba(168,120,255,.08),0 8px 20px rgba(74,35,130,.16)}
+.campaign-v2 .audience-tabs button.active::after{content:"";position:absolute;right:10px;top:10px;width:6px;height:6px;border-radius:50%;background:#b58cff;box-shadow:0 0 12px rgba(181,140,255,.75)}
+.campaign-v2 .campaign-card:first-child>label{margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.018)}
+.campaign-v2 .campaign-card:first-child>label select{margin-top:8px!important;background:#0b0814!important}
+.campaign-v2 .filters{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.018);gap:9px!important}
+.campaign-v2 .filters label{margin-top:0!important}
+.campaign-v2 .lead-list{display:flex!important;flex-direction:column!important;gap:6px!important;margin-top:12px!important;padding:6px!important;max-height:340px!important;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(7,5,13,.46);scrollbar-width:thin}
+.campaign-v2 .lead-list label{display:flex!important;align-items:center!important;gap:12px!important;width:100%!important;min-height:54px!important;margin:0!important;padding:9px 10px!important;border:1px solid transparent!important;border-radius:11px!important;background:rgba(255,255,255,.018)!important;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.campaign-v2 .lead-list label:hover{background:rgba(139,92,246,.08)!important;border-color:rgba(168,120,255,.16)!important}
+.campaign-v2 .lead-list label:has(input[type="checkbox"]:checked){background:rgba(139,92,246,.12)!important;border-color:rgba(168,120,255,.32)!important}
+.campaign-v2 .campaign-card .lead-list input[type="checkbox"]{appearance:none!important;-webkit-appearance:none!important;width:19px!important;height:19px!important;min-width:19px!important;max-width:19px!important;flex:0 0 19px!important;margin:0!important;padding:0!important;border:1px solid rgba(255,255,255,.25)!important;border-radius:6px!important;background:#0b0814!important;box-shadow:none!important}
+.campaign-v2 .campaign-card .lead-list input[type="checkbox"]:checked{border-color:#a77cff!important;background:linear-gradient(135deg,#9b6cff,#6d3bd1)!important;box-shadow:0 0 0 3px rgba(139,92,246,.12)!important}
+.campaign-v2 .campaign-card .lead-list input[type="checkbox"]:checked::after{content:"✓";display:grid;place-items:center;width:100%;height:100%;color:#fff;font-size:12px;font-weight:800}
+.campaign-v2 .lead-list label span{display:block!important;min-width:0!important;flex:1!important;overflow:hidden!important;color:#f3eef9!important;font-size:12px!important;font-weight:650!important;line-height:1.25!important}
+.campaign-v2 .lead-list label small{margin-top:4px!important;color:#8d849b!important;font-size:10px!important;font-weight:450!important;line-height:1!important}
+.campaign-v2 .audience-note{margin:12px 2px 0!important;padding:10px 12px;border-left:2px solid rgba(139,92,246,.45);border-radius:0 8px 8px 0;background:rgba(139,92,246,.045);font-size:10px!important;line-height:1.5!important;color:#847b91!important}
+@media(max-width:560px){
+  .campaign-v2 .campaign-card:first-child header{align-items:center;padding-bottom:12px}
+  .campaign-v2 .campaign-card:first-child header h2{font-size:20px!important}
+  .campaign-v2 .audience-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+  .campaign-v2 .audience-tabs button{min-height:52px!important;padding:10px 11px!important;font-size:11px!important}
+  .campaign-v2 .lead-list{max-height:310px!important}
+}
+@media(max-width:380px){
+  .campaign-v2 .audience-tabs{grid-template-columns:1fr 1fr!important}
+  .campaign-v2 .audience-tabs button{min-height:50px!important;font-size:10px!important}
+}
