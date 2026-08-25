@@ -27,20 +27,34 @@ export async function repairMaiaActionWorkflowInput() {
   const currentCode = String(parameters.jsCode || "");
   if (!currentCode) throw new Error(`${PREPARE_CAMPAIGN_NODE} has no JavaScript code.`);
 
-  const start = currentCode.indexOf("  const isTwoParamLimitlessTemplate =");
-  const end = currentCode.indexOf("  const whatsappPayload = requiresTemplate", start);
-  if (start < 0 || end < 0) {
-    if (currentCode.includes(PATCH_MARKER)) {
-      return { repaired: false, workflowId: workflow.id, node: PREPARE_CAMPAIGN_NODE, updateV2Contract: true };
+  let nextCode = currentCode;
+  let repaired = false;
+
+  if (currentCode.includes(PATCH_MARKER)) {
+    if (!currentCode.includes("const isTwoParamLimitlessTemplate = false;")) {
+      nextCode = currentCode.replace(
+        `  // ${PATCH_MARKER}`,
+        `  // ${PATCH_MARKER}\n  const isTwoParamLimitlessTemplate = false;`,
+      );
+      repaired = true;
     }
-    throw new Error(`${PREPARE_CAMPAIGN_NODE} does not contain the expected template-body construction block; refusing an unsafe rewrite.`);
+  } else {
+    const start = currentCode.indexOf("  const isTwoParamLimitlessTemplate =");
+    const end = currentCode.indexOf("  const whatsappPayload = requiresTemplate", start);
+    if (start < 0 || end < 0) {
+      throw new Error(`${PREPARE_CAMPAIGN_NODE} does not contain the expected template-body construction block; refusing an unsafe rewrite.`);
+    }
+
+    const replacement = `  // ${PATCH_MARKER}\n  const isTwoParamLimitlessTemplate = false;\n  // Meta's approved limitless_realty_update_v2 contract is four BODY parameters and no button/media component.\n  const templateBodyParams = [\n    safeTemplateText(recipient.name || 'there', 60),\n    safeTemplateText(templateDisplayHeader, 240),\n    safeTemplateText(dashboardMessage, 1024),\n    safeTemplateText(params.response_prompt || params.reply_prompt || 'Reply YES if you want more information about this update.', 1024),\n  ];\n`;
+    nextCode = currentCode.slice(0, start) + replacement + currentCode.slice(end);
+    repaired = true;
   }
 
-  const replacement = `  // ${PATCH_MARKER}\n  // Meta's approved limitless_realty_update_v2 contract is four BODY parameters and no button/media component.\n  const templateBodyParams = [\n    safeTemplateText(recipient.name || 'there', 60),\n    safeTemplateText(templateDisplayHeader, 240),\n    safeTemplateText(dashboardMessage, 1024),\n    safeTemplateText(params.response_prompt || params.reply_prompt || 'Reply YES if you want more information about this update.', 1024),\n  ];\n`;
+  if (!repaired) {
+    return { repaired: false, workflowId: workflow.id, node: PREPARE_CAMPAIGN_NODE, updateV2Contract: true, bodyParameterCount: 4 };
+  }
 
-  const nextCode = currentCode.slice(0, start) + replacement + currentCode.slice(end);
   parameters.jsCode = nextCode;
-
   const nextNodes = nodes.map((node) =>
     node.name === PREPARE_CAMPAIGN_NODE ? { ...node, parameters } : node,
   );
