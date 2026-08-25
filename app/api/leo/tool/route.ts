@@ -9,6 +9,7 @@ import {
 import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
 import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
 import { auditLeoEvent } from "@/lib/leo-session-store";
+import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function channel(value: unknown): LeoChannel {
@@ -17,6 +18,52 @@ function channel(value: unknown): LeoChannel {
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function clean(value: unknown, max = 180) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function validEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function capturePublicLead(args: Record<string, unknown>, identity: Awaited<ReturnType<typeof resolveLeoIdentity>>) {
+  if (!identity || identity.scope !== "public") throw new Error("Public lead capture requires a public Leo identity.");
+
+  const name = clean(args.name);
+  const email = clean(args.email, 240).toLowerCase();
+  const phone = clean(args.phone, 80);
+  const organization = clean(args.organization || args.business_name);
+  if (!name || !email || !phone || !organization) {
+    return { ok: false, status: "missing_details", error: "Name, email, phone and organization are required before capturing the lead." };
+  }
+  if (!validEmail(email)) return { ok: false, status: "invalid_email", error: "The email address is not valid." };
+
+  const now = new Date().toISOString();
+  const rows = await supabaseServerRequest<Array<{ id: string }>>("evaluation_leads", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      email,
+      phone,
+      business_name: organization,
+      business_type: clean(args.business_type) || "Not specified",
+      agent_types: Array.isArray(args.agent_types) ? args.agent_types : [],
+      main_goal: clean(args.main_goal, 500) || "Public Leo consultation",
+      current_tools: clean(args.current_tools, 500) || null,
+      lead_volume: clean(args.lead_volume, 120) || null,
+      timeline: clean(args.timeline, 120) || null,
+      budget: clean(args.budget, 120) || null,
+      preferred_contact_time: clean(args.preferred_contact_time, 120) || null,
+      consent_given: false,
+      source: "public_leo",
+      status: "new",
+      submitted_at: now,
+    }),
+  });
+
+  return { ok: true, status: "captured", leadId: rows[0]?.id || null, capturedAt: now };
 }
 
 async function globalSystemSnapshot() {
@@ -85,6 +132,21 @@ export async function POST(request: NextRequest) {
     }
 
     const args = object(body.arguments);
+
+    // Public lead capture is intentionally executed here rather than dispatched
+    // through the generic n8n path. This keeps voice and chat capture reliable
+    // even when the workflow layer is unavailable.
+    if (tool.key === "leo.public.lead.capture") {
+      const result = await capturePublicLead(args, identity);
+      await auditLeoEvent({
+        identity,
+        eventType: result.ok ? "tool_execution_completed" : "tool_execution_failed",
+        toolKey: tool.key,
+        details: { channel: identity.channel, status: result.status, lead_id: result.ok ? result.leadId : undefined },
+      });
+      return NextResponse.json({ ...result, toolKey: tool.key, approval, channel: identity.channel, scope: identity.scope }, { status: result.ok ? 200 : 400 });
+    }
+
     if (tool.key === "leo.tenant.inspect" && identity.scope === "super_admin" && !String(args.organization_id || "").trim()) {
       const snapshot = await globalSystemSnapshot();
       await auditLeoEvent({
