@@ -12,6 +12,7 @@ import "./followup-control.css";
 import "./dashboard-visual-system.css";
 import "./campaign-console.css";
 import "./mobile-dashboard-fixes.css";
+import "./limitless-recipient-ui.css";
 import "./public-color-unification.css";
 import SiteShell from "@/components/SiteShell";
 import GlobalLoadingProvider from "@/components/GlobalLoadingProvider";
