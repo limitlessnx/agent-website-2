@@ -28,7 +28,7 @@ function voiceInstructions(identity: NonNullable<Awaited<ReturnType<typeof resol
   return [
     "You are Leo, Fluxknight's voice and chat operating assistant.",
     "Speak ONLY in natural, clear English unless the user explicitly asks you to switch languages. Do not automatically switch languages based on accent, names, or detected locale.",
-    "Use the Marin voice. Keep spoken replies short and natural unless the user asks for detail.",
+    "Use the Sol voice. Keep spoken replies short and natural unless the user asks for detail.",
     scopeRule,
     "The application permission engine determines authority. You cannot grant yourself permissions.",
     "Use the leo_execute_tool function only with a tool_key listed below. For ending a voice call, use the separate leo_end_call function.",
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     ? configuredModel
     : DEFAULT_REALTIME_MODEL;
   const configuredVoice = process.env.LEO_REALTIME_VOICE?.trim();
-  const voice = configuredVoice || "marin";
+  const voice = configuredVoice || "sol";
 
   const session = {
     type: "realtime",
