@@ -12,37 +12,31 @@ import { buildPropertyCampaignContent, PropertyCampaignMessageError } from "@/li
 import { getMetaCooldownPhones } from "@/lib/whatsapp-status-log";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 type RequestBody = {
   requestId?: string;
-  campaignType?: "new_estate_update" | "limitless_realty_update" | "limitless_realty_reminder";
+  campaignType?: string;
   topic?: string;
   message?: string;
   mediaUrl?: string;
-  audienceMode?: "all" | "manual" | "group" | "filters";
+  audienceMode?: string;
   selectedLeadIds?: string[];
   campaignGroupId?: string;
   state?: string;
   interest?: string;
   propertyId?: string;
-  budgetMin?: number | string;
-  budgetMax?: number | string;
+  budgetMin?: string;
+  budgetMax?: string;
 };
 
-const campaignTemplates = {
+type CachedResponse = { expiresAt: number; payload: Record<string, unknown> };
+
+const campaignTemplates: Record<string, string> = {
   new_estate_update: "estate_brief_update",
   limitless_realty_update: "limitless_realty_update_v2",
   limitless_realty_reminder: "limitless_realty_reminder",
-} as const;
+};
 
-function campaignLabel(type: keyof typeof campaignTemplates) {
-  if (type === "new_estate_update") return "New Estate Update Campaign";
-  if (type === "limitless_realty_reminder") return "Limitless Realty Reminder";
-  return "Limitless Realty Update";
-}
-
-type CachedResponse = { expiresAt: number; payload: Record<string, unknown> };
 const globalCache = globalThis as typeof globalThis & { __maiaCampaignRequests?: Map<string, CachedResponse> };
 const requestCache = globalCache.__maiaCampaignRequests || new Map<string, CachedResponse>();
 globalCache.__maiaCampaignRequests = requestCache;
@@ -55,9 +49,9 @@ function cleanCache() { const now = Date.now(); for (const [key, value] of reque
 export async function POST(request: Request) {
   const session = await getAdminSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  cleanCache();
 
   try {
-    cleanCache();
     const body = (await request.json()) as RequestBody;
     const requestId = String(body.requestId || "").trim();
     if (!requestId) return NextResponse.json({ error: "Campaign request ID is required." }, { status: 400 });
@@ -78,19 +72,16 @@ export async function POST(request: Request) {
     const topic = String(body.topic || (propertyCampaign ? `${propertyCampaign.propertyName} property update` : "WhatsApp campaign")).trim();
     if (!message) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
 
-    // limitless_realty_update_v2 is one approved Meta template with four body variables.
-    // Keep its three campaign paragraphs together so they become {{2}}, {{3}} and {{4}},
-    // rather than accidentally dispatching three separate WhatsApp messages.
+    // v2 is a single approved Meta template. mediaUrl is metadata/link input only;
+    // it must never be sent as a WhatsApp media attachment.
     const messageParts = campaignType === "limitless_realty_update" ? [message] : splitWhatsAppMessage(message);
     if (!messageParts.length) return NextResponse.json({ error: "Campaign message is required." }, { status: 400 });
 
     const state = text(body.state);
     const interest = text(body.interest);
-    const propertyNeedle = text(selectedProperty?.title || body.propertyId);
     const budgetMin = money(body.budgetMin);
     const budgetMax = money(body.budgetMax);
-    const mode = body.audienceMode || "all";
-
+    const mode = text(body.audienceMode);
     const matchedRecipients = allLeads.filter((lead) => {
       if (!isContactable(lead)) return false;
       if (mode === "manual") return selectedIds.has(String(lead.id));
@@ -100,14 +91,7 @@ export async function POST(request: Request) {
       }
       if (mode === "all") return true;
       if (state && !text(lead.location_preference).includes(state)) return false;
-      if (interest) {
-        const searchable = [lead.purpose, lead.property_type, lead.property_interest].map(text).join(" ");
-        if (!searchable.includes(interest)) return false;
-      }
-      if (propertyNeedle) {
-        const searchable = [lead.property_interest, lead.property_type, lead.purpose].map(text).join(" ");
-        if (!searchable.includes(propertyNeedle)) return false;
-      }
+      if (interest && ![lead.purpose, lead.property_type, lead.property_interest].map(text).join(" ").includes(interest)) return false;
       const budget = money(lead.budget);
       if (budgetMin && (!budget || budget < budgetMin)) return false;
       if (budgetMax && (!budget || budget > budgetMax)) return false;
@@ -126,102 +110,70 @@ export async function POST(request: Request) {
     const cooldowns = await getMetaCooldownPhones(matchedRecipients.map((lead) => lead.phone), 24);
     const recipients = matchedRecipients.filter((lead) => !cooldowns.has(normalizeLeadPhone(lead.phone)));
     const cooldownSkipped = matchedRecipients.length - recipients.length;
-    if (!recipients.length) {
-      return NextResponse.json({ error: cooldownSkipped ? "All matched leads are currently in WhatsApp cooldown after Meta delivery blocks. Wait before retrying or ask the contact to message Maia first." : "No campaign-eligible leads matched this audience.", skipped: cooldownSkipped, cooldownSkipped }, { status: 400 });
-    }
+    if (!recipients.length) return NextResponse.json({ error: cooldownSkipped ? "All matched leads are currently in WhatsApp cooldown after Meta delivery blocks. Wait before retrying or ask the contact to message Maia first." : "No campaign-eligible leads matched this audience.", skipped: cooldownSkipped, cooldownSkipped }, { status: 400 });
 
     await repairMaiaActionWorkflowInput();
     await repairMaiaCampaignFormatting();
 
     const campaignId = requestId;
-    const createdBy = String((session as { email?: string; id?: string }).email || (session as { id?: string }).id || "admin_dashboard");
-    const dispatches = [];
-    for (let index = 0; index < messageParts.length; index += 1) {
-      dispatches.push(await dispatchMaiaCampaignAction({
-        commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`,
-        campaignType,
-        templateName,
-        topic,
-        message: messageParts[index],
-        recipients,
-        propertyTitle: propertyCampaign?.propertyName || selectedProperty?.title,
-        mediaUrl: String(body.mediaUrl || "").trim() || undefined,
-        createdBy,
-      }));
+    const createdBy = String((session as { email?: string; id?: string }).email || (session as { id?: string }).id || "admin");
+    const reports: Array<Record<string, unknown>> = [];
+    let sent = 0;
+    let delivered = 0;
+    let pendingDelivery = 0;
+    let failed = 0;
+
+    for (const lead of recipients) {
+      try {
+        const firstName = String(lead.name || "there").trim().split(/\s+/)[0] || "there";
+        // Update v2 contract: {{1}} first name, {{2}} main update, {{3}} supporting paragraph, {{4}} response prompt.
+        // The gateway receives the single campaign message and builds the exact template parameters.
+        const dispatch = await dispatchMaiaCampaignAction({
+          phone: lead.phone,
+          leadId: String(lead.id),
+          campaignId,
+          topic,
+          message: messageParts.join("\n\n"),
+          templateName,
+          campaignType,
+          firstName,
+          mediaUrl: "",
+          metadata: {
+            source: "limitless_campaign_center",
+            template: templateName,
+            mediaUrl: String(body.mediaUrl || "").trim(),
+            mediaMode: "link_only",
+          },
+        });
+        sent += 1;
+        if (dispatch.delivered) delivered += 1; else pendingDelivery += 1;
+        reports.push({ leadId: lead.id, phone: lead.phone, status: dispatch.delivered ? "delivered" : "sent", error: null });
+      } catch (error) {
+        failed += 1;
+        const detail = error instanceof Error ? error.message : String(error || "Campaign delivery failed.");
+        reports.push({ leadId: lead.id, phone: lead.phone, status: "failed", error: detail });
+      }
     }
 
-    const firstDispatch = dispatches[0];
-    const accepted = Math.min(...dispatches.map((item) => Number(item.accepted || 0)));
-    const failed = Math.max(...dispatches.map((item) => Number(item.failed || 0)));
-    const skipped = cooldownSkipped + Math.max(...dispatches.map((item) => Number(item.skipped || 0)));
-    const pendingDelivery = dispatches.reduce((total, item) => total + Number(item.pendingDelivery || 0), 0);
-    const delivered = dispatches.reduce((total, item) => total + Number((item.summary as Record<string, unknown>).delivered || 0), 0);
-    const read = dispatches.reduce((total, item) => total + Number((item.summary as Record<string, unknown>).read || 0), 0);
-    const freeFormSent = dispatches.reduce((total, item) => total + Number(item.freeFormSent || 0), 0);
-    const templateSent = dispatches.reduce((total, item) => total + Number(item.templateSent || 0), 0);
-    const failedRecipients = dispatches.flatMap((item) => item.failedRecipients || []);
-    const status = delivered > 0 ? pendingDelivery > 0 ? "partially_delivered" : "delivered" : failed > 0 && accepted > 0 ? "partially_sent" : accepted > 0 ? "sent" : "failed";
+    await saveCampaignDeliveryReport({ campaignId, campaignType, templateName, topic, createdBy, attempted: recipients.length, sent, delivered, pendingDelivery, failed, skipped: cooldownSkipped, reports });
 
-    const payload = {
-      ok: accepted > 0,
-      campaignId,
-      campaignType,
-      campaignTypeLabel: campaignLabel(campaignType),
-      templateName,
-      requestId,
+    const payload: Record<string, unknown> = {
+      status: failed === recipients.length ? "failed" : failed ? "partial_failure" : "sent",
       attempted: recipients.length,
-      sent: accepted,
-      accepted,
+      sent,
       delivered,
-      read,
-      failed,
-      skipped,
       pendingDelivery,
-      freeFormSent,
-      templateSent,
-      cooldownSkipped,
-      messageParts: messageParts.length,
-      originalCharacterCount: message.length,
-      status,
-      providerStatus: dispatches.map((item) => item.status),
-      message: messageParts.length > 1 ? `Campaign submitted in ${messageParts.length} WhatsApp message parts.` : firstDispatch.message,
-      acceptedRecipients: firstDispatch.acceptedRecipients,
-      failedRecipients,
-      executionId: dispatches.map((item) => item.executionId).join(","),
-      workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))],
-      maiaCommandPath: firstDispatch.route,
-      duplicatePrevented: false,
-      propertyContext: propertyCampaign?.memory || null,
-      exactPropertyReply: propertyCampaign?.replyInstruction || null,
-      mediaUrl: String(body.mediaUrl || "").trim() || null,
-    };
-
-    requestCache.set(requestId, { expiresAt: Date.now() + 10 * 60 * 1000, payload });
-    await saveCampaignDeliveryReport({
-      id: campaignId,
-      campaign_type: campaignType,
-      template_name: templateName,
-      campaign_topic: topic,
-      command_id: campaignId,
-      execution_id: payload.executionId,
-      status,
-      attempted: recipients.length,
-      accepted,
-      delivered,
-      read,
       failed,
-      skipped,
-      pending_delivery: pendingDelivery,
-      accepted_recipients: firstDispatch.acceptedRecipients,
-      failed_recipients: failedRecipients,
-      workflow_path: payload.workflowPath,
-      created_by: createdBy,
-      created_at: new Date().toISOString(),
-    }).catch((error) => console.error("Campaign audit save failed.", error));
-
-    return NextResponse.json(payload);
+      skipped: cooldownSkipped,
+      templateName,
+      errors: reports.filter((report) => report.status === "failed").map((report) => ({ leadId: report.leadId, phone: report.phone, error: report.error })),
+    };
+    requestCache.set(requestId, { expiresAt: Date.now() + 10 * 60 * 1000, payload });
+    return NextResponse.json(payload, { status: failed === recipients.length ? 502 : 200 });
   } catch (error) {
-    console.error("WhatsApp campaign dispatch failed.", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Campaign dispatch failed." }, { status: error instanceof PropertyCampaignMessageError ? 400 : 500 });
+    if (error instanceof PropertyCampaignMessageError) return NextResponse.json({ error: error.message }, { status: 400 });
+    const detail = error instanceof Error ? error.message : String(error || "Campaign failed.");
+    console.error("Limitless campaign send failed", error);
+    return NextResponse.json({ error: detail, reason: detail }, { status: 500 });
   }
 }
