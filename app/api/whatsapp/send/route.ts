@@ -12,11 +12,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const organizationId = String(body.organization_id || "limitless-realty");
     const to = String(body.to || body.recipient || body.phone || "");
-
     if (!to) return NextResponse.json({ error: "to is required." }, { status: 400 });
 
     const propertyImageUrls = Array.isArray(body.property_image_urls)
       ? body.property_image_urls.filter((value: unknown): value is string => typeof value === "string")
+      : undefined;
+    const propertyVideoUrls = Array.isArray(body.property_video_urls)
+      ? body.property_video_urls.filter((value: unknown): value is string => typeof value === "string")
       : undefined;
 
     const result = await sendWhatsAppMessage({
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
       templatePurpose: typeof body.template_purpose === "string" ? body.template_purpose : undefined,
       variables: body.variables && typeof body.variables === "object" ? body.variables : undefined,
       propertyImageUrls,
+      propertyVideoUrls,
     });
 
     return NextResponse.json(result);
