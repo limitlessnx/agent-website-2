@@ -15,6 +15,10 @@ export async function POST(request: NextRequest) {
 
     if (!to) return NextResponse.json({ error: "to is required." }, { status: 400 });
 
+    const propertyImageUrls = Array.isArray(body.property_image_urls)
+      ? body.property_image_urls.filter((value: unknown): value is string => typeof value === "string")
+      : undefined;
+
     const result = await sendWhatsAppMessage({
       organizationId,
       to,
@@ -23,6 +27,7 @@ export async function POST(request: NextRequest) {
       forceTemplate: body.force_template === true,
       templatePurpose: typeof body.template_purpose === "string" ? body.template_purpose : undefined,
       variables: body.variables && typeof body.variables === "object" ? body.variables : undefined,
+      propertyImageUrls,
     });
 
     return NextResponse.json(result);
