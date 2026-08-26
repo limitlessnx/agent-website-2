@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
@@ -10,6 +9,7 @@ import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import MobileBottomNav from "@/components/admin/MobileBottomNav";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
 import desktop from "@/components/admin/SuperAdminDesktop.module.css";
@@ -36,16 +36,20 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
             <AdminSearch />
             <div className="admin-topbar-actions">
-              <Link href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></Link>
+              <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
               <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
-          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header"><FluxknightLogo className={mobileChrome.mobileLogo} /><div className={mobileChrome.mobileAvatar} aria-label="Limitless account">L</div></header>
+          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header">
+            <FluxknightLogo className={mobileChrome.mobileLogo} />
+            <div className={mobileChrome.mobileScope}><span>Admin</span><strong>Fluxknight</strong></div>
+          </header>
           <WorkspaceRail />
           {children}
           <EnterpriseTableEnhancer />
         </section>
         <LeoFloatingButton />
+        <MobileBottomNav />
       </div>
     </div>
   );
