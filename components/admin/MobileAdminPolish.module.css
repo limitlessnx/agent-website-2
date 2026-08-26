@@ -1,0 +1,41 @@
+.mobilePolish{min-height:100dvh}
+.mobileHeader{display:none}
+
+@media (max-width:900px){
+  .mobilePolish{min-height:100dvh;background:#08050c;color:#f6f1ff}
+  .mobilePolish :global(.admin-shell){display:block!important;min-height:100dvh!important;width:100%!important;background:#08050c!important}
+  .mobilePolish :global(.admin-main){display:block!important;width:100%!important;min-width:0!important;min-height:100dvh!important;padding:0 12px calc(104px + env(safe-area-inset-bottom,0px))!important;background:#08050c!important}
+  .mobilePolish :global(.admin-topbar){display:none!important}
+  .mobileHeader{position:sticky;top:0;z-index:85;display:flex!important;align-items:center;justify-content:space-between;gap:12px;min-height:58px!important;margin:0 -12px 10px!important;padding:10px 14px 10px 62px!important;border-bottom:1px solid rgba(172,108,255,.16);background:rgba(8,5,12,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .mobileLogo{width:112px!important;height:22px!important;flex:0 0 auto}
+  .mobileScope{display:grid!important;justify-items:end;gap:3px;min-width:0;line-height:1}
+  .mobileScope span{color:#777084;font-size:8px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .mobileScope strong{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e5ddf4;font-size:11px;font-weight:800}
+  .mobilePolish :global(.admin-page){width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:12px!important}
+  .mobilePolish :global(.admin-page-header){margin:0 0 10px!important;padding:16px!important;border-radius:14px!important}
+  .mobilePolish :global(.admin-page-header h1){font-size:clamp(1.65rem,8vw,2.25rem)!important;line-height:1.02!important}
+  .mobilePolish :global(.admin-page-header p){font-size:.76rem!important;line-height:1.45!important}
+  .mobilePolish :global(.admin-panel),.mobilePolish :global(.admin-metric-card){border-radius:12px!important}
+  .mobilePolish :global(.workspace-rail){display:none!important}
+  .mobilePolish :global(.admin-sidebar){position:fixed!important;display:flex!important;top:0!important;bottom:0!important;left:0!important;z-index:90!important;width:min(86vw,340px)!important;height:100dvh!important;transform:translateX(-105%);overflow-y:auto!important}
+  .mobilePolish :global(.admin-sidebar.sidebarOpen){transform:translateX(0)!important}
+  .mobilePolish :global(.admin-sidebar .mobileHeader){position:relative!important;top:auto!important;display:flex!important;margin:0 0 10px!important;padding:0!important;border:0!important;background:transparent!important;backdrop-filter:none!important}
+  .mobilePolish :global(.mobileToggle){z-index:100!important;top:calc(env(safe-area-inset-top,0px) + 9px)!important;left:12px!important;width:42px!important;height:42px!important}
+  .mobilePolish :global(.backdrop){z-index:89!important}
+  .mobilePolish :global(.nav){gap:9px!important}
+  .mobilePolish :global(.nav a),.mobilePolish :global(.nav button){min-height:40px!important}
+  .mobilePolish :global(.fluxknight-platform-shell){background:#08050c!important}
+  .mobilePolish :global(.fluxknight-platform-shell),.mobilePolish :global(.admin-main){background-image:none!important}
+  .mobilePolish :global(.admin-main > .admin-page){background:transparent!important}
+  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"]){right:14px!important;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important;z-index:120!important;min-width:0!important;width:auto!important;height:44px!important;padding:0 14px!important;border-radius:13px!important;border-color:rgba(172,108,255,.45)!important;background:#0d0916!important}
+  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"] + aside){right:12px!important;bottom:calc(136px + env(safe-area-inset-bottom,0px))!important;width:calc(100vw - 24px)!important;max-height:calc(100dvh - 196px)!important}
+  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"] + aside){height:min(520px,calc(100dvh - 196px))!important}
+  .mobilePolish :global(.mobile-bottom-nav){bottom:calc(8px + env(safe-area-inset-bottom,0px))!important}
+}
+
+@media (max-width:520px){
+  .mobileHeader{min-height:54px!important;padding-left:62px!important}
+  .mobileLogo{width:104px!important;height:21px!important}
+  .mobilePolish :global(.admin-main){padding-left:10px!important;padding-right:10px!important;padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
+  .mobilePolish :global(.admin-page-header){padding:14px!important}
+}
