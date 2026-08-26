@@ -1,48 +1,118 @@
-/* Fluxknight Super Admin desktop design system. Scoped to the admin shell so public pages remain untouched. */
-.desktopChrome{--sa-bg:#080a0e;--sa-sidebar:#0a0c10;--sa-surface:#0d1117;--sa-surface-2:#10151c;--sa-border:#202630;--sa-border-strong:#2a313c;--sa-text:#f0f2f5;--sa-muted:#7d8592;--sa-subtle:#5f6773;--sa-accent:#7650d8;--sa-accent-soft:rgba(118,80,216,.11);min-height:100vh;background:var(--sa-bg);color:var(--sa-text)}
+/* Fluxknight Super Admin design authority. Keep dashboard-wide rules here; do not add new global admin overrides. */
+.desktopChrome{
+  --sa-bg:#080a0e;
+  --sa-surface:#0d1117;
+  --sa-surface-2:#10151c;
+  --sa-surface-3:#121821;
+  --sa-border:#202630;
+  --sa-border-strong:#2a313c;
+  --sa-text:#f0f2f5;
+  --sa-muted:#8a929f;
+  --sa-subtle:#69717e;
+  --sa-accent:#7650d8;
+  --sa-accent-strong:#8c69e4;
+  --sa-accent-soft:rgba(118,80,216,.10);
+  --sa-success:#4fd394;
+  --sa-warning:#e9b65d;
+  --sa-danger:#ef7474;
+  --sa-radius-sm:7px;
+  --sa-radius-md:10px;
+  --sa-radius-lg:14px;
+  --sa-space-1:4px;
+  --sa-space-2:8px;
+  --sa-space-3:12px;
+  --sa-space-4:16px;
+  --sa-space-5:20px;
+  --sa-space-6:24px;
+  --sa-space-7:32px;
+  --sa-content-max:1520px;
+  min-height:100vh;
+  background:var(--sa-bg);
+  color:var(--sa-text);
+}
+
 .desktopChrome :global(.admin-shell){display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;background:var(--sa-bg)}
-.desktopChrome :global(.admin-main){min-width:0;min-height:100vh;background:radial-gradient(circle at 88% 0%,rgba(118,80,216,.045),transparent 26%),var(--sa-bg)}
-.desktopChrome :global(.admin-sidebar){position:sticky!important;top:0!important;height:100vh!important;min-height:100vh!important;width:248px!important;box-sizing:border-box;padding:15px 12px 12px!important;border-right:1px solid #1c222a!important;background:linear-gradient(180deg,#0b0d11,#090b0f)!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-width:thin;scrollbar-color:#242a33 transparent}
-.desktopChrome :global(.admin-brand){display:flex!important;align-items:center!important;gap:9px!important;min-height:44px!important;margin:0 7px 14px!important;padding:0 3px!important;color:var(--sa-text)!important;text-decoration:none!important}
-.desktopChrome :global(.admin-brand small){display:block!important;margin-left:auto!important;color:#565e6a!important;font-size:7px!important;font-weight:800!important;letter-spacing:.09em!important;text-transform:uppercase!important}
-.desktopChrome :global(.admin-sidebar .workspaceSwitcher){margin:0 2px 14px!important}
-.desktopChrome :global(.admin-nav){display:grid!important;gap:7px!important}
-.desktopChrome :global(.admin-nav .trigger){min-height:31px!important;padding:0 9px!important;border:0!important;border-radius:7px!important;color:#666e7b!important;background:transparent!important;font-size:8px!important;font-weight:850!important;letter-spacing:.1em!important}
-.desktopChrome :global(.admin-nav .trigger:hover),.desktopChrome :global(.admin-nav .groupActive .trigger){color:#aeb5c1!important;background:#10141a!important}
-.desktopChrome :global(.admin-nav .items){gap:2px!important;padding-left:2px!important}
-.desktopChrome :global(.admin-nav .items a){min-height:34px!important;display:flex!important;align-items:center!important;gap:9px!important;padding:0 9px!important;border:1px solid transparent!important;border-radius:7px!important;color:#858d99!important;background:transparent!important;text-decoration:none!important;font-size:9px!important;font-weight:650!important;white-space:nowrap!important}
-.desktopChrome :global(.admin-nav .items a svg){width:14px!important;height:14px!important;color:#68717e!important;flex:0 0 auto!important}
-.desktopChrome :global(.admin-nav .items a:hover){color:#dfe2e7!important;background:#11151b!important}
-.desktopChrome :global(.admin-nav .items a[aria-current="page"]){color:#eeeaf7!important;border-color:#302a42!important;background:rgba(118,80,216,.09)!important;box-shadow:inset 2px 0 #7b58d8!important}
-.desktopChrome :global(.admin-nav .items a[aria-current="page"] svg){color:#aa94e5!important}
-.desktopChrome :global(.admin-nav .sectionTrigger){min-height:30px!important;margin-top:2px!important;padding:0 8px!important;border:0!important;border-radius:6px!important;color:#676f7b!important;background:transparent!important;font-size:8px!important;font-weight:800!important}
-.desktopChrome :global(.admin-nav .sectionTrigger:hover),.desktopChrome :global(.admin-nav .sectionTriggerActive){color:#b5bcc7!important;background:#0f1318!important}
-.desktopChrome :global(.admin-sidebar-footer){margin-top:14px!important;padding-top:12px!important;border-top:1px solid #1c222a!important}
-.desktopChrome :global(.admin-topbar){position:sticky!important;top:0!important;z-index:40!important;display:grid!important;grid-template-columns:180px minmax(260px,520px) 1fr!important;align-items:center!important;gap:20px!important;height:68px!important;padding:0 28px!important;border-bottom:1px solid rgba(32,38,48,.9)!important;background:rgba(8,10,14,.86)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important}
-.desktopChrome :global(.admin-breadcrumb){min-width:0!important}
-.desktopChrome :global(.admin-breadcrumb strong){color:#e9ebef!important;font-size:10px!important;letter-spacing:.02em!important}
-.desktopChrome :global(.admin-breadcrumb span){color:#626a76!important;font-size:8px!important}
-.desktopChrome :global(.admin-search){width:100%!important;height:36px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:8px!important;padding:0 8px 0 11px!important;border:1px solid #232a34!important;border-radius:8px!important;background:#0c1015!important;box-shadow:none!important}
-.desktopChrome :global(.admin-search svg){color:#626a77!important;flex:0 0 auto!important}
-.desktopChrome :global(.admin-search input){height:100%!important;min-width:0!important;padding:0!important;border:0!important;outline:0!important;color:#dfe3e8!important;background:transparent!important;font-size:9px!important}
-.desktopChrome :global(.admin-search input::placeholder){color:#555d69!important}
-.desktopChrome :global(.admin-search button){height:24px!important;padding:0 8px!important;border:1px solid #252c36!important;border-radius:6px!important;color:#818995!important;background:#12171e!important;font-size:8px!important;font-weight:800!important}
-.desktopChrome :global(.admin-topbar-actions){display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;min-width:0!important}
-.desktopChrome :global(.admin-topbar-actions .admin-period){min-height:30px!important;display:inline-flex!important;align-items:center!important;gap:6px!important;padding:0 8px!important;border:1px solid #202630!important;border-radius:7px!important;color:#7e8692!important;background:#0d1117!important;text-decoration:none!important;font-size:8px!important;font-weight:750!important}
-.desktopChrome :global(.admin-topbar-actions .admin-period span:first-child){color:#67dba0!important}
-.desktopChrome :global(.workspace-rail){position:relative!important;z-index:2!important;display:flex!important;align-items:center!important;min-height:48px!important;margin:0!important;padding:0 28px!important;border-bottom:1px solid #1b2129!important;background:#0b0e13!important}
-.desktopChrome :global(.workspace-rail .items){width:auto!important;gap:3px!important;overflow-x:auto!important}
-.desktopChrome :global(.workspace-rail .items a){min-width:auto!important;min-height:30px!important;flex-direction:row!important;gap:6px!important;padding:0 10px!important;border:1px solid transparent!important;border-radius:6px!important;color:#6f7784!important;font-size:8px!important;font-weight:750!important}
-.desktopChrome :global(.workspace-rail .items a svg){width:13px!important;height:13px!important;color:#606875!important}
+.desktopChrome :global(.admin-main){min-width:0;min-height:100vh;background:radial-gradient(circle at 88% 0%,rgba(118,92,216,.045),transparent 28%),var(--sa-bg)}
+.desktopChrome :global(.admin-sidebar){position:sticky!important;top:0!important;height:100vh!important;min-height:100vh!important;width:248px!important;box-sizing:border-box;padding:16px 12px 12px!important;border-right:1px solid var(--sa-border)!important;background:#0a0d12!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-width:thin;scrollbar-color:#242a33 transparent}
+.desktopChrome :global(.admin-brand){display:flex!important;align-items:center!important;gap:10px!important;min-height:44px!important;margin:0 7px 14px!important;padding:0 3px!important;color:var(--sa-text)!important;text-decoration:none!important}
+.desktopChrome :global(.admin-brand small){display:block!important;margin-left:auto!important;color:#59616d!important;font-size:9px!important;font-weight:800!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+.desktopChrome :global(.admin-sidebar .workspaceSwitcher){margin:0 2px 16px!important}
+.desktopChrome :global(.admin-nav){display:grid!important;gap:16px!important}
+.desktopChrome :global(.admin-nav .trigger){min-height:30px!important;padding:0 9px!important;border:0!important;border-radius:var(--sa-radius-sm)!important;color:#727b88!important;background:transparent!important;font-size:10px!important;font-weight:800!important;letter-spacing:.08em!important}
+.desktopChrome :global(.admin-nav .trigger:hover),.desktopChrome :global(.admin-nav .groupActive .trigger){color:#b9c0ca!important;background:#10141a!important}
+.desktopChrome :global(.admin-nav .items){gap:3px!important;padding-left:2px!important}
+.desktopChrome :global(.admin-nav .items a){min-height:36px!important;display:flex!important;align-items:center!important;gap:10px!important;padding:0 10px!important;border:1px solid transparent!important;border-radius:var(--sa-radius-sm)!important;color:#8a929e!important;background:transparent!important;text-decoration:none!important;font-size:12px!important;font-weight:650!important;white-space:nowrap!important}
+.desktopChrome :global(.admin-nav .items a svg){width:15px!important;height:15px!important;color:#69727f!important;flex:0 0 auto!important}
+.desktopChrome :global(.admin-nav .items a:hover){color:#e2e5ea!important;background:#11161d!important}
+.desktopChrome :global(.admin-nav .items a[aria-current="page"]){color:#eeeaf7!important;border-color:#332b47!important;background:var(--sa-accent-soft)!important;box-shadow:inset 2px 0 var(--sa-accent-strong)!important}
+.desktopChrome :global(.admin-nav .items a[aria-current="page"] svg){color:#ad99e9!important}
+.desktopChrome :global(.admin-nav .sectionTrigger){min-height:32px!important;margin-top:2px!important;padding:0 9px!important;border:0!important;border-radius:var(--sa-radius-sm)!important;color:#707986!important;background:transparent!important;font-size:10px!important;font-weight:800!important}
+.desktopChrome :global(.admin-nav .sectionTrigger:hover),.desktopChrome :global(.admin-nav .sectionTriggerActive){color:#b9c0ca!important;background:#0f141a!important}
+.desktopChrome :global(.admin-sidebar-footer){margin-top:16px!important;padding-top:14px!important;border-top:1px solid var(--sa-border)!important}
+
+.desktopChrome :global(.admin-topbar){position:sticky!important;top:0!important;z-index:40!important;display:grid!important;grid-template-columns:210px minmax(280px,560px) 1fr!important;align-items:center!important;gap:24px!important;height:64px!important;padding:0 28px!important;border-bottom:1px solid rgba(32,38,48,.92)!important;background:rgba(8,10,14,.88)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important}
+.desktopChrome :global(.admin-breadcrumb){min-width:0!important;display:grid!important;gap:3px!important}
+.desktopChrome :global(.admin-breadcrumb strong){color:#e9ebef!important;font-size:13px!important;font-weight:800!important;letter-spacing:-.01em!important}
+.desktopChrome :global(.admin-breadcrumb span){color:#6f7784!important;font-size:11px!important}
+.desktopChrome :global(.admin-search){width:100%!important;height:40px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:9px!important;padding:0 9px 0 12px!important;border:1px solid var(--sa-border-strong)!important;border-radius:var(--sa-radius-sm)!important;background:#0c1015!important;box-shadow:none!important}
+.desktopChrome :global(.admin-search svg){color:#68717d!important;flex:0 0 auto!important}
+.desktopChrome :global(.admin-search input){height:100%!important;min-width:0!important;padding:0!important;border:0!important;outline:0!important;color:#dfe3e8!important;background:transparent!important;font-size:12px!important}
+.desktopChrome :global(.admin-search input::placeholder){color:#59616d!important}
+.desktopChrome :global(.admin-search button){height:26px!important;padding:0 8px!important;border:1px solid #29303a!important;border-radius:6px!important;color:#858d99!important;background:#12171e!important;font-size:10px!important;font-weight:800!important}
+.desktopChrome :global(.admin-topbar-actions){display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;min-width:0!important}
+.desktopChrome :global(.admin-topbar-actions .admin-period){min-height:32px!important;display:inline-flex!important;align-items:center!important;gap:7px!important;padding:0 10px!important;border:1px solid var(--sa-border)!important;border-radius:var(--sa-radius-sm)!important;color:#858d99!important;background:#0d1117!important;text-decoration:none!important;font-size:10px!important;font-weight:750!important}
+.desktopChrome :global(.admin-topbar-actions .admin-period span:first-child){color:var(--sa-success)!important}
+
+.desktopChrome :global(.workspace-rail){position:relative!important;z-index:2!important;display:flex!important;align-items:center!important;min-height:44px!important;margin:0!important;padding:0 28px!important;border-bottom:1px solid #1b2129!important;background:#0b0e13!important}
+.desktopChrome :global(.workspace-rail .items){width:auto!important;gap:4px!important;overflow-x:auto!important}
+.desktopChrome :global(.workspace-rail .items a){min-width:auto!important;min-height:32px!important;flex-direction:row!important;gap:7px!important;padding:0 11px!important;border:1px solid transparent!important;border-radius:var(--sa-radius-sm)!important;color:#747d89!important;font-size:11px!important;font-weight:700!important}
+.desktopChrome :global(.workspace-rail .items a svg){width:14px!important;height:14px!important;color:#626b78!important}
 .desktopChrome :global(.workspace-rail .items a:hover){color:#d0d4dc!important;background:#11151b!important}
-.desktopChrome :global(.workspace-rail .items a.active){color:#e8e3f6!important;border-color:#302a42!important;background:rgba(118,80,216,.08)!important}
+.desktopChrome :global(.workspace-rail .items a.active){color:#e8e3f6!important;border-color:#302a42!important;background:var(--sa-accent-soft)!important}
 .desktopChrome :global(.workspace-rail .items a.active svg){color:#a894e1!important}
 .desktopChrome :global(.workspace-rail .items a.active:after){display:none!important}
-.desktopChrome :global(.admin-page){width:100%!important;max-width:1600px!important;box-sizing:border-box!important;margin:0 auto!important;padding:22px 28px 42px!important}
-.desktopChrome :global(.admin-page-header){margin-bottom:18px!important}
-.desktopChrome :global(.admin-page-header h1){font-size:32px!important;letter-spacing:-.045em!important}
-.desktopChrome :global(.admin-panel),.desktopChrome :global(.admin-metric-card){border-color:var(--sa-border)!important;background:var(--sa-surface)!important;box-shadow:none!important}
-.desktopChrome :global(.admin-button){border-radius:7px!important}
-.desktopChrome :global(.enterprise-grid-shell){box-shadow:0 10px 30px rgba(0,0,0,.12)!important}
-@media(max-width:1200px){.desktopChrome :global(.admin-topbar){grid-template-columns:150px minmax(240px,1fr) auto!important;gap:12px!important}.desktopChrome :global(.admin-topbar-actions .admin-period span:last-child){display:none!important}}
-@media(max-width:900px){.desktopChrome :global(.admin-shell){grid-template-columns:1fr!important}.desktopChrome :global(.admin-sidebar){width:min(86vw,340px)!important}.desktopChrome :global(.admin-topbar){position:relative!important;grid-template-columns:minmax(0,1fr) auto!important;height:auto!important;padding:10px 12px 9px 70px!important}.desktopChrome :global(.admin-search){grid-column:1/-1!important;grid-row:2!important}.desktopChrome :global(.workspace-rail){padding:0 10px!important}.desktopChrome :global(.admin-page){padding:12px 12px 30px!important}}
+
+.desktopChrome :global(.admin-page){width:100%!important;max-width:var(--sa-content-max)!important;box-sizing:border-box!important;margin:0 auto!important;padding:24px 28px 48px!important}
+.desktopChrome :global(.admin-page-header){margin-bottom:20px!important;border-radius:var(--sa-radius-lg)!important;border-color:var(--sa-border)!important;background:var(--sa-surface)!important;box-shadow:none!important}
+.desktopChrome :global(.admin-page-header h1){font-size:32px!important;line-height:1.05!important;letter-spacing:-.045em!important}
+
+/* Admin-wide component normalization. These are intentionally scoped to the Super Admin shell. */
+.desktopChrome :global(.admin-panel),
+.desktopChrome :global(.admin-metric-card),
+.desktopChrome :global(.admin-hero-panel),
+.desktopChrome :global(.admin-card),
+.desktopChrome :global(.dashboard-card),
+.desktopChrome :global(.campaign-panel),
+.desktopChrome :global(.enterprise-grid-shell){border-radius:var(--sa-radius-md)!important;border-color:var(--sa-border)!important;background:var(--sa-surface)!important;box-shadow:none!important}
+.desktopChrome :global(.admin-panel),.desktopChrome :global(.admin-card){padding:var(--sa-space-5)!important}
+.desktopChrome :global(.admin-metric-card){padding:var(--sa-space-4)!important}
+.desktopChrome :global(.admin-panel h2),.desktopChrome :global(.admin-panel h3),.desktopChrome :global(.admin-card h2),.desktopChrome :global(.admin-card h3){font-size:15px!important;line-height:1.25!important;color:var(--sa-text)!important}
+.desktopChrome :global(.admin-panel p),.desktopChrome :global(.admin-card p){font-size:12px!important;line-height:1.5!important;color:var(--sa-muted)!important}
+.desktopChrome :global(.admin-metric-card span){font-size:11px!important;color:var(--sa-muted)!important}
+.desktopChrome :global(.admin-metric-card strong){font-size:28px!important;line-height:1.05!important;color:var(--sa-text)!important;letter-spacing:-.035em!important}
+.desktopChrome :global(.admin-button),.desktopChrome :global(.primary-button),.desktopChrome :global(button){border-radius:var(--sa-radius-sm)!important}
+.desktopChrome :global(.admin-table th){font-size:11px!important;color:#9ea7b4!important}
+.desktopChrome :global(.admin-table td){font-size:12px!important;color:#d4d9e0!important}
+.desktopChrome :global(input),.desktopChrome :global(select),.desktopChrome :global(textarea){border-radius:var(--sa-radius-sm)!important}
+.desktopChrome :global(.enterprise-grid-shell){overflow:hidden!important}
+
+@media(max-width:1200px){
+  .desktopChrome :global(.admin-topbar){grid-template-columns:170px minmax(240px,1fr) auto!important;gap:14px!important}
+  .desktopChrome :global(.admin-topbar-actions .admin-period span:last-child){display:none!important}
+  .desktopChrome :global(.admin-page){padding-left:22px!important;padding-right:22px!important}
+}
+
+@media(max-width:900px){
+  .desktopChrome :global(.admin-shell){grid-template-columns:1fr!important}
+  .desktopChrome :global(.admin-sidebar){width:min(86vw,320px)!important}
+  .desktopChrome :global(.admin-topbar){position:relative!important;grid-template-columns:minmax(0,1fr) auto!important;height:auto!important;min-height:56px!important;padding:10px 12px 9px 68px!important}
+  .desktopChrome :global(.admin-search){grid-column:1/-1!important;grid-row:2!important;height:42px!important}
+  .desktopChrome :global(.workspace-rail){padding:0 12px!important}
+  .desktopChrome :global(.admin-page){padding:18px 16px 40px!important}
+}
+
+@media(max-width:640px){
+  .desktopChrome :global(.admin-page){padding:16px 14px 88px!important}
+  .desktopChrome :global(.admin-panel),.desktopChrome :global(.admin-card){padding:16px!important}
+  .desktopChrome :global(.admin-metric-card){padding:14px!important}
+}
