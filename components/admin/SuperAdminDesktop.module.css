@@ -104,8 +104,7 @@
 
 @media(max-width:900px){
   .desktopChrome :global(.admin-shell){grid-template-columns:1fr!important}
-  .desktopChrome :global(.admin-sidebar){width:min(86vw,320px)!important}
-  .desktopChrome :global(.admin-topbar){position:relative!important;grid-template-columns:minmax(0,1fr) auto!important;height:auto!important;min-height:56px!important;padding:10px 12px 9px 68px!important}
+  .desktopChrome :global(.admin-topbar){position:relative!important;grid-template-columns:minmax(0,1fr) auto!important;height:auto!important;min-height:56px!important;padding:10px 12px 9px!important}
   .desktopChrome :global(.admin-search){grid-column:1/-1!important;grid-row:2!important;height:42px!important}
   .desktopChrome :global(.workspace-rail){padding:0 12px!important}
   .desktopChrome :global(.admin-page){padding:18px 16px 40px!important}
