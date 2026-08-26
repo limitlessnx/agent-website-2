@@ -8,7 +8,7 @@ import LeoFloatingButton from "@/components/admin/LeoFloatingButton";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
-import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import MobileAdminHeader from "@/components/admin/MobileAdminHeader";
 import MobileBottomNav from "@/components/admin/MobileBottomNav";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
@@ -41,11 +41,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
               <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
-          <header className={`${mobileChrome.mobileHeader} ${mobilePolish.mobileHeader}`} aria-label="Fluxknight mobile header">
-            <div aria-hidden="true" />
-            <FluxknightLogo className={`${mobileChrome.mobileLogo} ${mobilePolish.mobileLogo}`} />
-            <div className={`${mobileChrome.mobileScope} ${mobilePolish.mobileScope}`}><span>Admin</span><strong>Fluxknight</strong></div>
-          </header>
+          <MobileAdminHeader />
           <WorkspaceRail />
           {children}
           <EnterpriseTableEnhancer />
