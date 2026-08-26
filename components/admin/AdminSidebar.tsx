@@ -107,9 +107,8 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const workspaceName = pathname.startsWith("/dashboard/gencouv") ? "Gencouv" : pathname.startsWith("/dashboard/limitless") ? "Limitless Realty" : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding") ? "Client Onboarding" : "Fluxknight Platform";
 
   return <>
-    {!mobileOpen ? <button className={styles.mobileOpenButton} type="button" aria-label="Open navigation menu" aria-expanded="false" onClick={() => setMobileOpen(true)}><Menu size={20} /></button> : null}
-    {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={closeMobileMenu} /> : null}
-    <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
+    <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMobileMenu} />
+    <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-hidden={!mobileOpen ? undefined : undefined}>
       <div className={styles.mobileHeader}>
         <span className={styles.mobileMenuTitle}>Navigation</span>
         <div><ThemeToggle /><button type="button" onClick={closeMobileMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
