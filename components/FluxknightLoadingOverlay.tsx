@@ -1,22 +1,15 @@
 "use client";
 
-import FluxknightLogo from "@/components/admin/FluxknightLogo";
-import styles from "./FluxknightLoadingOverlay.module.css";
+export default function FluxknightLoadingOverlay({ visible = false }: { visible?: boolean }) {
+  if (!visible) return null;
 
-export default function FluxknightLoadingOverlay({ visible = true }: { visible?: boolean }) {
   return (
     <div
-      className={`${styles.overlay} ${visible ? styles.visible : ""}`}
-      role={visible ? "status" : undefined}
-      aria-label={visible ? "Loading" : undefined}
-      aria-hidden={!visible}
+      role="status"
+      aria-label="Loading"
+      className="flux-global-loading"
     >
-      <div className={styles.mark}>
-        <span className={styles.ring} aria-hidden="true" />
-        <div className={styles.logo}>
-          <FluxknightLogo />
-        </div>
-      </div>
+      <span className="flux-loading-core" aria-hidden="true" />
     </div>
   );
 }
