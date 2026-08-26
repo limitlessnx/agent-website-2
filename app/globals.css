@@ -13,91 +13,56 @@
   --text-muted: #8c9aaa;
 }
 
-/* Global Fluxknight navigation/action overlay. The application stays mounted underneath it. */
+/* Non-blocking global navigation progress. Dashboard content remains readable and interactive. */
 .flux-global-loading {
   position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0 0 auto 0;
+  width: 100%;
+  height: 2px;
   z-index: 2147483647;
-  display: grid;
-  place-items: center;
-  pointer-events: auto;
+  display: block;
+  pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  background: rgba(4, 7, 13, .48);
-  backdrop-filter: blur(8px) saturate(.82);
-  -webkit-backdrop-filter: blur(8px) saturate(.82);
-  transition: opacity .22s ease, visibility 0s linear .22s;
+  background: rgba(139, 92, 246, .12);
+  box-shadow: 0 1px 10px rgba(139, 92, 246, .12);
+  transition: opacity .18s ease, visibility .18s ease;
 }
 
 .flux-global-loading.is-active {
   opacity: 1;
   visibility: visible;
-  transition: opacity .22s ease;
 }
 
 .flux-loading-core {
-  position: relative;
-  min-width: min(290px, calc(100vw - 48px));
-  min-height: 132px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 10px;
-  padding: 26px 30px;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 24px;
-  background: rgba(7, 11, 18, .78);
-  box-shadow: 0 20px 70px rgba(0,0,0,.32), 0 0 0 1px rgba(0,212,255,.04);
-}
-
-.flux-loading-logo {
-  position: relative;
-  z-index: 2;
-  color: var(--text-main);
-  font-size: 22px;
-  letter-spacing: .16em;
-  font-weight: 700;
-  animation: flux-loading-breathe 1.5s ease-in-out infinite;
-}
-
-.flux-loading-logo .flux-wordmark-x { color: var(--cyan); }
-
-.flux-loading-orbit {
   position: absolute;
-  width: 82px;
-  height: 82px;
+  inset: 0 auto auto 0;
+  width: 32%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  border: 1px solid rgba(0,212,255,.32);
-  border-top-color: var(--cyan);
-  border-right-color: rgba(0,212,255,.08);
-  animation: flux-loading-spin 1.15s linear infinite;
+  background: linear-gradient(90deg, transparent, rgba(192, 132, 252, .95), #a855f7, transparent);
+  box-shadow: 0 0 12px rgba(139, 92, 246, .55);
+  animation: flux-loading-progress 1.1s ease-in-out infinite;
 }
 
-.flux-loading-label {
-  position: relative;
-  z-index: 2;
-  color: var(--text-muted);
-  font-size: 12px;
-  letter-spacing: .06em;
+.flux-loading-logo,
+.flux-loading-label,
+.flux-loading-orbit,
+.flux-loading-dots {
+  display: none;
 }
 
-.flux-loading-dots { display: inline-flex; gap: 4px; position: relative; z-index: 2; }
-.flux-loading-dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--cyan); opacity: .3; animation: flux-loading-dot 1s ease-in-out infinite; }
-.flux-loading-dots i:nth-child(2) { animation-delay: .15s; }
-.flux-loading-dots i:nth-child(3) { animation-delay: .3s; }
-
-@keyframes flux-loading-spin { to { transform: rotate(360deg); } }
-@keyframes flux-loading-breathe { 0%,100% { opacity: .82; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.02); } }
-@keyframes flux-loading-dot { 0%,100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+@keyframes flux-loading-progress {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(420%); }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .flux-loading-logo, .flux-loading-orbit, .flux-loading-dots i { animation: none; }
+  .flux-loading-core { animation: none; transform: none; left: 33%; }
   .flux-global-loading { transition-duration: .01ms; }
-}
-
-@media (max-width: 480px) {
-  .flux-loading-core { min-width: 248px; min-height: 120px; padding: 22px; border-radius: 20px; }
-  .flux-loading-logo { font-size: 18px; }
 }
