@@ -13,6 +13,7 @@ import MobileBottomNav from "@/components/admin/MobileBottomNav";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
 import desktop from "@/components/admin/SuperAdminDesktop.module.css";
+import mobilePolish from "@/components/admin/MobileAdminPolish.module.css";
 
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
@@ -20,7 +21,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   const tenants = await listClientOnboardingProfiles(100).catch(() => []);
 
   return (
-    <div className={`${enterprise.platform} ${mobileChrome.shell} ${desktop.desktopChrome}`}>
+    <div className={`${enterprise.platform} ${mobileChrome.shell} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
       <div className="admin-shell fluxknight-platform-shell">
         <AdminSidebar
           email={session.email}
@@ -40,9 +41,9 @@ export default async function AdminShell({ children }: { children: React.ReactNo
               <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
-          <header className={mobileChrome.mobileHeader} aria-label="Fluxknight mobile header">
-            <FluxknightLogo className={mobileChrome.mobileLogo} />
-            <div className={mobileChrome.mobileScope}><span>Admin</span><strong>Fluxknight</strong></div>
+          <header className={`${mobileChrome.mobileHeader} ${mobilePolish.mobileHeader}`} aria-label="Fluxknight mobile header">
+            <FluxknightLogo className={`${mobileChrome.mobileLogo} ${mobilePolish.mobileLogo}`} />
+            <div className={`${mobileChrome.mobileScope} ${mobilePolish.mobileScope}`}><span>Admin</span><strong>Fluxknight</strong></div>
           </header>
           <WorkspaceRail />
           {children}
