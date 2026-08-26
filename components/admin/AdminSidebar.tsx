@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
-  MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
+  Menu, MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
 } from "@/components/admin/ServerIcons";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -107,6 +107,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const workspaceName = pathname.startsWith("/dashboard/gencouv") ? "Gencouv" : pathname.startsWith("/dashboard/limitless") ? "Limitless Realty" : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding") ? "Client Onboarding" : "Fluxknight Platform";
 
   return <>
+    {!mobileOpen ? <button className={styles.mobileOpenButton} type="button" aria-label="Open navigation menu" aria-expanded="false" onClick={() => setMobileOpen(true)}><Menu size={20} /></button> : null}
     {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={closeMobileMenu} /> : null}
     <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
       <div className={styles.mobileHeader}>
