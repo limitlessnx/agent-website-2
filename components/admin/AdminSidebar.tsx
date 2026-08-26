@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
@@ -94,6 +94,12 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const [mobileOpen, setMobileOpen] = useState(false);
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
 
+  useEffect(() => {
+    const openFromBottomNav = () => setMobileOpen(true);
+    window.addEventListener("fluxknight:mobile-menu", openFromBottomNav);
+    return () => window.removeEventListener("fluxknight:mobile-menu", openFromBottomNav);
+  }, []);
+
   function toggleGroup(id: string) { setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]); }
   function toggleSection(id: string) { setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]); }
   function closeMobileMenu() { setMobileOpen(false); }
@@ -105,8 +111,8 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     {mobileOpen ? <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={closeMobileMenu} /> : null}
     <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
       <div className={styles.mobileHeader}>
-        <ThemeToggle />
-        <button type="button" onClick={closeMobileMenu} aria-label="Close navigation menu"><X size={20} /></button>
+        <span className={styles.mobileMenuTitle}>Navigation</span>
+        <div><ThemeToggle /><button type="button" onClick={closeMobileMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
       </div>
       <Link href="/dashboard" onClick={closeMobileMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
       <div className={extras.workspaceSwitcher}>
