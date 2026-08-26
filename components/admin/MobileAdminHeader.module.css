@@ -1,0 +1,11 @@
+.header{display:none}
+@media(max-width:900px){
+  .header{position:sticky;top:0;z-index:85;display:flex;align-items:center;gap:12px;width:calc(100% + 24px);min-height:58px;margin:0 -12px 14px;padding:10px 14px;border-bottom:1px solid #202630;background:rgba(8,10,14,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .menu{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #262d37;border-radius:9px;color:#b7bec9;background:#10141a}
+  .menu:active{background:#171c24}
+  .logo{width:108px;height:22px;flex:0 0 auto}
+  .scope{display:grid;gap:3px;min-width:0;margin-left:auto;text-align:right;line-height:1}
+  .scope span{color:#69717d;font-size:8px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+  .scope strong{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e6e8ed;font-size:11px;font-weight:800}
+}
+@media(max-width:520px){.header{min-height:54px;margin-bottom:12px;padding:8px 10px}.menu{width:38px;height:38px}.logo{width:100px;height:21px}.scope strong{font-size:10px}}
