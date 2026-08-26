@@ -10,7 +10,6 @@ const items = [
   { href: "/dashboard/clients", label: "Workspaces", icon: Building2 },
   { href: "/dashboard/agents", label: "Agents", icon: Bot },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
-  { href: "/dashboard/settings", label: "More", icon: MoreHorizontal },
 ];
 
 export default function MobileBottomNav() {
@@ -23,6 +22,9 @@ export default function MobileBottomNav() {
           <item.icon size={18} /><span>{item.label}</span>
         </Link>;
       })}
+      <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("fluxknight:mobile-menu"))} aria-label="Open more navigation">
+        <MoreHorizontal size={18} /><span>More</span>
+      </button>
     </nav>
   );
 }
