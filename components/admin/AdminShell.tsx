@@ -12,6 +12,7 @@ import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer"
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
+import desktop from "@/components/admin/SuperAdminDesktop.module.css";
 
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
@@ -19,7 +20,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   const tenants = await listClientOnboardingProfiles(100).catch(() => []);
 
   return (
-    <div className={`${enterprise.platform} ${mobileChrome.shell}`}>
+    <div className={`${enterprise.platform} ${mobileChrome.shell} ${desktop.desktopChrome}`}>
       <div className="admin-shell fluxknight-platform-shell">
         <AdminSidebar
           email={session.email}
@@ -35,7 +36,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
             <AdminSearch />
             <div className="admin-topbar-actions">
-              <Link href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none" }} className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></Link>
+              <Link href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></Link>
               <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
             </div>
           </header>
