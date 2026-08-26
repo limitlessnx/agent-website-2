@@ -9,7 +9,6 @@ import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
-import MobileMenuButton from "@/components/admin/MobileMenuButton";
 import MobileBottomNav from "@/components/admin/MobileBottomNav";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
@@ -43,7 +42,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             </div>
           </header>
           <header className={`${mobileChrome.mobileHeader} ${mobilePolish.mobileHeader}`} aria-label="Fluxknight mobile header">
-            <MobileMenuButton />
+            <div aria-hidden="true" />
             <FluxknightLogo className={`${mobileChrome.mobileLogo} ${mobilePolish.mobileLogo}`} />
             <div className={`${mobileChrome.mobileScope} ${mobilePolish.mobileScope}`}><span>Admin</span><strong>Fluxknight</strong></div>
           </header>
