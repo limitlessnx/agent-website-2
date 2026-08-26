@@ -10,7 +10,7 @@ export function useGlobalLoading() { return useContext(LoadingContext); }
 
 export default function GlobalLoadingProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const initialPath = useRef(pathname);
   const hydrated = useRef(false);
   const navigationTimer = useRef<number | null>(null);
@@ -28,11 +28,6 @@ export default function GlobalLoadingProvider({ children }: { children: React.Re
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setIsLoading(false), 700);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     if (!hydrated.current) {
       hydrated.current = true;
       initialPath.current = pathname;
@@ -43,6 +38,10 @@ export default function GlobalLoadingProvider({ children }: { children: React.Re
       stopLoading();
     }
   }, [pathname, stopLoading]);
+
+  useEffect(() => () => {
+    if (navigationTimer.current) window.clearTimeout(navigationTimer.current);
+  }, []);
 
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
@@ -63,10 +62,6 @@ export default function GlobalLoadingProvider({ children }: { children: React.Re
     document.addEventListener("click", handleDocumentClick, true);
     return () => document.removeEventListener("click", handleDocumentClick, true);
   }, [startLoading]);
-
-  useEffect(() => () => {
-    if (navigationTimer.current) window.clearTimeout(navigationTimer.current);
-  }, []);
 
   const value = useMemo<LoadingContextValue>(() => ({ startLoading, stopLoading, isLoading }), [isLoading, startLoading, stopLoading]);
 
