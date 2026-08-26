@@ -1,7 +1,6 @@
 import { getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-data";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import LeoOverview from "@/components/admin/LeoOverview";
-import styles from "@/app/dashboard/DashboardExecutive.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +22,7 @@ export default async function DashboardPage() {
   ].slice(0, 6);
 
   return (
-    <main className={`${styles.page} admin-page`}>
+    <main className="admin-page">
       <LeoOverview
         newLeads={newLeads.length}
         clients={clients.map((client) => ({ id: client.id, business_name: client.business_name, business_email: client.business_email, status: client.status }))}
