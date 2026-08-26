@@ -6,7 +6,7 @@ import {
   Gauge, MessageSquareText, Play, Sparkles, Target, Users, Workflow,
 } from "@/components/admin/ServerIcons";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
-import styles from "./LeoOverview.module.css";
+import styles from "./LeoOverviewDesktop.module.css";
 
 type Notice = { title: string; detail: string; href: string; type: string };
 type Client = { id: string; business_name?: string | null; business_email?: string | null; status: string };
