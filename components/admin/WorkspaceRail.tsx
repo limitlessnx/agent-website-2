@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Activity, BarChart2, BrainCircuit, Building2, Home, MessageCircle, Settings, Users, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import styles from "@/components/admin/WorkspaceRail.module.css";
 
 type Item = { href: string; label: string; Icon: typeof Activity };
@@ -45,6 +46,21 @@ function active(pathname: string, href: string) {
 
 export default function WorkspaceRail() {
   const pathname = usePathname();
+  const [desktop, setDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 901px)");
+    const sync = () => setDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  // WorkspaceRail is a desktop-only navigation surface. Mobile navigation is
+  // owned by the sidebar drawer + MobileBottomNav, so this component does not
+  // render a second navigation system on phones.
+  if (!desktop) return null;
+
   const isLimitless = pathname.startsWith("/dashboard/limitless");
   const isGencouv = pathname.startsWith("/dashboard/gencouv");
   const name = isLimitless ? "Limitless Realty" : isGencouv ? "Gencouv" : "Fluxknight";
