@@ -5,12 +5,12 @@ export default function DashboardLoading() {
     <main className="admin-page" aria-busy="true" aria-label="Loading dashboard">
       <section className={styles.shell}>
         <div className={styles.header}>
-          <div>
+          <div className={styles.headerCopy}>
             <span className={styles.lineShort} />
             <span className={styles.lineTitle} />
             <span className={styles.lineWide} />
           </div>
-          <div className={styles.actions}>
+          <div className={styles.actions} aria-hidden="true">
             <span />
             <span />
           </div>
@@ -21,20 +21,27 @@ export default function DashboardLoading() {
             <span className={styles.lineShort} />
             <span className={styles.heroTitle} />
             <span className={styles.lineWide} />
-            <div className={styles.chips}><i /><i /><i /></div>
+            <div className={styles.chips} aria-hidden="true"><i /><i /><i /></div>
           </div>
-          <div className={styles.leo}><span /></div>
+          <div className={styles.leo} aria-hidden="true"><span /></div>
         </div>
 
-        <div className={styles.command}><span /><span /></div>
+        <div className={styles.command} aria-hidden="true"><span /><span /></div>
 
-        <div className={styles.metrics}>
-          {Array.from({ length: 4 }).map((_, index) => <div className={styles.metric} key={index}><span /><b /><i /></div>)}
+        <div className={styles.metrics} aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div className={styles.metric} key={index}><span /><b /><i /></div>
+          ))}
         </div>
 
-        <div className={styles.grid}>
-          <div className={styles.panel}><span className={styles.lineShort} /><span className={styles.lineMedium} />{Array.from({ length: 4 }).map((_, index) => <i className={styles.row} key={index} />)}</div>
-          <div className={styles.panel}><span className={styles.lineShort} /><span className={styles.lineMedium} />{Array.from({ length: 4 }).map((_, index) => <i className={styles.row} key={index} />)}</div>
+        <div className={styles.grid} aria-hidden="true">
+          {Array.from({ length: 2 }).map((_, panelIndex) => (
+            <div className={styles.panel} key={panelIndex}>
+              <span className={styles.lineShort} />
+              <span className={styles.lineMedium} />
+              {Array.from({ length: 4 }).map((_, rowIndex) => <i className={styles.row} key={rowIndex} />)}
+            </div>
+          ))}
         </div>
       </section>
     </main>
