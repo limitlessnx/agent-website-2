@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
@@ -17,6 +17,7 @@ import {
   CLIENT_ONBOARDING_NAV,
   PUBLIC_SITE_NAV,
   buildClientWorkspaceNav,
+  getActiveAdminNavGroup,
   isAdminNavItemActive,
   type AdminNavGroup,
   type AdminNavSection,
@@ -100,10 +101,28 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     ];
   }, [tenants]);
 
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
-  const [openSections, setOpenSections] = useState<string[]>([]);
+  const activeGroupId = getActiveAdminNavGroup(pathname);
+  const [openGroups, setOpenGroups] = useState<string[]>(() => activeGroupId ? [activeGroupId] : []);
+  const [openSections, setOpenSections] = useState<string[]>(() => {
+    const group = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV].find((candidate) => candidate.id === activeGroupId);
+    if (!group) return [];
+    return group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact))
+      ? [sectionId(group.id, section, index)]
+      : []);
+  });
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
   const { open: mobileOpen, closeMenu } = useMobileNavigation();
+
+  useEffect(() => {
+    if (!activeGroupId) return;
+    setOpenGroups((current) => current.includes(activeGroupId) ? current : [...current, activeGroupId]);
+    const group = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV].find((candidate) => candidate.id === activeGroupId);
+    if (!group) return;
+    const activeSectionIds = group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact))
+      ? [sectionId(group.id, section, index)]
+      : []);
+    if (activeSectionIds.length) setOpenSections((current) => Array.from(new Set([...current, ...activeSectionIds])));
+  }, [activeGroupId, pathname]);
 
   function toggleGroup(id: string) { setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]); }
   function toggleSection(id: string) { setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]); }
@@ -112,7 +131,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
 
   return <>
     <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMenu} />
-    <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation">
+    <aside id="admin-mobile-navigation" className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation" aria-hidden={mobileOpen ? undefined : false}>
       <div className={styles.mobileHeader}>
         <span className={styles.mobileMenuTitle}>Navigation</span>
         <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
