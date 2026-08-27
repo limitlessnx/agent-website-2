@@ -10,6 +10,7 @@ import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import MobileAdminHeader from "@/components/admin/MobileAdminHeader";
 import MobileBottomNav from "@/components/admin/MobileBottomNav";
+import { MobileNavigationProvider } from "@/components/admin/MobileNavigationContext";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import mobileChrome from "@/components/admin/MobileDashboardChrome.module.css";
 import desktop from "@/components/admin/SuperAdminDesktop.module.css";
@@ -22,33 +23,35 @@ export default async function AdminShell({ children }: { children: React.ReactNo
 
   return (
     <div className={`${enterprise.platform} ${mobileChrome.shell} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
-      <div className="admin-shell fluxknight-platform-shell">
-        <AdminSidebar
-          email={session.email}
-          tenants={tenants.map((tenant) => ({
-            id: tenant.id,
-            organizationId: tenant.organization_id,
-            name: tenant.business_name || tenant.business_email || "Unnamed tenant",
-            status: tenant.status,
-          }))}
-        />
-        <section className="admin-main">
-          <header className="admin-topbar">
-            <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
-            <AdminSearch />
-            <div className="admin-topbar-actions">
-              <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
-              <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
-            </div>
-          </header>
-          <MobileAdminHeader />
-          <WorkspaceRail />
-          {children}
-          <EnterpriseTableEnhancer />
-        </section>
-        <LeoFloatingButton />
-        <MobileBottomNav />
-      </div>
+      <MobileNavigationProvider>
+        <div className="admin-shell fluxknight-platform-shell">
+          <AdminSidebar
+            email={session.email}
+            tenants={tenants.map((tenant) => ({
+              id: tenant.id,
+              organizationId: tenant.organization_id,
+              name: tenant.business_name || tenant.business_email || "Unnamed tenant",
+              status: tenant.status,
+            }))}
+          />
+          <section className="admin-main">
+            <header className="admin-topbar">
+              <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
+              <AdminSearch />
+              <div className="admin-topbar-actions">
+                <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
+                <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
+              </div>
+            </header>
+            <MobileAdminHeader />
+            <WorkspaceRail />
+            {children}
+            <EnterpriseTableEnhancer />
+          </section>
+          <LeoFloatingButton />
+          <MobileBottomNav />
+        </div>
+      </MobileNavigationProvider>
     </div>
   );
 }
