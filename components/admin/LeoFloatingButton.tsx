@@ -23,19 +23,17 @@ export default function LeoFloatingButton() {
   const [error, setError] = useState("");
   const messageRef = useRef<HTMLTextAreaElement | null>(null);
 
-  function closeLeo() {
-    setOpen(false);
-    setVoice(false);
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") closeLeo(); };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
-
+  function closeLeo() { setOpen(false); setVoice(false); }
+  useEffect(() => { if (!open) return; const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") closeLeo(); }; window.addEventListener("keydown", handleKeyDown); return () => window.removeEventListener("keydown", handleKeyDown); }, [open]);
   useEffect(() => { if (open && !voice) messageRef.current?.focus(); }, [open, voice]);
+
+  function appendVoiceTranscript(message: LeoMessage) {
+    setMessages((current) => {
+      const previous = current[current.length - 1];
+      if (previous?.role === message.role && previous.content === message.content) return current;
+      return [...current, message];
+    });
+  }
 
   async function sendMessage(form: HTMLFormElement) {
     const message = String(new FormData(form).get("message") || "").trim();
@@ -46,7 +44,7 @@ export default function LeoFloatingButton() {
       const response = await fetch("/api/leo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, sessionId: conversationId || undefined, pageContext: context, channel: "chat" }) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Leo could not respond.");
-      setConversationId(result.sessionId || "");
+      setConversationId(result.sessionId || conversationId);
       setMessages((current) => [...current, { role: "assistant", content: result.reply || "Leo returned no response." }]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Leo could not respond."); }
     finally { setBusy(false); }
@@ -58,7 +56,7 @@ export default function LeoFloatingButton() {
       <header className="flex items-center justify-between border-b border-white/10 px-4 py-3"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl border border-violet-300/20 bg-violet-500/10"><Bot size={18} /></span><div><strong className="block text-sm">Agent Leo</strong><span className="text-[10px] text-slate-400">Fluxknight operator · {context.section}</span></div></div><button type="button" onClick={closeLeo} aria-label="Close Leo" title="Close Leo" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/50"><X size={17} /></button></header>
       <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2"><span className="flex items-center gap-2 text-[10px] text-slate-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Current page: <strong className="text-slate-200">{context.resourceType}</strong></span><div className="leo-mode-switch" role="group" aria-label="Leo conversation mode"><button type="button" className={!voice ? "active" : ""} aria-pressed={!voice} onClick={() => setVoice(false)} title="Message Leo"><MessageSquareText size={13} /><span>Message</span></button><button type="button" className={voice ? "active" : ""} aria-pressed={voice} onClick={() => setVoice(true)} title="Call Leo"><PhoneCall size={13} /><span>Call</span></button></div></div>
       <div className="relative min-h-0 flex-1">
-        {open && voice ? <div className="absolute inset-0 flex flex-col"><LeoRealtimeVoice sessionId={conversationId || undefined} onCallEnded={() => setVoice(false)} /></div> : null}
+        {open && voice ? <div className="absolute inset-0 flex flex-col"><LeoRealtimeVoice sessionId={conversationId || undefined} pageContext={context} onSessionId={setConversationId} onTranscript={appendVoiceTranscript} onCallEnded={() => setVoice(false)} /></div> : null}
         {!voice ? <div className="absolute inset-0 flex flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs">{!messages.length ? <div className="flex h-full flex-col items-center justify-center text-center text-slate-400"><Bot size={28} className="mb-3 text-violet-300" /><strong className="text-base text-white">What needs attention?</strong><p className="mt-2 max-w-xs leading-5">Leo understands your current page and can inspect Fluxknight in context.</p></div> : messages.map((item, index) => <div key={`${item.role}-${index}`} className={`mb-3 ${item.role === "user" ? "text-right" : "text-left"}`}><span className="mb-1 block text-[9px] font-bold tracking-wider text-slate-500">{item.role === "user" ? "YOU" : "LEO"}</span><div className="inline-block max-w-[90%] whitespace-pre-wrap rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2.5 leading-5">{item.content}</div></div>)}{busy ? <div className="flex items-center gap-2 text-[10px] text-slate-400"><Loader2 size={13} className="animate-spin" />Leo is inspecting Fluxknight...</div> : null}{error ? <div className="mt-3 rounded-lg border border-rose-300/20 bg-rose-500/10 p-2 text-[10px] text-rose-200" role="alert">{error}</div> : null}</div>
           <form className="border-t border-white/10 bg-slate-950 p-3" onSubmit={(event) => { event.preventDefault(); void sendMessage(event.currentTarget); }}><div className="flex items-end gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2"><textarea ref={messageRef} name="message" rows={1} required placeholder="Message Leo..." aria-label="Message Leo" className="min-h-8 flex-1 resize-none bg-transparent text-xs text-white outline-none placeholder:text-slate-600" /><button type="submit" disabled={busy} aria-label="Send message" title="Send message" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-600 text-white disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-violet-300/50"><Send size={15} /></button></div><div className="mt-2 flex items-center gap-1 text-[8px] text-slate-600"><ShieldCheck size={10} />Sensitive actions remain approval-gated.</div></form>
