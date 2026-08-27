@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
-  Menu, MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
+  MessageCircle, Plus, Search, Settings, ShieldCheck, Users, X,
 } from "@/components/admin/ServerIcons";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import ThemeToggle from "@/components/admin/ThemeToggle";
+import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import styles from "@/components/admin/AdminSidebar.module.css";
 import extras from "@/components/admin/AdminSidebarExtras.module.css";
 
@@ -91,29 +92,22 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
 
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [openSections, setOpenSections] = useState<string[]>([]);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
-
-  useEffect(() => {
-    const openFromBottomNav = () => setMobileOpen(true);
-    window.addEventListener("fluxknight:mobile-menu", openFromBottomNav);
-    return () => window.removeEventListener("fluxknight:mobile-menu", openFromBottomNav);
-  }, []);
+  const { open: mobileOpen, closeMenu } = useMobileNavigation();
 
   function toggleGroup(id: string) { setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]); }
   function toggleSection(id: string) { setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]); }
-  function closeMobileMenu() { setMobileOpen(false); }
 
   const workspaceName = pathname.startsWith("/dashboard/gencouv") ? "Gencouv" : pathname.startsWith("/dashboard/limitless") ? "Limitless Realty" : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding") ? "Client Onboarding" : "Fluxknight Platform";
 
   return <>
-    <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMobileMenu} />
-    <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-hidden={!mobileOpen ? undefined : undefined}>
+    <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMenu} />
+    <aside className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation">
       <div className={styles.mobileHeader}>
         <span className={styles.mobileMenuTitle}>Navigation</span>
-        <div><ThemeToggle /><button type="button" onClick={closeMobileMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
+        <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
       </div>
-      <Link href="/dashboard" onClick={closeMobileMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
+      <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
       <div className={extras.workspaceSwitcher}>
         <span className={extras.workspaceIcon}><Building2 size={16} /></span>
         <span><small>Current scope</small><strong>{workspaceName}</strong></span>
@@ -125,7 +119,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
             <ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} />
           </button>
           <div className={`${styles.items} ${publicSiteOpen ? styles.itemsOpen : ""}`}><div className={styles.section}><div className={styles.sectionItemsOpen}>
-            {publicSiteLinks.map((item) => <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMobileMenu}><ExternalLink size={16} /><span>{item.label}</span></a>)}
+            {publicSiteLinks.map((item) => <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMenu}><ExternalLink size={16} /><span>{item.label}</span></a>)}
           </div></div></div>
         </section>
         {platformGroups.map((group) => {
@@ -141,7 +135,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
                 return <div key={nestedSectionId} className={styles.section}>
                   {section.label ? <button type="button" className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`} onClick={() => toggleSection(nestedSectionId)} aria-expanded={isSectionOpen}><span>{section.label}</span><ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} /></button> : null}
                   <div className={`${section.label ? styles.sectionItems : ""} ${!section.label || isSectionOpen ? styles.sectionItemsOpen : ""}`}>
-                    {section.items.map((item) => { const active = itemIsActive(pathname, item); return <Link key={item.href} href={item.href} onClick={closeMobileMenu} aria-current={active ? "page" : undefined}><item.icon size={17} /><span>{item.label}</span>{item.meta ? <small>{item.meta}</small> : null}</Link>; })}
+                    {section.items.map((item) => { const active = itemIsActive(pathname, item); return <Link key={item.href} href={item.href} onClick={closeMenu} aria-current={active ? "page" : undefined}><item.icon size={17} /><span>{item.label}</span>{item.meta ? <small>{item.meta}</small> : null}</Link>; })}
                   </div>
                 </div>;
               })}
