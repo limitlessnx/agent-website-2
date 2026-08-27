@@ -62,16 +62,20 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard/clients": Users,
 };
 
+function sectionWithIcons(section: AdminNavSection): NavSection {
+  return {
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      icon: ICON_BY_HREF[item.href] || Building2,
+    })),
+  };
+}
+
 function withIcons(group: AdminNavGroup): NavGroup {
   return {
     ...group,
-    sections: group.sections.map((section) => ({
-      ...section,
-      items: section.items.map((item) => ({
-        ...item,
-        icon: ICON_BY_HREF[item.href] || Building2,
-      })),
-    })),
+    sections: group.sections.map(sectionWithIcons),
   };
 }
 
@@ -82,22 +86,19 @@ function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
 
 export default function AdminSidebar({ email, tenants }: { email: string; tenants: TenantNavItem[] }) {
   const pathname = usePathname();
-  const platformGroups = useMemo<NavGroup[]>(() => [
-    ...ADMIN_NAV_GROUPS.map(withIcons),
-    {
-      ...withIcons(CLIENT_ONBOARDING_NAV),
-      sections: [
-        withIcons(CLIENT_ONBOARDING_NAV).sections[0],
-        buildClientWorkspaceNav(tenants),
-      ].map((section) => ({
-        ...section,
-        items: section.items.map((item) => ({
-          ...item,
-          icon: ICON_BY_HREF[item.href] || Building2,
-        })),
-      })),
-    },
-  ], [tenants]);
+  const platformGroups = useMemo<NavGroup[]>(() => {
+    const onboarding = withIcons(CLIENT_ONBOARDING_NAV);
+    return [
+      ...ADMIN_NAV_GROUPS.map(withIcons),
+      {
+        ...onboarding,
+        sections: [
+          onboarding.sections[0],
+          sectionWithIcons(buildClientWorkspaceNav(tenants)),
+        ],
+      },
+    ];
+  }, [tenants]);
 
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [openSections, setOpenSections] = useState<string[]>([]);
