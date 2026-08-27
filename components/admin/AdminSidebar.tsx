@@ -26,8 +26,8 @@ import styles from "@/components/admin/AdminSidebar.module.css";
 import extras from "@/components/admin/AdminSidebarExtras.module.css";
 
 type NavItem = AdminNavItem & { icon: ComponentType<{ size?: number }> };
-type NavSection = AdminNavSection & { items: NavItem[] };
-type NavGroup = AdminNavGroup & { sections: NavSection[] };
+type NavSection = Omit<AdminNavSection, "items"> & { items: NavItem[] };
+type NavGroup = Omit<AdminNavGroup, "sections"> & { sections: NavSection[] };
 export type TenantNavItem = { id: string; organizationId: string; name: string; status: string };
 
 const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
