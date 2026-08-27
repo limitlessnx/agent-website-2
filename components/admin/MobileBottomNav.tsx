@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Activity, Bot, Building2, Home, Menu } from "@/components/admin/ServerIcons";
+import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import styles from "./MobileBottomNav.module.css";
 
 const items = [
@@ -14,6 +15,8 @@ const items = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { openMenu } = useMobileNavigation();
+
   return (
     <nav className={styles.nav} aria-label="Mobile navigation">
       {items.map((item) => {
@@ -22,7 +25,7 @@ export default function MobileBottomNav() {
           <item.icon size={18} /><span>{item.label}</span>
         </Link>;
       })}
-      <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("fluxknight:mobile-menu"))} aria-label="Open more navigation">
+      <button type="button" onClick={openMenu} aria-label="Open more navigation">
         <Menu size={18} /><span>More</span>
       </button>
     </nav>
