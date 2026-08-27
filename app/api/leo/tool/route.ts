@@ -42,22 +42,22 @@ export async function POST(request: NextRequest) {
     const args = object(body.arguments);
 
     if (tool.key === "leo.public.lead.capture") {
-      const result = await capturePublicLeoLead(args);
-      let session = null;
       const sessionId = String(body.sessionId || body.session_id || "").trim();
-      if (identity.scope === "public" && sessionId && result.ok) {
-        session = await getOrCreateLeoSession({ identity, sessionId });
-        session = await updateLeoPublicLeadState({
-          identity,
-          session,
-          leadProfile: {
-            name: String(args.name || ""), email: String(args.email || "").toLowerCase(), phone: String(args.phone || ""), organization: String(args.organization || args.business_name || ""),
-            business_type: String(args.business_type || ""), main_goal: String(args.main_goal || ""), current_tools: String(args.current_tools || ""), lead_volume: String(args.lead_volume || ""), timeline: String(args.timeline || ""), budget: String(args.budget || ""), preferred_contact_time: String(args.preferred_contact_time || ""),
-          }, captured: true, leadId: result.leadId,
-        });
+      const session = identity.scope === "public" && sessionId ? await getOrCreateLeoSession({ identity, sessionId }) : null;
+      if (session?.leadCaptured) {
+        await auditLeoEvent({ identity, session, eventType: "tool_execution_skipped", toolKey: tool.key, details: { channel: identity.channel, status: "already_captured", lead_id: session.leadId } });
+        return NextResponse.json({ ok: true, status: "already_captured", toolKey: tool.key, approval, channel: identity.channel, scope: identity.scope, leadCaptured: true, leadId: session.leadId || null }, { status: 200 });
       }
-      await auditLeoEvent({ identity, session: session || undefined, eventType: result.ok ? "tool_execution_completed" : "tool_execution_failed", toolKey: tool.key, details: { channel: identity.channel, status: result.status, lead_id: result.ok ? result.leadId : undefined } });
-      return NextResponse.json({ ...result, toolKey: tool.key, approval, channel: identity.channel, scope: identity.scope, leadCaptured: Boolean(session?.leadCaptured) || result.ok, leadId: session?.leadId || (result.ok ? result.leadId : null) }, { status: result.ok ? 200 : 400 });
+      const result = await capturePublicLeoLead(args);
+      let updatedSession = session;
+      if (identity.scope === "public" && sessionId && result.ok && session) {
+        updatedSession = await updateLeoPublicLeadState({ identity, session, leadProfile: {
+          name: String(args.name || ""), email: String(args.email || "").toLowerCase(), phone: String(args.phone || ""), organization: String(args.organization || args.business_name || ""),
+          business_type: String(args.business_type || ""), main_goal: String(args.main_goal || ""), current_tools: String(args.current_tools || ""), lead_volume: String(args.lead_volume || ""), timeline: String(args.timeline || ""), budget: String(args.budget || ""), preferred_contact_time: String(args.preferred_contact_time || ""),
+        }, captured: true, leadId: result.leadId });
+      }
+      await auditLeoEvent({ identity, session: updatedSession || undefined, eventType: result.ok ? "tool_execution_completed" : "tool_execution_failed", toolKey: tool.key, details: { channel: identity.channel, status: result.status, lead_id: result.ok ? result.leadId : undefined } });
+      return NextResponse.json({ ...result, toolKey: tool.key, approval, channel: identity.channel, scope: identity.scope, leadCaptured: Boolean(updatedSession?.leadCaptured) || result.ok, leadId: updatedSession?.leadId || (result.ok ? result.leadId : null) }, { status: result.ok ? 200 : 400 });
     }
 
     if (tool.key === "leo.tenant.inspect" && identity.scope === "super_admin" && !String(args.organization_id || "").trim()) {
