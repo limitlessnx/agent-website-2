@@ -24,6 +24,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   return (
     <div className={`${enterprise.platform} ${mobileChrome.shell} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
       <MobileNavigationProvider>
+        <MobileAdminHeader />
         <div className="admin-shell fluxknight-platform-shell">
           <AdminSidebar
             email={session.email}
@@ -43,7 +44,6 @@ export default async function AdminShell({ children }: { children: React.ReactNo
                 <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
               </div>
             </header>
-            <MobileAdminHeader />
             <WorkspaceRail />
             {children}
             <EnterpriseTableEnhancer />
