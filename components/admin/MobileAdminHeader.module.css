@@ -1,8 +1,9 @@
 .header{display:none}
 @media(max-width:900px){
-  .header{position:sticky;top:0;z-index:85;display:flex;align-items:center;gap:12px;width:calc(100% + 24px);min-height:58px;margin:0 -12px 14px;padding:10px 14px;border-bottom:1px solid #202630;background:rgba(8,10,14,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
-  .menu{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #262d37;border-radius:9px;color:#b7bec9;background:#10141a}
-  .menu:active{background:#171c24}
+  .header{position:sticky;top:0;z-index:1101;display:flex;align-items:center;gap:12px;width:calc(100% + 24px);min-height:58px;margin:0 -12px 14px;padding:10px 14px;border-bottom:1px solid #202630;background:rgba(8,10,14,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);pointer-events:auto}
+  .menu{position:relative;z-index:1102;width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #262d37;border-radius:9px;color:#f4f1ff;background:#10141a;cursor:pointer;pointer-events:auto;touch-action:manipulation}
+  .menu svg{display:block!important;width:20px!important;height:20px!important;color:#f4f1ff!important;stroke:currentColor!important;opacity:1!important;visibility:visible!important}
+  .menu:active{background:#171c24;transform:scale(.97)}
   .logo{width:108px;height:22px;flex:0 0 auto}
   .scope{display:grid;gap:3px;min-width:0;margin-left:auto;text-align:right;line-height:1}
   .scope span{color:#69717d;font-size:8px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
