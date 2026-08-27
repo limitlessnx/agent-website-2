@@ -5,8 +5,15 @@ import { LoaderCircle, Mic, MicOff, PhoneCall, PhoneOff, X } from "@/components/
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
-type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string };
-type LeoRealtimeVoiceProps = { sessionId?: string; mode?: "panel" | "orb"; onCallEnded?: () => void };
+type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string; transcript?: string };
+type LeoRealtimeVoiceProps = {
+  sessionId?: string;
+  pageContext?: Record<string, unknown>;
+  mode?: "panel" | "orb";
+  onCallEnded?: () => void;
+  onSessionId?: (sessionId: string) => void;
+  onTranscript?: (message: { role: "user" | "assistant"; content: string }) => void;
+};
 
 function friendlyVoiceError(value: string) {
   const text = String(value || "");
@@ -17,25 +24,63 @@ function friendlyVoiceError(value: string) {
   return text.length > 180 ? "Leo voice could not start. Please try again in a moment." : text || "Leo voice could not start.";
 }
 
-export default function LeoRealtimeVoice({ sessionId, mode = "panel", onCallEnded }: LeoRealtimeVoiceProps) {
+export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel", onCallEnded, onSessionId, onTranscript }: LeoRealtimeVoiceProps) {
   const [state, setState] = useState<VoiceState>("idle"); const [error, setError] = useState(""); const [muted, setMuted] = useState(false);
-  const peerRef = useRef<RTCPeerConnection | null>(null); const channelRef = useRef<RTCDataChannel | null>(null); const streamRef = useRef<MediaStream | null>(null); const audioRef = useRef<HTMLAudioElement | null>(null); const onCallEndedRef = useRef(onCallEnded);
+  const peerRef = useRef<RTCPeerConnection | null>(null); const channelRef = useRef<RTCDataChannel | null>(null); const streamRef = useRef<MediaStream | null>(null); const audioRef = useRef<HTMLAudioElement | null>(null);
+  const activeSessionIdRef = useRef(sessionId || ""); const onCallEndedRef = useRef(onCallEnded); const onSessionIdRef = useRef(onSessionId); const onTranscriptRef = useRef(onTranscript);
   useEffect(() => { onCallEndedRef.current = onCallEnded; }, [onCallEnded]);
+  useEffect(() => { onSessionIdRef.current = onSessionId; }, [onSessionId]);
+  useEffect(() => { onTranscriptRef.current = onTranscript; }, [onTranscript]);
+  useEffect(() => { if (sessionId) activeSessionIdRef.current = sessionId; }, [sessionId]);
+
   function sendEvent(event: Record<string, unknown>) { const channel = channelRef.current; if (channel?.readyState === "open") channel.send(JSON.stringify(event)); }
+
+  async function persistTranscript(role: "user" | "assistant", content: string) {
+    const clean = content.trim(); const activeSessionId = activeSessionIdRef.current;
+    if (!clean || !activeSessionId) return;
+    onTranscriptRef.current?.({ role, content: clean });
+    try { await fetch("/api/leo/realtime/transcript", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: activeSessionId, role, content: clean }) }); } catch {}
+  }
+
   async function handleToolCall(event: RealtimeToolEvent) {
     if (!event.name || !event.call_id) return;
     if (event.name === "leo_end_call") { sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ ok: true }) } }); sendEvent({ type: "response.create" }); stop(true, true); return; }
     if (event.name !== "leo_execute_tool") return;
     let args: Record<string, unknown> = {}; try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
     let output: Record<string, unknown>;
-    try { const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: sessionId || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) }); const result = await response.json().catch(() => ({})); output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." }; } catch (cause) { output = { ok: false, error: cause instanceof Error ? cause.message : "Leo tool execution failed." }; }
+    try { const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) }); const result = await response.json().catch(() => ({})); output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." }; } catch (cause) { output = { ok: false, error: cause instanceof Error ? cause.message : "Leo tool execution failed." }; }
     sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify(output) } }); sendEvent({ type: "response.create" });
   }
+
   async function start() {
     if (state === "connecting" || state === "live") return; setState("connecting"); setError(""); setMuted(false);
-    try { if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser."); const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); streamRef.current = stream; const peer = new RTCPeerConnection(); peerRef.current = peer; for (const track of stream.getTracks()) peer.addTrack(track, stream); const audio = document.createElement("audio"); audio.autoplay = true; audioRef.current = audio; peer.ontrack = (event) => { audio.srcObject = event.streams[0]; void audio.play().catch(() => null); }; const dataChannel = peer.createDataChannel("oai-events"); channelRef.current = dataChannel; dataChannel.onmessage = (message) => { try { const event = JSON.parse(String(message.data)) as RealtimeToolEvent; if (event.type === "response.function_call_arguments.done") void handleToolCall(event); } catch {} }; dataChannel.onopen = () => setState("live"); dataChannel.onerror = () => { setError("Leo voice connection encountered an error."); setState("error"); }; const offer = await peer.createOffer(); await peer.setLocalDescription(offer); const response = await fetch("/api/leo/realtime/call", { method: "POST", headers: { "content-type": "application/sdp" }, body: offer.sdp || "" }); const answerSdp = await response.text(); if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice.")); await peer.setRemoteDescription({ type: "answer", sdp: answerSdp }); }
-    catch (cause) { stop(false, false); setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice.")); setState("error"); }
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser.");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); streamRef.current = stream;
+      const peer = new RTCPeerConnection(); peerRef.current = peer; for (const track of stream.getTracks()) peer.addTrack(track, stream);
+      const audio = document.createElement("audio"); audio.autoplay = true; audioRef.current = audio; peer.ontrack = (event) => { audio.srcObject = event.streams[0]; void audio.play().catch(() => null); };
+      const dataChannel = peer.createDataChannel("oai-events"); channelRef.current = dataChannel;
+      dataChannel.onmessage = (message) => {
+        try {
+          const event = JSON.parse(String(message.data)) as RealtimeToolEvent;
+          if (event.type === "response.function_call_arguments.done") void handleToolCall(event);
+          else if (event.type === "conversation.item.input_audio_transcription.completed" && event.transcript) void persistTranscript("user", event.transcript);
+          else if (event.type === "response.output_audio_transcript.done" && event.transcript) void persistTranscript("assistant", event.transcript);
+        } catch {}
+      };
+      dataChannel.onopen = () => setState("live"); dataChannel.onerror = () => { setError("Leo voice connection encountered an error."); setState("error"); };
+      const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
+      const headers: Record<string, string> = { "content-type": "application/sdp" };
+      if (activeSessionIdRef.current) headers["x-leo-session-id"] = activeSessionIdRef.current;
+      if (pageContext) headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify(pageContext));
+      const response = await fetch("/api/leo/realtime/call", { method: "POST", headers, body: offer.sdp || "" });
+      const answerSdp = await response.text(); if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice."));
+      const resolvedSessionId = response.headers.get("x-leo-session-id") || activeSessionIdRef.current;
+      if (resolvedSessionId) { activeSessionIdRef.current = resolvedSessionId; onSessionIdRef.current?.(resolvedSessionId); }
+      await peer.setRemoteDescription({ type: "answer", sdp: answerSdp });
+    } catch (cause) { stop(false, false); setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice.")); setState("error"); }
   }
+
   function stop(resetState = true, notifyParent = true) { channelRef.current?.close(); channelRef.current = null; peerRef.current?.close(); peerRef.current = null; streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null; if (audioRef.current) { audioRef.current.srcObject = null; audioRef.current.remove(); audioRef.current = null; } setMuted(false); if (resetState) { setError(""); setState("idle"); } if (notifyParent) onCallEndedRef.current?.(); }
   function toggleMute() { const next = !muted; streamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; }); setMuted(next); }
   useEffect(() => () => stop(false, false), []);
