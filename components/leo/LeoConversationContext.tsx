@@ -29,7 +29,7 @@ function safeStoredMessages(value: string | null): LeoMessage[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((item) => item && typeof item === "object" && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
-      .map((item) => ({ role: item.role as "user" | "assistant", content: item.content.slice(0, 8000), source: item.source === "voice" ? "voice" as const : "chat" as const }))
+      .map((item): LeoMessage => ({ role: item.role as "user" | "assistant", content: item.content.slice(0, 8000), source: item.source === "voice" ? "voice" : "chat" }))
       .slice(-40);
   } catch { return []; }
 }
@@ -64,7 +64,8 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     setMessages((current) => {
       const previous = current[current.length - 1];
       if (previous?.role === message.role && previous.content === content) return current;
-      return [...current, { role: message.role, content, source: "voice" }].slice(-40);
+      const next: LeoMessage = { role: message.role, content, source: "voice" };
+      return [...current, next].slice(-40);
     });
   }, []);
 
@@ -73,7 +74,8 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     if (!clean || busy) return;
     setBusy(true);
     setError("");
-    setMessages((current) => [...current, { role: "user", content: clean, source: "chat" }].slice(-40));
+    const userMessage: LeoMessage = { role: "user", content: clean, source: "chat" };
+    setMessages((current) => [...current, userMessage].slice(-40));
     try {
       const response = await fetch("/api/leo", {
         method: "POST",
@@ -83,7 +85,8 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Leo could not respond.");
       if (result.sessionId) setSessionId(result.sessionId);
-      setMessages((current) => [...current, { role: "assistant", content: result.reply || "Leo returned no response.", source: "chat" }].slice(-40));
+      const assistantMessage: LeoMessage = { role: "assistant", content: String(result.reply || "Leo returned no response."), source: "chat" };
+      setMessages((current) => [...current, assistantMessage].slice(-40));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Leo could not respond.");
     } finally {
