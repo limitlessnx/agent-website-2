@@ -15,18 +15,29 @@ const items = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { openMenu } = useMobileNavigation();
+  const { open, openMenu } = useMobileNavigation();
 
   return (
-    <nav className={styles.nav} aria-label="Mobile navigation">
+    <nav className={styles.nav} aria-label="Mobile primary navigation">
       {items.map((item) => {
         const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return <Link key={item.label} href={item.href} className={active ? styles.active : ""} aria-current={active ? "page" : undefined}>
-          <item.icon size={18} /><span>{item.label}</span>
-        </Link>;
+        return (
+          <Link key={item.label} href={item.href} className={active ? styles.active : ""} aria-current={active ? "page" : undefined}>
+            <item.icon size={18} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
       })}
-      <button type="button" onClick={openMenu} aria-label="Open more navigation">
-        <Menu size={18} /><span>More</span>
+      <button
+        type="button"
+        onClick={openMenu}
+        className={open ? styles.active : ""}
+        aria-label="Open full navigation menu"
+        aria-expanded={open}
+        aria-controls="admin-mobile-navigation"
+      >
+        <Menu size={18} aria-hidden="true" />
+        <span>Menu</span>
       </button>
     </nav>
   );
