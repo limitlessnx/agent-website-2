@@ -2,22 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, BrainCircuit, Building2, Home, MessageCircle, Settings, Users, Zap } from "lucide-react";
+import { Activity, BarChart2, BrainCircuit, Home, MessageCircle, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "@/components/admin/WorkspaceRail.module.css";
 
 type Item = { href: string; label: string; Icon: typeof Activity };
 
+/**
+ * Desktop navigation ownership:
+ * AdminSidebar owns the complete primary navigation inventory.
+ * WorkspaceRail is a contextual quick-access strip only.
+ */
 const limitless: Item[] = [
-  { href: "/dashboard/limitless", label: "Overview", Icon: Home },
-  { href: "/dashboard/organizations", label: "Organizations", Icon: Building2 },
   { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
-  { href: "/dashboard/limitless/agentic", label: "Maia", Icon: BrainCircuit },
-  { href: "/dashboard/limitless/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/limitless/agentic", label: "Agentic", Icon: BrainCircuit },
   { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
-  { href: "/dashboard/analytics", label: "Analytics", Icon: BarChart2 },
-  { href: "/dashboard/settings", label: "Settings", Icon: Settings },
+  { href: "/dashboard/limitless/payments", label: "Payments", Icon: Activity },
 ];
 
 const gencouv: Item[] = [
@@ -30,17 +31,9 @@ const gencouv: Item[] = [
   { href: "/dashboard/gencouv#operations", label: "Operations", Icon: Zap },
 ];
 
-const platform: Item[] = [
-  { href: "/dashboard", label: "Command", Icon: Home },
-  { href: "/dashboard/agents", label: "Agents", Icon: BrainCircuit },
-  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
-  { href: "/dashboard/knowledge", label: "Knowledge", Icon: Building2 },
-  { href: "/dashboard/memory", label: "Memory", Icon: BrainCircuit },
-  { href: "/dashboard/settings", label: "Settings", Icon: Settings },
-];
-
 function active(pathname: string, href: string) {
   const route = href.split("#")[0];
+  if (route === "/dashboard/gencouv") return pathname === route;
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
@@ -56,20 +49,27 @@ export default function WorkspaceRail() {
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  // WorkspaceRail is a desktop-only navigation surface. Mobile navigation is
-  // owned by the sidebar drawer + MobileBottomNav, so this component does not
-  // render a second navigation system on phones.
   if (!desktop) return null;
 
   const isLimitless = pathname.startsWith("/dashboard/limitless");
   const isGencouv = pathname.startsWith("/dashboard/gencouv");
-  const name = isLimitless ? "Limitless Realty" : isGencouv ? "Gencouv" : "Fluxknight";
-  const items = isLimitless ? limitless : isGencouv ? gencouv : platform;
+  if (!isLimitless && !isGencouv) return null;
 
-  return <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} dashboard navigation`}>
-    <div className={styles.identity}><span className={styles.dot}/><strong>{name}</strong></div>
-    <div className={styles.items}>
-      {items.map(({ href, label, Icon }) => <Link key={href} href={href} className={active(pathname, href) ? styles.active : ""}><Icon size={16}/><span>{label}</span></Link>)}
-    </div>
-  </nav>;
+  const name = isLimitless ? "Limitless Realty" : "Gencouv";
+  const items = isLimitless ? limitless : gencouv;
+
+  return (
+    <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} quick navigation`}>
+      <div className={styles.identity} aria-hidden="true"><span className={styles.dot} /><strong>{name}</strong></div>
+      <div className={styles.items}>
+        {items.map(({ href, label, Icon }) => {
+          const isActive = active(pathname, href);
+          return <Link key={href} href={href} className={isActive ? styles.active : ""} aria-current={isActive ? "page" : undefined}>
+            <Icon size={16} />
+            <span>{label}</span>
+          </Link>;
+        })}
+      </div>
+    </nav>
+  );
 }
