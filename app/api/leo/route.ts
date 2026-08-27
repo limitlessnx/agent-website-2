@@ -29,6 +29,15 @@ function conciseLeoReply(reply: string) {
   return `${(compact || text.slice(0, 700)).replace(/[\s,;:]+$/, "")}…`;
 }
 
+type RuntimeToolCall = {
+  toolKey: string;
+  reason: string;
+  approval: "none" | "admin" | "confirm";
+  arguments: Record<string, unknown>;
+  status: "proposed" | "executed" | "failed";
+  result?: unknown;
+};
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const channel = validChannel(body.channel);
@@ -54,16 +63,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Leo could not complete this response.", reason: result.reason, sessionId: session.id, persistence: session.persisted ? "database" : "ephemeral", ai: { connected: false, model: result.model, latencyMs: result.latencyMs } }, { status });
   }
   const reply = conciseLeoReply(result.reply);
-  let toolCalls = result.toolCalls.map((call) => ({ ...call, arguments: scopeToolArguments(identity, call.arguments), status: "proposed" as const }));
+  let toolCalls: RuntimeToolCall[] = result.toolCalls.map((call) => ({ ...call, arguments: scopeToolArguments(identity, call.arguments), status: "proposed" }));
   if (identity.scope === "public" && !session.leadCaptured) {
     const capture = toolCalls.find((call) => call.toolKey === "leo.public.lead.capture");
     if (capture) {
       const captureResult = await capturePublicLeoLead(capture.arguments);
       if (captureResult.ok) {
         session = await updateLeoPublicLeadState({ identity, session, leadProfile: { name: String(capture.arguments.name), email: String(capture.arguments.email), phone: String(capture.arguments.phone), organization: String(capture.arguments.organization || capture.arguments.business_name), business_type: String(capture.arguments.business_type || ""), main_goal: String(capture.arguments.main_goal || ""), current_tools: String(capture.arguments.current_tools || ""), lead_volume: String(capture.arguments.lead_volume || ""), timeline: String(capture.arguments.timeline || ""), budget: String(capture.arguments.budget || ""), preferred_contact_time: String(capture.arguments.preferred_contact_time || "") }, captured: true, leadId: captureResult.leadId });
-        toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "executed" as const, result: captureResult } : call);
+        toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "executed", result: captureResult } : call);
         await auditLeoEvent({ identity, session, eventType: "public_lead_captured", toolKey: capture.toolKey, details: { lead_id: captureResult.leadId, channel } });
-      } else toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "failed" as const, result: captureResult } : call);
+      } else toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "failed", result: captureResult } : call);
     }
   }
   await storeLeoMessage({ identity, session, role: "assistant", content: reply, metadata: { intent: result.intent, confidence: result.confidence, needs_human_review: result.needsHumanReview, model: result.model, lead_captured: session.leadCaptured } });
