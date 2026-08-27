@@ -64,22 +64,11 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
 };
 
 function sectionWithIcons(section: AdminNavSection): NavSection {
-  return {
-    ...section,
-    items: section.items.map((item) => ({
-      ...item,
-      icon: ICON_BY_HREF[item.href] || Building2,
-    })),
-  };
+  return { ...section, items: section.items.map((item) => ({ ...item, icon: ICON_BY_HREF[item.href] || Building2 })) };
 }
-
 function withIcons(group: AdminNavGroup): NavGroup {
-  return {
-    ...group,
-    sections: group.sections.map(sectionWithIcons),
-  };
+  return { ...group, sections: group.sections.map(sectionWithIcons) };
 }
-
 function groupItems(group: NavGroup) { return group.sections.flatMap((section) => section.items); }
 function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
   return section.label ? `${groupId}:${section.label.toLowerCase().replaceAll(" ", "-")}` : `${groupId}:${sectionIndex}`;
@@ -89,16 +78,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const pathname = usePathname();
   const platformGroups = useMemo<NavGroup[]>(() => {
     const onboarding = withIcons(CLIENT_ONBOARDING_NAV);
-    return [
-      ...ADMIN_NAV_GROUPS.map(withIcons),
-      {
-        ...onboarding,
-        sections: [
-          onboarding.sections[0],
-          sectionWithIcons(buildClientWorkspaceNav(tenants)),
-        ],
-      },
-    ];
+    return [...ADMIN_NAV_GROUPS.map(withIcons), { ...onboarding, sections: [onboarding.sections[0], sectionWithIcons(buildClientWorkspaceNav(tenants))] }];
   }, [tenants]);
 
   const activeGroupId = getActiveAdminNavGroup(pathname);
@@ -106,9 +86,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const [openSections, setOpenSections] = useState<string[]>(() => {
     const group = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV].find((candidate) => candidate.id === activeGroupId);
     if (!group) return [];
-    return group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact))
-      ? [sectionId(group.id, section, index)]
-      : []);
+    return group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact)) ? [sectionId(group.id, section, index)] : []);
   });
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
   const { open: mobileOpen, closeMenu } = useMobileNavigation();
@@ -118,9 +96,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     setOpenGroups((current) => current.includes(activeGroupId) ? current : [...current, activeGroupId]);
     const group = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV].find((candidate) => candidate.id === activeGroupId);
     if (!group) return;
-    const activeSectionIds = group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact))
-      ? [sectionId(group.id, section, index)]
-      : []);
+    const activeSectionIds = group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact)) ? [sectionId(group.id, section, index)] : []);
     if (activeSectionIds.length) setOpenSections((current) => Array.from(new Set([...current, ...activeSectionIds])));
   }, [activeGroupId, pathname]);
 
@@ -131,21 +107,17 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
 
   return <>
     <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMenu} />
-    <aside id="admin-mobile-navigation" className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation" aria-hidden={mobileOpen ? undefined : false}>
+    <aside id="admin-mobile-navigation" className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation">
       <div className={styles.mobileHeader}>
         <span className={styles.mobileMenuTitle}>Navigation</span>
         <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
       </div>
       <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
-      <div className={extras.workspaceSwitcher}>
-        <span className={extras.workspaceIcon}><Building2 size={16} /></span>
-        <span><small>Current scope</small><strong>{workspaceName}</strong></span>
-      </div>
+      <div className={extras.workspaceSwitcher}><span className={extras.workspaceIcon}><Building2 size={16} /></span><span><small>Current scope</small><strong>{workspaceName}</strong></span></div>
       <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent, client onboarding and public website navigation">
         <section className={styles.group}>
           <button type="button" className={styles.trigger} onClick={() => setPublicSiteOpen((current) => !current)} aria-expanded={publicSiteOpen}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Globe2 size={15} /> Public Website</span>
-            <ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Globe2 size={15} /> Public Website</span><ChevronDown size={15} className={`${styles.chevron} ${publicSiteOpen ? styles.chevronOpen : ""}`} />
           </button>
           <div className={`${styles.items} ${publicSiteOpen ? styles.itemsOpen : ""}`}><div className={styles.section}><div className={styles.sectionItemsOpen}>
             {PUBLIC_SITE_NAV.map((item) => <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={closeMenu}><ExternalLink size={16} /><span>{item.label}</span></a>)}
@@ -173,10 +145,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
           </section>;
         })}
       </nav>
-      <div className={`admin-sidebar-footer ${styles.footer}`}>
-        <div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div>
-        <LogoutButton />
-      </div>
+      <div className={`admin-sidebar-footer ${styles.footer}`}><div className={extras.userCard}><span><Database size={15} /></span><div><strong>Platform Admin</strong><small>{email}</small></div></div><LogoutButton /></div>
     </aside>
   </>;
 }
