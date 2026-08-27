@@ -2,8 +2,8 @@
 
 @media (max-width:900px){
   .mobilePolish{min-height:100dvh;background:#08050c;color:#f6f1ff;overflow-x:hidden}
-  .mobilePolish :global(.admin-shell){display:block!important;min-height:100dvh!important;width:100%!important;background:#08050c!important;overflow-x:hidden!important}
-  .mobilePolish :global(.admin-main){display:block!important;width:100%!important;min-width:0!important;min-height:100dvh!important;padding:0 12px calc(86px + env(safe-area-inset-bottom,0px))!important;background:#08050c!important;overflow-x:hidden!important;filter:none!important}
+  .mobilePolish :global(.admin-shell){display:block!important;position:relative!important;min-height:100dvh!important;width:100%!important;background:#08050c!important;overflow-x:hidden!important}
+  .mobilePolish :global(.admin-main){display:block!important;width:100%!important;min-width:0!important;min-height:100dvh!important;padding:68px 12px calc(86px + env(safe-area-inset-bottom,0px))!important;background:#08050c!important;overflow-x:hidden!important;filter:none!important}
   .mobilePolish :global(.admin-topbar){display:none!important}
   .mobilePolish :global(.admin-page){width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:0!important;filter:none!important}
   .mobilePolish :global(.admin-page-header){margin:0 0 10px!important;padding:14px!important;border-radius:12px!important}
