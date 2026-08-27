@@ -15,11 +15,7 @@ function visibilityFor(identity: LeoIdentity, requested?: unknown): LeoConversat
 function leadState(row?: LeoSessionRow) {
   const metadata = row?.metadata && typeof row.metadata === "object" ? row.metadata : {};
   const profile = metadata.public_leo_lead_profile;
-  return {
-    leadProfile: profile && typeof profile === "object" && !Array.isArray(profile) ? profile as PublicLeoLeadProfile : undefined,
-    leadCaptured: metadata.public_leo_lead_captured === true,
-    leadId: typeof metadata.public_leo_lead_id === "string" ? metadata.public_leo_lead_id : null,
-  };
+  return { leadProfile: profile && typeof profile === "object" && !Array.isArray(profile) ? profile as PublicLeoLeadProfile : undefined, leadCaptured: metadata.public_leo_lead_captured === true, leadId: typeof metadata.public_leo_lead_id === "string" ? metadata.public_leo_lead_id : null };
 }
 function queryForExisting(identity: LeoIdentity, sessionId: string) {
   const parts = [`id=eq.${encodeURIComponent(sessionId)}`, `scope=eq.${encodeURIComponent(identity.scope)}`, "status=eq.active", "limit=1"];
@@ -46,9 +42,11 @@ export async function getOrCreateLeoSession(input: { identity: LeoIdentity; sess
 
 export async function updateLeoPublicLeadState(input: { identity: LeoIdentity; session: LeoSessionState; leadProfile: PublicLeoLeadProfile; captured?: boolean; leadId?: string | null }) {
   if (!input.session.persisted || input.identity.scope !== "public") return input.session;
-  const metadata = { public_leo_lead_profile: input.leadProfile, public_leo_lead_captured: input.captured === true || input.session.leadCaptured, public_leo_lead_id: input.leadId || input.session.leadId || null };
-  await supabaseServerRequest(`leo_sessions?id=eq.${encodeURIComponent(input.session.id)}`, { method: "PATCH", body: JSON.stringify({ metadata, updated_at: new Date().toISOString(), last_active_at: new Date().toISOString() }) }).catch(() => null);
-  return { ...input.session, leadProfile: input.leadProfile, leadCaptured: metadata.public_leo_lead_captured, leadId: metadata.public_leo_lead_id };
+  const existingRows = await supabaseServerRequest<LeoSessionRow[]>(`leo_sessions?select=metadata&id=eq.${encodeURIComponent(input.session.id)}&scope=eq.public&status=eq.active&limit=1`).catch(() => []);
+  const existingMetadata = existingRows[0]?.metadata && typeof existingRows[0].metadata === "object" ? existingRows[0].metadata : {};
+  const metadata = { ...existingMetadata, public_leo_lead_profile: input.leadProfile, public_leo_lead_captured: input.captured === true || input.session.leadCaptured, public_leo_lead_id: input.leadId || input.session.leadId || null };
+  await supabaseServerRequest(`leo_sessions?id=eq.${encodeURIComponent(input.session.id)}&scope=eq.public&status=eq.active`, { method: "PATCH", body: JSON.stringify({ metadata, updated_at: new Date().toISOString(), last_active_at: new Date().toISOString() }) }).catch(() => null);
+  return { ...input.session, leadProfile: input.leadProfile, leadCaptured: metadata.public_leo_lead_captured === true, leadId: typeof metadata.public_leo_lead_id === "string" ? metadata.public_leo_lead_id : null };
 }
 
 export async function loadLeoHistory(identity: LeoIdentity, session: LeoSessionState) {
