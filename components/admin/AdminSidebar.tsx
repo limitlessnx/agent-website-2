@@ -64,29 +64,56 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
 };
 
 function sectionWithIcons(section: AdminNavSection): NavSection {
-  return { ...section, items: section.items.map((item) => ({ ...item, icon: ICON_BY_HREF[item.href] || Building2 })) };
+  return {
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      icon: ICON_BY_HREF[item.href] || Building2,
+    })),
+  };
 }
+
 function withIcons(group: AdminNavGroup): NavGroup {
-  return { ...group, sections: group.sections.map(sectionWithIcons) };
+  return {
+    ...group,
+    sections: group.sections.map((section) => sectionWithIcons(section)),
+  };
 }
-function groupItems(group: NavGroup) { return group.sections.flatMap((section) => section.items); }
-function sectionId(groupId: string, section: NavSection, sectionIndex: number) {
-  return section.label ? `${groupId}:${section.label.toLowerCase().replaceAll(" ", "-")}` : `${groupId}:${sectionIndex}`;
+
+function groupItems(group: NavGroup) {
+  return group.sections.flatMap((section) => section.items);
+}
+
+function sectionId(groupId: string, section: AdminNavSection, sectionIndex: number) {
+  return section.label
+    ? `${groupId}:${section.label.toLowerCase().replaceAll(" ", "-")}`
+    : `${groupId}:${sectionIndex}`;
 }
 
 export default function AdminSidebar({ email, tenants }: { email: string; tenants: TenantNavItem[] }) {
   const pathname = usePathname();
   const platformGroups = useMemo<NavGroup[]>(() => {
     const onboarding = withIcons(CLIENT_ONBOARDING_NAV);
-    return [...ADMIN_NAV_GROUPS.map(withIcons), { ...onboarding, sections: [onboarding.sections[0], sectionWithIcons(buildClientWorkspaceNav(tenants))] }];
+    const clientWorkspaceSection = sectionWithIcons(buildClientWorkspaceNav(tenants));
+    return [
+      ...ADMIN_NAV_GROUPS.map((group) => withIcons(group)),
+      {
+        ...onboarding,
+        sections: [onboarding.sections[0], clientWorkspaceSection],
+      },
+    ];
   }, [tenants]);
 
   const activeGroupId = getActiveAdminNavGroup(pathname);
-  const [openGroups, setOpenGroups] = useState<string[]>(() => activeGroupId ? [activeGroupId] : []);
+  const [openGroups, setOpenGroups] = useState<string[]>(() => (activeGroupId ? [activeGroupId] : []));
   const [openSections, setOpenSections] = useState<string[]>(() => {
     const group = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV].find((candidate) => candidate.id === activeGroupId);
     if (!group) return [];
-    return group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact)) ? [sectionId(group.id, section, index)] : []);
+    return group.sections.flatMap((section, index) =>
+      section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact))
+        ? [sectionId(group.id, section, index)]
+        : [],
+    );
   });
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
   const { open: mobileOpen, closeMenu } = useMobileNavigation();
@@ -96,14 +123,31 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     setOpenGroups((current) => current.includes(activeGroupId) ? current : [...current, activeGroupId]);
     const group = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV].find((candidate) => candidate.id === activeGroupId);
     if (!group) return;
-    const activeSectionIds = group.sections.flatMap((section, index) => section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact)) ? [sectionId(group.id, section, index)] : []);
-    if (activeSectionIds.length) setOpenSections((current) => Array.from(new Set([...current, ...activeSectionIds])));
+    const activeSectionIds = group.sections.flatMap((section, index) =>
+      section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact))
+        ? [sectionId(group.id, section, index)]
+        : [],
+    );
+    if (activeSectionIds.length) {
+      setOpenSections((current) => Array.from(new Set([...current, ...activeSectionIds])));
+    }
   }, [activeGroupId, pathname]);
 
-  function toggleGroup(id: string) { setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]); }
-  function toggleSection(id: string) { setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]); }
+  function toggleGroup(id: string) {
+    setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
+  }
 
-  const workspaceName = pathname.startsWith("/dashboard/gencouv") ? "Gencouv" : pathname.startsWith("/dashboard/limitless") ? "Limitless Realty" : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding") ? "Client Onboarding" : "Fluxknight Platform";
+  function toggleSection(id: string) {
+    setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]);
+  }
+
+  const workspaceName = pathname.startsWith("/dashboard/gencouv")
+    ? "Gencouv"
+    : pathname.startsWith("/dashboard/limitless")
+      ? "Limitless Realty"
+      : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding")
+        ? "Client Onboarding"
+        : "Fluxknight Platform";
 
   return <>
     <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMenu} />
