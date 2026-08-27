@@ -7,6 +7,12 @@ import styles from "./LeoRealtimeVoice.module.css";
 type VoiceState = "idle" | "connecting" | "live" | "error";
 type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string };
 
+type LeoRealtimeVoiceProps = {
+  sessionId?: string;
+  mode?: "panel" | "orb";
+  onCallEnded?: () => void;
+};
+
 function friendlyVoiceError(value: string) {
   const text = String(value || "");
   if (/missing_model|model parameter/i.test(text)) return "Leo voice could not start because the realtime model was rejected by OpenAI.";
@@ -16,7 +22,7 @@ function friendlyVoiceError(value: string) {
   return text.length > 180 ? "Leo voice could not start. Please try again in a moment." : text || "Leo voice could not start.";
 }
 
-export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessionId?: string; mode?: "panel" | "orb" }) {
+export default function LeoRealtimeVoice({ sessionId, mode = "panel", onCallEnded }: LeoRealtimeVoiceProps) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
@@ -24,6 +30,9 @@ export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessio
   const channelRef = useRef<RTCDataChannel | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const onCallEndedRef = useRef(onCallEnded);
+
+  useEffect(() => { onCallEndedRef.current = onCallEnded; }, [onCallEnded]);
 
   function sendEvent(event: Record<string, unknown>) {
     const channel = channelRef.current;
@@ -31,7 +40,14 @@ export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessio
   }
 
   async function handleToolCall(event: RealtimeToolEvent) {
-    if (event.name !== "leo_execute_tool" || !event.call_id) return;
+    if (!event.name || !event.call_id) return;
+    if (event.name === "leo_end_call") {
+      sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ ok: true }) } });
+      sendEvent({ type: "response.create" });
+      stop(true, true);
+      return;
+    }
+    if (event.name !== "leo_execute_tool") return;
     let args: Record<string, unknown> = {};
     try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
     let output: Record<string, unknown>;
@@ -65,15 +81,17 @@ export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessio
       if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice."));
       await peer.setRemoteDescription({ type: "answer", sdp: answerSdp });
     } catch (cause) {
-      stop(false); setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice.")); setState("error");
+      stop(false, false); setError(friendlyVoiceError(cause instanceof Error ? cause.message : "Unable to start Leo voice.")); setState("error");
     }
   }
 
-  function stop(resetState = true) {
+  function stop(resetState = true, notifyParent = true) {
     channelRef.current?.close(); channelRef.current = null; peerRef.current?.close(); peerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null;
     if (audioRef.current) { audioRef.current.srcObject = null; audioRef.current.remove(); audioRef.current = null; }
-    setMuted(false); if (resetState) { setError(""); setState("idle"); }
+    setMuted(false);
+    if (resetState) { setError(""); setState("idle"); }
+    if (notifyParent) onCallEndedRef.current?.();
   }
 
   function toggleMute() {
@@ -82,7 +100,7 @@ export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessio
     setMuted(next);
   }
 
-  useEffect(() => () => stop(false), []);
+  useEffect(() => () => stop(false, false), []);
 
   if (mode === "orb") {
     if (state === "error") return <div className={styles.orbError} role="alert"><span>{error}</span><button type="button" onClick={() => void start()}>Try again</button></div>;
@@ -102,7 +120,7 @@ export default function LeoRealtimeVoice({ sessionId, mode = "panel" }: { sessio
       </div>
       <div className={styles.identity}><h3>Leo</h3><p>{live ? "I'm listening. Speak naturally." : "Establishing secure voice connection…"}</p></div>
       <div className={styles.controls}>
-        <button type="button" className={`${styles.control} ${muted ? styles.activeControl : ""}`} onClick={toggleMute}>{muted ? <MicOff size={21} /> : <Mic size={21} />}<span>{muted ? "Unmute" : "Mute"}</span></button>
+        <button type="button" className={`${styles.control} ${muted ? styles.activeControl : ""}`} onClick={toggleMute} aria-pressed={muted}>{muted ? <MicOff size={21} /> : <Mic size={21} />}<span>{muted ? "Unmute" : "Mute"}</span></button>
         <button type="button" className={styles.endCall} onClick={() => stop()}><PhoneOff size={21} /><span>End call</span></button>
       </div>
       <p className={styles.hint}>Leo can use authorized Fluxknight tools during the call.</p>
