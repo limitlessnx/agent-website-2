@@ -8,20 +8,27 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type TaskStepInput = { title?: string; toolKey: string; arguments: Record<string, unknown> };
+type TaskActionResult = {
+  ok: boolean;
+  stopReason: string;
+  executedSteps: number;
+  task: { currentStep?: number } | null;
+  pendingStep?: { id?: string; toolKey?: string };
+  evidence?: { status?: string; source?: string; summary?: string };
+};
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-async function auditTaskResult(input: { identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>; session: Awaited<ReturnType<typeof getOrCreateLeoSession>>; taskId: string; action: "run" | "recover"; result: Awaited<ReturnType<typeof runLeoOperationalTask>> }) {
+async function auditTaskResult(input: { identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>; session: Awaited<ReturnType<typeof getOrCreateLeoSession>>; taskId: string; action: "run" | "recover"; result: TaskActionResult }) {
   const { identity, session, taskId, action, result } = input;
   await auditLeoEvent({ identity, session, eventType: action === "recover" ? "operational_task_recovery" : "operational_task_run", details: { task_id: taskId, stop_reason: result.stopReason, executed_steps: result.executedSteps, ok: result.ok } });
   if (result.stopReason === "approval_required") {
     await auditLeoEvent({ identity, session, eventType: "operational_task_approval_requested", toolKey: result.pendingStep?.toolKey, details: { task_id: taskId, step_id: result.pendingStep?.id, step_index: result.task?.currentStep } });
   }
   if (["evidence_pending", "evidence_partial", "evidence_failed"].includes(result.stopReason)) {
-    const evidence = "evidence" in result ? result.evidence : undefined;
-    await auditLeoEvent({ identity, session, eventType: "operational_task_evidence_checked", details: { task_id: taskId, stop_reason: result.stopReason, evidence_status: evidence?.status, evidence_source: evidence?.source, evidence_summary: evidence?.summary } });
+    await auditLeoEvent({ identity, session, eventType: "operational_task_evidence_checked", details: { task_id: taskId, stop_reason: result.stopReason, evidence_status: result.evidence?.status, evidence_source: result.evidence?.source, evidence_summary: result.evidence?.summary } });
   }
 }
 
@@ -93,7 +100,7 @@ export async function POST(request: NextRequest) {
       const result = action === "recover"
         ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps })
         : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
-      await auditTaskResult({ identity, session, taskId, action, result });
+      await auditTaskResult({ identity, session, taskId, action, result: result as TaskActionResult });
       return NextResponse.json(result, { status: result.ok ? 200 : result.stopReason === "task_not_found" ? 404 : 409 });
     }
 
