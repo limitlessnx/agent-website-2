@@ -7,6 +7,8 @@ import { runLeoOperationalTask } from "@/lib/leo-task-executor";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type TaskStepInput = { title?: string; toolKey: string; arguments: Record<string, unknown> };
+
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -23,8 +25,8 @@ export async function POST(request: NextRequest) {
     const session = await getOrCreateLeoSession({ identity, sessionId });
 
     if (action === "create") {
-      const rawSteps = Array.isArray(body.steps) ? body.steps : [];
-      const steps = rawSteps.map((value: unknown) => {
+      const rawSteps: unknown[] = Array.isArray(body.steps) ? body.steps : [];
+      const steps: TaskStepInput[] = rawSteps.map((value: unknown) => {
         const row = object(value);
         return {
           title: String(row.title || "").trim() || undefined,
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
           arguments: object(row.arguments),
         };
       });
-      if (steps.some((step) => !step.toolKey)) return NextResponse.json({ error: "Every task step requires a toolKey." }, { status: 400 });
+      if (steps.some((step: TaskStepInput) => !step.toolKey)) return NextResponse.json({ error: "Every task step requires a toolKey." }, { status: 400 });
       const task = await createLeoOperationalTask({
         identity,
         session,
