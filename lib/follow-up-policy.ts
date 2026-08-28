@@ -78,6 +78,7 @@ export async function resolveFollowUpPolicy(organizationId: string, organization
     const byKey = await supabase
       .from("organization_follow_up_policies")
       .select("*")
+      .eq("organization_id", organizationId)
       .ilike("organization_key", organizationKey)
       .eq("status", "active")
       .maybeSingle();
