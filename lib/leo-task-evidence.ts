@@ -44,7 +44,7 @@ function nestedResult(result: Record<string, unknown>) {
 
 export function classifyLeoTaskStepEvidence(step: LeoTaskStep, rawResult: Record<string, unknown>): LeoTaskStepEvidence {
   const result = nestedResult(rawResult);
-  const accepted = pickNumber(result, ["accepted", "attempted", "sent"]);
+  const accepted = pickNumber(result, ["accepted"]);
   const sent = pickNumber(result, ["sent", "sentOnly", "sent_only"]);
   const delivered = pickNumber(result, ["delivered"]);
   const read = pickNumber(result, ["read"]);
@@ -52,7 +52,7 @@ export function classifyLeoTaskStepEvidence(step: LeoTaskStep, rawResult: Record
   const unresolved = pickNumber(result, ["unresolved"]);
   const pending = pickNumber(result, ["pendingDelivery", "pending_delivery", "pending"]);
   const counts = { accepted, sent, delivered, read, failed, unresolved, pending };
-  const hasDeliveryEvidence = [delivered, read, failed, unresolved, pending].some((value) => value !== undefined);
+  const hasDeliveryEvidence = [accepted, sent, delivered, read, failed, unresolved, pending].some((value) => value !== undefined);
   const checkedAt = new Date().toISOString();
 
   if (step.readOnly) {
@@ -77,7 +77,8 @@ export function classifyLeoTaskStepEvidence(step: LeoTaskStep, rawResult: Record
     const failedCount = failed || 0;
     const unresolvedCount = (unresolved || 0) + (pending || 0);
     const confirmedCount = (delivered || 0) + (read || 0);
-    if (failedCount > 0 && (confirmedCount > 0 || (accepted || 0) > failedCount)) {
+    const acceptedOrSent = accepted ?? sent ?? 0;
+    if (failedCount > 0 && (confirmedCount > 0 || acceptedOrSent > failedCount)) {
       return {
         status: "partial",
         source: "provider_status",
@@ -86,7 +87,7 @@ export function classifyLeoTaskStepEvidence(step: LeoTaskStep, rawResult: Record
         counts,
       };
     }
-    if (failedCount > 0 && confirmedCount === 0 && unresolvedCount === 0) {
+    if (failedCount > 0 && confirmedCount === 0 && unresolvedCount === 0 && acceptedOrSent <= failedCount) {
       return {
         status: "failed",
         source: "provider_status",
@@ -95,11 +96,11 @@ export function classifyLeoTaskStepEvidence(step: LeoTaskStep, rawResult: Record
         counts,
       };
     }
-    if (unresolvedCount > 0 || ((accepted || sent || 0) > 0 && confirmedCount === 0)) {
+    if (unresolvedCount > 0 || (acceptedOrSent > 0 && confirmedCount === 0)) {
       return {
         status: "pending",
         source: "provider_status",
-        summary: `The action was accepted/executed, but ${unresolvedCount || accepted || sent || 0} outcome${(unresolvedCount || accepted || sent || 0) === 1 ? " is" : "s are"} not yet independently confirmed.`,
+        summary: `The action was accepted/executed, but ${unresolvedCount || acceptedOrSent} outcome${(unresolvedCount || acceptedOrSent) === 1 ? " is" : "s are"} not yet independently confirmed.`,
         checkedAt,
         counts,
       };
