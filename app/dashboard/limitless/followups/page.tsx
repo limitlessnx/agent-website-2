@@ -14,7 +14,9 @@ export default async function FollowupsPage() {
   const scheduled = summary.statusSummary.upcoming;
   const dueNow = summary.statusSummary.due;
   const overdue = summary.statusSummary.overdue;
-  const attention = summary.enrollments.filter((item) => item.status === "failed").length + summary.executions.filter((item) => item.status === "error").length;
+  const logFailures = summary.logs.filter((item) => ["failed", "error", "blocked"].includes(String(item.status).toLowerCase())).length;
+  const n8nFailures = summary.executions.filter((item) => item.status === "error").length;
+  const attention = logFailures + n8nFailures;
 
   return (
     <div className="admin-page">
@@ -35,7 +37,7 @@ export default async function FollowupsPage() {
         <article className="admin-metric-card"><p>Due now</p><strong>{dueNow}</strong><span>Ready for today&apos;s step</span></article>
         <article className="admin-metric-card"><p>Overdue</p><strong>{overdue}</strong><span>Missed by more than 24 hours</span></article>
         <article className="admin-metric-card"><p>Sequences</p><strong>{summary.sequences.length}</strong><span>Reusable follow-up plans</span></article>
-        <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed actions requiring review</span></article>
+        <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed or blocked actions requiring review</span></article>
       </div>
 
       <FollowupControlCenter
@@ -44,6 +46,7 @@ export default async function FollowupsPage() {
         sequences={summary.sequences}
         steps={summary.steps}
         enrollments={summary.enrollments}
+        logs={summary.logs}
         automationIssues={attention}
       />
     </div>
