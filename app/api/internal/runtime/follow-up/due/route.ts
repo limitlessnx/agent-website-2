@@ -91,27 +91,32 @@ export async function POST(request: NextRequest) {
       }
 
       let lastCustomerMessageAt = text(meta.last_customer_message_at);
+      let verifiedInboundCustomerMessage = false;
       if (conversationId) {
         const message = await supabase
           .from("conversation_messages")
           .select("created_at")
           .eq("organization_id", organizationId)
           .eq("conversation_id", conversationId)
-          .eq("sender_type", "customer")
+          .in("sender_type", ["customer", "user"])
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
         if (message.error) throw message.error;
-        if (message.data?.created_at) lastCustomerMessageAt = String(message.data.created_at);
+        if (message.data?.created_at) {
+          lastCustomerMessageAt = String(message.data.created_at);
+          verifiedInboundCustomerMessage = true;
+        }
       }
 
       const policy = await resolveFollowUpPolicy(organizationId, text(meta.organization_key) || null);
       const lead = (leadResult.data || {}) as Record<string, unknown>;
       const leadDetails = record(lead.details);
+      const explicitlyMeaningful = meta.meaningful_conversation === true;
       const followUpContext = {
         specific_interest: text(meta.specific_interest) || text(leadDetails.specific_interest) || text(leadDetails.property_interest),
         property_interest: text(meta.property_interest) || text(leadDetails.property_interest) || null,
-        meaningful_conversation: meta.meaningful_conversation !== false,
+        meaningful_conversation: explicitlyMeaningful || verifiedInboundCustomerMessage,
         campaign_only: Boolean(meta.campaign_only),
         last_customer_message_at: lastCustomerMessageAt || text(leadDetails.last_customer_message_at),
         sequence_step: Number(meta.sequence_step || 1),
