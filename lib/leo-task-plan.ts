@@ -5,12 +5,34 @@ import type { LeoSessionState } from "@/lib/leo-session-store";
 
 export type LeoTaskStepStatus = "pending" | "ready" | "waiting_confirmation" | "approved" | "executing" | "completed" | "failed" | "canceled";
 export type LeoTaskStatus = "planning" | "ready" | "waiting_confirmation" | "executing" | "blocked" | "completed" | "canceled";
+export type LeoTaskEvidenceStatus = "verified" | "executed" | "pending" | "partial" | "failed";
 export type LeoTaskApproval = {
   token: string;
   fingerprint: string;
   requestedAt: string;
   approvedAt?: string;
   approvedBy?: string;
+};
+export type LeoTaskStepEvidence = {
+  status: LeoTaskEvidenceStatus;
+  source: "tool_result" | "provider_status" | "read_observation";
+  summary: string;
+  checkedAt: string;
+  counts?: {
+    accepted?: number;
+    sent?: number;
+    delivered?: number;
+    read?: number;
+    failed?: number;
+    unresolved?: number;
+    pending?: number;
+  };
+};
+export type LeoTaskRecoveryState = {
+  retrySafe: boolean;
+  requiresFreshApproval: boolean;
+  reason: string;
+  lastRecoveryAt?: string;
 };
 export type LeoTaskStep = {
   id: string;
@@ -23,6 +45,9 @@ export type LeoTaskStep = {
   status: LeoTaskStepStatus;
   approvalState?: LeoTaskApproval;
   result?: Record<string, unknown>;
+  evidence?: LeoTaskStepEvidence;
+  recovery?: LeoTaskRecoveryState;
+  attempts?: number;
   error?: string;
   startedAt?: string;
   completedAt?: string;
@@ -71,7 +96,7 @@ export async function createLeoOperationalTask(input: { identity: LeoIdentity; s
   const steps: LeoTaskStep[] = input.steps.map((candidate, index) => {
     const tool = resolveLeoTool(candidate.toolKey);
     if (!tool || !tool.scopes.includes("super_admin")) throw new Error(`Tool ${candidate.toolKey} is not available to Super Leo.`);
-    return { id: randomUUID(), index, title: String(candidate.title || tool.title), toolKey: tool.key, arguments: candidate.arguments || {}, approval: tool.approval, readOnly: tool.readOnly, status: index === 0 ? "ready" : "pending" };
+    return { id: randomUUID(), index, title: String(candidate.title || tool.title), toolKey: tool.key, arguments: candidate.arguments || {}, approval: tool.approval, readOnly: tool.readOnly, status: index === 0 ? "ready" : "pending", attempts: 0 };
   });
   const now = new Date().toISOString();
   return persist(input.identity, input.session, { id: randomUUID(), goal, workspace: input.workspace, status: "ready", currentStep: 0, steps, createdAt: now, updatedAt: now });
@@ -121,8 +146,35 @@ export function taskStepApprovalIsValid(task: LeoOperationalTask) {
   return step.approvalState.fingerprint === stepFingerprint(task.id, step);
 }
 
-export async function updateLeoOperationalTask(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask; stepIndex: number; stepStatus: LeoTaskStepStatus; result?: Record<string, unknown>; error?: string }) {
-  const steps = input.task.steps.map((step, index) => index === input.stepIndex ? { ...step, status: input.stepStatus, result: input.result ?? step.result, error: input.error, startedAt: input.stepStatus === "executing" ? step.startedAt || new Date().toISOString() : step.startedAt, completedAt: input.stepStatus === "completed" || input.stepStatus === "failed" ? new Date().toISOString() : step.completedAt } : step);
+export async function resetLeoOperationalTaskStepForRecovery(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask; stepIndex: number; recovery: LeoTaskRecoveryState }) {
+  const step = input.task.steps[input.stepIndex];
+  if (!step || step.status !== "failed") throw new Error("Only the current failed task step can be recovered.");
+  if (input.stepIndex !== input.task.currentStep) throw new Error("Recovery is restricted to the current failed task step.");
+  const now = new Date().toISOString();
+  const steps = input.task.steps.map((item, index) => index === input.stepIndex ? {
+    ...item,
+    status: "ready" as LeoTaskStepStatus,
+    error: undefined,
+    completedAt: undefined,
+    approvalState: input.recovery.requiresFreshApproval ? undefined : item.approvalState,
+    recovery: { ...input.recovery, lastRecoveryAt: now },
+  } : item);
+  const task = { ...input.task, steps, status: "ready" as LeoTaskStatus, updatedAt: now };
+  return persist(input.identity, input.session, task);
+}
+
+export async function updateLeoOperationalTask(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask; stepIndex: number; stepStatus: LeoTaskStepStatus; result?: Record<string, unknown>; evidence?: LeoTaskStepEvidence; recovery?: LeoTaskRecoveryState; error?: string }) {
+  const steps = input.task.steps.map((step, index) => index === input.stepIndex ? {
+    ...step,
+    status: input.stepStatus,
+    result: input.result ?? step.result,
+    evidence: input.evidence ?? step.evidence,
+    recovery: input.recovery ?? step.recovery,
+    error: input.error,
+    attempts: input.stepStatus === "executing" ? (step.attempts || 0) + 1 : step.attempts || 0,
+    startedAt: input.stepStatus === "executing" ? step.startedAt || new Date().toISOString() : step.startedAt,
+    completedAt: input.stepStatus === "completed" || input.stepStatus === "failed" ? new Date().toISOString() : step.completedAt,
+  } : step);
   let currentStep = input.task.currentStep;
   let status: LeoTaskStatus = input.task.status;
   if (input.stepStatus === "completed") {
