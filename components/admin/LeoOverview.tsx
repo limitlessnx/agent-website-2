@@ -9,6 +9,7 @@ import {
 } from "@/components/admin/ServerIcons";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 import LeoActionCenter from "@/components/leo/LeoActionCenter";
+import LeoTaskProgress from "@/components/leo/LeoTaskProgress";
 import { useLeoConversation } from "@/components/leo/LeoConversationContext";
 import styles from "./LeoOverviewDesktop.module.css";
 
@@ -100,6 +101,7 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
         <div className={styles.operationFoot}><ShieldCheck size={12} /><span>{operationState === "executing" ? "Act → verify → report" : busy ? "Observe → investigate → recommend" : operationState === "completed" ? "Execution result recorded in the shared Leo session" : "Result available in the shared Leo conversation"}</span></div>
       </article>}
 
+      <LeoTaskProgress sessionId={sessionId || undefined} />
       <LeoActionCenter />
 
       <div className={styles.metrics}>
