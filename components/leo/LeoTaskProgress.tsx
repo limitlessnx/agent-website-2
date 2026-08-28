@@ -31,7 +31,7 @@ function statusLabel(value: string) {
 
 function stepIcon(step: TaskStep, active: boolean) {
   if (step.status === "completed") return <CheckCircle2 size={13} />;
-  if (step.status === "failed") return <AlertTriangle size={13} />;
+  if (step.status === "failed" || step.status === "waiting_evidence") return <AlertTriangle size={13} />;
   if (step.status === "waiting_confirmation" || step.status === "approved") return <ShieldCheck size={13} />;
   if (step.status === "executing") return <Loader2 size={13} className="animate-spin" />;
   return active ? <Play size={12} /> : <Clock3 size={12} />;
@@ -79,6 +79,7 @@ export default function LeoTaskProgress({ sessionId }: { sessionId?: string }) {
   const percent = total ? Math.round((completed / total) * 100) : 0;
   const current = task?.steps[task.currentStep];
   const retrySafe = task?.status === "blocked" && current?.status === "failed" && current.recovery?.retrySafe === true;
+  const waitingEvidence = task?.status === "blocked" && current?.status === "waiting_evidence";
   const canResume = Boolean(task && ["ready", "executing"].includes(task.status) && current?.status !== "executing");
 
   async function act(action: "resume" | "recover") {
@@ -125,9 +126,9 @@ export default function LeoTaskProgress({ sessionId }: { sessionId?: string }) {
           const active = index === task.currentStep && !["completed", "canceled"].includes(task.status);
           return <div key={step.id} className={`rounded-xl border px-3 py-2.5 ${active ? "border-violet-400/25 bg-violet-400/[0.06]" : "border-white/[0.06] bg-white/[0.015]"}`}>
             <div className="flex items-start gap-2.5">
-              <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md ${step.status === "completed" ? "bg-emerald-400/10 text-emerald-300" : step.status === "failed" ? "bg-rose-400/10 text-rose-300" : step.status === "waiting_confirmation" ? "bg-amber-300/10 text-amber-200" : active ? "bg-violet-400/10 text-violet-200" : "bg-white/[0.04] text-slate-500"}`}>{stepIcon(step, active)}</span>
+              <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md ${step.status === "completed" ? "bg-emerald-400/10 text-emerald-300" : step.status === "failed" || step.status === "waiting_evidence" ? "bg-rose-400/10 text-rose-300" : step.status === "waiting_confirmation" ? "bg-amber-300/10 text-amber-200" : active ? "bg-violet-400/10 text-violet-200" : "bg-white/[0.04] text-slate-500"}`}>{stepIcon(step, active)}</span>
               <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-[10px] font-semibold text-slate-200">{index + 1}. {step.title}</strong><span className="text-[8px] font-black uppercase tracking-[0.08em] text-slate-500">{statusLabel(step.status)}</span></div><p className="mt-0.5 truncate text-[8px] text-slate-600">{step.toolKey}</p>
-                {step.evidence?.summary ? <p className={`mt-1.5 text-[9px] leading-4 ${step.evidence.status === "failed" || step.evidence.status === "partial" ? "text-amber-200/80" : "text-emerald-300/80"}`}>{step.evidence.summary}</p> : null}
+                {step.evidence?.summary ? <p className={`mt-1.5 text-[9px] leading-4 ${step.evidence.status === "failed" || step.evidence.status === "partial" || step.evidence.status === "pending" ? "text-amber-200/80" : "text-emerald-300/80"}`}>{step.evidence.summary}</p> : null}
                 {step.error ? <p className="mt-1.5 text-[9px] leading-4 text-rose-300">{step.error}</p> : null}
               </div>
             </div>
@@ -136,6 +137,7 @@ export default function LeoTaskProgress({ sessionId }: { sessionId?: string }) {
       </div>
 
       {task.status === "waiting_confirmation" ? <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-[9px] text-amber-100/80"><ShieldCheck size={12} />Waiting for confirmation of the exact current step through Leo. No action is executed until approval is valid.</div> : null}
+      {waitingEvidence ? <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-[9px] leading-4 text-amber-100/80"><AlertTriangle size={12} className="mt-0.5 shrink-0" /><span>Downstream execution is paused until Leo has enough evidence for this step. Refreshing or reconnecting will not silently repeat the action.</span></div> : null}
       {retrySafe && current?.recovery?.reason ? <div className="mt-3 rounded-xl border border-rose-300/15 bg-rose-300/[0.04] px-3 py-2 text-[9px] leading-4 text-rose-100/80">Recovery available: {current.recovery.reason}</div> : null}
 
       {(canResume || retrySafe) ? <div className="mt-3 flex flex-wrap justify-end gap-2">
