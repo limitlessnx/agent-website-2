@@ -12,6 +12,37 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
+const WHATSAPP_CUSTOMER_SERVICE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function safeTimestamp(value: unknown) {
+  const raw = text(value);
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function buildTemplateVariables(
+  variableKeys: string[],
+  customer: Record<string, unknown>,
+  lead: Record<string, unknown>,
+) {
+  const details = record(lead.details);
+  const values: Record<string, string> = {
+    customer_name: text(customer.full_name) || "there",
+    last_topic: text(details.last_topic) || text(lead.summary) || "your property enquiry",
+    property_name: text(details.property_name) || text(details.property_interest) || text(details.specific_interest) || "the property you asked about",
+    property_location: text(details.property_location) || text(details.location) || "the property location",
+    customer_interest: text(details.customer_interest) || text(details.property_interest) || text(details.specific_interest) || "your property interest",
+    customer_goal: text(details.customer_goal) || text(details.goal) || "your property plans",
+    objection: text(details.objection) || text(details.last_objection) || "any questions you may have",
+  };
+
+  return {
+    values,
+    parameters: variableKeys.map((key) => values[key] || "Not specified"),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     assertRuntimeSecret(request.headers.get("x-runtime-secret"));
@@ -29,7 +60,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: execution, error: executionError } = await supabase
       .from("runtime_executions")
-      .select("id")
+      .select("id,input_payload")
       .eq("id", executionId)
       .eq("organization_id", organizationId)
       .eq("agent_id", agentId)
@@ -138,6 +169,192 @@ export async function POST(request: NextRequest) {
 
         if (!integration) {
           results.push({ type, status: "blocked", reason: `${channel}_integration_not_connected`, payload });
+          continue;
+        }
+
+        if (channel === "whatsapp") {
+          const conversationId = text(payload.conversation_id);
+          const taskId = text(payload.task_id);
+          const customerId = text(payload.customer_id);
+          const leadId = text(payload.lead_id);
+
+          const [lastInboundResult, taskResult, customerResult, leadResult] = await Promise.all([
+            conversationId
+              ? supabase
+                .from("conversation_messages")
+                .select("created_at")
+                .eq("organization_id", organizationId)
+                .eq("conversation_id", conversationId)
+                .in("sender_type", ["customer", "user"])
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+            taskId
+              ? supabase
+                .from("crm_tasks")
+                .select("id,metadata")
+                .eq("organization_id", organizationId)
+                .eq("id", taskId)
+                .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+            customerId
+              ? supabase
+                .from("crm_customers")
+                .select("id,full_name")
+                .eq("organization_id", organizationId)
+                .eq("id", customerId)
+                .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+            leadId
+              ? supabase
+                .from("crm_leads")
+                .select("id,summary,details")
+                .eq("organization_id", organizationId)
+                .eq("id", leadId)
+                .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+          ]);
+
+          if (lastInboundResult.error) throw lastInboundResult.error;
+          if (taskResult.error) throw taskResult.error;
+          if (customerResult.error) throw customerResult.error;
+          if (leadResult.error) throw leadResult.error;
+
+          const lastInboundAt = safeTimestamp(lastInboundResult.data?.created_at);
+          const windowOpen = Boolean(
+            lastInboundAt &&
+            Date.now() - lastInboundAt.getTime() >= 0 &&
+            Date.now() - lastInboundAt.getTime() < WHATSAPP_CUSTOMER_SERVICE_WINDOW_MS,
+          );
+
+          const executionInput = record(execution.input_payload);
+          const taskMetadata = record(taskResult.data?.metadata);
+          const workflowKey = text(taskMetadata.workflow_key) || text(executionInput.workflow_key);
+          const isCrmFollowUp = workflowKey === "crm_follow_up_v3" || taskMetadata.source_execution_id === executionId;
+
+          if (!windowOpen) {
+            if (!isCrmFollowUp) {
+              results.push({
+                type,
+                status: "blocked",
+                reason: "whatsapp_customer_service_window_closed",
+                customer_service_window: {
+                  open: false,
+                  hours: 24,
+                  last_inbound_at: lastInboundAt?.toISOString() || null,
+                },
+              });
+              continue;
+            }
+
+            const { data: templateConfig, error: templateError } = await supabase
+              .from("whatsapp_template_configs")
+              .select("id,purpose,template_name,language_code,variable_keys,status,metadata")
+              .eq("organization_id", organizationId)
+              .eq("purpose", "follow_up_outside_24h")
+              .eq("status", "active")
+              .limit(1)
+              .maybeSingle();
+            if (templateError) throw templateError;
+
+            if (!templateConfig) {
+              results.push({ type, status: "blocked", reason: "whatsapp_follow_up_template_not_configured" });
+              continue;
+            }
+
+            const variableKeys = Array.isArray(templateConfig.variable_keys)
+              ? templateConfig.variable_keys.map((key) => text(key)).filter(Boolean)
+              : [];
+            const templateVariables = buildTemplateVariables(
+              variableKeys,
+              record(customerResult.data),
+              record(leadResult.data),
+            );
+            const templateMetadata = record(templateConfig.metadata);
+
+            const queued = await supabase.from("command_queue").insert({
+              organization_id: organizationId,
+              agent_id: agentId,
+              execution_id: executionId,
+              command_type: "whatsapp.send_template",
+              payload: {
+                integration_id: integration.id,
+                credential_reference: integration.credential_reference,
+                recipient: payload.recipient,
+                conversation_id: conversationId || null,
+                customer_id: customerId || null,
+                lead_id: leadId || null,
+                task_id: taskId || null,
+                message_mode: "template",
+                template: {
+                  config_id: templateConfig.id,
+                  purpose: templateConfig.purpose,
+                  name: templateConfig.template_name,
+                  language: templateConfig.language_code,
+                  variable_keys: variableKeys,
+                  variables: templateVariables.values,
+                  parameters: templateVariables.parameters,
+                  provider_status: text(templateMetadata.provider_status) || null,
+                },
+                generated_follow_up_content: payload.content,
+                customer_service_window: {
+                  open: false,
+                  hours: 24,
+                  last_inbound_at: lastInboundAt?.toISOString() || null,
+                },
+              },
+              status: "queued",
+              priority: 50,
+              max_attempts: 3,
+              idempotency_key: actionKey,
+            }).select("id,status").single();
+            if (queued.error) throw queued.error;
+            results.push({
+              type,
+              status: "queued",
+              provider: integration.provider,
+              delivery_mode: "template",
+              template_name: templateConfig.template_name,
+              command: queued.data,
+            });
+            continue;
+          }
+
+          const queued = await supabase.from("command_queue").insert({
+            organization_id: organizationId,
+            agent_id: agentId,
+            execution_id: executionId,
+            command_type: "whatsapp.send_message",
+            payload: {
+              integration_id: integration.id,
+              credential_reference: integration.credential_reference,
+              recipient: payload.recipient,
+              content: payload.content,
+              conversation_id: conversationId || null,
+              customer_id: customerId || null,
+              lead_id: leadId || null,
+              task_id: taskId || null,
+              message_mode: "free_form",
+              customer_service_window: {
+                open: true,
+                hours: 24,
+                last_inbound_at: lastInboundAt?.toISOString() || null,
+              },
+            },
+            status: "queued",
+            priority: 50,
+            max_attempts: 3,
+            idempotency_key: actionKey,
+          }).select("id,status").single();
+          if (queued.error) throw queued.error;
+          results.push({
+            type,
+            status: "queued",
+            provider: integration.provider,
+            delivery_mode: "free_form",
+            command: queued.data,
+          });
           continue;
         }
 
