@@ -1,11 +1,16 @@
 import type { LeoIdentity } from "@/lib/leo-core";
 import type { LeoSessionState } from "@/lib/leo-session-store";
-import { loadLeoOperationalTask, requestLeoTaskStepApproval, taskStepApprovalIsValid, updateLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
+import { classifyLeoTaskStepEvidence, recoveryPolicyForLeoTaskStep } from "@/lib/leo-task-evidence";
+import { loadLeoOperationalTask, requestLeoTaskStepApproval, resetLeoOperationalTaskStepForRecovery, taskStepApprovalIsValid, updateLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
 
 export type LeoTaskRunStopReason =
   | "completed"
   | "approval_required"
   | "manual_boundary"
+  | "recovery_required"
+  | "evidence_pending"
+  | "evidence_partial"
+  | "evidence_failed"
   | "step_failed"
   | "step_limit"
   | "task_not_found"
@@ -53,6 +58,13 @@ async function executeStepThroughLeoToolRoute(input: {
   return result;
 }
 
+function stopReasonForEvidence(status: string): LeoTaskRunStopReason | null {
+  if (status === "pending") return "evidence_pending";
+  if (status === "partial") return "evidence_partial";
+  if (status === "failed") return "evidence_failed";
+  return null;
+}
+
 export async function runLeoOperationalTask(input: {
   request: Request;
   identity: LeoIdentity;
@@ -71,6 +83,18 @@ export async function runLeoOperationalTask(input: {
   while (executedSteps < maxSteps) {
     const step = task.steps[task.currentStep];
     if (!step) return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
+
+    if (step.status === "failed") {
+      return {
+        ok: false,
+        stopReason: "recovery_required" as LeoTaskRunStopReason,
+        executedSteps,
+        task,
+        pendingStep: step,
+        recovery: step.recovery || recoveryPolicyForLeoTaskStep(step),
+        message: "The current task step previously failed. Leo will not silently retry it; use the controlled recovery action so duplicate side effects are not created.",
+      };
+    }
 
     let confirmed = false;
     if (step.approval === "admin") {
@@ -106,8 +130,10 @@ export async function runLeoOperationalTask(input: {
       stepStatus: "executing",
     });
 
+    const executingStep = task.steps[task.currentStep];
     try {
       const result = await executeStepThroughLeoToolRoute({ request: input.request, session: input.session, task, confirmed });
+      const evidence = classifyLeoTaskStepEvidence(executingStep, result);
       task = await updateLeoOperationalTask({
         identity: input.identity,
         session: input.session,
@@ -115,22 +141,82 @@ export async function runLeoOperationalTask(input: {
         stepIndex: task.currentStep,
         stepStatus: "completed",
         result,
+        evidence,
       });
       executedSteps += 1;
+
+      const evidenceStop = stopReasonForEvidence(evidence.status);
+      if (evidenceStop) {
+        return {
+          ok: evidence.status !== "failed",
+          stopReason: evidenceStop,
+          executedSteps,
+          task,
+          evidence,
+          message: evidence.summary,
+        };
+      }
       if (task.status === "completed") return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
     } catch (cause) {
       const error = cause instanceof Error ? cause.message : "Leo could not execute this task step.";
+      const recovery = recoveryPolicyForLeoTaskStep(executingStep);
       task = await updateLeoOperationalTask({
         identity: input.identity,
         session: input.session,
         task,
         stepIndex: task.currentStep,
         stepStatus: "failed",
+        recovery,
         error,
       });
-      return { ok: false, stopReason: "step_failed" as LeoTaskRunStopReason, executedSteps, task, error };
+      return { ok: false, stopReason: "step_failed" as LeoTaskRunStopReason, executedSteps, task, error, recovery };
     }
   }
 
   return { ok: true, stopReason: "step_limit" as LeoTaskRunStopReason, executedSteps, task };
+}
+
+export async function recoverLeoOperationalTask(input: {
+  request: Request;
+  identity: LeoIdentity;
+  session: LeoSessionState;
+  taskId: string;
+  maxSteps?: number;
+}) {
+  if (input.identity.scope !== "super_admin") throw new Error("Operational task recovery is currently restricted to Super Leo.");
+  const task = await loadLeoOperationalTask(input.identity, input.session, input.taskId);
+  if (!task) return { ok: false, stopReason: "task_not_found" as LeoTaskRunStopReason, executedSteps: 0, task: null };
+  const step = task.steps[task.currentStep];
+  if (!step || step.status !== "failed") {
+    return { ok: false, stopReason: "manual_boundary" as LeoTaskRunStopReason, executedSteps: 0, task, message: "There is no current failed task step to recover." };
+  }
+
+  const recovery = recoveryPolicyForLeoTaskStep(step);
+  if (!recovery.retrySafe) {
+    return {
+      ok: false,
+      stopReason: "manual_boundary" as LeoTaskRunStopReason,
+      executedSteps: 0,
+      task,
+      pendingStep: step,
+      recovery,
+      message: recovery.reason,
+    };
+  }
+
+  await resetLeoOperationalTaskStepForRecovery({
+    identity: input.identity,
+    session: input.session,
+    task,
+    stepIndex: task.currentStep,
+    recovery,
+  });
+
+  return runLeoOperationalTask({
+    request: input.request,
+    identity: input.identity,
+    session: input.session,
+    taskId: input.taskId,
+    maxSteps: input.maxSteps,
+  });
 }
