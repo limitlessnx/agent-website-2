@@ -1,0 +1,68 @@
+import { NextRequest, NextResponse } from "next/server";
+import { resolveLeoIdentity } from "@/lib/leo-core";
+import { getOrCreateLeoSession, auditLeoEvent } from "@/lib/leo-session-store";
+import { createLeoOperationalTask, loadLeoOperationalTask } from "@/lib/leo-task-plan";
+import { runLeoOperationalTask } from "@/lib/leo-task-executor";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function object(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const identity = await resolveLeoIdentity({ channel: "api", allowPublic: false });
+    if (!identity || identity.scope !== "super_admin") return NextResponse.json({ error: "Super Leo task operations require super-admin access." }, { status: 403 });
+
+    const body = await request.json().catch(() => ({}));
+    const action = String(body.action || "run").trim().toLowerCase();
+    const sessionId = String(body.sessionId || body.session_id || "").trim();
+    if (!sessionId) return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
+    const session = await getOrCreateLeoSession({ identity, sessionId });
+
+    if (action === "create") {
+      const rawSteps = Array.isArray(body.steps) ? body.steps : [];
+      const steps = rawSteps.map((value: unknown) => {
+        const row = object(value);
+        return {
+          title: String(row.title || "").trim() || undefined,
+          toolKey: String(row.toolKey || row.tool_key || "").trim(),
+          arguments: object(row.arguments),
+        };
+      });
+      if (steps.some((step) => !step.toolKey)) return NextResponse.json({ error: "Every task step requires a toolKey." }, { status: 400 });
+      const task = await createLeoOperationalTask({
+        identity,
+        session,
+        goal: String(body.goal || ""),
+        workspace: String(body.workspace || "").trim() || undefined,
+        steps,
+      });
+      await auditLeoEvent({ identity, session, eventType: "operational_task_created", details: { task_id: task.id, goal: task.goal, step_count: task.steps.length } });
+      return NextResponse.json({ ok: true, task }, { status: 201 });
+    }
+
+    if (action === "get") {
+      const taskId = String(body.taskId || body.task_id || "").trim();
+      if (!taskId) return NextResponse.json({ error: "taskId is required." }, { status: 400 });
+      const task = await loadLeoOperationalTask(identity, session, taskId);
+      if (!task) return NextResponse.json({ error: "Task not found for this Leo session." }, { status: 404 });
+      return NextResponse.json({ ok: true, task });
+    }
+
+    if (action === "run") {
+      const taskId = String(body.taskId || body.task_id || "").trim();
+      if (!taskId) return NextResponse.json({ error: "taskId is required." }, { status: 400 });
+      const result = await runLeoOperationalTask({ request, identity, session, taskId, maxSteps: Number(body.maxSteps || body.max_steps) || undefined });
+      await auditLeoEvent({ identity, session, eventType: "operational_task_run", details: { task_id: taskId, stop_reason: result.stopReason, executed_steps: result.executedSteps, ok: result.ok } });
+      return NextResponse.json(result, { status: result.ok ? 200 : result.stopReason === "task_not_found" ? 404 : 409 });
+    }
+
+    return NextResponse.json({ error: "Unsupported task action. Use create, get or run." }, { status: 400 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Super Leo task operation failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
