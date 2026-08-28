@@ -6,10 +6,14 @@ import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
 import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState } from "@/lib/leo-session-store";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findLimitlessLeads, prepareLimitlessCampaign, prepareLimitlessFollowup, sendLimitlessFollowup, sendThroughLimitlessCampaignRoute } from "@/lib/leo-limitless-messaging";
+import { findLimitlessLeads, prepareLimitlessCampaign, prepareLimitlessFollowup, saveLimitlessLead, sendLimitlessFollowup, sendThroughLimitlessCampaignRoute } from "@/lib/leo-limitless-messaging";
 
 function channel(value: unknown): LeoChannel { return value === "voice" ? "voice" : value === "api" ? "api" : "chat"; }
 function object(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
+function limitlessWorkspace(args: Record<string, unknown>) {
+  const workspace = String(args.workspace || args.organization || args.organization_name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  return ["limitless_realty", "limitless", "limitlessrealty"].includes(workspace);
+}
 
 async function globalSystemSnapshot() {
   const supabase = createAdminClient();
@@ -65,6 +69,12 @@ export async function POST(request: NextRequest) {
       const snapshot = await globalSystemSnapshot();
       await auditLeoEvent({ identity, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, scope: identity.scope, global: true } });
       return NextResponse.json({ ok: true, result: snapshot, approval, channel: identity.channel, scope: identity.scope }, { status: 200 });
+    }
+
+    if (identity.scope === "super_admin" && tool.key === "leo.crm.leads.update" && limitlessWorkspace(args)) {
+      const result = await saveLimitlessLead(args);
+      await auditLeoEvent({ identity, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: "saved" } });
+      return NextResponse.json({ ok: true, requestId: String(body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: "saved", result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 });
     }
 
     if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) {
