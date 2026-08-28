@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { dispatchMaiaPropertyMedia } from "@/lib/ai/maia-property-media-dispatch";
 
 export type MaiaPropertyToolContext = {
   organizationId: string;
@@ -14,10 +15,12 @@ export type MaiaPropertyToolDefinition = {
 };
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+const object = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const uuidLike = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 function mediaKind(mimeType: unknown, metadata: unknown) {
   const mime = text(mimeType).toLowerCase();
-  const meta = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata as Record<string, unknown> : {};
+  const meta = object(metadata);
   const explicit = text(meta.media_type || meta.asset_type).toLowerCase();
   if (explicit) return explicit;
   if (mime.startsWith("image/")) return "image";
@@ -27,9 +30,87 @@ function mediaKind(mimeType: unknown, metadata: unknown) {
 }
 
 function approvedMedia(metadata: unknown) {
-  const meta = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata as Record<string, unknown> : {};
+  const meta = object(metadata);
   if (meta.approved === false || meta.status === "rejected" || meta.disabled === true) return false;
   return true;
+}
+
+async function resolveTrustedWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
+  const admin = createAdminClient();
+  const { data: session, error: sessionError } = await admin
+    .from("agent_runtime_sessions")
+    .select("id,organization_id,agent_id,channel,external_conversation_id")
+    .eq("id", ctx.sessionId)
+    .eq("organization_id", ctx.organizationId)
+    .eq("agent_id", ctx.agentId)
+    .maybeSingle();
+  if (sessionError) throw sessionError;
+  if (!session) throw new Error("The Maia runtime session could not be verified.");
+  if (text(session.channel).toLowerCase() !== "whatsapp") throw new Error("Property media can only be sent from a verified WhatsApp runtime session.");
+
+  const externalId = text(session.external_conversation_id);
+  if (!externalId) throw new Error("The WhatsApp session is not linked to a verified CRM conversation.");
+
+  let conversation: any = null;
+  if (uuidLike(externalId)) {
+    const byId = await admin
+      .from("agent_conversations")
+      .select("id,organization_id,agent_id,customer_id,channel,external_thread_key")
+      .eq("id", externalId)
+      .eq("organization_id", ctx.organizationId)
+      .eq("agent_id", ctx.agentId)
+      .maybeSingle();
+    if (byId.error) throw byId.error;
+    conversation = byId.data;
+  }
+  if (!conversation) {
+    const byThread = await admin
+      .from("agent_conversations")
+      .select("id,organization_id,agent_id,customer_id,channel,external_thread_key")
+      .eq("external_thread_key", externalId)
+      .eq("organization_id", ctx.organizationId)
+      .eq("agent_id", ctx.agentId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (byThread.error) throw byThread.error;
+    conversation = byThread.data;
+  }
+  if (!conversation || !conversation.customer_id) throw new Error("No verified customer is attached to this WhatsApp conversation.");
+  if (text(conversation.channel).toLowerCase() !== "whatsapp") throw new Error("The linked CRM conversation is not a WhatsApp conversation.");
+
+  const { data: customer, error: customerError } = await admin
+    .from("crm_customers")
+    .select("id,full_name,phone")
+    .eq("id", conversation.customer_id)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  if (customerError) throw customerError;
+  if (!customer || !text(customer.phone)) throw new Error("The verified WhatsApp customer has no phone number.");
+
+  const { data: lastInbound, error: inboundError } = await admin
+    .from("conversation_messages")
+    .select("created_at")
+    .eq("organization_id", ctx.organizationId)
+    .eq("conversation_id", conversation.id)
+    .eq("sender_type", "customer")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (inboundError) throw inboundError;
+  if (!lastInbound?.created_at) throw new Error("No verified customer inbound message exists for this conversation.");
+  const inboundAt = new Date(lastInbound.created_at).getTime();
+  if (!Number.isFinite(inboundAt) || Date.now() - inboundAt >= 24 * 60 * 60 * 1000) {
+    throw new Error("The WhatsApp customer-service window is closed. Direct property media was not sent.");
+  }
+
+  return {
+    conversationId: String(conversation.id),
+    customerId: String(customer.id),
+    customerName: text(customer.full_name) || "Customer",
+    phone: text(customer.phone),
+    lastInboundAt: String(lastInbound.created_at),
+  };
 }
 
 export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
@@ -135,6 +216,76 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
           catalog_links: catalogLinks,
           has_registered_media: assets.length > 0,
           warning: assets.length === 0 && catalogLinks.length === 0 ? "No approved media is registered for this property." : null,
+        };
+      },
+    },
+    {
+      name: "send_property_media",
+      description: "Send one registered, approved property image, video or document to the verified customer in the current WhatsApp conversation. Use only an asset ID returned by get_property_media. The recipient, property ownership, asset URL and 24-hour service window are verified server-side and cannot be supplied by the model.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          assetId: { type: "string" },
+        },
+        required: ["assetId"],
+      },
+      execute: async (input, ctx) => {
+        const assetId = text(input.assetId);
+        if (!assetId) throw new Error("assetId is required.");
+        const admin = createAdminClient();
+        const { data: asset, error: assetError } = await admin
+          .from("media_assets")
+          .select("id,organization_id,property_id,storage_bucket,storage_path,mime_type,file_name,caption,send_status,metadata")
+          .eq("id", assetId)
+          .eq("organization_id", ctx.organizationId)
+          .maybeSingle();
+        if (assetError) throw assetError;
+        if (!asset || !asset.property_id) throw new Error("The requested media asset is not registered to a property in this tenant.");
+        if (!approvedMedia(asset.metadata)) throw new Error("The requested media asset is not approved for customer delivery.");
+
+        const kind = mediaKind(asset.mime_type, asset.metadata);
+        if (!["image", "video", "document"].includes(kind)) throw new Error(`Unsupported WhatsApp property media type: ${kind}.`);
+
+        const { data: property, error: propertyError } = await admin
+          .from("properties")
+          .select("id,title,location_city,location_area,status")
+          .eq("id", asset.property_id)
+          .eq("organization_id", ctx.organizationId)
+          .maybeSingle();
+        if (propertyError) throw propertyError;
+        if (!property) throw new Error("The media asset does not belong to a property in this tenant.");
+
+        const metadata = object(asset.metadata);
+        let publicUrl = text(metadata.public_url);
+        if (!publicUrl && asset.storage_bucket && asset.storage_path) {
+          const resolved = admin.storage.from(asset.storage_bucket).getPublicUrl(asset.storage_path);
+          publicUrl = text(resolved.data?.publicUrl);
+        }
+        if (!publicUrl) throw new Error("The approved property media asset has no deliverable URL.");
+
+        const recipient = await resolveTrustedWhatsAppRecipient(ctx);
+        const commandId = `maia-property-media:${ctx.sessionId}:${asset.id}:${crypto.randomUUID()}`;
+        const result = await dispatchMaiaPropertyMedia({
+          commandId,
+          recipient: recipient.phone,
+          propertyId: String(property.id),
+          propertyTitle: text(property.title) || "Property",
+          assetId: String(asset.id),
+          mediaUrl: publicUrl,
+          mediaType: kind as "image" | "video" | "document",
+          mimeType: text(asset.mime_type),
+          fileName: text(asset.file_name),
+          caption: text(asset.caption) || text(property.title) || "Property media",
+        });
+
+        return {
+          ...result,
+          conversation_id: recipient.conversationId,
+          customer_id: recipient.customerId,
+          property_title: property.title,
+          last_customer_message_at: recipient.lastInboundAt,
+          recipient_verified: true,
         };
       },
     },
