@@ -3,7 +3,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { resolveLeoTool, type LeoIdentity } from "@/lib/leo-core";
 import type { LeoSessionState } from "@/lib/leo-session-store";
 
-export type LeoTaskStepStatus = "pending" | "ready" | "waiting_confirmation" | "approved" | "executing" | "completed" | "failed" | "canceled";
+export type LeoTaskStepStatus = "pending" | "ready" | "waiting_confirmation" | "approved" | "executing" | "waiting_evidence" | "completed" | "failed" | "canceled";
 export type LeoTaskStatus = "planning" | "ready" | "waiting_confirmation" | "executing" | "blocked" | "completed" | "canceled";
 export type LeoTaskEvidenceStatus = "verified" | "executed" | "pending" | "partial" | "failed";
 export type LeoTaskApproval = {
@@ -249,7 +249,7 @@ export async function updateLeoOperationalTask(input: { identity: LeoIdentity; s
   } else if (input.stepStatus === "waiting_confirmation") status = "waiting_confirmation";
   else if (input.stepStatus === "approved") status = "ready";
   else if (input.stepStatus === "executing") status = "executing";
-  else if (input.stepStatus === "failed") status = "blocked";
+  else if (input.stepStatus === "waiting_evidence" || input.stepStatus === "failed") status = "blocked";
   else if (input.stepStatus === "canceled") status = "canceled";
   const task = { ...input.task, steps, currentStep, status, updatedAt: new Date().toISOString() };
   return persist(input.identity, input.session, task);
