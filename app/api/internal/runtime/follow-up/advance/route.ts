@@ -37,41 +37,59 @@ export async function POST(request: NextRequest) {
     const shouldStop = Boolean(decision.stop_sequence) || ["close", "handoff"].includes(action);
 
     if (taskId && sourceTask.data) {
-      await supabase.from("crm_tasks").update({
+      const updatedSource = await supabase.from("crm_tasks").update({
         status: shouldStop || action === "skip" ? "cancelled" : "completed",
         metadata: { ...sourceMeta, completed_at: now, completed_action: action, completed_step: currentStep },
         updated_at: now,
       }).eq("id", taskId).eq("organization_id", organizationId);
+      if (updatedSource.error) throw updatedSource.error;
     }
 
     let nextTask: Record<string, unknown> | null = null;
     const nextStep = currentStep + 1;
     const nextConfig = sequence.find((entry: Record<string, unknown>) => Number(entry.step) === nextStep);
     if (!shouldStop && action === "send" && nextConfig) {
-      const anchor = text(sourceMeta.sequence_anchor_at) || text(sourceTask.data?.due_at) || now;
-      const dueAt = computeSequenceStepDueAt(policy, anchor, nextStep);
-      if (dueAt) {
-        const inserted = await supabase.from("crm_tasks").insert({
-          organization_id: organizationId,
-          customer_id: customerId,
-          lead_id: leadId || null,
-          assigned_agent_id: agentId,
-          task_type: "sales_follow_up",
-          title: `CRM follow-up step ${nextStep}`,
-          description: text(nextConfig.purpose) || "Tenant follow-up sequence",
-          status: "scheduled",
-          due_at: dueAt,
-          metadata: {
-            ...sourceMeta,
-            workflow_key: "crm_follow_up_v3",
-            sequence_step: nextStep,
-            sequence_anchor_at: anchor,
-            previous_task_id: taskId || null,
-            previous_execution_id: text(body.execution_id) || null,
-          },
-        }).select("id,status,due_at,metadata").single();
-        if (inserted.error) throw inserted.error;
-        nextTask = inserted.data as Record<string, unknown>;
+      if (taskId) {
+        const existing = await supabase
+          .from("crm_tasks")
+          .select("id,status,due_at,metadata")
+          .eq("organization_id", organizationId)
+          .eq("customer_id", customerId)
+          .eq("task_type", "sales_follow_up")
+          .contains("metadata", { previous_task_id: taskId, sequence_step: nextStep })
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (existing.error) throw existing.error;
+        if (existing.data) nextTask = existing.data as Record<string, unknown>;
+      }
+
+      if (!nextTask) {
+        const anchor = text(sourceMeta.sequence_anchor_at) || text(sourceTask.data?.due_at) || now;
+        const dueAt = computeSequenceStepDueAt(policy, anchor, nextStep);
+        if (dueAt) {
+          const inserted = await supabase.from("crm_tasks").insert({
+            organization_id: organizationId,
+            customer_id: customerId,
+            lead_id: leadId || null,
+            assigned_agent_id: agentId,
+            task_type: "sales_follow_up",
+            title: `CRM follow-up step ${nextStep}`,
+            description: text(nextConfig.purpose) || "Tenant follow-up sequence",
+            status: "scheduled",
+            due_at: dueAt,
+            metadata: {
+              ...sourceMeta,
+              workflow_key: "crm_follow_up_v3",
+              sequence_step: nextStep,
+              sequence_anchor_at: anchor,
+              previous_task_id: taskId || null,
+              previous_execution_id: text(body.execution_id) || null,
+            },
+          }).select("id,status,due_at,metadata").single();
+          if (inserted.error) throw inserted.error;
+          nextTask = inserted.data as Record<string, unknown>;
+        }
       }
     }
 
