@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveLeoIdentity } from "@/lib/leo-core";
 import { getOrCreateLeoSession, auditLeoEvent } from "@/lib/leo-session-store";
 import { approveLeoTaskStep, createLeoOperationalTask, loadLeoOperationalTask } from "@/lib/leo-task-plan";
-import { runLeoOperationalTask } from "@/lib/leo-task-executor";
+import { recoverLeoOperationalTask, runLeoOperationalTask } from "@/lib/leo-task-executor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +11,18 @@ type TaskStepInput = { title?: string; toolKey: string; arguments: Record<string
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+async function auditTaskResult(input: { identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>; session: Awaited<ReturnType<typeof getOrCreateLeoSession>>; taskId: string; action: "run" | "recover"; result: Awaited<ReturnType<typeof runLeoOperationalTask>> }) {
+  const { identity, session, taskId, action, result } = input;
+  await auditLeoEvent({ identity, session, eventType: action === "recover" ? "operational_task_recovery" : "operational_task_run", details: { task_id: taskId, stop_reason: result.stopReason, executed_steps: result.executedSteps, ok: result.ok } });
+  if (result.stopReason === "approval_required") {
+    await auditLeoEvent({ identity, session, eventType: "operational_task_approval_requested", toolKey: result.pendingStep?.toolKey, details: { task_id: taskId, step_id: result.pendingStep?.id, step_index: result.task?.currentStep } });
+  }
+  if (["evidence_pending", "evidence_partial", "evidence_failed"].includes(result.stopReason)) {
+    const evidence = "evidence" in result ? result.evidence : undefined;
+    await auditLeoEvent({ identity, session, eventType: "operational_task_evidence_checked", details: { task_id: taskId, stop_reason: result.stopReason, evidence_status: evidence?.status, evidence_source: evidence?.source, evidence_summary: evidence?.summary } });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -74,18 +86,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, status: "approved", task: approved, approvedStep: stepAfter });
     }
 
-    if (action === "run") {
+    if (action === "run" || action === "recover") {
       const taskId = String(body.taskId || body.task_id || "").trim();
       if (!taskId) return NextResponse.json({ error: "taskId is required." }, { status: 400 });
-      const result = await runLeoOperationalTask({ request, identity, session, taskId, maxSteps: Number(body.maxSteps || body.max_steps) || undefined });
-      await auditLeoEvent({ identity, session, eventType: "operational_task_run", details: { task_id: taskId, stop_reason: result.stopReason, executed_steps: result.executedSteps, ok: result.ok } });
-      if (result.stopReason === "approval_required") {
-        await auditLeoEvent({ identity, session, eventType: "operational_task_approval_requested", toolKey: result.pendingStep?.toolKey, details: { task_id: taskId, step_id: result.pendingStep?.id, step_index: result.task?.currentStep } });
-      }
+      const maxSteps = Number(body.maxSteps || body.max_steps) || undefined;
+      const result = action === "recover"
+        ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps })
+        : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
+      await auditTaskResult({ identity, session, taskId, action, result });
       return NextResponse.json(result, { status: result.ok ? 200 : result.stopReason === "task_not_found" ? 404 : 409 });
     }
 
-    return NextResponse.json({ error: "Unsupported task action. Use create, get, approve or run." }, { status: 400 });
+    return NextResponse.json({ error: "Unsupported task action. Use create, get, approve, run or recover." }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Super Leo task operation failed.";
     const status = /approval token|changed after approval|waiting for confirmation/i.test(message) ? 409 : 500;
