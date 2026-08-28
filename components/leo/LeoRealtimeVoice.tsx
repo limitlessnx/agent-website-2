@@ -24,6 +24,27 @@ function friendlyVoiceError(value: string) {
   return text.length > 180 ? "Leo voice could not start. Please try again in a moment." : text || "Leo voice could not start.";
 }
 
+function localDaypart() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
+}
+
+function openingInstruction(sessionId: string) {
+  const period = localDaypart();
+  const key = sessionId ? `fluxknight.leo.voice.greeted:${sessionId}` : "fluxknight.leo.voice.greeted:temporary";
+  let greeted = false;
+  try {
+    greeted = sessionStorage.getItem(key) === "1";
+    sessionStorage.setItem(key, "1");
+  } catch {}
+  if (greeted) {
+    return `Open the call now with a short natural greeting. Say "Welcome back, boss." If ACTIVE OPERATIONAL TASK exists, briefly state what we were working on and offer to continue from where we stopped. Otherwise ask, "What would you like me to assist you with this ${period}?" Do not repeat a good morning/afternoon/evening greeting on this reconnect.`;
+  }
+  return `Open the call now. The user's local daypart is ${period}. Address the user as boss. Start with exactly: "Good ${period}, boss." If ACTIVE OPERATIONAL TASK exists, briefly mention the task and ask whether to continue it or handle something else. If there is no active task, follow with exactly: "What would you like me to assist you with this ${period}?" Keep this opening concise and do not add generic customer-support language.`;
+}
+
 export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel", onCallEnded, onSessionId, onTranscript }: LeoRealtimeVoiceProps) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
@@ -162,13 +183,19 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
           else if (event.type === "response.output_audio_transcript.done" && event.transcript) void persistTranscript("assistant", event.transcript);
         } catch {}
       };
-      dataChannel.onopen = () => { startingRef.current = false; setState("live"); reportLifecycle("connected"); };
+      dataChannel.onopen = () => {
+        startingRef.current = false;
+        setState("live");
+        reportLifecycle("connected");
+        sendEvent({ type: "response.create", response: { instructions: openingInstruction(activeSessionIdRef.current) } });
+      };
       dataChannel.onerror = () => handleUnexpectedDrop("Leo voice connection encountered an error. You can reconnect or continue by message.");
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
       const headers: Record<string, string> = { "content-type": "application/sdp" };
       if (activeSessionIdRef.current) headers["x-leo-session-id"] = activeSessionIdRef.current;
       if (pageContext) headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify(pageContext));
+      headers["x-leo-timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
       const response = await fetch("/api/leo/realtime/call", { method: "POST", headers, body: offer.sdp || "" });
       const answerSdp = await response.text();
       if (!response.ok) throw new Error(friendlyVoiceError(answerSdp || "Unable to start Leo voice."));
