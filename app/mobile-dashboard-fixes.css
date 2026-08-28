@@ -29,8 +29,8 @@ html,body{max-width:100%;overflow-x:hidden}
 /* Limitless Realty campaign composer: prevent desktop controls from collapsing into a chaotic stack. */
 .campaign-v2-grid{grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)!important}
 .campaign-card{overflow:hidden!important}
-.lead-list{max-height:300px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
-.lead-list label{min-width:0;overflow:hidden}
+.lead-list{max-height:300px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.lead-list label{min-width:0;overflow:hidden;touch-action:manipulation}
 .lead-list label span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .lead-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -49,14 +49,16 @@ html,body{max-width:100%;overflow-x:hidden}
   .campaign-card{padding:14px!important;border-radius:16px!important}
   .campaign-card header{margin-bottom:12px!important}
   .audience-tabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important}
-  .audience-tabs button{min-height:44px!important;width:100%!important}
+  .audience-tabs button{min-height:48px!important;width:100%!important}
   .campaign-type-grid{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
   .campaign-type-grid button{width:100%!important;min-height:66px!important}
   .form-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:9px!important}
   .form-grid label.wide{grid-column:auto!important}
   .filters{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}
+  .lead-list{max-height:44vh!important;padding:7px!important}
+  .lead-list label{min-height:58px!important;padding:11px!important}
   .sendbar{flex-direction:column!important;align-items:stretch!important;gap:10px!important}
-  .sendbar button{width:100%!important;min-height:46px!important}
+  .sendbar button{width:100%!important;min-height:48px!important}
   .message-preview,.template-contract,.channel-contract,.direct-notice{max-width:100%!important;overflow-wrap:anywhere!important}
   .console-mode-grid{grid-template-columns:1fr 1fr!important}
   .console-mode-grid button{width:100%!important;min-height:72px!important}
@@ -64,8 +66,31 @@ html,body{max-width:100%;overflow-x:hidden}
   .console-form-grid{grid-template-columns:minmax(0,1fr)!important}
   .console-result>div{grid-template-columns:1fr 1fr!important}
   .console-audience-meter ul{grid-template-columns:1fr!important}
-  .campaign-report-panel .admin-table{min-width:760px!important}
   .gencouv-inbox-grid{grid-template-columns:minmax(0,1fr)!important}
+
+  /* Campaign delivery reports become readable cards instead of a 760px sideways table. */
+  .campaign-report-panel .admin-table-wrap{overflow:visible!important}
+  .campaign-report-panel .admin-table{display:block!important;width:100%!important;min-width:0!important}
+  .campaign-report-panel .admin-table thead{display:none!important}
+  .campaign-report-panel .admin-table tbody{display:grid!important;gap:10px!important}
+  .campaign-report-panel .admin-table tr{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;padding:12px!important;border:1px solid var(--console-line-soft)!important;background:rgba(255,255,255,.018)!important}
+  .campaign-report-panel .admin-table td{display:block!important;min-width:0!important;padding:0!important;border:0!important;overflow-wrap:anywhere!important}
+  .campaign-report-panel .admin-table td:first-child{grid-column:1/-1!important;padding-bottom:8px!important;border-bottom:1px solid var(--console-line-soft)!important}
+  .campaign-report-panel .admin-table td:nth-child(2)::before{content:"STATUS"}.campaign-report-panel .admin-table td:nth-child(3)::before{content:"ATTEMPTED"}.campaign-report-panel .admin-table td:nth-child(4)::before{content:"DELIVERED"}.campaign-report-panel .admin-table td:nth-child(5)::before{content:"PENDING"}.campaign-report-panel .admin-table td:nth-child(6)::before{content:"FAILED"}.campaign-report-panel .admin-table td:nth-child(7)::before{content:"SKIPPED"}.campaign-report-panel .admin-table td:nth-child(8)::before{content:"DATE"}
+  .campaign-report-panel .admin-table td:not(:first-child)::before{display:block;margin-bottom:4px;color:var(--console-muted);font-size:.6rem;letter-spacing:.11em}
+  .campaign-report-panel .admin-table td:nth-child(8){grid-column:1/-1!important;padding-top:8px!important;border-top:1px solid var(--console-line-soft)!important}
+
+  /* Follow-up execution logs keep their reason and status visible without horizontal scrolling. */
+  .followup-center .admin-table-wrap{overflow:visible!important}
+  .followup-center .admin-table{display:block!important;width:100%!important;min-width:0!important}
+  .followup-center .admin-table thead{display:none!important}
+  .followup-center .admin-table tbody{display:grid!important;gap:10px!important}
+  .followup-center .admin-table tr{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;padding:12px!important;border:1px solid var(--admin-border)!important;border-radius:10px!important;background:var(--admin-panel-bg)!important}
+  .followup-center .admin-table td{display:block!important;min-width:0!important;max-width:none!important;padding:0!important;border:0!important;overflow-wrap:anywhere!important}
+  .followup-center .admin-table td:first-child{grid-column:1/-1!important;padding-bottom:8px!important;border-bottom:1px solid var(--admin-border)!important}
+  .followup-center .admin-table td:nth-child(2)::before{content:"SEQUENCE"}.followup-center .admin-table td:nth-child(3)::before{content:"CHANNEL"}.followup-center .admin-table td:nth-child(4)::before{content:"STATUS"}.followup-center .admin-table td:nth-child(5)::before{content:"REASON"}.followup-center .admin-table td:nth-child(6)::before{content:"TIME"}
+  .followup-center .admin-table td:not(:first-child)::before{display:block;margin-bottom:4px;color:var(--admin-text-muted);font-size:.62rem;letter-spacing:.08em}
+  .followup-center .admin-table td:nth-child(5),.followup-center .admin-table td:nth-child(6){grid-column:1/-1!important;padding-top:8px!important;border-top:1px solid var(--admin-border)!important}
 }
 @media(max-width:420px){
   .admin-main,.portal-main{padding:10px!important}
@@ -73,4 +98,6 @@ html,body{max-width:100%;overflow-x:hidden}
   .console-titlebar h1{font-size:2rem!important}
   .console-mode-grid,.audience-tabs{grid-template-columns:1fr!important}
   .console-result>div{grid-template-columns:1fr!important}
+  .campaign-report-panel .admin-table tr,.followup-center .admin-table tr{grid-template-columns:1fr!important}
+  .campaign-report-panel .admin-table td,.followup-center .admin-table td{grid-column:1/-1!important}
 }
