@@ -8,6 +8,7 @@ import {
   Gauge, MessageSquareText, Play, Search, ShieldCheck, Sparkles, Target, Users, Workflow,
 } from "@/components/admin/ServerIcons";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
+import LeoActionCenter from "@/components/leo/LeoActionCenter";
 import { useLeoConversation } from "@/components/leo/LeoConversationContext";
 import styles from "./LeoOverviewDesktop.module.css";
 
@@ -44,7 +45,7 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
   const healthPercent = systemHealth === "Operational" ? 98 : 64;
   const taskCount = Math.max(1, attentionCount + newLeads);
   const pageContext = useMemo(() => ({ pathname, section: "leo", resourceType: "platform-operations", localTime: new Date().toString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }), [pathname]);
-  const leoStateLabel = operationState === "investigating" ? "Investigating" : operationState === "error" ? "Needs attention" : "Ready";
+  const leoStateLabel = operationState === "investigating" ? "Investigating" : operationState === "executing" ? "Executing" : operationState === "approval_required" ? "Approval required" : operationState === "verified" ? "Verified" : operationState === "error" ? "Needs attention" : "Ready";
   const latestLeoMessage = [...messages].reverse().find((message) => message.role === "assistant");
 
   async function runCommand(form: HTMLFormElement) {
@@ -89,15 +90,17 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
       </div>
 
       <div className={styles.commandBar}>
-        <div className={styles.commandIntro}><div className={styles.commandIcon}>{busy ? <Search size={15} /> : <Sparkles size={15} />}</div><div><strong>{busy ? "Leo is investigating" : error ? "Leo needs attention" : "Command Super Leo"}</strong><span>{busy ? "Checking current system state before responding." : error ? error : "Ask, investigate, prepare or execute with approval."}</span></div></div>
-        <form className={styles.commandForm} onSubmit={(event) => { event.preventDefault(); void runCommand(event.currentTarget); }}><input name="leo-command" disabled={busy} placeholder="Ask what is happening, what needs attention, or what should be done…" aria-label="Command Super Leo" /><button type="submit" disabled={busy}><Play size={13} /> {busy ? "Checking" : "Ask Leo"}</button></form>
+        <div className={styles.commandIntro}><div className={styles.commandIcon}>{busy ? <Search size={15} /> : <Sparkles size={15} />}</div><div><strong>{operationState === "executing" ? "Leo is executing" : operationState === "approval_required" ? "Leo is waiting for approval" : busy ? "Leo is investigating" : error ? "Leo needs attention" : operationState === "verified" ? "Leo verified the last action" : "Command Super Leo"}</strong><span>{operationState === "executing" ? "The approved action is running. Leo will report the result when it returns." : operationState === "approval_required" ? "Review the prepared action below before anything changes." : busy ? "Checking current system state before responding." : error ? error : operationState === "verified" ? "Execution returned successfully and the result is recorded in the shared session." : "Ask, investigate, prepare or execute with approval."}</span></div></div>
+        <form className={styles.commandForm} onSubmit={(event) => { event.preventDefault(); void runCommand(event.currentTarget); }}><input name="leo-command" disabled={busy} placeholder="Ask what is happening, what needs attention, or what should be done…" aria-label="Command Super Leo" /><button type="submit" disabled={busy}><Play size={13} /> {busy ? "Working" : "Ask Leo"}</button></form>
       </div>
 
       {(busy || latestLeoMessage) && <article className={styles.operationCard} aria-live="polite">
-        <div className={styles.operationState}><span className={busy ? styles.operationPulse : styles.operationDone}>{busy ? <Search size={15} /> : <CheckCircle2 size={15} />}</span><div><span>{busy ? "INVESTIGATING" : "LATEST LEO RESULT"}</span><strong>{busy ? "Leo is checking the current system state" : "Finding and recommended next action"}</strong></div></div>
-        <p>{busy ? "Leo is gathering context before recommending or preparing an action. Sensitive changes remain approval-gated." : latestLeoMessage?.content}</p>
-        <div className={styles.operationFoot}><ShieldCheck size={12} /><span>{busy ? "Observe → investigate → recommend" : "Result available in the shared Leo conversation"}</span></div>
+        <div className={styles.operationState}><span className={busy ? styles.operationPulse : styles.operationDone}>{busy ? <Search size={15} /> : <CheckCircle2 size={15} />}</span><div><span>{operationState === "executing" ? "EXECUTING" : busy ? "INVESTIGATING" : operationState === "verified" ? "VERIFIED" : "LATEST LEO RESULT"}</span><strong>{operationState === "executing" ? "Leo is carrying out the approved action" : busy ? "Leo is checking the current system state" : operationState === "verified" ? "Action completed and verification returned" : "Finding and recommended next action"}</strong></div></div>
+        <p>{operationState === "executing" ? "Leo is executing only the scoped action you approved. The result will remain visible in this shared session." : busy ? "Leo is gathering context before recommending or preparing an action. Sensitive changes remain approval-gated." : latestLeoMessage?.content}</p>
+        <div className={styles.operationFoot}><ShieldCheck size={12} /><span>{operationState === "executing" ? "Act → verify → report" : busy ? "Observe → investigate → recommend" : operationState === "verified" ? "Execution verified in the shared Leo session" : "Result available in the shared Leo conversation"}</span></div>
       </article>}
+
+      <LeoActionCenter />
 
       <div className={styles.metrics}>
         <article><div className={styles.metricIcon}><Bot size={16} /></div><span>AI workforce</span><strong>{clients.length + 2}</strong><small>{liveClients} client workspaces live</small></article>
