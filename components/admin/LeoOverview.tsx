@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
   Activity, AlertTriangle, ArrowUpRight, Bot, CheckCircle2, ChevronRight, Clock3,
-  Gauge, MessageSquareText, Play, Sparkles, Target, Users, Workflow,
+  Gauge, MessageSquareText, Play, Search, ShieldCheck, Sparkles, Target, Users, Workflow,
 } from "@/components/admin/ServerIcons";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
 import { useLeoConversation } from "@/components/leo/LeoConversationContext";
@@ -31,13 +31,21 @@ const quickActions = [
   { label: "Organizations", href: "/dashboard/organizations", icon: Users },
 ];
 
+function noticeSeverity(type: string) {
+  const value = String(type || "").toLowerCase();
+  if (value.includes("error") || value.includes("fail") || value.includes("critical")) return "Critical";
+  if (value.includes("warn") || value.includes("attention") || value.includes("pending")) return "Important";
+  return "Info";
+}
+
 export default function LeoOverview({ newLeads, clients, liveClients, pendingClients, attentionCount, systemHealth, notifications }: Props) {
   const pathname = usePathname();
-  const { sessionId, busy, error, operationState, sendMessage, setSessionId, appendTranscript } = useLeoConversation();
+  const { sessionId, messages, busy, error, operationState, sendMessage, setSessionId, appendTranscript } = useLeoConversation();
   const healthPercent = systemHealth === "Operational" ? 98 : 64;
   const taskCount = Math.max(1, attentionCount + newLeads);
   const pageContext = useMemo(() => ({ pathname, section: "leo", resourceType: "platform-operations", localTime: new Date().toString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }), [pathname]);
   const leoStateLabel = operationState === "investigating" ? "Investigating" : operationState === "error" ? "Needs attention" : "Ready";
+  const latestLeoMessage = [...messages].reverse().find((message) => message.role === "assistant");
 
   async function runCommand(form: HTMLFormElement) {
     const input = form.elements.namedItem("leo-command") as HTMLInputElement | null;
@@ -45,6 +53,11 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
     if (!message || busy) return;
     if (input) input.value = "";
     await sendMessage(message, pageContext);
+  }
+
+  function investigate(item: Notice) {
+    if (busy) return;
+    void sendMessage(`Investigate this operational signal: ${item.title}. Context: ${item.detail}. Explain the finding, impact, likely cause, and safest next action. Do not execute a sensitive action without approval.`, { ...pageContext, signal: { title: item.title, detail: item.detail, type: item.type, href: item.href } });
   }
 
   return (
@@ -76,9 +89,15 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
       </div>
 
       <div className={styles.commandBar}>
-        <div className={styles.commandIntro}><div className={styles.commandIcon}><Sparkles size={15} /></div><div><strong>{busy ? "Leo is investigating" : error ? "Leo needs attention" : "Command Super Leo"}</strong><span>{busy ? "Checking current system state before responding." : error ? error : "Ask, investigate, prepare or execute with approval."}</span></div></div>
+        <div className={styles.commandIntro}><div className={styles.commandIcon}>{busy ? <Search size={15} /> : <Sparkles size={15} />}</div><div><strong>{busy ? "Leo is investigating" : error ? "Leo needs attention" : "Command Super Leo"}</strong><span>{busy ? "Checking current system state before responding." : error ? error : "Ask, investigate, prepare or execute with approval."}</span></div></div>
         <form className={styles.commandForm} onSubmit={(event) => { event.preventDefault(); void runCommand(event.currentTarget); }}><input name="leo-command" disabled={busy} placeholder="Ask what is happening, what needs attention, or what should be done…" aria-label="Command Super Leo" /><button type="submit" disabled={busy}><Play size={13} /> {busy ? "Checking" : "Ask Leo"}</button></form>
       </div>
+
+      {(busy || latestLeoMessage) && <article className={styles.operationCard} aria-live="polite">
+        <div className={styles.operationState}><span className={busy ? styles.operationPulse : styles.operationDone}>{busy ? <Search size={15} /> : <CheckCircle2 size={15} />}</span><div><span>{busy ? "INVESTIGATING" : "LATEST LEO RESULT"}</span><strong>{busy ? "Leo is checking the current system state" : "Finding and recommended next action"}</strong></div></div>
+        <p>{busy ? "Leo is gathering context before recommending or preparing an action. Sensitive changes remain approval-gated." : latestLeoMessage?.content}</p>
+        <div className={styles.operationFoot}><ShieldCheck size={12} /><span>{busy ? "Observe → investigate → recommend" : "Result available in the shared Leo conversation"}</span></div>
+      </article>}
 
       <div className={styles.metrics}>
         <article><div className={styles.metricIcon}><Bot size={16} /></div><span>AI workforce</span><strong>{clients.length + 2}</strong><small>{liveClients} client workspaces live</small></article>
@@ -89,9 +108,13 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
 
       <div className={styles.mainGrid}>
         <article className={styles.panel}>
-          <header className={styles.panelHeader}><div><span>NEEDS ATTENTION</span><h3>Operational signals</h3><p>Issues and events Leo should investigate first.</p></div><Link href="/dashboard/activity">View activity <ArrowUpRight size={13} /></Link></header>
-          <div className={styles.timeline}>
-            {notifications.slice(0, 6).map((item, index) => <Link href={item.href} key={`${item.title}-${index}`} className={styles.timelineItem}><span className={styles.timelineDot} /><div><strong>{item.title}</strong><small>{item.detail}</small></div><time>{index === 0 ? "Now" : `${index * 3}m`}</time></Link>)}
+          <header className={styles.panelHeader}><div><span>NEEDS ATTENTION</span><h3>Operational signals</h3><p>Real platform signals Leo can investigate in context.</p></div><Link href="/dashboard/activity">View activity <ArrowUpRight size={13} /></Link></header>
+          <div className={styles.attentionList}>
+            {notifications.slice(0, 6).map((item, index) => { const severity = noticeSeverity(item.type); return <div key={`${item.title}-${index}`} className={styles.attentionItem}>
+              <span className={`${styles.severity} ${severity === "Critical" ? styles.severityCritical : severity === "Important" ? styles.severityImportant : styles.severityInfo}`}>{severity}</span>
+              <div className={styles.attentionCopy}><strong>{item.title}</strong><small>{item.detail}</small></div>
+              <div className={styles.attentionActions}><button type="button" disabled={busy} onClick={() => investigate(item)}><Search size={12} /> Investigate</button><Link href={item.href} aria-label={`View ${item.title}`}><ArrowUpRight size={13} /></Link></div>
+            </div>; })}
             {!notifications.length && <div className={styles.empty}><CheckCircle2 size={18} /><div><strong>All systems quiet</strong><span>No operational signals require attention.</span></div></div>}
           </div>
         </article>
