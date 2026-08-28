@@ -3,13 +3,22 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Clock3, Pause, Play, Plus, RotateCcw, Send, SkipForward, XCircle } from "@/components/admin/ServerIcons";
-import type { FollowupEnrollment, FollowupSequence, FollowupStep } from "@/lib/followup-control";
+import type { FollowupEnrollment, FollowupLog, FollowupSequence, FollowupStep } from "@/lib/followup-control";
 
 type LeadOption = { id:string; name:string; phone:string };
-type Props = { leads:LeadOption[]; sequences:FollowupSequence[]; steps:FollowupStep[]; enrollments:FollowupEnrollment[]; configured:boolean; automationIssues:number };
+type Props = { leads:LeadOption[]; sequences:FollowupSequence[]; steps:FollowupStep[]; enrollments:FollowupEnrollment[]; logs:FollowupLog[]; configured:boolean; automationIssues:number };
 type DraftStep = { channel:string; delay_value:number; delay_unit:string; title:string; message_template:string };
+type LogStatus = "all" | "success" | "failed" | "blocked";
+type LogWindow = "24h" | "7d" | "30d" | "all";
 
 const blankStep = ():DraftStep => ({ channel:"whatsapp", delay_value:1, delay_unit:"days", title:"", message_template:"" });
+const failureStatuses = new Set(["failed", "error"]);
+
+function formatDate(value:string|null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-NG");
+}
 
 export default function FollowupControlCenter(props:Props) {
   const router = useRouter();
@@ -20,9 +29,28 @@ export default function FollowupControlCenter(props:Props) {
   const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState<DraftStep[]>([blankStep()]);
   const [statusFilter, setStatusFilter] = useState("active");
+  const [logStatus, setLogStatus] = useState<LogStatus>("all");
+  const [logWindow, setLogWindow] = useState<LogWindow>("7d");
 
   const filteredEnrollments = useMemo(() => props.enrollments.filter((item) => statusFilter === "all" || item.status === statusFilter), [props.enrollments,statusFilter]);
-  const sequenceName = (id:string) => props.sequences.find((item)=>item.id===id)?.name || "Unknown sequence";
+  const sequenceName = (id:string|null) => props.sequences.find((item)=>item.id===id)?.name || "Unknown sequence";
+  const leadName = (leadId:string|null) => props.leads.find((item)=>item.id===leadId)?.name || props.enrollments.find((item)=>item.lead_id===leadId)?.lead_name || "Unknown lead";
+
+  const filteredLogs = useMemo(() => {
+    const now = Date.now();
+    const windows:Record<Exclude<LogWindow,"all">,number> = { "24h":86400000, "7d":604800000, "30d":2592000000 };
+    return props.logs.filter((item) => {
+      const status = String(item.status || "").toLowerCase();
+      const statusMatches = logStatus === "all"
+        || (logStatus === "success" && ["success", "sent", "delivered", "completed"].includes(status))
+        || (logStatus === "failed" && failureStatuses.has(status))
+        || (logStatus === "blocked" && status === "blocked");
+      if (!statusMatches) return false;
+      if (logWindow === "all") return true;
+      const created = new Date(item.created_at).getTime();
+      return Number.isFinite(created) && now - created <= windows[logWindow];
+    }).slice(0, 25);
+  }, [logStatus, logWindow, props.logs]);
 
   async function request(method:string, body:Record<string,unknown>) {
     setBusy(true); setMessage("");
@@ -53,7 +81,7 @@ export default function FollowupControlCenter(props:Props) {
 
   return <div className="followup-center">
     {!props.configured ? <section className="admin-panel"><div className="admin-list-row compact"><div><strong>Follow-up setup needs attention</strong><span>Complete the platform setup before saving sequences or enrollments.</span></div><em>Setup required</em></div></section> : null}
-    {props.automationIssues > 0 ? <section className="admin-panel"><div className="admin-list-row compact attention-danger"><div><strong>Automation needs attention</strong><span>{props.automationIssues} recent follow-up action(s) failed. Review affected contacts and retry or reschedule them.</span></div><em>{props.automationIssues} issue(s)</em></div></section> : null}
+    {props.automationIssues > 0 ? <section className="admin-panel"><div className="admin-list-row compact attention-danger"><div><strong>Automation needs attention</strong><span>{props.automationIssues} recent follow-up action(s) failed or were blocked. Review the execution log below before retrying.</span></div><em>{props.automationIssues} issue(s)</em></div></section> : null}
 
     <section className="admin-panel followup-toolbar">
       <div className="admin-panel-header"><div><h2>Assign follow-up</h2><p>Select any leads, choose a sequence and schedule the start.</p></div><span className="admin-status live">{selected.length} selected</span></div>
@@ -91,6 +119,33 @@ export default function FollowupControlCenter(props:Props) {
     </section>
 
     <section className="admin-panel">
+      <div className="admin-panel-header">
+        <div><h2>Execution log</h2><p>See what Maia attempted, what succeeded, and the exact reason anything failed or was blocked.</p></div>
+        <div className="followup-log-filters">
+          <select aria-label="Execution status" value={logStatus} onChange={(event)=>setLogStatus(event.target.value as LogStatus)}><option value="all">All statuses</option><option value="success">Successful</option><option value="failed">Failed</option><option value="blocked">Blocked</option></select>
+          <select aria-label="Execution time range" value={logWindow} onChange={(event)=>setLogWindow(event.target.value as LogWindow)}><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="all">All available</option></select>
+        </div>
+      </div>
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead><tr><th>Lead</th><th>Sequence</th><th>Channel</th><th>Status</th><th>Reason</th><th>Time</th></tr></thead>
+          <tbody>
+            {filteredLogs.map((item)=><tr key={item.id}>
+              <td><strong>{leadName(item.lead_id)}</strong></td>
+              <td>{sequenceName(item.sequence_id)}</td>
+              <td>{item.channel || "-"}</td>
+              <td><span className={`admin-status ${failureStatuses.has(String(item.status).toLowerCase()) || String(item.status).toLowerCase()==="blocked" ? "warning" : "live"}`}>{item.status || "unknown"}</span></td>
+              <td>{item.error_message || "-"}</td>
+              <td>{formatDate(item.executed_at || item.created_at)}</td>
+            </tr>)}
+            {!filteredLogs.length ? <tr><td colSpan={6}>No execution records match this view.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+      <p className="admin-empty">Showing up to 25 matching execution records from the latest 100 retained by the control reader.</p>
+    </section>
+
+    <section className="admin-panel">
       <details className="followup-details">
         <summary><span><Plus size={16}/> Create editable sequence</span><ChevronDown size={16}/></summary>
         <form className="followup-builder" onSubmit={createSequence}>
@@ -107,5 +162,8 @@ export default function FollowupControlCenter(props:Props) {
       </details>
     </section>
     {message ? <p className="admin-form-message">{message}</p> : null}
+    <style jsx>{`
+      .followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}
+    `}</style>
   </div>;
 }
