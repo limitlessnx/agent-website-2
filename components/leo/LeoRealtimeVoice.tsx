@@ -85,6 +85,25 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     try { await fetch("/api/leo/realtime/transcript", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: activeSessionId, role, content: clean }) }); } catch {}
   }
 
+  async function handleTaskCall(event: RealtimeToolEvent, args: Record<string, unknown>) {
+    const response = await fetch("/api/leo/tasks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action: String(args.action || "active"),
+        sessionId: activeSessionIdRef.current || undefined,
+        taskId: String(args.task_id || "").trim() || undefined,
+        toolKey: String(args.tool_key || "").trim() || undefined,
+        arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : undefined,
+        token: String(args.approval_token || "").trim() || undefined,
+        reason: String(args.reason || "").trim() || undefined,
+        maxSteps: typeof args.max_steps === "number" ? args.max_steps : undefined,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    return response.ok ? result : { ok: false, error: result.error || "Leo task operation failed." };
+  }
+
   async function handleToolCall(event: RealtimeToolEvent) {
     if (!event.name || !event.call_id) return;
     if (event.name === "leo_end_call") {
@@ -93,16 +112,21 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       stop("ended");
       return;
     }
-    if (event.name !== "leo_execute_tool") return;
     let args: Record<string, unknown> = {};
     try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
     let output: Record<string, unknown>;
     try {
-      const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) });
-      const result = await response.json().catch(() => ({}));
-      output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." };
+      if (event.name === "leo_manage_task") {
+        output = await handleTaskCall(event, args) as Record<string, unknown>;
+      } else if (event.name === "leo_execute_tool") {
+        const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) });
+        const result = await response.json().catch(() => ({}));
+        output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." };
+      } else {
+        return;
+      }
     } catch (cause) {
-      output = { ok: false, error: cause instanceof Error ? cause.message : "Leo tool execution failed." };
+      output = { ok: false, error: cause instanceof Error ? cause.message : "Leo operation failed." };
     }
     sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify(output) } });
     sendEvent({ type: "response.create" });
