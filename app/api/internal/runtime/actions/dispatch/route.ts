@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { dispatchMaiaWhatsAppFollowUp } from "@/lib/maia-action-gateway";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -151,27 +152,6 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const providerKeys: Record<string, string[]> = {
-          whatsapp: ["whatsapp", "whatsapp_cloud", "meta_whatsapp"],
-          email: ["email", "resend", "gmail", "google_workspace", "microsoft_365"],
-          telegram: ["telegram"],
-          voice: ["voice", "elevenlabs", "vapi", "retell"],
-        };
-        const providers = providerKeys[channel] || [channel];
-        const { data: integration } = await supabase
-          .from("organization_integrations")
-          .select("id,provider,status,credential_reference,configuration")
-          .eq("organization_id", organizationId)
-          .eq("status", "connected")
-          .in("provider", providers)
-          .limit(1)
-          .maybeSingle();
-
-        if (!integration) {
-          results.push({ type, status: "blocked", reason: `${channel}_integration_not_connected`, payload });
-          continue;
-        }
-
         if (channel === "whatsapp") {
           const conversationId = text(payload.conversation_id);
           const taskId = text(payload.task_id);
@@ -233,128 +213,125 @@ export async function POST(request: NextRequest) {
           const workflowKey = text(taskMetadata.workflow_key) || text(executionInput.workflow_key);
           const isCrmFollowUp = workflowKey === "crm_follow_up_v3" || taskMetadata.source_execution_id === executionId;
 
-          if (!windowOpen) {
-            if (!isCrmFollowUp) {
+          if (isCrmFollowUp) {
+            const recipient = text(payload.recipient);
+            if (!recipient) {
+              results.push({ type, status: "blocked", reason: "whatsapp_recipient_missing" });
+              continue;
+            }
+
+            if (!windowOpen) {
+              const { data: templateConfig, error: templateError } = await supabase
+                .from("whatsapp_template_configs")
+                .select("id,purpose,template_name,language_code,variable_keys,status,metadata")
+                .eq("organization_id", organizationId)
+                .eq("purpose", "follow_up_outside_24h")
+                .eq("status", "active")
+                .limit(1)
+                .maybeSingle();
+              if (templateError) throw templateError;
+
+              if (!templateConfig) {
+                results.push({ type, status: "blocked", reason: "whatsapp_follow_up_template_not_configured" });
+                continue;
+              }
+
+              const variableKeys = Array.isArray(templateConfig.variable_keys)
+                ? templateConfig.variable_keys.map((key) => text(key)).filter(Boolean)
+                : [];
+              const templateVariables = buildTemplateVariables(
+                variableKeys,
+                record(customerResult.data),
+                record(leadResult.data),
+              );
+
+              const delivery = await dispatchMaiaWhatsAppFollowUp({
+                commandId: actionKey,
+                recipient,
+                recipientName: text(customerResult.data?.full_name) || "there",
+                message: text(payload.content) || "Following up on your property enquiry.",
+                deliveryMode: "template",
+                templateName: templateConfig.template_name,
+                templateLanguage: templateConfig.language_code,
+                templateParameters: templateVariables.parameters,
+                templateVariableKeys: variableKeys,
+                topic: "Maia CRM follow-up",
+                propertyTitle: templateVariables.values.property_name,
+                createdBy: `runtime:${executionId}`,
+              });
+
               results.push({
                 type,
-                status: "blocked",
-                reason: "whatsapp_customer_service_window_closed",
+                status: delivery.accepted > 0 ? "submitted" : delivery.status,
+                provider: "maia_action_n8n",
+                delivery_mode: "template",
+                template_name: templateConfig.template_name,
                 customer_service_window: {
                   open: false,
                   hours: 24,
                   last_inbound_at: lastInboundAt?.toISOString() || null,
+                },
+                delivery: {
+                  execution_id: delivery.executionId,
+                  accepted: delivery.accepted,
+                  failed: delivery.failed,
+                  pending_delivery: delivery.pendingDelivery,
+                  template_sent: delivery.templateSent,
                 },
               });
               continue;
             }
 
-            const { data: templateConfig, error: templateError } = await supabase
-              .from("whatsapp_template_configs")
-              .select("id,purpose,template_name,language_code,variable_keys,status,metadata")
-              .eq("organization_id", organizationId)
-              .eq("purpose", "follow_up_outside_24h")
-              .eq("status", "active")
-              .limit(1)
-              .maybeSingle();
-            if (templateError) throw templateError;
+            const delivery = await dispatchMaiaWhatsAppFollowUp({
+              commandId: actionKey,
+              recipient,
+              recipientName: text(customerResult.data?.full_name) || "there",
+              message: text(payload.content),
+              deliveryMode: "direct",
+              topic: "Maia CRM follow-up",
+              createdBy: `runtime:${executionId}`,
+            });
 
-            if (!templateConfig) {
-              results.push({ type, status: "blocked", reason: "whatsapp_follow_up_template_not_configured" });
-              continue;
-            }
-
-            const variableKeys = Array.isArray(templateConfig.variable_keys)
-              ? templateConfig.variable_keys.map((key) => text(key)).filter(Boolean)
-              : [];
-            const templateVariables = buildTemplateVariables(
-              variableKeys,
-              record(customerResult.data),
-              record(leadResult.data),
-            );
-            const templateMetadata = record(templateConfig.metadata);
-
-            const queued = await supabase.from("command_queue").insert({
-              organization_id: organizationId,
-              agent_id: agentId,
-              execution_id: executionId,
-              command_type: "whatsapp.send_template",
-              payload: {
-                integration_id: integration.id,
-                credential_reference: integration.credential_reference,
-                recipient: payload.recipient,
-                conversation_id: conversationId || null,
-                customer_id: customerId || null,
-                lead_id: leadId || null,
-                task_id: taskId || null,
-                message_mode: "template",
-                template: {
-                  config_id: templateConfig.id,
-                  purpose: templateConfig.purpose,
-                  name: templateConfig.template_name,
-                  language: templateConfig.language_code,
-                  variable_keys: variableKeys,
-                  variables: templateVariables.values,
-                  parameters: templateVariables.parameters,
-                  provider_status: text(templateMetadata.provider_status) || null,
-                },
-                generated_follow_up_content: payload.content,
-                customer_service_window: {
-                  open: false,
-                  hours: 24,
-                  last_inbound_at: lastInboundAt?.toISOString() || null,
-                },
-              },
-              status: "queued",
-              priority: 50,
-              max_attempts: 3,
-              idempotency_key: actionKey,
-            }).select("id,status").single();
-            if (queued.error) throw queued.error;
             results.push({
               type,
-              status: "queued",
-              provider: integration.provider,
-              delivery_mode: "template",
-              template_name: templateConfig.template_name,
-              command: queued.data,
-            });
-            continue;
-          }
-
-          const queued = await supabase.from("command_queue").insert({
-            organization_id: organizationId,
-            agent_id: agentId,
-            execution_id: executionId,
-            command_type: "whatsapp.send_message",
-            payload: {
-              integration_id: integration.id,
-              credential_reference: integration.credential_reference,
-              recipient: payload.recipient,
-              content: payload.content,
-              conversation_id: conversationId || null,
-              customer_id: customerId || null,
-              lead_id: leadId || null,
-              task_id: taskId || null,
-              message_mode: "free_form",
+              status: delivery.accepted > 0 ? "submitted" : delivery.status,
+              provider: "maia_action_n8n",
+              delivery_mode: "free_form",
               customer_service_window: {
                 open: true,
                 hours: 24,
                 last_inbound_at: lastInboundAt?.toISOString() || null,
               },
-            },
-            status: "queued",
-            priority: 50,
-            max_attempts: 3,
-            idempotency_key: actionKey,
-          }).select("id,status").single();
-          if (queued.error) throw queued.error;
-          results.push({
-            type,
-            status: "queued",
-            provider: integration.provider,
-            delivery_mode: "free_form",
-            command: queued.data,
-          });
+              delivery: {
+                execution_id: delivery.executionId,
+                accepted: delivery.accepted,
+                failed: delivery.failed,
+                pending_delivery: delivery.pendingDelivery,
+                free_form_sent: delivery.freeFormSent,
+              },
+            });
+            continue;
+          }
+        }
+
+        const providerKeys: Record<string, string[]> = {
+          whatsapp: ["whatsapp", "whatsapp_cloud", "meta_whatsapp"],
+          email: ["email", "resend", "gmail", "google_workspace", "microsoft_365"],
+          telegram: ["telegram"],
+          voice: ["voice", "elevenlabs", "vapi", "retell"],
+        };
+        const providers = providerKeys[channel] || [channel];
+        const { data: integration } = await supabase
+          .from("organization_integrations")
+          .select("id,provider,status,credential_reference,configuration")
+          .eq("organization_id", organizationId)
+          .eq("status", "connected")
+          .in("provider", providers)
+          .limit(1)
+          .maybeSingle();
+
+        if (!integration) {
+          results.push({ type, status: "blocked", reason: `${channel}_integration_not_connected`, payload });
           continue;
         }
 
@@ -389,7 +366,7 @@ export async function POST(request: NextRequest) {
       organization_id: organizationId,
       execution_id: executionId,
       event_type: "actions.dispatched",
-      message: "Tenant-safe workflow actions were evaluated and queued.",
+      message: "Tenant-safe workflow actions were evaluated and dispatched.",
       payload: { results },
     });
 
