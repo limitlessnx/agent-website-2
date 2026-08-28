@@ -2,17 +2,28 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-type LeoMessage = { role: "user" | "assistant"; content: string; source?: "chat" | "voice" };
-type LeoOperationState = "ready" | "investigating" | "error";
+export type LeoMessage = { role: "user" | "assistant"; content: string; source?: "chat" | "voice" };
+export type LeoToolCall = {
+  toolKey: string;
+  reason: string;
+  approval: "none" | "admin" | "confirm";
+  arguments: Record<string, unknown>;
+  status: "proposed" | "executing" | "executed" | "failed" | "dismissed";
+  result?: unknown;
+};
+export type LeoOperationState = "ready" | "investigating" | "approval_required" | "executing" | "verified" | "error";
 type PageContext = Record<string, unknown> | undefined;
 
 type LeoConversationValue = {
   sessionId: string;
   messages: LeoMessage[];
+  toolCalls: LeoToolCall[];
   busy: boolean;
   error: string;
   operationState: LeoOperationState;
   sendMessage: (message: string, pageContext?: PageContext) => Promise<void>;
+  executeTool: (tool: LeoToolCall) => Promise<void>;
+  dismissTool: (toolKey: string) => void;
   setSessionId: (sessionId: string) => void;
   appendTranscript: (message: { role: "user" | "assistant"; content: string }) => void;
   clearError: () => void;
@@ -20,6 +31,7 @@ type LeoConversationValue = {
 
 const SESSION_KEY = "fluxknight.leo.session";
 const MESSAGES_KEY = "fluxknight.leo.messages";
+const TOOLS_KEY = "fluxknight.leo.tools";
 const LeoConversationContext = createContext<LeoConversationValue | null>(null);
 
 function safeStoredMessages(value: string | null): LeoMessage[] {
@@ -34,22 +46,46 @@ function safeStoredMessages(value: string | null): LeoMessage[] {
   } catch { return []; }
 }
 
+function normalizeTools(value: unknown): LeoToolCall[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): LeoToolCall[] => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    const toolKey = String(row.toolKey || "").trim();
+    if (!toolKey) return [];
+    const approval: LeoToolCall["approval"] = row.approval === "confirm" ? "confirm" : row.approval === "admin" ? "admin" : "none";
+    const rawStatus = String(row.status || "proposed");
+    const status: LeoToolCall["status"] = ["executing", "executed", "failed", "dismissed"].includes(rawStatus) ? rawStatus as LeoToolCall["status"] : "proposed";
+    return [{ toolKey, reason: String(row.reason || "Leo prepared an operational action."), approval, arguments: row.arguments && typeof row.arguments === "object" && !Array.isArray(row.arguments) ? row.arguments as Record<string, unknown> : {}, status, result: row.result }];
+  }).slice(-8);
+}
+
+function executionSummary(tool: LeoToolCall, result: Record<string, unknown>) {
+  const title = tool.toolKey.split(".").slice(-2).join(" ").replaceAll("_", " ");
+  if (result.ok === false) return `Action failed: ${String(result.error || result.message || title)}.`;
+  if (result.status === "confirmation_required") return String(result.message || "Approval is required before Leo can execute this action.");
+  return `Verified: ${title || "the requested action"} completed successfully.`;
+}
+
 export function LeoConversationProvider({ children }: { children: React.ReactNode }) {
   const [sessionIdState, setSessionIdState] = useState("");
   const [messages, setMessages] = useState<LeoMessage[]>([]);
+  const [toolCalls, setToolCalls] = useState<LeoToolCall[]>([]);
   const [busy, setBusy] = useState(false);
+  const [executingTool, setExecutingTool] = useState("");
   const [error, setError] = useState("");
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
     try {
       setSessionIdState(sessionStorage.getItem(SESSION_KEY) || "");
       setMessages(safeStoredMessages(sessionStorage.getItem(MESSAGES_KEY)));
+      setToolCalls(normalizeTools(JSON.parse(sessionStorage.getItem(TOOLS_KEY) || "[]")));
     } catch {}
   }, []);
 
-  useEffect(() => {
-    try { sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(messages.slice(-40))); } catch {}
-  }, [messages]);
+  useEffect(() => { try { sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(messages.slice(-40))); } catch {} }, [messages]);
+  useEffect(() => { try { sessionStorage.setItem(TOOLS_KEY, JSON.stringify(toolCalls.slice(-8))); } catch {} }, [toolCalls]);
 
   const setSessionId = useCallback((sessionId: string) => {
     const clean = String(sessionId || "").trim();
@@ -71,8 +107,9 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
 
   const sendMessage = useCallback(async (message: string, pageContext?: PageContext) => {
     const clean = String(message || "").trim();
-    if (!clean || busy) return;
+    if (!clean || busy || executingTool) return;
     setBusy(true);
+    setVerified(false);
     setError("");
     const userMessage: LeoMessage = { role: "user", content: clean, source: "chat" };
     setMessages((current) => [...current, userMessage].slice(-40));
@@ -85,6 +122,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Leo could not respond.");
       if (result.sessionId) setSessionId(result.sessionId);
+      setToolCalls(normalizeTools(result.toolCalls));
       const assistantMessage: LeoMessage = { role: "assistant", content: String(result.reply || "Leo returned no response."), source: "chat" };
       setMessages((current) => [...current, assistantMessage].slice(-40));
     } catch (cause) {
@@ -92,19 +130,60 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     } finally {
       setBusy(false);
     }
-  }, [busy, sessionIdState, setSessionId]);
+  }, [busy, executingTool, sessionIdState, setSessionId]);
+
+  const executeTool = useCallback(async (tool: LeoToolCall) => {
+    if (busy || executingTool || tool.status !== "proposed") return;
+    setExecutingTool(tool.toolKey);
+    setVerified(false);
+    setError("");
+    setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executing" } : item));
+    try {
+      const response = await fetch("/api/leo/tool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolKey: tool.toolKey, arguments: tool.arguments, sessionId: sessionIdState || undefined, channel: "chat", confirmed: tool.approval === "confirm" }),
+      });
+      const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+      if (!response.ok || result.ok === false) throw new Error(String(result.error || result.message || "Leo could not execute this action."));
+      if (result.status === "confirmation_required") {
+        setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "proposed", result } : item));
+        return;
+      }
+      setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executed", result } : item));
+      const summary = executionSummary(tool, result);
+      setMessages((current) => [...current, { role: "assistant", content: summary, source: "chat" } as LeoMessage].slice(-40));
+      setVerified(true);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Leo could not execute this action.";
+      setError(message);
+      setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "failed", result: { error: message } } : item));
+    } finally {
+      setExecutingTool("");
+    }
+  }, [busy, executingTool, sessionIdState]);
+
+  const dismissTool = useCallback((toolKey: string) => {
+    setToolCalls((current) => current.map((item) => item.toolKey === toolKey && item.status === "proposed" ? { ...item, status: "dismissed" } : item));
+  }, []);
+
+  const hasApproval = toolCalls.some((tool) => tool.status === "proposed" && tool.approval === "confirm");
+  const operationState: LeoOperationState = error ? "error" : executingTool ? "executing" : busy ? "investigating" : verified ? "verified" : hasApproval ? "approval_required" : "ready";
 
   const value = useMemo<LeoConversationValue>(() => ({
     sessionId: sessionIdState,
     messages,
-    busy,
+    toolCalls,
+    busy: busy || Boolean(executingTool),
     error,
-    operationState: error ? "error" : busy ? "investigating" : "ready",
+    operationState,
     sendMessage,
+    executeTool,
+    dismissTool,
     setSessionId,
     appendTranscript,
     clearError: () => setError(""),
-  }), [sessionIdState, messages, busy, error, sendMessage, setSessionId, appendTranscript]);
+  }), [sessionIdState, messages, toolCalls, busy, executingTool, error, operationState, sendMessage, executeTool, dismissTool, setSessionId, appendTranscript]);
 
   return <LeoConversationContext.Provider value={value}>{children}</LeoConversationContext.Provider>;
 }
