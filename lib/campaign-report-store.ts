@@ -1,3 +1,5 @@
+import { recordLimitlessCampaignDeliveryAttempts } from "@/lib/whatsapp-delivery-ledger";
+
 export type CampaignDeliveryReport = {
   id: string;
   campaign_type?: string;
@@ -62,5 +64,17 @@ export async function saveCampaignDeliveryReport(report: CampaignDeliveryReport)
     console.error(`Campaign report persistence failed: ${response.status} ${detail}`);
     return false;
   }
+
+  await recordLimitlessCampaignDeliveryAttempts({
+    campaignId: report.id,
+    executionId: report.execution_id,
+    campaignType: report.campaign_type,
+    templateName: report.template_name,
+    topic: report.campaign_topic,
+    acceptedRecipients: Array.isArray(report.accepted_recipients) ? report.accepted_recipients as Record<string, unknown>[] : [],
+    failedRecipients: Array.isArray(report.failed_recipients) ? report.failed_recipients as Record<string, unknown>[] : [],
+    createdBy: report.created_by,
+  }).catch((error) => console.error("Campaign recipient ledger persistence failed.", error));
+
   return true;
 }
