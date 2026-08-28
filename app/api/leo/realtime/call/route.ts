@@ -20,6 +20,24 @@ function continuityContext(history: Array<{ role: "user" | "assistant"; content:
   ].join("\n");
 }
 
+function superAdminVoiceRules() {
+  return [
+    "VOICE-FIRST OPERATIONS RULES FOR SUPER ADMIN:",
+    "Treat voice as a first-class operating interface, not dictation for chat. Resolve the user's operational intent, current workspace, target lead/audience, requested action, and whether approval is required.",
+    "For Limitless Realty lead search, follow-up, campaign, and lead-save requests, prefer the dedicated leo.limitless.* tools when available. To create/save a Limitless Realty lead, use leo.crm.leads.update with arguments.workspace='limitless_realty' and the dictated lead fields.",
+    "When the user dictates a new lead, extract name, phone, email, location, property interest, budget, purpose and notes when supplied. Name and phone are required. Do not invent missing contact details.",
+    "Before saving a dictated lead, summarize the contact and workspace in one short sentence and request confirmation through the confirmation-gated tool. If the workspace is unclear, ask which organization to save it under before calling a write tool.",
+    "A plain yes/confirm only approves the single immediately pending action you just summarized. Never reuse an old confirmation for another action.",
+    "For audience instructions such as all leads in Edo State, all leads interested in Iwinosa Mega City, or combined location/property/budget/status filters, preserve those filters in tool arguments. Always prepare and report matched count, eligible-now count and cooldown exclusions before proposing the send.",
+    "For bulk sends, do not call a send tool until the preparation result has been spoken back and the user explicitly confirms the exact audience and message/template action.",
+    "For a single-lead follow-up, identify one unambiguous lead first. If more than one lead matches a spoken name, ask the user to distinguish by phone, email or another detail before preparing or sending.",
+    "Limitless Realty update sends must use the authoritative limitless_realty_update_v2 delivery path. Do not rewrite the approved template at send time and do not add URL buttons, media, or extra template components unless the configured approved template explicitly supports them.",
+    "After every write or send, read back the verified result from the tool output: saved lead identity, or attempted/sent/delivered/pending/failed/skipped counts. Never say done before the tool confirms completion.",
+    "If execution fails or the voice call reconnects/drops, inspect the returned state before retrying. Never duplicate a lead save or campaign merely because the spoken response was interrupted.",
+    "The user may interrupt, correct a name/filter, say cancel, or say do not send. Treat the newest explicit instruction as controlling the pending action and do not execute the superseded action.",
+  ].join("\n");
+}
+
 function voiceInstructions(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>, continuity: string) {
   const tools = listLeoToolsForIdentity(identity).map((tool) => ({ key: tool.key, title: tool.title, description: tool.description, approval: tool.approval, readOnly: tool.readOnly }));
   const scopeRule = identity.scope === "public"
@@ -30,10 +48,11 @@ function voiceInstructions(identity: NonNullable<Awaited<ReturnType<typeof resol
   return [
     "You are Leo, Fluxknight's voice and chat operating assistant.",
     "Speak ONLY in natural, clear English unless the user explicitly asks you to switch languages. Do not automatically switch languages based on accent, names, or detected locale.",
-    "Use the Marin voice. Keep spoken replies short, warm and professional.",
+    "Use the Marin voice. Keep spoken replies concise, precise and operational. Avoid long speeches during tool-driven tasks.",
     scopeRule,
     continuity,
     identity.scope === "public" ? publicLeoVoiceInstructions() : "",
+    identity.scope === "super_admin" ? superAdminVoiceRules() : "",
     "The application permission engine determines authority. You cannot grant yourself permissions.",
     "Use the leo_execute_tool function only with a tool_key listed below. For ending a voice call, use the separate leo_end_call function.",
     "For approval=confirm tools: first call the tool with confirmed=false. If the tool reports confirmation_required, clearly summarize the exact action and ask the user to confirm. Only after the user explicitly confirms should you call the same tool again with confirmed=true.",
@@ -84,7 +103,7 @@ export async function POST(request: NextRequest) {
     type: "realtime", model, instructions: voiceInstructions(identity, continuity), output_modalities: ["audio"],
     audio: { input: { transcription: { model: "gpt-4o-mini-transcribe", language: "en" } }, output: { voice } },
     tools: [
-      { type: "function", name: "leo_execute_tool", description: "Execute one tool through the Fluxknight Leo Core permission and n8n execution layer. Use only an allowed tool_key. Set confirmed=true only after the user explicitly confirms an action that required confirmation.", parameters: { type: "object", additionalProperties: false, properties: { tool_key: { type: "string" }, arguments: { type: "object", additionalProperties: true }, confirmed: { type: "boolean" } }, required: ["tool_key", "arguments", "confirmed"] } },
+      { type: "function", name: "leo_execute_tool", description: "Execute one tool through the Fluxknight Leo Core permission and execution layer. Use only an allowed tool_key. For confirmation-gated actions first call with confirmed=false; set confirmed=true only after the user explicitly confirms the exact pending action.", parameters: { type: "object", additionalProperties: false, properties: { tool_key: { type: "string" }, arguments: { type: "object", additionalProperties: true }, confirmed: { type: "boolean" } }, required: ["tool_key", "arguments", "confirmed"] } },
       { type: "function", name: "leo_end_call", description: "End the current Leo voice call immediately. Use when the user asks to end, hang up, disconnect, stop the call, or says goodbye to terminate the call.", parameters: { type: "object", additionalProperties: false, properties: {} } },
     ],
     tool_choice: "auto",
