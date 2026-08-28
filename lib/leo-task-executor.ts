@@ -1,6 +1,6 @@
 import type { LeoIdentity } from "@/lib/leo-core";
 import type { LeoSessionState } from "@/lib/leo-session-store";
-import { loadLeoOperationalTask, updateLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
+import { loadLeoOperationalTask, requestLeoTaskStepApproval, taskStepApprovalIsValid, updateLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
 
 export type LeoTaskRunStopReason =
   | "completed"
@@ -16,8 +16,6 @@ function canAutoExecute(task: LeoOperationalTask) {
   if (!step) return false;
   if (step.approval !== "none") return false;
   if (step.readOnly) return true;
-  // Preparation steps are intentionally non-consequential: they may calculate,
-  // filter or create a draft, but they do not send, delete, pause or mutate live state.
   return /\.prepare$/.test(step.toolKey);
 }
 
@@ -25,6 +23,7 @@ async function executeStepThroughLeoToolRoute(input: {
   request: Request;
   session: LeoSessionState;
   task: LeoOperationalTask;
+  confirmed: boolean;
 }) {
   const step = input.task.steps[input.task.currentStep];
   const origin = new URL(input.request.url).origin;
@@ -39,7 +38,7 @@ async function executeStepThroughLeoToolRoute(input: {
       requestId,
       toolKey: step.toolKey,
       arguments: step.arguments,
-      confirmed: false,
+      confirmed: input.confirmed,
     }),
     cache: "no-store",
   });
@@ -49,7 +48,7 @@ async function executeStepThroughLeoToolRoute(input: {
     throw new Error(error);
   }
   if (result.status === "confirmation_required") {
-    throw new Error(`Tool ${step.toolKey} unexpectedly requested confirmation during an autonomous step.`);
+    throw new Error(`Tool ${step.toolKey} requested confirmation even though the task checkpoint did not authorize execution.`);
   }
   return result;
 }
@@ -73,18 +72,29 @@ export async function runLeoOperationalTask(input: {
     const step = task.steps[task.currentStep];
     if (!step) return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
 
-    if (step.approval !== "none") {
-      task = await updateLeoOperationalTask({
-        identity: input.identity,
-        session: input.session,
-        task,
-        stepIndex: task.currentStep,
-        stepStatus: "waiting_confirmation",
-      });
-      return { ok: true, stopReason: "approval_required" as LeoTaskRunStopReason, executedSteps, task, pendingStep: task.steps[task.currentStep] };
+    let confirmed = false;
+    if (step.approval === "admin") {
+      return { ok: true, stopReason: "manual_boundary" as LeoTaskRunStopReason, executedSteps, task, pendingStep: step, message: "This task step requires platform-admin review and cannot be autonomously approved." };
     }
-
-    if (!canAutoExecute(task)) {
+    if (step.approval === "confirm") {
+      if (!taskStepApprovalIsValid(task)) {
+        task = await requestLeoTaskStepApproval({ identity: input.identity, session: input.session, task });
+        return {
+          ok: true,
+          stopReason: "approval_required" as LeoTaskRunStopReason,
+          executedSteps,
+          task,
+          pendingStep: task.steps[task.currentStep],
+          approval: {
+            taskId: task.id,
+            stepId: task.steps[task.currentStep].id,
+            token: task.steps[task.currentStep].approvalState?.token,
+            requestedAt: task.steps[task.currentStep].approvalState?.requestedAt,
+          },
+        };
+      }
+      confirmed = true;
+    } else if (!canAutoExecute(task)) {
       return { ok: true, stopReason: "manual_boundary" as LeoTaskRunStopReason, executedSteps, task, pendingStep: step };
     }
 
@@ -97,7 +107,7 @@ export async function runLeoOperationalTask(input: {
     });
 
     try {
-      const result = await executeStepThroughLeoToolRoute({ request: input.request, session: input.session, task });
+      const result = await executeStepThroughLeoToolRoute({ request: input.request, session: input.session, task, confirmed });
       task = await updateLeoOperationalTask({
         identity: input.identity,
         session: input.session,
