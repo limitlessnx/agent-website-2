@@ -1,10 +1,17 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { resolveLeoTool, type LeoIdentity } from "@/lib/leo-core";
 import type { LeoSessionState } from "@/lib/leo-session-store";
 
-export type LeoTaskStepStatus = "pending" | "ready" | "waiting_confirmation" | "executing" | "completed" | "failed" | "canceled";
+export type LeoTaskStepStatus = "pending" | "ready" | "waiting_confirmation" | "approved" | "executing" | "completed" | "failed" | "canceled";
 export type LeoTaskStatus = "planning" | "ready" | "waiting_confirmation" | "executing" | "blocked" | "completed" | "canceled";
+export type LeoTaskApproval = {
+  token: string;
+  fingerprint: string;
+  requestedAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
+};
 export type LeoTaskStep = {
   id: string;
   index: number;
@@ -14,6 +21,7 @@ export type LeoTaskStep = {
   approval: "none" | "confirm" | "admin";
   readOnly: boolean;
   status: LeoTaskStepStatus;
+  approvalState?: LeoTaskApproval;
   result?: Record<string, unknown>;
   error?: string;
   startedAt?: string;
@@ -30,6 +38,15 @@ export type LeoOperationalTask = {
   updatedAt: string;
 };
 
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (!value || typeof value !== "object") return value;
+  const row = value as Record<string, unknown>;
+  return Object.fromEntries(Object.keys(row).sort().map((key) => [key, canonical(row[key])]));
+}
+function stepFingerprint(taskId: string, step: LeoTaskStep) {
+  return createHash("sha256").update(JSON.stringify(canonical({ taskId, stepId: step.id, toolKey: step.toolKey, arguments: step.arguments, approval: step.approval }))).digest("hex");
+}
 function taskKey(taskId: string) { return `leo_task:${taskId}`; }
 function taskFromContent(value: unknown): LeoOperationalTask | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -71,6 +88,39 @@ export async function loadLeoOperationalTask(identity: LeoIdentity, session: Leo
   } catch { return null; }
 }
 
+export async function requestLeoTaskStepApproval(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask }) {
+  const step = input.task.steps[input.task.currentStep];
+  if (!step) throw new Error("The task has no current step to approve.");
+  if (step.approval === "none") throw new Error("This task step does not require approval.");
+  if (step.approval === "admin") throw new Error("This task step requires platform-admin review and cannot be self-approved through task execution.");
+  const fingerprint = stepFingerprint(input.task.id, step);
+  const existing = step.approvalState;
+  const approvalState = existing && existing.fingerprint === fingerprint && !existing.approvedAt ? existing : { token: randomUUID(), fingerprint, requestedAt: new Date().toISOString() };
+  const steps = input.task.steps.map((item, index) => index === input.task.currentStep ? { ...item, status: "waiting_confirmation" as LeoTaskStepStatus, approvalState } : item);
+  const task = { ...input.task, steps, status: "waiting_confirmation" as LeoTaskStatus, updatedAt: new Date().toISOString() };
+  return persist(input.identity, input.session, task);
+}
+
+export async function approveLeoTaskStep(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask; token: string }) {
+  if (input.identity.scope !== "super_admin") throw new Error("Only Super Leo can approve an operational task step.");
+  const step = input.task.steps[input.task.currentStep];
+  if (!step) throw new Error("The task has no current step to approve.");
+  if (step.status !== "waiting_confirmation" || !step.approvalState) throw new Error("This task step is not currently waiting for confirmation.");
+  const expectedFingerprint = stepFingerprint(input.task.id, step);
+  if (step.approvalState.fingerprint !== expectedFingerprint) throw new Error("The pending task step changed after approval was requested. A new approval is required.");
+  if (!input.token || input.token !== step.approvalState.token) throw new Error("The approval token does not match the exact pending task step.");
+  const approvedAt = new Date().toISOString();
+  const steps = input.task.steps.map((item, index) => index === input.task.currentStep ? { ...item, status: "approved" as LeoTaskStepStatus, approvalState: { ...item.approvalState!, approvedAt, approvedBy: input.identity.email || input.identity.userId || "super_admin" } } : item);
+  const task = { ...input.task, steps, status: "ready" as LeoTaskStatus, updatedAt: approvedAt };
+  return persist(input.identity, input.session, task);
+}
+
+export function taskStepApprovalIsValid(task: LeoOperationalTask) {
+  const step = task.steps[task.currentStep];
+  if (!step || step.approval !== "confirm" || step.status !== "approved" || !step.approvalState?.approvedAt) return false;
+  return step.approvalState.fingerprint === stepFingerprint(task.id, step);
+}
+
 export async function updateLeoOperationalTask(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask; stepIndex: number; stepStatus: LeoTaskStepStatus; result?: Record<string, unknown>; error?: string }) {
   const steps = input.task.steps.map((step, index) => index === input.stepIndex ? { ...step, status: input.stepStatus, result: input.result ?? step.result, error: input.error, startedAt: input.stepStatus === "executing" ? step.startedAt || new Date().toISOString() : step.startedAt, completedAt: input.stepStatus === "completed" || input.stepStatus === "failed" ? new Date().toISOString() : step.completedAt } : step);
   let currentStep = input.task.currentStep;
@@ -80,6 +130,7 @@ export async function updateLeoOperationalTask(input: { identity: LeoIdentity; s
     if (next >= steps.length) status = "completed";
     else { currentStep = next; steps[next] = { ...steps[next], status: "ready" }; status = "ready"; }
   } else if (input.stepStatus === "waiting_confirmation") status = "waiting_confirmation";
+  else if (input.stepStatus === "approved") status = "ready";
   else if (input.stepStatus === "executing") status = "executing";
   else if (input.stepStatus === "failed") status = "blocked";
   else if (input.stepStatus === "canceled") status = "canceled";
