@@ -11,7 +11,7 @@ export type LeoToolCall = {
   status: "proposed" | "executing" | "executed" | "failed" | "dismissed";
   result?: unknown;
 };
-export type LeoOperationState = "ready" | "investigating" | "approval_required" | "executing" | "verified" | "error";
+export type LeoOperationState = "ready" | "investigating" | "approval_required" | "executing" | "completed" | "error";
 type PageContext = Record<string, unknown> | undefined;
 
 type LeoConversationValue = {
@@ -64,7 +64,14 @@ function executionSummary(tool: LeoToolCall, result: Record<string, unknown>) {
   const title = tool.toolKey.split(".").slice(-2).join(" ").replaceAll("_", " ");
   if (result.ok === false) return `Action failed: ${String(result.error || result.message || title)}.`;
   if (result.status === "confirmation_required") return String(result.message || "Approval is required before Leo can execute this action.");
-  return `Verified: ${title || "the requested action"} completed successfully.`;
+  const nested = result.result && typeof result.result === "object" ? result.result as Record<string, unknown> : result;
+  const delivered = Number(nested.delivered || 0);
+  const read = Number(nested.read || 0);
+  const failed = Number(nested.failed || 0);
+  const unresolved = Number(nested.pendingDelivery ?? nested.pending_delivery ?? 0);
+  const accepted = Number(nested.accepted ?? nested.sent ?? 0);
+  if (delivered || read || failed || unresolved || accepted) return `Executed: ${title || "the requested action"}. Accepted ${accepted}, delivered ${delivered}, read ${read}, failed ${failed}, unresolved ${unresolved}.`;
+  return `Executed: ${title || "the requested action"}. The execution completed successfully; external delivery or post-condition verification may still be pending.`;
 }
 
 export function LeoConversationProvider({ children }: { children: React.ReactNode }) {
@@ -74,7 +81,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
   const [busy, setBusy] = useState(false);
   const [executingTool, setExecutingTool] = useState("");
   const [error, setError] = useState("");
-  const [verified, setVerified] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     try {
@@ -109,7 +116,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     const clean = String(message || "").trim();
     if (!clean || busy || executingTool) return;
     setBusy(true);
-    setVerified(false);
+    setCompleted(false);
     setError("");
     const userMessage: LeoMessage = { role: "user", content: clean, source: "chat" };
     setMessages((current) => [...current, userMessage].slice(-40));
@@ -135,7 +142,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
   const executeTool = useCallback(async (tool: LeoToolCall) => {
     if (busy || executingTool || tool.status !== "proposed") return;
     setExecutingTool(tool.toolKey);
-    setVerified(false);
+    setCompleted(false);
     setError("");
     setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executing" } : item));
     try {
@@ -153,7 +160,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
       setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executed", result } : item));
       const summary = executionSummary(tool, result);
       setMessages((current) => [...current, { role: "assistant", content: summary, source: "chat" } as LeoMessage].slice(-40));
-      setVerified(true);
+      setCompleted(true);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Leo could not execute this action.";
       setError(message);
@@ -168,7 +175,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
   }, []);
 
   const hasApproval = toolCalls.some((tool) => tool.status === "proposed" && tool.approval === "confirm");
-  const operationState: LeoOperationState = error ? "error" : executingTool ? "executing" : busy ? "investigating" : verified ? "verified" : hasApproval ? "approval_required" : "ready";
+  const operationState: LeoOperationState = error ? "error" : executingTool ? "executing" : busy ? "investigating" : completed ? "completed" : hasApproval ? "approval_required" : "ready";
 
   const value = useMemo<LeoConversationValue>(() => ({
     sessionId: sessionIdState,
