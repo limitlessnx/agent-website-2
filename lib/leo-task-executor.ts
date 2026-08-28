@@ -84,6 +84,19 @@ export async function runLeoOperationalTask(input: {
     const step = task.steps[task.currentStep];
     if (!step) return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
 
+    if (step.status === "waiting_evidence") {
+      const stopReason = stopReasonForEvidence(step.evidence?.status || "pending") || "evidence_pending";
+      return {
+        ok: step.evidence?.status !== "failed",
+        stopReason,
+        executedSteps,
+        task,
+        pendingStep: step,
+        evidence: step.evidence,
+        message: step.evidence?.summary || "This step is waiting for evidence before Leo can continue downstream execution.",
+      };
+    }
+
     if (step.status === "failed") {
       return {
         ok: false,
@@ -134,6 +147,34 @@ export async function runLeoOperationalTask(input: {
     try {
       const result = await executeStepThroughLeoToolRoute({ request: input.request, session: input.session, task, confirmed });
       const evidence = classifyLeoTaskStepEvidence(executingStep, result);
+      const evidenceStop = stopReasonForEvidence(evidence.status);
+
+      if (evidenceStop) {
+        const recovery = evidence.status === "failed" ? recoveryPolicyForLeoTaskStep(executingStep) : undefined;
+        task = await updateLeoOperationalTask({
+          identity: input.identity,
+          session: input.session,
+          task,
+          stepIndex: task.currentStep,
+          stepStatus: evidence.status === "failed" ? "failed" : "waiting_evidence",
+          result,
+          evidence,
+          recovery,
+          error: evidence.status === "failed" ? evidence.summary : undefined,
+        });
+        executedSteps += 1;
+        return {
+          ok: evidence.status !== "failed",
+          stopReason: evidenceStop,
+          executedSteps,
+          task,
+          pendingStep: task.steps[task.currentStep],
+          evidence,
+          recovery,
+          message: evidence.summary,
+        };
+      }
+
       task = await updateLeoOperationalTask({
         identity: input.identity,
         session: input.session,
@@ -144,18 +185,6 @@ export async function runLeoOperationalTask(input: {
         evidence,
       });
       executedSteps += 1;
-
-      const evidenceStop = stopReasonForEvidence(evidence.status);
-      if (evidenceStop) {
-        return {
-          ok: evidence.status !== "failed",
-          stopReason: evidenceStop,
-          executedSteps,
-          task,
-          evidence,
-          message: evidence.summary,
-        };
-      }
       if (task.status === "completed") return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
     } catch (cause) {
       const error = cause instanceof Error ? cause.message : "Leo could not execute this task step.";
