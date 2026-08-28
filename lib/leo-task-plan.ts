@@ -113,6 +113,71 @@ export async function loadLeoOperationalTask(identity: LeoIdentity, session: Leo
   } catch { return null; }
 }
 
+export async function loadActiveLeoOperationalTask(identity: LeoIdentity, session: LeoSessionState) {
+  if (identity.scope !== "super_admin" || !session.persisted) return null;
+  const rows = await supabaseServerRequest<Array<{ content?: string; created_at?: string }>>("bot_sessions?select=content,created_at&role=eq.leo_operational_task&order=created_at.desc&limit=30").catch(() => []);
+  for (const row of rows) {
+    if (!row.content) continue;
+    try {
+      const parsed = JSON.parse(row.content) as Record<string, unknown>;
+      if (parsed.sessionId !== session.id) continue;
+      const task = taskFromContent(parsed);
+      if (task && !["completed", "canceled"].includes(task.status)) return task;
+    } catch {}
+  }
+  return null;
+}
+
+export async function reviseLeoOperationalTaskCurrentStep(input: {
+  identity: LeoIdentity;
+  session: LeoSessionState;
+  task: LeoOperationalTask;
+  toolKey?: string;
+  title?: string;
+  arguments?: Record<string, unknown>;
+}) {
+  if (input.identity.scope !== "super_admin") throw new Error("Only Super Leo can revise an operational task.");
+  if (["completed", "canceled"].includes(input.task.status)) throw new Error("Completed or canceled tasks cannot be revised.");
+  const current = input.task.steps[input.task.currentStep];
+  if (!current) throw new Error("The task has no current step to revise.");
+  if (current.status === "executing") throw new Error("The current step is already executing. Verify its outcome before changing or retrying it.");
+  const toolKey = String(input.toolKey || current.toolKey).trim();
+  const tool = resolveLeoTool(toolKey);
+  if (!tool || !tool.scopes.includes("super_admin")) throw new Error(`Tool ${toolKey} is not available to Super Leo.`);
+  const now = new Date().toISOString();
+  const steps = input.task.steps.map((step, index) => index === input.task.currentStep ? {
+    ...step,
+    title: String(input.title || step.title || tool.title),
+    toolKey: tool.key,
+    arguments: input.arguments ?? step.arguments,
+    approval: tool.approval,
+    readOnly: tool.readOnly,
+    status: "ready" as LeoTaskStepStatus,
+    approvalState: undefined,
+    result: undefined,
+    evidence: undefined,
+    recovery: undefined,
+    error: undefined,
+    startedAt: undefined,
+    completedAt: undefined,
+  } : step);
+  return persist(input.identity, input.session, { ...input.task, steps, status: "ready", updatedAt: now });
+}
+
+export async function cancelLeoOperationalTask(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask; reason?: string }) {
+  if (input.identity.scope !== "super_admin") throw new Error("Only Super Leo can cancel an operational task.");
+  if (input.task.status === "completed") throw new Error("A completed task cannot be canceled.");
+  if (input.task.status === "canceled") return input.task;
+  const now = new Date().toISOString();
+  const steps = input.task.steps.map((step, index) => index < input.task.currentStep || step.status === "completed" ? step : {
+    ...step,
+    status: "canceled" as LeoTaskStepStatus,
+    approvalState: undefined,
+    error: index === input.task.currentStep && input.reason ? `Canceled: ${input.reason}` : step.error,
+  });
+  return persist(input.identity, input.session, { ...input.task, steps, status: "canceled", updatedAt: now });
+}
+
 export async function requestLeoTaskStepApproval(input: { identity: LeoIdentity; session: LeoSessionState; task: LeoOperationalTask }) {
   const step = input.task.steps[input.task.currentStep];
   if (!step) throw new Error("The task has no current step to approve.");
