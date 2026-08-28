@@ -12,6 +12,20 @@ function argumentSummary(tool: LeoToolCall) {
   return entries.map(([key, value]) => `${key.replaceAll("_", " ")}: ${String(value).slice(0, 80)}`).join(" · ");
 }
 
+function outcomeSummary(tool: LeoToolCall) {
+  const result = tool.result && typeof tool.result === "object" ? tool.result as Record<string, unknown> : {};
+  const nested = result.result && typeof result.result === "object" ? result.result as Record<string, unknown> : result;
+  const delivered = Number(nested.delivered || 0);
+  const read = Number(nested.read || 0);
+  const failed = Number(nested.failed || 0);
+  const pending = Number(nested.pendingDelivery ?? nested.pending_delivery ?? 0);
+  const accepted = Number(nested.accepted ?? nested.sent ?? 0);
+  if (delivered || read || failed || pending || accepted) {
+    return `Accepted ${accepted} · Delivered ${delivered} · Read ${read} · Failed ${failed} · Unresolved ${pending}`;
+  }
+  return "Execution returned successfully and is recorded. External delivery or post-condition verification may still be pending.";
+}
+
 export default function LeoActionCenter({ compact = false }: { compact?: boolean }) {
   const { toolCalls, executeTool, dismissTool, operationState } = useLeoConversation();
   const visible = toolCalls.filter((tool) => tool.status !== "dismissed").slice(-3);
@@ -30,7 +44,7 @@ export default function LeoActionCenter({ compact = false }: { compact?: boolean
           <div className="flex min-w-0 items-start gap-2.5">
             <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${executed ? "bg-emerald-400/10 text-emerald-300" : failed ? "bg-rose-400/10 text-rose-300" : confirmation ? "bg-amber-300/10 text-amber-200" : "bg-violet-400/10 text-violet-200"}`}>{executing ? <Loader2 size={14} className="animate-spin" /> : executed ? <CheckCircle2 size={14} /> : confirmation ? <ShieldCheck size={14} /> : <Wrench size={14} />}</span>
             <div className="min-w-0">
-              <span className={`text-[9px] font-black tracking-[0.12em] ${executed ? "text-emerald-300" : failed ? "text-rose-300" : confirmation ? "text-amber-200" : "text-violet-200"}`}>{executing ? "EXECUTING" : executed ? "VERIFIED" : failed ? "ACTION FAILED" : confirmation ? "APPROVAL REQUIRED" : "ACTION PREPARED"}</span>
+              <span className={`text-[9px] font-black tracking-[0.12em] ${executed ? "text-emerald-300" : failed ? "text-rose-300" : confirmation ? "text-amber-200" : "text-violet-200"}`}>{executing ? "EXECUTING" : executed ? "EXECUTED" : failed ? "ACTION FAILED" : confirmation ? "APPROVAL REQUIRED" : "ACTION PREPARED"}</span>
               <strong className="mt-1 block text-[11px] text-slate-100">{titleFor(tool)}</strong>
             </div>
           </div>
@@ -42,7 +56,7 @@ export default function LeoActionCenter({ compact = false }: { compact?: boolean
           <span className="flex items-center gap-1 text-[8px] text-slate-500"><ShieldCheck size={10} />{confirmation ? "Nothing changes until you approve." : "Leo will execute this scoped action."}</span>
           <button type="button" disabled={operationState === "executing" || operationState === "investigating"} onClick={() => void executeTool(tool)} className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 text-[9px] font-black transition disabled:opacity-50 ${confirmation ? "bg-amber-300 text-slate-950 hover:bg-amber-200" : "bg-violet-600 text-white hover:bg-violet-500"}`}><Play size={11} />{confirmation ? "Approve & execute" : "Execute"}</button>
         </div> : null}
-        {executed ? <div className="mt-2 flex items-center gap-1.5 text-[9px] text-emerald-300"><CheckCircle2 size={11} />Execution returned successfully and is recorded in Leo's session.</div> : null}
+        {executed ? <div className="mt-2 flex items-center gap-1.5 text-[9px] text-emerald-300"><CheckCircle2 size={11} />{outcomeSummary(tool)}</div> : null}
         {failed ? <div className="mt-2 text-[9px] text-rose-300">Leo stopped this action because execution did not complete successfully.</div> : null}
       </article>;
     })}
