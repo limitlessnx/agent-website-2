@@ -3,6 +3,7 @@ import { sanitizeSupportDiagnostics } from "@/lib/ai/support-sanitizer";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { enforceLeoOrganizationScope, type LeoIdentity } from "@/lib/leo-core";
 import { LEO_PUBLIC_KNOWLEDGE } from "@/lib/leo-public-knowledge";
+import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -37,13 +38,14 @@ async function adminContext(identity: LeoIdentity) {
     "admin",
   );
 
-  const [organizations, usage] = await Promise.all([
+  const [organizations, usage, operationalMemory] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>(
       "organizations?select=id,name,slug,status&order=created_at.desc&limit=100",
     ).catch(() => []),
     supabaseServerRequest<Record<string, unknown>[]>(
       "usage_ledger?select=organization_id,usage_type,quantity,occurred_at&order=occurred_at.desc&limit=100",
     ).catch(() => []),
+    listLeoOperationalMemories(identity, { limit: 12, includeRetired: false }).catch(() => []),
   ]);
 
   return {
@@ -52,6 +54,22 @@ async function adminContext(identity: LeoIdentity) {
       organizationCount: organizations.length,
       activeOrganizationCount: organizations.filter((item) => String(item.status || "").toLowerCase() === "active").length,
       recentUsageEvents: usage.length,
+    },
+    operationalMemory: operationalMemory.map((memory) => ({
+      id: memory.id,
+      kind: memory.kind,
+      title: memory.title,
+      summary: memory.summary,
+      workspace: memory.workspace || null,
+      organizationId: memory.organizationId || null,
+      confidence: memory.confidence,
+      source: memory.source,
+      updatedAt: memory.updatedAt,
+    })),
+    memoryRules: {
+      scope: "super_admin_only",
+      usage: "Use relevant operational memory as historical context, never as fresh execution evidence or permission.",
+      conflictRule: "Current verified system state and explicit current user instructions override older memory.",
     },
   } as Record<string, unknown>;
 }
