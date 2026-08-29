@@ -11,6 +11,8 @@ export type LeoPersistedSignal = LeoProactiveSignal & {
   acknowledgedBy?: string;
   resolvedAt?: string;
   reopenedAt?: string;
+  lastAlertedAt?: string;
+  alertCount?: number;
 };
 
 type StoredSignalRow = { id: string; user_id?: string; content?: string | Record<string, unknown>; created_at?: string };
@@ -42,6 +44,13 @@ export async function listPersistedLeoSignals(limit = 200) {
   return rows.map(parseStored).filter((item): item is LeoPersistedSignal => Boolean(item));
 }
 
+export async function getPersistedLeoSignal(signalId: string) {
+  const id = String(signalId || "").trim();
+  if (!id) return null;
+  const rows = await supabaseServerRequest<StoredSignalRow[]>(`bot_sessions?select=id,user_id,content,created_at&id=eq.${encodeURIComponent(rowKey(id))}&role=eq.${ROLE}&limit=1`).catch(() => []);
+  return rows[0] ? parseStored(rows[0]) : null;
+}
+
 export async function reconcileLeoProactiveSignals(snapshot: { generatedAt: string; signals: LeoProactiveSignal[] }, actor = "fluxknight_admin") {
   const existing = await listPersistedLeoSignals(500);
   const byId = new Map(existing.map((item) => [item.id, item]));
@@ -61,6 +70,8 @@ export async function reconcileLeoProactiveSignals(snapshot: { generatedAt: stri
       acknowledgedBy: lifecycle === "acknowledged" ? prior?.acknowledgedBy : undefined,
       resolvedAt: undefined,
       reopenedAt: prior?.lifecycle === "resolved" ? snapshot.generatedAt : prior?.reopenedAt,
+      lastAlertedAt: prior?.lastAlertedAt,
+      alertCount: prior?.alertCount || 0,
     };
     await writeSignal(merged, actor);
     next.push(merged);
@@ -75,13 +86,20 @@ export async function reconcileLeoProactiveSignals(snapshot: { generatedAt: stri
 }
 
 export async function acknowledgeLeoProactiveSignal(signalId: string, actor: string) {
-  const id = String(signalId || "").trim();
-  if (!id) throw new Error("Signal ID is required.");
-  const rows = await supabaseServerRequest<StoredSignalRow[]>(`bot_sessions?select=id,user_id,content,created_at&id=eq.${encodeURIComponent(rowKey(id))}&role=eq.${ROLE}&limit=1`).catch(() => []);
-  const current = rows[0] ? parseStored(rows[0]) : null;
+  const current = await getPersistedLeoSignal(signalId);
   if (!current) throw new Error("Proactive signal was not found.");
   if (current.lifecycle === "resolved") throw new Error("A resolved signal does not need acknowledgment.");
   const next: LeoPersistedSignal = { ...current, lifecycle: "acknowledged", acknowledgedAt: new Date().toISOString(), acknowledgedBy: actor };
+  await writeSignal(next, actor);
+  return next;
+}
+
+export async function recordLeoProactiveAlertDelivery(signalId: string, actor: string) {
+  const current = await getPersistedLeoSignal(signalId);
+  if (!current) throw new Error("Proactive signal was not found.");
+  if (current.lifecycle === "resolved") return current;
+  const now = new Date().toISOString();
+  const next: LeoPersistedSignal = { ...current, lastAlertedAt: now, alertCount: Math.max(0, current.alertCount || 0) + 1 };
   await writeSignal(next, actor);
   return next;
 }
