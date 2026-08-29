@@ -5,6 +5,7 @@ import { enforceLeoOrganizationScope, type LeoIdentity } from "@/lib/leo-core";
 import { LEO_PUBLIC_KNOWLEDGE } from "@/lib/leo-public-knowledge";
 import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
 import { compactLeoPlaybooksForContext, listLeoOperationalPlaybooks, matchLeoOperationalPlaybooks } from "@/lib/leo-operational-playbooks";
+import { listLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -36,7 +37,7 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
   const diagnostics = await collectSupportDiagnostics("admin");
   const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
 
-  const [organizations, usage, operationalMemory, playbooks] = await Promise.all([
+  const [organizations, usage, operationalMemory, playbooks, autonomousGoals] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>(
       "organizations?select=id,name,slug,status&order=created_at.desc&limit=100",
     ).catch(() => []),
@@ -47,6 +48,7 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
     input.query
       ? matchLeoOperationalPlaybooks(identity, { query: input.query, workspace: input.workspace, limit: 5 }).catch(() => [])
       : listLeoOperationalPlaybooks(identity).then((items) => items.filter((item) => item.status === "active").slice(0, 5)).catch(() => []),
+    listLeoAutonomousGoals(identity).catch(() => []),
   ]);
 
   return {
@@ -79,6 +81,13 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
       authority: "A playbook cannot grant a tool, bypass approval, change tenant scope, or prove execution. Canonical tool policy and current evidence remain authoritative.",
       versioning: "Use the active version supplied in context. Never silently reconstruct retired or draft procedures from memory.",
       conflictRule: "Explicit current user instruction and current verified state override a playbook when they conflict, but permission and approval boundaries never weaken.",
+    },
+    autonomousGoals: autonomousGoals.map((goal) => ({ id: goal.id, key: goal.key, title: goal.title, objective: goal.objective, workspace: goal.workspace || null, status: goal.status, minimumSeverity: goal.minimumSeverity, categories: goal.signalCategories, lastEvaluation: goal.lastEvaluation || null })),
+    autonomousGoalHealth: summarizeLeoGoalHealth(autonomousGoals),
+    autonomousGoalRules: {
+      mode: "observe_recommend",
+      usage: "Ongoing goals are evaluated automatically against current monitoring evidence. They may surface an intervention objective but do not themselves send messages, mutate workflows, change integrations, or bypass approvals.",
+      intervention: "When an active goal needs action, create or continue a controlled 6K/6M operational task. Consequential steps retain canonical confirmation requirements.",
     },
   } as Record<string, unknown>;
 }
