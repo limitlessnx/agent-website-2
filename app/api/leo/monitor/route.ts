@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { resolveLeoIdentity } from "@/lib/leo-core";
 import { scanLeoProactiveSignals } from "@/lib/leo-proactive-monitor";
-import { acknowledgeLeoProactiveSignal, getPersistedLeoSignal, recordLeoProactiveAlertDelivery, reconcileLeoProactiveSignals } from "@/lib/leo-proactive-signal-store";
+import { acknowledgeLeoProactiveSignal, getPersistedLeoSignal, listPersistedLeoSignals, recordLeoProactiveAlertDelivery, reconcileLeoProactiveSignals } from "@/lib/leo-proactive-signal-store";
 import { actionBlueprintForLeoSignal, alertPolicyForLeoSignal, recommendationForLeoSignal, sortDeliverableSignals } from "@/lib/leo-proactive-policy";
+import { auditLeoProactiveMonitoring } from "@/lib/leo-proactive-audit";
 import { createLeoOperationalTask } from "@/lib/leo-task-plan";
 import { auditLeoEvent, getOrCreateLeoSession } from "@/lib/leo-session-store";
 
@@ -28,9 +29,10 @@ export async function GET(request: Request) {
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit")) || 50, 100));
   const snapshot = await scanLeoProactiveSignals({ limit });
   const persisted = await reconcileLeoProactiveSignals(snapshot, actorFor(identity));
+  const allPersisted = await listPersistedLeoSignals(500);
   const signals = enrichSignals(persisted);
   const alerts = sortDeliverableSignals(persisted.filter((item) => alertPolicyForLeoSignal(item).deliver)).slice(0, 8).map((item) => ({ ...item, alertPolicy: alertPolicyForLeoSignal(item), analysis: recommendationForLeoSignal(item), actionAvailable: Boolean(actionBlueprintForLeoSignal(item)) }));
-  return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length } }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length }, monitoringAudit: auditLeoProactiveMonitoring(allPersisted) }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function POST(request: Request) {
