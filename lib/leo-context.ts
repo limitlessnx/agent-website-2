@@ -15,6 +15,7 @@ import { buildLeoUnifiedBusinessState, compactLeoUnifiedBusinessState } from "@/
 import { buildLeoWorkspaceKpis, compactLeoWorkspaceKpis } from "@/lib/leo-business-kpis";
 import { evaluateLeoBusinessRules } from "@/lib/leo-business-rules";
 import { buildLeoOperationalCalendarSnapshot } from "@/lib/leo-operational-calendar";
+import { buildLeoWorkspaceBusinessModelSnapshot } from "@/lib/leo-workspace-business-models";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -35,12 +36,13 @@ function wantsBusinessState(query?: string) { return Boolean(query && /\b(busine
 function wantsKpis(query?: string) { return Boolean(query && /\b(kpi|objective|target|goal performance|business performance|delivery rate|failure rate|stale qualified|operating target|scorecard)\b/i.test(query)); }
 function wantsBusinessRules(query?: string) { return Boolean(query && /\b(rule|rules|guardrail|policy trigger|when .*then|block campaign|business rule|operating rule|threshold breach)\b/i.test(query)); }
 function wantsOperationalCalendar(query?: string) { return Boolean(query && /\b(calendar|schedule|deadline|due|overdue|upcoming|appointment|campaign window|follow-up window|follow up window|routine|this week|today)\b/i.test(query)); }
+function wantsBusinessModel(query?: string) { return Boolean(query && /\b(business model|workspace model|pipeline stage|operating object|how .*business works|how .*workspace works|business type|business structure|entities|sales pipeline)\b/i.test(query)); }
 
 async function adminContext(identity: LeoIdentity, input: { query?: string; workspace?: string } = {}) {
   if (identity.scope !== "super_admin") throw new Error("Super-admin Leo context requires super-admin scope.");
   const diagnostics = await collectSupportDiagnostics("admin");
   const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
-  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio, decisionIntelligence, optimizationProposals, executiveBrief, governance, businessState, businessKpis, businessRules, operationalCalendar] = await Promise.all([
+  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio, decisionIntelligence, optimizationProposals, executiveBrief, governance, businessState, businessKpis, businessRules, operationalCalendar, workspaceBusinessModel] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>("organizations?select=id,name,slug,status&order=created_at.desc&limit=100").catch(() => []),
     supabaseServerRequest<Record<string, unknown>[]>("usage_ledger?select=organization_id,usage_type,quantity,occurred_at&order=occurred_at.desc&limit=100").catch(() => []),
     listLeoOperationalMemories(identity, { limit: 12, includeRetired: false }).catch(() => []),
@@ -54,6 +56,7 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
     wantsKpis(input.query) ? buildLeoWorkspaceKpis({ identity, workspace: input.workspace }).then(compactLeoWorkspaceKpis).catch(() => null) : Promise.resolve(null),
     wantsBusinessRules(input.query) ? evaluateLeoBusinessRules({ identity, workspace: input.workspace }).catch(() => null) : Promise.resolve(null),
     wantsOperationalCalendar(input.query) ? buildLeoOperationalCalendarSnapshot({ identity, workspace: input.workspace }).catch(() => null) : Promise.resolve(null),
+    wantsBusinessModel(input.query) && input.workspace ? buildLeoWorkspaceBusinessModelSnapshot({ identity, workspace: input.workspace }).catch(() => null) : Promise.resolve(null),
   ]);
   return {
     diagnostics: safe,
@@ -83,6 +86,8 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
     businessRuleRules: { authority: "Active business rules guide recommendations and blocking logic but cannot grant permissions, approve actions, or prove execution.", versioning: "Use only the active rule version. Draft and retired rules are never treated as operating policy.", evidence: "Rules trigger only from current KPI evidence. Missing data is not a trigger.", precedence: "Canonical permissions, explicit current user instruction, and verified current state outrank business-rule assumptions. Business rules cannot weaken safety boundaries." },
     operationalCalendar,
     operationalCalendarRules: { time: "Treat deadlines, appointments, campaign windows and routines as first-class operating context.", authority: "Calendar state prioritizes work but cannot prove completion or execute a consequential action.", recurrence: "Recurring entries advance only after explicit completion is recorded.", scope: "Workspace calendar items must remain pinned to their organization ID; never blend private schedules across tenants." },
+    workspaceBusinessModel,
+    workspaceBusinessModelRules: { semantics: "Use the resolved workspace business model to understand entities, pipeline stages, operating objects, events and relevant KPIs for that business.", fallback: "A generic client model is intentionally sparse; do not invent business-specific stages, metrics, financial meaning or entities when configuration is missing.", authority: "Business models describe operating semantics only and cannot grant tools, approvals, permissions or prove execution.", isolation: "Every business-specific operation must remain pinned to the exact organization ID resolved for the workspace." },
   } as Record<string, unknown>;
 }
 
