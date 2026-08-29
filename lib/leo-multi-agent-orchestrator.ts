@@ -42,6 +42,7 @@ type AgentRow = { id: string; organization_id: string; name: string; agent_type?
 type StoredRow = { content?: string | Record<string, unknown>; user_id?: string };
 const ROLE = "leo_multi_agent_orchestration";
 const PREFIX = "leo_orchestration:";
+const ACTIVE_AGENT_STATUSES = new Set(["active", "published", "running", "online", "testing"]);
 
 function asRecord(value: unknown) { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function text(value: unknown) { return String(value || "").trim(); }
@@ -58,17 +59,26 @@ async function persist(orchestration: LeoMultiAgentOrchestration, actor: string)
   const userId = orchestrationKey(orchestration.sessionId);
   const existing = await supabaseServerRequest<Array<{ id: string }>>(`bot_sessions?select=id&role=eq.${ROLE}&user_id=eq.${encodeURIComponent(userId)}&limit=1`).catch(() => []);
   const body = JSON.stringify({ role: ROLE, user_id: userId, content: JSON.stringify(orchestration), created_at: orchestration.createdAt });
-  if (existing[0]?.id) {
-    await supabaseServerRequest(`bot_sessions?id=eq.${existing[0].id}`, { method: "PATCH", body });
-  } else {
-    await supabaseServerRequest("bot_sessions", { method: "POST", body });
-  }
+  if (existing[0]?.id) await supabaseServerRequest(`bot_sessions?id=eq.${existing[0].id}`, { method: "PATCH", body });
+  else await supabaseServerRequest("bot_sessions", { method: "POST", body });
   return orchestration;
 }
 
 export async function loadActiveLeoOrchestration(sessionId: string) {
   const rows = await supabaseServerRequest<StoredRow[]>(`bot_sessions?select=user_id,content&role=eq.${ROLE}&user_id=eq.${encodeURIComponent(orchestrationKey(sessionId))}&order=created_at.desc&limit=1`).catch(() => []);
   return parseStored(rows[0]);
+}
+
+async function resolveOrganizationId(organizationId: string | undefined, workspace: string | undefined, objective: string) {
+  if (organizationId) return organizationId;
+  if (!/limitless|realty|property|maia/i.test(`${workspace || ""} ${objective}`)) return undefined;
+  const admin = createAdminClient();
+  const result = await admin.from("agents").select("id,organization_id,name,agent_type,status,configuration").or("name.ilike.%Maia%,agent_type.eq.real_estate").limit(20);
+  if (result.error) throw result.error;
+  const rows = (result.data || []) as AgentRow[];
+  const canonical = rows.find((agent) => asRecord(agent.configuration).canonical_agent === true && ACTIVE_AGENT_STATUSES.has(text(agent.status).toLowerCase()))
+    || rows.find((agent) => /maia/i.test(agent.name) && ACTIVE_AGENT_STATUSES.has(text(agent.status).toLowerCase()));
+  return canonical?.organization_id;
 }
 
 async function availableAgents(organizationId?: string) {
@@ -93,7 +103,8 @@ function chooseAgent(agents: AgentRow[], specialist: LeoSpecialistKey) {
     support: /support/,
     platform: /platform|admin/,
   };
-  return agents.find((agent) => patterns[specialist].test(agentKey(agent))) || null;
+  const candidates = agents.filter((agent) => patterns[specialist].test(agentKey(agent)));
+  return candidates.find((agent) => ACTIVE_AGENT_STATUSES.has(text(agent.status).toLowerCase())) || null;
 }
 function specialist(key: LeoSpecialistKey, agents: AgentRow[], organizationId?: string): LeoSpecialist {
   const labels: Record<LeoSpecialistKey, string> = { maia: "Maia", crm: "CRM", campaign: "Campaign", workflow: "Workflow", analytics: "Analytics", support: "Support", platform: "Platform" };
@@ -103,6 +114,15 @@ function specialist(key: LeoSpecialistKey, agents: AgentRow[], organizationId?: 
 
 function add(plan: Array<Omit<LeoDelegation, "id" | "status" | "taskStepIndex">>, specialists: Record<LeoSpecialistKey, LeoSpecialist>, key: LeoSpecialistKey, title: string, toolKey: string, args: Record<string, unknown>) {
   plan.push({ specialist: specialists[key], title, toolKey, arguments: args });
+}
+function dedupePlan(plan: Array<Omit<LeoDelegation, "id" | "status" | "taskStepIndex">>) {
+  const seen = new Set<string>();
+  return plan.filter((item) => {
+    const key = `${item.toolKey}:${JSON.stringify(item.arguments)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function buildPlan(input: { objective: string; workspace?: string; organizationId?: string; context?: Record<string, unknown>; specialists: Record<LeoSpecialistKey, LeoSpecialist> }) {
@@ -120,18 +140,15 @@ function buildPlan(input: { objective: string; workspace?: string; organizationI
     if (limitless) add(plan, input.specialists, "crm", "Inspect Limitless leads requiring attention", "leo.limitless.leads.read", context);
     else add(plan, input.specialists, "crm", "Inspect CRM leads", "leo.crm.leads.read", args);
   }
-  if (/workflow|automation|failure|failed|error|runtime/.test(objective)) {
-    add(plan, input.specialists, "workflow", "Inspect workflow failures", "leo.workflow.inspect_failures", args);
+  if (/workflow|automation|failure|failed|error|runtime/.test(objective)) add(plan, input.specialists, "workflow", "Inspect workflow failures", "leo.workflow.inspect_failures", args);
+  if (/integration|disconnect|connection/.test(objective)) add(plan, input.specialists, "support", "Inspect integration health", "leo.integration.inspect", args);
+  if (/analytics|report|performance|metrics?|evidence|conversion|trend/.test(objective)) {
+    if (limitless) add(plan, input.specialists, "analytics", "Collect Limitless operational evidence", "leo.limitless.leads.read", { ...context, campaign_diagnosis: /campaign|delivery|whatsapp/.test(objective) });
+    else if (input.organizationId) add(plan, input.specialists, "analytics", "Collect workspace operational evidence", "leo.tenant.inspect", args);
+    else add(plan, input.specialists, "analytics", "Collect platform operating snapshot", "leo.platform.organizations.read", { limit: 50 });
   }
-  if (/integration|disconnect|connection/.test(objective)) {
-    add(plan, input.specialists, "support", "Inspect integration health", "leo.integration.inspect", args);
-  }
-  if (/agent|maia/.test(objective) && input.specialists.maia.agentId) {
-    add(plan, input.specialists, "maia", "Inspect Maia specialist state", "leo.agent.inspect", { ...args, agent_id: input.specialists.maia.agentId });
-  }
-  if (/organization|tenant|workspace|platform/.test(objective) && input.organizationId) {
-    add(plan, input.specialists, "platform", "Inspect workspace state", "leo.tenant.inspect", args);
-  }
+  if (/agent|maia/.test(objective) && input.specialists.maia.agentId) add(plan, input.specialists, "maia", "Inspect Maia specialist state", "leo.agent.inspect", { ...args, agent_id: input.specialists.maia.agentId });
+  if (/organization|tenant|workspace|platform/.test(objective) && input.organizationId) add(plan, input.specialists, "platform", "Inspect workspace state", "leo.tenant.inspect", args);
 
   const explicitlySend = /\b(send|broadcast|message|follow up)\b/.test(objective);
   if (explicitlySend && limitless && (context.message || context.update || context.content || context.property_id)) {
@@ -148,21 +165,22 @@ function buildPlan(input: { objective: string; workspace?: string; organizationI
     if (input.organizationId) add(plan, input.specialists, "platform", "Inspect workspace before deciding next action", "leo.tenant.inspect", args);
     else add(plan, input.specialists, "platform", "Inspect Fluxknight organizations", "leo.platform.organizations.read", { limit: 50 });
   }
-  return plan.slice(0, 12);
+  return dedupePlan(plan).slice(0, 12);
 }
 
 export async function createLeoMultiAgentOrchestration(input: { identity: LeoIdentity; session: LeoSessionState; objective: string; workspace?: string; organizationId?: string; context?: Record<string, unknown> }) {
   if (input.identity.scope !== "super_admin") throw new Error("Multi-agent orchestration is restricted to Super Leo.");
   const objective = text(input.objective);
   if (!objective) throw new Error("An orchestration objective is required.");
-  const agents = await availableAgents(input.organizationId);
+  const organizationId = await resolveOrganizationId(input.organizationId, input.workspace, objective);
+  const agents = await availableAgents(organizationId);
   const keys: LeoSpecialistKey[] = ["maia", "crm", "campaign", "workflow", "analytics", "support", "platform"];
-  const specialists = Object.fromEntries(keys.map((key) => [key, specialist(key, agents, input.organizationId)])) as Record<LeoSpecialistKey, LeoSpecialist>;
-  const plan = buildPlan({ objective, workspace: input.workspace, organizationId: input.organizationId, context: input.context, specialists });
+  const specialists = Object.fromEntries(keys.map((key) => [key, specialist(key, agents, organizationId)])) as Record<LeoSpecialistKey, LeoSpecialist>;
+  const plan = buildPlan({ objective, workspace: input.workspace, organizationId, context: input.context, specialists });
   const task = await createLeoOperationalTask({ identity: input.identity, session: input.session, goal: objective, workspace: input.workspace, steps: plan.map((item) => ({ title: `${item.specialist.label}: ${item.title}`, toolKey: item.toolKey, arguments: item.arguments })) });
   const now = new Date().toISOString();
   const orchestration: LeoMultiAgentOrchestration = {
-    id: randomUUID(), sessionId: input.session.id, objective, workspace: input.workspace, organizationId: input.organizationId,
+    id: randomUUID(), sessionId: input.session.id, objective, workspace: input.workspace, organizationId,
     status: "active", taskId: task.id,
     delegations: plan.map((item, index) => ({ id: randomUUID(), ...item, status: index === 0 ? "ready" : "planned", taskStepIndex: index })),
     createdAt: now, updatedAt: now,
@@ -202,9 +220,10 @@ export function auditLeoMultiAgentOrchestration(orchestration: LeoMultiAgentOrch
   const specialistKeys = new Set(orchestration.delegations.map((item) => item.specialist.key));
   const directConsequentialBypass = orchestration.delegations.some((item) => /\.send$|\.pause$|\.resume$|\.activate$|\.deactivate$/.test(item.toolKey) && task?.steps[item.taskStepIndex]?.approval === "none");
   const stepAlignment = Boolean(task) && task!.steps.length === delegated && orchestration.delegations.every((item) => task!.steps[item.taskStepIndex]?.toolKey === item.toolKey);
+  const unsafeDraftAgentDelegation = orchestration.delegations.some((item) => item.specialist.authority === "specialized_agent" && !ACTIVE_AGENT_STATUSES.has(text(item.specialist.agentStatus).toLowerCase()));
   return {
-    ok: Boolean(task) && delegated > 0 && stepAlignment && !directConsequentialBypass,
-    checks: { persistedTask: Boolean(task), delegationCount: delegated, stepAlignment, approvalBoundary: !directConsequentialBypass, specialistCoverage: specialistKeys.size },
+    ok: Boolean(task) && delegated > 0 && stepAlignment && !directConsequentialBypass && !unsafeDraftAgentDelegation,
+    checks: { persistedTask: Boolean(task), delegationCount: delegated, stepAlignment, approvalBoundary: !directConsequentialBypass, activeSpecialistBoundary: !unsafeDraftAgentDelegation, specialistCoverage: specialistKeys.size },
     architecture: "Understand objective → choose specialist/tool → delegate → task approval → execute → verify → recover → report",
   };
 }
