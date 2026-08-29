@@ -15,6 +15,7 @@ function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+// Keep task execution and recovery on the same exported result contract so API typing cannot drift.
 async function auditTaskResult(input: { identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>; session: Awaited<ReturnType<typeof getOrCreateLeoSession>>; taskId: string; action: "run" | "recover"; result: LeoTaskRunResult }) {
   const { identity, session, taskId, action, result } = input;
   await auditLeoEvent({ identity, session, eventType: action === "recover" ? "operational_task_recovery" : "operational_task_run", details: { task_id: taskId, stop_reason: result.stopReason, executed_steps: result.executedSteps, ok: result.ok } });
