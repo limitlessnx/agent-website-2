@@ -3,6 +3,7 @@ import { resolveLeoIdentity } from "@/lib/leo-core";
 import { getOrCreateLeoSession, auditLeoEvent } from "@/lib/leo-session-store";
 import { approveLeoTaskStep, cancelLeoOperationalTask, createLeoOperationalTask, loadActiveLeoOperationalTask, loadLeoOperationalTask, reviseLeoOperationalTaskCurrentStep } from "@/lib/leo-task-plan";
 import { recoverLeoOperationalTask, runLeoOperationalTask } from "@/lib/leo-task-executor";
+import { createLeoMultiAgentOrchestration, refreshLeoMultiAgentOrchestration } from "@/lib/leo-multi-agent-orchestrator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,15 +44,26 @@ export async function POST(request: NextRequest) {
     if (!sessionId) return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
     const session = await getOrCreateLeoSession({ identity, sessionId });
 
+    if (action === "orchestrate") {
+      const context = object(body.arguments);
+      const orchestration = await createLeoMultiAgentOrchestration({
+        identity,
+        session,
+        objective: String(body.reason || body.goal || context.objective || "").trim(),
+        workspace: String(context.workspace || body.workspace || "").trim() || undefined,
+        organizationId: String(context.organization_id || context.organizationId || "").trim() || undefined,
+        context,
+      });
+      const refreshed = await refreshLeoMultiAgentOrchestration({ identity, session, orchestration });
+      await auditLeoEvent({ identity, session, eventType: "multi_agent_orchestration_created", details: { orchestration_id: orchestration.id, task_id: orchestration.taskId, objective: orchestration.objective, specialists: orchestration.delegations.map((item) => item.specialist.key) } });
+      return NextResponse.json({ ok: true, orchestration: refreshed.orchestration, task: refreshed.task }, { status: 201 });
+    }
+
     if (action === "create") {
       const rawSteps: unknown[] = Array.isArray(body.steps) ? body.steps : [];
       const steps: TaskStepInput[] = rawSteps.map((value: unknown) => {
         const row = object(value);
-        return {
-          title: String(row.title || "").trim() || undefined,
-          toolKey: String(row.toolKey || row.tool_key || "").trim(),
-          arguments: object(row.arguments),
-        };
+        return { title: String(row.title || "").trim() || undefined, toolKey: String(row.toolKey || row.tool_key || "").trim(), arguments: object(row.arguments) };
       });
       if (steps.some((step: TaskStepInput) => !step.toolKey)) return NextResponse.json({ error: "Every task step requires a toolKey." }, { status: 400 });
       const task = await createLeoOperationalTask({ identity, session, goal: String(body.goal || ""), workspace: String(body.workspace || "").trim() || undefined, steps });
@@ -71,14 +83,7 @@ export async function POST(request: NextRequest) {
     if (action === "revise") {
       const task = await resolveTask();
       if (!task) return NextResponse.json({ error: "No active task was found for this Leo session." }, { status: 404 });
-      const revised = await reviseLeoOperationalTaskCurrentStep({
-        identity,
-        session,
-        task,
-        toolKey: String(body.toolKey || body.tool_key || "").trim() || undefined,
-        title: String(body.title || "").trim() || undefined,
-        arguments: body.arguments && typeof body.arguments === "object" && !Array.isArray(body.arguments) ? body.arguments as Record<string, unknown> : undefined,
-      });
+      const revised = await reviseLeoOperationalTaskCurrentStep({ identity, session, task, toolKey: String(body.toolKey || body.tool_key || "").trim() || undefined, title: String(body.title || "").trim() || undefined, arguments: body.arguments && typeof body.arguments === "object" && !Array.isArray(body.arguments) ? body.arguments as Record<string, unknown> : undefined });
       await auditLeoEvent({ identity, session, eventType: "operational_task_revised", toolKey: revised.steps[revised.currentStep]?.toolKey, details: { task_id: revised.id, step_id: revised.steps[revised.currentStep]?.id, step_index: revised.currentStep, approval_invalidated: true } });
       return NextResponse.json({ ok: true, status: "revised", task: revised, currentStep: revised.steps[revised.currentStep] });
     }
@@ -109,14 +114,12 @@ export async function POST(request: NextRequest) {
       const taskId = task.id;
       const maxSteps = Number(body.maxSteps || body.max_steps) || undefined;
       const recovery = action === "recover";
-      const result = recovery
-        ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps })
-        : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
+      const result = recovery ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps }) : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
       await auditTaskResult({ identity, session, taskId, action: recovery ? "recover" : "run", result: result as TaskActionResult });
       return NextResponse.json(result, { status: result.ok ? 200 : result.stopReason === "task_not_found" ? 404 : 409 });
     }
 
-    return NextResponse.json({ error: "Unsupported task action. Use create, get, active, revise, cancel, approve, run, resume or recover." }, { status: 400 });
+    return NextResponse.json({ error: "Unsupported task action. Use orchestrate, create, get, active, revise, cancel, approve, run, resume or recover." }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Super Leo task operation failed.";
     const status = /approval token|changed after approval|waiting for confirmation|already executing|cannot be revised/i.test(message) ? 409 : 500;
