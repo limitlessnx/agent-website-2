@@ -12,6 +12,7 @@ import { listLeoOptimizationProposals } from "@/lib/leo-autonomous-optimization"
 import { buildLeoExecutiveBrief, compactLeoExecutiveBrief } from "@/lib/leo-executive-command";
 import { getLeoAutonomyGovernance, auditLeoAutonomyGovernance } from "@/lib/leo-autonomy-governance";
 import { buildLeoUnifiedBusinessState, compactLeoUnifiedBusinessState } from "@/lib/leo-business-state";
+import { buildLeoWorkspaceKpis, compactLeoWorkspaceKpis } from "@/lib/leo-business-kpis";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -25,28 +26,28 @@ async function tenantContext(identity: LeoIdentity) {
   ]);
   return sanitizeSupportDiagnostics({ ...diagnostics, subscriptions, billingPlans, readiness }, "tenant", organizationId) as unknown as Record<string, unknown>;
 }
-
 function wantsDecisionIntelligence(query?: string) { return Boolean(query && /\b(trend|performance|metric|conversion|compare|comparison|anomal|declin|improv|decision|why .*chang|what changed|health|forecast|pattern|rate)\b/i.test(query)); }
 function wantsOptimization(query?: string) { return Boolean(query && /\b(optimi[sz]|improve|recommend.*change|efficien|better process|fix recurring|reduce failure|reduce stale)\b/i.test(query)); }
 function wantsExecutiveBrief(query?: string) { return Boolean(query && /\b(executive|brief|priority|priorities|what needs attention|what should i focus|decision needed|morning brief|operating brief)\b/i.test(query)); }
 function wantsBusinessState(query?: string) { return Boolean(query && /\b(business state|business status|operating state|what is happening|what's happening|everything happening|current business|overall state|business overview|workspace state|company state)\b/i.test(query)); }
+function wantsKpis(query?: string) { return Boolean(query && /\b(kpi|objective|target|goal performance|business performance|delivery rate|failure rate|stale qualified|operating target|scorecard)\b/i.test(query)); }
 
 async function adminContext(identity: LeoIdentity, input: { query?: string; workspace?: string } = {}) {
   if (identity.scope !== "super_admin") throw new Error("Super-admin Leo context requires super-admin scope.");
   const diagnostics = await collectSupportDiagnostics("admin");
   const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
-  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio, decisionIntelligence, optimizationProposals, executiveBrief, governance, businessState] = await Promise.all([
+  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio, decisionIntelligence, optimizationProposals, executiveBrief, governance, businessState, businessKpis] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>("organizations?select=id,name,slug,status&order=created_at.desc&limit=100").catch(() => []),
     supabaseServerRequest<Record<string, unknown>[]>("usage_ledger?select=organization_id,usage_type,quantity,occurred_at&order=occurred_at.desc&limit=100").catch(() => []),
     listLeoOperationalMemories(identity, { limit: 12, includeRetired: false }).catch(() => []),
     input.query ? matchLeoOperationalPlaybooks(identity, { query: input.query, workspace: input.workspace, limit: 5 }).catch(() => []) : listLeoOperationalPlaybooks(identity).then((items) => items.filter((item) => item.status === "active").slice(0, 5)).catch(() => []),
-    listLeoAutonomousGoals(identity).catch(() => []),
-    listLeoWorkspacePortfolio(identity).catch(() => []),
+    listLeoAutonomousGoals(identity).catch(() => []), listLeoWorkspacePortfolio(identity).catch(() => []),
     wantsDecisionIntelligence(input.query) ? buildLeoDecisionIntelligence({ identity, workspace: input.workspace }).then(compactLeoDecisionIntelligence).catch(() => null) : Promise.resolve(null),
     wantsOptimization(input.query) ? listLeoOptimizationProposals(identity).then((items) => items.slice(0, 8)).catch(() => []) : Promise.resolve([]),
     wantsExecutiveBrief(input.query) ? buildLeoExecutiveBrief({ identity, workspace: input.workspace, refreshOptimizations: true }).then(compactLeoExecutiveBrief).catch(() => null) : Promise.resolve(null),
     getLeoAutonomyGovernance(identity).catch(() => null),
     wantsBusinessState(input.query) ? buildLeoUnifiedBusinessState({ identity, workspace: input.workspace }).then(compactLeoUnifiedBusinessState).catch(() => null) : Promise.resolve(null),
+    wantsKpis(input.query) ? buildLeoWorkspaceKpis({ identity, workspace: input.workspace }).then(compactLeoWorkspaceKpis).catch(() => null) : Promise.resolve(null),
   ]);
   return {
     diagnostics: safe,
@@ -70,6 +71,8 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
     autonomyRules: { killSwitch: "The governance kill switch blocks controlled autonomous preparation when active.", approval: "No Phase 7 layer can self-approve or downgrade canonical tool approval.", retries: "Consequential retries require evidence about the prior attempt before repetition.", humanDelegation: "7F Human Delegation & Escalation is deferred; do not invent an escalation team or assign humans automatically." },
     businessState,
     businessStateRules: { sourceOfTruth: "Unified business state is a read-only normalized view over existing authoritative Fluxknight systems, not a replacement database.", freshness: "Rebuild the state before consequential decisions when conditions may have changed.", scope: "Workspace state must resolve to one exact organization ID. Cross-workspace state can aggregate safe summaries but cannot merge private records." },
+    businessKpis,
+    businessKpiRules: { objective: "Evaluate explicit operating objectives from authoritative KPI evidence rather than generic system health alone.", missingData: "If evidence is missing, report insufficient data instead of estimating a KPI.", thresholds: "KPI thresholds are operating targets and must not be represented as forecasts, guarantees, revenue projections, or permissions.", action: "KPI breaches can inform prioritization and recommendations but consequential action still requires canonical approval and post-action evidence." },
   } as Record<string, unknown>;
 }
 
