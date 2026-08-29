@@ -1,5 +1,7 @@
 import type { LeoPersistedSignal } from "@/lib/leo-proactive-signal-store";
 
+export const LEO_PROACTIVE_MONITORING_VERSION = "6L-H";
+
 export function auditLeoProactiveMonitoring(signals: LeoPersistedSignal[]) {
   const ids = signals.map((item) => item.id);
   const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
@@ -19,6 +21,7 @@ export function auditLeoProactiveMonitoring(signals: LeoPersistedSignal[]) {
     consequenceBoundary: true,
   };
   return {
+    version: LEO_PROACTIVE_MONITORING_VERSION,
     ok: Object.values(checks).every(Boolean),
     checkedAt: new Date().toISOString(),
     checks,
@@ -28,6 +31,7 @@ export function auditLeoProactiveMonitoring(signals: LeoPersistedSignal[]) {
       "Monitoring produces recommendations and controlled task plans only; it does not directly execute consequential actions.",
       "Super-admin monitor routes remain separate from tenant Leo routes.",
       "Acknowledgment suppresses repeat delivery but does not mark the underlying condition resolved.",
+      "Scheduled scans update evidence and lifecycle state; alert delivery remains subject to severity policy and cooldowns.",
     ],
   };
 }
