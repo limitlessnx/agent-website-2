@@ -4,6 +4,7 @@ import { getOrCreateLeoSession, auditLeoEvent } from "@/lib/leo-session-store";
 import { approveLeoTaskStep, cancelLeoOperationalTask, createLeoOperationalTask, loadActiveLeoOperationalTask, loadLeoOperationalTask, reviseLeoOperationalTaskCurrentStep } from "@/lib/leo-task-plan";
 import { recoverLeoOperationalTask, runLeoOperationalTask } from "@/lib/leo-task-executor";
 import { createLeoMultiAgentOrchestration, refreshLeoMultiAgentOrchestration } from "@/lib/leo-multi-agent-orchestrator";
+import { rememberLeoTaskOutcome } from "@/lib/leo-operational-memory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,6 +117,13 @@ export async function POST(request: NextRequest) {
       const recovery = action === "recover";
       const result = recovery ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps }) : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
       await auditTaskResult({ identity, session, taskId, action: recovery ? "recover" : "run", result: result as TaskActionResult });
+      if (result.ok && result.stopReason === "completed") {
+        const completedTask = await loadLeoOperationalTask(identity, session, taskId);
+        if (completedTask?.status === "completed") {
+          const memory = await rememberLeoTaskOutcome({ identity, sessionId: session.id, task: completedTask }).catch(() => null);
+          if (memory) await auditLeoEvent({ identity, session, eventType: "operational_memory_learned", details: { memory_id: memory.id, task_id: taskId, kind: memory.kind } });
+        }
+      }
       return NextResponse.json(result, { status: result.ok ? 200 : result.stopReason === "task_not_found" ? 404 : 409 });
     }
 
