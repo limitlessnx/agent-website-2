@@ -4,6 +4,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { enforceLeoOrganizationScope, type LeoIdentity } from "@/lib/leo-core";
 import { LEO_PUBLIC_KNOWLEDGE } from "@/lib/leo-public-knowledge";
 import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
+import { compactLeoPlaybooksForContext, listLeoOperationalPlaybooks, matchLeoOperationalPlaybooks } from "@/lib/leo-operational-playbooks";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -30,15 +31,12 @@ async function tenantContext(identity: LeoIdentity) {
   ) as unknown as Record<string, unknown>;
 }
 
-async function adminContext(identity: LeoIdentity) {
+async function adminContext(identity: LeoIdentity, input: { query?: string; workspace?: string } = {}) {
   if (identity.scope !== "super_admin") throw new Error("Super-admin Leo context requires super-admin scope.");
   const diagnostics = await collectSupportDiagnostics("admin");
-  const safe = sanitizeSupportDiagnostics(
-    diagnostics as unknown as Record<string, unknown>,
-    "admin",
-  );
+  const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
 
-  const [organizations, usage, operationalMemory] = await Promise.all([
+  const [organizations, usage, operationalMemory, playbooks] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>(
       "organizations?select=id,name,slug,status&order=created_at.desc&limit=100",
     ).catch(() => []),
@@ -46,6 +44,9 @@ async function adminContext(identity: LeoIdentity) {
       "usage_ledger?select=organization_id,usage_type,quantity,occurred_at&order=occurred_at.desc&limit=100",
     ).catch(() => []),
     listLeoOperationalMemories(identity, { limit: 12, includeRetired: false }).catch(() => []),
+    input.query
+      ? matchLeoOperationalPlaybooks(identity, { query: input.query, workspace: input.workspace, limit: 5 }).catch(() => [])
+      : listLeoOperationalPlaybooks(identity).then((items) => items.filter((item) => item.status === "active").slice(0, 5)).catch(() => []),
   ]);
 
   return {
@@ -71,23 +72,29 @@ async function adminContext(identity: LeoIdentity) {
       usage: "Use relevant operational memory as historical context, never as fresh execution evidence or permission.",
       conflictRule: "Current verified system state and explicit current user instructions override older memory.",
     },
+    operationalPlaybooks: compactLeoPlaybooksForContext(playbooks),
+    playbookRules: {
+      scope: "super_admin_only",
+      usage: "Treat matched active playbooks as the preferred operating procedure for the objective, while still using current evidence and canonical Leo permissions.",
+      authority: "A playbook cannot grant a tool, bypass approval, change tenant scope, or prove execution. Canonical tool policy and current evidence remain authoritative.",
+      versioning: "Use the active version supplied in context. Never silently reconstruct retired or draft procedures from memory.",
+      conflictRule: "Explicit current user instruction and current verified state override a playbook when they conflict, but permission and approval boundaries never weaken.",
+    },
   } as Record<string, unknown>;
 }
 
 export async function buildLeoReasoningContext(input: {
   identity: LeoIdentity;
   pageContext?: unknown;
+  query?: string;
+  workspace?: string;
 }): Promise<LeoReasoningContext> {
   const base: LeoReasoningContext = {
     pageContext: input.pageContext,
     publicKnowledge: LEO_PUBLIC_KNOWLEDGE as unknown as Record<string, unknown>,
   };
 
-  if (input.identity.scope === "tenant") {
-    return { ...base, tenantSnapshot: await tenantContext(input.identity) };
-  }
-  if (input.identity.scope === "super_admin") {
-    return { ...base, adminSnapshot: await adminContext(input.identity) };
-  }
+  if (input.identity.scope === "tenant") return { ...base, tenantSnapshot: await tenantContext(input.identity) };
+  if (input.identity.scope === "super_admin") return { ...base, adminSnapshot: await adminContext(input.identity, { query: input.query, workspace: input.workspace }) };
   return base;
 }
