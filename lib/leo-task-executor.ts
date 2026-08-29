@@ -16,6 +16,26 @@ export type LeoTaskRunStopReason =
   | "task_not_found"
   | "task_inactive";
 
+type LeoOperationalTaskStep = LeoOperationalTask["steps"][number];
+
+export type LeoTaskRunResult = {
+  ok: boolean;
+  stopReason: LeoTaskRunStopReason;
+  executedSteps: number;
+  task: LeoOperationalTask | null;
+  pendingStep?: LeoOperationalTaskStep;
+  evidence?: LeoOperationalTaskStep["evidence"];
+  recovery?: LeoOperationalTaskStep["recovery"];
+  message?: string;
+  approval?: {
+    taskId: string;
+    stepId: string;
+    token?: string;
+    requestedAt?: string;
+  };
+  error?: string;
+};
+
 function canAutoExecute(task: LeoOperationalTask) {
   const step = task.steps[task.currentStep];
   if (!step) return false;
@@ -71,18 +91,18 @@ export async function runLeoOperationalTask(input: {
   session: LeoSessionState;
   taskId: string;
   maxSteps?: number;
-}) {
+}): Promise<LeoTaskRunResult> {
   if (input.identity.scope !== "super_admin") throw new Error("Operational task execution is currently restricted to Super Leo.");
   let task = await loadLeoOperationalTask(input.identity, input.session, input.taskId);
-  if (!task) return { ok: false, stopReason: "task_not_found" as LeoTaskRunStopReason, executedSteps: 0, task: null };
-  if (["completed", "canceled"].includes(task.status)) return { ok: true, stopReason: "task_inactive" as LeoTaskRunStopReason, executedSteps: 0, task };
+  if (!task) return { ok: false, stopReason: "task_not_found", executedSteps: 0, task: null };
+  if (["completed", "canceled"].includes(task.status)) return { ok: true, stopReason: "task_inactive", executedSteps: 0, task };
 
   const maxSteps = Math.max(1, Math.min(Number(input.maxSteps) || 6, 12));
   let executedSteps = 0;
 
   while (executedSteps < maxSteps) {
     const step = task.steps[task.currentStep];
-    if (!step) return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
+    if (!step) return { ok: true, stopReason: "completed", executedSteps, task };
 
     if (step.status === "waiting_evidence") {
       const stopReason = stopReasonForEvidence(step.evidence?.status || "pending") || "evidence_pending";
@@ -100,7 +120,7 @@ export async function runLeoOperationalTask(input: {
     if (step.status === "failed") {
       return {
         ok: false,
-        stopReason: "recovery_required" as LeoTaskRunStopReason,
+        stopReason: "recovery_required",
         executedSteps,
         task,
         pendingStep: step,
@@ -111,14 +131,14 @@ export async function runLeoOperationalTask(input: {
 
     let confirmed = false;
     if (step.approval === "admin") {
-      return { ok: true, stopReason: "manual_boundary" as LeoTaskRunStopReason, executedSteps, task, pendingStep: step, message: "This task step requires platform-admin review and cannot be autonomously approved." };
+      return { ok: true, stopReason: "manual_boundary", executedSteps, task, pendingStep: step, message: "This task step requires platform-admin review and cannot be autonomously approved." };
     }
     if (step.approval === "confirm") {
       if (!taskStepApprovalIsValid(task)) {
         task = await requestLeoTaskStepApproval({ identity: input.identity, session: input.session, task });
         return {
           ok: true,
-          stopReason: "approval_required" as LeoTaskRunStopReason,
+          stopReason: "approval_required",
           executedSteps,
           task,
           pendingStep: task.steps[task.currentStep],
@@ -132,7 +152,7 @@ export async function runLeoOperationalTask(input: {
       }
       confirmed = true;
     } else if (!canAutoExecute(task)) {
-      return { ok: true, stopReason: "manual_boundary" as LeoTaskRunStopReason, executedSteps, task, pendingStep: step };
+      return { ok: true, stopReason: "manual_boundary", executedSteps, task, pendingStep: step };
     }
 
     task = await updateLeoOperationalTask({
@@ -185,7 +205,7 @@ export async function runLeoOperationalTask(input: {
         evidence,
       });
       executedSteps += 1;
-      if (task.status === "completed") return { ok: true, stopReason: "completed" as LeoTaskRunStopReason, executedSteps, task };
+      if (task.status === "completed") return { ok: true, stopReason: "completed", executedSteps, task };
     } catch (cause) {
       const error = cause instanceof Error ? cause.message : "Leo could not execute this task step.";
       const recovery = recoveryPolicyForLeoTaskStep(executingStep);
@@ -198,11 +218,11 @@ export async function runLeoOperationalTask(input: {
         recovery,
         error,
       });
-      return { ok: false, stopReason: "step_failed" as LeoTaskRunStopReason, executedSteps, task, error, recovery };
+      return { ok: false, stopReason: "step_failed", executedSteps, task, error, recovery };
     }
   }
 
-  return { ok: true, stopReason: "step_limit" as LeoTaskRunStopReason, executedSteps, task };
+  return { ok: true, stopReason: "step_limit", executedSteps, task };
 }
 
 export async function recoverLeoOperationalTask(input: {
@@ -211,20 +231,20 @@ export async function recoverLeoOperationalTask(input: {
   session: LeoSessionState;
   taskId: string;
   maxSteps?: number;
-}) {
+}): Promise<LeoTaskRunResult> {
   if (input.identity.scope !== "super_admin") throw new Error("Operational task recovery is currently restricted to Super Leo.");
   const task = await loadLeoOperationalTask(input.identity, input.session, input.taskId);
-  if (!task) return { ok: false, stopReason: "task_not_found" as LeoTaskRunStopReason, executedSteps: 0, task: null };
+  if (!task) return { ok: false, stopReason: "task_not_found", executedSteps: 0, task: null };
   const step = task.steps[task.currentStep];
   if (!step || step.status !== "failed") {
-    return { ok: false, stopReason: "manual_boundary" as LeoTaskRunStopReason, executedSteps: 0, task, message: "There is no current failed task step to recover." };
+    return { ok: false, stopReason: "manual_boundary", executedSteps: 0, task, message: "There is no current failed task step to recover." };
   }
 
   const recovery = recoveryPolicyForLeoTaskStep(step);
   if (!recovery.retrySafe) {
     return {
       ok: false,
-      stopReason: "manual_boundary" as LeoTaskRunStopReason,
+      stopReason: "manual_boundary",
       executedSteps: 0,
       task,
       pendingStep: step,
