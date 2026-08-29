@@ -6,6 +6,7 @@ import { LEO_PUBLIC_KNOWLEDGE } from "@/lib/leo-public-knowledge";
 import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
 import { compactLeoPlaybooksForContext, listLeoOperationalPlaybooks, matchLeoOperationalPlaybooks } from "@/lib/leo-operational-playbooks";
 import { listLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
+import { compactLeoWorkspacePortfolio, listLeoWorkspacePortfolio } from "@/lib/leo-workspace-portfolio";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -37,7 +38,7 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
   const diagnostics = await collectSupportDiagnostics("admin");
   const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
 
-  const [organizations, usage, operationalMemory, playbooks, autonomousGoals] = await Promise.all([
+  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>(
       "organizations?select=id,name,slug,status&order=created_at.desc&limit=100",
     ).catch(() => []),
@@ -49,6 +50,7 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
       ? matchLeoOperationalPlaybooks(identity, { query: input.query, workspace: input.workspace, limit: 5 }).catch(() => [])
       : listLeoOperationalPlaybooks(identity).then((items) => items.filter((item) => item.status === "active").slice(0, 5)).catch(() => []),
     listLeoAutonomousGoals(identity).catch(() => []),
+    listLeoWorkspacePortfolio(identity).catch(() => []),
   ]);
 
   return {
@@ -88,6 +90,19 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
       mode: "observe_recommend",
       usage: "Ongoing goals are evaluated automatically against current monitoring evidence. They may surface an intervention objective but do not themselves send messages, mutate workflows, change integrations, or bypass approvals.",
       intervention: "When an active goal needs action, create or continue a controlled 6K/6M operational task. Consequential steps retain canonical confirmation requirements.",
+    },
+    workspacePortfolio: compactLeoWorkspacePortfolio(workspacePortfolio),
+    workspacePortfolioSummary: {
+      total: workspacePortfolio.length,
+      owned: workspacePortfolio.filter((item) => item.relation === "owned").length,
+      clients: workspacePortfolio.filter((item) => item.relation === "client").length,
+    },
+    crossWorkspaceRules: {
+      scope: "super_admin_only",
+      isolation: "Every operational action must resolve to one exact organization ID before private inspection or execution. Never mix leads, campaigns, workflows, agents, memories, evidence, or approvals between workspaces.",
+      multiWorkspace: "For an objective spanning multiple workspaces, create isolated child segments and activate only one workspace segment at a time. Each child orchestration must carry that workspace's exact organization ID.",
+      comparison: "Cross-workspace comparison may aggregate sanitized counts or summaries, but underlying tenant records remain separately scoped and must not be exposed across tenant contexts.",
+      precedence: "An explicit current workspace target overrides inferred workspace aliases. If the target is ambiguous, resolve it before acting.",
     },
   } as Record<string, unknown>;
 }
