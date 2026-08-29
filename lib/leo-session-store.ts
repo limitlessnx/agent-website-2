@@ -3,9 +3,10 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { enforceLeoOrganizationScope, sanitizeLeoPageContext, type LeoConversationVisibility, type LeoIdentity } from "@/lib/leo-core";
 import type { LeoProposedToolCall } from "@/lib/ai/leo-model";
 import type { PublicLeoLeadProfile } from "@/lib/leo-lead-capture";
+import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
 
 type LeoSessionRow = { id: string; scope: string; organization_id?: string | null; user_id?: string | null; membership_id?: string | null; role: string; channel: string; visibility: string; status: string; metadata?: Record<string, unknown> | null };
-export type LeoVoiceWorkingContext = { workspace?: string; action?: string; leadId?: string; leadName?: string; property?: string; audience?: Record<string, unknown>; message?: string; pendingToolKey?: string; pendingArguments?: Record<string, unknown>; pendingSince?: string; lastResult?: Record<string, unknown> };
+export type LeoVoiceWorkingContext = { workspace?: string; action?: string; leadId?: string; leadName?: string; property?: string; audience?: Record<string, unknown>; message?: string; pendingToolKey?: string; pendingArguments?: Record<string, unknown>; pendingSince?: string; lastResult?: Record<string, unknown>; operationalMemory?: Array<{ id: string; kind: string; title: string; summary: string; workspace?: string; confidence: number }> };
 export type LeoSessionState = { id: string; persisted: boolean; visibility: LeoConversationVisibility; leadProfile?: PublicLeoLeadProfile; leadCaptured: boolean; leadId?: string | null; voiceWorkingContext?: LeoVoiceWorkingContext };
 
 function visibilityFor(identity: LeoIdentity, requested?: unknown): LeoConversationVisibility {
@@ -18,6 +19,17 @@ function sessionState(row?: LeoSessionRow) {
   const profile = metadata.public_leo_lead_profile;
   const voice = metadata.leo_voice_working_context;
   return { leadProfile: profile && typeof profile === "object" && !Array.isArray(profile) ? profile as PublicLeoLeadProfile : undefined, leadCaptured: metadata.public_leo_lead_captured === true, leadId: typeof metadata.public_leo_lead_id === "string" ? metadata.public_leo_lead_id : null, voiceWorkingContext: voice && typeof voice === "object" && !Array.isArray(voice) ? voice as LeoVoiceWorkingContext : undefined };
+}
+async function withOperationalMemory(identity: LeoIdentity, state: ReturnType<typeof sessionState>) {
+  if (identity.scope !== "super_admin") return state;
+  const memories = await listLeoOperationalMemories(identity, { limit: 8, includeRetired: false }).catch(() => []);
+  return {
+    ...state,
+    voiceWorkingContext: {
+      ...(state.voiceWorkingContext || {}),
+      operationalMemory: memories.map((memory) => ({ id: memory.id, kind: memory.kind, title: memory.title, summary: memory.summary, workspace: memory.workspace, confidence: memory.confidence })),
+    },
+  };
 }
 function queryForExisting(identity: LeoIdentity, sessionId: string) {
   const parts = [`id=eq.${encodeURIComponent(sessionId)}`, `scope=eq.${encodeURIComponent(identity.scope)}`, "status=eq.active", "limit=1"];
@@ -33,13 +45,15 @@ export async function getOrCreateLeoSession(input: { identity: LeoIdentity; sess
     const existing = await supabaseServerRequest<LeoSessionRow[]>(queryForExisting(input.identity, requestedId)).catch(() => []);
     if (existing[0]) {
       void supabaseServerRequest(`leo_sessions?id=eq.${encodeURIComponent(existing[0].id)}`, { method: "PATCH", body: JSON.stringify({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString(), page_context: sanitizeLeoPageContext(input.pageContext) || {} }) }).catch(() => null);
-      return { id: existing[0].id, persisted: true, visibility: existing[0].visibility as LeoConversationVisibility, ...sessionState(existing[0]) };
+      const restored = await withOperationalMemory(input.identity, sessionState(existing[0]));
+      return { id: existing[0].id, persisted: true, visibility: existing[0].visibility as LeoConversationVisibility, ...restored };
     }
   }
   const id = randomUUID();
   const organizationId = input.identity.scope === "tenant" ? enforceLeoOrganizationScope(input.identity) : null;
   const created = await supabaseServerRequest<LeoSessionRow[]>("leo_sessions", { method: "POST", body: JSON.stringify({ id, scope: input.identity.scope, organization_id: organizationId || null, user_id: input.identity.userId || null, membership_id: input.identity.membershipId || null, role: input.identity.role, channel: input.identity.channel, visibility, status: "active", page_context: sanitizeLeoPageContext(input.pageContext) || {}, metadata: { global_scope: input.identity.globalScope } }) }).catch(() => []);
-  return { id: created[0]?.id || id, persisted: Boolean(created[0]?.id), visibility, leadCaptured: false, leadProfile: undefined, leadId: null, voiceWorkingContext: undefined };
+  const restored = await withOperationalMemory(input.identity, { leadCaptured: false, leadProfile: undefined, leadId: null, voiceWorkingContext: undefined });
+  return { id: created[0]?.id || id, persisted: Boolean(created[0]?.id), visibility, ...restored };
 }
 
 async function mergeSessionMetadata(identity: LeoIdentity, session: LeoSessionState, patch: Record<string, unknown>) {
