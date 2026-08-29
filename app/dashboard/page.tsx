@@ -3,6 +3,7 @@ import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding"
 import { resolveLeoIdentity } from "@/lib/leo-core";
 import { buildLeoBusinessCommandCenter, compactLeoBusinessCommandCenter } from "@/lib/leo-business-command-center";
 import LeoOverview from "@/components/admin/LeoOverview";
+import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="admin-page">
+      <BusinessCommandCenterPanel snapshot={commandCenter} />
       <LeoOverview
         newLeads={newLeads.length}
         clients={clients.map((client) => ({ id: client.id, business_name: client.business_name, business_email: client.business_email, status: client.status }))}
@@ -39,7 +41,6 @@ export default async function DashboardPage() {
         attentionCount={commandCenter ? commandCenter.priorityRisks.length : notifications.length}
         systemHealth={systemHealth}
         notifications={notifications}
-        commandCenter={commandCenter}
       />
     </main>
   );
