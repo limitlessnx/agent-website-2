@@ -71,7 +71,8 @@ export async function loadLeoCrossWorkspaceOperation(identity: LeoIdentity, sess
   const suffix = operationId ? `&user_id=eq.${encodeURIComponent(key(sessionId, operationId))}` : "";
   const rows = await supabaseServerRequest<StoredRow[]>(`bot_sessions?select=user_id,content&role=eq.${ROLE}${suffix}&order=created_at.desc&limit=20`).catch(() => []);
   if (operationId) return parse(rows[0]);
-  return rows.map(parse).find((item): item is LeoCrossWorkspaceOperation => Boolean(item) && ["planned","active","blocked"].includes(item.status)) || null;
+  const parsed = rows.map(parse).filter((item): item is LeoCrossWorkspaceOperation => item !== null);
+  return parsed.find((item) => ["planned","active","blocked"].includes(item.status)) || null;
 }
 
 export async function activateLeoCrossWorkspaceSegment(input: { identity: LeoIdentity; session: LeoSessionState; operation: LeoCrossWorkspaceOperation; segmentId: string; context?: Record<string, unknown> }) {
