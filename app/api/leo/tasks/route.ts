@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveLeoIdentity } from "@/lib/leo-core";
 import { getOrCreateLeoSession, auditLeoEvent } from "@/lib/leo-session-store";
 import { approveLeoTaskStep, cancelLeoOperationalTask, createLeoOperationalTask, loadActiveLeoOperationalTask, loadLeoOperationalTask, reviseLeoOperationalTaskCurrentStep } from "@/lib/leo-task-plan";
-import { recoverLeoOperationalTask, runLeoOperationalTask } from "@/lib/leo-task-executor";
+import { recoverLeoOperationalTask, runLeoOperationalTask, type LeoTaskRunResult } from "@/lib/leo-task-executor";
 import { createLeoMultiAgentOrchestration, refreshLeoMultiAgentOrchestration } from "@/lib/leo-multi-agent-orchestrator";
 import { rememberLeoTaskOutcome } from "@/lib/leo-operational-memory";
 
@@ -10,20 +10,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type TaskStepInput = { title?: string; toolKey: string; arguments: Record<string, unknown> };
-type TaskActionResult = {
-  ok: boolean;
-  stopReason: string;
-  executedSteps: number;
-  task: { currentStep?: number } | null;
-  pendingStep?: { id?: string; toolKey?: string };
-  evidence?: { status?: string; source?: string; summary?: string };
-};
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-async function auditTaskResult(input: { identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>; session: Awaited<ReturnType<typeof getOrCreateLeoSession>>; taskId: string; action: "run" | "recover"; result: TaskActionResult }) {
+async function auditTaskResult(input: { identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>; session: Awaited<ReturnType<typeof getOrCreateLeoSession>>; taskId: string; action: "run" | "recover"; result: LeoTaskRunResult }) {
   const { identity, session, taskId, action, result } = input;
   await auditLeoEvent({ identity, session, eventType: action === "recover" ? "operational_task_recovery" : "operational_task_run", details: { task_id: taskId, stop_reason: result.stopReason, executed_steps: result.executedSteps, ok: result.ok } });
   if (result.stopReason === "approval_required") {
@@ -115,8 +107,10 @@ export async function POST(request: NextRequest) {
       const taskId = task.id;
       const maxSteps = Number(body.maxSteps || body.max_steps) || undefined;
       const recovery = action === "recover";
-      const result = recovery ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps }) : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
-      await auditTaskResult({ identity, session, taskId, action: recovery ? "recover" : "run", result: result as TaskActionResult });
+      const result: LeoTaskRunResult = recovery
+        ? await recoverLeoOperationalTask({ request, identity, session, taskId, maxSteps })
+        : await runLeoOperationalTask({ request, identity, session, taskId, maxSteps });
+      await auditTaskResult({ identity, session, taskId, action: recovery ? "recover" : "run", result });
       if (result.ok && result.stopReason === "completed") {
         const completedTask = await loadLeoOperationalTask(identity, session, taskId);
         if (completedTask?.status === "completed") {
