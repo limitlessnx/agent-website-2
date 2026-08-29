@@ -5,6 +5,7 @@ import { publicLeoSalesDirective } from "@/lib/leo-public-policy";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { buildLeoPolicySnapshot, enforceLeoOrganizationScope, resolveLeoIdentity, sanitizeLeoPageContext, type LeoChannel, type LeoIdentity } from "@/lib/leo-core";
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, storeLeoMessage, storeLeoToolProposals, updateLeoPublicLeadState } from "@/lib/leo-session-store";
+import { createLeoMultiAgentOrchestration, refreshLeoMultiAgentOrchestration } from "@/lib/leo-multi-agent-orchestrator";
 
 function validChannel(value: unknown): LeoChannel { return value === "voice" ? "voice" : value === "api" ? "api" : "chat"; }
 function safeHistory(value: unknown): LeoChatMessage[] {
@@ -27,6 +28,13 @@ function conciseLeoReply(reply: string) {
   const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]; let compact = "";
   for (const sentence of sentences) { const candidate = `${compact}${compact ? " " : ""}${sentence.trim()}`; if (candidate.length > 700) break; compact = candidate; if (compact.length >= 450) break; }
   return `${(compact || text.slice(0, 700)).replace(/[\s,;:]+$/, "")}…`;
+}
+function explicitOrchestrationRequest(message: string) {
+  return /\b(orchestrate|coordinate|multi[- ]agent|across (?:the )?(?:agents|crm|campaigns?|workflows?)|use (?:maia|the agents).*(?:crm|campaign|workflow)|take care of .*(?:follow.?ups?|campaign|workflow|leads?).*(?:today|end to end|for me))\b/i.test(message);
+}
+function orchestrationWorkspace(message: string, pageContext?: Record<string, unknown>) {
+  if (/limitless|realty|property|maia/i.test(message)) return "limitless_realty";
+  return String(pageContext?.section || "").trim() || undefined;
 }
 
 type RuntimeToolCall = {
@@ -62,7 +70,19 @@ export async function POST(request: NextRequest) {
     const status = result.reason === "not_configured" ? 503 : result.reason === "timeout" ? 504 : 502;
     return NextResponse.json({ error: "Leo could not complete this response.", reason: result.reason, sessionId: session.id, persistence: session.persisted ? "database" : "ephemeral", ai: { connected: false, model: result.model, latencyMs: result.latencyMs } }, { status });
   }
-  const reply = conciseLeoReply(result.reply);
+  let reply = conciseLeoReply(result.reply);
+  let orchestration: Awaited<ReturnType<typeof refreshLeoMultiAgentOrchestration>> | null = null;
+  if (identity.scope === "super_admin" && explicitOrchestrationRequest(message)) {
+    try {
+      const contextArgs = body.orchestrationContext && typeof body.orchestrationContext === "object" && !Array.isArray(body.orchestrationContext) ? body.orchestrationContext as Record<string, unknown> : {};
+      const created = await createLeoMultiAgentOrchestration({ identity, session, objective: message, workspace: orchestrationWorkspace(message, pageContext as Record<string, unknown> | undefined), organizationId: String(contextArgs.organization_id || contextArgs.organizationId || "").trim() || undefined, context: contextArgs });
+      orchestration = await refreshLeoMultiAgentOrchestration({ identity, session, orchestration: created });
+      reply = `${reply}\n\nI’ve created a controlled multi-agent operation with ${created.delegations.length} delegated step${created.delegations.length === 1 ? "" : "s"}. Consequential steps remain approval-gated and completion will be based on task evidence.`;
+      void auditLeoEvent({ identity, session, eventType: "multi_agent_orchestration_created", details: { orchestration_id: created.id, task_id: created.taskId, objective: created.objective, specialists: created.delegations.map((item) => item.specialist.key), channel: "chat" } });
+    } catch (error) {
+      void auditLeoEvent({ identity, session, eventType: "multi_agent_orchestration_failed", details: { error: error instanceof Error ? error.message : "unknown", channel: "chat" } });
+    }
+  }
   let toolCalls: RuntimeToolCall[] = result.toolCalls.map((call) => ({ ...call, arguments: scopeToolArguments(identity, call.arguments), status: "proposed" }));
   if (identity.scope === "public" && !session.leadCaptured) {
     const capture = toolCalls.find((call) => call.toolKey === "leo.public.lead.capture");
@@ -75,8 +95,8 @@ export async function POST(request: NextRequest) {
       } else toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "failed", result: captureResult } : call);
     }
   }
-  await storeLeoMessage({ identity, session, role: "assistant", content: reply, metadata: { intent: result.intent, confidence: result.confidence, needs_human_review: result.needsHumanReview, model: result.model, lead_captured: session.leadCaptured } });
+  await storeLeoMessage({ identity, session, role: "assistant", content: reply, metadata: { intent: result.intent, confidence: result.confidence, needs_human_review: result.needsHumanReview, model: result.model, lead_captured: session.leadCaptured, orchestration_id: orchestration?.orchestration.id || null } });
   await storeLeoToolProposals({ identity, session, toolCalls: toolCalls.map((call) => ({ toolKey: call.toolKey, arguments: call.arguments, reason: call.reason, approval: call.approval })) });
   void auditLeoEvent({ identity, session, eventType: "reasoning_completed", details: { intent: result.intent, confidence: result.confidence, tool_count: toolCalls.length, model: result.model, latency_ms: result.latencyMs, lead_captured: session.leadCaptured } });
-  return NextResponse.json({ ok: true, sessionId: session.id, persistence: session.persisted ? "database" : "ephemeral", visibility: session.visibility, reply, intent: result.intent, confidence: result.confidence, needsHumanReview: result.needsHumanReview, toolCalls, executionMode: "proposal_only", leadCaptured: session.leadCaptured, leadProfile: session.leadProfile || null, leadId: session.leadId || null, identity: { scope: identity.scope, role: identity.role, organizationId: identity.scope === "tenant" ? identity.organizationId || null : null, channel: identity.channel }, policy: buildLeoPolicySnapshot(identity), ai: { connected: true, provider: result.provider, model: result.model, latencyMs: result.latencyMs, usage: result.usage || null } });
+  return NextResponse.json({ ok: true, sessionId: session.id, persistence: session.persisted ? "database" : "ephemeral", visibility: session.visibility, reply, intent: result.intent, confidence: result.confidence, needsHumanReview: result.needsHumanReview, toolCalls, executionMode: "proposal_only", orchestration: orchestration?.orchestration || null, orchestrationTask: orchestration?.task || null, leadCaptured: session.leadCaptured, leadProfile: session.leadProfile || null, leadId: session.leadId || null, identity: { scope: identity.scope, role: identity.role, organizationId: identity.scope === "tenant" ? identity.organizationId || null : null, channel: identity.channel }, policy: buildLeoPolicySnapshot(identity), ai: { connected: true, provider: result.provider, model: result.model, latencyMs: result.latencyMs, usage: result.usage || null } });
 }
