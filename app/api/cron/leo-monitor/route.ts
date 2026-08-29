@@ -4,9 +4,13 @@ import { scanLeoProactiveSignals } from "@/lib/leo-proactive-monitor";
 import { listPersistedLeoSignals, reconcileLeoProactiveSignals } from "@/lib/leo-proactive-signal-store";
 import { alertPolicyForLeoSignal } from "@/lib/leo-proactive-policy";
 import { auditLeoProactiveMonitoring } from "@/lib/leo-proactive-audit";
+import { evaluateLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
+import type { LeoIdentity } from "@/lib/leo-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const schedulerIdentity: LeoIdentity = { scope: "super_admin", role: "super_admin", userId: "leo_goal_scheduler", email: "leo-goal-scheduler@internal.fluxknight", channel: "api", globalScope: true };
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET?.trim();
@@ -25,6 +29,8 @@ export async function GET(request: Request) {
 
   const snapshot = await scanLeoProactiveSignals({ limit: 100 });
   const active = await reconcileLeoProactiveSignals(snapshot, schedulerAuthorized ? "leo_supabase_scheduler" : "leo_vercel_scheduler");
+  const goals = await evaluateLeoAutonomousGoals(schedulerIdentity, snapshot.signals);
+  const goalHealth = summarizeLeoGoalHealth(goals);
   const all = await listPersistedLeoSignals(500);
   const audit = auditLeoProactiveMonitoring(all);
   const deliverable = active.filter((item) => alertPolicyForLeoSignal(item).deliver);
@@ -42,6 +48,7 @@ export async function GET(request: Request) {
       active: active.filter((item) => item.lifecycle === "active").length,
       acknowledged: active.filter((item) => item.lifecycle === "acknowledged").length,
     },
+    autonomousGoals: goalHealth,
     audit,
   }, { headers: { "cache-control": "no-store" } });
 }
