@@ -3,8 +3,8 @@ import { listLeoWorkspacePortfolio, resolveLeoWorkspaceTarget, type LeoWorkspace
 import { listLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
 import { scanLeoProactiveSignals } from "@/lib/leo-proactive-monitor";
 import { getWorkflowRuns, getWorkflows } from "@/lib/workflow-registry";
-import { getLeads } from "@/lib/limitless-data";
-import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
+import { getLeads, type Lead } from "@/lib/limitless-data";
+import { getDetailedCampaignReports, type DetailedCampaignReport } from "@/lib/campaign-report-reader";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type LeoBusinessStateScope = {
@@ -41,12 +41,12 @@ export type LeoBusinessState = {
 function isLimitless(target?: LeoWorkspaceTarget | null, workspace?: string) {
   return /limitless|realty|maia/i.test(`${target?.name || ""} ${target?.slug || ""} ${target?.aliases?.join(" ") || ""} ${workspace || ""}`);
 }
-function qualifiedLead(lead: Record<string, unknown>) {
+function qualifiedLead(lead: Lead) {
   const status = String(lead.status || "").toLowerCase();
   const score = String(lead.score || "").toLowerCase();
   return ["qualified", "hot", "ready", "ready_to_buy"].includes(status) || score === "hot";
 }
-function staleLead(lead: Record<string, unknown>, now: number) {
+function staleLead(lead: Lead, now: number) {
   const raw = String(lead.last_contacted_at || lead.last_follow_up_at || lead.created_at || "");
   const ts = raw ? Date.parse(raw) : Number.NaN;
   return !Number.isFinite(ts) || now - ts > 24 * 60 * 60 * 1000;
@@ -70,15 +70,15 @@ export async function buildLeoUnifiedBusinessState(input: { identity: LeoIdentit
     getWorkflows(250, true).catch(() => []),
     getWorkflowRuns(500).catch(() => []),
     admin.from("organization_integrations").select("id,organization_id,provider,display_name,status").limit(500),
-    limitless || !target ? getLeads(800).catch(() => []) : Promise.resolve([]),
-    limitless || !target ? getDetailedCampaignReports(150).catch(() => []) : Promise.resolve([]),
+    limitless || !target ? getLeads(800).catch(() => [] as Lead[]) : Promise.resolve([] as Lead[]),
+    limitless || !target ? getDetailedCampaignReports(150).catch(() => [] as DetailedCampaignReport[]) : Promise.resolve([] as DetailedCampaignReport[]),
   ]);
 
   const organizationId = target?.organizationId;
   const scopedWorkspaces = target ? portfolio.filter((item) => item.organizationId === organizationId) : portfolio;
   const scopedGoals = target ? goals.filter((goal) => !goal.organizationId || goal.organizationId === organizationId || (limitless && goal.workspace === "limitless_realty")) : goals;
   const scopedSignals = target ? signalSnapshot.signals.filter((signal) => signal.workspace === organizationId || (limitless && signal.workspace === "limitless_realty")) : signalSnapshot.signals;
-  const scopedWorkflows = target ? workflows.filter((item) => item.organization_id === organizationId) : workflows;
+  const scopedWorkflows = target ? workflows.filter((item) => item.organization_id === organizationId || item.organization_uuid === organizationId) : workflows;
   const scopedRuns = target ? runs.filter((item) => item.organization_id === organizationId || item.organization_uuid === organizationId) : runs;
   const integrations = (integrationsResult.error ? [] : integrationsResult.data || []).map((item) => ({
     id: String(item.id), organizationId: String(item.organization_id), provider: String(item.provider || "unknown"), displayName: item.display_name ? String(item.display_name) : undefined, status: String(item.status || "unknown"),
@@ -86,14 +86,22 @@ export async function buildLeoUnifiedBusinessState(input: { identity: LeoIdentit
   const scopedIntegrations = target ? integrations.filter((item) => item.organizationId === organizationId) : integrations;
   const unhealthyIntegrations = scopedIntegrations.filter((item) => integrationUnhealthy(item.status));
 
-  const qualified = (leads as Array<Record<string, unknown>>).filter(qualifiedLead);
+  const qualified = leads.filter(qualifiedLead);
   const staleQualified = qualified.filter((lead) => staleLead(lead, now.getTime()));
-  const campaignSummary = (campaigns as Array<Record<string, any>>).reduce((acc, item) => {
-    acc.total += 1; acc.accepted += Number(item.accepted || 0); acc.delivered += Number(item.delivered || 0); acc.read += Number(item.read || 0); acc.failed += Number(item.failed || 0); acc.unresolved += Number(item.unresolved || item.pending_delivery || 0); return acc;
+  const campaignSummary = campaigns.reduce((acc, item) => {
+    acc.total += 1;
+    acc.accepted += item.accepted;
+    acc.delivered += item.delivered;
+    acc.read += item.read;
+    acc.failed += item.failed;
+    acc.unresolved += item.unresolved;
+    return acc;
   }, { total: 0, accepted: 0, delivered: 0, read: 0, failed: 0, unresolved: 0 });
   const goalHealth = summarizeLeoGoalHealth(scopedGoals);
   const recentFailedRuns = scopedRuns.filter((run) => ["failed", "timed_out"].includes(String(run.status))).filter((run) => {
-    const raw = run.created_at || run.started_at || run.completed_at; const ts = raw ? Date.parse(String(raw)) : Number.NaN; return Number.isFinite(ts) && now.getTime() - ts <= 24 * 60 * 60 * 1000;
+    const raw = run.created_at || run.started_at || run.completed_at;
+    const ts = raw ? Date.parse(String(raw)) : Number.NaN;
+    return Number.isFinite(ts) && now.getTime() - ts <= 24 * 60 * 60 * 1000;
   }).length;
   const signalCounts = {
     total: scopedSignals.length,
