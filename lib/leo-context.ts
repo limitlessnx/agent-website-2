@@ -7,6 +7,7 @@ import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
 import { compactLeoPlaybooksForContext, listLeoOperationalPlaybooks, matchLeoOperationalPlaybooks } from "@/lib/leo-operational-playbooks";
 import { listLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
 import { compactLeoWorkspacePortfolio, listLeoWorkspacePortfolio } from "@/lib/leo-workspace-portfolio";
+import { buildLeoDecisionIntelligence, compactLeoDecisionIntelligence } from "@/lib/leo-decision-intelligence";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
 
 async function tenantContext(identity: LeoIdentity) {
@@ -33,12 +34,16 @@ async function tenantContext(identity: LeoIdentity) {
   ) as unknown as Record<string, unknown>;
 }
 
+function wantsDecisionIntelligence(query?: string) {
+  return Boolean(query && /\b(trend|performance|metric|conversion|compare|comparison|anomal|declin|improv|decision|why .*chang|what changed|health|forecast|pattern|rate)\b/i.test(query));
+}
+
 async function adminContext(identity: LeoIdentity, input: { query?: string; workspace?: string } = {}) {
   if (identity.scope !== "super_admin") throw new Error("Super-admin Leo context requires super-admin scope.");
   const diagnostics = await collectSupportDiagnostics("admin");
   const safe = sanitizeSupportDiagnostics(diagnostics as unknown as Record<string, unknown>, "admin");
 
-  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio] = await Promise.all([
+  const [organizations, usage, operationalMemory, playbooks, autonomousGoals, workspacePortfolio, decisionIntelligence] = await Promise.all([
     supabaseServerRequest<Record<string, unknown>[]>(
       "organizations?select=id,name,slug,status&order=created_at.desc&limit=100",
     ).catch(() => []),
@@ -51,6 +56,9 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
       : listLeoOperationalPlaybooks(identity).then((items) => items.filter((item) => item.status === "active").slice(0, 5)).catch(() => []),
     listLeoAutonomousGoals(identity).catch(() => []),
     listLeoWorkspacePortfolio(identity).catch(() => []),
+    wantsDecisionIntelligence(input.query)
+      ? buildLeoDecisionIntelligence({ identity, workspace: input.workspace }).then(compactLeoDecisionIntelligence).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -103,6 +111,13 @@ async function adminContext(identity: LeoIdentity, input: { query?: string; work
       multiWorkspace: "For an objective spanning multiple workspaces, create isolated child segments and activate only one workspace segment at a time. Each child orchestration must carry that workspace's exact organization ID.",
       comparison: "Cross-workspace comparison may aggregate sanitized counts or summaries, but underlying tenant records remain separately scoped and must not be exposed across tenant contexts.",
       precedence: "An explicit current workspace target overrides inferred workspace aliases. If the target is ambiguous, resolve it before acting.",
+    },
+    decisionIntelligence,
+    decisionIntelligenceRules: {
+      evidence: "Use computed trend and anomaly evidence only within its stated coverage window. Missing history means insufficient data, not permission to estimate.",
+      causality: "Never turn correlation or timing into a causal claim without source evidence explaining the change.",
+      forecasting: "Do not project future revenue, conversions, campaign outcomes or reliability from sparse history. State assumptions and coverage when forecasting is explicitly requested.",
+      action: "Decision intelligence prioritizes and recommends. Consequential action still flows through active playbooks, controlled orchestration, approval and post-action verification.",
     },
   } as Record<string, unknown>;
 }
