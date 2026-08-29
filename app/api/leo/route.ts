@@ -54,13 +54,14 @@ export async function POST(request: NextRequest) {
   const message = String(body.message || "").trim().slice(0, 8000);
   if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
   const pageContext = sanitizeLeoPageContext(body.pageContext);
+  const workspace = identity.scope === "super_admin" ? orchestrationWorkspace(message, pageContext as Record<string, unknown> | undefined) : undefined;
   let session = await getOrCreateLeoSession({ identity, sessionId: String(body.sessionId || "").trim() || undefined, pageContext, visibility: body.visibility });
   const persistedHistory = await loadLeoHistory(identity, session);
   const suppliedHistory = safeHistory(body.history);
   const history = persistedHistory.length ? persistedHistory : suppliedHistory;
   await storeLeoMessage({ identity, session, role: "user", content: message });
   void auditLeoEvent({ identity, session, eventType: "message_received", details: { channel, persisted: session.persisted } });
-  const context = await buildLeoReasoningContext({ identity, pageContext });
+  const context = await buildLeoReasoningContext({ identity, pageContext, query: identity.scope === "super_admin" ? message : undefined, workspace });
   const leadCaptured = session.leadCaptured || body.leadCaptured === true || Boolean(body.leadProfile);
   const directive = identity.scope === "public" ? publicLeoSalesDirective(leadCaptured, session.leadProfile || body.leadProfile) : "";
   const modelMessage = directive ? `${directive}\n\nVISITOR'S LATEST MESSAGE:\n${message}` : message;
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
   if (identity.scope === "super_admin" && explicitOrchestrationRequest(message)) {
     try {
       const contextArgs = body.orchestrationContext && typeof body.orchestrationContext === "object" && !Array.isArray(body.orchestrationContext) ? body.orchestrationContext as Record<string, unknown> : {};
-      const created = await createLeoMultiAgentOrchestration({ identity, session, objective: message, workspace: orchestrationWorkspace(message, pageContext as Record<string, unknown> | undefined), organizationId: String(contextArgs.organization_id || contextArgs.organizationId || "").trim() || undefined, context: contextArgs });
+      const created = await createLeoMultiAgentOrchestration({ identity, session, objective: message, workspace, organizationId: String(contextArgs.organization_id || contextArgs.organizationId || "").trim() || undefined, context: contextArgs });
       orchestration = await refreshLeoMultiAgentOrchestration({ identity, session, orchestration: created });
       reply = `${reply}\n\nI’ve created a controlled multi-agent operation with ${created.delegations.length} delegated step${created.delegations.length === 1 ? "" : "s"}. Consequential steps remain approval-gated and completion will be based on task evidence.`;
       void auditLeoEvent({ identity, session, eventType: "multi_agent_orchestration_created", details: { orchestration_id: created.id, task_id: created.taskId, objective: created.objective, specialists: created.delegations.map((item) => item.specialist.key), channel: "chat" } });
