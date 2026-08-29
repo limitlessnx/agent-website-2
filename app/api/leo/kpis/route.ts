@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    const identity = await resolveLeoIdentity(request);
-    if (identity.scope !== "super_admin") return NextResponse.json({ error: "Super Admin authorization required." }, { status: 403 });
+    const identity = await resolveLeoIdentity({ channel: "api", allowPublic: false });
+    if (!identity || identity.scope !== "super_admin") return NextResponse.json({ error: "Super Admin authorization required." }, { status: 403 });
     const workspace = request.nextUrl.searchParams.get("workspace") || undefined;
     const organizationId = request.nextUrl.searchParams.get("organizationId") || undefined;
     const snapshot = await buildLeoWorkspaceKpis({ identity, workspace, organizationId });
