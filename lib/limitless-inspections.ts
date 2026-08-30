@@ -25,20 +25,15 @@ export type LimitlessInspection = {
 function clean(value: unknown, max = 1000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
+function dueBefore(date: Date, hours: number) { return new Date(date.getTime() - hours * 60 * 60 * 1000).toISOString(); }
+function dueAfter(date: Date, hours: number) { return new Date(date.getTime() + hours * 60 * 60 * 1000).toISOString(); }
 
-function dueBefore(date: Date, hours: number) {
-  return new Date(date.getTime() - hours * 60 * 60 * 1000).toISOString();
-}
-function dueAfter(date: Date, hours: number) {
-  return new Date(date.getTime() + hours * 60 * 60 * 1000).toISOString();
-}
-
-async function createReminderTask(input: { leadId: string; title: string; description: string; dueAt: string; kind: string }) {
+async function createReminderTask(input: { leadId: string; assignedAgentId?: string | null; title: string; description: string; dueAt: string; kind: string }) {
   const admin = createAdminClient();
   const { data, error } = await admin.from("crm_tasks").insert({
     organization_id: LIMITLESS_REALTY_ORGANIZATION_ID,
     lead_id: input.leadId,
-    assigned_agent_id: null,
+    assigned_agent_id: input.assignedAgentId || null,
     task_type: input.kind,
     title: input.title,
     description: input.description,
@@ -80,7 +75,7 @@ export async function bookLimitlessInspection(input: {
 
   const admin = createAdminClient();
   const { data: lead, error: leadError } = await admin.from("crm_leads")
-    .select("id,customer_id,stage")
+    .select("id,customer_id,stage,assigned_agent_id")
     .eq("id", leadId)
     .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
     .maybeSingle();
@@ -90,18 +85,18 @@ export async function bookLimitlessInspection(input: {
   const propertyName = clean(input.propertyName, 240) || null;
   const timezone = clean(input.timezone, 80) || "Africa/Lagos";
   const scheduledIso = scheduled.toISOString();
-
   const reminder24Due = dueBefore(scheduled, 24);
   const reminder2Due = dueBefore(scheduled, 2);
   const postDue = dueAfter(scheduled, 24);
+  const assignedAgentId = lead.assigned_agent_id || null;
 
   const reminder24TaskId = reminder24Due > new Date().toISOString()
-    ? await createReminderTask({ leadId, kind: "inspection_reminder", title: "Inspection reminder: 24 hours", description: `Remind the client about the ${propertyName || "property"} inspection scheduled for ${scheduledIso}.`, dueAt: reminder24Due })
+    ? await createReminderTask({ leadId, assignedAgentId, kind: "inspection_reminder", title: "Inspection reminder: 24 hours", description: `Remind the client about the ${propertyName || "property"} inspection scheduled for ${scheduledIso}.`, dueAt: reminder24Due })
     : null;
   const reminder2TaskId = reminder2Due > new Date().toISOString()
-    ? await createReminderTask({ leadId, kind: "inspection_reminder", title: "Inspection reminder: 2 hours", description: `Remind the client that the ${propertyName || "property"} inspection is in about 2 hours.`, dueAt: reminder2Due })
+    ? await createReminderTask({ leadId, assignedAgentId, kind: "inspection_reminder", title: "Inspection reminder: 2 hours", description: `Remind the client that the ${propertyName || "property"} inspection is in about 2 hours.`, dueAt: reminder2Due })
     : null;
-  const postTaskId = await createReminderTask({ leadId, kind: "inspection_follow_up", title: "Post-inspection follow-up", description: `Follow up after the ${propertyName || "property"} inspection and record the outcome.`, dueAt: postDue });
+  const postTaskId = await createReminderTask({ leadId, assignedAgentId, kind: "inspection_follow_up", title: "Post-inspection follow-up", description: `Follow up after the ${propertyName || "property"} inspection and record the outcome.`, dueAt: postDue });
 
   const now = new Date().toISOString();
   const { data: inspection, error } = await admin.from("limitless_inspections").insert({
@@ -125,11 +120,12 @@ export async function bookLimitlessInspection(input: {
   const detailsPatch = { inspection_id: inspection.id, inspection_status: "booked", inspection_scheduled_at: scheduledIso, inspection_property_name: propertyName };
   const current = await admin.from("crm_leads").select("details").eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
   if (current.error) throw current.error;
-  await admin.from("crm_leads").update({
+  const leadUpdate = await admin.from("crm_leads").update({
     stage: "inspection",
     details: { ...(current.data?.details || {}), ...detailsPatch },
     updated_at: now,
   }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
+  if (leadUpdate.error) throw leadUpdate.error;
 
   return inspection as LimitlessInspection;
 }
@@ -143,6 +139,7 @@ export async function updateLimitlessInspectionStatus(input: { inspectionId: str
   const { data, error } = await admin.from("limitless_inspections").update({ status: input.status, notes: clean(input.notes, 2000) || existing.notes || null, updated_at: new Date().toISOString() }).eq("id", inspectionId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).select("*").single();
   if (error) throw error;
   const leadStage = input.status === "completed" ? "negotiation" : input.status === "cancelled" || input.status === "no_show" ? "qualified" : "inspection";
-  await admin.from("crm_leads").update({ stage: leadStage, updated_at: new Date().toISOString() }).eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
+  const leadUpdate = await admin.from("crm_leads").update({ stage: leadStage, updated_at: new Date().toISOString() }).eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
+  if (leadUpdate.error) throw leadUpdate.error;
   return data as LimitlessInspection;
 }
