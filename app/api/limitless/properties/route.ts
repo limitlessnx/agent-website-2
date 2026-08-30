@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createProperty, getProperties } from "@/lib/limitless-data";
+import { getProperties } from "@/lib/limitless-data";
+import { createPropertyNormalized } from "@/lib/limitless-property-write";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
 import { updatePropertyImages, uploadPublicImages } from "@/lib/supabase-storage";
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Property title is required." }, { status: 400 });
     }
 
-    const created = await createProperty(payload);
+    const created = await createPropertyNormalized(payload);
     const property = created[0];
     if (!property?.id) {
       return NextResponse.json({ error: "Property record was not created." }, { status: 502 });
