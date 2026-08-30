@@ -51,7 +51,7 @@ export async function auditLeoPhase8(input: { identity: LeoIdentity }): Promise<
 
   const checks = {
     unifiedBusinessStateReadOnly: {
-      passed: Boolean(state.rules?.sourceOfTruth) && Boolean(state.rules?.scope), severity: "blocking" as const,
+      passed: Boolean(state.rules?.sourceOfTruth) && Boolean(state.rules?.isolation) && Boolean(state.scope?.type), severity: "blocking" as const,
       detail: "Unified Business State remains a read-only normalized view over authoritative runtime sources and preserves workspace isolation."
     },
     kpiIntegrity: {
@@ -96,7 +96,7 @@ export async function auditLeoPhase8(input: { identity: LeoIdentity }): Promise<
     },
     productionDeploymentVerified: {
       passed: false, severity: "blocking" as const,
-      detail: "8G-8I production deployment verification is still blocked by the Vercel build-rate limit; source implementation is not equivalent to production closure."
+      detail: "8G-8I production deployment verification is still pending; source implementation is not equivalent to production closure."
     },
   };
 
@@ -138,7 +138,7 @@ export async function auditLeoPhase8(input: { identity: LeoIdentity }): Promise<
     blockers,
     rules: {
       closure: "Phase 8 may be marked production-closed only after all blocking audit checks pass and the final production deployment is verified.",
-      deployment: "A source commit or rate-limit rejection is not deployment evidence. Final closure requires a successful Vercel deployment for the exact Phase 8 closure commit.",
+      deployment: "A source commit or rejected build is not deployment evidence. Final closure requires a successful Vercel deployment for the exact Phase 8 closure commit.",
       financial: "Missing authoritative revenue/pipeline evidence must remain missing; never fill financial gaps with estimates or synthetic conversion projections.",
       isolation: "Every workspace-specific state, rule, event, calendar item, model, simulation and command-center view must remain pinned to one exact organization ID."
     },
