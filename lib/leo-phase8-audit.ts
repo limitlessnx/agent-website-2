@@ -138,7 +138,7 @@ export async function auditLeoPhase8(input: { identity: LeoIdentity }): Promise<
     blockers,
     rules: {
       closure: "Phase 8 may be marked production-closed only after all blocking audit checks pass and the final production deployment is verified.",
-      deployment: "A source commit or rejected build is not deployment evidence. Final closure requires a successful Vercel deployment for the exact Phase 8 closure commit.",
+      deployment: "A source commit or rate-limit rejection is not deployment evidence. Final closure requires a successful Vercel deployment for the exact Phase 8 closure commit.",
       financial: "Missing authoritative revenue/pipeline evidence must remain missing; never fill financial gaps with estimates or synthetic conversion projections.",
       isolation: "Every workspace-specific state, rule, event, calendar item, model, simulation and command-center view must remain pinned to one exact organization ID."
     },
