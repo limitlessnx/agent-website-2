@@ -1,5 +1,5 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
-import type { LeoIdentity } from "@/lib/leo-core";
+import { assertLeoToolAllowed, type LeoIdentity } from "@/lib/leo-core";
 import type { RuntimeApprovalStatus } from "@/lib/ai-runtime/types";
 
 type ApprovalRow = { id: string; organization_id: string; execution_id: string; action_key: string; status: string; requested_by: string; reviewed_by?: string | null; reviewer_notes?: string | null; expires_at?: string | null; created_at?: string; reviewed_at?: string | null };
@@ -45,4 +45,21 @@ export async function requireRuntimeApproval(input: { identity: LeoIdentity; org
   const row = await getRuntimeApproval({ ...input, approvalRequestId: input.approvalRequestId });
   if (row.runtimeStatus !== "approved") return { approved: false as const, reason: row.runtimeStatus, approval: row };
   return { approved: true as const, approval: row };
+}
+
+export async function reviewRuntimeApproval(input: { identity: LeoIdentity; organizationId?: string; approvalRequestId: string; decision: "approved" | "rejected" | "cancelled"; notes?: string }) {
+  const organizationId = organizationForApproval(input.identity, input.organizationId);
+  const rows = await supabaseServerRequest<ApprovalRow[]>(`action_approval_requests?select=*&id=eq.${encodeURIComponent(input.approvalRequestId)}&organization_id=eq.${encodeURIComponent(organizationId)}&limit=1`);
+  const row = rows[0];
+  if (!row) throw new Error("Approval request was not found inside the current organization boundary.");
+  const runtimeStatus = status(row.status, row.expires_at);
+  if (runtimeStatus !== "pending") throw new Error(`Approval request is already ${runtimeStatus}.`);
+  const tool = assertLeoToolAllowed(input.identity, row.action_key);
+  if (tool.approval === "admin" && input.identity.scope !== "super_admin") throw new Error("This action requires Super Admin approval.");
+  if (tool.approval === "none") throw new Error("This action does not require approval.");
+  const actor = input.identity.userId || input.identity.email || input.identity.scope;
+  const notes = `${String(input.notes || "").trim().slice(0, 800)}${input.notes ? " | " : ""}Reviewed by ${actor}`.slice(0, 1000);
+  const updated = await supabaseServerRequest<ApprovalRow[]>(`action_approval_requests?id=eq.${encodeURIComponent(row.id)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.pending`, { method: "PATCH", body: JSON.stringify({ status: input.decision, reviewed_at: new Date().toISOString(), reviewer_notes: notes }) });
+  if (!updated[0]) throw new Error("Approval review did not update a pending request.");
+  return { ...updated[0], runtimeStatus: status(updated[0].status, updated[0].expires_at) };
 }
