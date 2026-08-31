@@ -7,6 +7,7 @@ import { appendRuntimeMessage } from "@/lib/ai-runtime/memory";
 import { resolveRuntimeSession, advanceRuntimeSession } from "@/lib/ai-runtime/session";
 import { createRuntimeApproval, requireRuntimeApproval } from "@/lib/ai-runtime/approvals";
 import { RuntimeToolRegistry, createRuntimeToolRegistry } from "@/lib/ai-runtime/tool-registry";
+import { registerProductionRuntimeTools } from "@/lib/ai-runtime/production-tools";
 import type { RuntimeChannel, RuntimeToolExecutionResult } from "@/lib/ai-runtime/types";
 
 export type RuntimeReasonInput = {
@@ -39,8 +40,12 @@ async function logToolRun(input: { organizationId?: string; agentId?: string; se
   await supabaseServerRequest("agent_runtime_tool_runs", { method: "POST", body: JSON.stringify({ organization_id: input.organizationId, agent_id: input.agentId, session_id: input.sessionId || null, tool_name: input.toolKey, input: input.args, output: input.output ?? {}, status: input.status, approval_required: input.approvalRequired, started_at: input.startedAt, finished_at: input.finishedAt }) }).catch(() => null);
 }
 
+function productionRegistry() {
+  return registerProductionRuntimeTools(createRuntimeToolRegistry());
+}
+
 export class AgentRuntimeSDK {
-  constructor(readonly tools: RuntimeToolRegistry = createRuntimeToolRegistry()) {}
+  constructor(readonly tools: RuntimeToolRegistry = productionRegistry()) {}
 
   async reason(input: RuntimeReasonInput): Promise<RuntimeReasonOutput> {
     const executionId = randomUUID();
@@ -78,14 +83,19 @@ export class AgentRuntimeSDK {
   async executeTool(input: { identity: LeoIdentity; executionId: string; organizationId?: string; agentId?: string; sessionId?: string; toolKey: string; arguments: Record<string, unknown>; approvalRequestId?: string; superAdminConfirmed?: boolean }): Promise<RuntimeToolExecutionResult> {
     const definition = this.tools.resolveAllowed(input.identity, input.toolKey);
     const organizationId = input.identity.scope === "tenant" ? input.identity.organizationId : input.organizationId;
-    if (input.identity.scope === "tenant" && organizationId !== input.identity.organizationId) return { toolKey: definition.key, status: "rejected", error: "Cross-organization execution is forbidden." };
+    if ((input.identity.scope === "tenant" || input.identity.scope === "internal_service") && organizationId !== input.identity.organizationId) return { toolKey: definition.key, status: "rejected", error: "Cross-organization execution is forbidden." };
 
+    let approvedBy: string | undefined;
+    let approvedAt: string | undefined;
     if (definition.approval !== "none") {
       if (input.identity.scope === "super_admin" && input.superAdminConfirmed === true) {
-        // Explicit authenticated confirmation is sufficient for platform-level Super Leo actions.
+        approvedBy = input.identity.email || "super_admin";
+        approvedAt = new Date().toISOString();
       } else if (organizationId) {
         const approval = await requireRuntimeApproval({ identity: input.identity, organizationId, approvalRequestId: input.approvalRequestId, executionId: input.executionId, actionKey: definition.key });
         if (!approval.approved) return { toolKey: definition.key, status: "approval_required", error: `Approval status: ${approval.reason}.`, approvalRequestId: input.approvalRequestId };
+        approvedBy = approval.approval.reviewed_by || approval.approval.reviewer_notes || "runtime-approval-ledger";
+        approvedAt = approval.approval.reviewed_at || new Date().toISOString();
       } else {
         return { toolKey: definition.key, status: "approval_required", error: "Explicit approval evidence is required." };
       }
@@ -93,7 +103,22 @@ export class AgentRuntimeSDK {
 
     const startedAt = new Date().toISOString();
     try {
-      const output = await this.tools.execute({ identity: input.identity, toolKey: definition.key, arguments: input.arguments, organizationId, agentId: input.agentId, executionId: input.executionId });
+      const output = await this.tools.execute({
+        identity: input.identity,
+        toolKey: definition.key,
+        arguments: input.arguments,
+        organizationId,
+        agentId: input.agentId,
+        executionId: input.executionId,
+        authorization: {
+          approved: definition.approval === "none" ? true : Boolean(approvedBy),
+          approvalMode: definition.approval,
+          approvalRequestId: input.approvalRequestId,
+          approvedBy,
+          approvedAt,
+          source: "runtime-sdk",
+        },
+      });
       const finishedAt = new Date().toISOString();
       await logToolRun({ organizationId, agentId: input.agentId, sessionId: input.sessionId, toolKey: definition.key, args: input.arguments, output, status: "completed", approvalRequired: definition.approval !== "none", startedAt, finishedAt });
       return { toolKey: definition.key, status: "succeeded", output };
@@ -101,7 +126,7 @@ export class AgentRuntimeSDK {
       const finishedAt = new Date().toISOString();
       const message = error instanceof Error ? error.message : "Runtime tool execution failed.";
       await logToolRun({ organizationId, agentId: input.agentId, sessionId: input.sessionId, toolKey: definition.key, args: input.arguments, output: { error: message }, status: "failed", approvalRequired: definition.approval !== "none", startedAt, finishedAt });
-      return { toolKey: definition.key, status: /forbidden|approval|permission|registered/i.test(message) ? "rejected" : "failed", error: message };
+      return { toolKey: definition.key, status: /forbidden|approval|permission|registered|authorization/i.test(message) ? "rejected" : "failed", error: message };
     }
   }
 }
