@@ -1,6 +1,24 @@
-import { LEO_TOOLS, assertLeoToolAllowed, listLeoToolsForIdentity, type LeoIdentity, type LeoToolDefinition } from "@/lib/leo-core";
+import { LEO_TOOLS, assertLeoToolAllowed, listLeoToolsForIdentity, type LeoApprovalMode, type LeoIdentity, type LeoToolDefinition } from "@/lib/leo-core";
 
-export type RuntimeToolExecutor = (input: Record<string, unknown>, context: { identity: LeoIdentity; organizationId?: string; agentId?: string; executionId: string }) => Promise<unknown>;
+export type RuntimeExecutionAuthorization = {
+  approved: boolean;
+  approvalMode: LeoApprovalMode;
+  approvalRequestId?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  source: "runtime-sdk";
+};
+
+export type RuntimeToolExecutorContext = {
+  identity: LeoIdentity;
+  organizationId?: string;
+  agentId?: string;
+  executionId: string;
+  toolKey: string;
+  authorization: RuntimeExecutionAuthorization;
+};
+
+export type RuntimeToolExecutor = (input: Record<string, unknown>, context: RuntimeToolExecutorContext) => Promise<unknown>;
 
 export class RuntimeToolRegistry {
   private readonly definitions = new Map<string, LeoToolDefinition>();
@@ -41,11 +59,29 @@ export class RuntimeToolRegistry {
     return this.executors.has(toolKey);
   }
 
-  async execute(input: { identity: LeoIdentity; toolKey: string; arguments: Record<string, unknown>; organizationId?: string; agentId?: string; executionId: string }) {
+  async execute(input: {
+    identity: LeoIdentity;
+    toolKey: string;
+    arguments: Record<string, unknown>;
+    organizationId?: string;
+    agentId?: string;
+    executionId: string;
+    authorization: RuntimeExecutionAuthorization;
+  }) {
     const definition = this.resolveAllowed(input.identity, input.toolKey);
+    if (input.authorization.source !== "runtime-sdk") throw new Error("Runtime executor authorization source is invalid.");
+    if (input.authorization.approvalMode !== definition.approval) throw new Error("Runtime executor approval mode does not match tool policy.");
+    if (definition.approval !== "none" && !input.authorization.approved) throw new Error(`Approved runtime authorization is required for ${definition.key}.`);
     const executor = this.executors.get(definition.key);
     if (!executor) throw new Error(`No runtime executor registered for ${definition.key}.`);
-    return executor(input.arguments, { identity: input.identity, organizationId: input.organizationId, agentId: input.agentId, executionId: input.executionId });
+    return executor(input.arguments, {
+      identity: input.identity,
+      organizationId: input.organizationId,
+      agentId: input.agentId,
+      executionId: input.executionId,
+      toolKey: definition.key,
+      authorization: input.authorization,
+    });
   }
 }
 
