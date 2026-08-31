@@ -31,6 +31,10 @@ export class RuntimeToolRegistry {
     return [...this.definitions.values()].filter((tool) => canonical.has(tool.key));
   }
 
+  listExecutable(identity: LeoIdentity) {
+    return this.listAllowed(identity).filter((tool) => this.executors.has(tool.key));
+  }
+
   resolveAllowed(identity: LeoIdentity, toolKey: string) {
     const allowed = assertLeoToolAllowed(identity, toolKey);
     const definition = this.definitions.get(allowed.key);
