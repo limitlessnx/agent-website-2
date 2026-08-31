@@ -9,3 +9,4 @@ export * from "@/lib/ai-runtime/agent-bus";
 export * from "@/lib/ai-runtime/stream";
 export * from "@/lib/ai-runtime/provider";
 export * from "@/lib/ai-runtime/sdk";
+export * from "@/lib/ai-runtime/migration";

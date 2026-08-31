@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:support": "node --test tests/support-ai-security.test.mjs tests/leo-core-security.test.mjs tests/leo-phase7-governance.test.mjs tests/leo-phase8-business-events.test.mjs tests/leo-phase8-business-models.test.mjs tests/leo-phase8-business-simulation.test.mjs tests/leo-phase8-closure.test.mjs tests/leo-phase9-agent-roles.test.mjs tests/leo-phase10-runtime.test.mjs tests/leo-phase11-runtime-engine.test.mjs"
+    "test:support": "node --test tests/support-ai-security.test.mjs tests/leo-core-security.test.mjs tests/leo-phase7-governance.test.mjs tests/leo-phase8-business-events.test.mjs tests/leo-phase8-business-models.test.mjs tests/leo-phase8-business-simulation.test.mjs tests/leo-phase8-closure.test.mjs tests/leo-phase9-agent-roles.test.mjs tests/leo-phase10-runtime.test.mjs tests/leo-phase11-runtime-engine.test.mjs tests/leo-phase12-runtime-migration.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

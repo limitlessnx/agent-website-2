@@ -1,6 +1,7 @@
 import type { SupportMessage, SupportScope } from "@/lib/support-agent";
 import { buildSupportSystemPrompt } from "@/lib/ai/support-prompt";
 import { sanitizeSupportDiagnostics, type SafeSupportDiagnostics } from "@/lib/ai/support-sanitizer";
+import { resolvePhase12AgentId, runPhase12StructuredAgent } from "@/lib/ai-runtime/migration";
 
 export const SUPPORT_ACTION_KEYS = [
   "inspect_tenant_workflow_failures",
@@ -159,10 +160,7 @@ export async function generateSupportAgentReply(input: {
 }): Promise<SupportModelResult> {
   const startedAt = Date.now();
   const diagnostics = sanitizeSupportDiagnostics(input.diagnostics, input.scope, input.organizationId);
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const model = process.env.SUPPORT_AI_MODEL?.trim() || "gpt-4o-mini";
-
-  if (!apiKey) {
+  if (!process.env.OPENAI_API_KEY?.trim()) {
     return {
       ok: false,
       connected: false,
@@ -173,91 +171,57 @@ export async function generateSupportAgentReply(input: {
       latencyMs: Date.now() - startedAt,
     };
   }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  if (input.scope !== "tenant" || !input.organizationId) {
+    return {
+      ok: false,
+      connected: false,
+      provider: "openai",
+      model: null,
+      reason: "provider_error",
+      diagnostics,
+      latencyMs: Date.now() - startedAt,
+    };
+  }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: buildSupportSystemPrompt({ scope: input.scope, organizationId: input.organizationId, diagnostics }) },
-          ...historyForModel(input.history),
-          { role: "user", content: input.message.slice(0, 8000) },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "fluxknight_support_response",
-            strict: true,
-            schema: supportResponseSchema,
-          },
-        },
-      }),
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        connected: false,
-        provider: "openai",
-        model,
-        reason: "provider_error",
+    const agentId = await resolvePhase12AgentId({ organizationId: input.organizationId, kind: "leo" });
+    const result = await runPhase12StructuredAgent({
+      kind: "leo",
+      organizationId: input.organizationId,
+      agentId,
+      channel: "api",
+      systemPrompt: buildSupportSystemPrompt({ scope: input.scope, organizationId: input.organizationId, diagnostics }),
+      input: {
+        message: input.message.slice(0, 8000),
+        history: historyForModel(input.history),
         diagnostics,
-        latencyMs: Date.now() - startedAt,
-      };
-    }
-
-    const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
-    const choices = payload && Array.isArray(payload.choices) ? payload.choices : [];
-    const first = isRecord(choices[0]) ? choices[0] : null;
-    const message = first && isRecord(first.message) ? first.message : null;
-    const content = message && typeof message.content === "string" ? message.content : "";
-    let parsed: unknown = null;
-    try {
-      parsed = content ? JSON.parse(content) : null;
-    } catch {
-      parsed = null;
-    }
+      },
+      outputSchema: supportResponseSchema as unknown as Record<string, unknown>,
+      temperature: 0.2,
+    });
+    const parsed: unknown = result.parsed || (() => {
+      try { return JSON.parse(result.outputText); } catch { return null; }
+    })();
     const validated = validateSupportAIResponse(parsed);
     if (!validated) {
       return {
         ok: false,
         connected: false,
         provider: "openai",
-        model,
+        model: result.modelKey,
         reason: "invalid_response",
         diagnostics,
         latencyMs: Date.now() - startedAt,
       };
     }
-
-    const usageRecord = payload && isRecord(payload.usage) ? payload.usage : null;
-    const usage: SupportUsage | undefined = usageRecord
-      ? {
-          inputTokens: typeof usageRecord.prompt_tokens === "number" ? usageRecord.prompt_tokens : undefined,
-          outputTokens: typeof usageRecord.completion_tokens === "number" ? usageRecord.completion_tokens : undefined,
-          totalTokens: typeof usageRecord.total_tokens === "number" ? usageRecord.total_tokens : undefined,
-        }
-      : undefined;
-
     return {
       ok: true,
       connected: true,
       provider: "openai",
-      model,
+      model: result.modelKey,
       response: validated,
       diagnostics,
-      usage,
+      usage: result.usage,
       latencyMs: Date.now() - startedAt,
     };
   } catch (error) {
@@ -266,12 +230,10 @@ export async function generateSupportAgentReply(input: {
       ok: false,
       connected: false,
       provider: "openai",
-      model,
+      model: null,
       reason: timedOut ? "timeout" : "provider_error",
       diagnostics,
       latencyMs: Date.now() - startedAt,
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }

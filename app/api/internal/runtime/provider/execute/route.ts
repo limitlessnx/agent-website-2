@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { runPhase12StructuredAgent } from "@/lib/ai-runtime/migration";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -12,14 +13,13 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function extractOutputText(payload: Record<string, unknown>) {
-  if (typeof payload.output_text === "string") return payload.output_text;
-  const output = Array.isArray(payload.output) ? payload.output : [];
-  return output
-    .flatMap((item) => Array.isArray(record(item).content) ? record(item).content as unknown[] : [])
-    .map((item) => text(record(item).text) || text(record(item).output_text))
-    .filter(Boolean)
-    .join("");
+function resolveAgentKind(purpose: string) {
+  const value = purpose.toLowerCase();
+  if (value.includes("maia") || value.includes("realty") || value.includes("property")) return "maia" as const;
+  if (value.includes("voice") || value.includes("reception")) return "voice" as const;
+  if (value.includes("sales") || value.includes("lead")) return "sales" as const;
+  if (value.includes("support")) return "support" as const;
+  return "specialist" as const;
 }
 
 export async function POST(request: NextRequest) {
@@ -58,81 +58,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Runtime context snapshot was not found." }, { status: 409 });
     }
 
-    const { data: assignment, error: assignmentError } = await supabase
+    const { data: assignment } = await supabase
       .from("agent_provider_assignments")
-      .select("id,status,limits,ai_provider_id,ai_model_id,platform_provider_catalog:ai_provider_id(provider_key,status,credential_reference,configuration),platform_provider_models:ai_model_id(model_key,status)")
+      .select("id,limits")
       .eq("organization_id", organizationId)
       .eq("agent_id", agentId)
       .eq("status", "active")
-      .single();
-    if (assignmentError || !assignment) {
-      return NextResponse.json({ error: "No active AI provider assignment exists for this tenant agent." }, { status: 409 });
-    }
+      .maybeSingle();
 
-    const providerValue = assignment.platform_provider_catalog;
-    const modelValue = assignment.platform_provider_models;
-    const provider = Array.isArray(providerValue) ? record(providerValue[0]) : record(providerValue);
-    const model = Array.isArray(modelValue) ? record(modelValue[0]) : record(modelValue);
-    const providerKey = text(provider.provider_key);
-    const modelKey = text(model.model_key);
-    if (!providerKey || !modelKey || text(provider.status) !== "active" || text(model.status) !== "active") {
-      return NextResponse.json({ error: "Assigned provider or model is not active." }, { status: 409 });
-    }
-
-    const input = record(body.input);
+    const runtimeInput = record(body.input);
     const outputSchema = record(body.output_schema);
-    const instructions = [
+    const systemPrompt = [
       text(snapshot.compiled_prompt),
-      "Return strict JSON only.",
-      Object.keys(outputSchema).length ? `Required output contract: ${JSON.stringify(outputSchema)}` : "",
+      "This execution is running through the Phase 12 shared Fluxknight AI runtime.",
+      "The organization and agent boundaries are immutable.",
     ].filter(Boolean).join("\n\n");
 
-    let providerPayload: Record<string, unknown>;
-    let providerResponse: Response;
-    if (providerKey === "openai") {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) return NextResponse.json({ error: "OPENAI_API_KEY is not configured on the Fluxknight server." }, { status: 503 });
-      providerPayload = {
-        model: modelKey,
-        input: [
-          { role: "system", content: [{ type: "input_text", text: instructions }] },
-          { role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] },
-        ],
-        temperature: Number(record(assignment.limits).temperature ?? 0.2),
-      };
-      providerResponse = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(providerPayload),
-        signal: AbortSignal.timeout(90_000),
-      });
-    } else {
-      return NextResponse.json({ error: `Provider ${providerKey} is assigned but not yet supported by the runtime adapter.` }, { status: 501 });
-    }
+    const result = await runPhase12StructuredAgent({
+      kind: resolveAgentKind(purpose),
+      organizationId,
+      agentId,
+      channel: "api",
+      systemPrompt,
+      input: runtimeInput,
+      outputSchema: Object.keys(outputSchema).length ? outputSchema : undefined,
+      temperature: Number(record(assignment?.limits).temperature ?? 0.2),
+    });
 
-    const responsePayload = record(await providerResponse.json().catch(() => ({})));
     const latencyMs = Date.now() - startedAt;
-    if (!providerResponse.ok) {
-      const errorMessage = text(record(responsePayload.error).message) || `Provider request failed with ${providerResponse.status}.`;
-      await supabase
-        .from("runtime_model_requests")
-        .update({ status: "failed", response_payload: responsePayload, latency_ms: latencyMs, error_message: errorMessage, completed_at: new Date().toISOString() })
-        .eq("organization_id", organizationId)
-        .eq("execution_id", executionId)
-        .eq("status", "prepared");
-      return NextResponse.json({ error: errorMessage }, { status: 502 });
-    }
+    const usage = result.usage || {};
+    const responsePayload = {
+      id: result.responseId || null,
+      output_text: result.outputText,
+      parsed: result.parsed,
+      provider: result.provider,
+      model: result.modelKey,
+      model_source: result.modelSource,
+    };
 
-    const usage = record(responsePayload.usage);
-    const outputText = extractOutputText(responsePayload);
     await Promise.all([
       supabase
         .from("runtime_model_requests")
         .update({
           status: "succeeded",
           response_payload: responsePayload,
-          input_tokens: Number(usage.input_tokens) || null,
-          output_tokens: Number(usage.output_tokens) || null,
+          input_tokens: usage.inputTokens || null,
+          output_tokens: usage.outputTokens || null,
           latency_ms: latencyMs,
           completed_at: new Date().toISOString(),
         })
@@ -144,16 +115,29 @@ export async function POST(request: NextRequest) {
         agent_id: agentId,
         execution_id: executionId,
         usage_type: "ai_tokens",
-        quantity: (Number(usage.input_tokens) || 0) + (Number(usage.output_tokens) || 0),
+        quantity: usage.totalTokens || (usage.inputTokens || 0) + (usage.outputTokens || 0),
         unit_cost_minor: 0,
-        metadata: { provider: providerKey, model: modelKey, purpose, provider_response_id: responsePayload.id },
+        metadata: {
+          provider: result.provider,
+          model: result.modelKey,
+          model_source: result.modelSource,
+          purpose,
+          provider_response_id: result.responseId || null,
+          runtime_phase: 12,
+        },
       }),
       supabase.from("runtime_progress_events").insert({
         organization_id: organizationId,
         execution_id: executionId,
         event_type: "provider.completed",
-        message: "Assigned AI provider completed the request.",
-        payload: { provider: providerKey, model: modelKey, latency_ms: latencyMs },
+        message: "Shared Phase 12 AI runtime completed the request.",
+        payload: {
+          provider: result.provider,
+          model: result.modelKey,
+          model_source: result.modelSource,
+          latency_ms: latencyMs,
+          runtime_phase: 12,
+        },
       }),
     ]);
 
@@ -162,13 +146,19 @@ export async function POST(request: NextRequest) {
       organization_id: organizationId,
       agent_id: agentId,
       execution_id: executionId,
-      provider_assignment_id: assignment.id,
-      provider: providerKey,
-      model: modelKey,
-      response_id: responsePayload.id || null,
-      output_text: outputText,
-      usage,
+      provider_assignment_id: assignment?.id || null,
+      provider: result.provider,
+      model: result.modelKey,
+      model_source: result.modelSource,
+      response_id: result.responseId || null,
+      output_text: result.outputText,
+      usage: {
+        input_tokens: usage.inputTokens,
+        output_tokens: usage.outputTokens,
+        total_tokens: usage.totalTokens,
+      },
       latency_ms: latencyMs,
+      runtime_phase: 12,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to execute assigned provider.";
