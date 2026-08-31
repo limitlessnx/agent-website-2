@@ -1,4 +1,5 @@
 import { LEO_TOOLS, assertLeoToolAllowed, listLeoToolsForIdentity, type LeoIdentity, type LeoToolDefinition } from "@/lib/leo-core";
+import { registerProductionRuntimeExecutors } from "@/lib/ai-runtime/production-executors";
 
 export type RuntimeToolExecutor = (input: Record<string, unknown>, context: { identity: LeoIdentity; organizationId?: string; agentId?: string; executionId: string }) => Promise<unknown>;
 
@@ -30,6 +31,10 @@ export class RuntimeToolRegistry {
     return [...this.definitions.values()].filter((tool) => canonical.has(tool.key));
   }
 
+  listExecutable(identity: LeoIdentity) {
+    return this.listAllowed(identity).filter((tool) => this.executors.has(tool.key));
+  }
+
   resolveAllowed(identity: LeoIdentity, toolKey: string) {
     const allowed = assertLeoToolAllowed(identity, toolKey);
     const definition = this.definitions.get(allowed.key);
@@ -44,11 +49,11 @@ export class RuntimeToolRegistry {
   async execute(input: { identity: LeoIdentity; toolKey: string; arguments: Record<string, unknown>; organizationId?: string; agentId?: string; executionId: string }) {
     const definition = this.resolveAllowed(input.identity, input.toolKey);
     const executor = this.executors.get(definition.key);
-    if (!executor) throw new Error(`No runtime executor registered for ${definition.key}.`);
+    if (!executor) throw new Error(`No runtime executor registered for ${definition.key}. Production execution is unavailable.`);
     return executor(input.arguments, { identity: input.identity, organizationId: input.organizationId, agentId: input.agentId, executionId: input.executionId });
   }
 }
 
 export function createRuntimeToolRegistry() {
-  return new RuntimeToolRegistry();
+  return registerProductionRuntimeExecutors(new RuntimeToolRegistry());
 }
