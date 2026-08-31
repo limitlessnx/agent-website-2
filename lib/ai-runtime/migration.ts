@@ -1,4 +1,4 @@
-import type { LeoIdentity } from "@/lib/leo-core";
+import type { LeoIdentity, LeoChannel } from "@/lib/leo-core";
 import { AgentRuntimeSDK, type RuntimeReasonOutput } from "@/lib/ai-runtime/sdk";
 import { routeRuntimeModel } from "@/lib/ai-runtime/model-router";
 import { generateRuntimeStructuredOutput, type RuntimeStructuredOutput } from "@/lib/ai-runtime/provider";
@@ -35,6 +35,12 @@ const KIND_HINTS: Record<Phase12AgentKind, string[]> = {
   specialist: [],
 };
 
+function leoChannelForRuntime(channel: RuntimeChannel): LeoChannel {
+  if (channel === "voice") return "voice";
+  if (channel === "chat") return "chat";
+  return "api";
+}
+
 export function internalRuntimeIdentity(organizationId: string, channel: RuntimeChannel = "api"): LeoIdentity {
   const normalized = String(organizationId || "").trim();
   if (!normalized) throw new Error("Internal runtime identity requires an organization ID.");
@@ -42,7 +48,7 @@ export function internalRuntimeIdentity(organizationId: string, channel: Runtime
     scope: "internal_service",
     role: "service",
     organizationId: normalized,
-    channel,
+    channel: leoChannelForRuntime(channel),
     globalScope: false,
   };
 }
