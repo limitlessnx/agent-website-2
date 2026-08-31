@@ -10,12 +10,13 @@ const router = await readFile(new URL("../lib/ai-runtime/model-router.ts", impor
 const approvals = await readFile(new URL("../lib/ai-runtime/approvals.ts", import.meta.url), "utf8");
 const bus = await readFile(new URL("../lib/ai-runtime/agent-bus.ts", import.meta.url), "utf8");
 const stream = await readFile(new URL("../lib/ai-runtime/stream.ts", import.meta.url), "utf8");
+const streamRoute = await readFile(new URL("../app/api/leo/runtime/engine/stream/route.ts", import.meta.url), "utf8");
 const provider = await readFile(new URL("../lib/ai-runtime/provider.ts", import.meta.url), "utf8");
 const sdk = await readFile(new URL("../lib/ai-runtime/sdk.ts", import.meta.url), "utf8");
 const engineRoute = await readFile(new URL("../app/api/leo/runtime/engine/route.ts", import.meta.url), "utf8");
 const approvalRoute = await readFile(new URL("../app/api/leo/runtime/approvals/route.ts", import.meta.url), "utf8");
 
- test("Phase 11 builds one organization-scoped runtime context", () => {
+test("Phase 11 builds one organization-scoped runtime context", () => {
   assert.match(context, /buildRuntimeContext/);
   assert.match(context, /Cross-organization runtime context is forbidden/);
   assert.match(context, /sanitizeLeoPageContext/);
@@ -69,7 +70,8 @@ test("Phase 11 exposes streaming runtime events", () => {
   assert.match(stream, /text\/event-stream/);
   assert.match(stream, /RuntimeStreamEvent/);
   assert.match(stream, /runtime\.delta/);
-  assert.match(stream, /runtime\.completed/);
+  assert.match(streamRoute, /runtime\.completed/);
+  assert.match(streamRoute, /runtime\.failed/);
 });
 
 test("Phase 11 SDK persists reasoning and keeps execution behind the tool gateway", () => {
