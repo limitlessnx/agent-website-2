@@ -1,4 +1,4 @@
-import { LEO_TOOLS, assertLeoToolAllowed, listLeoToolsForIdentity, type LeoApprovalMode, type LeoIdentity, type LeoToolDefinition } from "@/lib/leo-core";
+import { LEO_TOOLS, assertLeoToolAllowed, listLeoToolsForIdentity, resolveLeoTool, type LeoApprovalMode, type LeoIdentity, type LeoToolDefinition } from "@/lib/leo-core";
 
 export type RuntimeExecutionAuthorization = {
   approved: boolean;
@@ -44,11 +44,23 @@ export class RuntimeToolRegistry {
   }
 
   listAllowed(identity: LeoIdentity) {
+    if (identity.scope === "internal_service") {
+      if (!identity.organizationId) return [];
+      return [...this.definitions.values()].filter((tool) => tool.scopes.includes("tenant"));
+    }
     const canonical = new Set(listLeoToolsForIdentity(identity).map((tool) => tool.key));
     return [...this.definitions.values()].filter((tool) => canonical.has(tool.key));
   }
 
   resolveAllowed(identity: LeoIdentity, toolKey: string) {
+    if (identity.scope === "internal_service") {
+      if (!identity.organizationId) throw new Error("Internal service tool access requires an exact organization ID.");
+      const resolved = resolveLeoTool(toolKey);
+      if (!resolved || !resolved.scopes.includes("tenant")) throw new Error(`Runtime tool ${toolKey} is not permitted for an internal tenant service.`);
+      const definition = this.definitions.get(resolved.key);
+      if (!definition) throw new Error(`Runtime tool is not registered: ${resolved.key}.`);
+      return definition;
+    }
     const allowed = assertLeoToolAllowed(identity, toolKey);
     const definition = this.definitions.get(allowed.key);
     if (!definition) throw new Error(`Runtime tool is not registered: ${allowed.key}.`);
