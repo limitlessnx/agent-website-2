@@ -2,6 +2,7 @@ export * from "@/lib/ai-runtime/types";
 export * from "@/lib/ai-runtime/context";
 export * from "@/lib/ai-runtime/model-router";
 export * from "@/lib/ai-runtime/tool-registry";
+export * from "@/lib/ai-runtime/production-tools";
 export * from "@/lib/ai-runtime/memory";
 export * from "@/lib/ai-runtime/session";
 export * from "@/lib/ai-runtime/approvals";
