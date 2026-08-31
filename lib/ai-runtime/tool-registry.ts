@@ -45,7 +45,7 @@ export class RuntimeToolRegistry {
   async execute(input: { identity: LeoIdentity; toolKey: string; arguments: Record<string, unknown>; organizationId?: string; agentId?: string; executionId: string }) {
     const definition = this.resolveAllowed(input.identity, input.toolKey);
     const executor = this.executors.get(definition.key);
-    if (!executor) throw new Error(`No production runtime executor registered for ${definition.key}.`);
+    if (!executor) throw new Error(`No runtime executor registered for ${definition.key}. Production execution is unavailable.`);
     return executor(input.arguments, { identity: input.identity, organizationId: input.organizationId, agentId: input.agentId, executionId: input.executionId });
   }
 }
