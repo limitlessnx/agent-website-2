@@ -18,7 +18,8 @@ test("Phase 13 activates production executors in the shared registry", () => {
 });
 
 test("unimplemented production tools fail closed instead of faking success", () => {
-  assert.match(registry, /No production runtime executor registered/);
+  assert.match(registry, /No runtime executor registered/);
+  assert.match(registry, /Production execution is unavailable/);
   assert.doesNotMatch(registry, /return \{\s*ok:\s*true/);
 });
 
