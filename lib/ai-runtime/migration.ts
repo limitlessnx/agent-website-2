@@ -3,6 +3,7 @@ import { AgentRuntimeSDK, type RuntimeReasonOutput } from "@/lib/ai-runtime/sdk"
 import { routeRuntimeModel } from "@/lib/ai-runtime/model-router";
 import { generateRuntimeStructuredOutput, type RuntimeStructuredOutput } from "@/lib/ai-runtime/provider";
 import type { RuntimeChannel } from "@/lib/ai-runtime/types";
+import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 export const PHASE12_AGENT_KINDS = [
   "leo",
@@ -23,6 +24,17 @@ export type Phase12AgentDescriptor = {
   externalConversationId?: string;
 };
 
+type AgentLookupRow = { id: string; name: string; status: string };
+
+const KIND_HINTS: Record<Phase12AgentKind, string[]> = {
+  leo: ["leo"],
+  maia: ["maia"],
+  sales: ["sales", "qualification"],
+  support: ["support", "customer"],
+  voice: ["voice", "reception"],
+  specialist: [],
+};
+
 export function internalRuntimeIdentity(organizationId: string, channel: RuntimeChannel = "api"): LeoIdentity {
   const normalized = String(organizationId || "").trim();
   if (!normalized) throw new Error("Internal runtime identity requires an organization ID.");
@@ -33,6 +45,32 @@ export function internalRuntimeIdentity(organizationId: string, channel: Runtime
     channel,
     globalScope: false,
   };
+}
+
+export async function resolvePhase12AgentId(input: {
+  organizationId: string;
+  kind: Phase12AgentKind;
+  preferredAgentId?: string;
+}) {
+  const organizationId = String(input.organizationId || "").trim();
+  if (!organizationId) throw new Error("Phase 12 agent resolution requires an organization ID.");
+  if (input.preferredAgentId?.trim()) {
+    const rows = await supabaseServerRequest<AgentLookupRow[]>(
+      `agents?select=id,name,status&id=eq.${encodeURIComponent(input.preferredAgentId.trim())}&organization_id=eq.${encodeURIComponent(organizationId)}&limit=1`,
+    ).catch(() => []);
+    if (rows[0] && rows[0].status !== "deleted") return rows[0].id;
+    throw new Error("Requested Phase 12 agent does not belong to this organization.");
+  }
+
+  const rows = await supabaseServerRequest<AgentLookupRow[]>(
+    `agents?select=id,name,status&organization_id=eq.${encodeURIComponent(organizationId)}&status=neq.deleted&order=created_at.asc&limit=100`,
+  ).catch(() => []);
+  const hints = KIND_HINTS[input.kind];
+  const matched = hints.length
+    ? rows.find((row) => hints.some((hint) => String(row.name || "").toLowerCase().includes(hint)))
+    : rows[0];
+  if (!matched) throw new Error(`No active ${input.kind} agent is configured in this organization.`);
+  return matched.id;
 }
 
 export function assertPhase12AgentBoundary(input: Phase12AgentDescriptor) {
