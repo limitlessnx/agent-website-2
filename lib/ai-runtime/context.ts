@@ -34,7 +34,7 @@ export async function buildRuntimeContext(input: { identity: LeoIdentity; organi
 
   const model = await routeRuntimeModel({ identity: input.identity, organizationId, agentId: input.agentId, overrideModelId: input.overrideModelId });
   const registry = createRuntimeToolRegistry();
-  const tools = registry.listExecutable(input.identity);
+  const tools = registry.listAllowed(input.identity);
   const memory = input.agentId && input.sessionId && organizationId ? await loadRuntimeMemory({ identity: input.identity, organizationId, agentId: input.agentId, sessionId: input.sessionId }) : [];
 
   return {
