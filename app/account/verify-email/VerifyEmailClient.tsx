@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { MailCheck } from "lucide-react";
+import FluxknightLogo from "@/components/admin/FluxknightLogo";
 
 const COOLDOWN_SECONDS = 60;
 
@@ -43,7 +43,7 @@ export default function VerifyEmailClient({ email }: { email: string }) {
 
   return (
     <div className="admin-login-card">
-      <div className="admin-login-icon"><MailCheck size={22} /></div>
+      <div className="admin-login-icon"><FluxknightLogo compact priority /></div>
       <div>
         <p className="admin-kicker">Email verification</p>
         <h1>Check your inbox</h1>

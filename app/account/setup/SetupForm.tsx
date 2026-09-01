@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2 } from "lucide-react";
+import FluxknightLogo from "@/components/admin/FluxknightLogo";
 
 export default function SetupForm() {
   const router = useRouter();
@@ -39,7 +39,7 @@ export default function SetupForm() {
 
   return (
     <form onSubmit={submit} className="admin-login-card">
-      <div className="admin-login-icon"><Building2 size={22} /></div>
+      <div className="admin-login-icon"><FluxknightLogo compact priority /></div>
       <div>
         <p className="admin-kicker">Fluxknight Client Portal</p>
         <h1>Finish your workspace</h1>

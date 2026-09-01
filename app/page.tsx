@@ -25,6 +25,7 @@ import {
   Zap,
 } from "lucide-react";
 import ElevenLabsConsultant from "@/components/ElevenLabsConsultant";
+import AiOperationsCanvas from "./AiOperationsCanvas";
 
 const services = [
   { icon: Bot, title: "AI Sales Agents", text: "Qualify leads, answer objections, recommend next steps, and move opportunities into your pipeline." },
@@ -102,13 +103,13 @@ export default function HomePage() {
       <ElevenLabsConsultant />
       <section className="quantix-hero">
         <div className="hero-stars" /><div className="violet-arc" /><div className="hero-haze" />
-        <motion.div className="hero-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
+        <motion.div className="hero-content" initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
           <div className="hero-pill"><Sparkles size={13} /> Coordinate your AI workforce</div>
           <h1>Build a business that runs through <span>connected AI automation.</span></h1>
           <p>Deploy intelligent sales, support, voice, lead-generation, and workflow agents through one secure operating system built around your actual business.</p>
           <div className="hero-buttons"><Link className="button-primary" href="/evaluation">Book a Demo <ArrowRight size={17} /></Link><Link className="button-secondary" href="/services">Explore Services <ArrowRight size={16} /></Link></div>
         </motion.div>
-        <motion.div className="product-shot" initial={{ opacity: 0, y: 42, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .9, delay: .25 }}><img src="/flux-dashboard.svg" alt="Fluxknight AI operations dashboard" /></motion.div>
+        <AiOperationsCanvas />
       </section>
 
       <section className="integration-strip"><p>Built to connect with the tools your business already uses</p><div><span>n8n</span><span>Supabase</span><span>ElevenLabs</span><span>WhatsApp</span><span>Trigger.dev</span><span>OpenAI</span></div></section>

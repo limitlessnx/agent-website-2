@@ -62,7 +62,7 @@ export default async function DashboardPage() {
         <div className={styles.automationVisual} aria-label="Fluxknight AI operations visual">
           <div className={styles.orbit} />
           <div className={`${styles.orbit} ${styles.orbitTwo}`} />
-          <div className={styles.core}><FluxknightLogo /></div>
+          <div className={styles.core}><FluxknightLogo compact priority /></div>
           <div className={`${styles.node} ${styles.nodeOne}`}><Bot size={14} /> Assistant</div>
           <div className={`${styles.node} ${styles.nodeTwo}`}><Workflow size={14} /> Operations</div>
           <div className={`${styles.node} ${styles.nodeThree}`}><Building2 size={14} /> Organizations</div>
