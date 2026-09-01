@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import { LockKeyhole } from "lucide-react";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function LoginForm() {
   return (
     <form onSubmit={submit} className="admin-login-card">
       <div className="admin-login-icon">
-        <FluxknightLogo compact priority />
+        <LockKeyhole size={22} />
       </div>
       <div>
         <p className="admin-kicker">Limitless Realty Backend</p>

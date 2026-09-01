@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import { LogIn } from "lucide-react";
 
 export default function ClientLoginForm() {
   const router = useRouter();
@@ -40,7 +40,7 @@ export default function ClientLoginForm() {
 
   return (
     <form onSubmit={submit} className="admin-login-card">
-      <div className="admin-login-icon"><FluxknightLogo compact priority /></div>
+      <div className="admin-login-icon"><LogIn size={22} /></div>
       <div>
         <p className="admin-kicker">Fluxknight Client Portal</p>
         <h1>Client sign in</h1>

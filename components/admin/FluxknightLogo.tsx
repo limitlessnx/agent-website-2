@@ -1,25 +1,28 @@
-import Image from "next/image";
+import type { SVGProps } from "react";
 
-type FluxknightLogoProps = {
-  className?: string;
-  compact?: boolean;
-  priority?: boolean;
-};
-
-export default function FluxknightLogo({
-  className,
-  compact = false,
-  priority = false,
-}: FluxknightLogoProps) {
+export default function FluxknightLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
-    <Image
+    <svg
       className={className}
-      src={compact ? "/brand/fluxknight-mark.webp" : "/brand/fluxknight-wordmark.webp"}
-      alt="Fluxknight"
-      width={compact ? 512 : 560}
-      height={compact ? 512 : 132}
-      sizes={compact ? "96px" : "190px"}
-      priority={priority}
-    />
+      viewBox="0 0 260 48"
+      fill="none"
+      role="img"
+      aria-label="Fluxknight"
+      preserveAspectRatio="xMidYMid meet"
+      {...props}
+    >
+      <text
+        x="130"
+        y="33"
+        textAnchor="middle"
+        fill="currentColor"
+        fontFamily="Inter, Arial, Helvetica, sans-serif"
+        fontSize="27"
+        fontWeight="500"
+        letterSpacing="7.2"
+      >
+        FLUXKNIGHT
+      </text>
+    </svg>
   );
 }
