@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { provisionClientOrganization } from "@/lib/client-onboarding";
 import { getPrimaryMembership, setClientSession, setPendingClientSetupSession, signUpClient } from "@/lib/client-auth";
+import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
 function slugify(value: string) {
   return value
@@ -9,6 +10,10 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 70);
+}
+
+function firstName(value: string) {
+  return value.trim().split(/\s+/)[0] || "there";
 }
 
 export async function POST(request: NextRequest) {
@@ -75,6 +80,19 @@ export async function POST(request: NextRequest) {
       membershipId: membership.membershipId,
       role: membership.role,
       issuedAt: Date.now(),
+    });
+
+    await sendFluxknightLifecycleEvent({
+      eventKey: `welcome:${auth.user.id}`,
+      event: "fluxknight.user.verified",
+      email: auth.user.email || email,
+      userId: auth.user.id,
+      organizationId: membership.organizationId,
+      payload: {
+        first_name: firstName(fullName),
+        company_name: companyName,
+        dashboard_url: fluxknightPortalUrl(),
+      },
     });
 
     return NextResponse.json({
