@@ -6,7 +6,13 @@ type ResendEventPayload = Record<string, string | number | boolean | null>;
 
 type SendLifecycleEventInput = {
   eventKey: string;
-  event: "fluxknight.user.verified" | "fluxknight.payment.succeeded" | "fluxknight.workspace.ready";
+  event:
+    | "fluxknight.user.verified"
+    | "fluxknight.payment.succeeded"
+    | "fluxknight.payment.failed"
+    | "fluxknight.workspace.ready"
+    | "fluxknight.provisioning.failed"
+    | "fluxknight.onboarding.incomplete";
   email: string;
   payload: ResendEventPayload;
   userId?: string | null;
@@ -38,7 +44,7 @@ export function fluxknightPortalUrl() {
  *
  * Supabase owns deduplication, the Resend credential in Vault, and the
  * outbound pg_net request. This keeps the Resend API key out of Vercel and
- * lets database-side provisioning completion use the exact same dispatcher.
+ * lets database-side lifecycle transitions use the exact same dispatcher.
  */
 export async function sendFluxknightLifecycleEvent(input: SendLifecycleEventInput): Promise<DispatchResult> {
   const admin = createAdminClient();
