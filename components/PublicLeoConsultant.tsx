@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
+import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 type LeadProfile = { name: string; email: string; phone: string; organization: string; leadId?: string };
@@ -274,7 +275,7 @@ export default function PublicLeoConsultant() {
         if (remoteStream) audio.srcObject = remoteStream;
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: getLeoMicrophoneConstraints() });
       streamRef.current = stream;
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
