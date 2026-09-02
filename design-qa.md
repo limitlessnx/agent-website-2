@@ -31,7 +31,7 @@
 
 - P0: none.
 - P1: none in the current rendered layout.
-- P2: local supervised preview renders correctly, but its Next.js client hydration does not attach interaction handlers. Live Vercel interaction verification is pending.
+- P2: none. The deployed Next.js build hydrates successfully; feature and pricing carousel controls update their selected states.
 - P3: reference uses a tighter navigation label set; Fluxknight retains its established route-rich navigation intentionally.
 
 ## Build verification
@@ -39,7 +39,11 @@
 - TypeScript: passed.
 - Production build: passed; 120 routes generated.
 - Leo/support security tests: 86 passed, 0 failed.
+- Vercel preview: READY.
+- Live interactions: feature carousel, pricing carousel, and Public Leo open/close passed.
+- Browser console: no application errors.
+- Rendered structure: six major homepage section headings, eleven styled testimonials, and no legacy oversized About image container.
 
 ## Final result
 
-Blocked pending Vercel preview interaction verification.
+Passed — no P0, P1, or P2 issues remain in the verified scope.
