@@ -477,6 +477,118 @@ body:not(:has(.admin-shell)) .contact-grid > div > div {
 
 @media(prefers-reduced-motion:reduce){.needs-horizon img{animation:none}.feature-card{transition:none}}
 
+/* Reference fidelity pass: compact cinematic rhythm and stronger focal light */
+.reference-hero{
+  min-height:890px!important;
+  padding-top:112px!important;
+  background:
+    radial-gradient(ellipse 62% 30% at 50% 49%,rgba(137,67,236,.16),transparent 72%),
+    linear-gradient(180deg,#04020a 0%,#07030f 68%,#04020a 100%)!important;
+}
+.reference-hero .hero-pill{display:none}
+.reference-hero .hero-content h1{font-size:clamp(2.85rem,4.8vw,4.5rem);max-width:720px;margin-top:13px}
+.reference-hero .hero-content>p{max-width:520px;font-size:.86rem;line-height:1.55}
+.reference-hero .hero-buttons{margin-top:17px}
+.reference-hero .button-primary{min-height:42px;padding:0 18px;font-size:.76rem}
+.reference-hero .violet-arc{top:73px;height:420px;width:min(1160px,132vw)}
+.reference-hero .hero-haze{height:540px}
+.reference-hero .hero-energy-field{top:306px;height:535px;width:min(1320px,132vw);opacity:1}
+.reference-hero .hero-energy-field img{opacity:1;filter:saturate(1.28) contrast(1.12) brightness(1.18)}
+.reference-hero .product-shot{width:min(790px,calc(100% - 44px));margin-top:56px;border-radius:14px;box-shadow:0 35px 100px #020006,0 0 42px rgba(174,104,255,.48),0 0 125px rgba(104,38,210,.3)}
+.reference-trust{padding:16px 24px 46px}
+.reference-trust>div{margin-top:17px}
+
+.reference-needs{padding-top:70px!important}
+.reference-needs .brand-heading{margin-bottom:8px}
+.reference-needs .brand-heading h2,.reference-features .brand-heading h2{font-size:clamp(2.1rem,3.5vw,3.15rem)}
+.needs-network{height:535px;max-width:940px}
+.needs-core{top:10px;width:62px;height:62px}
+.needs-core span svg{width:19px;height:19px}
+.needs-network:before{left:18%;right:18%;top:101px;height:118px}
+.needs-network:after{top:71px;height:142px}
+.need-card{top:210px;width:28.5%;min-height:180px;padding:43px 19px 19px;border-radius:16px}
+.need-center{top:184px}
+.need-card .brand-icon{top:-23px;width:47px;height:47px}
+.need-card h3{font-size:.98rem;margin-bottom:8px}
+.need-card p{font-size:.72rem;line-height:1.55}
+.needs-horizon{bottom:-26px;height:235px;width:138%}
+.needs-horizon img{filter:brightness(1.38) saturate(1.2)}
+.service-chip-row{margin:-55px auto 50px;max-width:840px}
+.service-chip-row a{padding:7px 10px;font-size:.67rem}
+
+.reference-features{padding-top:76px!important;padding-bottom:66px!important}
+.reference-features .brand-heading{margin-bottom:24px}
+.feature-stage{height:340px;max-width:940px}
+.feature-card{width:276px;min-height:282px;margin-left:-138px;padding:32px 22px 20px;border-radius:16px}
+.feature-card .brand-icon{width:58px;height:58px;margin-bottom:17px;border-radius:17px}
+.feature-card h3{font-size:1.05rem;margin-bottom:8px}
+.feature-card p{font-size:.72rem;line-height:1.5}
+.feature-card a{margin-top:12px;font-size:.7rem}
+.feature-arrow{width:36px;height:36px}
+.feature-dots{margin-top:-26px}
+.use-case-ribbon{gap:12px;margin-top:44px;padding-bottom:18px}
+.use-case-ribbon article{flex-basis:min(285px,78vw);min-height:218px;padding:18px;border-radius:14px}
+.use-case-ribbon .brand-icon{width:38px;height:38px}
+.use-case-ribbon h3{margin:11px 0 7px;font-size:.9rem}
+.use-case-ribbon p{font-size:.69rem;line-height:1.5;-webkit-line-clamp:2}
+.use-case-ribbon article>div:last-of-type{gap:4px;margin:11px 0}
+.use-case-ribbon article>div:last-of-type span,.use-case-ribbon article>a{font-size:.66rem}
+.reference-features>.brand-shell>.hero-buttons{margin-top:18px}
+.reference-features .button-primary{min-height:40px;padding:0 16px;font-size:.72rem}
+
+.pricing-orbit-section{padding-top:72px!important;padding-bottom:74px!important}
+.pricing-orbit-section .brand-heading{margin-bottom:24px;max-width:690px}
+.pricing-orbit-section .brand-heading h2{font-size:clamp(2rem,3.4vw,3.2rem);max-width:680px;margin-inline:auto}
+.pricing-orbit-section .brand-heading p{font-size:.82rem;line-height:1.55;max-width:600px}
+.pricing-route-link{margin-top:18px}
+.pricing-usage-note{margin-top:14px;font-size:.7rem}
+.compact-about{padding:58px 20px!important}
+.compact-about .brand-heading h2{font-size:clamp(1.85rem,3vw,2.65rem)}
+.compact-about .brand-heading p{font-size:.82rem}
+
+.client-reviews-section{padding:78px 0!important}
+.client-reviews-heading{margin-bottom:18px!important}
+.client-reviews-heading h2{font-size:clamp(2rem,3.6vw,3.1rem)!important}
+.client-reviews-track{padding-top:20px!important;padding-bottom:24px!important}
+.client-review-card{flex-basis:min(590px,66vw)!important;min-height:190px!important;padding:24px 28px 21px!important}
+.client-review-card p{font-size:.84rem!important;line-height:1.58!important;margin-bottom:16px!important}
+.client-review-quote{font-size:2.6rem!important;height:30px!important}
+.client-reviews-section{position:relative;isolation:isolate}
+.client-reviews-section:before{content:"";position:absolute;z-index:-1;left:50%;top:105px;transform:translateX(-50%);width:min(720px,92vw);height:400px;background:url('/fluxknight-orbital-network.png') center/cover no-repeat;opacity:.34;filter:brightness(1.16) saturate(1.15);mask-image:radial-gradient(ellipse at center,#000 12%,transparent 70%);pointer-events:none}
+.flux-footer{padding-top:58px!important}
+.flux-footer-grid{max-width:1120px!important;grid-template-columns:1.35fr repeat(3,.7fr) 1.05fr!important;gap:34px!important;padding-bottom:44px!important}
+.flux-footer-newsletter h4{margin:0 0 12px;color:#f6f1ff;font-size:.82rem;font-weight:700}
+.flux-footer-newsletter p{margin:0 0 14px;color:#8f839e;font-size:.72rem;line-height:1.55}
+.flux-footer-newsletter form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
+.flux-footer-newsletter input{min-width:0;height:38px;padding:0 11px;border:1px solid rgba(182,139,247,.17);border-radius:8px;color:#fff;background:rgba(15,8,28,.88);outline:none;font:inherit;font-size:.7rem}
+.flux-footer-newsletter input:focus{border-color:rgba(202,162,255,.55);box-shadow:0 0 0 3px rgba(146,77,238,.12)}
+.flux-footer-newsletter button{height:38px;padding:0 12px;border:1px solid rgba(220,191,255,.32);border-radius:8px;color:#fff;background:linear-gradient(135deg,#9e58ff,#6d34dc);font:inherit;font-size:.68rem;font-weight:800;cursor:pointer}
+
+@media(max-width:760px){
+  .reference-hero{min-height:650px!important;padding-top:92px!important;padding-bottom:22px!important}
+  .reference-hero .hero-content h1{font-size:clamp(2.25rem,10.7vw,3.3rem);line-height:1.02}
+  .reference-hero .hero-content>p{font-size:.78rem;max-width:360px}
+  .reference-hero .violet-arc{top:66px;height:310px}
+  .reference-hero .hero-energy-field{top:250px;height:360px;width:190vw}
+  .reference-hero .product-shot{width:calc(100% - 38px);margin-top:42px}
+  .reference-trust{padding-bottom:38px}
+  .reference-needs{padding-top:58px!important}
+  .needs-network{gap:42px;padding-top:80px}
+  .needs-core{width:58px;height:58px}
+  .need-card{padding:40px 18px 18px}
+  .service-chip-row{margin:48px 0 46px}
+  .reference-features{padding-top:64px!important;padding-bottom:58px!important}
+  .feature-stage{height:330px}
+  .feature-card{width:70vw;max-width:280px;margin-left:min(-35vw,-140px);min-height:280px}
+  .use-case-ribbon{margin-top:38px}
+  .pricing-orbit-section{padding-top:64px!important;padding-bottom:64px!important}
+  .compact-about{padding:52px 18px!important}
+  .client-reviews-section{padding:64px 0!important}
+  .client-review-card{flex-basis:82vw!important;min-height:185px!important}
+  .flux-footer-grid{grid-template-columns:1fr 1fr!important}
+  .flux-footer-newsletter{grid-column:1/-1}
+}
+
 .client-reviews-section{padding:112px 0!important;overflow:hidden!important;background:#05020b!important}
 .client-reviews-section .brand-shell{width:100%!important;max-width:none!important}
 .client-reviews-heading{text-align:center!important;margin:0 auto 42px!important}
