@@ -3,13 +3,13 @@
 ## Target and evidence
 
 - Selected target: `/workspace/scratch/102b0f88e5c4/upload/01-1001058813.jpg`
-- Implementation capture: `/workspace/scratch/fluxknight-corrective-hero.png`
-- Same-viewport comparison: `/workspace/scratch/102b0f88e5c4/fluxknight-corrective-comparison.jpg`
-- Desktop verification viewport: 1348 × 926
+- Earlier same-viewport comparison: `/workspace/scratch/102b0f88e5c4/fluxknight-corrective-comparison.jpg`
+- Latest implementation: captured and inspected in the cloud browser after the fidelity pass.
+- Latest verification viewport: 1178 × 930.
 
 ## Section fidelity
 
-- Hero: centered two-line headline, violet horizon, animated energy field, primary CTA, and elevated Fluxknight dashboard.
+- Hero: centered two-line headline, centered animated violet energy field, primary CTA, and elevated Fluxknight dashboard. The shifted-right motion-transform regression was corrected.
 - Trust row: five existing/reference businesses retained beneath the dashboard.
 - Automation needs: three connected pillars with a central security node and illuminated horizon.
 - Features: layered, keyboard- and button-controlled feature carousel using all six Fluxknight services.
@@ -18,7 +18,7 @@
 - About: retained as a compact section; the broken oversized image container was removed.
 - Ecosystem: large orbital Fluxknight scene, four community metrics, all ten existing industries, and social links.
 - Testimonials: all eleven existing reviews retained in a layered horizontal carousel.
-- Footer: all existing navigation groups retained with the illuminated curved ending.
+- Footer: all existing navigation groups retained, newsletter treatment added, and illuminated curved ending preserved.
 
 ## Preservation checks
 
@@ -30,9 +30,10 @@
 ## Findings
 
 - P0: none.
-- P1: none in the current rendered layout.
+- P1: none in the latest rendered layout. The prior page was materially too tall and visually flat; section height, spacing, overlap, focal glow, card scale, and carousel density were corrected.
 - P2: none. The deployed Next.js build hydrates successfully; feature and pricing carousel controls update their selected states.
-- P3: reference uses a tighter navigation label set; Fluxknight retains its established route-rich navigation intentionally.
+- P3: the pricing, About, and detailed use-case content add length beyond the reference image. They remain intentionally because the user explicitly required those existing sections and routes to be preserved.
+- P3: the hero dashboard uses Fluxknight's existing operational UI rather than copying the reference dashboard's fictional data.
 
 ## Build verification
 
@@ -42,7 +43,7 @@
 - Vercel preview: READY.
 - Live interactions: feature carousel, pricing carousel, and Public Leo open/close passed.
 - Browser console: no application errors.
-- Rendered structure: six major homepage section headings, eleven styled testimonials, and no legacy oversized About image container.
+- Rendered structure: compact screenshot-led composition, eleven styled testimonials, centered animated light fields, and no legacy oversized About image container.
 
 ## Final result
 
