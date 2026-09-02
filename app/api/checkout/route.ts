@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const paystackResponse = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: session.email, amount: Math.round(amount * 100), currency, reference, callback_url: `${appUrl}/portal/payment/success?reference=${reference}`, metadata: { organization_id: session.organizationId, quote_id: quote.id, user_id: session.userId } }),
+      body: JSON.stringify({ email: session.email, amount: Math.round(amount * 100), currency, reference, callback_url: `${appUrl}/api/checkout/verify?reference=${reference}`, metadata: { organization_id: session.organizationId, quote_id: quote.id, user_id: session.userId } }),
     });
     const initialized = await paystackResponse.json();
     if (!paystackResponse.ok || !initialized.status) throw new Error(initialized.message || "Unable to initialize payment.");
