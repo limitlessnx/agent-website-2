@@ -6,11 +6,9 @@ function firstName(value: string, email: string) {
   return value.trim().split(/\s+/)[0] || email.split("@")[0] || "there";
 }
 
-function failureReason(data: Record<string, unknown>) {
-  const gateway = String(data.gateway_response || "").trim();
-  const message = String(data.message || "").trim();
-  const status = String(data.status || "failed").trim();
-  return gateway || message || `Payment status: ${status}`;
+function failureReason(status: string) {
+  if (status === "reversed") return "The payment provider reversed this transaction before it could be completed.";
+  return "The payment provider could not complete this transaction. You can safely try the payment again.";
 }
 
 async function authorized(request: Request) {
@@ -87,10 +85,14 @@ export async function GET(request: Request) {
         .maybeSingle();
       if (updateError) throw updateError;
 
-      // Another request may have marked this payment paid after our initial read.
-      // Only the request that actually transitions pending -> failed/cancelled may notify.
       if (!claimed?.id) {
         results.push({ id: attempt.id, status: "state_changed" });
+        continue;
+      }
+
+      // Abandonment is a cancellation, not a payment failure. Record it but do not email the customer.
+      if (transactionStatus === "abandoned") {
+        results.push({ id: attempt.id, status: localStatus, notified: false });
         continue;
       }
 
@@ -116,7 +118,7 @@ export async function GET(request: Request) {
             first_name: firstName(fullName, email),
             amount: String(attempt.amount),
             currency: String(attempt.currency || ""),
-            reason: failureReason(verified.data as Record<string, unknown>),
+            reason: failureReason(transactionStatus),
             retry_url: fluxknightPortalUrl(),
           },
         });
