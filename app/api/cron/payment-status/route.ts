@@ -74,7 +74,7 @@ export async function GET(request: Request) {
       }
 
       const localStatus = transactionStatus === "abandoned" ? "cancelled" : "failed";
-      const { error: updateError } = await admin
+      const { data: claimed, error: updateError } = await admin
         .from("payment_attempts")
         .update({
           status: localStatus,
@@ -82,8 +82,17 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", attempt.id)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
       if (updateError) throw updateError;
+
+      // Another request may have marked this payment paid after our initial read.
+      // Only the request that actually transitions pending -> failed/cancelled may notify.
+      if (!claimed?.id) {
+        results.push({ id: attempt.id, status: "state_changed" });
+        continue;
+      }
 
       let email = String(verified.data?.customer?.email || "").trim().toLowerCase();
       let fullName = String(verified.data?.customer?.first_name || "").trim();
