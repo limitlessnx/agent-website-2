@@ -62,7 +62,7 @@ export default function HomePage() {
           className="hero-energy-field"
           aria-hidden="true"
           initial={false}
-          animate={{ opacity: [0.72, 1, 0.72], scale: [0.985, 1.015, 0.985] }}
+          animate={{ opacity: [0.72, 1, 0.72], scale: [0.985, 1.015, 0.985], x: "-50%" }}
           transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         >
           <Image src="/fluxknight-orbital-network.png" alt="" fill priority sizes="100vw" />
