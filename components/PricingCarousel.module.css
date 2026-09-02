@@ -265,7 +265,20 @@
   box-shadow: 0 0 16px rgba(168, 85, 247, .62);
 }
 
-.compact .card { min-height: 690px; }
+.compact .topControls { max-width: 940px; margin-bottom: 8px; }
+.compact .topControls button { width: 36px; height: 36px; border-radius: 9px; }
+.compact .track { gap: 14px; padding-top: 14px; padding-bottom: 22px; }
+.compact .card { flex-basis: min(68vw, 350px); min-height: 505px; padding: 22px; border-radius: 18px; }
+.compact .icon { width: 42px; height: 42px; border-radius: 12px; }
+.compact .card h3 { margin-top: 17px; font-size: 1.35rem; }
+.compact .description { min-height: 54px; font-size: .76rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.compact .priceBlock { gap: 8px; margin: 16px 0; padding: 13px; }
+.compact .priceBlock strong { font-size: 1.28rem; }
+.compact .priceBlock > div + div strong { font-size: .94rem; }
+.compact .features { gap: 5px; margin-bottom: 15px; }
+.compact .features span { font-size: .72rem; line-height: 1.3; }
+.compact .features span:nth-child(n+7) { display: none; }
+.compact .cta { min-height: 42px; border-radius: 9px; font-size: .78rem; }
 
 @media (min-width: 900px) {
   .track {
@@ -290,7 +303,7 @@
   }
   .card.active { opacity: 1; }
   .description { min-height: 0; }
-  .compact .card { min-height: 0; }
+  .compact .card { flex-basis: 82vw; min-height: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
