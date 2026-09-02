@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
 function validSignature(raw: string, received: string | null, secret: string) {
   if (!received) return false;
@@ -8,6 +9,17 @@ function validSignature(raw: string, received: string | null, secret: string) {
   const a = Buffer.from(expected);
   const b = Buffer.from(received);
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function firstName(value: string, email: string) {
+  return value.trim().split(/\s+/)[0] || email.split("@")[0] || "there";
+}
+
+function planLabel(value: string | null | undefined) {
+  if (!value) return "Fluxknight plan";
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export async function POST(request: Request) {
@@ -35,7 +47,7 @@ export async function POST(request: Request) {
         .eq("provider", "paystack")
         .eq("provider_reference", reference)
         .neq("status", "paid")
-        .select("id,organization_id,quote_id")
+        .select("id,organization_id,quote_id,amount,currency,created_by")
         .maybeSingle();
       if (error) throw error;
 
@@ -57,6 +69,38 @@ export async function POST(request: Request) {
         ];
         const { error: jobError } = await admin.from("provisioning_jobs").insert(jobs);
         if (jobError) throw jobError;
+
+        const [{ data: quote }, { data: organization }, userResult] = await Promise.all([
+          admin.from("organization_quotes").select("quote_type,metadata").eq("id", payment.quote_id).maybeSingle(),
+          admin.from("organizations").select("name").eq("id", payment.organization_id).maybeSingle(),
+          payment.created_by ? admin.auth.admin.getUserById(payment.created_by) : Promise.resolve({ data: { user: null }, error: null }),
+        ]);
+
+        const user = userResult.data?.user;
+        const customerEmail = String(user?.email || event?.data?.customer?.email || "").trim().toLowerCase();
+        if (customerEmail) {
+          const metadata = user?.user_metadata || {};
+          const fullName = String(metadata.full_name || event?.data?.customer?.first_name || "").trim();
+          const quoteMetadata = (quote?.metadata || {}) as Record<string, unknown>;
+          const explicitPlan = String(quoteMetadata.plan_name || quoteMetadata.plan || "").trim();
+
+          await sendFluxknightLifecycleEvent({
+            eventKey: `payment-success:${payment.id}`,
+            event: "fluxknight.payment.succeeded",
+            email: customerEmail,
+            userId: payment.created_by || null,
+            organizationId: payment.organization_id,
+            paymentAttemptId: payment.id,
+            payload: {
+              first_name: firstName(fullName, customerEmail),
+              plan_name: explicitPlan || planLabel(quote?.quote_type),
+              amount: String(payment.amount),
+              currency: String(payment.currency || ""),
+              dashboard_url: fluxknightPortalUrl(),
+              workspace_name: organization?.name || "your Fluxknight workspace",
+            },
+          });
+        }
       }
     }
 
