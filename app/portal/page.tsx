@@ -3,7 +3,7 @@ import { Activity, Bot, CheckCircle2, Clock3, Workflow } from "@/components/admi
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary } from "@/lib/client-portal-data";
 
-export const metadata = { title: "Client Portal | Fluxknight" };
+export const metadata = { title: "Client Portal" };
 export const dynamic = "force-dynamic";
 
 function formatDate(value?: string | null) {

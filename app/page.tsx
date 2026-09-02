@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, Building2, CalendarCheck2, CheckCircle2, Database, Dumbbell, Headphones, Hotel, MessageSquareText, Mic, Network, Rocket, Sparkles, UsersRound, Workflow, Wrench, Zap } from "@/components/admin/ServerIcons";
+import { ArrowLeft, ArrowRight, Bot, Building2, CheckCircle2, Database, Dumbbell, Headphones, Hotel, MessageSquareText, Mic, Network, Rocket, ShieldCheck, Sparkles, Workflow, Wrench, Zap } from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
 import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
+import PricingCarousel from "@/components/PricingCarousel";
 
 const services = [
   { icon: Bot, title: "AI Sales Agents", text: "Qualify leads, answer objections, recommend next steps, and move opportunities into your pipeline." },
@@ -31,14 +34,121 @@ const pricingPlans = [
 ];
 
 export default function HomePage() {
-  return <main className="quantix-home">
-    <PublicLeoConsultant />
-    <section className="quantix-hero"><div className="hero-stars"/><div className="violet-arc"/><div className="hero-haze"/><motion.div className="hero-content" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:.7}}><div className="hero-pill"><Sparkles size={13}/> Coordinate your AI workforce</div><h1>AI agents and business automation for <span>growing companies.</span></h1><p>Deploy connected AI sales agents, customer support, WhatsApp automation, voice agents, lead generation, email automation, CRM workflows, and custom multi-agent systems through one secure operating platform.</p><div className="hero-buttons"><Link className="button-primary" href="/evaluation">Book a Demo <ArrowRight size={17}/></Link><Link className="button-secondary" href="/services">Explore Services <ArrowRight size={16}/></Link></div></motion.div><motion.div className="product-shot" initial={{opacity:0,y:42,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.9,delay:.25}}><img src="/flux-dashboard.svg" alt="Fluxknight AI agents and business automation dashboard"/></motion.div></section>
-    <section className="brand-section" id="services"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">AI automation services</span><h2>AI agents, customer automation, and workflow systems in one coherent platform.</h2><p>Deploy specialized agents for sales, support, WhatsApp, voice, email, lead generation, and CRM workflows while keeping permissions, data, monitoring, and human escalation under one operating system.</p></div><div className="brand-grid">{services.map(({icon:Icon,title,text})=><article className="brand-card" key={title}><span className="brand-icon"><Icon size={21}/></span><h3>{title}</h3><p>{text}</p><Link href="/services">View service <ArrowRight size={15}/></Link></article>)}</div></div></section>
-    <IndustryCarousel />
-    <section className="brand-section use-case-section" id="use-cases"><div className="brand-shell"><div className="brand-heading use-case-heading"><span className="brand-eyebrow">How AI grows a business</span><h2>See the customer journey, not another wall of technology words.</h2><p>Fluxknight gives your business a fast digital front desk, a tireless follow-up assistant, and a connected operations layer.</p></div><div className="use-case-grid">{useCases.map(({icon:Icon,tag,title,summary,flow,outcome,visualTitle,visualMessage,visualSteps,visualMetric,visualStatus},index)=><motion.article className="use-case-card" key={tag} initial={{opacity:0,y:28}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:.2}} transition={{duration:.45,delay:index*.06}}><div className="use-case-copy"><div className="use-case-label"><span className="brand-icon"><Icon size={22}/></span><span className="brand-eyebrow">{tag}</span></div><h3>{title}</h3><p>{summary}</p><div className="use-case-explainer"><div><MessageSquareText size={18}/><p><strong>What happens:</strong> {flow}</p></div><div><CalendarCheck2 size={18}/><p><strong>What the business gains:</strong> {outcome}</p></div></div><Link href="/evaluation">Build this for my business <ArrowRight size={15}/></Link></div><div className="use-case-visual"><div className="visual-glow"/><div className="visual-topbar"><span><span className="visual-live-dot"/> AI assistant active</span><em>24/7</em></div><div className="visual-window"><div className="visual-window-head"><span className="visual-avatar"><Icon size={18}/></span><div><strong>{visualTitle}</strong><small>Just now · WhatsApp</small></div><span className="visual-status">{visualStatus}</span></div><div className="visual-message"><MessageSquareText size={16}/><p>{visualMessage}</p></div><div className="visual-ai-reply"><span><Bot size={15}/> Fluxknight AI</span><p>I understand. I have collected the important details and started the next steps for you.</p></div><div className="visual-workflow">{visualSteps.map((step,i)=><div key={step}><span>{i+1}</span><p>{step}</p><CheckCircle2 size={16}/></div>)}</div><div className="visual-result"><span><Zap size={16}/> Automation result</span><strong>{visualMetric}</strong></div></div></div></motion.article>)}</div><div className="use-case-closing"><span className="brand-icon"><UsersRound size={22}/></span><h3>The goal is not to replace your team. It is to remove the work that slows them down.</h3><p>Fluxknight connects customer conversations, saved contact details, bookings, reminders, internal alerts, and human handoffs into one operating system.</p><div className="hero-buttons"><Link className="button-primary" href="/evaluation">Plan My AI System <ArrowRight size={17}/></Link></div></div></div></section>
-    <section className="brand-section" id="pricing"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Pricing</span><h2>Start small. Automate what matters. Expand when the business is ready.</h2><p>Your first month covers setup, configuration, deployment and onboarding. From the second month onward, you pay the ongoing service fee for monitoring, support and continued operation.</p></div><div className="brand-grid">{pricingPlans.map(({icon:Icon,slug,name,firstMonth,ongoing,description,features,cta,featured,custom})=><article className={`brand-card ${featured?"pricing-featured":""}`} key={name}><span className="brand-icon"><Icon size={21}/></span>{featured&&<span className="brand-eyebrow">Most complete starter</span>}<h3>{name}</h3><p>{description}</p><div style={{display:"grid",gap:8,margin:"18px 0"}}><div><span style={{display:"block",fontSize:12,opacity:.65,textTransform:"uppercase",letterSpacing:".08em"}}>First month · installation + deployment</span><strong style={{display:"block",fontSize:28,marginTop:4}}>{firstMonth}</strong></div><div><span style={{display:"block",fontSize:12,opacity:.65,textTransform:"uppercase",letterSpacing:".08em"}}>Consecutively</span><strong style={{display:"block",fontSize:18,marginTop:4}}>{ongoing}</strong></div></div><h4 style={{fontSize:13,margin:"0 0 10px"}}>What&apos;s included</h4><div style={{display:"grid",gap:8,marginBottom:18}}>{features.map(feature=><span key={feature} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:14,lineHeight:1.45}}><CheckCircle2 size={15} style={{flexShrink:0,marginTop:2}}/>{feature}</span>)}</div>{custom ? <Link href="/evaluation">{cta} <ArrowRight size={15}/></Link> : <Link href={`/checkout?plan=${slug}`}>{cta} <ArrowRight size={15}/></Link>}</article>)}</div><div className="hero-buttons" style={{marginTop:28}}><Link className="button-secondary" href="/pricing">See full pricing & package details <ArrowRight size={16}/></Link></div><p style={{marginTop:22,opacity:.72,fontSize:14}}>Voice usage, messaging-provider charges, email volume, and third-party platform fees may vary by usage and are scoped during onboarding.</p></div></section>
-    <ClientReviews />
-    <section className="brand-section" id="about"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">About Fluxknight</span><h2>We build AI automation systems around business reality.</h2><p>Fluxknight combines AI agents, workflow automation, shared data, and human oversight so businesses can grow without turning their operations into a community of confusion.</p></div><div className="hero-buttons"><Link className="button-primary" href="/about">About Fluxknight <ArrowRight size={17}/></Link><Link className="button-secondary" href="/evaluation">Book a Demo</Link></div></div></section>
-  </main>;
+  const [activeFeature, setActiveFeature] = useState(2);
+  const moveFeature = (direction: number) => setActiveFeature((current) => (current + direction + services.length) % services.length);
+
+  return (
+    <main className="quantix-home">
+      <PublicLeoConsultant />
+
+      <section className="quantix-hero reference-hero">
+        <div className="hero-stars" />
+        <div className="violet-arc" />
+        <div className="hero-haze" />
+        <motion.div
+          className="hero-content"
+          initial={false}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="hero-pill"><Sparkles size={13} /> AI-powered business operations</div>
+          <h1>Automate. Optimize. <span>Scale Limitlessly.</span></h1>
+          <p>Fluxknight builds AI-powered automation systems that save time, reduce costs, and grow your business.</p>
+          <div className="hero-buttons">
+            <Link className="button-primary" href="/evaluation">Book a Free Strategy Call <ArrowRight size={17} /></Link>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="hero-energy-field"
+          aria-hidden="true"
+          initial={false}
+          animate={{ opacity: [0.72, 1, 0.72], scale: [0.985, 1.015, 0.985], x: "-50%" }}
+          transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+        >
+          <Image src="/fluxknight-orbital-network.png" alt="" fill priority sizes="100vw" />
+        </motion.div>
+
+        <motion.div
+          className="product-shot"
+          initial={false}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+        >
+          <Image
+            src="/flux-dashboard.svg"
+            alt="Fluxknight AI agents and business automation dashboard"
+            width={1600}
+            height={900}
+            priority
+          />
+        </motion.div>
+      </section>
+
+      <section className="reference-trust" aria-label="Trusted businesses">
+        <span>Trusted by innovative businesses</span>
+        <div><strong>K1 DEVICE</strong><strong>Limitless Realty</strong><strong>XPOSURE</strong><strong>GENCOUV</strong><strong>Landsmith</strong></div>
+      </section>
+
+      <section className="brand-section services-constellation reference-needs" id="services">
+        <div className="brand-shell">
+          <div className="brand-heading">
+            <span className="brand-eyebrow">Why choose us</span>
+            <h2>Premier Choice for<br />Your Automation Needs</h2>
+          </div>
+          <div className="needs-network">
+            <div className="needs-core"><span><ShieldCheck size={24} /></span></div>
+            <article className="need-card need-left"><span className="brand-icon"><Zap size={22} /></span><h3>Smart Automations</h3><p>AI-powered workflows and agents that handle repetitive tasks, qualify leads, and drive results while you focus on growth.</p></article>
+            <article className="need-card need-center"><span className="brand-icon"><ShieldCheck size={22} /></span><h3>Enterprise Security</h3><p>Role-based security, data encryption, and controlled human oversight keep your business and customer data safe.</p></article>
+            <article className="need-card need-right"><span className="brand-icon"><Headphones size={22} /></span><h3>24/7 Expert Support</h3><p>Our team and AI agents work around the clock to support your business and keep operations running smoothly.</p></article>
+            <div className="needs-horizon"><Image src="/fluxknight-orbital-network.png" alt="" fill sizes="100vw" /></div>
+          </div>
+          <div className="service-chip-row">{services.map(({icon:Icon,title})=><Link href="/services" key={title}><Icon size={16}/>{title}</Link>)}</div>
+        </div>
+      </section>
+
+      <section className="brand-section reference-features" id="use-cases">
+        <div className="brand-shell">
+          <div className="brand-heading">
+            <span className="brand-eyebrow">Powerful & intelligent</span>
+            <h2>Discover the Powerful Features<br />of Fluxknight</h2>
+          </div>
+          <div className="feature-stage" onKeyDown={(event)=>{if(event.key==="ArrowLeft")moveFeature(-1);if(event.key==="ArrowRight")moveFeature(1)}} tabIndex={0} aria-label="Fluxknight feature carousel">
+            <button className="feature-arrow feature-prev" onClick={()=>moveFeature(-1)} aria-label="Previous feature"><ArrowLeft size={20}/></button>
+            {services.map(({icon:Icon,title,text},index)=>{
+              let offset=index-activeFeature;
+              if(offset>services.length/2)offset-=services.length;
+              if(offset<-services.length/2)offset+=services.length;
+              return <article key={title} className={`feature-card ${offset===0?"is-active":""}`} style={{transform:`translateX(${offset*54}%) scale(${offset===0 ? 1 : Math.abs(offset)===1 ? .84 : .7}) rotateY(${offset*-7}deg)`,opacity:Math.abs(offset)>2 ? 0 : offset===0 ? 1 : Math.abs(offset)===1 ? .55 : .22,zIndex:10-Math.abs(offset)}} aria-hidden={Math.abs(offset)>2} onClick={()=>setActiveFeature(index)}><span className="brand-icon"><Icon size={offset===0?32:22}/></span><h3>{title}</h3><p>{text}</p>{offset===0&&<Link href="/services">Explore this feature <ArrowRight size={15}/></Link>}</article>;
+            })}
+            <button className="feature-arrow feature-next" onClick={()=>moveFeature(1)} aria-label="Next feature"><ArrowRight size={20}/></button>
+          </div>
+          <div className="feature-dots" role="tablist" aria-label="Choose a feature">{services.map((service,index)=><button key={service.title} aria-label={`Show ${service.title}`} role="tab" aria-selected={index===activeFeature} onClick={()=>setActiveFeature(index)}/>)}</div>
+          <div className="use-case-ribbon">
+            {useCases.map(({icon:Icon,tag,title,summary,visualSteps})=><article key={tag}><div><span className="brand-icon"><Icon size={19}/></span><small>{tag}</small></div><h3>{title}</h3><p>{summary}</p><div>{visualSteps.map(step=><span key={step}><CheckCircle2 size={14}/>{step}</span>)}</div><Link href="/evaluation">Build this system <ArrowRight size={14}/></Link></article>)}
+          </div>
+          <div className="hero-buttons"><Link className="button-primary" href="/services">Explore All Features <ArrowRight size={16}/></Link></div>
+        </div>
+      </section>
+
+      <section className="brand-section pricing-orbit-section" id="pricing">
+        <div className="brand-shell">
+          <div className="brand-heading">
+            <span className="brand-eyebrow">Pricing</span>
+            <h2>Start small. Automate what matters. Expand when the business is ready.</h2>
+            <p>Your first month covers setup, configuration, deployment and onboarding. From the second month onward, you pay the ongoing service fee for monitoring, support and continued operation.</p>
+          </div>
+          <PricingCarousel plans={pricingPlans} compact />
+          <div className="hero-buttons pricing-route-link"><Link className="button-secondary" href="/pricing">See full pricing &amp; package details <ArrowRight size={16} /></Link></div>
+          <p className="pricing-usage-note">Voice usage, messaging-provider charges, email volume, and third-party platform fees may vary by usage and are scoped during onboarding.</p>
+        </div>
+      </section>
+
+      <section className="brand-section compact-about" id="about">
+        <div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">About Fluxknight</span><h2>AI automation built around business reality.</h2><p>Fluxknight combines specialized AI agents, connected workflows, shared data, and human oversight into one secure operating platform.</p><div className="hero-buttons"><Link className="button-secondary" href="/about">About Fluxknight <ArrowRight size={16}/></Link></div></div></div>
+      </section>
+
+      <IndustryCarousel />
+
+      <ClientReviews />
+    </main>
+  );
 }

@@ -3,7 +3,7 @@ import { ArrowLeft } from "@/components/admin/ServerIcons";
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 
-export const metadata = { title: "Admin Login | Fluxknight" };
+export const metadata = { title: "Admin Login" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const params = await searchParams;

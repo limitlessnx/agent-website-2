@@ -163,7 +163,7 @@ export default function ContactClient() {
               {[
                 { icon: Clock, title: "Response within 24 hours", desc: "We review every submission and get back within one business day." },
                 { icon: MessageSquare, title: "No-pressure conversation", desc: "The strategy call is diagnostic, not a sales pitch. You leave with a clear plan regardless." },
-                { icon: Zap, title: "Scoped in the call", desc: "By the end of the call you&apos;ll know exactly what to build, what it costs, and how long it takes." },
+                { icon: Zap, title: "Scoped in the call", desc: "By the end of the call you’ll know exactly what to build, what it costs, and how long it takes." },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

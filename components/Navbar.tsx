@@ -17,8 +17,17 @@ const navLinks = [
   { href: "/about", label: "About" },
 ];
 
+const homeNavLinks = [
+  { href: "/", label: "Home" },
+  { href: "/services", label: "Solutions" },
+  { href: "/case-studies", label: "How It Works" },
+  { href: "/#use-cases", label: "Features" },
+  { href: "/about", label: "About Us" },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
+  const desktopNavLinks = pathname === "/" ? homeNavLinks : navLinks;
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -59,7 +68,7 @@ export default function Navbar() {
       <nav className={styles.siteNav} aria-label="Primary navigation">
         <Link className={styles.siteBrand} href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
         <div className={styles.desktopLinks}>
-          {navLinks.map((link) => (
+          {desktopNavLinks.map((link) => (
             <Link className={pathname === link.href ? styles.active : ""} key={link.href} href={link.href}>{link.label}</Link>
           ))}
         </div>

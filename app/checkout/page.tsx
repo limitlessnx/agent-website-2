@@ -8,7 +8,7 @@ import CheckoutClient from "./CheckoutClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Checkout | Fluxknight",
+  title: "Checkout",
   description: "Secure Fluxknight AI system checkout.",
 };
 

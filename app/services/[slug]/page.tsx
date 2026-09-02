@@ -102,7 +102,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const service = services[slug as keyof typeof services];
-  return { title: service ? `${service.title} | Fluxknight` : "Service | Fluxknight", description: service?.summary };
+  return { title: service ? service.title : "Service", description: service?.summary };
 }
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -1,6 +1,6 @@
 import SignupForm from "./SignupForm";
 
-export const metadata = { title: "Create Account | Fluxknight" };
+export const metadata = { title: "Create Account" };
 
 export default async function ClientSignupPage({ searchParams }: { searchParams: Promise<{ tx_ref?: string; next?: string }> }) {
   const params = await searchParams;
