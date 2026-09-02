@@ -1,6 +1,6 @@
 import VerifyEmailClient from "./VerifyEmailClient";
 
-export const metadata = { title: "Verify Email | Fluxknight" };
+export const metadata = { title: "Verify Email" };
 
 export default async function VerifyEmailPage({ searchParams }: { searchParams: Promise<{ email?: string; tx_ref?: string; next?: string }> }) {
   const params = await searchParams;

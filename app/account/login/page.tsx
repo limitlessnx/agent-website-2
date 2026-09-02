@@ -1,6 +1,6 @@
 import ClientLoginForm from "./LoginForm";
 
-export const metadata = { title: "Client Login | Fluxknight" };
+export const metadata = { title: "Client Login" };
 
 export default async function ClientLoginPage({ searchParams }: { searchParams: Promise<{ tx_ref?: string; next?: string }> }) {
   const params = await searchParams;

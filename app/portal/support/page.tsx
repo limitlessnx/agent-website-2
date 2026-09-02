@@ -2,7 +2,7 @@ import AgentLeoClient from "@/app/dashboard/support/AgentLeoClient";
 import "@/app/dashboard/support/support.css";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Support Agent | Fluxknight" };
+export const metadata = { title: "Support Agent" };
 
 export default function PortalSupportPage() {
   return (

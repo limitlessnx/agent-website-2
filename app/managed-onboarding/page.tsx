@@ -1,7 +1,7 @@
 import OnboardingClient from "../onboarding/OnboardingClient";
 import "./onboarding.css";
 
-export const metadata = { title: "Managed Setup | Fluxknight" };
+export const metadata = { title: "Managed Setup" };
 
 export default async function ManagedOnboardingPage({ searchParams }: { searchParams: Promise<{ id?: string; token?: string }> }) {
   const params = await searchParams;

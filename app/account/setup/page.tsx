@@ -1,6 +1,6 @@
 import SetupForm from "./SetupForm";
 
-export const metadata = { title: "Finish Workspace Setup | Fluxknight" };
+export const metadata = { title: "Finish Workspace Setup" };
 
 export default function ClientWorkspaceSetupPage() {
   return (

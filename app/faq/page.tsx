@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "FAQ | Fluxknight",
+  title: "FAQ",
   description: "Answers about Fluxknight AI agents, channels, workflows, credits, setup, support, security, and usage-based services.",
 };
 
