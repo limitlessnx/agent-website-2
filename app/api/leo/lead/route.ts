@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
       method: "POST",
       body: JSON.stringify({
         name, email, phone, business_name: organization, business_type: "Not specified", agent_types: [],
-        main_goal: "Public Leo consultation", current_tools: null, lead_volume: null, timeline: null, budget: null,
+        main_goal: "Public Leo consultation", current_tools: null,
+        lead_volume: "Not discussed", timeline: "Not discussed", budget: "Not discussed",
         preferred_contact_time: null, consent_given: false, source: "public_leo", status: "new", submitted_at: now,
       }),
     });
