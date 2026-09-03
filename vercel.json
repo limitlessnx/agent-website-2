@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "feature/dashboard-first-lifecycle": false
+      "feature/dashboard-first-lifecycle": false,
+      "feature/account-administration-lifecycle-v4": false
     }
   },
   "crons": [

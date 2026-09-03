@@ -4,6 +4,7 @@ import { generateSupportAgentReply, SUPPORT_ACTION_KEYS, type SupportAIResponse 
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { legacySupportActionPolicy, tenantLeoIdentityFromSession } from "@/lib/leo-support-policy";
 import type { LeoIdentity } from "@/lib/leo-core";
+import { mergeSupportLifecycleMetadata } from "@/lib/support-lifecycle";
 import {
   buildSupportReply,
   collectSupportDiagnostics,
@@ -273,6 +274,21 @@ export async function POST(request: NextRequest) {
       }),
     });
 
+    const metadataRows = await supabaseServerRequest<Array<{ metadata: Record<string, unknown> | null }>>(
+      `support_conversations?id=eq.${encodeURIComponent(conversationId)}&organization_id=eq.${encodeURIComponent(session.organizationId)}&select=metadata&limit=1`,
+    ).catch(() => []);
+    const preservedMetadata = { ...(metadataRows[0]?.metadata || {}) };
+    preservedMetadata.scope = "tenant";
+    preservedMetadata.role = leoIdentity.role;
+    preservedMetadata.ai = aiMetadata;
+    const nextMetadata = needsHumanReview
+      ? mergeSupportLifecycleMetadata(preservedMetadata, {
+          escalation_required: true,
+          escalation_reason: "Agent Leo requested human review",
+          escalation_detected_at: new Date().toISOString(),
+        })
+      : preservedMetadata;
+
     await supabaseServerRequest(
       `support_conversations?id=eq.${encodeURIComponent(conversationId)}&organization_id=eq.${encodeURIComponent(session.organizationId)}`,
       {
@@ -280,7 +296,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           status: createdActions.length || needsHumanReview ? "waiting_approval" : "open",
           updated_at: new Date().toISOString(),
-          metadata: { scope: "tenant", role: leoIdentity.role, ai: aiMetadata },
+          metadata: nextMetadata,
         }),
       },
     );
