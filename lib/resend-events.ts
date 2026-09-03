@@ -12,7 +12,13 @@ type SendLifecycleEventInput = {
     | "fluxknight.payment.failed"
     | "fluxknight.workspace.ready"
     | "fluxknight.provisioning.failed"
-    | "fluxknight.onboarding.incomplete";
+    | "fluxknight.onboarding.incomplete"
+    | "fluxknight.subscription.renewal_upcoming"
+    | "fluxknight.subscription.renewal_succeeded"
+    | "fluxknight.subscription.renewal_failed"
+    | "fluxknight.subscription.cancellation_scheduled"
+    | "fluxknight.subscription.cancelled"
+    | "fluxknight.subscription.grace_period";
   email: string;
   payload: ResendEventPayload;
   userId?: string | null;
