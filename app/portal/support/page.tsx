@@ -1,4 +1,5 @@
 import AgentLeoClient from "@/app/dashboard/support/AgentLeoClient";
+import SupportLifecyclePanel from "@/components/portal/SupportLifecyclePanel";
 import "@/app/dashboard/support/support.css";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default function PortalSupportPage() {
         placeholder="Ask about your dashboard, agents, automations, messages, account setup, or something that is not working..."
         typingLabel="Inspecting this tenant workspace only"
       />
+      <SupportLifecyclePanel />
     </main>
   );
 }
