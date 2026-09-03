@@ -35,6 +35,8 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard": Home,
   "/dashboard/support": LifeBuoy,
   "/dashboard/notifications": Bell,
+  "/dashboard/health": ShieldCheck,
+  "/dashboard/value": LineChart,
   "/dashboard/evaluations": ClipboardList,
   "/dashboard/agents": Bot,
   "/dashboard/activity": Activity,
