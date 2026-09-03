@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bell, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
-  CreditCard, Database, ExternalLink, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
+  CreditCard, Database, ExternalLink, Gauge, Globe2, Home, Image, LifeBuoy, LineChart, Mail, Megaphone,
   MessageCircle, Plus, Search, Settings, ShieldCheck, Target, Users, X,
 } from "@/components/admin/ServerIcons";
 import LogoutButton from "@/components/admin/LogoutButton";
