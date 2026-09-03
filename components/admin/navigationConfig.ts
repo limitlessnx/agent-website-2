@@ -27,11 +27,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     sections: [{
       items: [
         { href: "/dashboard", label: "Command Center", exact: true },
+        { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
         { href: "/dashboard/support", label: "Agent Leo AI Support" },
         { href: "/dashboard/notifications", label: "Admin Notifications" },
         { href: "/dashboard/health", label: "Customer Health" },
         { href: "/dashboard/value", label: "Usage & Value" },
         { href: "/dashboard/expansion", label: "Growth Opportunities" },
+        { href: "/dashboard/retention", label: "Retention Risk" },
         { href: "/dashboard/evaluations", label: "Evaluation Leads" },
         { href: "/dashboard/agents", label: "Super Assistant" },
         { href: "/dashboard/activity", label: "Global Activity" },
