@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "feature/dashboard-first-lifecycle": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/maia-safety-net",
