@@ -27,6 +27,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     sections: [{
       items: [
         { href: "/dashboard", label: "Command Center", exact: true },
+        { href: "/dashboard/control-center", label: "Customer Control Center" },
         { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
         { href: "/dashboard/support", label: "Agent Leo AI Support" },
         { href: "/dashboard/notifications", label: "Admin Notifications" },
