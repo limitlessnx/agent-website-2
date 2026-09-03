@@ -18,12 +18,7 @@ export type AdminNavGroup = {
 }
 
 /**
- * Phase 4A canonical navigation inventory.
- *
- * IMPORTANT: this mirrors the existing AdminSidebar route inventory exactly.
- * It is intentionally descriptive and is not yet consumed by the live UI.
- * Do not add, remove, rename, relocate, or convert destinations here without
- * first verifying the corresponding existing component/route behavior.
+ * Canonical navigation inventory for the Fluxknight admin dashboard.
  */
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
@@ -34,6 +29,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { href: "/dashboard", label: "Command Center", exact: true },
         { href: "/dashboard/support", label: "Agent Leo AI Support" },
         { href: "/dashboard/notifications", label: "Admin Notifications" },
+        { href: "/dashboard/health", label: "Customer Health" },
         { href: "/dashboard/evaluations", label: "Evaluation Leads" },
         { href: "/dashboard/agents", label: "Super Assistant" },
         { href: "/dashboard/activity", label: "Global Activity" },
