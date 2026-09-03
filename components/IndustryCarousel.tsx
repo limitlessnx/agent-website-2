@@ -10,71 +10,71 @@ const industries = [
     id: "hotels",
     title: "Hotels",
     icon: Hotel,
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85",
-    text: "Booking assistance, guest questions, reservations, upsells, and front-desk escalation without making guests wait.",
+    image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1400&q=85",
+    text: "Turn more guest enquiries into bookings and reduce pressure on your front desk.",
   },
   {
     id: "restaurants",
     title: "Restaurants",
     icon: ShoppingCart,
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=85",
-    text: "Reservations, catering enquiries, menu support, repeat-customer campaigns, and faster customer response.",
+    image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1400&q=85",
+    text: "Handle reservations and customer questions faster so your team can stay focused on service.",
   },
   {
     id: "clinics",
     title: "Clinics",
     icon: Stethoscope,
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1400&q=85",
-    text: "Patient intake, appointment booking, reminders, rescheduling, and staff escalation around the clock.",
+    image: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1400&q=85",
+    text: "Improve patient experience with faster answers, smoother appointments, and less admin work.",
   },
   {
     id: "sales-companies",
     title: "Sales Companies",
     icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=85",
-    text: "Lead generation, qualification, disciplined follow-up, scoring, routing, and alerts when buyers are ready.",
+    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1400&q=85",
+    text: "Qualify leads earlier and keep follow-up active until serious prospects are ready to buy.",
   },
   {
     id: "real-estate",
     title: "Real Estate",
     icon: Building2,
-    image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85",
-    text: "Property enquiries, buyer qualification, listing recommendations, inspections, follow-up, and payment journeys.",
+    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=85",
+    text: "Turn more property enquiries into inspections and serious buyer conversations.",
   },
   {
     id: "gyms",
     title: "Gyms",
     icon: Dumbbell,
-    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=85",
-    text: "Membership enquiries, trial bookings, lead reactivation, renewals, class promotion, and member engagement.",
+    image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1400&q=85",
+    text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off.",
   },
   {
     id: "services",
     title: "Service Businesses",
     icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1400&q=85",
-    text: "Service-request intake, quote qualification, consultations, reminders, customer updates, and review requests.",
+    image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1400&q=85",
+    text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down.",
   },
   {
     id: "auto-shops",
     title: "Auto Shops",
     icon: Truck,
-    image: "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=1400&q=85",
-    text: "Repair bookings, vehicle intake, quote follow-up, maintenance reminders, and customer status updates.",
+    image: "https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&w=1400&q=85",
+    text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing.",
   },
   {
     id: "ecommerce",
     title: "E-commerce",
     icon: ShoppingCart,
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85",
-    text: "Product assistance, abandoned-cart recovery, order support, recommendations, upsells, and win-back campaigns.",
+    image: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=85",
+    text: "Recover more purchase intent through better product help, order support, and follow-up.",
   },
   {
     id: "professional-services",
     title: "Professional Services",
     icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1400&q=85",
-    text: "Prospect qualification, discovery calls, proposal follow-up, onboarding, reminders, and client experience automation.",
+    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1400&q=85",
+    text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up.",
   },
 ];
 
@@ -106,8 +106,8 @@ export default function IndustryCarousel() {
       <div className={styles.shell}>
         <div className={styles.heading}>
           <span className={styles.eyebrow}>Industries</span>
-          <h2 id="industry-carousel-title">Automation shaped around how your market actually works.</h2>
-          <p>Explore industry-specific AI systems built around the customer journey, sales process, operations, and follow-up rhythm of each business.</p>
+          <h2 id="industry-carousel-title">Built for organizations across industries.</h2>
+          <p>Different industries. Same outcome: stronger customer experiences, less friction, and better business results.</p>
         </div>
 
         <div
