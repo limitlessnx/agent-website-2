@@ -46,7 +46,7 @@ export default function ClientReviews() {
     <section className="brand-section client-reviews-section" aria-label="Client reviews">
       <div className="brand-shell">
         <div className="client-reviews-heading">
-          <h2>What clients say about Fluxknight</h2>
+          <h2>What changes when repetitive work stops slowing the business down</h2>
         </div>
 
         <div ref={trackRef} className="client-reviews-track">
@@ -77,7 +77,7 @@ export default function ClientReviews() {
       </div>
       <style jsx>{`
         .client-reviews-section { padding-top: 64px; padding-bottom: 64px; overflow: hidden; }
-        .client-reviews-heading { text-align: center; margin: 0 auto 30px; }
+        .client-reviews-heading { text-align: center; margin: 0 auto 30px; max-width: 820px; }
         .client-reviews-heading h2 { margin: 0; font-size: clamp(1.85rem, 3.6vw, 3rem); line-height: 1.08; letter-spacing: -.04em; }
         .client-reviews-track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; overscroll-behavior-x: contain; padding: 2px 2px 8px; }
         .client-reviews-track::-webkit-scrollbar { display: none; }
