@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, Clock3, MessageSquareText, Network, UsersRound } from "@/components/admin/ServerIcons";
 
 const reviews = [
   { quote: "We stopped losing enquiries after hours. The AI handles the first conversation, captures what the guest needs, and gets the right request to our team without someone living inside WhatsApp.", name: "Ama Mensah", role: "Hotel Operations · Ghana" },
@@ -14,6 +15,13 @@ const reviews = [
   { quote: "We finally have a consistent customer journey from the first enquiry to human support. The system remembers the context instead of making customers explain themselves again.", name: "Rachel Williams", role: "Home Services · United States" },
   { quote: "The value is not just the chatbot. It is what happens behind it: the lead is captured, the team is alerted, follow-up is scheduled and nothing gets forgotten.", name: "Omar Al Haddad", role: "Property Services · UAE" },
   { quote: "Automation gave our staff breathing room. We are still a human business, but the machines now handle the repetitive work that was quietly eating our day.", name: "Ifeoma Nwosu", role: "Professional Services · Nigeria" },
+];
+
+const proofThemes = [
+  { icon: Clock3, title: "Faster response", text: "Customers get help before interest turns into silence." },
+  { icon: MessageSquareText, title: "Stronger follow-up", text: "Conversations keep moving without relying on memory." },
+  { icon: UsersRound, title: "More staff capacity", text: "Routine work moves into the background so people can focus." },
+  { icon: Network, title: "Better continuity", text: "Context, next steps, and handoffs stay connected." },
 ];
 
 export default function ClientReviews() {
@@ -46,9 +54,22 @@ export default function ClientReviews() {
     <section className="brand-section client-reviews-section" aria-label="Client reviews">
       <div className="brand-shell">
         <div className="client-reviews-heading">
-          <h2>What changes when repetitive work stops slowing the business down</h2>
+          <span className="client-reviews-eyebrow">What businesses feel first</span>
+          <h2>Less chasing. Faster responses. More room for the team to do real work.</h2>
+          <p>The patterns below are the operational changes Fluxknight is designed to create across customer-facing teams.</p>
         </div>
 
+        <div className="client-proof-grid" aria-label="Operational proof themes">
+          {proofThemes.map(({ icon: Icon, title, text }) => (
+            <article key={title}>
+              <span><Icon size={18} /></span>
+              <div><strong>{title}</strong><p>{text}</p></div>
+              <CheckCircle2 size={16} />
+            </article>
+          ))}
+        </div>
+
+        <div className="client-review-label">Client perspectives</div>
         <div ref={trackRef} className="client-reviews-track">
           {reviews.map((review) => (
             <article className="client-review-card" key={review.name}>
@@ -64,34 +85,12 @@ export default function ClientReviews() {
 
         <div className="client-review-dots" aria-label="Review navigation">
           {reviews.map((review, index) => (
-            <button
-              key={review.name}
-              type="button"
-              className={index === active ? "active" : ""}
-              aria-label={`Show review ${index + 1}`}
-              aria-current={index === active ? "true" : undefined}
-              onClick={() => goTo(index)}
-            />
+            <button key={review.name} type="button" className={index === active ? "active" : ""} aria-label={`Show review ${index + 1}`} aria-current={index === active ? "true" : undefined} onClick={() => goTo(index)} />
           ))}
         </div>
       </div>
       <style jsx>{`
-        .client-reviews-section { padding-top: 64px; padding-bottom: 64px; overflow: hidden; }
-        .client-reviews-heading { text-align: center; margin: 0 auto 30px; max-width: 820px; }
-        .client-reviews-heading h2 { margin: 0; font-size: clamp(1.85rem, 3.6vw, 3rem); line-height: 1.08; letter-spacing: -.04em; }
-        .client-reviews-track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; overscroll-behavior-x: contain; padding: 2px 2px 8px; }
-        .client-reviews-track::-webkit-scrollbar { display: none; }
-        .client-review-card { flex: 0 0 calc((100% - 32px) / 3); min-height: 230px; display: flex; flex-direction: column; scroll-snap-align: start; padding: 20px 18px 18px; border: 1px solid var(--flux-line); border-radius: 16px; background: linear-gradient(145deg, rgba(24,12,43,.96), rgba(11,6,20,.94)); box-shadow: inset 0 1px rgba(255,255,255,.03); }
-        .client-review-quote { color: var(--flux-purple); font-size: 3.2rem; line-height: .7; height: 38px; font-family: Georgia, serif; font-weight: 900; }
-        .client-review-card p { margin: 3px 0 18px; color: #d7cde2; font-size: .86rem; line-height: 1.55; }
-        .client-review-person { margin-top: auto; display: grid; gap: 3px; }
-        .client-review-person strong { color: var(--flux-text); font-size: .82rem; }
-        .client-review-person span { color: #756985; font-size: .69rem; }
-        .client-review-dots { display: flex; justify-content: center; align-items: center; gap: 7px; margin-top: 22px; }
-        .client-review-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.25); cursor: pointer; transition: transform .2s ease, background .2s ease; }
-        .client-review-dots button.active { width: 8px; height: 8px; background: var(--flux-purple); box-shadow: 0 0 12px var(--flux-glow); transform: scale(1.08); }
-        @media (max-width: 900px) { .client-review-card { flex-basis: calc((100% - 16px) / 2); } }
-        @media (max-width: 640px) { .client-reviews-section { padding: 52px 18px; } .client-reviews-heading { margin-bottom: 24px; } .client-review-card { flex-basis: 78%; min-height: 205px; padding: 18px 16px 16px; } .client-review-card p { font-size: .82rem; line-height: 1.5; } .client-review-dots { gap: 6px; margin-top: 18px; } .client-review-dots button, .client-review-dots button.active { width: 7px; height: 7px; } }
+        .client-reviews-section{padding-top:76px;padding-bottom:72px;overflow:hidden}.client-reviews-heading{text-align:center;margin:0 auto 30px;max-width:860px}.client-reviews-eyebrow{display:inline-block;margin-bottom:12px;color:#a970ff;font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.client-reviews-heading h2{margin:0;font-size:clamp(1.9rem,3.7vw,3.15rem);line-height:1.06;letter-spacing:-.045em}.client-reviews-heading p{max-width:680px;margin:14px auto 0;color:#8f829f;font-size:.9rem;line-height:1.65}.client-proof-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:30px 0 34px}.client-proof-grid article{display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:11px;padding:16px;border:1px solid rgba(190,151,255,.14);border-radius:15px;background:linear-gradient(145deg,rgba(23,12,40,.86),rgba(10,6,18,.9))}.client-proof-grid article>span{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border-radius:10px;background:rgba(139,92,246,.11);color:#b982ff}.client-proof-grid strong{display:block;color:#f7f3fb;font-size:.79rem}.client-proof-grid p{margin:4px 0 0;color:#887b95;font-size:.72rem;line-height:1.45}.client-proof-grid article>svg{margin-top:2px;color:#7d5aac}.client-review-label{margin-bottom:12px;color:#746780;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.client-reviews-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;overscroll-behavior-x:contain;padding:2px 2px 8px}.client-reviews-track::-webkit-scrollbar{display:none}.client-review-card{flex:0 0 calc((100% - 32px)/3);min-height:230px;display:flex;flex-direction:column;scroll-snap-align:start;padding:20px 18px 18px;border:1px solid var(--flux-line);border-radius:16px;background:linear-gradient(145deg,rgba(24,12,43,.96),rgba(11,6,20,.94));box-shadow:inset 0 1px rgba(255,255,255,.03)}.client-review-quote{color:var(--flux-purple);font-size:3.2rem;line-height:.7;height:38px;font-family:Georgia,serif;font-weight:900}.client-review-card p{margin:3px 0 18px;color:#d7cde2;font-size:.86rem;line-height:1.55}.client-review-person{margin-top:auto;display:grid;gap:3px}.client-review-person strong{color:var(--flux-text);font-size:.82rem}.client-review-person span{color:#756985;font-size:.69rem}.client-review-dots{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:22px}.client-review-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer;transition:transform .2s ease,background .2s ease}.client-review-dots button.active{width:8px;height:8px;background:var(--flux-purple);box-shadow:0 0 12px var(--flux-glow);transform:scale(1.08)}@media(max-width:900px){.client-proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.client-review-card{flex-basis:calc((100% - 16px)/2)}}@media(max-width:640px){.client-reviews-section{padding:58px 18px}.client-reviews-heading{margin-bottom:24px}.client-proof-grid{grid-template-columns:1fr;gap:9px;margin:24px 0 28px}.client-proof-grid article{padding:14px}.client-review-card{flex-basis:84%;min-height:205px;padding:18px 16px 16px}.client-review-card p{font-size:.82rem;line-height:1.5}.client-review-dots{gap:6px;margin-top:18px}.client-review-dots button,.client-review-dots button.active{width:7px;height:7px}}
       `}</style>
     </section>
   );
