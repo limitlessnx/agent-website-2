@@ -33,6 +33,7 @@ export type TenantNavItem = { id: string; organizationId: string; name: string; 
 
 const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard": Home,
+  "/dashboard/control-center": Gauge,
   "/dashboard/lifecycle": Activity,
   "/dashboard/support": LifeBuoy,
   "/dashboard/notifications": Bell,
