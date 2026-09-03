@@ -38,7 +38,7 @@ export default async function LifecycleControlCenterPage() {
       </div>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>30-day operating value</h2><p>Measured activity only. No optimistic multiplication by imaginary ROI coefficients.</p></div><LineChart size={18} /></div>
+        <div className="admin-panel-header"><div><h2>30-day operating value</h2><p>Measured activity only. No invented ROI multipliers are applied.</p></div><LineChart size={18} /></div>
         <div className="admin-metric-grid">
           <article className="admin-metric-card"><p>Conversations</p><strong>{analytics.totalConversations30d.toLocaleString()}</strong><span>Recorded customer conversations</span></article>
           <article className="admin-metric-card"><p>Leads captured</p><strong>{analytics.totalLeads30d.toLocaleString()}</strong><span>Organization-scoped lead activity</span></article>
@@ -57,7 +57,7 @@ export default async function LifecycleControlCenterPage() {
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Priority intervention queue</h2><p>High and critical accounts come before expansion. The software has finally learned not to upsell during a fire.</p></div><ShieldCheck size={18} /></div>
+        <div className="admin-panel-header"><div><h2>Priority intervention queue</h2><p>High and critical accounts come before expansion recommendations.</p></div><ShieldCheck size={18} /></div>
         <div className="admin-list">
           {analytics.priorityQueue.map((item) => (
             <article className="admin-list-row" key={item.organizationId} style={{ alignItems: "start", gap: 18 }}>
@@ -91,7 +91,7 @@ export default async function LifecycleControlCenterPage() {
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Measurement boundaries</h2><p>Metrics we deliberately refuse to fake until the underlying events exist.</p></div><Activity size={18} /></div>
+        <div className="admin-panel-header"><div><h2>Measurement boundaries</h2><p>Metrics remain absent until the underlying lifecycle events are explicitly recorded.</p></div><Activity size={18} /></div>
         <div className="admin-list">{analytics.dataNotes.map((note) => <div className="admin-list-row compact" key={note}><div><span>{note}</span></div></div>)}</div>
       </section>
     </main>
