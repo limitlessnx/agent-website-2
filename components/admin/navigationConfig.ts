@@ -30,6 +30,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { href: "/dashboard/support", label: "Agent Leo AI Support" },
         { href: "/dashboard/notifications", label: "Admin Notifications" },
         { href: "/dashboard/health", label: "Customer Health" },
+        { href: "/dashboard/value", label: "Usage & Value" },
         { href: "/dashboard/evaluations", label: "Evaluation Leads" },
         { href: "/dashboard/agents", label: "Super Assistant" },
         { href: "/dashboard/activity", label: "Global Activity" },
