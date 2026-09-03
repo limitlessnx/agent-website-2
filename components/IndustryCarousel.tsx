@@ -17,7 +17,7 @@ const industries = [
     id: "restaurants",
     title: "Restaurants",
     icon: ShoppingCart,
-    image: "https://unsplash.com/photos/0e2eYxBiP6A/download?force=true&w=1400",
+    image: "https://unsplash.com/photos/deEt6Xfk78M/download?force=true&w=1400",
     text: "Handle reservations and customer questions faster so your team can stay focused on service.",
   },
   {
@@ -38,7 +38,7 @@ const industries = [
     id: "real-estate",
     title: "Real Estate",
     icon: Building2,
-    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=86&v=2",
+    image: "https://unsplash.com/photos/EZI7eC-od_U/download?force=true&w=1400",
     text: "Turn more property enquiries into inspections and serious buyer conversations.",
   },
   {
