@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const txRef = `FK-${plan.slug}-${crypto.randomUUID()}`;
     const amount = plan.installationFee;
     const recurringAmount = plan.recurringFee;
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.FLUXKNIGHT_APP_URL || "https://fluxknight.space").replace(/\/$/, "");
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.FLUXKNIGHT_APP_URL || "https://www.fluxknight.space").replace(/\/$/, "");
 
     const inserted = await supabaseRest<CheckoutSession[]>("checkout_sessions", {
       method: "POST",
