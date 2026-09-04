@@ -1,1 +1,9 @@
-export { alt, size, contentType, default } from "./opengraph-image";
+import OpenGraphImage from "./opengraph-image";
+
+export const alt = "Fluxknight AI automation for connected customer operations";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
+
+export default function TwitterImage() {
+  return OpenGraphImage();
+}
