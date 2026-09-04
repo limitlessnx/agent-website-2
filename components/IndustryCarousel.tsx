@@ -6,76 +6,16 @@ import { ArrowLeft, ArrowRight, Briefcase, Building2, Dumbbell, Hotel, ShoppingC
 import styles from "./IndustryCarousel.module.css";
 
 const industries = [
-  {
-    id: "hotels",
-    title: "Hotels",
-    icon: Hotel,
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?fit=crop&w=1400&q=86&fm=jpg",
-    text: "Turn more guest enquiries into bookings and reduce pressure on your front desk.",
-  },
-  {
-    id: "restaurants",
-    title: "Restaurants",
-    icon: ShoppingCart,
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?fit=crop&w=1400&q=86&fm=jpg",
-    text: "Handle reservations and customer questions faster so your team can stay focused on service.",
-  },
-  {
-    id: "clinics",
-    title: "Clinics",
-    icon: Stethoscope,
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?fit=crop&w=1400&q=86&fm=jpg",
-    text: "Improve patient experience with faster answers, smoother appointments, and less admin work.",
-  },
-  {
-    id: "sales-companies",
-    title: "Sales Companies",
-    icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=86&v=2",
-    text: "Qualify leads earlier and keep follow-up active until serious prospects are ready to buy.",
-  },
-  {
-    id: "real-estate",
-    title: "Real Estate",
-    icon: Building2,
-    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?fit=crop&w=1400&q=86&fm=jpg",
-    text: "Turn more property enquiries into inspections and serious buyer conversations.",
-  },
-  {
-    id: "gyms",
-    title: "Gyms",
-    icon: Dumbbell,
-    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?fit=crop&w=1400&q=86&fm=jpg",
-    text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off.",
-  },
-  {
-    id: "services",
-    title: "Service Businesses",
-    icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2",
-    text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down.",
-  },
-  {
-    id: "auto-shops",
-    title: "Auto Shops",
-    icon: Truck,
-    image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1400&q=86&v=2",
-    text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing.",
-  },
-  {
-    id: "ecommerce",
-    title: "E-commerce",
-    icon: ShoppingCart,
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=86&v=2",
-    text: "Recover more purchase intent through better product help, order support, and follow-up.",
-  },
-  {
-    id: "professional-services",
-    title: "Professional Services",
-    icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2",
-    text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up.",
-  },
+  { id: "hotels", title: "Hotels", icon: Hotel, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?fit=crop&w=1400&q=86&fm=jpg", text: "Turn more guest enquiries into bookings and reduce pressure on your front desk." },
+  { id: "restaurants", title: "Restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?fit=crop&w=1400&q=86&fm=jpg", text: "Handle reservations and customer questions faster so your team can stay focused on service." },
+  { id: "clinics", title: "Clinics", icon: Stethoscope, image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?fit=crop&w=1400&q=86&fm=jpg", text: "Improve patient experience with faster answers, smoother appointments, and less admin work." },
+  { id: "sales-companies", title: "Sales Companies", icon: Briefcase, image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=86&v=2", text: "Qualify leads earlier and keep follow-up active until serious prospects are ready to buy." },
+  { id: "real-estate", title: "Real Estate", icon: Building2, image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?fit=crop&w=1400&q=86&fm=jpg", text: "Turn more property enquiries into inspections and serious buyer conversations." },
+  { id: "gyms", title: "Gyms", icon: Dumbbell, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?fit=crop&w=1400&q=86&fm=jpg", text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off." },
+  { id: "services", title: "Service Businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2", text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down." },
+  { id: "auto-shops", title: "Auto Shops", icon: Truck, image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1400&q=86&v=2", text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing." },
+  { id: "ecommerce", title: "E-commerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8311?auto=format&fit=crop&w=1400&q=86&v=2", text: "Recover more purchase intent through better product help, order support, and follow-up." },
+  { id: "professional-services", title: "Professional Services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2", text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up." },
 ];
 
 function relativeIndex(index: number, active: number, length: number) {
@@ -87,6 +27,7 @@ function relativeIndex(index: number, active: number, length: number) {
 
 export default function IndustryCarousel() {
   const [active, setActive] = useState(0);
+  const [userInteracted, setUserInteracted] = useState(false);
   const touchStart = useRef<number | null>(null);
   const length = industries.length;
   const activeIndustry = industries[active];
@@ -99,12 +40,21 @@ export default function IndustryCarousel() {
     });
   }, []);
 
+  useEffect(() => {
+    if (userInteracted || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      setActive((current) => (current + 1) % length);
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, [length, userInteracted]);
+
   const visible = useMemo(
     () => industries.map((item, index) => ({ item, index, offset: relativeIndex(index, active, length) })),
     [active, length],
   );
 
-  const go = (direction: number) => {
+  const go = (direction: number, manual = true) => {
+    if (manual) setUserInteracted(true);
     setActive((current) => (current + direction + length) % length);
   };
 
@@ -149,7 +99,12 @@ export default function IndustryCarousel() {
                     zIndex: 20 - Math.abs(offset),
                     pointerEvents: hidden ? "none" : "auto",
                   }}
-                  onClick={() => offset !== 0 && setActive(index)}
+                  onClick={() => {
+                    if (offset !== 0) {
+                      setUserInteracted(true);
+                      setActive(index);
+                    }
+                  }}
                   aria-hidden={hidden}
                 >
                   <div className={styles.cardContent}>
@@ -181,7 +136,10 @@ export default function IndustryCarousel() {
               <button
                 key={item.id}
                 className={index === active ? styles.dotActive : styles.dot}
-                onClick={() => setActive(index)}
+                onClick={() => {
+                  setUserInteracted(true);
+                  setActive(index);
+                }}
                 aria-label={`Show ${item.title}`}
                 aria-selected={index === active}
                 role="tab"
