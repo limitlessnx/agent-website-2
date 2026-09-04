@@ -11,6 +11,8 @@ type ContactPayload = {
   consent?: boolean;
 };
 
+type DestinationResult = { configured: boolean; data?: unknown };
+
 function sanitizeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -19,7 +21,7 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-async function saveToSupabase(row: Record<string, unknown>) {
+async function saveToSupabase(row: Record<string, unknown>): Promise<DestinationResult> {
   const supabaseUrl =
     process.env.LIMITLESS_SUPABASE_URL ||
     process.env.SUPABASE_URL ||
@@ -49,7 +51,7 @@ async function saveToSupabase(row: Record<string, unknown>) {
   return { configured: true, data: await response.json() };
 }
 
-async function sendToN8n(payload: Record<string, unknown>) {
+async function sendToN8n(payload: Record<string, unknown>): Promise<DestinationResult> {
   const webhookUrl = process.env.N8N_CONTACT_WEBHOOK_URL || process.env.N8N_EVALUATION_WEBHOOK_URL;
   if (!webhookUrl) return { configured: false };
 
@@ -109,16 +111,41 @@ export async function POST(req: NextRequest) {
       submitted_at: now,
     };
 
-    const supabaseResult = await saveToSupabase(lead);
-    const n8nResult = await sendToN8n({ event: "contact_request_created", lead, createdAt: now });
+    let supabaseResult: DestinationResult = { configured: false };
+    let n8nResult: DestinationResult = { configured: false };
+    let supabaseError: unknown = null;
+    let n8nError: unknown = null;
 
-    if (!supabaseResult.configured && !n8nResult.configured && process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "No contact destination is configured" }, { status: 503 });
+    try {
+      supabaseResult = await saveToSupabase(lead);
+    } catch (error) {
+      supabaseError = error;
+      console.error("[Contact API Supabase]", error);
+    }
+
+    try {
+      n8nResult = await sendToN8n({ event: "contact_request_created", lead, createdAt: now });
+    } catch (error) {
+      n8nError = error;
+      console.error("[Contact API n8n]", error);
+    }
+
+    const recorded = supabaseResult.configured || n8nResult.configured;
+    const hadDestinationError = Boolean(supabaseError || n8nError);
+
+    if (!recorded) {
+      if (hadDestinationError) {
+        return NextResponse.json({ error: "Unable to safely record the contact request" }, { status: 502 });
+      }
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "No contact destination is configured" }, { status: 503 });
+      }
     }
 
     return NextResponse.json({
       success: true,
       destinations: { supabase: supabaseResult.configured, n8n: n8nResult.configured },
+      degraded: recorded && hadDestinationError,
     });
   } catch (error) {
     console.error("[Contact API Error]", error);
