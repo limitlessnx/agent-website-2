@@ -1,0 +1,31 @@
+.quantix-home{overflow-x:clip}
+
+.quantix-home>section[id]{scroll-margin-top:88px}
+
+@supports(content-visibility:auto){
+  .quantix-home>.brand-section,
+  .quantix-home>#industries,
+  .quantix-home>.client-reviews-section{
+    content-visibility:auto;
+    contain-intrinsic-size:1px 760px;
+  }
+}
+
+@media(max-width:640px){
+  .quantix-home .production-animated-hero .product-shot:before{filter:blur(18px);opacity:.5}
+  .quantix-home .production-pricing-carousel:before{filter:blur(46px);opacity:.68}
+  .quantix-home .home-outcome-strip:before{filter:blur(12px);opacity:.72}
+  .quantix-home .use-case-section:before{opacity:.7}
+  .quantix-home .brand-section{padding-left:0;padding-right:0}
+  .quantix-home .brand-shell{width:min(100% - 28px,1180px)}
+  .quantix-home .hero-buttons{gap:10px}
+  .quantix-home .hero-buttons>a{min-height:46px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .quantix-home *,
+  .quantix-home *::before,
+  .quantix-home *::after{
+    scroll-behavior:auto!important;
+  }
+}
