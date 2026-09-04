@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import PricingOutcomeClient from "./PricingOutcomeClient";
+import PricingClient from "./PricingClient";
 
-const description = "Choose a focused Fluxknight starting point for faster customer response, stronger follow-up, reduced repetitive work, or connected AI front-desk operations.";
+const description = "Choose the Fluxknight operating level that fits your organization: Basic, Starter, Business, or Business+, then see how scope changes for your industry, channels, usage, workflows, and integrations.";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function PricingPage() {
-  return <PricingOutcomeClient />;
+  return <PricingClient />;
 }
