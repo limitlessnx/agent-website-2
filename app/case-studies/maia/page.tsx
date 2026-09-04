@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -87,7 +88,7 @@ export default function MaiaCaseStudyPage() {
           <div className={styles.systemMap}>
             <div className={styles.orbitA} /><div className={styles.orbitB} />
             <div className={styles.center}><Network size={24} /><span>Real estate AI operating system</span><strong>Maia</strong><em><i /> Live workflow</em></div>
-            {capabilities.map(({icon: Icon,title},index)=><div className={styles.mapNode} key={title} style={{"--i":index} as React.CSSProperties}><Icon size={16}/><span>{title}</span></div>)}
+            {capabilities.map(({icon: Icon,title},index)=><div className={styles.mapNode} key={title} style={{"--i":index} as CSSProperties}><Icon size={16}/><span>{title}</span></div>)}
           </div>
         </div>
       </section>
