@@ -15,10 +15,27 @@ import {
 } from "@/components/admin/ServerIcons";
 import styles from "./page.module.css";
 
+const maiaDescription =
+  "See how Maia connects lead capture, qualification, WhatsApp and email follow-up, inspection scheduling, reminders, CRM, Leo admin visibility, and human handoff for real estate operations.";
+
 export const metadata: Metadata = {
-  title: "Maia Real Estate Automation Case Study | Fluxknight",
-  description:
-    "See how Maia connects lead capture, qualification, WhatsApp and email follow-up, inspection scheduling, reminders, CRM, Leo admin visibility, and human handoff for real estate operations.",
+  title: "Maia Real Estate Automation Case Study",
+  description: maiaDescription,
+  alternates: { canonical: "/case-studies/maia" },
+  openGraph: {
+    type: "website",
+    url: "/case-studies/maia",
+    title: "Maia Real Estate Automation Case Study | Fluxknight",
+    description: maiaDescription,
+    siteName: "Fluxknight",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Maia real estate automation system by Fluxknight" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Maia Real Estate Automation Case Study | Fluxknight",
+    description: maiaDescription,
+    images: ["/og-image.png"],
+  },
 };
 
 const capabilities = [
@@ -134,7 +151,7 @@ export default function MaiaCaseStudyPage() {
         <div className={styles.shell}>
           <div className={styles.leoCard}>
             <div><span className={styles.eyebrow}>Leo admin layer</span><h2>Automation with management visibility.</h2><p>Leo gives the team a control layer over what Maia is doing, helping administrators understand lead activity, follow-up status, scheduled inspections, and conversations that need human attention.</p></div>
-            <div className={styles.leoPanel}><div><span className={styles.liveDot}/> Operations live</div><strong>12 leads progressing</strong><p>4 qualified · 3 inspections scheduled · 2 need human attention</p><small>Lead context and next actions remain connected.</small></div>
+            <div className={styles.leoPanel}><div><span className={styles.liveDot}/> Operations live</div><strong>12 leads progressing</strong><p>4 qualified · 3 inspections scheduled · 2 need human attention</p><small>Illustrative dashboard view · Lead context and next actions remain connected.</small></div>
           </div>
         </div>
       </section>
