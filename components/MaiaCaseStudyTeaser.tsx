@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Network } from "@/components/admin/ServerIcons";
+import { ArrowRight } from "@/components/admin/ServerIcons";
 import styles from "./MaiaCaseStudyTeaser.module.css";
 
 export default function MaiaCaseStudyTeaser() {
@@ -11,29 +11,22 @@ export default function MaiaCaseStudyTeaser() {
       <div className={styles.glow} />
       <motion.div
         className={styles.card}
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.25 }}
-        transition={{ duration: 0.5 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.45 }}
       >
         <div className={styles.copy}>
-          <span className={styles.eyebrow}>Flagship system · Maia</span>
-          <h2 id="maia-case-study-title">Want to see a real <span>agentic system</span> at work?</h2>
+          <span className={styles.eyebrow}>Case study · Maia</span>
+          <h2 id="maia-case-study-title">See what Fluxknight looks like <span>in practice.</span></h2>
           <p>
-            Explore how Maia connects enquiry handling, lead qualification, WhatsApp and email follow-up, scheduling, support, CRM, admin visibility, and human handoff inside one real-estate workflow.
+            Maia is a real estate AI system that connects enquiries, qualification, follow-up, scheduling, support, CRM updates, admin visibility, and human handoff in one working customer journey.
           </p>
-          <Link className={styles.primary} href="/case-studies/maia" data-cta="maia-case-study-home">
-            See Maia in action <ArrowRight size={17} />
-          </Link>
         </div>
 
-        <div className={styles.signal} aria-hidden="true">
-          <div className={styles.signalGlow} />
-          <span className={styles.icon}><Network size={28} /></span>
-          <small>Real estate AI operating system</small>
-          <strong>Maia</strong>
-          <em>11 connected capabilities · one operating flow</em>
-        </div>
+        <Link className={styles.primary} href="/case-studies/maia" data-cta="maia-case-study-home">
+          Explore the Maia case study <ArrowRight size={17} />
+        </Link>
       </motion.div>
     </section>
   );
