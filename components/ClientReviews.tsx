@@ -1,7 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Clock3, MessageSquareText, Network, UsersRound } from "@/components/admin/ServerIcons";
+import { ArrowRight, CheckCircle2, Clock3, MessageSquareText, Network, UsersRound } from "@/components/admin/ServerIcons";
+
+const builtSystems = [
+  {
+    label: "Real estate operations",
+    title: "Maia",
+    status: "Implemented workflow",
+    text: "Lead capture, buyer qualification, WhatsApp and email follow-up, inspection scheduling, reminders, CRM records, Leo admin visibility, and human handoff are designed as one connected real estate operating flow.",
+    href: "/case-studies/maia",
+    cta: "View Maia case study",
+  },
+  {
+    label: "Acquisition & onboarding",
+    title: "Gencouv",
+    status: "Implemented workflow",
+    text: "Lead sourcing, prospect organization, email nurture, website conversion, support, Telegram onboarding, and human escalation are connected across one customer-acquisition journey.",
+    href: "/case-studies",
+    cta: "View Gencouv build",
+  },
+];
 
 const reviews = [
   { quote: "We stopped losing enquiries after hours. The AI handles the first conversation, captures what the guest needs, and gets the right request to our team without someone living inside WhatsApp.", name: "Ama Mensah", role: "Hotel Operations · Ghana" },
@@ -51,15 +71,26 @@ export default function ClientReviews() {
   };
 
   return (
-    <section className="brand-section client-reviews-section" aria-label="Client reviews">
+    <section className="brand-section client-reviews-section" aria-label="Proof and client perspectives">
       <div className="brand-shell">
         <div className="client-reviews-heading">
-          <span className="client-reviews-eyebrow">What businesses feel first</span>
-          <h2>Less chasing. Faster responses. More room for the team to do real work.</h2>
-          <p>The patterns below are the operational changes Fluxknight is designed to create across customer-facing teams.</p>
+          <span className="client-reviews-eyebrow">Proof before promises</span>
+          <h2>Start with what has actually been built.</h2>
+          <p>Fluxknight proof is separated into implemented system capability, operational improvement themes, and qualitative client perspectives. Performance percentages are not presented here unless approved source data supports them.</p>
         </div>
 
-        <div className="client-proof-grid" aria-label="Operational proof themes">
+        <div className="built-proof-grid" aria-label="Implemented Fluxknight systems">
+          {builtSystems.map((system) => (
+            <article key={system.title}>
+              <div className="built-proof-topline"><span>{system.label}</span><em><i /> {system.status}</em></div>
+              <h3>{system.title}</h3>
+              <p>{system.text}</p>
+              <Link href={system.href}>{system.cta} <ArrowRight size={15} /></Link>
+            </article>
+          ))}
+        </div>
+
+        <div className="client-proof-grid" aria-label="Operational improvement themes">
           {proofThemes.map(({ icon: Icon, title, text }) => (
             <article key={title}>
               <span><Icon size={18} /></span>
@@ -69,7 +100,7 @@ export default function ClientReviews() {
           ))}
         </div>
 
-        <div className="client-review-label">Client perspectives</div>
+        <div className="client-review-label">Qualitative client perspectives <span>· operational feedback, not performance guarantees</span></div>
         <div ref={trackRef} className="client-reviews-track">
           {reviews.map((review) => (
             <article className="client-review-card" key={review.name}>
@@ -90,7 +121,7 @@ export default function ClientReviews() {
         </div>
       </div>
       <style jsx>{`
-        .client-reviews-section{padding-top:76px;padding-bottom:72px;overflow:hidden}.client-reviews-heading{text-align:center;margin:0 auto 30px;max-width:860px}.client-reviews-eyebrow{display:inline-block;margin-bottom:12px;color:#a970ff;font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.client-reviews-heading h2{margin:0;font-size:clamp(1.9rem,3.7vw,3.15rem);line-height:1.06;letter-spacing:-.045em}.client-reviews-heading p{max-width:680px;margin:14px auto 0;color:#8f829f;font-size:.9rem;line-height:1.65}.client-proof-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:30px 0 34px}.client-proof-grid article{display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:11px;padding:16px;border:1px solid rgba(190,151,255,.14);border-radius:15px;background:linear-gradient(145deg,rgba(23,12,40,.86),rgba(10,6,18,.9))}.client-proof-grid article>span{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border-radius:10px;background:rgba(139,92,246,.11);color:#b982ff}.client-proof-grid strong{display:block;color:#f7f3fb;font-size:.79rem}.client-proof-grid p{margin:4px 0 0;color:#887b95;font-size:.72rem;line-height:1.45}.client-proof-grid article>svg{margin-top:2px;color:#7d5aac}.client-review-label{margin-bottom:12px;color:#746780;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.client-reviews-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;overscroll-behavior-x:contain;padding:2px 2px 8px}.client-reviews-track::-webkit-scrollbar{display:none}.client-review-card{flex:0 0 calc((100% - 32px)/3);min-height:230px;display:flex;flex-direction:column;scroll-snap-align:start;padding:20px 18px 18px;border:1px solid var(--flux-line);border-radius:16px;background:linear-gradient(145deg,rgba(24,12,43,.96),rgba(11,6,20,.94));box-shadow:inset 0 1px rgba(255,255,255,.03)}.client-review-quote{color:var(--flux-purple);font-size:3.2rem;line-height:.7;height:38px;font-family:Georgia,serif;font-weight:900}.client-review-card p{margin:3px 0 18px;color:#d7cde2;font-size:.86rem;line-height:1.55}.client-review-person{margin-top:auto;display:grid;gap:3px}.client-review-person strong{color:var(--flux-text);font-size:.82rem}.client-review-person span{color:#756985;font-size:.69rem}.client-review-dots{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:22px}.client-review-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer;transition:transform .2s ease,background .2s ease}.client-review-dots button.active{width:8px;height:8px;background:var(--flux-purple);box-shadow:0 0 12px var(--flux-glow);transform:scale(1.08)}@media(max-width:900px){.client-proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.client-review-card{flex-basis:calc((100% - 16px)/2)}}@media(max-width:640px){.client-reviews-section{padding:58px 18px}.client-reviews-heading{margin-bottom:24px}.client-proof-grid{grid-template-columns:1fr;gap:9px;margin:24px 0 28px}.client-proof-grid article{padding:14px}.client-review-card{flex-basis:84%;min-height:205px;padding:18px 16px 16px}.client-review-card p{font-size:.82rem;line-height:1.5}.client-review-dots{gap:6px;margin-top:18px}.client-review-dots button,.client-review-dots button.active{width:7px;height:7px}}
+        .client-reviews-section{padding-top:76px;padding-bottom:72px;overflow:hidden}.client-reviews-heading{text-align:center;margin:0 auto 30px;max-width:860px}.client-reviews-eyebrow{display:inline-block;margin-bottom:12px;color:#a970ff;font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.client-reviews-heading h2{margin:0;font-size:clamp(1.9rem,3.7vw,3.15rem);line-height:1.06;letter-spacing:-.045em}.client-reviews-heading p{max-width:760px;margin:14px auto 0;color:#8f829f;font-size:.9rem;line-height:1.65}.built-proof-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:30px 0 20px}.built-proof-grid article{padding:22px;border:1px solid rgba(190,151,255,.18);border-radius:18px;background:radial-gradient(circle at 88% 12%,rgba(139,92,246,.13),transparent 32%),linear-gradient(145deg,rgba(28,14,49,.92),rgba(10,6,18,.96));box-shadow:inset 0 1px rgba(255,255,255,.03)}.built-proof-topline{display:flex;align-items:center;justify-content:space-between;gap:12px}.built-proof-topline>span{color:#9e8bab;font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.built-proof-topline em{display:inline-flex;align-items:center;gap:7px;color:#a99bbb;font-size:.64rem;font-style:normal}.built-proof-topline i{width:7px;height:7px;border-radius:50%;background:#9e64ff;box-shadow:0 0 12px rgba(158,100,255,.72)}.built-proof-grid h3{margin:16px 0 8px;color:#fff;font-size:1.5rem;letter-spacing:-.035em}.built-proof-grid p{margin:0;color:#a699b4;font-size:.82rem;line-height:1.62}.built-proof-grid a{display:inline-flex;align-items:center;gap:7px;margin-top:18px;color:#c598ff;font-size:.76rem;font-weight:800;text-decoration:none}.client-proof-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0 34px}.client-proof-grid article{display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:11px;padding:16px;border:1px solid rgba(190,151,255,.14);border-radius:15px;background:linear-gradient(145deg,rgba(23,12,40,.86),rgba(10,6,18,.9))}.client-proof-grid article>span{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border-radius:10px;background:rgba(139,92,246,.11);color:#b982ff}.client-proof-grid strong{display:block;color:#f7f3fb;font-size:.79rem}.client-proof-grid p{margin:4px 0 0;color:#887b95;font-size:.72rem;line-height:1.45}.client-proof-grid article>svg{margin-top:2px;color:#7d5aac}.client-review-label{margin-bottom:12px;color:#746780;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.client-review-label span{letter-spacing:0;text-transform:none;color:#665b71;font-weight:600}.client-reviews-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;overscroll-behavior-x:contain;padding:2px 2px 8px}.client-reviews-track::-webkit-scrollbar{display:none}.client-review-card{flex:0 0 calc((100% - 32px)/3);min-height:230px;display:flex;flex-direction:column;scroll-snap-align:start;padding:20px 18px 18px;border:1px solid var(--flux-line);border-radius:16px;background:linear-gradient(145deg,rgba(24,12,43,.96),rgba(11,6,20,.94));box-shadow:inset 0 1px rgba(255,255,255,.03)}.client-review-quote{color:var(--flux-purple);font-size:3.2rem;line-height:.7;height:38px;font-family:Georgia,serif;font-weight:900}.client-review-card p{margin:3px 0 18px;color:#d7cde2;font-size:.86rem;line-height:1.55}.client-review-person{margin-top:auto;display:grid;gap:3px}.client-review-person strong{color:var(--flux-text);font-size:.82rem}.client-review-person span{color:#756985;font-size:.69rem}.client-review-dots{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:22px}.client-review-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer;transition:transform .2s ease,background .2s ease}.client-review-dots button.active{width:8px;height:8px;background:var(--flux-purple);box-shadow:0 0 12px var(--flux-glow);transform:scale(1.08)}@media(max-width:900px){.client-proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.client-review-card{flex-basis:calc((100% - 16px)/2)}}@media(max-width:640px){.client-reviews-section{padding:58px 18px}.client-reviews-heading{margin-bottom:24px}.built-proof-grid{grid-template-columns:1fr;gap:10px;margin:24px 0 16px}.built-proof-grid article{padding:18px}.built-proof-topline{align-items:flex-start;flex-direction:column;gap:7px}.client-proof-grid{grid-template-columns:1fr;gap:9px;margin:16px 0 28px}.client-proof-grid article{padding:14px}.client-review-label span{display:block;margin-top:4px}.client-review-card{flex-basis:84%;min-height:205px;padding:18px 16px 16px}.client-review-card p{font-size:.82rem;line-height:1.5}.client-review-dots{gap:6px;margin-top:18px}.client-review-dots button,.client-review-dots button.active{width:7px;height:7px}}
       `}</style>
     </section>
   );
