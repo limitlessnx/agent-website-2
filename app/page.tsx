@@ -2,62 +2,174 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, Building2, CalendarCheck2, CheckCircle2, Database, Dumbbell, Headphones, Hotel, MessageSquareText, Mic, Network, Rocket, Sparkles, UsersRound, Workflow, Wrench, Zap } from "@/components/admin/ServerIcons";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Database,
+  MessageSquareText,
+  Network,
+  Rocket,
+  Sparkles,
+  Workflow,
+} from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
 import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 
-const services = [
-  { icon: Bot, title: "More enquiries become opportunities", text: "Give every serious enquiry an immediate response, capture the right details, and keep prospects moving until your team can close. Powered by AI sales agents and lead qualification." },
-  { icon: Headphones, title: "Customers get answers faster", text: "Handle routine questions immediately while complex cases reach the right person without delays. Powered by connected support, FAQs, and customer-response automation." },
-  { icon: Workflow, title: "Your team gets hours back", text: "Reduce repetitive enquiries, reminders, follow-up, and information gathering that quietly drain staff time. Powered by automated responses, reminders, and follow-up." },
-  { icon: Workflow, title: "Follow-up stops depending on memory", text: "Keep leads, customers, and internal next steps moving even when the team is busy. Powered by workflow automation, reminders, and handoff logic." },
-  { icon: Database, title: "Nothing important gets lost between systems", text: "Keep conversations, customer details, notes, and activity connected so people do not keep starting from zero. Powered by shared data capture and organization-wide visibility." },
-  { icon: Network, title: "Growth creates less operational pressure", text: "Handle more customer activity without your organization becoming slower, noisier, or harder to manage. Powered by CRM coordination and connected operating workflows." },
-];
-
-const useCases = [
-  { icon: Building2, tag: "Real estate", title: "Stop losing property buyers between enquiry and inspection.", summary: "Fluxknight helps real estate companies respond instantly, qualify buyers, recommend suitable listings, and keep follow-up active until agents take over the serious conversations.", flow: "Property enquiries receive immediate responses, the right details are captured, suitable options are presented, and inspections can be moved forward without delay.", outcome: "More inspections, better-qualified leads, fewer forgotten prospects, and agents who spend more time closing instead of repeatedly restarting conversations.", visualTitle: "Property enquiries moving forward", visualMessage: "A buyer asks about available property, gets an immediate response, and is moved toward the next serious action.", visualSteps: ["Enquiry answered", "Buyer qualified", "Inspection progressing"], visualMetric: "More serious buyer conversations", visualStatus: "Active" },
-  { icon: Hotel, tag: "Hotels & hospitality", title: "Turn more guest enquiries into confirmed bookings.", summary: "Fluxknight helps hospitality businesses answer faster, guide guests clearly, take reservation details, and keep staff focused on real guest care instead of repetitive front-desk admin.", flow: "Guest requests are answered quickly, booking details are collected smoothly, and the team receives clear, usable information instead of fragmented conversations.", outcome: "More after-hours bookings, fewer missed enquiries, reduced pressure on reception, and a stronger guest experience from the first contact.", visualTitle: "Guest enquiries converting faster", visualMessage: "A guest asks about availability and services, receives clear help, and the booking conversation keeps moving.", visualSteps: ["Question answered", "Booking details captured", "Team updated"], visualMetric: "More bookings completed", visualStatus: "Confirmed" },
-  { icon: Dumbbell, tag: "Gyms & fitness", title: "Convert more prospects and keep more members engaged.", summary: "Fluxknight helps gyms answer membership questions, recommend suitable plans, reactivate inactive prospects, and reduce the manual follow-up that usually falls through the cracks.", flow: "Prospects get help faster, membership interest is guided toward a visit or sign-up, and inactive leads or members can be followed up consistently.", outcome: "More memberships, stronger retention, better follow-up consistency, and less repetitive admin work for staff.", visualTitle: "Membership interest gaining momentum", visualMessage: "A prospect asks about joining, gets immediate guidance, and is moved toward the next step instead of going cold.", visualSteps: ["Question handled", "Right plan suggested", "Follow-up active"], visualMetric: "More memberships progressing", visualStatus: "Warm" },
-  { icon: Wrench, tag: "Service businesses", title: "Keep bookings, updates, and follow-up moving without operational chaos.", summary: "Fluxknight helps service businesses capture requests, gather the right job details, schedule work, update customers, and reduce the back-and-forth that slows the operation down.", flow: "Customer requests are captured clearly, staff get better information, and updates or reminders happen without depending on repeated manual chasing.", outcome: "Fewer missed appointments, better customer trust, cleaner handoffs between office and field teams, and more jobs progressing smoothly.", visualTitle: "Service requests handled with control", visualMessage: "A customer makes a request, the details are organized properly, and the next steps keep moving without confusion.", visualSteps: ["Request captured", "Next step organized", "Customer updated"], visualMetric: "More jobs moving smoothly", visualStatus: "Scheduled" },
+const automationPillars = [
+  {
+    icon: MessageSquareText,
+    title: "Customer conversations",
+    text: "Handle enquiries and support across customer-facing channels, answer approved questions, capture context, and hand the right conversations to your team.",
+    detail: "WhatsApp · Web support · Inquiry handling · Support desk · Human handoff",
+  },
+  {
+    icon: Workflow,
+    title: "Follow-up & customer journey",
+    text: "Keep interested customers moving after the first conversation instead of relying on staff memory or manual chasing.",
+    detail: "Lead qualification · Follow-up · Reminders · Scheduling · Re-engagement",
+  },
+  {
+    icon: Database,
+    title: "Connected business operations",
+    text: "Connect customer activity to the systems your team uses so information, next actions, and management visibility stay organized.",
+    detail: "Email automation · CRM · Databases · Admin visibility · Custom workflows",
+  },
 ];
 
 const pricingPlans = [
-  { icon: MessageSquareText, slug: "whatsapp-ai-starter", name: "WhatsApp AI Starter", firstMonth: "₦100,000", ongoing: "₦50,000/month", description: "A focused WhatsApp AI agent for businesses that want every enquiry answered, qualified, captured, and followed up.", features: ["24/7 WhatsApp AI receptionist", "Approved FAQ responses", "Lead qualification", "Customer detail capture", "Automated follow-up", "Human handoff", "Basic dashboard access"], cta: "Get started" },
-  { icon: Mic, slug: "ai-call-receptionist", name: "AI Call Receptionist", firstMonth: "₦200,000", ongoing: "₦100,000/month", description: "An AI phone agent that answers customers, understands why they are calling, qualifies opportunities and routes the right calls.", features: ["24/7 inbound AI calls", "Approved FAQ responses", "Caller qualification", "Customer detail capture", "Appointment booking where configured", "Human escalation", "Call summaries", "Dashboard lead capture"], cta: "Get started" },
-  { icon: Network, slug: "ai-front-desk-suite", name: "AI Front Desk Suite", firstMonth: "₦400,000", ongoing: "₦250,000/month", description: "A connected front desk across WhatsApp, inbound calls and email, keeping customer communication and follow-up in one operating process.", features: ["WhatsApp AI", "Inbound AI call agent", "Email automation", "Lead qualification", "Automated follow-up", "Customer detail capture", "Booking support", "Human handoff", "Shared dashboard", "Basic reporting"], cta: "Get started", featured: true },
-  { icon: Rocket, slug: "custom-ai-operations", name: "Custom AI Operations", firstMonth: "Custom", ongoing: "Custom", description: "For organizations that need multiple AI agents, departments, branches, advanced workflows and custom integrations built around their operations.", features: ["Multiple AI agents", "Multiple departments or branches", "Advanced workflow automation", "Voice, WhatsApp and email", "Custom integrations", "Customer-management automation", "Advanced analytics", "Workflow monitoring", "Organization-wide automation", "Managed deployment and support"], cta: "Request an evaluation", custom: true },
-];
-
-const nextSteps = [
-  { icon: MessageSquareText, step: "01", title: "Map the problem", text: "Tell us where enquiries, follow-up, customer service, bookings, or repetitive work are slowing the organization down." },
-  { icon: Workflow, step: "02", title: "Scope the right system", text: "We identify the channels, handoffs, data, and human checkpoints required instead of forcing your business into a generic automation package." },
-  { icon: Rocket, step: "03", title: "Deploy around real operations", text: "The system is configured around the approved workflow, then expanded only where additional automation creates useful leverage." },
-];
-
-const trustPrinciples = [
-  { icon: UsersRound, title: "Human handoff stays available", text: "AI can handle routine work while the right conversations still reach your team when human judgement is needed." },
-  { icon: CheckCircle2, title: "Approved knowledge and boundaries", text: "Customer-facing agents are designed around the information, policies, and escalation rules your organization approves." },
-  { icon: Network, title: "Built around your existing operation", text: "Fluxknight connects the channels and workflows that matter rather than requiring a complete operational reset." },
-  { icon: Database, title: "Context stays connected", text: "Lead details, conversation context, and next actions can move through the workflow so customers and staff do not keep restarting from zero." },
+  {
+    icon: MessageSquareText,
+    slug: "whatsapp-ai-starter",
+    name: "Basic",
+    firstMonth: "₦100,000",
+    ongoing: "₦50,000/month",
+    description: "One AI customer-support channel for conversations, questions, enquiries, and human handoff. Choose WhatsApp AI or Web AI support.",
+    features: ["WhatsApp AI or Web AI support", "24/7 questions and enquiries", "Approved product, service and FAQ responses", "Basic customer and lead capture", "Conversation history", "Human-agent handoff", "Basic dashboard access"],
+    cta: "Start with Basic",
+  },
+  {
+    icon: Workflow,
+    slug: "ai-call-receptionist",
+    name: "Starter Business",
+    firstMonth: "₦200,000",
+    ongoing: "₦100,000/month",
+    description: "Everything in Basic, plus automated follow-up and reminders around the products or services customers enquire about.",
+    features: ["Everything in Basic", "Automated customer follow-up", "Product or service-specific follow-up", "Reminder automation", "Follow-up timing rules", "Lead and customer status tracking", "Increased usage credits", "Human handoff with context"],
+    cta: "Start with Starter Business",
+  },
+  {
+    icon: Network,
+    slug: "ai-front-desk-suite",
+    name: "Business+",
+    firstMonth: "₦400,000",
+    ongoing: "₦250,000/month",
+    description: "A connected customer automation system with higher limits across WhatsApp, web, email, CRM, scheduling, reminders, and follow-up.",
+    features: ["Everything in Starter Business", "Higher usage credits", "WhatsApp, Web and Email automation", "Automated email follow-up", "Multi-channel follow-up", "Lead qualification", "CRM and pipeline automation", "Scheduling and booking workflows", "Shared dashboard and admin visibility", "Supported integrations"],
+    cta: "Deploy Business+",
+    featured: true,
+  },
+  {
+    icon: Rocket,
+    slug: "custom-ai-operations",
+    name: "Custom",
+    firstMonth: "Custom",
+    ongoing: "Custom",
+    description: "A custom AI operating system built around multiple agents, departments, databases, memberships, workflows, and integrations.",
+    features: ["Everything in Business+", "Multiple AI agents", "Multiple teams, departments or branches", "Custom databases", "Membership systems", "Customer or member portals", "Advanced workflow automation", "Custom CRM and operating workflows", "Custom integrations", "Role-based staff access", "Workflow monitoring", "Managed deployment and support"],
+    cta: "Plan a custom system",
+    custom: true,
+  },
 ];
 
 export default function HomePage() {
-  return <main className="quantix-home">
-    <PublicLeoConsultant />
-    <section className="quantix-hero production-animated-hero outcome-first-hero"><div className="hero-stars"/><div className="violet-arc"/><div className="hero-haze"/><motion.div className="hero-content" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:.7}}><div className="hero-pill"><Sparkles size={13}/> AI automation that drives real business outcomes</div><h1>Grow your organization <span>without growing the workload.</span></h1><p>Fluxknight helps organizations respond faster, convert more opportunities, reduce repetitive work, and keep customers moving from first enquiry to completed action.</p><div className="hero-buttons"><Link className="button-primary" href="/evaluation" data-cta="hero-evaluation">Evaluate My Business <ArrowRight size={17}/></Link><Link className="button-secondary" href="#outcomes" data-cta="hero-outcomes">See What We Can Improve <ArrowRight size={16}/></Link></div><div className="hero-proof-row" aria-label="Fluxknight operating principles"><span><CheckCircle2 size={14}/> 24/7 customer availability</span><span><CheckCircle2 size={14}/> AI works alongside your team</span><span><CheckCircle2 size={14}/> Human handoff when needed</span></div></motion.div><motion.div className="product-shot outcome-product-shot" initial={{opacity:0,y:42,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.9,delay:.25}}><div className="outcome-dashboard-label"><span>Business impact, live</span><strong>Customer operations</strong></div><img src="/flux-dashboard.svg" alt="Fluxknight customer operations dashboard showing conversations, leads, bookings and business activity"/></motion.div></section>
-    <MaiaCaseStudyTeaser />
-    <section className="home-outcome-strip" id="outcomes" aria-label="Business outcomes"><div className="home-outcome-shell"><article><span className="home-outcome-icon"><Zap size={20}/></span><h2>Respond faster</h2><p>Every serious enquiry gets immediate attention so opportunities do not disappear while customers wait.</p></article><article><span className="home-outcome-icon"><UsersRound size={20}/></span><h2>Convert more</h2><p>Qualify, nurture and follow up consistently until prospects are ready for the next meaningful action.</p></article><article><span className="home-outcome-icon"><Workflow size={20}/></span><h2>Reduce repetitive work</h2><p>Automate routine questions, reminders and handoffs so your team can focus on decisions and relationships.</p></article><article><span className="home-outcome-icon"><Network size={20}/></span><h2>Operate with visibility</h2><p>Keep conversations, leads, bookings and next actions connected so management can see what needs attention.</p></article></div></section>
-    <section className="brand-section" id="services"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Business outcomes</span><h2>What changes when Fluxknight works inside your organization.</h2><p>These results are powered by AI communication, follow-up systems, workflow coordination, shared customer information, and connected operating processes.</p></div><div className="brand-grid">{services.map(({icon:Icon,title,text})=><article className="brand-card" key={title}><span className="brand-icon"><Icon size={21}/></span><h3>{title}</h3><p>{text}</p><Link href="/services">See what powers this <ArrowRight size={15}/></Link></article>)}</div></div></section>
-    <IndustryCarousel />
-    <section className="brand-section use-case-section" id="use-cases"><div className="brand-shell"><div className="brand-heading use-case-heading"><span className="brand-eyebrow">Real business impact</span><h2>What improvement actually looks like inside an organization.</h2><p>Fluxknight helps businesses stop losing enquiries, serve more customers, give staff time back, and keep customer operations moving with far less friction.</p></div><div className="use-case-grid">{useCases.map(({icon:Icon,tag,title,summary,flow,outcome,visualTitle,visualMessage,visualSteps,visualMetric,visualStatus},index)=><motion.article className="use-case-card" key={tag} initial={{opacity:0,y:28}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:.2}} transition={{duration:.45,delay:index*.06}}><div className="use-case-copy"><div className="use-case-label"><span className="brand-icon"><Icon size={22}/></span><span className="brand-eyebrow">{tag}</span></div><h3>{title}</h3><p>{summary}</p><div className="use-case-explainer"><div><MessageSquareText size={18}/><p><strong>What improves:</strong> {flow}</p></div><div><CalendarCheck2 size={18}/><p><strong>Business impact:</strong> {outcome}</p></div></div><Link href="/evaluation" data-cta={`use-case-${tag.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`}>Evaluate this workflow <ArrowRight size={15}/></Link></div><div className="use-case-visual"><div className="visual-glow"/><div className="visual-topbar"><span><span className="visual-live-dot"/> Outcome engine active</span><em>24/7</em></div><div className="visual-window"><div className="visual-window-head"><span className="visual-avatar"><Icon size={18}/></span><div><strong>{visualTitle}</strong><small>Just now · Customer operations</small></div><span className="visual-status">{visualStatus}</span></div><div className="visual-message"><MessageSquareText size={16}/><p>{visualMessage}</p></div><div className="visual-ai-reply"><span><Bot size={15}/> Fluxknight AI</span><p>Details are captured, the next step is moving, and the team has full context.</p></div><div className="visual-workflow">{visualSteps.map((step,i)=><div key={step}><span>{i+1}</span><p>{step}</p><CheckCircle2 size={16}/></div>)}</div><div className="visual-result"><span><Zap size={16}/> Business result</span><strong>{visualMetric}</strong></div></div></div></motion.article>)}</div><div className="use-case-closing"><span className="brand-icon"><UsersRound size={22}/></span><h3>One organization. More capacity. Less friction.</h3><p>Fluxknight gives your organization leverage to grow without requiring repetitive work and manual coordination to grow at the same rate.</p><div className="hero-buttons"><Link className="button-primary" href="/evaluation" data-cta="use-case-closing">Evaluate My Business <ArrowRight size={17}/></Link></div></div></div></section>
-    <ClientReviews />
-    <section className="brand-section trust-section" id="trust"><div className="brand-shell"><div className="brand-heading trust-heading"><span className="brand-eyebrow">Built for controlled deployment</span><h2>Automation should fit your organization, not take control away from it.</h2><p>Fluxknight is designed around clear boundaries, connected context, and human escalation so automation can create leverage without turning customer operations into a black box.</p></div><div className="trust-grid">{trustPrinciples.map(({icon:Icon,title,text})=><article key={title}><span className="brand-icon"><Icon size={21}/></span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
-    <section className="brand-section production-pricing-carousel" id="pricing"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Start where it matters most</span><h2>Start with the part of your organization that needs the most leverage.</h2><p>Choose the package that best matches the business problem you want to solve first, then expand as your customer operations and internal workflows grow.</p></div><PricingCarousel plans={pricingPlans} compact/><div className="hero-buttons production-pricing-route-link"><Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16}/></Link></div><p className="production-pricing-note">Messaging-provider charges, email volume, and third-party platform fees may vary by usage and are scoped during onboarding.</p></div></section>
-    <section className="brand-section evaluation-journey" id="evaluation-journey"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">What happens next</span><h2>Start with the business problem. Then design the automation around it.</h2><p>The evaluation is not a commitment to rebuild your organization. It is a structured way to identify where automation can create the most useful leverage first.</p></div><div className="evaluation-step-grid">{nextSteps.map(({icon:Icon,step,title,text})=><article key={step}><span className="evaluation-step-number">{step}</span><span className="brand-icon"><Icon size={21}/></span><h3>{title}</h3><p>{text}</p></article>)}</div><div className="evaluation-conversion-card"><div><span className="brand-eyebrow">Start with clarity</span><h3>Find the highest-leverage place to automate first.</h3><p>Share your current workflow, where opportunities get lost, and what your team spends too much time doing. We use that context to recommend the right starting point.</p></div><div className="evaluation-conversion-actions"><Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17}/></Link><small>No package selection required before the evaluation.</small></div></div></div></section>
-    <section className="brand-section" id="about"><div className="brand-shell"><div className="brand-heading"><span className="brand-eyebrow">Built for growth</span><h2>Build an organization that can handle more.</h2><p>More conversations. More customers. More activity. More impact. Without repetitive work increasing at the same rate.</p></div><div className="hero-buttons"><Link className="button-primary" href="/evaluation" data-cta="about-evaluation">Evaluate My Business <ArrowRight size={17}/></Link><Link className="button-secondary" href="/about">About Fluxknight</Link></div></div></section>
-  </main>;
+  return (
+    <main className="quantix-home">
+      <PublicLeoConsultant />
+
+      <section className="quantix-hero production-animated-hero outcome-first-hero">
+        <div className="hero-stars" />
+        <div className="violet-arc" />
+        <div className="hero-haze" />
+        <motion.div className="hero-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
+          <div className="hero-pill"><Sparkles size={13} /> AI automation that drives real business outcomes</div>
+          <h1>Grow your organization <span>without growing the workload.</span></h1>
+          <p>Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.</p>
+          <div className="hero-buttons">
+            <Link className="button-primary" href="/evaluation" data-cta="hero-evaluation">Evaluate My Business <ArrowRight size={17} /></Link>
+            <Link className="button-secondary" href="#services" data-cta="hero-services">See What We Automate <ArrowRight size={16} /></Link>
+          </div>
+          <div className="hero-proof-row" aria-label="Fluxknight operating principles">
+            <span><CheckCircle2 size={14} /> Works 24/7</span>
+            <span><CheckCircle2 size={14} /> Built around your workflow</span>
+            <span><CheckCircle2 size={14} /> Human handoff stays available</span>
+          </div>
+        </motion.div>
+        <motion.div className="product-shot outcome-product-shot" initial={{ opacity: 0, y: 42, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .9, delay: .25 }}>
+          <div className="outcome-dashboard-label"><span>Business impact, live</span><strong>Customer operations</strong></div>
+          <img src="/flux-dashboard.svg" alt="Fluxknight customer operations dashboard showing conversations, leads, bookings and business activity" />
+        </motion.div>
+      </section>
+
+      <MaiaCaseStudyTeaser />
+
+      <IndustryCarousel />
+
+      <section className="brand-section" id="services">
+        <div className="brand-shell">
+          <div className="brand-heading">
+            <span className="brand-eyebrow">What Fluxknight automates</span>
+            <h2>Three layers. One connected business system.</h2>
+            <p>Start with customer conversations, add follow-up when you need it, then connect the wider operation as the business grows.</p>
+          </div>
+          <div className="brand-grid">
+            {automationPillars.map(({ icon: Icon, title, text, detail }) => (
+              <article className="brand-card" key={title}>
+                <span className="brand-icon"><Icon size={21} /></span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+                <small>{detail}</small>
+                <Link href="/services">Explore capabilities <ArrowRight size={15} /></Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <ClientReviews />
+
+      <section className="brand-section production-pricing-carousel" id="pricing">
+        <div className="brand-shell">
+          <div className="brand-heading">
+            <span className="brand-eyebrow">Choose your automation level</span>
+            <h2>Start simple. Add automation as the operation needs it.</h2>
+            <p>Basic handles conversations. Starter Business adds follow-up. Business+ connects the customer journey. Custom builds around the wider organization.</p>
+          </div>
+          <PricingCarousel plans={pricingPlans} compact />
+          <div className="hero-buttons production-pricing-route-link">
+            <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
+          </div>
+          <p className="production-pricing-note">Messaging-provider charges, email volume, and third-party platform fees may vary by usage and are scoped during onboarding.</p>
+        </div>
+      </section>
+
+      <section className="brand-section evaluation-journey" id="evaluation-journey">
+        <div className="brand-shell">
+          <div className="evaluation-conversion-card">
+            <div>
+              <span className="brand-eyebrow">Not sure where your business fits?</span>
+              <h3>Show us the workflow. We’ll identify the best place to automate first.</h3>
+              <p>Tell us where enquiries get lost, where follow-up breaks down, or where your team spends too much time on repetitive work.</p>
+            </div>
+            <div className="evaluation-conversion-actions">
+              <Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link>
+              <small>No package selection required before the evaluation.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }
