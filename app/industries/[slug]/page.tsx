@@ -22,20 +22,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const industry = resolveIndustry(slug);
 
   if (!industry) {
-    return { title: "Industry | Fluxknight" };
+    return { title: "Industry" };
   }
 
+  const pageTitle = `${industry.name} AI Automation`;
+  const socialTitle = `${pageTitle} | Fluxknight`;
+  const canonical = `/industries/${industry.slug}`;
+
   return {
-    title: `${industry.name} AI Automation | Fluxknight`,
+    title: pageTitle,
     description: industry.subhead,
+    alternates: {
+      canonical,
+    },
     openGraph: {
-      title: `${industry.name} AI Automation | Fluxknight`,
+      title: socialTitle,
       description: industry.subhead,
       type: "website",
+      url: canonical,
     },
     twitter: {
       card: "summary_large_image",
-      title: `${industry.name} AI Automation | Fluxknight`,
+      title: socialTitle,
       description: industry.subhead,
     },
   };
