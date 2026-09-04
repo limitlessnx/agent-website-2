@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,14 +8,14 @@ import {
   Database,
   Mail,
   MessageSquareText,
-  Network,
   UsersRound,
   Workflow,
 } from "@/components/admin/ServerIcons";
+import MaiaSystemRing from "@/components/MaiaSystemRing";
 import styles from "./page.module.css";
 
 const maiaDescription =
-  "See how Maia connects lead capture, qualification, WhatsApp and email follow-up, inspection scheduling, reminders, CRM, Leo admin visibility, and human handoff for real estate operations.";
+  "See how Maia connects inquiry handling, lead capture, qualification, WhatsApp and email follow-up, support, inspection scheduling, reminders, CRM, Leo admin visibility, and human handoff for real estate operations.";
 
 export const metadata: Metadata = {
   title: "Maia Real Estate Automation Case Study",
@@ -39,10 +38,12 @@ export const metadata: Metadata = {
 };
 
 const capabilities = [
+  { icon: MessageSquareText, title: "Inquiry handling", text: "Answer common questions immediately and understand what the buyer needs before the conversation stalls." },
   { icon: MessageSquareText, title: "Lead capture", text: "Capture new enquiries immediately with the customer details needed for the next step." },
   { icon: CheckCircle2, title: "Lead qualification", text: "Collect budget, preferred location, property type, urgency, and buying intent before an agent takes over." },
   { icon: MessageSquareText, title: "WhatsApp follow-up", text: "Keep conversations moving when prospects pause, miss a reply, or need another prompt before booking." },
   { icon: Mail, title: "Email follow-up", text: "Continue nurturing qualified prospects through email when a longer-form update or reminder is useful." },
+  { icon: Bot, title: "Support desk", text: "Handle routine support needs and route conversations that require staff attention without losing context." },
   { icon: CalendarCheck2, title: "Inspection scheduling", text: "Move qualified buyers toward inspections and appointments without repeated manual coordination." },
   { icon: Workflow, title: "Reminders", text: "Protect important next actions so inspection dates, follow-ups, and customer commitments do not disappear." },
   { icon: Database, title: "CRM", text: "Keep lead details, status, history, and next actions organized in one operational record." },
@@ -51,15 +52,16 @@ const capabilities = [
 ];
 
 const journey = [
-  ["01", "A buyer sends an enquiry", "Maia responds immediately and captures the conversation before interest goes cold."],
+  ["01", "A buyer sends an enquiry", "Maia responds immediately, answers initial questions, and captures the conversation before interest goes cold."],
   ["02", "The lead is qualified", "Budget, intent, location, property preferences, and readiness are collected and organized."],
   ["03", "The right property conversation starts", "Relevant information can be shared while unsuitable or incomplete enquiries are clarified."],
   ["04", "Inspection moves forward", "Qualified prospects are guided toward a booking or inspection with the required details captured."],
   ["05", "Reminders protect the next step", "Maia keeps scheduled activity from relying entirely on an agent's memory."],
   ["06", "Follow-up continues across channels", "WhatsApp and email can keep the lead warm when they need more time or miss a response."],
-  ["07", "CRM stays updated", "The lead record reflects what happened, what matters, and what should happen next."],
-  ["08", "Leo gives the team visibility", "Admins can see where conversations are progressing and where human attention is needed."],
-  ["09", "A human agent takes over", "The team enters with context instead of restarting the conversation from zero."],
+  ["07", "Support stays available", "Routine customer questions can be handled while cases needing staff attention are routed with context."],
+  ["08", "CRM stays updated", "The lead record reflects what happened, what matters, and what should happen next."],
+  ["09", "Leo gives the team visibility", "Admins can see where conversations are progressing and where human attention is needed."],
+  ["10", "A human agent takes over", "The team enters with context instead of restarting the conversation from zero."],
 ];
 
 export default function MaiaCaseStudyPage() {
@@ -69,14 +71,25 @@ export default function MaiaCaseStudyPage() {
         <div className={styles.heroGlow} />
         <div className={styles.shell}>
           <span className={styles.eyebrow}>Case study · Maia</span>
-          <h1>A complete real estate automation system.</h1>
+          <h1>A real agentic system for real estate operations.</h1>
           <p>
-            Maia connects lead capture, qualification, follow-up, inspection scheduling, reminders, CRM updates, Leo admin visibility, and human handoff into one operating flow.
+            Maia connects inquiry handling, lead capture, qualification, follow-up, support, inspection scheduling, reminders, CRM updates, Leo admin visibility, and human handoff into one operating flow.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primary} href="/evaluation" data-cta="maia-case-study-evaluation">Evaluate My Business <ArrowRight size={17} /></Link>
             <Link className={styles.secondary} href="/#maia-case-study">Back to homepage</Link>
           </div>
+        </div>
+      </section>
+
+      <section className={styles.mapSection}>
+        <div className={styles.shell}>
+          <div className={styles.heading}>
+            <span className={styles.eyebrow}>The Maia system</span>
+            <h2>See the complete operating flow.</h2>
+            <p>Every animated connection below represents a part of the customer journey staying connected instead of operating as a separate tool or forgotten task.</p>
+          </div>
+          <MaiaSystemRing />
         </div>
       </section>
 
@@ -95,26 +108,11 @@ export default function MaiaCaseStudyPage() {
         </div>
       </section>
 
-      <section className={styles.mapSection}>
-        <div className={styles.shell}>
-          <div className={styles.heading}>
-            <span className={styles.eyebrow}>The Maia system</span>
-            <h2>One connected flow from enquiry to human handoff.</h2>
-            <p>The system is designed to keep the customer journey moving while preserving the moments where people should stay in control.</p>
-          </div>
-          <div className={styles.systemMap}>
-            <div className={styles.orbitA} /><div className={styles.orbitB} />
-            <div className={styles.center}><Network size={24} /><span>Real estate AI operating system</span><strong>Maia</strong><em><i /> Live workflow</em></div>
-            {capabilities.map(({icon: Icon,title},index)=><div className={styles.mapNode} key={title} style={{"--i":index} as CSSProperties}><Icon size={16}/><span>{title}</span></div>)}
-          </div>
-        </div>
-      </section>
-
       <section className={styles.capabilitiesSection}>
         <div className={styles.shell}>
           <div className={styles.heading}>
             <span className={styles.eyebrow}>What the complete system comprises</span>
-            <h2>Every important part of the lead journey stays connected.</h2>
+            <h2>Eleven connected capabilities. One customer journey.</h2>
           </div>
           <div className={styles.capabilityGrid}>
             {capabilities.map(({icon:Icon,title,text})=><article key={title}><span className={styles.icon}><Icon size={19}/></span><h3>{title}</h3><p>{text}</p></article>)}
@@ -159,7 +157,7 @@ export default function MaiaCaseStudyPage() {
       <section className={styles.finalCta}>
         <div className={styles.shell}>
           <span className={styles.eyebrow}>Build around your operation</span>
-          <h2>Want this kind of real estate system inside your business?</h2>
+          <h2>Want this kind of system inside your business?</h2>
           <p>Start with the workflow you already have. Fluxknight maps where leads are being lost, where staff time is being wasted, and where automation can create useful leverage first.</p>
           <Link className={styles.primary} href="/evaluation" data-cta="maia-case-study-final">Evaluate My Business <ArrowRight size={17}/></Link>
         </div>
