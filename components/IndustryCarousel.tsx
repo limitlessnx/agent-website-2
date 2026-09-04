@@ -7,12 +7,12 @@ import styles from "./IndustryCarousel.module.css";
 
 const industries = [
   { id: "hotels", title: "Hotels", icon: Hotel, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?fit=crop&w=1400&q=86&fm=jpg", text: "Turn more guest enquiries into bookings and reduce pressure on your front desk." },
-  { id: "restaurants", title: "Restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?fit=crop&w=1400&q=86&fm=jpg", text: "Handle reservations and customer questions faster so your team can stay focused on service." },
-  { id: "clinics", title: "Clinics", icon: Stethoscope, image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?fit=crop&w=1400&q=86&fm=jpg", text: "Improve patient experience with faster answers, smoother appointments, and less admin work." },
+  { id: "restaurants", title: "Restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?fit=crop&w=1400&q=86&fm=jpg", text: "Handle reservations, orders and customer questions faster so your team can stay focused on service." },
+  { id: "clinics", title: "Clinics", icon: Stethoscope, image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?fit=crop&w=1400&q=86&fm=jpg", text: "Improve patient experience with faster administrative answers, smoother appointments, and less front-desk work." },
   { id: "sales-companies", title: "Sales Companies", icon: Briefcase, image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=86&v=2", text: "Qualify leads earlier and keep follow-up active until serious prospects are ready to buy." },
   { id: "real-estate", title: "Real Estate", icon: Building2, image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?fit=crop&w=1400&q=86&fm=jpg", text: "Turn more property enquiries into inspections and serious buyer conversations." },
   { id: "gyms", title: "Gyms", icon: Dumbbell, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?fit=crop&w=1400&q=86&fm=jpg", text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off." },
-  { id: "services", title: "Service Businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2", text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down." },
+  { id: "service-businesses", title: "Service Businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2", text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down." },
   { id: "auto-shops", title: "Auto Shops", icon: Truck, image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1400&q=86&v=2", text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing." },
   { id: "ecommerce", title: "E-commerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=86&v=2", text: "Recover more purchase intent through better product help, order support, and follow-up." },
   { id: "professional-services", title: "Professional Services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2", text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up." },
@@ -32,30 +32,23 @@ export default function IndustryCarousel() {
   const [active, setActive] = useState(0);
   const touchStart = useRef<number | null>(null);
   const pauseUntil = useRef(0);
-  const hoverPaused = useRef(false);
-  const focusPaused = useRef(false);
   const length = industries.length;
   const activeIndustry = industries[active];
 
   useEffect(() => {
-    // Warm only the active neighborhood instead of downloading ten large photos at once.
-    // As the carousel advances, the next image is already in browser cache.
-    [-1, 0, 1, 2].forEach((offset) => {
-      const index = (active + offset + length) % length;
+    industries.forEach((industry) => {
       const image = new Image();
       image.decoding = "async";
-      image.src = industries[index].image;
+      image.src = industry.image;
     });
-  }, [active, length]);
+  }, []);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
     const timer = window.setInterval(() => {
-      if (hoverPaused.current || focusPaused.current || Date.now() < pauseUntil.current || document.hidden) return;
+      if (Date.now() < pauseUntil.current || document.hidden) return;
       setActive((current) => (current + 1) % length);
     }, AUTOPLAY_MS);
-
     return () => window.clearInterval(timer);
   }, [length]);
 
@@ -90,17 +83,7 @@ export default function IndustryCarousel() {
 
         <div
           className={styles.carousel}
-          aria-roledescription="carousel"
-          aria-label="Industries Fluxknight supports"
-          onMouseEnter={() => { hoverPaused.current = true; }}
-          onMouseLeave={() => { hoverPaused.current = false; pauseAutoplay(); }}
-          onFocusCapture={() => { focusPaused.current = true; }}
-          onBlurCapture={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-              focusPaused.current = false;
-              pauseAutoplay();
-            }
-          }}
+          onMouseEnter={pauseAutoplay}
           onTouchStart={(event) => {
             pauseAutoplay();
             touchStart.current = event.touches[0]?.clientX ?? null;
@@ -113,15 +96,12 @@ export default function IndustryCarousel() {
             if (Math.abs(delta) > 45) go(delta < 0 ? 1 : -1, true);
           }}
         >
-          <button className={`${styles.navButton} ${styles.prev}`} type="button" onClick={() => go(-1, true)} aria-label="Previous industry">
-            <ArrowLeft size={20} />
-          </button>
+          <button className={`${styles.navButton} ${styles.prev}`} onClick={() => go(-1, true)} aria-label="Previous industry"><ArrowLeft size={20} /></button>
 
-          <div className={styles.stage} aria-live="polite">
+          <div className={styles.stage}>
             {visible.map(({ item, index, offset }) => {
               const Icon = item.icon;
               const hidden = Math.abs(offset) > 2;
-              const selectable = !hidden && offset !== 0;
               return (
                 <article
                   key={item.id}
@@ -134,19 +114,8 @@ export default function IndustryCarousel() {
                     zIndex: 20 - Math.abs(offset),
                     pointerEvents: hidden ? "none" : "auto",
                   }}
-                  onClick={() => selectable && select(index)}
-                  onKeyDown={(event) => {
-                    if (!selectable) return;
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      select(index);
-                    }
-                  }}
-                  role={selectable ? "button" : undefined}
-                  tabIndex={selectable ? 0 : -1}
-                  aria-label={selectable ? `Show ${item.title}` : undefined}
+                  onClick={() => offset !== 0 && select(index)}
                   aria-hidden={hidden}
-                  aria-current={offset === 0 ? "true" : undefined}
                 >
                   <div className={styles.cardContent}>
                     <span className={styles.icon}><Icon size={22} /></span>
@@ -155,7 +124,7 @@ export default function IndustryCarousel() {
                       <h3>{item.title}</h3>
                       <p>{item.text}</p>
                       {offset === 0 && (
-                        <Link href={`/industries#${item.id}`} className={styles.link} onClick={pauseAutoplay}>
+                        <Link href={`/industries/${item.id}`} className={styles.link} onClick={pauseAutoplay}>
                           Explore {item.title} <ArrowRight size={16} />
                         </Link>
                       )}
@@ -166,25 +135,16 @@ export default function IndustryCarousel() {
             })}
           </div>
 
-          <button className={`${styles.navButton} ${styles.next}`} type="button" onClick={() => go(1, true)} aria-label="Next industry">
-            <ArrowRight size={20} />
-          </button>
+          <button className={`${styles.navButton} ${styles.next}`} onClick={() => go(1, true)} aria-label="Next industry"><ArrowRight size={20} /></button>
         </div>
 
         <div className={styles.footerControls}>
-          <div className={styles.dots} role="group" aria-label="Choose an industry slide">
+          <div className={styles.dots} role="tablist" aria-label="Industry slides">
             {industries.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className={index === active ? styles.dotActive : styles.dot}
-                onClick={() => select(index)}
-                aria-label={`Show ${item.title}`}
-                aria-current={index === active ? "true" : undefined}
-              />
+              <button key={item.id} className={index === active ? styles.dotActive : styles.dot} onClick={() => select(index)} aria-label={`Show ${item.title}`} aria-selected={index === active} role="tab" />
             ))}
           </div>
-          <Link href={`/industries#${activeIndustry.id}`} className={styles.mobileLink} onClick={pauseAutoplay}>
+          <Link href={`/industries/${activeIndustry.id}`} className={styles.mobileLink} onClick={pauseAutoplay}>
             View {activeIndustry.title} <ArrowRight size={15} />
           </Link>
         </div>
