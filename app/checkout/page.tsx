@@ -8,8 +8,9 @@ import CheckoutClient from "./CheckoutClient";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Checkout | Fluxknight",
+  title: "Checkout",
   description: "Secure Fluxknight AI system checkout.",
+  robots: { index: false, follow: false },
 };
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
