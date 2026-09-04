@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import SignupForm from "./SignupForm";
 
-export const metadata = { title: "Create Account | Fluxknight" };
+export const metadata: Metadata = {
+  title: "Create Account",
+  robots: { index: false, follow: false },
+};
 
 export default async function ClientSignupPage({ searchParams }: { searchParams: Promise<{ tx_ref?: string; next?: string }> }) {
   const params = await searchParams;
