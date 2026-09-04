@@ -14,7 +14,7 @@ const industries = [
   { id: "gyms", title: "Gyms", icon: Dumbbell, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?fit=crop&w=1400&q=86&fm=jpg", text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off." },
   { id: "services", title: "Service Businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2", text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down." },
   { id: "auto-shops", title: "Auto Shops", icon: Truck, image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1400&q=86&v=2", text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing." },
-  { id: "ecommerce", title: "E-commerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8311?auto=format&fit=crop&w=1400&q=86&v=2", text: "Recover more purchase intent through better product help, order support, and follow-up." },
+  { id: "ecommerce", title: "E-commerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=86&v=2", text: "Recover more purchase intent through better product help, order support, and follow-up." },
   { id: "professional-services", title: "Professional Services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2", text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up." },
 ];
 
