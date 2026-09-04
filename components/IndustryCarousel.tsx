@@ -32,22 +32,27 @@ export default function IndustryCarousel() {
   const [active, setActive] = useState(0);
   const touchStart = useRef<number | null>(null);
   const pauseUntil = useRef(0);
+  const hoverPaused = useRef(false);
+  const focusPaused = useRef(false);
   const length = industries.length;
   const activeIndustry = industries[active];
 
   useEffect(() => {
-    industries.forEach((industry) => {
+    // Warm only the active neighborhood instead of downloading ten large photos at once.
+    // As the carousel advances, the next image is already in browser cache.
+    [-1, 0, 1, 2].forEach((offset) => {
+      const index = (active + offset + length) % length;
       const image = new Image();
       image.decoding = "async";
-      image.src = industry.image;
+      image.src = industries[index].image;
     });
-  }, []);
+  }, [active, length]);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const timer = window.setInterval(() => {
-      if (Date.now() < pauseUntil.current || document.hidden) return;
+      if (hoverPaused.current || focusPaused.current || Date.now() < pauseUntil.current || document.hidden) return;
       setActive((current) => (current + 1) % length);
     }, AUTOPLAY_MS);
 
@@ -85,7 +90,17 @@ export default function IndustryCarousel() {
 
         <div
           className={styles.carousel}
-          onMouseEnter={pauseAutoplay}
+          aria-roledescription="carousel"
+          aria-label="Industries Fluxknight supports"
+          onMouseEnter={() => { hoverPaused.current = true; }}
+          onMouseLeave={() => { hoverPaused.current = false; pauseAutoplay(); }}
+          onFocusCapture={() => { focusPaused.current = true; }}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              focusPaused.current = false;
+              pauseAutoplay();
+            }
+          }}
           onTouchStart={(event) => {
             pauseAutoplay();
             touchStart.current = event.touches[0]?.clientX ?? null;
@@ -98,14 +113,15 @@ export default function IndustryCarousel() {
             if (Math.abs(delta) > 45) go(delta < 0 ? 1 : -1, true);
           }}
         >
-          <button className={`${styles.navButton} ${styles.prev}`} onClick={() => go(-1, true)} aria-label="Previous industry">
+          <button className={`${styles.navButton} ${styles.prev}`} type="button" onClick={() => go(-1, true)} aria-label="Previous industry">
             <ArrowLeft size={20} />
           </button>
 
-          <div className={styles.stage}>
+          <div className={styles.stage} aria-live="polite">
             {visible.map(({ item, index, offset }) => {
               const Icon = item.icon;
               const hidden = Math.abs(offset) > 2;
+              const selectable = !hidden && offset !== 0;
               return (
                 <article
                   key={item.id}
@@ -118,8 +134,19 @@ export default function IndustryCarousel() {
                     zIndex: 20 - Math.abs(offset),
                     pointerEvents: hidden ? "none" : "auto",
                   }}
-                  onClick={() => offset !== 0 && select(index)}
+                  onClick={() => selectable && select(index)}
+                  onKeyDown={(event) => {
+                    if (!selectable) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      select(index);
+                    }
+                  }}
+                  role={selectable ? "button" : undefined}
+                  tabIndex={selectable ? 0 : -1}
+                  aria-label={selectable ? `Show ${item.title}` : undefined}
                   aria-hidden={hidden}
+                  aria-current={offset === 0 ? "true" : undefined}
                 >
                   <div className={styles.cardContent}>
                     <span className={styles.icon}><Icon size={22} /></span>
@@ -139,21 +166,21 @@ export default function IndustryCarousel() {
             })}
           </div>
 
-          <button className={`${styles.navButton} ${styles.next}`} onClick={() => go(1, true)} aria-label="Next industry">
+          <button className={`${styles.navButton} ${styles.next}`} type="button" onClick={() => go(1, true)} aria-label="Next industry">
             <ArrowRight size={20} />
           </button>
         </div>
 
         <div className={styles.footerControls}>
-          <div className={styles.dots} role="tablist" aria-label="Industry slides">
+          <div className={styles.dots} role="group" aria-label="Choose an industry slide">
             {industries.map((item, index) => (
               <button
                 key={item.id}
+                type="button"
                 className={index === active ? styles.dotActive : styles.dot}
                 onClick={() => select(index)}
                 aria-label={`Show ${item.title}`}
-                aria-selected={index === active}
-                role="tab"
+                aria-current={index === active ? "true" : undefined}
               />
             ))}
           </div>
