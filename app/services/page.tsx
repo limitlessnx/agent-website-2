@@ -3,8 +3,7 @@ import ServicesClient from "./ServicesClient";
 
 export const metadata: Metadata = {
   title: "Services",
-  description:
-    "AI sales agents, customer support systems, WhatsApp automation, voice agents, CRM workflows, and content systems for growing businesses.",
+  description: "Explore Fluxknight AI systems for faster response, better lead conversion, consistent follow-up, reduced repetitive work, and connected customer operations.",
 };
 
 export default function ServicesPage() {

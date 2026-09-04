@@ -26,6 +26,29 @@ type PricingCarouselProps = {
   compact?: boolean;
 };
 
+const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: string }> = {
+  "whatsapp-ai-starter": {
+    fit: "Businesses getting most enquiries through WhatsApp",
+    outcome: "Answer, qualify and follow up without adding another full-time responder.",
+    cta: "Start with WhatsApp AI",
+  },
+  "ai-call-receptionist": {
+    fit: "Businesses missing calls or spending too much staff time on routine enquiries",
+    outcome: "Keep inbound calls moving while your team handles the conversations that need people.",
+    cta: "Add an AI receptionist",
+  },
+  "ai-front-desk-suite": {
+    fit: "Growing teams handling customers across WhatsApp, calls and email",
+    outcome: "Create one connected front desk instead of managing each channel separately.",
+    cta: "Deploy the front desk suite",
+  },
+  "custom-ai-operations": {
+    fit: "Organizations with multiple departments, branches or custom operating workflows",
+    outcome: "Build automation around the organization instead of forcing the organization into a fixed package.",
+    cta: "Plan a custom system",
+  },
+};
+
 export default function PricingCarousel({ plans, compact = false }: PricingCarouselProps) {
   const [active, setActive] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -93,7 +116,10 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
       if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
     }} aria-roledescription="carousel" aria-label="Fluxknight pricing plans">
       <div className={styles.topControls}>
-        <p aria-live="polite">Plan {active + 1} of {plans.length}</p>
+        <div className={styles.controlCopy}>
+          <p aria-live="polite">Plan {active + 1} of {plans.length}</p>
+          <span>Swipe or use the arrows to compare</span>
+        </div>
         <div>
           <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={18} /></button>
           <button type="button" onClick={() => move(1)} disabled={active === plans.length - 1} aria-label="Next pricing plan"><ArrowRight size={18} /></button>
@@ -106,6 +132,8 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
           const firstPrice = plan.firstMonth ?? plan.first ?? "Custom";
           const isCustom = plan.custom || plan.slug === "custom-ai-operations";
           const href = isCustom ? "/evaluation" : `/checkout?plan=${encodeURIComponent(plan.slug)}`;
+          const decision = planDecisionCopy[plan.slug];
+          const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
           return (
             <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.name} aria-label={`${plan.name}${plan.featured ? ", most complete starter" : ""}`}>
               <div className={styles.cardGlow} aria-hidden="true" />
@@ -115,13 +143,20 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
               </div>
               <h3>{plan.name}</h3>
               <p className={styles.description}>{plan.description ?? plan.tag}</p>
+              {decision ? (
+                <div className={styles.decisionBlock}>
+                  <span>Best for</span>
+                  <strong>{decision.fit}</strong>
+                  <p>{decision.outcome}</p>
+                </div>
+              ) : null}
               <div className={styles.priceBlock}>
                 <div><span>First month · installation + deployment</span><strong>{firstPrice}</strong></div>
-                <div><span>Consecutively</span><strong>{plan.ongoing}</strong></div>
+                <div><span>Then</span><strong>{plan.ongoing}</strong></div>
               </div>
               <h4>What&apos;s included</h4>
               <div className={styles.features}>{plan.features.map((feature) => <span key={feature}><CheckCircle2 size={16} />{feature}</span>)}</div>
-              <Link className={styles.cta} href={href} aria-label={`${plan.cta ?? "Get started"} with ${plan.name}`}>{plan.cta ?? "Get started"} <ArrowRight size={16} /></Link>
+              <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>
             </article>
           );
         })}

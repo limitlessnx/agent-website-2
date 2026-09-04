@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import PricingClient from "./PricingClient";
+import PricingOutcomeClient from "./PricingOutcomeClient";
 
 export const metadata: Metadata = {
-  title: "Pricing | Fluxknight",
-  description: "Fluxknight AI pricing for WhatsApp AI, inbound call agents, AI front desk automation, and custom AI operations systems.",
+  title: "Pricing",
+  description: "Choose a focused Fluxknight starting point for faster customer response, stronger follow-up, reduced repetitive work, or connected AI front-desk operations.",
 };
 
 export default function PricingPage() {
-  return <PricingClient />;
+  return <PricingOutcomeClient />;
 }

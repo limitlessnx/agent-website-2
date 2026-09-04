@@ -10,71 +10,71 @@ const industries = [
     id: "hotels",
     title: "Hotels",
     icon: Hotel,
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85",
-    text: "Booking assistance, guest questions, reservations, upsells, and front-desk escalation without making guests wait.",
+    image: "https://unsplash.com/photos/ym_EI-DTS1g/download?force=true&w=1400",
+    text: "Turn more guest enquiries into bookings and reduce pressure on your front desk.",
   },
   {
     id: "restaurants",
     title: "Restaurants",
     icon: ShoppingCart,
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=85",
-    text: "Reservations, catering enquiries, menu support, repeat-customer campaigns, and faster customer response.",
+    image: "https://unsplash.com/photos/deEt6Xfk78M/download?force=true&w=1400",
+    text: "Handle reservations and customer questions faster so your team can stay focused on service.",
   },
   {
     id: "clinics",
     title: "Clinics",
     icon: Stethoscope,
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1400&q=85",
-    text: "Patient intake, appointment booking, reminders, rescheduling, and staff escalation around the clock.",
+    image: "https://unsplash.com/photos/nMyM7fxpokE/download?force=true&w=1400",
+    text: "Improve patient experience with faster answers, smoother appointments, and less admin work.",
   },
   {
     id: "sales-companies",
     title: "Sales Companies",
     icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=85",
-    text: "Lead generation, qualification, disciplined follow-up, scoring, routing, and alerts when buyers are ready.",
+    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=86&v=2",
+    text: "Qualify leads earlier and keep follow-up active until serious prospects are ready to buy.",
   },
   {
     id: "real-estate",
     title: "Real Estate",
     icon: Building2,
-    image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85",
-    text: "Property enquiries, buyer qualification, listing recommendations, inspections, follow-up, and payment journeys.",
+    image: "https://unsplash.com/photos/EZI7eC-od_U/download?force=true&w=1400",
+    text: "Turn more property enquiries into inspections and serious buyer conversations.",
   },
   {
     id: "gyms",
     title: "Gyms",
     icon: Dumbbell,
-    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=85",
-    text: "Membership enquiries, trial bookings, lead reactivation, renewals, class promotion, and member engagement.",
+    image: "https://unsplash.com/photos/-8lajF7J8T0/download?force=true&w=1400",
+    text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off.",
   },
   {
     id: "services",
     title: "Service Businesses",
     icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1400&q=85",
-    text: "Service-request intake, quote qualification, consultations, reminders, customer updates, and review requests.",
+    image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2",
+    text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down.",
   },
   {
     id: "auto-shops",
     title: "Auto Shops",
     icon: Truck,
-    image: "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=1400&q=85",
-    text: "Repair bookings, vehicle intake, quote follow-up, maintenance reminders, and customer status updates.",
+    image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1400&q=86&v=2",
+    text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing.",
   },
   {
     id: "ecommerce",
     title: "E-commerce",
     icon: ShoppingCart,
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85",
-    text: "Product assistance, abandoned-cart recovery, order support, recommendations, upsells, and win-back campaigns.",
+    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=86&v=2",
+    text: "Recover more purchase intent through better product help, order support, and follow-up.",
   },
   {
     id: "professional-services",
     title: "Professional Services",
     icon: Briefcase,
-    image: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1400&q=85",
-    text: "Prospect qualification, discovery calls, proposal follow-up, onboarding, reminders, and client experience automation.",
+    image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2",
+    text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up.",
   },
 ];
 
@@ -106,8 +106,8 @@ export default function IndustryCarousel() {
       <div className={styles.shell}>
         <div className={styles.heading}>
           <span className={styles.eyebrow}>Industries</span>
-          <h2 id="industry-carousel-title">Automation shaped around how your market actually works.</h2>
-          <p>Explore industry-specific AI systems built around the customer journey, sales process, operations, and follow-up rhythm of each business.</p>
+          <h2 id="industry-carousel-title">Built for organizations across industries.</h2>
+          <p>Different industries. Same outcome: stronger customer experiences, less friction, and better business results.</p>
         </div>
 
         <div
@@ -134,7 +134,8 @@ export default function IndustryCarousel() {
                   key={item.id}
                   className={`${styles.card} ${offset === 0 ? styles.active : ""}`}
                   style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(12,6,28,.12), rgba(8,3,20,.92)), url(${item.image})`,
+                    backgroundImage: hidden ? undefined : `linear-gradient(180deg, rgba(12,6,28,.12), rgba(8,3,20,.92)), url(${item.image})`,
+                    backgroundColor: "#0b0614",
                     transform: `translateX(${offset * 56}%) scale(${offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.88 : 0.76}) rotateY(${offset * -6}deg)`,
                     opacity: hidden ? 0 : offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.74 : 0.36,
                     zIndex: 20 - Math.abs(offset),
