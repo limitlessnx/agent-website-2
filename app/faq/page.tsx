@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const description = "Answers about Fluxknight AI agents, channels, workflows, credits, setup, support, security, and usage-based services.";
+
 export const metadata: Metadata = {
-  title: "FAQ | Fluxknight",
-  description: "Answers about Fluxknight AI agents, channels, workflows, credits, setup, support, security, and usage-based services.",
+  title: "FAQ",
+  description,
+  alternates: { canonical: "/faq" },
+  openGraph: { type: "website", url: "/faq", title: "Fluxknight FAQ", description },
+  twitter: { card: "summary_large_image", title: "Fluxknight FAQ", description },
 };
 
 const faqs = [
@@ -21,7 +26,7 @@ const faqs = [
   },
   {
     q: "What happens after my included usage or credits are used?",
-    a: "Yes, additional usage can be billed when the allocated allowance is exhausted. The reason is simple: third-party services such as WhatsApp Business API messaging, voice minutes, AI model usage, email delivery, SMS, and other infrastructure are consumption-based costs. Fluxknight cannot responsibly promise unlimited third-party usage inside a fixed subscription without either restricting the system or hiding those costs somewhere else. Additional usage keeps the system running instead of unexpectedly stopping a live customer conversation.",
+    a: "Additional usage can be billed when the allocated allowance is exhausted. Third-party services such as WhatsApp Business API messaging, voice minutes, AI model usage, email delivery, SMS, and other infrastructure are consumption-based costs. Additional usage keeps the system running instead of unexpectedly stopping a live customer conversation.",
   },
   {
     q: "Why are WhatsApp API messages charged separately?",
