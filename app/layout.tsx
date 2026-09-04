@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1 };
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="en"><body><GlobalLoadingProvider><SiteShell>{children}</SiteShell></GlobalLoadingProvider></body></html>;
