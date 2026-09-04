@@ -18,6 +18,9 @@ const industries = [
   { id: "professional-services", title: "Professional Services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2", text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up." },
 ];
 
+const AUTOPLAY_MS = 4600;
+const INTERACTION_PAUSE_MS = 9000;
+
 function relativeIndex(index: number, active: number, length: number) {
   let diff = index - active;
   if (diff > length / 2) diff -= length;
@@ -27,8 +30,8 @@ function relativeIndex(index: number, active: number, length: number) {
 
 export default function IndustryCarousel() {
   const [active, setActive] = useState(0);
-  const [userInteracted, setUserInteracted] = useState(false);
   const touchStart = useRef<number | null>(null);
+  const pauseUntil = useRef(0);
   const length = industries.length;
   const activeIndustry = industries[active];
 
@@ -41,21 +44,33 @@ export default function IndustryCarousel() {
   }, []);
 
   useEffect(() => {
-    if (userInteracted || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const timer = window.setInterval(() => {
+      if (Date.now() < pauseUntil.current || document.hidden) return;
       setActive((current) => (current + 1) % length);
-    }, 4200);
+    }, AUTOPLAY_MS);
+
     return () => window.clearInterval(timer);
-  }, [length, userInteracted]);
+  }, [length]);
 
   const visible = useMemo(
     () => industries.map((item, index) => ({ item, index, offset: relativeIndex(index, active, length) })),
     [active, length],
   );
 
-  const go = (direction: number, manual = true) => {
-    if (manual) setUserInteracted(true);
+  const pauseAutoplay = () => {
+    pauseUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+  };
+
+  const go = (direction: number, manual = false) => {
+    if (manual) pauseAutoplay();
     setActive((current) => (current + direction + length) % length);
+  };
+
+  const select = (index: number) => {
+    pauseAutoplay();
+    setActive(index);
   };
 
   return (
@@ -70,16 +85,20 @@ export default function IndustryCarousel() {
 
         <div
           className={styles.carousel}
-          onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+          onMouseEnter={pauseAutoplay}
+          onTouchStart={(event) => {
+            pauseAutoplay();
+            touchStart.current = event.touches[0]?.clientX ?? null;
+          }}
           onTouchEnd={(event) => {
             if (touchStart.current === null) return;
             const end = event.changedTouches[0]?.clientX ?? touchStart.current;
             const delta = end - touchStart.current;
             touchStart.current = null;
-            if (Math.abs(delta) > 45) go(delta < 0 ? 1 : -1);
+            if (Math.abs(delta) > 45) go(delta < 0 ? 1 : -1, true);
           }}
         >
-          <button className={`${styles.navButton} ${styles.prev}`} onClick={() => go(-1)} aria-label="Previous industry">
+          <button className={`${styles.navButton} ${styles.prev}`} onClick={() => go(-1, true)} aria-label="Previous industry">
             <ArrowLeft size={20} />
           </button>
 
@@ -99,12 +118,7 @@ export default function IndustryCarousel() {
                     zIndex: 20 - Math.abs(offset),
                     pointerEvents: hidden ? "none" : "auto",
                   }}
-                  onClick={() => {
-                    if (offset !== 0) {
-                      setUserInteracted(true);
-                      setActive(index);
-                    }
-                  }}
+                  onClick={() => offset !== 0 && select(index)}
                   aria-hidden={hidden}
                 >
                   <div className={styles.cardContent}>
@@ -114,7 +128,7 @@ export default function IndustryCarousel() {
                       <h3>{item.title}</h3>
                       <p>{item.text}</p>
                       {offset === 0 && (
-                        <Link href={`/industries#${item.id}`} className={styles.link}>
+                        <Link href={`/industries#${item.id}`} className={styles.link} onClick={pauseAutoplay}>
                           Explore {item.title} <ArrowRight size={16} />
                         </Link>
                       )}
@@ -125,7 +139,7 @@ export default function IndustryCarousel() {
             })}
           </div>
 
-          <button className={`${styles.navButton} ${styles.next}`} onClick={() => go(1)} aria-label="Next industry">
+          <button className={`${styles.navButton} ${styles.next}`} onClick={() => go(1, true)} aria-label="Next industry">
             <ArrowRight size={20} />
           </button>
         </div>
@@ -136,17 +150,14 @@ export default function IndustryCarousel() {
               <button
                 key={item.id}
                 className={index === active ? styles.dotActive : styles.dot}
-                onClick={() => {
-                  setUserInteracted(true);
-                  setActive(index);
-                }}
+                onClick={() => select(index)}
                 aria-label={`Show ${item.title}`}
                 aria-selected={index === active}
                 role="tab"
               />
             ))}
           </div>
-          <Link href={`/industries#${activeIndustry.id}`} className={styles.mobileLink}>
+          <Link href={`/industries#${activeIndustry.id}`} className={styles.mobileLink} onClick={pauseAutoplay}>
             View {activeIndustry.title} <ArrowRight size={15} />
           </Link>
         </div>
