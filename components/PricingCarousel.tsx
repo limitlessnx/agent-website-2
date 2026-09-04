@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "@/components/admin/ServerIcons";
+import { usePublicPricing } from "@/lib/use-public-pricing";
 import styles from "@/components/PricingCarousel.module.css";
 
 export type PricingCarouselPlan = {
@@ -54,6 +55,7 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
   const trackRef = useRef<HTMLDivElement>(null);
   const settledRef = useRef<number | null>(null);
   const programmaticRef = useRef<number | null>(null);
+  const { prices, currency } = usePublicPricing();
 
   const goTo = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const track = trackRef.current;
@@ -118,7 +120,7 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
       <div className={styles.topControls}>
         <div className={styles.controlCopy}>
           <p aria-live="polite">Plan {active + 1} of {plans.length}</p>
-          <span>Swipe or use the arrows to compare</span>
+          <span>{currency ? `Pricing shown in ${currency} · ` : ""}Swipe or use the arrows to compare</span>
         </div>
         <div>
           <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={18} /></button>
@@ -129,7 +131,9 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
         {plans.map((plan, index) => {
           const Icon = plan.icon;
-          const firstPrice = plan.firstMonth ?? plan.first ?? "Custom";
+          const detected = prices[plan.slug];
+          const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
+          const ongoingPrice = detected?.ongoing ?? plan.ongoing;
           const isCustom = plan.custom || plan.slug === "custom-ai-operations";
           const href = isCustom ? "/evaluation" : `/checkout?plan=${encodeURIComponent(plan.slug)}`;
           const decision = planDecisionCopy[plan.slug];
@@ -152,7 +156,7 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
               ) : null}
               <div className={styles.priceBlock}>
                 <div><span>First month · installation + deployment</span><strong>{firstPrice}</strong></div>
-                <div><span>Then</span><strong>{plan.ongoing}</strong></div>
+                <div><span>Then</span><strong>{ongoingPrice}</strong></div>
               </div>
               <h4>What&apos;s included</h4>
               <div className={styles.features}>{plan.features.map((feature) => <span key={feature}><CheckCircle2 size={16} />{feature}</span>)}</div>
@@ -162,8 +166,8 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
         })}
       </div>
 
-      <div className={styles.dots} role="tablist" aria-label="Choose a pricing plan">
-        {plans.map((plan, index) => <button type="button" key={plan.name} role="tab" aria-selected={index === active} aria-label={`Show ${plan.name}`} className={index === active ? styles.dotActive : styles.dot} onClick={() => goTo(index)} />)}
+      <div className={styles.dots} role="group" aria-label="Choose a pricing plan">
+        {plans.map((plan, index) => <button type="button" key={plan.name} aria-current={index === active ? "true" : undefined} aria-label={`Show ${plan.name}`} className={index === active ? styles.dotActive : styles.dot} onClick={() => goTo(index)} />)}
       </div>
     </div>
   );
