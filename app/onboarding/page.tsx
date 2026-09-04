@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { supabaseRest } from "@/lib/supabase-server-rest";
@@ -5,7 +6,10 @@ import { ensureClientOnboardingProfile } from "@/lib/client-workspace-onboarding
 import OnboardingForm from "./OnboardingForm";
 import "./onboarding.css";
 
-export const metadata = { title: "Set Up Your Workspace | Fluxknight" };
+export const metadata: Metadata = {
+  title: "Set Up Your Workspace",
+  robots: { index: false, follow: false },
+};
 export const dynamic = "force-dynamic";
 
 type SearchParams = { tx_ref?: string };
