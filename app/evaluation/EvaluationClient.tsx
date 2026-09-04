@@ -90,7 +90,7 @@ export default function EvaluationClient() {
     if (!form.leadVolume) nextErrors.leadVolume = "Select your monthly lead volume";
     if (!form.timeline) nextErrors.timeline = "Select your timeline";
     if (!form.budget) nextErrors.budget = "Select a budget range";
-    if (!form.consent) nextErrors.consent = "Consent is required before our evaluation system can contact you";
+    if (!form.consent) nextErrors.consent = "Consent is required before Fluxknight can follow up on this request";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -209,7 +209,7 @@ export default function EvaluationClient() {
 
               <label style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 16, border: `1px solid ${errors.consent ? palette.danger : palette.border}`, borderRadius: 12, background: "rgba(168,85,247,.06)", cursor: "pointer" }}>
                 <input type="checkbox" checked={form.consent} onChange={(e) => update("consent", e.target.checked)} style={{ marginTop: 4 }} />
-                <span style={{ color: palette.muted, lineHeight: 1.55, fontSize: ".9rem" }}>I agree to be contacted about this request, including by an AI evaluation call agent at the phone number provided. Consent is not required to purchase.</span>
+                <span style={{ color: palette.muted, lineHeight: 1.55, fontSize: ".9rem" }}>I agree to be contacted about this request using the contact details I provided, including by email, phone or WhatsApp where appropriate. Consent is not required to purchase.</span>
               </label>
               {errorMessage("consent")}
 
