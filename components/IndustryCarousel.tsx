@@ -134,7 +134,8 @@ export default function IndustryCarousel() {
                   key={item.id}
                   className={`${styles.card} ${offset === 0 ? styles.active : ""}`}
                   style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(12,6,28,.12), rgba(8,3,20,.92)), url(${item.image})`,
+                    backgroundImage: hidden ? undefined : `linear-gradient(180deg, rgba(12,6,28,.12), rgba(8,3,20,.92)), url(${item.image})`,
+                    backgroundColor: "#0b0614",
                     transform: `translateX(${offset * 56}%) scale(${offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.88 : 0.76}) rotateY(${offset * -6}deg)`,
                     opacity: hidden ? 0 : offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.74 : 0.36,
                     zIndex: 20 - Math.abs(offset),
