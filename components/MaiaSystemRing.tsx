@@ -8,7 +8,6 @@ import {
   Database,
   Mail,
   MessageSquareText,
-  Network,
   UsersRound,
   Workflow,
 } from "@/components/admin/ServerIcons";
@@ -53,10 +52,8 @@ export default function MaiaSystemRing() {
       </svg>
 
       <motion.div className={styles.centerCard} animate={{ y: [0, -5, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
-        <span className={styles.centerIcon}><Network size={24} /></span>
-        <small>Real estate AI operating system</small>
         <strong>Maia</strong>
-        <em><span /> System active</em>
+        <small>WhatsApp Agent</small>
       </motion.div>
 
       <div className={styles.nodeLayer} role="list" aria-label="Maia connected automation capabilities">
