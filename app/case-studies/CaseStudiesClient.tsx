@@ -23,6 +23,7 @@ const cases = [
     industry: "Real Estate · Limitless Realty",
     title: "We built and automated a real estate operation around Maia",
     client: "A live real estate system built for Limitless Realty",
+    status: "Implemented system",
     intro:
       "Instead of building a chatbot in isolation, we connected the real estate operation around an AI agent, property data, lead management, media, education and human handoff. Maia sits at the front of the customer journey and helps move a buyer from first question to a qualified next step.",
     challenge:
@@ -53,13 +54,16 @@ const cases = [
       "Property, lead and customer information brought into one operating system.",
       "A structure that can connect conversations to follow-up workflows and human agents.",
       "An education layer that helps prospects understand real-estate and land-documentation topics before they make decisions."
-    ]
+    ],
+    ctaHref: "/case-studies/maia",
+    ctaLabel: "Open the detailed Maia case study",
   },
   {
     number: "02",
     industry: "Trading · Gencouv",
     title: "From prospecting to onboarding: the Gencouv sales system",
     client: "Gencouv Trading · lead generation, email automation and customer onboarding",
+    status: "Implemented workflow",
     intro:
       "Gencouv was not treated as a simple trading website. We connected the acquisition and customer journey so a prospect can be discovered, contacted, nurtured, qualified, onboarded and eventually handed to a human team without the business manually moving information between every stage.",
     challenge:
@@ -92,7 +96,9 @@ const cases = [
       "An automated support layer for repetitive customer questions.",
       "Telegram onboarding connected to the wider customer journey.",
       "Clear human handoff points so automation supports the sales team rather than trying to replace it."
-    ]
+    ],
+    ctaHref: "/evaluation",
+    ctaLabel: "Evaluate a similar acquisition workflow",
   }
 ];
 
@@ -129,13 +135,20 @@ export default function CaseStudiesClient() {
               <span className="gradient-text"> We built them.</span>
             </h1>
             <p style={{ fontSize: "1.05rem", color: "#a99ab8", lineHeight: 1.8, maxWidth: "700px", margin: "0 auto" }}>
-              Two real builds that show what Fluxknight looks like when AI agents, websites, data, automation and human teams are designed as one system.
+              Two implemented builds showing how Fluxknight connects AI agents, websites, data, automation, follow-up, and human teams as one operating system.
             </p>
           </motion.div>
         </div>
       </section>
 
-      <section style={{ padding: "80px 24px 100px" }}>
+      <section style={{ padding: "44px 24px 0" }}>
+        <div className="evidence-note">
+          <div><span>Evidence scope</span><strong>What this page is intended to prove</strong></div>
+          <p>These case studies document implemented workflow design, connected system capability, operating structure, and human handoff. Quantitative ROI, conversion, or revenue claims are not presented unless approved source data supports them.</p>
+        </div>
+      </section>
+
+      <section style={{ padding: "48px 24px 100px" }}>
         <div style={{ maxWidth: "1060px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "72px" }}>
           {cases.map((c, i) => (
             <FadeUp key={c.title} delay={i * 0.05}>
@@ -143,8 +156,9 @@ export default function CaseStudiesClient() {
                 <div style={{ padding: "42px 42px 36px", borderBottom: "1px solid rgba(172,94,255,0.13)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "flex-start", marginBottom: "18px" }}>
                     <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.16em", color: "#8e56cc" }}>{c.number}</span>
-                    <span className="section-label">{c.industry}</span>
+                    <span className="case-status"><i /> {c.status}</span>
                   </div>
+                  <span className="section-label" style={{ display: "inline-block", marginBottom: "14px" }}>{c.industry}</span>
                   <h2 style={{ fontSize: "clamp(1.6rem,3.2vw,2.5rem)", fontWeight: 850, color: "#f7f1ff", letterSpacing: "-0.035em", lineHeight: 1.15, marginBottom: "12px", maxWidth: "820px" }}>{c.title}</h2>
                   <p style={{ fontSize: "0.88rem", color: "#806e91" }}>{c.client}</p>
                 </div>
@@ -187,6 +201,11 @@ export default function CaseStudiesClient() {
                     <BulletList items={c.outcome} />
                   </div>
                 </div>
+
+                <div className="case-footer">
+                  <div><span>Next</span><p>See the deeper system view or map a similar workflow around your own operation.</p></div>
+                  <Link href={c.ctaHref}>{c.ctaLabel} <ArrowRight size={16} /></Link>
+                </div>
               </article>
             </FadeUp>
           ))}
@@ -204,7 +223,9 @@ export default function CaseStudiesClient() {
         </FadeUp>
       </section>
 
-      <style>{`@media (max-width:768px) { .cs-grid { grid-template-columns:1fr !important; } }`}</style>
+      <style>{`
+        .evidence-note{max-width:1060px;margin:0 auto;display:grid;grid-template-columns:.75fr 1.25fr;gap:24px;align-items:center;padding:22px 24px;border:1px solid rgba(172,94,255,.16);border-radius:18px;background:linear-gradient(145deg,rgba(24,12,42,.76),rgba(10,6,18,.9))}.evidence-note span{display:block;color:#a970ff;font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.evidence-note strong{display:block;margin-top:6px;color:#f7f1ff;font-size:1rem}.evidence-note p{margin:0;color:#93859f;font-size:.8rem;line-height:1.65}.case-status{display:inline-flex;align-items:center;gap:7px;color:#aa9ab8;font-size:.68rem;font-weight:700}.case-status i{width:7px;height:7px;border-radius:50%;background:#9f65ff;box-shadow:0 0 12px rgba(159,101,255,.75)}.case-footer{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 42px;border-top:1px solid rgba(172,94,255,.13);background:rgba(172,94,255,.035)}.case-footer span{color:#806e91;font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.case-footer p{margin:5px 0 0;color:#9b8ca8;font-size:.78rem;line-height:1.5}.case-footer a{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;color:#c89cff;font-size:.78rem;font-weight:800;text-decoration:none}@media (max-width:768px){.cs-grid{grid-template-columns:1fr !important}.evidence-note{grid-template-columns:1fr;padding:18px}.case-footer{align-items:flex-start;flex-direction:column;padding:20px 24px}.case-footer a{flex:initial}}
+      `}</style>
     </div>
   );
 }
