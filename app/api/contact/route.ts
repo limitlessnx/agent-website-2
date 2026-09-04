@@ -1,104 +1,127 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * Contact Form API Route
- *
- * Current: logs submissions and returns success.
- *
- * TO CONNECT n8n WEBHOOK:
- * 1. Create an n8n workflow with a "Webhook" trigger node
- * 2. Copy the webhook URL from n8n (e.g. https://your-n8n.cloud/webhook/contact-form)
- * 3. Add to your .env.local:  N8N_WEBHOOK_URL=https://your-n8n.cloud/webhook/contact-form
- * 4. Uncomment the n8n fetch block below
- *
- * TO CONNECT SUPABASE:
- * 1. Create a table: contact_submissions (id, name, email, phone, business_type, automation_goal, budget, created_at)
- * 2. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to .env.local
- * 3. Use @supabase/supabase-js to insert the row
- *
- * TO CONNECT CALENDLY:
- * 1. After form submission, redirect to your Calendly link or embed it in a modal
- * 2. Pass ?name=...&email=... query params to pre-fill the form
- *
- * TO ADD EMAIL NOTIFICATION:
- * 1. Use Resend (resend.com) or SendGrid
- * 2. Send an internal notification email on every submission
- * 3. Send the user a confirmation email
- */
+type ContactPayload = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  businessName?: string;
+  businessType?: string;
+  automationGoal?: string;
+  budget?: string;
+  consent?: boolean;
+};
+
+function sanitizeString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function saveToSupabase(row: Record<string, unknown>) {
+  const supabaseUrl =
+    process.env.LIMITLESS_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey =
+    process.env.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) return { configured: false };
+
+  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/evaluation_leads`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(row),
+  });
+
+  if (!response.ok) throw new Error(`Supabase save failed: ${await response.text()}`);
+  return { configured: true, data: await response.json() };
+}
+
+async function sendToN8n(payload: Record<string, unknown>) {
+  const webhookUrl = process.env.N8N_CONTACT_WEBHOOK_URL || process.env.N8N_EVALUATION_WEBHOOK_URL;
+  if (!webhookUrl) return { configured: false };
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) throw new Error(`n8n webhook failed: ${await response.text()}`);
+  return { configured: true };
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { name, email, phone, businessType, automationGoal, budget } = body;
-
-    // Basic server-side validation
-    if (!name || !email || !businessType || !automationGoal || !budget) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
-    }
-
-    const submission = {
-      name,
-      email,
-      phone: phone || "",
-      businessType,
-      automationGoal,
-      budget,
-      submittedAt: new Date().toISOString(),
-      source: "fluxknight.ai/contact",
+    const body = (await req.json()) as ContactPayload;
+    const normalized = {
+      name: sanitizeString(body.name),
+      email: sanitizeString(body.email).toLowerCase(),
+      phone: sanitizeString(body.phone),
+      businessName: sanitizeString(body.businessName),
+      businessType: sanitizeString(body.businessType),
+      automationGoal: sanitizeString(body.automationGoal),
+      budget: sanitizeString(body.budget),
+      consent: body.consent === true,
     };
 
-    // ── Dev: log to console ───────────────────────────────────────────────────
-    if (process.env.NODE_ENV === "development") {
-      console.log("[Contact Form Submission]", submission);
+    if (!normalized.name || !normalized.email || !normalized.businessName || !normalized.businessType || !normalized.automationGoal || !normalized.budget) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // ── n8n Webhook (uncomment when ready) ────────────────────────────────────
-    // const n8nUrl = process.env.N8N_WEBHOOK_URL;
-    // if (n8nUrl) {
-    //   await fetch(n8nUrl, {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(submission),
-    //   });
-    // }
+    if (!isValidEmail(normalized.email)) {
+      return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
+    }
 
-    // ── Supabase (uncomment when ready) ───────────────────────────────────────
-    // import { createClient } from "@supabase/supabase-js";
-    // const supabase = createClient(
-    //   process.env.SUPABASE_URL!,
-    //   process.env.SUPABASE_SERVICE_ROLE_KEY!
-    // );
-    // const { error: dbError } = await supabase
-    //   .from("contact_submissions")
-    //   .insert([submission]);
-    // if (dbError) throw dbError;
+    if (!normalized.consent) {
+      return NextResponse.json({ error: "Consent is required before we can follow up on this request" }, { status: 400 });
+    }
 
-    // ── Email notification (uncomment when ready) ─────────────────────────────
-    // import { Resend } from "resend";
-    // const resend = new Resend(process.env.RESEND_API_KEY);
-    // await resend.emails.send({
-    //   from: "notifications@fluxknight.ai",
-    //   to: "hello@fluxknight.ai",
-    //   subject: `New Contact Form: ${name} — ${businessType}`,
-    //   text: JSON.stringify(submission, null, 2),
-    // });
+    const now = new Date().toISOString();
+    const lead = {
+      name: normalized.name,
+      email: normalized.email,
+      phone: normalized.phone || "Not provided",
+      business_name: normalized.businessName,
+      business_type: normalized.businessType,
+      agent_types: [],
+      main_goal: normalized.automationGoal,
+      current_tools: null,
+      lead_volume: "Not provided via contact",
+      timeline: "Not provided via contact",
+      budget: normalized.budget,
+      preferred_contact_time: null,
+      consent_given: true,
+      source: "website_contact",
+      status: "new",
+      submitted_at: now,
+    };
 
-    return NextResponse.json(
-      { success: true, message: "Submission received" },
-      { status: 200 }
-    );
+    const supabaseResult = await saveToSupabase(lead);
+    const n8nResult = await sendToN8n({ event: "contact_request_created", lead, createdAt: now });
+
+    if (!supabaseResult.configured && !n8nResult.configured && process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "No contact destination is configured" }, { status: 503 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      destinations: { supabase: supabaseResult.configured, n8n: n8nResult.configured },
+    });
   } catch (error) {
     console.error("[Contact API Error]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
