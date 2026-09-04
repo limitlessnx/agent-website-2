@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Briefcase, Building2, Dumbbell, Hotel, ShoppingCart, Stethoscope, Truck } from "@/components/admin/ServerIcons";
 import styles from "./IndustryCarousel.module.css";
 
@@ -10,21 +10,21 @@ const industries = [
     id: "hotels",
     title: "Hotels",
     icon: Hotel,
-    image: "https://unsplash.com/photos/ym_EI-DTS1g/download?force=true&w=1400",
+    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=86",
     text: "Turn more guest enquiries into bookings and reduce pressure on your front desk.",
   },
   {
     id: "restaurants",
     title: "Restaurants",
     icon: ShoppingCart,
-    image: "https://unsplash.com/photos/deEt6Xfk78M/download?force=true&w=1400",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=86",
     text: "Handle reservations and customer questions faster so your team can stay focused on service.",
   },
   {
     id: "clinics",
     title: "Clinics",
     icon: Stethoscope,
-    image: "https://unsplash.com/photos/nMyM7fxpokE/download?force=true&w=1400",
+    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1400&q=86",
     text: "Improve patient experience with faster answers, smoother appointments, and less admin work.",
   },
   {
@@ -38,14 +38,14 @@ const industries = [
     id: "real-estate",
     title: "Real Estate",
     icon: Building2,
-    image: "https://unsplash.com/photos/EZI7eC-od_U/download?force=true&w=1400",
+    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=86&v=2",
     text: "Turn more property enquiries into inspections and serious buyer conversations.",
   },
   {
     id: "gyms",
     title: "Gyms",
     icon: Dumbbell,
-    image: "https://unsplash.com/photos/-8lajF7J8T0/download?force=true&w=1400",
+    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=86",
     text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off.",
   },
   {
@@ -90,6 +90,14 @@ export default function IndustryCarousel() {
   const touchStart = useRef<number | null>(null);
   const length = industries.length;
   const activeIndustry = industries[active];
+
+  useEffect(() => {
+    industries.forEach((industry) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = industry.image;
+    });
+  }, []);
 
   const visible = useMemo(
     () => industries.map((item, index) => ({ item, index, offset: relativeIndex(index, active, length) })),
