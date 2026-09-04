@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import EvaluationClient from "./EvaluationClient";
 
+const description = "Tell Fluxknight what your business wants to improve or automate. We evaluate the need first, then recommend the right AI agents, channels, integrations, and workflows.";
+
 export const metadata: Metadata = {
   title: "Business AI Evaluation",
-  description:
-    "Tell Fluxknight what your business wants to improve or automate. We evaluate the need first, then recommend the right AI agents, channels, integrations, and workflows.",
+  description,
+  alternates: { canonical: "/evaluation" },
+  openGraph: { type: "website", url: "/evaluation", title: "Business AI Evaluation | Fluxknight", description },
+  twitter: { card: "summary_large_image", title: "Business AI Evaluation | Fluxknight", description },
 };
 
 export default function EvaluationPage() {
