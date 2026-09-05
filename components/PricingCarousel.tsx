@@ -29,6 +29,8 @@ type PricingCarouselProps = {
 
 type PlanPresentation = Pick<PricingCarouselPlan, "icon" | "name" | "description" | "features">;
 
+const pricingFrameworkSlugs = new Set(["basic", "starter", "business", "business-plus"]);
+
 const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
     icon: MessageSquareText,
@@ -210,7 +212,12 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
           const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
           const isCustom = plan.custom || plan.slug === "custom-ai-operations";
-          const href = isCustom ? "/evaluation" : `/checkout?plan=${encodeURIComponent(plan.slug)}`;
+          const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
+          const href = isFrameworkPlan
+            ? `/pricing?plan=${encodeURIComponent(plan.slug)}#plan-details`
+            : isCustom
+              ? "/evaluation"
+              : `/checkout?plan=${encodeURIComponent(plan.slug)}`;
           const decision = planDecisionCopy[plan.slug];
           const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
           return (
