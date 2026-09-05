@@ -2,65 +2,69 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
+import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 type LeadProfile = { name: string; email: string; phone: string; organization: string; leadId?: string };
-type LeadStage = "name" | "email" | "phone" | "organization" | "complete";
 type RealtimeEvent = {
   type?: string;
   name?: string;
   call_id?: string;
   arguments?: string;
+  error?: { message?: string; code?: string; type?: string };
   item?: { type?: string; call_id?: string; name?: string; arguments?: string };
 };
 
 const firstMessage: ChatMessage = {
   role: "assistant",
-  content: "Hi, I’m Leo. I can help with Fluxknight services and automation. Before we get into it, what’s your full name?",
+  content: "Hi, I’m Leo. Tell me what your business does or what you’d like to improve, and I’ll show you a practical way Fluxknight could help.",
 };
 
 function localLeoReply(input: string, count: number) {
   const lower = input.toLowerCase();
-  if (/website|web site|landing|portal|dashboard|integrat|custom/.test(lower)) {
-    return "Yes. Fluxknight can scope custom packages combining websites, dashboards, AI chat, WhatsApp, voice, CRM and workflow automation. Tell me what you want the system to do from enquiry through follow-up.";
+  if (/how can (i|we) use|how.*help.*business|for my business|for our business/.test(lower)) {
+    return "I can make that practical. For example, if customers contact your business while your team is busy or after hours, Leo can answer their questions, understand what they need, help with the next step such as a booking or enquiry, and hand anything unusual to a person on your team. What kind of business do you run?";
+  }
+  if (/salon|spa|barber|beauty/.test(lower)) {
+    return "For a salon, a customer could message after hours, ask about a service, choose what they want, find a suitable appointment time, receive confirmation and a reminder, while unusual requests go to your staff. That means fewer missed bookings without making customers feel like they are talking to a form. Where do most of your customers contact you now?";
+  }
+  if (/real estate|property|realtor/.test(lower)) {
+    return "For a real-estate business, Leo can respond when a buyer asks about a property, understand location and budget, answer the property questions you have approved, arrange a viewing or next step, follow up later, and hand serious or unusual cases to your team. Which part of that process currently takes the most time?";
+  }
+  if (/restaurant|food|hotel|hospitality/.test(lower)) {
+    return "A customer could ask about availability, services or an order at any hour, get an immediate useful answer, complete the normal next step, and reach a staff member when the request needs human judgment. What do customers most often contact your team about?";
   }
   if (/price|pricing|package|plan|cost/.test(lower)) {
-    return "Fluxknight offers WhatsApp AI Starter, AI Call Receptionist, AI Front Desk Suite and Custom AI Operations. I can recommend the right level once I understand your channels and workflow.";
-  }
-  if (/whatsapp|call|voice|email|support|lead|follow/.test(lower)) {
-    return "That is a strong automation use case. I’d map the customer entry point, qualification process, follow-up and the systems your team already uses before recommending the build.";
+    return "I can help you work out the right level without throwing a list of packages at you. Tell me what kind of business you run and the customer task you most want handled better.";
   }
   const prompts = [
-    "What industry is your organization in, and what customer process are you trying to improve?",
-    "Which channels should the system handle: WhatsApp, phone, website chat, email, or several of them?",
-    "What outcome matters most: more leads, faster response, bookings, follow-up, support, or end-to-end automation?",
+    "What kind of business do you run, and what part of dealing with customers takes the most time?",
+    "Walk me through what normally happens when a new customer contacts you. Where does the process usually slow down?",
+    "What would make the biggest practical difference for you: fewer missed enquiries, easier bookings, faster replies, better follow-up, or something else?",
   ];
   return prompts[count % prompts.length];
 }
 
-function nextLeadQuestion(stage: LeadStage) {
-  if (stage === "name") return "Thanks. What’s the best email address to reach you?";
-  if (stage === "email") return "Got it. What’s the best phone number for your team to reach you?";
-  if (stage === "phone") return "Thanks. And what organization or business are you looking to automate?";
-  return "Thanks. I have what I need. What are you looking to automate?";
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+function asLeadProfile(value: unknown, leadId?: unknown): LeadProfile | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const name = String(row.name || "").trim();
+  const email = String(row.email || "").trim();
+  const phone = String(row.phone || "").trim();
+  const organization = String(row.organization || row.business_name || "").trim();
+  if (!name || !email || !phone || !organization) return null;
+  return { name, email, phone, organization, leadId: String(leadId || row.leadId || "").trim() || undefined };
 }
 
 export default function PublicLeoConsultant() {
   const [open, setOpen] = useState(false);
   const [lead, setLead] = useState<LeadProfile | null>(null);
-  const [leadDraft, setLeadDraft] = useState<Partial<LeadProfile>>({});
-  const [leadStage, setLeadStage] = useState<LeadStage>("name");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [callError, setCallError] = useState("");
-  const [leadSaving, setLeadSaving] = useState(false);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -81,88 +85,13 @@ export default function PublicLeoConsultant() {
     if (messages.length === 0) setMessages([firstMessage]);
   }
 
-  async function saveLead(profile: LeadProfile) {
-    setLeadSaving(true);
-    try {
-      const response = await fetch("/api/leo/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...profile, sessionId: sessionId || undefined }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) throw new Error(data.error || "Leo could not save the enquiry.");
-      setLead({ ...profile, leadId: data.leadId || undefined });
-      setLeadStage("complete");
-      return true;
-    } catch (error) {
-      setMessages((current) => [...current, { role: "assistant", content: error instanceof Error ? error.message : "I couldn’t save those details. Please try again." }]);
-      return false;
-    } finally {
-      setLeadSaving(false);
-    }
-  }
-
-  async function handleLeadConversation(content: string) {
-    const value = content.trim();
-    if (!value) return true;
-
-    if (leadStage === "name") {
-      setLeadDraft({ name: value });
-      setLeadStage("email");
-      setMessages((current) => [...current, { role: "assistant", content: nextLeadQuestion("name") }]);
-      return true;
-    }
-
-    if (leadStage === "email") {
-      if (!isValidEmail(value)) {
-        setMessages((current) => [...current, { role: "assistant", content: "I need a valid email address so the team can reach you. What email should I use?" }]);
-        return true;
-      }
-      setLeadDraft((current) => ({ ...current, email: value.toLowerCase() }));
-      setLeadStage("phone");
-      setMessages((current) => [...current, { role: "assistant", content: nextLeadQuestion("email") }]);
-      return true;
-    }
-
-    if (leadStage === "phone") {
-      if (value.length < 7) {
-        setMessages((current) => [...current, { role: "assistant", content: "Please give me a valid phone number, including the country code if possible." }]);
-        return true;
-      }
-      setLeadDraft((current) => ({ ...current, phone: value }));
-      setLeadStage("organization");
-      setMessages((current) => [...current, { role: "assistant", content: nextLeadQuestion("phone") }]);
-      return true;
-    }
-
-    if (leadStage === "organization") {
-      const profile: LeadProfile = {
-        name: leadDraft.name || "",
-        email: leadDraft.email || "",
-        phone: leadDraft.phone || "",
-        organization: value,
-      };
-      const saved = await saveLead(profile);
-      if (saved) setMessages((current) => [...current, { role: "assistant", content: "Thanks. I’ve captured that. Now, tell me what you’re looking to automate." }]);
-      return true;
-    }
-
-    return false;
-  }
-
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = input.trim();
-    if (!content || isThinking || isCalling || leadSaving) return;
+    if (!content || isThinking || isCalling) return;
 
     setMessages((current) => [...current, { role: "user", content }]);
     setInput("");
-
-    if (leadStage !== "complete") {
-      await handleLeadConversation(content);
-      return;
-    }
-
     const nextMessages = [...messages, { role: "user" as const, content }];
     setIsThinking(true);
     try {
@@ -175,14 +104,18 @@ export default function PublicLeoConsultant() {
           sessionId: sessionId || undefined,
           history: nextMessages.slice(-12),
           visibility: "private",
-          leadProfile: lead,
-          pageContext: { pathname: window.location.pathname, section: "public-homepage", resourceType: "public_leo_onboarding", leadCaptured: true },
+          leadProfile: lead || undefined,
+          pageContext: { pathname: window.location.pathname, section: "public-homepage", resourceType: "public_leo_consultation", leadCaptured: Boolean(lead) },
         }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.reason || data.error || "Leo is temporarily unavailable.");
       if (data.sessionId) setSessionId(String(data.sessionId));
-      const reply = String(data.reply || "").trim() || "Tell me a little more about what you want automated.";
+      if (data.leadCaptured) {
+        const captured = asLeadProfile(data.leadProfile, data.leadId);
+        if (captured) setLead(captured);
+      }
+      const reply = String(data.reply || "").trim() || "Tell me a little more about the business and what you want to improve.";
       setMessages((current) => [...current, { role: "assistant", content: reply }]);
     } catch {
       messageCount.current += 1;
@@ -208,12 +141,12 @@ export default function PublicLeoConsultant() {
       stopCall();
       return;
     }
-
     if (toolName !== "leo_execute_tool") return;
 
     let payload: { tool_key?: string; arguments?: Record<string, unknown>; confirmed?: boolean } = {};
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
 
+    let output: Record<string, unknown>;
     try {
       const response = await fetch("/api/leo/tool", {
         method: "POST",
@@ -227,16 +160,20 @@ export default function PublicLeoConsultant() {
         }),
       });
       const data = await response.json().catch(() => ({}));
-      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(data) } });
-      sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
-    } catch (error) {
-      const output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
-      try {
-        sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) } });
-        sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
-      } catch {
-        setCallError(output.error);
+      output = response.ok ? data : { ok: false, ...data };
+      if (response.ok && data.leadCaptured && payload.tool_key === "leo.public.lead.capture") {
+        const captured = asLeadProfile(payload.arguments, data.leadId);
+        if (captured) setLead(captured);
       }
+    } catch (error) {
+      output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
+    }
+
+    try {
+      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) } });
+      sendRealtimeEvent({ type: "response.create" });
+    } catch {
+      setCallError(String(output.error || "Leo could not complete that action. You can keep talking or try again."));
     }
   }
 
@@ -247,7 +184,10 @@ export default function PublicLeoConsultant() {
       void executeVoiceTool(event);
       return;
     }
-    if (event.type === "error") setCallError("Leo's voice service returned an error. Please try again.");
+    if (event.type === "error") {
+      console.error("[Public Leo Realtime]", event.error || event);
+      setCallError(event.error?.message ? `Leo hit a voice error: ${event.error.message}` : "Leo's voice service returned an error. You can continue by message or try the call again.");
+    }
   }
 
   async function startCall() {
@@ -274,7 +214,7 @@ export default function PublicLeoConsultant() {
         if (remoteStream) audio.srcObject = remoteStream;
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: getLeoMicrophoneConstraints() });
       streamRef.current = stream;
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
@@ -287,8 +227,7 @@ export default function PublicLeoConsultant() {
           sendRealtimeEvent({
             type: "response.create",
             response: {
-              output_modalities: ["audio"],
-              instructions: "You are speaking with a new public Fluxknight visitor. Do not show or request a form. Have a natural conversation and collect these four lead details conversationally, one at a time: full name, email address, phone number, and organization/business. Start by asking for their full name. After all four are provided, use leo_execute_tool with tool_key leo.public.lead.capture and arguments containing name, email, phone, and organization. Do not ask them to click anything to provide the details. Once the lead is captured, continue the business conversation. If the user says end the call, hang up, disconnect, goodbye, or otherwise clearly asks to terminate the call, briefly acknowledge them and immediately use leo_end_call. Do not continue speaking after requesting the hangup. Keep replies short and natural.",
+              instructions: "Open naturally as a practical business consultant. Invite the visitor to tell you what their business does or ask a question. Help first. Do not begin by requesting contact details. If they ask how Fluxknight could help, explain a realistic day-to-day example in plain language, then ask one useful question about their business. Only collect contact details later when they ask for a proposal, demo, evaluation, setup or follow-up, or explicitly agree to be contacted. Keep replies short and natural.",
             },
           });
         } catch {
@@ -298,13 +237,18 @@ export default function PublicLeoConsultant() {
 
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
+      const headers: Record<string, string> = { "Content-Type": "application/sdp" };
+      if (sessionId) headers["x-leo-session-id"] = sessionId;
+      headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify({ pathname: window.location.pathname, section: "public-homepage", resourceType: "public_leo_consultation", leadCaptured: Boolean(lead) }));
       const response = await fetch("/api/leo/realtime/call", {
         method: "POST",
-        headers: { "Content-Type": "application/sdp" },
+        headers,
         body: offer.sdp || "",
       });
       const answer = await response.text();
       if (!response.ok) throw new Error(answer || "Leo could not start the call.");
+      const resolvedSessionId = response.headers.get("x-leo-session-id");
+      if (resolvedSessionId) setSessionId(resolvedSessionId);
       await peer.setRemoteDescription({ type: "answer", sdp: answer });
     } catch (error) {
       stopCall();
@@ -329,7 +273,7 @@ export default function PublicLeoConsultant() {
         <section className="public-leo-panel">
           <header className="public-leo-header">
             <span className="public-leo-avatar"><Bot size={18} /></span>
-            <div><strong>Leo</strong><small>{isCalling ? "Live voice support" : "AI support & enquiries"}</small></div>
+            <div><strong>Leo</strong><small>{isCalling ? "Live voice support" : "AI business consultant"}</small></div>
             <button type="button" className="public-leo-close" onClick={() => { stopCall(); setOpen(false); }} aria-label="Close Leo"><X size={18} /></button>
           </header>
 
@@ -352,8 +296,8 @@ export default function PublicLeoConsultant() {
               <button type="button" className="public-leo-call-button" onClick={() => void startCall()}><Phone size={17} /> Talk to Leo</button>
             )}
             <form onSubmit={sendMessage} className="public-leo-input">
-              <input value={input} onChange={(event) => setInput(event.target.value)} placeholder={leadStage === "complete" ? "Ask Leo..." : "Reply to Leo..."} disabled={isCalling || isThinking || leadSaving} aria-label="Message Leo" />
-              <button type="submit" disabled={isCalling || isThinking || leadSaving || !input.trim()} aria-label="Send message"><Send size={17} /></button>
+              <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask Leo about your business..." disabled={isCalling || isThinking} aria-label="Message Leo" />
+              <button type="submit" disabled={isCalling || isThinking || !input.trim()} aria-label="Send message"><Send size={17} /></button>
             </form>
           </div>
         </section>
