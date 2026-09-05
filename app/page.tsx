@@ -42,44 +42,75 @@ const automationPillars = [
 const pricingPlans = [
   {
     icon: MessageSquareText,
-    slug: "whatsapp-ai-starter",
+    slug: "basic",
     name: "Basic",
     firstMonth: "₦100,000",
     ongoing: "₦50,000/month",
-    description: "One AI customer-support channel for conversations, questions, enquiries, and human handoff. Choose WhatsApp AI or Web AI support.",
-    features: ["WhatsApp AI or Web AI support", "24/7 questions and enquiries", "Approved product, service and FAQ responses", "Basic customer and lead capture", "Conversation history", "Human-agent handoff", "Basic dashboard access"],
-    cta: "Start with Basic",
+    description: "A focused customer-facing system for organizations that mainly need instant response, qualification and human handoff without automated follow-up.",
+    features: [
+      "One primary customer channel",
+      "Website support agent",
+      "Approved FAQ, product or service knowledge",
+      "Lead qualification or sales intake",
+      "Customer detail capture",
+      "Human handoff or escalation",
+      "Basic conversation visibility",
+    ],
+    cta: "View Basic",
   },
   {
     icon: Workflow,
-    slug: "ai-call-receptionist",
-    name: "Starter Business",
+    slug: "starter",
+    name: "Starter",
     firstMonth: "₦200,000",
     ongoing: "₦100,000/month",
-    description: "Everything in Basic, plus automated follow-up and reminders around the products or services customers enquire about.",
-    features: ["Everything in Basic", "Automated customer follow-up", "Product or service-specific follow-up", "Reminder automation", "Follow-up timing rules", "Lead and customer status tracking", "Increased usage credits", "Human handoff with context"],
-    cta: "Start with Starter Business",
+    description: "Everything in Basic, plus automated follow-up and reminders through the same channel the lead originally used.",
+    features: [
+      "Everything in Basic",
+      "Same-channel automated follow-up",
+      "Appointment, booking, quote or inspection reminders",
+      "Missed-lead recovery",
+      "Scheduled nurture sequences",
+      "Simple lead status tracking",
+    ],
+    cta: "View Starter",
   },
   {
     icon: Network,
-    slug: "ai-front-desk-suite",
-    name: "Business+",
+    slug: "business",
+    name: "Business",
     firstMonth: "₦400,000",
     ongoing: "₦250,000/month",
-    description: "A connected customer automation system with higher limits across WhatsApp, web, email, CRM, scheduling, reminders, and follow-up.",
-    features: ["Everything in Starter Business", "Higher usage credits", "WhatsApp, Web and Email automation", "Automated email follow-up", "Multi-channel follow-up", "Lead qualification", "CRM and pipeline automation", "Scheduling and booking workflows", "Shared dashboard and admin visibility", "Supported integrations"],
-    cta: "Deploy Business+",
+    description: "Everything in Starter, with higher usage, admin controls, cross-channel follow-up, deeper workflows and Leo Admin Assistance.",
+    features: [
+      "Everything in Starter",
+      "Higher monthly usage and credits",
+      "Admin workspace and team access",
+      "WhatsApp and email follow-up",
+      "Cross-channel customer context",
+      "Workflow visibility and reporting",
+      "Human escalation controls",
+      "Leo Admin Assistance",
+    ],
+    cta: "View Business",
     featured: true,
   },
   {
     icon: Rocket,
-    slug: "custom-ai-operations",
-    name: "Custom",
+    slug: "business-plus",
+    name: "Business+",
     firstMonth: "Custom",
     ongoing: "Custom",
-    description: "A custom AI operating system built around multiple agents, departments, databases, memberships, workflows, and integrations.",
-    features: ["Everything in Business+", "Multiple AI agents", "Multiple teams, departments or branches", "Custom databases", "Membership systems", "Customer or member portals", "Advanced workflow automation", "Custom CRM and operating workflows", "Custom integrations", "Role-based staff access", "Workflow monitoring", "Managed deployment and support"],
-    cta: "Plan a custom system",
+    description: "Everything in Business, plus an industry-specific customer or operations database designed around how the organization actually works.",
+    features: [
+      "Everything in Business",
+      "Industry-specific customer or operations database",
+      "Deeper record history and lifecycle visibility",
+      "Advanced reporting and segmentation",
+      "Structured operational data for staff",
+      "Industry database modules released progressively",
+    ],
+    cta: "Explore Business+",
     custom: true,
   },
 ];
@@ -144,14 +175,14 @@ export default function HomePage() {
         <div className="brand-shell">
           <div className="brand-heading">
             <span className="brand-eyebrow">Choose your automation level</span>
-            <h2>Start simple. Add automation as the operation needs it.</h2>
-            <p>Basic handles conversations. Starter Business adds follow-up. Business+ connects the customer journey. Custom builds around the wider organization.</p>
+            <h2>Basic. Starter. Business. Business+.</h2>
+            <p>The same four Fluxknight tiers now stay consistent across the homepage, pricing page and every industry page. Start with conversations, add follow-up, connect the customer journey, then add the industry-specific operating database when needed.</p>
           </div>
           <PricingCarousel plans={pricingPlans} compact />
           <div className="hero-buttons production-pricing-route-link">
             <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
           </div>
-          <p className="production-pricing-note">Messaging-provider charges, email volume, and third-party platform fees may vary by usage and are scoped during onboarding.</p>
+          <p className="production-pricing-note">Final scope can vary with channels, usage, workflow depth, integrations and industry-specific data requirements.</p>
         </div>
       </section>
 
