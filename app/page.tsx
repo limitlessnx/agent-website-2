@@ -125,7 +125,7 @@ export default function HomePage() {
         <div className="violet-arc" />
         <div className="hero-haze" />
         <motion.div className="hero-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
-          <div className="hero-pill"><Sparkles size={13} /> AI automation that drives real business outcomes</div>
+          <div className="hero-pill" style={{ position: "relative", zIndex: 4, maxWidth: "min(100%, 520px)", justifyContent: "center", lineHeight: 1.25, background: "rgba(17,8,31,.88)", borderColor: "rgba(207,170,255,.3)", backdropFilter: "blur(14px)", boxShadow: "0 12px 34px rgba(19,5,42,.28), inset 0 1px rgba(255,255,255,.035)" }}><Sparkles size={13} /> AI automation that drives real business outcomes</div>
           <h1>Grow your organization <span>without growing the workload.</span></h1>
           <p>Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.</p>
           <div className="hero-buttons">
