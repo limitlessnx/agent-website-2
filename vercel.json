@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "feature/dashboard-first-lifecycle": false,
       "feature/account-administration-lifecycle-v4": false,
-      "feature/churn-prevention-winback": false
+      "feature/churn-prevention-winback": false,
+      "feature/dashboard-notification-center": false
     }
   },
   "crons": [
