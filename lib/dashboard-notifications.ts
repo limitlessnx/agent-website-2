@@ -94,6 +94,16 @@ export async function listOrganizationDashboardNotifications(organizationId: str
     .map((row) => mapNotification(row, readById.get(row.id) || null));
 }
 
+export async function listAdminDashboardNotifications(limit = 100) {
+  const rows = await supabaseServerRequest<NotificationRow[]>(
+    `dashboard_notifications?audience=in.(admin,both)&order=created_at.desc&limit=${Math.min(200, Math.max(1, limit))}`,
+  ).catch(() => []);
+  const now = Date.now();
+  return rows
+    .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now || row.persistent)
+    .map((row) => mapNotification(row, null));
+}
+
 export async function getOrganizationUnreadNotificationCount(organizationId: string, userId: string) {
   const rows = await listOrganizationDashboardNotifications(organizationId, userId, 200);
   return rows.filter((row) => !row.readAt && !row.resolvedAt).length;
