@@ -1,18 +1,29 @@
 import { NextResponse } from "next/server";
 import { getPublicCatalog } from "@/lib/payments/catalog";
-import { getRequestBillingRegion } from "@/lib/payments/region";
+import { currencyForRegion, getRequestBillingRegion, type BillingRegion } from "@/lib/payments/region";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { region, currency } = await getRequestBillingRegion();
+    const detected = await getRequestBillingRegion();
+    const url = new URL(request.url);
+    const requestedView = url.searchParams.get("view")?.toLowerCase();
+
+    let region: BillingRegion = detected.region;
+    if (detected.region === "NG" && requestedView === "international") {
+      region = "INTERNATIONAL";
+    }
+
+    const currency = currencyForRegion(region);
     const plans = await getPublicCatalog(region);
 
     return NextResponse.json(
       {
+        detectedRegion: detected.region,
         region,
         currency,
+        canViewInternational: detected.region === "NG",
         plans: plans.map((plan) => ({
           slug: plan.slug,
           name: plan.name,

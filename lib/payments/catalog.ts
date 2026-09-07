@@ -26,49 +26,70 @@ type BillingPlanRow = {
   metadata: Record<string, unknown> | null;
 };
 
+const PUBLIC_PRICING: Record<string, {
+  name: string;
+  description: string;
+  custom: boolean;
+  ng: { setup: number; recurring: number };
+  international: { setup: number; recurring: number };
+}> = {
+  "whatsapp-ai-starter": {
+    name: "Basic",
+    description: "AI front desk for customer questions, enquiries, qualification, capture and human handoff.",
+    custom: false,
+    ng: { setup: 150000, recurring: 50000 },
+    international: { setup: 500, recurring: 100 },
+  },
+  "ai-call-receptionist": {
+    name: "Starter",
+    description: "Everything in Basic, plus automated follow-up, reminders, nurture and missed-lead recovery.",
+    custom: false,
+    ng: { setup: 300000, recurring: 100000 },
+    international: { setup: 1000, recurring: 250 },
+  },
+  "ai-front-desk-suite": {
+    name: "Business",
+    description: "Customer operations automation with higher usage, admin controls, cross-channel workflows, reporting and Leo Admin Assistance.",
+    custom: false,
+    ng: { setup: 750000, recurring: 250000 },
+    international: { setup: 2500, recurring: 500 },
+  },
+  "custom-ai-operations": {
+    name: "Business+",
+    description: "Custom implementation with industry databases, deeper workflows, integrations, dashboards and operational data systems.",
+    custom: true,
+    ng: { setup: 2000000, recurring: 500000 },
+    international: { setup: 5000, recurring: 1000 },
+  },
+};
+
 export async function getPublicPlan(slug: string, region: BillingRegion): Promise<PublicPlan | null> {
+  const pricing = PUBLIC_PRICING[slug];
+  if (!pricing) return null;
+
   const rows = await supabaseRest<BillingPlanRow[]>(
     `billing_plans?select=id,slug,name,currency,installation_fee,recurring_fee,billing_interval,status,metadata&slug=eq.${encodeURIComponent(slug)}&status=eq.active&limit=1`,
   );
   const plan = rows[0];
   if (!plan || plan.metadata?.public_catalog !== true) return null;
 
-  if (region === "NG") {
-    return {
-      id: plan.id,
-      slug: plan.slug,
-      name: plan.name,
-      description: String(plan.metadata?.description || ""),
-      currency: "NGN",
-      installationFee: Number(plan.installation_fee),
-      recurringFee: Number(plan.recurring_fee),
-      billingInterval: plan.billing_interval,
-      custom: plan.metadata?.custom === true,
-      metadata: plan.metadata || {},
-    };
-  }
-
-  const international = (plan.metadata?.international || {}) as Record<string, unknown>;
-  const envPrefix = `FLUXKNIGHT_USD_${plan.slug.replaceAll("-", "_").toUpperCase()}`;
-  const setupEnv = process.env[`${envPrefix}_SETUP`];
-  const recurringEnv = process.env[`${envPrefix}_RECURRING`];
-  const installationFee = Number(international.installation_fee ?? setupEnv ?? 0);
-  const recurringFee = Number(international.recurring_fee ?? recurringEnv ?? 0);
-  const custom = plan.metadata?.custom === true;
-
-  if (!custom && (!installationFee || !recurringFee)) return null;
+  const selected = region === "NG" ? pricing.ng : pricing.international;
 
   return {
     id: plan.id,
     slug: plan.slug,
-    name: plan.name,
-    description: String(plan.metadata?.description || ""),
-    currency: "USD",
-    installationFee,
-    recurringFee,
-    billingInterval: plan.billing_interval,
-    custom,
-    metadata: plan.metadata || {},
+    name: pricing.name,
+    description: pricing.description,
+    currency: region === "NG" ? "NGN" : "USD",
+    installationFee: selected.setup,
+    recurringFee: selected.recurring,
+    billingInterval: plan.billing_interval || "monthly",
+    custom: pricing.custom,
+    metadata: {
+      ...(plan.metadata || {}),
+      custom: pricing.custom,
+      pricing_version: "v2-2026-09",
+    },
   };
 }
 
