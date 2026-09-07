@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getOrganizationUnreadNotificationCount, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
 import PortalSidebar from "./PortalSidebar";
 import ClientLogoutButton from "./ClientLogoutButton";
 import "./portal.css";
@@ -15,9 +16,12 @@ export default async function PortalLayout({ children }: { children: React.React
   const profile = await getClientOnboardingProfile(session.organizationId).catch(() => null);
   if (!profile || profile.status === "in_progress") redirect("/onboarding");
 
+  await syncLifecycleDashboardNotifications(session.organizationId).catch(() => undefined);
+  const unreadNotifications = await getOrganizationUnreadNotificationCount(session.organizationId, session.userId).catch(() => 0);
+
   return (
     <div className="portal-shell">
-      <PortalSidebar organization={profile.business_name || session.organizationSlug} />
+      <PortalSidebar organization={profile.business_name || session.organizationSlug} unreadNotifications={unreadNotifications} />
       <section className="portal-main">
         <header className="portal-topbar">
           <div>
