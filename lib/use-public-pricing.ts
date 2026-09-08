@@ -24,6 +24,10 @@ export type PublicPriceDisplay = {
   first: string;
   ongoing: string;
   currency: "NGN" | "USD";
+  installationFee: number;
+  recurringFee: number;
+  billingInterval: string;
+  custom: boolean;
 };
 
 const PRICE_VIEW_KEY = "fluxknight-pricing-view";
@@ -65,6 +69,10 @@ export function usePublicPricing() {
             first: `${plan.custom ? "From " : ""}${formatAmount(plan.currency, plan.installationFee)}`,
             ongoing: `${plan.custom ? "From " : ""}${formatAmount(plan.currency, plan.recurringFee)}/${plan.billingInterval === "monthly" ? "month" : plan.billingInterval}`,
             currency: plan.currency,
+            installationFee: plan.installationFee,
+            recurringFee: plan.recurringFee,
+            billingInterval: plan.billingInterval,
+            custom: plan.custom,
           } satisfies PublicPriceDisplay;
           next[plan.slug] = display;
           for (const alias of slugAliases[plan.slug] || []) next[alias] = display;
