@@ -13,9 +13,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+const allowedTerms = new Set([1, 3, 6, 12]);
+
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string; term?: string }> }) {
   const params = await searchParams;
   const planSlug = typeof params.plan === "string" ? params.plan : "";
+  const requestedTerm = Number(params.term || 1);
+  const durationMonths = allowedTerms.has(requestedTerm) ? requestedTerm : 1;
   if (!planSlug) notFound();
 
   const [{ region }, session] = await Promise.all([
@@ -43,6 +47,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
               installationFee: plan.installationFee,
               recurringFee: plan.recurringFee,
             }}
+            durationMonths={durationMonths}
             customer={session ? { name: session.organizationSlug, email: session.email } : null}
           />
         </div>
