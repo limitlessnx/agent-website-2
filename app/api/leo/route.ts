@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateLeoReasoning, type LeoChatMessage } from "@/lib/ai/leo-model";
 import { buildLeoReasoningContext } from "@/lib/leo-context";
+import { buildLifecycleConversationContext } from "@/lib/ai-runtime/lifecycle-context";
 import { publicLeoSalesDirective } from "@/lib/leo-public-policy";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { buildLeoPolicySnapshot, enforceLeoOrganizationScope, resolveLeoIdentity, sanitizeLeoPageContext, type LeoChannel, type LeoIdentity } from "@/lib/leo-core";
@@ -71,6 +72,23 @@ export async function POST(request: NextRequest) {
   await storeLeoMessage({ identity, session, role: "user", content: message });
   void auditLeoEvent({ identity, session, eventType: "message_received", details: { channel, persisted: session.persisted } });
   const context = await buildLeoReasoningContext({ identity, pageContext, query: identity.scope === "super_admin" ? message : undefined, workspace });
+  if (identity.scope === "super_admin" && context.adminSnapshot) {
+    const lifecycleIntelligence = await buildLifecycleConversationContext({ identity, objective: message }).catch(() => null);
+    if (lifecycleIntelligence) {
+      context.adminSnapshot = {
+        ...context.adminSnapshot,
+        lifecycleIntelligence,
+        lifecycleConversationRules: {
+          evidence: "For lifecycle questions, use lifecycleIntelligence as the current evidence. Do not invent causes, revenue, activity, value or account state that is absent from it.",
+          prioritization: "Risk overrides expansion. Never recommend expansion for a high or critical attention organization.",
+          action: "A recommended next action is advice only. Do not propose or imply execution unless the administrator separately and explicitly asks Leo to perform a specific action.",
+          ambiguity: "If selectedOrganization is absent for a named-customer question, do not guess. Require an exact workspace selection or an unambiguous organization name.",
+          navigation: "When useful, include the supplied dashboardLinks so the administrator can inspect the underlying lifecycle, retention, control-center or notification evidence.",
+        },
+      };
+      void auditLeoEvent({ identity, session, eventType: "lifecycle_context_loaded", details: { intent: lifecycleIntelligence.intent, scope: lifecycleIntelligence.scope, generated_at: lifecycleIntelligence.generatedAt } });
+    }
+  }
   const leadCaptured = session.leadCaptured || body.leadCaptured === true || Boolean(body.leadProfile);
   const directive = identity.scope === "public" ? publicLeoSalesDirective(leadCaptured, session.leadProfile || body.leadProfile) : "";
   const modelMessage = directive ? `${directive}\n\nVISITOR'S LATEST MESSAGE:\n${message}` : message;

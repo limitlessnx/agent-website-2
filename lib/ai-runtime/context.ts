@@ -3,6 +3,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { loadRuntimeMemory } from "@/lib/ai-runtime/memory";
 import { routeRuntimeModel } from "@/lib/ai-runtime/model-router";
 import { createRuntimeToolRegistry } from "@/lib/ai-runtime/tool-registry";
+import { buildLifecycleConversationContext } from "@/lib/ai-runtime/lifecycle-context";
 import type { RuntimeChannel, RuntimeContext } from "@/lib/ai-runtime/types";
 
 type AgentRow = { id: string; organization_id: string; name: string; system_prompt?: string | null; status: string; configuration?: Record<string, unknown> };
@@ -36,6 +37,14 @@ export async function buildRuntimeContext(input: { identity: LeoIdentity; organi
   const registry = createRuntimeToolRegistry();
   const tools = registry.listAllowed(input.identity);
   const memory = input.agentId && input.sessionId && organizationId ? await loadRuntimeMemory({ identity: input.identity, organizationId, agentId: input.agentId, sessionId: input.sessionId }) : [];
+  const lifecycleIntelligence = await buildLifecycleConversationContext({
+    identity: input.identity,
+    objective: input.objective,
+    organizationId,
+  }).catch((error) => ({
+    unavailable: true,
+    reason: error instanceof Error ? error.message : "Lifecycle intelligence could not be loaded.",
+  }));
 
   return {
     identity: input.identity,
@@ -49,6 +58,11 @@ export async function buildRuntimeContext(input: { identity: LeoIdentity; organi
     memory,
     tools,
     model,
-    metadata: { ...(input.metadata || {}), pageContext: sanitizeLeoPageContext(input.pageContext), agentConfiguration },
+    metadata: {
+      ...(input.metadata || {}),
+      pageContext: sanitizeLeoPageContext(input.pageContext),
+      agentConfiguration,
+      ...(lifecycleIntelligence ? { lifecycleIntelligence } : {}),
+    },
   };
 }
