@@ -4,9 +4,10 @@ import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import { getLeads } from "@/lib/limitless-data";
 import { getWorkflowRuns, getWorkflows } from "@/lib/workflow-registry";
+import { scanLifecycleProactiveSignals } from "@/lib/leo-lifecycle-proactive-monitor";
 
 export type LeoSignalSeverity = "critical" | "high" | "medium" | "low";
-export type LeoSignalCategory = "workflow" | "campaign" | "lead" | "workspace" | "integration";
+export type LeoSignalCategory = "workflow" | "campaign" | "lead" | "workspace" | "integration" | "lifecycle";
 export type LeoProactiveSignal = {
   id: string;
   category: LeoSignalCategory;
@@ -49,16 +50,17 @@ async function getIntegrationHealth() {
 export async function scanLeoProactiveSignals(options: { now?: Date; limit?: number } = {}) {
   const now = options.now || new Date();
   const nowMs = now.getTime();
-  const [workflows, runs, campaigns, leads, clients, integrations] = await Promise.all([
+  const [workflows, runs, campaigns, leads, clients, integrations, lifecycle] = await Promise.all([
     getWorkflows(150, true).catch(() => []),
     getWorkflowRuns(300).catch(() => []),
     getDetailedCampaignReports(40).catch(() => []),
     getLeads(250).catch(() => []),
     listClientOnboardingProfiles(100).catch(() => []),
     getIntegrationHealth().catch(() => []),
+    scanLifecycleProactiveSignals(now).catch(() => ({ generatedAt: now.toISOString(), organizations: 0, signals: [] as LeoProactiveSignal[] })),
   ]);
 
-  const signals: LeoProactiveSignal[] = [];
+  const signals: LeoProactiveSignal[] = [...lifecycle.signals];
 
   for (const workflow of workflows) {
     if (workflow.status === "error") signals.push(signal({ category: "workflow", severity: "critical", title: `${workflow.name} is in an error state`, summary: `Workflow ${workflow.workflow_key} is marked error and may not be processing new work.`, recommendation: "Inspect the latest failed run and error before resuming or changing the workflow.", href: "/dashboard/agent-operations", sourceId: workflow.id, workspace: workflow.organization_id, evidence: { organization_id: workflow.organization_id, workflow_key: workflow.workflow_key, status: workflow.status, last_error_at: workflow.last_error_at || null } }));
@@ -115,7 +117,7 @@ export async function scanLeoProactiveSignals(options: { now?: Date; limit?: num
     high: selected.filter((item) => item.severity === "high").length,
     medium: selected.filter((item) => item.severity === "medium").length,
     low: selected.filter((item) => item.severity === "low").length,
-    audit: { rawSignals: signals.length, deduplicatedSignals: deduped.length, duplicateCount, truncated: deduped.length > selected.length, sources: { workflows: workflows.length, runs: runs.length, campaigns: campaigns.length, leads: leads.length, clients: clients.length, integrations: integrations.length } },
+    audit: { rawSignals: signals.length, deduplicatedSignals: deduped.length, duplicateCount, truncated: deduped.length > selected.length, sources: { workflows: workflows.length, runs: runs.length, campaigns: campaigns.length, leads: leads.length, clients: clients.length, integrations: integrations.length, lifecycleOrganizations: lifecycle.organizations, lifecycleSignals: lifecycle.signals.length } },
     signals: selected,
   };
 }
