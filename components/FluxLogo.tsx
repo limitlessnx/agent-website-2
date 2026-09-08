@@ -5,7 +5,7 @@ export default function FluxLogo({ compact = false, className = "" }: { compact?
     <span
       className={`flux-wordmark ${compact ? "compact" : ""} ${className}`.trim()}
       aria-label="Fluxknight"
-      style={{ display: "inline-flex", alignItems: "center", width: compact ? 150 : 205, maxWidth: "100%", lineHeight: 0 }}
+      style={{ display: "inline-flex", alignItems: "center", width: compact ? 136 : 176, maxWidth: "100%", lineHeight: 0 }}
     >
       <FluxknightLogo style={{ display: "block", width: "100%", height: "auto", color: "currentColor" }} />
     </span>
