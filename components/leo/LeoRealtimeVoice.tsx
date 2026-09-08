@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Mic, MicOff, PhoneCall, PhoneOff, X } from "@/components/admin/ServerIcons";
+import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
@@ -161,7 +162,7 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     setState("connecting"); setError(""); setMuted(false);
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser.");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: getLeoMicrophoneConstraints() });
       streamRef.current = stream;
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
