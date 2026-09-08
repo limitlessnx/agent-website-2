@@ -73,6 +73,15 @@ as $$
   end;
 $$;
 
+create or replace function public.prevent_flux_credit_ledger_mutation()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'flux_credit_ledger is immutable';
+end;
+$$;
+
 create or replace function public.ensure_flux_credit_wallet(
   target_organization_id uuid,
   target_plan_code text default 'basic',
@@ -317,6 +326,12 @@ revoke all on function public.adjust_flux_credit_wallet(uuid,integer,text,text,t
 grant execute on function public.ensure_flux_credit_wallet(uuid,text,integer,integer,timestamptz,timestamptz) to service_role;
 grant execute on function public.record_flux_credit_usage(uuid,text,integer,text,text,numeric,jsonb,jsonb) to service_role;
 grant execute on function public.adjust_flux_credit_wallet(uuid,integer,text,text,text) to service_role;
+
+drop trigger if exists flux_credit_ledger_prevent_update on public.flux_credit_ledger;
+create trigger flux_credit_ledger_prevent_update before update on public.flux_credit_ledger for each row execute function public.prevent_flux_credit_ledger_mutation();
+
+drop trigger if exists flux_credit_ledger_prevent_delete on public.flux_credit_ledger;
+create trigger flux_credit_ledger_prevent_delete before delete on public.flux_credit_ledger for each row execute function public.prevent_flux_credit_ledger_mutation();
 
 drop trigger if exists flux_credit_wallets_set_updated_at on public.flux_credit_wallets;
 create trigger flux_credit_wallets_set_updated_at before update on public.flux_credit_wallets for each row execute function public.set_updated_at();
