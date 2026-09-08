@@ -8,7 +8,8 @@
       "feature/dashboard-notification-center": false,
       "feature/leo-operational-intelligence": false,
       "feature/leo-conversational-lifecycle": false,
-      "feature/proactive-lifecycle-monitoring": false
+      "feature/proactive-lifecycle-monitoring": false,
+      "hotfix/vercel-lifecycle-cron-daily": false
     }
   },
   "crons": [
@@ -18,7 +19,7 @@
     },
     {
       "path": "/api/cron/leo-lifecycle-monitor",
-      "schedule": "17 * * * *"
+      "schedule": "17 6 * * *"
     }
   ]
 }
