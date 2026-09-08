@@ -9,6 +9,7 @@ import { getClientSession } from "@/lib/client-auth";
 export const dynamic = "force-dynamic";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const allowedDurationMonths = new Set([1, 3, 6, 12]);
 
 type CheckoutSession = {
   id: string;
@@ -31,6 +32,8 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
     const planSlug = typeof body?.planSlug === "string" ? body.planSlug.trim() : "";
     const billingType = body?.billingType === "subscription" ? "subscription" : "setup";
+    const requestedDuration = Number(body?.durationMonths ?? 1);
+    const durationMonths = allowedDurationMonths.has(requestedDuration) ? requestedDuration : 1;
     const clientSession = await getClientSession();
     const customerName = typeof body?.customer?.name === "string" && body.customer.name.trim()
       ? body.customer.name.trim()
@@ -73,7 +76,12 @@ export async function POST(request: Request) {
         customer_phone: customerPhone,
         organization_id: clientSession?.organizationId || null,
         provider: "flutterwave",
-        metadata: { source: clientSession ? "fluxknight_client_marketplace" : "fluxknight_public_pricing", currency_locked: true, organization_id: clientSession?.organizationId || null },
+        metadata: {
+          source: clientSession ? "fluxknight_client_marketplace" : "fluxknight_public_pricing",
+          currency_locked: true,
+          organization_id: clientSession?.organizationId || null,
+          duration_months: durationMonths,
+        },
       }),
     });
 
@@ -88,8 +96,15 @@ export async function POST(request: Request) {
       customer: { email: customerEmail, name: customerName, phonenumber: customerPhone || undefined },
       payment_options: currency === "NGN" && billingType === "setup" ? "card, banktransfer, ussd" : "card",
       configurations: { session_duration: 30, max_retry_attempt: 5 },
-      customizations: { title: "Fluxknight AI Automation", description: `${plan.name} setup and deployment` },
-      meta: { fluxknight_session_id: session.id, plan_slug: plan.slug, billing_type: billingType, billing_region: region, organization_id: clientSession?.organizationId || null },
+      customizations: { title: "Fluxknight AI Automation", description: `${plan.name} setup and deployment · ${durationMonths}-month selected term` },
+      meta: {
+        fluxknight_session_id: session.id,
+        plan_slug: plan.slug,
+        billing_type: billingType,
+        billing_region: region,
+        organization_id: clientSession?.organizationId || null,
+        duration_months: durationMonths,
+      },
     };
     if (billingType === "subscription") payload.payment_plan = paymentPlanId;
 
@@ -98,7 +113,7 @@ export async function POST(request: Request) {
       const checkoutUrl = response.data?.link;
       if (!checkoutUrl) throw new Error("Flutterwave did not return a checkout link.");
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, { method: "PATCH", body: JSON.stringify({ checkout_url: checkoutUrl, provider_payload: response }) });
-      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true, authenticated: Boolean(clientSession) });
+      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true, durationMonths, authenticated: Boolean(clientSession) });
     } catch (error) {
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, { method: "PATCH", body: JSON.stringify({ status: "failed", provider_payload: { error: String(error) } }) }).catch(() => undefined);
       throw error;
