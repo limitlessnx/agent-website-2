@@ -11,7 +11,12 @@ const planOrder: PlanKey[] = ["basic", "starter", "business", "business-plus"];
 
 function normalizeRequestedPlan(value: string | null): PlanKey | null {
   if (value === "plus") return "starter";
+  if (value === "custom") return "business-plus";
   return value as PlanKey | null;
+}
+
+function publicPlanName(key: PlanKey, fallback: string) {
+  return key === "business-plus" ? "Custom" : fallback;
 }
 
 type ComparisonValue = {
@@ -38,7 +43,7 @@ const comparisonRows: ComparisonRow[] = [
     basic: neutral("2,500"),
     starter: neutral("5,000"),
     business: neutral("12,000"),
-    businessPlus: neutral("25,000+ configurable"),
+    businessPlus: neutral("Configurable"),
   },
   {
     capability: "Basic free trial",
@@ -52,8 +57,11 @@ const comparisonRows: ComparisonRow[] = [
     basic: included(), starter: included(), business: included(), businessPlus: included(),
   },
   {
-    capability: "Website / WhatsApp support",
-    basic: included(), starter: included(), business: included(), businessPlus: included(),
+    capability: "Customer route / agents",
+    basic: neutral("1 primary route"),
+    starter: neutral("1 route: WhatsApp AI or Voice Call Agent"),
+    business: included("Multiple AI agents / routes together"),
+    businessPlus: included("Tailored multi-agent setup"),
   },
   {
     capability: "Leo Chat",
@@ -61,11 +69,15 @@ const comparisonRows: ComparisonRow[] = [
   },
   {
     capability: "Automated follow-up",
-    basic: locked("Unlock on Plus"), starter: included(), business: included(), businessPlus: included(),
+    basic: locked("Unlock on Plus"), starter: included("On selected route"), business: included(), businessPlus: included(),
   },
   {
     capability: "Reminders",
-    basic: locked("Unlock on Plus"), starter: included(), business: included(), businessPlus: included(),
+    basic: locked("Unlock on Plus"), starter: included("On selected route"), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Email automation",
+    basic: locked("Unlock on Business"), starter: locked("Unlock on Business"), business: included(), businessPlus: included(),
   },
   {
     capability: "Admin / team tools",
@@ -81,11 +93,11 @@ const comparisonRows: ComparisonRow[] = [
   },
   {
     capability: "Client / industry database",
-    basic: locked("Unlock on Business+"), starter: locked("Unlock on Business+"), business: locked("Unlock on Business+"), businessPlus: included(),
+    basic: locked("Custom only"), starter: locked("Custom only"), business: locked("Custom only"), businessPlus: included(),
   },
   {
     capability: "Custom workflows / integrations",
-    basic: locked("Unlock on Business+"), starter: locked("Unlock on Business+"), business: limited("Supported integrations"), businessPlus: included("Advanced / custom"),
+    basic: locked("Custom only"), starter: locked("Custom only"), business: limited("Supported integrations"), businessPlus: included("Advanced / custom"),
   },
 ];
 
@@ -119,10 +131,11 @@ export default function PricingClient() {
   }, []);
 
   const active = planDefinitions.find((plan) => plan.key === activePlan) ?? planDefinitions[0];
+  const activeName = publicPlanName(active.key, active.name);
   const selectedIndustry = industries.find((industry) => industry.slug === industrySlug);
   const pricingProfile = industrySlug ? industryPricingBySlug[industrySlug] : undefined;
-  const activePrice = prices[active.key];
-  const evaluationPlan = active.key === "starter" ? "plus" : active.key;
+  const activePrice = active.key === "business-plus" ? undefined : prices[active.key];
+  const evaluationPlan = active.key === "starter" ? "plus" : active.key === "business-plus" ? "custom" : active.key;
   const evaluationHref = `/evaluation?plan=${encodeURIComponent(evaluationPlan)}${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
 
   return (
@@ -132,7 +145,7 @@ export default function PricingClient() {
           <div className="brand-heading pricing-page-heading">
             <span className="brand-eyebrow">Fluxknight Plans</span>
             <h1>Choose the level of automation your organization actually needs.</h1>
-            <p>Basic, Plus, Business and Business+ stay consistent across industries. Each step unlocks a specific layer of capability, so the difference between plans is clear before you choose.</p>
+            <p>Basic, Plus, Business and Custom stay consistent across industries. Plus runs one selected customer route. Business connects several AI agents and routes together with email automation. Custom is scoped around deeper databases, integrations and operating workflows.</p>
             {canViewInternational ? (
               <div className="pricing-region-switch" aria-label="Choose pricing view">
                 <button type="button" className={!viewingInternational ? "is-active" : ""} onClick={showNigeria}>Nigeria</button>
@@ -162,7 +175,8 @@ export default function PricingClient() {
           <div className="pricing-plan-grid">
             {planDefinitions.map((plan) => {
               const selected = plan.key === activePlan;
-              const planPrice = prices[plan.key];
+              const planName = publicPlanName(plan.key, plan.name);
+              const planPrice = plan.key === "business-plus" ? undefined : prices[plan.key];
               return (
                 <button
                   key={plan.key}
@@ -175,9 +189,9 @@ export default function PricingClient() {
                   aria-pressed={selected}
                 >
                   <span className="pricing-plan-eyebrow">{plan.eyebrow}</span>
-                  <h2>{plan.name}</h2>
+                  <h2>{planName}</h2>
                   {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.first}</strong><span> implementation · {planPrice.ongoing} ongoing</span></div> : null}
-                  <p>{plan.summary}</p>
+                  <p>{plan.key === "business-plus" ? "A tailored Fluxknight deployment for organizations that need industry databases, deeper integrations, custom workflows, dashboards or operational data systems." : plan.summary}</p>
                   <span className="pricing-plan-action">{selected ? "Selected" : "View full explanation"} <ArrowRight size={14} /></span>
                 </button>
               );
@@ -198,7 +212,7 @@ export default function PricingClient() {
                     <th scope="col">Basic</th>
                     <th scope="col">Plus</th>
                     <th scope="col">Business</th>
-                    <th scope="col">Business+</th>
+                    <th scope="col">Custom</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -217,10 +231,10 @@ export default function PricingClient() {
           </section>
 
           <section id="plan-details" className="pricing-detail-panel">
-            <span className="brand-eyebrow">{active.name} plan</span>
+            <span className="brand-eyebrow">{activeName} plan</span>
             <div className="pricing-detail-grid">
               <div className="pricing-detail-copy">
-                <h2>{active.summary}</h2>
+                <h2>{active.key === "business-plus" ? "A custom AI operating system scoped around your organization." : active.summary}</h2>
                 <p><strong>Best for:</strong> {active.bestFor}</p>
                 <h3>What’s included</h3>
                 <div className="pricing-feature-list">
@@ -233,21 +247,21 @@ export default function PricingClient() {
               </div>
 
               <aside className="pricing-scope-card">
-                <span>{currency ? `Pricing in ${currency}` : "Fluxknight pricing"}</span>
+                <span>{active.key === "business-plus" ? "Custom scope" : currency ? `Pricing in ${currency}` : "Fluxknight pricing"}</span>
                 {activePrice ? (
                   <div className="pricing-current-price">
                     <div><small>Implementation</small><strong>{activePrice.first}</strong></div>
                     <div><small>Ongoing platform &amp; support</small><strong>{activePrice.ongoing}</strong></div>
                   </div>
                 ) : null}
-                <h3>{selectedIndustry ? `${selectedIndustry.name} scope` : "Pricing follows the actual system."}</h3>
+                <h3>{selectedIndustry ? `${selectedIndustry.name} scope` : active.key === "business-plus" ? "Scoped around the actual system required." : "Pricing follows the actual system."}</h3>
                 {pricingProfile ? <>
                   <p><strong>Complexity:</strong> {pricingProfile.complexity}</p>
                   <div><strong>Typical channels</strong><p>{pricingProfile.typicalChannels.join(" · ")}</p></div>
                   <div><strong>What changes the price</strong><ul>{pricingProfile.scopeDrivers.map((driver) => <li key={driver}>{driver}</li>)}</ul></div>
-                  <div className="pricing-industry-note"><strong>{active.name} for {selectedIndustry?.name}</strong><p>{pricingProfile.planNotes[active.key]}</p></div>
-                </> : <p>Choose an industry above to see its pricing drivers. Exact scope depends on channels, usage, integrations, workflow depth and the operational data layer required.</p>}
-                <Link href={evaluationHref} className="button-primary">Evaluate this plan <ArrowRight size={16} /></Link>
+                  <div className="pricing-industry-note"><strong>{activeName} for {selectedIndustry?.name}</strong><p>{pricingProfile.planNotes[active.key]}</p></div>
+                </> : <p>{active.key === "business-plus" ? "Custom deployments are quoted after the database, integrations, channels, usage and workflow depth are scoped." : "Choose an industry above to see its pricing drivers. Exact scope depends on channels, usage, integrations, workflow depth and the operational data layer required."}</p>}
+                <Link href={evaluationHref} className="button-primary">{active.key === "business-plus" ? "Discuss custom scope" : "Evaluate this plan"} <ArrowRight size={16} /></Link>
               </aside>
             </div>
           </section>
