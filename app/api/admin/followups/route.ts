@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { assertFluxFeatureAccess, reserveFluxCredits } from "@/lib/flux-credits";
+import { assertFluxCreditsAvailable, assertFluxFeatureAccess, reserveFluxCredits } from "@/lib/flux-credits";
 import { createSequence, enrollLeads, updateEnrollment } from "@/lib/followup-control";
 
 export async function POST(request: NextRequest) {
@@ -19,13 +19,15 @@ export async function POST(request: NextRequest) {
     }
     if (body.type === "enroll") {
       const leads = Array.isArray(body.leads) ? body.leads : [];
+      const billableCount = Math.max(1, leads.length);
+      await assertFluxCreditsAvailable(organizationId, "whatsapp_follow_up_reminder", billableCount);
       const enrollments = await enrollLeads({ ...body, organization_id: organizationId, leads });
       await reserveFluxCredits({
         organizationId,
         action: "whatsapp_follow_up_reminder",
-        quantity: Math.max(1, enrollments.length || leads.length),
+        quantity: Math.max(1, enrollments.length || billableCount),
         source: "followup-control",
-        metadata: { sequence_id: body.sequence_id, leads: enrollments.length || leads.length, admin_email: session.email },
+        metadata: { sequence_id: body.sequence_id, leads: enrollments.length || billableCount, admin_email: session.email },
       });
       return NextResponse.json({ ok:true, enrollments }, { status:201 });
     }
