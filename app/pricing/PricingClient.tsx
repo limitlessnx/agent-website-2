@@ -9,6 +9,11 @@ import { usePublicPricing } from "@/lib/use-public-pricing";
 
 const planOrder: PlanKey[] = ["basic", "starter", "business", "business-plus"];
 
+function normalizeRequestedPlan(value: string | null): PlanKey | null {
+  if (value === "plus") return "starter";
+  return value as PlanKey | null;
+}
+
 export default function PricingClient() {
   const [activePlan, setActivePlan] = useState<PlanKey>("basic");
   const [industrySlug, setIndustrySlug] = useState("");
@@ -23,7 +28,7 @@ export default function PricingClient() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const requested = params.get("plan") as PlanKey | null;
+    const requested = normalizeRequestedPlan(params.get("plan"));
     const requestedIndustry = params.get("industry") || "";
     if (requested && planOrder.includes(requested)) setActivePlan(requested);
     if (requestedIndustry) setIndustrySlug(requestedIndustry);
@@ -33,7 +38,8 @@ export default function PricingClient() {
   const selectedIndustry = industries.find((industry) => industry.slug === industrySlug);
   const pricingProfile = industrySlug ? industryPricingBySlug[industrySlug] : undefined;
   const activePrice = prices[active.key];
-  const evaluationHref = `/evaluation?plan=${encodeURIComponent(active.key)}${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
+  const evaluationPlan = active.key === "starter" ? "plus" : active.key;
+  const evaluationHref = `/evaluation?plan=${encodeURIComponent(evaluationPlan)}${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
 
   return (
     <main className="quantix-home pricing-page-shell">
@@ -42,7 +48,7 @@ export default function PricingClient() {
           <div className="brand-heading pricing-page-heading">
             <span className="brand-eyebrow">Fluxknight Plans</span>
             <h1>Choose the level of automation your organization actually needs.</h1>
-            <p>Basic, Starter, Business and Business+ stay consistent across industries. The workflow, channels and operational data layer change to match how each organization actually works.</p>
+            <p>Basic, Plus, Business and Business+ stay consistent across industries. The workflow, channels and operational data layer change to match how each organization actually works.</p>
             {canViewInternational ? (
               <div className="pricing-region-switch" aria-label="Choose pricing view">
                 <button type="button" className={!viewingInternational ? "is-active" : ""} onClick={showNigeria}>Nigeria</button>

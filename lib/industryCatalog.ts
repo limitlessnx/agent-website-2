@@ -46,8 +46,10 @@ export const planDefinitions: PlanDefinition[] = [
     summary: "A focused customer-facing system for organizations that mainly need instant response, qualification and human handoff without automated follow-up.",
     bestFor: "Businesses that want one AI channel handling enquiries cleanly before a human takes over.",
     includes: [
-      "One primary customer channel: WhatsApp or inbound voice",
-      "Website support agent",
+      "2,500 monthly Flux Credits",
+      "Core AI support",
+      "Leo Chat",
+      "One primary customer channel: WhatsApp or web AI",
       "Approved FAQ, product or service knowledge",
       "Lead qualification or sales intake",
       "Customer detail capture",
@@ -58,11 +60,12 @@ export const planDefinitions: PlanDefinition[] = [
   },
   {
     key: "starter",
-    name: "Starter",
+    name: "Plus",
     eyebrow: "Keep the conversation moving.",
     summary: "Everything in Basic, plus automated follow-up and reminders through the same channel the lead originally used.",
     bestFor: "Businesses losing enquiries because staff cannot consistently remember every follow-up, booking, inspection or reminder.",
     includes: [
+      "5,000 monthly Flux Credits",
       "Everything in Basic",
       "Same-channel automated follow-up",
       "Appointment, booking, quote or inspection reminders where relevant",
@@ -75,14 +78,15 @@ export const planDefinitions: PlanDefinition[] = [
     key: "business",
     name: "Business",
     eyebrow: "Operate across the customer journey.",
-    summary: "Everything in Starter, with higher usage, admin controls, cross-channel follow-up, deeper workflows and Leo Admin Assistance for staff.",
+    summary: "Everything in Plus, with higher usage, admin controls, cross-channel follow-up, deeper workflows and Leo Admin Assistance for staff.",
     bestFor: "Organizations with teams, multiple channels and enough lead volume that management needs visibility, control and coordinated follow-up.",
     includes: [
-      "Everything in Starter",
+      "12,000 monthly Flux Credits",
+      "Everything in Plus",
       "Higher monthly usage and credits",
       "Admin workspace and team access",
       "WhatsApp and email follow-up",
-      "Inbound voice support",
+      "Leo Voice",
       "Cross-channel customer context",
       "Workflow visibility and reporting",
       "Human escalation controls",
@@ -98,10 +102,12 @@ export const planDefinitions: PlanDefinition[] = [
     summary: "Everything in Business, plus an industry-specific customer or operations database designed around how the organization actually works.",
     bestFor: "Organizations that want the AI system tied to a structured operational database rather than only conversations and follow-up.",
     includes: [
+      "25,000+ configurable monthly Flux Credits",
       "Everything in Business",
       "Industry-specific customer or operations database",
       "Deeper record history and lifecycle visibility",
       "More advanced reporting and segmentation",
+      "Advanced custom workflows and integrations",
       "Structured operational data for staff"
     ],
     comingSoon: ["Industry database modules are being released progressively"]
@@ -140,7 +146,7 @@ export const industries: IndustryDefinition[] = [
       { title: "Answer the property enquiry", description: "The agent responds to approved questions about available properties, location, pricing, payment plans, documentation and inspection availability." },
       { title: "Qualify the buyer", description: "It captures budget, preferred location, property type, purchase timeline, financing or payment preference and urgency." },
       { title: "Match the opportunity", description: "Where configured, the system recommends relevant listings or routes the lead to the right property or human specialist." },
-      { title: "Book or prepare inspection", description: "Starter and above can schedule inspection interest and send reminders through the same originating channel." },
+      { title: "Book or prepare inspection", description: "Plus and above can schedule inspection interest and send reminders through the same originating channel." },
       { title: "Follow up intelligently", description: "Business can continue the conversation across WhatsApp and email while keeping the lead context connected for staff." },
       { title: "Hand over to the closer", description: "Hot, urgent or complex opportunities are escalated with a concise summary so the human agent starts with context instead of asking everything again." }
     ],
@@ -174,7 +180,7 @@ export const industries: IndustryDefinition[] = [
       { title: "Handle first response", description: "The AI answers approved product, service, availability, pricing-range and process questions immediately." },
       { title: "Capture sales intake", description: "It collects the information the sales team actually needs, such as need, budget, company size, location, urgency or purchase timeline." },
       { title: "Score intent", description: "Leads can be categorized by configured criteria so staff can separate low-intent enquiries from opportunities that deserve fast human attention." },
-      { title: "Maintain follow-up", description: "Starter keeps follow-up on the originating channel. Business can coordinate WhatsApp and email follow-up with higher usage allowances." },
+      { title: "Maintain follow-up", description: "Plus keeps follow-up on the originating channel. Business can coordinate WhatsApp and email follow-up with higher usage allowances." },
       { title: "Give management visibility", description: "Business adds admins, reporting and Leo so managers can see neglected leads, conversation context and pipeline movement without reading every chat manually." },
       { title: "Hand over to the closer", description: "When buying intent is clear, the assigned salesperson receives the lead context and can continue from a much stronger starting point." }
     ],
@@ -242,7 +248,7 @@ export const industries: IndustryDefinition[] = [
   {
     slug: "service-businesses",
     name: "Service Businesses",
-    hero: "Qualify service requests before they consume your team’s time.",
+    hero: "Qualify service requests before they consume your team's time.",
     subhead: "Capture job details, answer approved service questions, identify intent and move qualified customers toward booking or staff handoff.",
     problem: ["Teams waste time on repetitive service questions.", "Quote requests arrive without enough information.", "Follow-up depends on busy staff remembering each enquiry."],
     outcomes: ["Cleaner service intake", "Faster qualification", "Better booking conversion", "Less repetitive admin"],

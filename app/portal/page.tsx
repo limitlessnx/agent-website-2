@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Activity, Bot, CheckCircle2, Clock3, Workflow } from "@/components/admin/ServerIcons";
+import PlanEntitlementsPanel from "@/components/portal/PlanEntitlementsPanel";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary } from "@/lib/client-portal-data";
+import { getFluxWalletSummary } from "@/lib/flux-credits";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -14,12 +16,14 @@ function formatDate(value?: string | null) {
 export default async function ClientPortalPage() {
   const session = await getClientSession();
   if (!session) return null;
-  const summary = await getClientPortalSummary(session.organizationId);
+  const [summary, wallet] = await Promise.all([
+    getClientPortalSummary(session.organizationId),
+    getFluxWalletSummary(session.organizationId),
+  ]);
   const activeAgents = summary.agents.filter((agent) => ["published", "testing"].includes(agent.status)).length;
   const activeWorkflows = summary.workflows.filter((workflow) => workflow.status === "active").length;
   const successfulRuns = summary.runs.filter((run) => run.status === "succeeded").length;
   const successRate = summary.runs.length ? Math.round((successfulRuns / summary.runs.length) * 100) : 0;
-  const requestedAgents = summary.onboarding?.requested_agents || [];
 
   return (
     <main className="portal-page">
@@ -27,7 +31,7 @@ export default async function ClientPortalPage() {
         <div>
           <p className="portal-kicker">AI operations workspace</p>
           <h1>Your business system is taking shape.</h1>
-          <p>Track agent setup, workflows, integrations, and launch readiness from one tenant-secured workspace.</p>
+          <p>Track agent setup, workflows, integrations, launch readiness and plan access from one tenant-secured workspace.</p>
         </div>
         <div className="portal-status-badge"><span>Current stage</span><strong>{summary.onboarding?.status.replaceAll("_", " ") || "setup"}</strong></div>
       </section>
@@ -36,7 +40,7 @@ export default async function ClientPortalPage() {
         <article className="portal-metric"><span><Bot size={16} /> Agents</span><strong>{summary.agents.length}</strong><small>{activeAgents} active or testing</small></article>
         <article className="portal-metric"><span><Workflow size={16} /> Workflows</span><strong>{summary.workflows.length}</strong><small>{activeWorkflows} active</small></article>
         <article className="portal-metric"><span><CheckCircle2 size={16} /> Success rate</span><strong>{successRate}%</strong><small>{summary.runs.length} recent runs</small></article>
-        <article className="portal-metric"><span><Clock3 size={16} /> Requested agents</span><strong>{requestedAgents.length}</strong><small>From onboarding</small></article>
+        <article className="portal-metric"><span><Clock3 size={16} /> Credits</span><strong>{wallet.percentUsed}%</strong><small>{wallet.balance.toLocaleString("en-NG")} remaining</small></article>
       </section>
 
       <section className="portal-grid">
@@ -64,6 +68,8 @@ export default async function ClientPortalPage() {
           <div className="portal-actions" style={{ marginTop: 20 }}><Link className="portal-button" href="/portal/agents">Review agents</Link><Link className="portal-button secondary" href="/portal/integrations">View integrations</Link></div>
         </article>
       </section>
+
+      <PlanEntitlementsPanel planCode={wallet.planCode} />
     </main>
   );
 }
