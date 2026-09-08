@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 
 export type MaiaRuntimeInput = {
   organizationId: string;
@@ -202,6 +203,14 @@ function toolSet(): ToolDefinition[] {
 
 const toolSchemas = (tools: ToolDefinition[]) => tools.map((tool) => ({ type: "function", function: { name: tool.name, description: tool.description, parameters: tool.parameters } }));
 function modelMessages(systemPrompt: string, history: Array<{ role: string; content: string }>, message: string) { return [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: message }]; }
+function chatUsage(payload: Record<string, unknown>) {
+  const usage = json(payload.usage);
+  return {
+    inputTokens: typeof usage.prompt_tokens === "number" ? usage.prompt_tokens : undefined,
+    outputTokens: typeof usage.completion_tokens === "number" ? usage.completion_tokens : undefined,
+    totalTokens: typeof usage.total_tokens === "number" ? usage.total_tokens : undefined,
+  };
+}
 
 async function callOpenAI(model: Model, messages: any[], tools: ToolDefinition[]) {
   const controller = new AbortController();
@@ -231,6 +240,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id };
   const model = await chooseModel(input.organizationId, profile, input.message);
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
+  await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
   const business = await loadBusinessContext(input.organizationId);
   const admin = createAdminClient();
   const { data: historyRows } = profile.memory_enabled ? await admin.from("agent_runtime_messages").select("role,content,tool_name,tool_call_id,metadata").eq("session_id", session.id).order("created_at", { ascending: false }).limit(16) : { data: [] };
@@ -255,7 +265,10 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const toolResults: Array<Record<string, unknown>> = [];
   while (steps < Math.max(1, Math.min(profile.max_steps, 20))) {
     steps += 1;
+    await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
     const payload = await callOpenAI(model, messages, tools);
+    const usage = chatUsage(payload);
+    await recordChargeableFluxAiUsage({ organizationId: input.organizationId, action: "web_ai", source: "maia_runtime", provider: model.provider, model: model.model_key, providerUsage: usage, metadata: { agent_id: input.agentId, session_id: session.id, step: steps } });
     const choice = payload?.choices?.[0];
     const assistant = choice?.message;
     if (!assistant) throw new Error("AI model returned no message.");

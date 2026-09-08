@@ -3,6 +3,7 @@ import { listLeoToolsForIdentity, resolveLeoIdentity } from "@/lib/leo-core";
 import { publicLeoVoiceInstructions } from "@/lib/leo-public-policy";
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { loadActiveLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
+import { FLUX_AI_HUMAN_HANDOFF_MESSAGE, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +40,14 @@ function pageContextFromHeader(request: NextRequest) { const encoded = request.h
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY?.trim(); if (!apiKey) return new Response("OpenAI Realtime is not configured.", { status: 503 }); const identity = await resolveLeoIdentity({ channel: "voice", allowPublic: true }); if (!identity) return new Response("Leo identity could not be resolved.", { status: 401 }); const sdp = await request.text(); if (!sdp.trim()) return new Response("SDP offer is required.", { status: 400 });
+  if (identity.scope === "tenant" && identity.organizationId) {
+    try {
+      await preflightChargeableFluxAi({ organizationId: identity.organizationId, feature: "leo_voice", action: "leo_voice_minute" });
+    } catch (error) {
+      if (isFluxAiControlError(error)) return Response.json({ error: error instanceof Error ? error.message : FLUX_AI_HUMAN_HANDOFF_MESSAGE, customerMessage: FLUX_AI_HUMAN_HANDOFF_MESSAGE, handoffRequired: true, chargeableAiPaused: true }, { status: 402, headers: { "cache-control": "no-store" } });
+      throw error;
+    }
+  }
   const requestedSessionId = String(request.headers.get("x-leo-session-id") || "").trim() || undefined; const leoSession = await getOrCreateLeoSession({ identity, sessionId: requestedSessionId, pageContext: pageContextFromHeader(request) }); const history = await loadLeoHistory(identity, leoSession); const activeTask = identity.scope === "super_admin" ? await loadActiveLeoOperationalTask(identity, leoSession) : null; const continuity = continuityContext(history, leoSession.leadProfile as unknown as Record<string, unknown> | undefined, leoSession.leadCaptured, leoSession.voiceWorkingContext, activeTask);
   const configuredModel = process.env.LEO_REALTIME_MODEL?.trim(); const model = configuredModel && SUPPORTED_REALTIME_MODELS.has(configuredModel) ? configuredModel : DEFAULT_REALTIME_MODEL; const configuredVoice = process.env.LEO_REALTIME_VOICE?.trim(); const voice = configuredVoice && SUPPORTED_REALTIME_VOICES.has(configuredVoice) ? configuredVoice : "marin";
   const realtimeTools: Array<Record<string, unknown>> = [{ type: "function", name: "leo_execute_tool", description: "Execute one tool through the Fluxknight Leo Core permission and execution layer. Use only an allowed tool_key. For confirmation-gated actions first call with confirmed=false; set confirmed=true only after the user explicitly confirms the exact pending action.", parameters: { type: "object", additionalProperties: false, properties: { tool_key: { type: "string" }, arguments: { type: "object", additionalProperties: true }, confirmed: { type: "boolean" } }, required: ["tool_key", "arguments", "confirmed"] } }];
@@ -47,5 +56,8 @@ export async function POST(request: NextRequest) {
   const session = { type: "realtime", model, instructions: voiceInstructions(identity, continuity), output_modalities: ["audio"], audio: { input: { transcription: { model: "gpt-4o-mini-transcribe", language: "en" } }, output: { voice } }, tools: realtimeTools, tool_choice: "auto" };
   const multipart = buildRealtimeMultipart(sdp, session); const response = await fetch("https://api.openai.com/v1/realtime/calls", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/sdp", "Content-Type": `multipart/form-data; boundary=${multipart.boundary}` }, body: multipart.body, cache: "no-store" }); const answer = await response.text();
   if (!response.ok) { const upstream = upstreamErrorBody(answer); console.error("[leo/realtime] OpenAI rejected WebRTC call", { status: response.status, model, voice, type: upstream.type, code: upstream.code, message: upstream.message }); return Response.json({ error: upstream.message, code: upstream.code, type: upstream.type, status: response.status }, { status: response.status, headers: { "cache-control": "no-store" } }); }
+  if (identity.scope === "tenant" && identity.organizationId) {
+    await recordChargeableFluxAiUsage({ organizationId: identity.organizationId, action: "leo_voice_minute", source: "leo_voice", provider: "openai", model, quantity: 1, metadata: { session_id: leoSession.id, voice } });
+  }
   void auditLeoEvent({ identity, session: leoSession, eventType: "voice_call_started", details: { model, voice, shared_history_count: history.length, restored_working_context: Boolean(leoSession.voiceWorkingContext), restored_operational_task: activeTask?.id || null } }); const headers = new Headers({ "content-type": "application/sdp", "cache-control": "no-store", "x-leo-realtime-model": model, "x-leo-realtime-voice": voice, "x-leo-session-id": leoSession.id }); const location = response.headers.get("location"); if (location) headers.set("x-leo-realtime-call", location); return new Response(answer, { status: 200, headers });
 }

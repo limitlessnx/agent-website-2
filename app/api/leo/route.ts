@@ -8,6 +8,7 @@ import { buildLeoPolicySnapshot, enforceLeoOrganizationScope, resolveLeoIdentity
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, storeLeoMessage, storeLeoToolProposals, updateLeoPublicLeadState } from "@/lib/leo-session-store";
 import { createLeoMultiAgentOrchestration, refreshLeoMultiAgentOrchestration } from "@/lib/leo-multi-agent-orchestrator";
 import { auditLeoCrossWorkspaceOperation, createLeoCrossWorkspaceOperation } from "@/lib/leo-cross-workspace";
+import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 
 function validChannel(value: unknown): LeoChannel { return value === "voice" ? "voice" : value === "api" ? "api" : "chat"; }
 function safeHistory(value: unknown): LeoChatMessage[] {
@@ -63,6 +64,14 @@ export async function POST(request: NextRequest) {
   if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved." }, { status: 401 });
   const message = String(body.message || "").trim().slice(0, 8000);
   if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
+  if (identity.scope === "tenant" && identity.organizationId) {
+    try {
+      await preflightChargeableFluxAi({ organizationId: identity.organizationId, feature: "leo_chat", action: "leo_chat" });
+    } catch (error) {
+      if (isFluxAiControlError(error)) return fluxAiControlResponse(error);
+      throw error;
+    }
+  }
   const pageContext = sanitizeLeoPageContext(body.pageContext);
   const workspace = identity.scope === "super_admin" ? orchestrationWorkspace(message, pageContext as Record<string, unknown> | undefined) : undefined;
   let session = await getOrCreateLeoSession({ identity, sessionId: String(body.sessionId || "").trim() || undefined, pageContext, visibility: body.visibility });
@@ -97,6 +106,17 @@ export async function POST(request: NextRequest) {
     void auditLeoEvent({ identity, session, eventType: "reasoning_failed", details: { reason: result.reason, model: result.model, latency_ms: result.latencyMs } });
     const status = result.reason === "not_configured" ? 503 : result.reason === "timeout" ? 504 : 502;
     return NextResponse.json({ error: "Leo could not complete this response.", reason: result.reason, sessionId: session.id, persistence: session.persisted ? "database" : "ephemeral", ai: { connected: false, model: result.model, latencyMs: result.latencyMs } }, { status });
+  }
+  if (identity.scope === "tenant" && identity.organizationId) {
+    await recordChargeableFluxAiUsage({
+      organizationId: identity.organizationId,
+      action: "leo_chat",
+      source: "leo_chat",
+      provider: result.provider,
+      model: result.model,
+      providerUsage: result.usage,
+      metadata: { session_id: session.id, channel, intent: result.intent, latency_ms: result.latencyMs },
+    });
   }
   let reply = conciseLeoReply(result.reply);
   let orchestration: Awaited<ReturnType<typeof refreshLeoMultiAgentOrchestration>> | null = null;
