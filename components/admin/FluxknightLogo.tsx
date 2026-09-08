@@ -21,7 +21,7 @@ export default function FluxknightLogo({ className, ...props }: SVGProps<SVGSVGE
           <stop offset="0.48" stopColor="#A855F7" />
           <stop offset="1" stopColor="#C084FC" />
         </linearGradient>
-        <linearGradient id="fluxknight-x" x1="140" y1="20" x2="161" y2="44" gradientUnits="userSpaceOnUse">
+        <linearGradient id="fluxknight-x" x1="144" y1="20" x2="165" y2="44" gradientUnits="userSpaceOnUse">
           <stop stopColor="#C084FC" />
           <stop offset="0.52" stopColor="#A855F7" />
           <stop offset="1" stopColor="#7C3AED" />
@@ -42,8 +42,8 @@ export default function FluxknightLogo({ className, ...props }: SVGProps<SVGSVGE
 
       <g fontFamily="Inter, Arial, Helvetica, sans-serif" fontSize="27" fontWeight="600" letterSpacing="1.9">
         <text x="88" y="41" fill="currentColor">FLU</text>
-        <text x="139" y="41" fill="url(#fluxknight-x)" filter="url(#fluxknight-glow)">X</text>
-        <text x="159" y="41" fill="currentColor">KNIGHT</text>
+        <text x="143" y="41" fill="url(#fluxknight-x)" filter="url(#fluxknight-glow)">X</text>
+        <text x="157" y="41" fill="currentColor">KNIGHT</text>
       </g>
     </svg>
   );
