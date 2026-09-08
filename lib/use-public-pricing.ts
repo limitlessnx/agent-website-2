@@ -21,6 +21,7 @@ type PublicPricingResponse = {
 };
 
 export type PublicPriceDisplay = {
+  slug: string;
   first: string;
   ongoing: string;
   currency: "NGN" | "USD";
@@ -66,6 +67,7 @@ export function usePublicPricing() {
         const next: Record<string, PublicPriceDisplay> = {};
         payload.plans.forEach((plan) => {
           const display = {
+            slug: plan.slug,
             first: `${plan.custom ? "From " : ""}${formatAmount(plan.currency, plan.installationFee)}`,
             ongoing: `${plan.custom ? "From " : ""}${formatAmount(plan.currency, plan.recurringFee)}/${plan.billingInterval === "monthly" ? "month" : plan.billingInterval}`,
             currency: plan.currency,
