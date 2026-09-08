@@ -24,7 +24,6 @@ export default async function ClientPortalPage() {
   const activeWorkflows = summary.workflows.filter((workflow) => workflow.status === "active").length;
   const successfulRuns = summary.runs.filter((run) => run.status === "succeeded").length;
   const successRate = summary.runs.length ? Math.round((successfulRuns / summary.runs.length) * 100) : 0;
-  const requestedAgents = summary.onboarding?.requested_agents || [];
 
   return (
     <main className="portal-page">
