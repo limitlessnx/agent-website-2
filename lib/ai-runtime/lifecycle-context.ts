@@ -34,11 +34,11 @@ export type LifecycleConversationContext = {
   rules: LeoLifecycleOperationsSnapshot["rules"];
 };
 
-const LIFECYCLE_TERMS = [
+const LIFECYCLE_DOMAIN_TERMS = [
   "client", "clients", "customer", "customers", "account", "accounts",
-  "attention", "risk", "at risk", "health", "retention", "churn", "cancel",
-  "next action", "what should", "do next", "priority", "prioritize",
-  "expansion", "growth", "upsell", "upgrade", "opportunity",
+  "organization", "organizations", "workspace", "workspaces", "lifecycle",
+  "retention", "churn", "cancellation", "cancel", "customer health",
+  "expansion", "upsell", "upgrade", "growth opportunity", "growth opportunities",
 ];
 
 function normalize(value: string) {
@@ -47,11 +47,11 @@ function normalize(value: string) {
 
 export function detectLifecycleConversationIntent(objective: string): LifecycleConversationIntent | null {
   const text = normalize(objective);
-  if (!text || !LIFECYCLE_TERMS.some((term) => text.includes(normalize(term)))) return null;
-  if (/expansion|growth|upsell|upgrade|opportunit/.test(text)) return "expansion";
+  if (!text || !LIFECYCLE_DOMAIN_TERMS.some((term) => text.includes(normalize(term)))) return null;
+  if (/expansion|growth opportunit|upsell|upgrade/.test(text)) return "expansion";
   if (/next action|what should|do next|priority|prioritize/.test(text)) return "next_action";
   if (/why|risk|at risk|health|retention|churn|cancel/.test(text)) return "risk";
-  if (/attention|client|customer|account/.test(text)) return "attention";
+  if (/attention|client|customer|account|organization|workspace|lifecycle/.test(text)) return "attention";
   return null;
 }
 
