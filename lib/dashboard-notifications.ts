@@ -1,5 +1,6 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { getUnifiedLifecycleSnapshots } from "@/lib/lifecycle-intelligence";
+import type { LeoPersistedSignal } from "@/lib/leo-proactive-signal-store";
 
 export type DashboardNotificationSeverity = "info" | "success" | "warning" | "critical";
 export type DashboardNotificationAudience = "customer" | "admin" | "both";
@@ -142,7 +143,7 @@ export async function markAllDashboardNotificationsRead(organizationId: string, 
   return rows.length;
 }
 
-async function upsertLifecycleNotification(input: {
+async function upsertDashboardNotification(input: {
   eventKey: string;
   organizationId: string;
   audience: DashboardNotificationAudience;
@@ -152,6 +153,7 @@ async function upsertLifecycleNotification(input: {
   message: string;
   actionLabel?: string;
   actionHref?: string;
+  source?: string;
   persistent?: boolean;
   metadata?: Record<string, unknown>;
 }) {
@@ -171,7 +173,7 @@ async function upsertLifecycleNotification(input: {
         message: input.message,
         action_label: input.actionLabel || null,
         action_href: input.actionHref || null,
-        source: "lifecycle",
+        source: input.source || "lifecycle",
         persistent: Boolean(input.persistent),
         metadata: input.metadata || {},
         last_seen_at: now,
@@ -182,14 +184,25 @@ async function upsertLifecycleNotification(input: {
   );
 }
 
+async function resolveDashboardNotification(eventKey: string) {
+  const now = new Date().toISOString();
+  await supabaseServerRequest(
+    `dashboard_notifications?event_key=eq.${encodeURIComponent(eventKey)}&resolved_at=is.null`,
+    { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ resolved_at: now, updated_at: now, persistent: false }) },
+  ).catch(() => []);
+}
+
 export async function syncLifecycleDashboardNotifications(organizationId?: string) {
   const snapshots = await getUnifiedLifecycleSnapshots(30).catch(() => []);
   const selected = organizationId ? snapshots.filter((item) => item.organizationId === organizationId) : snapshots;
 
   for (const item of selected) {
+    const riskKey = `lifecycle:${item.organizationId}:risk`;
+    const expansionKey = `lifecycle:${item.organizationId}:expansion`;
+
     if (item.attention === "high" || item.attention === "critical") {
-      await upsertLifecycleNotification({
-        eventKey: `lifecycle:${item.organizationId}:risk:${item.attention}`,
+      await upsertDashboardNotification({
+        eventKey: riskKey,
         organizationId: item.organizationId,
         audience: "both",
         category: "health",
@@ -199,13 +212,15 @@ export async function syncLifecycleDashboardNotifications(organizationId?: strin
         actionLabel: "Review support",
         actionHref: "/portal/support",
         persistent: item.attention === "critical",
-        metadata: { stage: item.stage, healthScore: item.healthScore, retentionRiskScore: item.retentionRiskScore },
+        metadata: { stage: item.stage, attention: item.attention, healthScore: item.healthScore, retentionRiskScore: item.retentionRiskScore },
       });
+    } else {
+      await resolveDashboardNotification(riskKey);
     }
 
     if (item.stage === "expansion" && item.attention !== "high" && item.attention !== "critical") {
-      await upsertLifecycleNotification({
-        eventKey: `lifecycle:${item.organizationId}:expansion`,
+      await upsertDashboardNotification({
+        eventKey: expansionKey,
         organizationId: item.organizationId,
         audience: "admin",
         category: "expansion",
@@ -216,6 +231,53 @@ export async function syncLifecycleDashboardNotifications(organizationId?: strin
         actionHref: `/dashboard/expansion?organizationId=${encodeURIComponent(item.organizationId)}`,
         metadata: { opportunityScore: item.opportunityScore, stage: item.stage },
       });
+    } else {
+      await resolveDashboardNotification(expansionKey);
     }
   }
+}
+
+function proactiveSeverity(severity: LeoPersistedSignal["severity"]): DashboardNotificationSeverity {
+  if (severity === "critical") return "critical";
+  if (severity === "high" || severity === "medium") return "warning";
+  return "info";
+}
+
+export async function syncLeoProactiveLifecycleDashboardNotifications(signals: LeoPersistedSignal[]) {
+  const lifecycleSignals = signals.filter((signal) => signal.category === "lifecycle" && signal.workspace);
+  let active = 0;
+  let resolved = 0;
+
+  for (const signal of lifecycleSignals) {
+    const eventKey = `leo:lifecycle:${signal.id}`;
+    if (signal.lifecycle === "resolved") {
+      await resolveDashboardNotification(eventKey);
+      resolved += 1;
+      continue;
+    }
+
+    await upsertDashboardNotification({
+      eventKey,
+      organizationId: signal.workspace as string,
+      audience: "admin",
+      category: String(signal.evidence.lifecycle_subtype || "retention"),
+      severity: proactiveSeverity(signal.severity),
+      title: signal.title,
+      message: signal.summary,
+      actionLabel: "Review lifecycle",
+      actionHref: signal.href,
+      source: "leo_proactive",
+      persistent: signal.severity === "critical",
+      metadata: {
+        signalId: signal.id,
+        signalLifecycle: signal.lifecycle,
+        occurrences: signal.occurrences,
+        recommendation: signal.recommendation,
+        evidence: signal.evidence,
+      },
+    });
+    active += 1;
+  }
+
+  return { active, resolved, total: lifecycleSignals.length };
 }

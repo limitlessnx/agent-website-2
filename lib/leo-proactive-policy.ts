@@ -43,6 +43,12 @@ export function recommendationForLeoSignal(signal: LeoProactiveSignal): LeoSigna
     safeNextStep: "Inspect the integration and affected workflows before changing credentials or reconnecting anything.",
     consequenceBoundary: "Credential changes, reconnection, or workflow changes remain explicit admin actions and are never performed by monitoring alone.",
   };
+  if (signal.category === "lifecycle") return {
+    likelyCause: "Unified lifecycle evidence has crossed a meaningful risk, usage, support, integration, cancellation, or expansion threshold. The signal describes measured state, not a diagnosis of intent or future outcome.",
+    verifyNext: ["Review the organization lifecycle snapshot and the evidence attached to this signal.", "Check whether the same condition is confirmed by recent usage, support, or integration data.", "Confirm that any commercial or retention response is appropriate before contacting the customer."],
+    safeNextStep: signal.recommendation || "Review the lifecycle evidence and decide whether a controlled human intervention is warranted.",
+    consequenceBoundary: "Lifecycle monitoring may observe, prioritize, and recommend only. It cannot send outreach, change billing, suspend accounts, reconnect integrations, or execute retention/expansion actions by itself.",
+  };
   return {
     likelyCause: "The client workspace has remained in an incomplete operational state without a recent onboarding update.",
     verifyNext: ["Review the current onboarding step.", "Identify who owns the next required action.", "Confirm whether configuration, testing, or approval is blocked."],

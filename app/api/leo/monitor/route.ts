@@ -6,6 +6,7 @@ import { actionBlueprintForLeoSignal, alertPolicyForLeoSignal, recommendationFor
 import { auditLeoProactiveMonitoring } from "@/lib/leo-proactive-audit";
 import { createLeoOperationalTask } from "@/lib/leo-task-plan";
 import { auditLeoEvent, getOrCreateLeoSession } from "@/lib/leo-session-store";
+import { syncLeoProactiveLifecycleDashboardNotifications, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,9 +31,13 @@ export async function GET(request: Request) {
   const snapshot = await scanLeoProactiveSignals({ limit });
   const persisted = await reconcileLeoProactiveSignals(snapshot, actorFor(identity));
   const allPersisted = await listPersistedLeoSignals(500);
+  const [notificationSync] = await Promise.all([
+    syncLeoProactiveLifecycleDashboardNotifications(allPersisted),
+    syncLifecycleDashboardNotifications(),
+  ]);
   const signals = enrichSignals(persisted);
   const alerts = sortDeliverableSignals(persisted.filter((item) => alertPolicyForLeoSignal(item).deliver)).slice(0, 8).map((item) => ({ ...item, alertPolicy: alertPolicyForLeoSignal(item), analysis: recommendationForLeoSignal(item), actionAvailable: Boolean(actionBlueprintForLeoSignal(item)) }));
-  return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length }, monitoringAudit: auditLeoProactiveMonitoring(allPersisted) }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), notificationSync, policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length }, monitoringAudit: auditLeoProactiveMonitoring(allPersisted) }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function POST(request: Request) {

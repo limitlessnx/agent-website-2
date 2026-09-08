@@ -7,13 +7,18 @@
       "feature/churn-prevention-winback": false,
       "feature/dashboard-notification-center": false,
       "feature/leo-operational-intelligence": false,
-      "feature/leo-conversational-lifecycle": false
+      "feature/leo-conversational-lifecycle": false,
+      "feature/proactive-lifecycle-monitoring": false
     }
   },
   "crons": [
     {
       "path": "/api/cron/maia-safety-net",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/leo-lifecycle-monitor",
+      "schedule": "17 * * * *"
     }
   ]
 }
