@@ -19,14 +19,14 @@ export async function POST(request: NextRequest) {
     }
     if (body.type === "enroll") {
       const leads = Array.isArray(body.leads) ? body.leads : [];
+      const enrollments = await enrollLeads({ ...body, organization_id: organizationId, leads });
       await reserveFluxCredits({
         organizationId,
         action: "whatsapp_follow_up_reminder",
-        quantity: Math.max(1, leads.length),
+        quantity: Math.max(1, enrollments.length || leads.length),
         source: "followup-control",
-        metadata: { sequence_id: body.sequence_id, leads: leads.length, admin_email: session.email },
+        metadata: { sequence_id: body.sequence_id, leads: enrollments.length || leads.length, admin_email: session.email },
       });
-      const enrollments = await enrollLeads({ ...body, organization_id: organizationId, leads });
       return NextResponse.json({ ok:true, enrollments }, { status:201 });
     }
     return NextResponse.json({ error:"Unsupported follow-up action." }, { status:400 });
