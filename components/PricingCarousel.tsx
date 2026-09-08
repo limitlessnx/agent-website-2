@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, Layers3, MessageSquareText, Network, Workflow } from "@/components/admin/ServerIcons";
+import { calculatePrepaidPrice, PREPAID_TERMS, type PrepaidTerm } from "@/lib/payments/terms";
 import { usePublicPricing } from "@/lib/use-public-pricing";
 import styles from "@/components/PricingCarousel.module.css";
 
@@ -29,6 +30,7 @@ type PricingCarouselProps = {
 };
 
 type PlanPresentation = Pick<PricingCarouselPlan, "icon" | "name" | "description" | "features">;
+type BillingTerm = "monthly" | PrepaidTerm;
 
 const pricingFrameworkSlugs = new Set(["basic", "plus", "starter", "business", "business-plus"]);
 const checkoutSlugByFramework: Record<string, string> = {
@@ -38,12 +40,12 @@ const checkoutSlugByFramework: Record<string, string> = {
   business: "ai-front-desk-suite",
   "business-plus": "custom-ai-operations",
 };
-const durationOptions = [
-  { months: 1, label: "1 month" },
-  { months: 3, label: "3 months" },
-  { months: 6, label: "6 months" },
-  { months: 12, label: "12 months" },
-] as const;
+const durationOptions: Array<{ key: BillingTerm; label: string; saving?: string }> = [
+  { key: "monthly", label: "Monthly" },
+  { key: "3m", label: "3 months", saving: "Save 10%" },
+  { key: "6m", label: "6 months", saving: "Save 15%" },
+  { key: "12m", label: "1 year", saving: "Save 20%" },
+];
 
 const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
@@ -145,7 +147,7 @@ function formatMoney(currency: "NGN" | "USD", amount: number) {
 
 export default function PricingCarousel({ plans, compact = false, showDurationSelector = false }: PricingCarouselProps) {
   const [active, setActive] = useState(0);
-  const [durationMonths, setDurationMonths] = useState(1);
+  const [billingTerm, setBillingTerm] = useState<BillingTerm>("monthly");
   const trackRef = useRef<HTMLDivElement>(null);
   const settledRef = useRef<number | null>(null);
   const programmaticRef = useRef<number | null>(null);
@@ -243,22 +245,23 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
       {showDurationSelector ? (
         <div className={styles.durationBar}>
           <div>
-            <span className={styles.durationLabel}>Choose duration</span>
-            <div className={styles.durationOptions} role="group" aria-label="Choose plan duration">
+            <span className={styles.durationLabel}>Billing duration</span>
+            <div className={styles.durationOptions} role="group" aria-label="Choose billing duration">
               {durationOptions.map((option) => (
                 <button
-                  key={option.months}
+                  key={option.key}
                   type="button"
-                  className={durationMonths === option.months ? styles.durationActive : styles.durationButton}
-                  aria-pressed={durationMonths === option.months}
-                  onClick={() => setDurationMonths(option.months)}
+                  className={billingTerm === option.key ? styles.durationActive : styles.durationButton}
+                  aria-pressed={billingTerm === option.key}
+                  onClick={() => setBillingTerm(option.key)}
                 >
-                  {option.label}
+                  <span>{option.label}</span>
+                  {option.saving ? <small>{option.saving}</small> : <small>Standard</small>}
                 </button>
               ))}
             </div>
           </div>
-          <small>Current rates are used for the selected term. First-month setup is paid at checkout, then platform billing continues monthly.</small>
+          <small>Monthly keeps standard renewal. Prepay 3, 6 or 12 months to apply the existing duration savings at checkout.</small>
         </div>
       ) : null}
 
@@ -268,17 +271,17 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const detected = prices[plan.slug];
           const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
-          const isCustom = plan.custom || plan.slug === "custom-ai-operations" || plan.slug === "business-plus";
+          const isCustom = detected?.custom ?? plan.custom ?? plan.slug === "custom-ai-operations" || plan.slug === "business-plus";
           const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
-          const checkoutSlug = isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug;
+          const checkoutSlug = detected?.slug ?? (isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug);
+          const prepaid = billingTerm !== "monthly" && detected && !detected.custom
+            ? calculatePrepaidPrice(detected.installationFee, detected.recurringFee, billingTerm)
+            : null;
           const href = isCustom
             ? `/evaluation?plan=${encodeURIComponent(plan.slug === "custom-ai-operations" ? "business-plus" : plan.slug)}`
-            : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector ? `&term=${durationMonths}` : ""}`;
+            : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector && billingTerm !== "monthly" ? `&term=${encodeURIComponent(billingTerm)}` : ""}`;
           const decision = planDecisionCopy[plan.slug];
           const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
-          const termValue = showDurationSelector && detected && !detected.custom
-            ? detected.installationFee + Math.max(0, durationMonths - 1) * detected.recurringFee
-            : null;
           return (
             <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.slug} aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}>
               <div className={styles.cardGlow} aria-hidden="true" />
@@ -296,12 +299,13 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
                 </div>
               ) : null}
               <div className={styles.priceBlock}>
-                <div><span>First month · setup + service</span><strong>{firstPrice}</strong></div>
-                <div><span>From month 2</span><strong>{ongoingPrice}</strong></div>
-                {termValue !== null && detected ? (
+                <div><span>Implementation</span><strong>{firstPrice}</strong></div>
+                <div><span>Monthly renewal</span><strong>{ongoingPrice}</strong></div>
+                {prepaid && detected ? (
                   <div className={styles.termValue}>
-                    <span>{durationMonths}-month term value at current rate</span>
-                    <strong>{formatMoney(detected.currency, termValue)}</strong>
+                    <span>{prepaid.label} prepaid · save {prepaid.discountPercent}%</span>
+                    <strong>{formatMoney(detected.currency, prepaid.total)}</strong>
+                    <small>Save {formatMoney(detected.currency, prepaid.discount)} from {formatMoney(detected.currency, prepaid.subtotal)}</small>
                   </div>
                 ) : null}
               </div>
