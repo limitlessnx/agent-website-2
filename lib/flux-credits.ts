@@ -80,6 +80,12 @@ function planFromSubscription(subscription: SubscriptionRow | null | undefined) 
   return getFluxPlanDefinition(metadataPlan || slug);
 }
 
+function requireWalletRow(value: unknown): WalletRow {
+  const wallet = Array.isArray(value) ? value[0] : value;
+  if (!wallet || typeof wallet !== "object") throw new Error("Flux credit wallet was not returned.");
+  return wallet as WalletRow;
+}
+
 export async function getActiveFluxSubscription(organizationId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -112,7 +118,7 @@ export async function ensureFluxWallet(organizationId: string): Promise<WalletRo
     target_current_period_end: subscription?.current_period_end || null,
   });
   if (error) throw error;
-  return Array.isArray(data) ? data[0] : data;
+  return requireWalletRow(data);
 }
 
 function toWalletSummary(wallet: WalletRow): FluxWalletSummary {
@@ -121,7 +127,8 @@ function toWalletSummary(wallet: WalletRow): FluxWalletSummary {
   const allowance = numberValue(wallet.monthly_allowance, plan.monthlyCredits);
   const percentUsed = calculateUsagePercent(balance, allowance);
   const threshold = getThresholdLevel(percentUsed);
-  const chargeableAiPaused = wallet.status === "paused" || percentUsed >= 100;
+  const trialExpired = wallet.trial_ends_at ? new Date(wallet.trial_ends_at).getTime() <= Date.now() : false;
+  const chargeableAiPaused = wallet.status === "paused" || percentUsed >= 100 || trialExpired;
   return {
     organizationId: wallet.organization_id,
     planCode: plan.code,
@@ -199,6 +206,18 @@ export async function assertFluxFeatureAccess(organizationId: string, feature: F
   return toWalletSummary(wallet);
 }
 
+export async function assertFluxCreditsAvailable(organizationId: string, action: FluxCreditAction, quantity = 1) {
+  const credits = calculateFluxCredits(action, quantity);
+  const wallet = await ensureFluxWallet(organizationId);
+  const summary = toWalletSummary(wallet);
+  if (summary.chargeableAiPaused || summary.balance < credits) {
+    const error = new Error("Flux Credits exhausted. Chargeable AI must hand off to a human operator.");
+    error.name = "FluxCreditLimitError";
+    throw error;
+  }
+  return { credits, wallet: summary };
+}
+
 export async function reserveFluxCredits(input: {
   organizationId: string;
   action: FluxCreditAction;
@@ -209,16 +228,8 @@ export async function reserveFluxCredits(input: {
   providerUsage?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }) {
-  const credits = calculateFluxCredits(input.action, input.quantity || 1);
+  const { credits } = await assertFluxCreditsAvailable(input.organizationId, input.action, input.quantity || 1);
   const admin = createAdminClient();
-  const wallet = await ensureFluxWallet(input.organizationId);
-  const summary = toWalletSummary(wallet);
-  if (summary.chargeableAiPaused || summary.balance < credits) {
-    const error = new Error("Flux Credits exhausted. Chargeable AI must hand off to a human operator.");
-    error.name = "FluxCreditLimitError";
-    throw error;
-  }
-
   const { data, error } = await admin.rpc("record_flux_credit_usage", {
     target_organization_id: input.organizationId,
     target_action_key: input.action,
@@ -230,7 +241,7 @@ export async function reserveFluxCredits(input: {
     target_metadata: input.metadata || {},
   });
   if (error) throw error;
-  return { credits, wallet: toWalletSummary(Array.isArray(data) ? data[0] : data) };
+  return { credits, wallet: toWalletSummary(requireWalletRow(data)) };
 }
 
 export async function adjustFluxCredits(input: {
@@ -242,6 +253,10 @@ export async function adjustFluxCredits(input: {
 }) {
   const amount = Math.trunc(input.amount);
   if (!amount) throw new Error("Credit adjustment amount must be non-zero.");
+  if (input.type === "top_up") {
+    const wallet = await getFluxWalletSummary(input.organizationId);
+    if (!wallet.canTopUp) throw new Error("Top-ups are not available during the Basic free trial.");
+  }
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("adjust_flux_credit_wallet", {
     target_organization_id: input.organizationId,
@@ -251,5 +266,5 @@ export async function adjustFluxCredits(input: {
     target_admin_email: input.adminEmail,
   });
   if (error) throw error;
-  return toWalletSummary(Array.isArray(data) ? data[0] : data);
+  return toWalletSummary(requireWalletRow(data));
 }
