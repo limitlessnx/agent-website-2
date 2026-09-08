@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getPublicPlan } from "@/lib/payments/catalog";
 import { getRequestBillingRegion } from "@/lib/payments/region";
+import { isPrepaidTerm } from "@/lib/payments/terms";
 import CheckoutClient from "./CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string; term?: string }> }) {
   const params = await searchParams;
   const planSlug = typeof params.plan === "string" ? params.plan : "";
+  const initialTerm = isPrepaidTerm(params.term) ? params.term : "3m";
   if (!planSlug) notFound();
 
   const [{ region }, session] = await Promise.all([
@@ -32,7 +34,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
           <div className="brand-heading">
             <span className="brand-eyebrow">Secure checkout</span>
             <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)", lineHeight: 1 }}>Get your AI system started.</h1>
-            <p>Your currency is locked to the billing region detected by Fluxknight. There is no manual currency switch.</p>
+            <p>Select 3 months, 6 months or 1 year and pay the discounted prepaid total directly. Your currency is locked to the billing region detected by Fluxknight.</p>
           </div>
           <CheckoutClient
             plan={{
@@ -44,6 +46,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
               recurringFee: plan.recurringFee,
             }}
             customer={session ? { name: session.organizationSlug, email: session.email } : null}
+            initialTerm={initialTerm}
           />
         </div>
       </section>
