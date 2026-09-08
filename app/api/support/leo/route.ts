@@ -5,6 +5,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { legacySupportActionPolicy, tenantLeoIdentityFromSession } from "@/lib/leo-support-policy";
 import type { LeoIdentity } from "@/lib/leo-core";
 import { mergeSupportLifecycleMetadata } from "@/lib/support-lifecycle";
+import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 import {
   buildSupportReply,
   collectSupportDiagnostics,
@@ -134,6 +135,12 @@ export async function POST(request: NextRequest) {
     const message = String(body.message || "").trim().slice(0, 8000);
     let conversationId = String(body.conversationId || "").trim();
     if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
+    try {
+      await preflightChargeableFluxAi({ organizationId: session.organizationId, feature: "leo_chat", action: "leo_chat" });
+    } catch (error) {
+      if (isFluxAiControlError(error)) return fluxAiControlResponse(error);
+      throw error;
+    }
 
     if (conversationId) {
       const existing = await getSupportConversationForScope(conversationId, "tenant", session.organizationId);
@@ -206,6 +213,15 @@ export async function POST(request: NextRequest) {
         model: aiResult.model,
         usage: aiResult.usage,
         latencyMs: aiResult.latencyMs,
+      });
+      await recordChargeableFluxAiUsage({
+        organizationId: session.organizationId,
+        action: "leo_chat",
+        source: "tenant_support_leo",
+        provider: aiResult.provider,
+        model: aiResult.model,
+        providerUsage: aiResult.usage,
+        metadata: { conversation_id: conversationId, category, latency_ms: aiResult.latencyMs },
       });
       console.info("Agent Leo tenant AI provider success", {
         organizationId: session.organizationId,

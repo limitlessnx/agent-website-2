@@ -152,6 +152,10 @@ export function calculateFluxCredits(action: FluxCreditAction, quantity = 1) {
   return Math.ceil(FLUX_CREDIT_ACTION_RATES[action] * safeQuantity);
 }
 
+export function calculateModeledProviderCostCents(action: FluxCreditAction, quantity = 1) {
+  return calculateFluxCredits(action, quantity) * FLUX_CREDIT_PROVIDER_VALUE_CENTS;
+}
+
 export function calculateUsagePercent(balance: number, allowance: number) {
   if (!allowance || allowance <= 0) return 0;
   return Math.min(100, Math.max(0, Math.round(((allowance - balance) / allowance) * 100)));
