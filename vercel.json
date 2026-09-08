@@ -6,7 +6,8 @@
       "feature/account-administration-lifecycle-v4": false,
       "feature/churn-prevention-winback": false,
       "feature/dashboard-notification-center": false,
-      "feature/leo-operational-intelligence": false
+      "feature/leo-operational-intelligence": false,
+      "feature/leo-conversational-lifecycle": false
     }
   },
   "crons": [
