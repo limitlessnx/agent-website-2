@@ -14,8 +14,12 @@ type Plan = {
   recurringFee: number;
 };
 
+type BillingRegion = "NG" | "INTERNATIONAL";
+type PaymentMethod = "card" | "crypto";
+
 type Props = {
   plan: Plan;
+  billingRegion: BillingRegion;
   customer: { name: string; email: string } | null;
   initialTerm?: PrepaidTerm;
 };
@@ -28,15 +32,17 @@ function money(value: number, currency: "NGN" | "USD") {
   }).format(value);
 }
 
-export default function CheckoutClient({ plan, customer, initialTerm = "3m" }: Props) {
+export default function CheckoutClient({ plan, billingRegion, customer, initialTerm = "3m" }: Props) {
   const [name, setName] = useState(customer?.name || "");
   const [email, setEmail] = useState(customer?.email || "");
   const [phone, setPhone] = useState("");
   const [term, setTerm] = useState<PrepaidTerm>(initialTerm);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const price = calculatePrepaidPrice(plan.installationFee, plan.recurringFee, term);
   const prepaidRenewals = plan.recurringFee * price.months;
+  const cryptoAvailable = billingRegion === "INTERNATIONAL" && plan.currency === "USD";
 
   async function startCheckout() {
     setBusy(true);
@@ -48,6 +54,8 @@ export default function CheckoutClient({ plan, customer, initialTerm = "3m" }: P
         body: JSON.stringify({
           planSlug: plan.slug,
           billingType: "setup",
+          billingRegion,
+          paymentMethod: cryptoAvailable ? paymentMethod : "card",
           term,
           customer: { name, email, phone },
         }),
@@ -154,10 +162,36 @@ export default function CheckoutClient({ plan, customer, initialTerm = "3m" }: P
           <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+234..." type="tel" autoComplete="tel" />
         </label>
 
+        {cryptoAvailable ? (
+          <div style={{ marginTop: 20 }}>
+            <span style={{ display: "block", marginBottom: 8 }}>Payment method</span>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              <button
+                type="button"
+                aria-pressed={paymentMethod === "card"}
+                onClick={() => setPaymentMethod("card")}
+                style={{ padding: 14, borderRadius: 12, border: paymentMethod === "card" ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: paymentMethod === "card" ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer", textAlign: "left" }}
+              >
+                <strong style={{ display: "block" }}>Card / bank</strong>
+                <small style={{ opacity: .65 }}>Secure fiat checkout</small>
+              </button>
+              <button
+                type="button"
+                aria-pressed={paymentMethod === "crypto"}
+                onClick={() => setPaymentMethod("crypto")}
+                style={{ padding: 14, borderRadius: 12, border: paymentMethod === "crypto" ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: paymentMethod === "crypto" ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer", textAlign: "left" }}
+              >
+                <strong style={{ display: "block" }}>Crypto</strong>
+                <small style={{ opacity: .65 }}>Pay securely via NOWPayments</small>
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {error ? <p role="alert" style={{ marginTop: 16, color: "#ff8c8c" }}>{error}</p> : null}
 
         <button className="button-primary" type="button" disabled={busy || !name.trim() || !email.trim()} onClick={startCheckout} style={{ marginTop: 22, width: "100%", justifyContent: "center" }}>
-          {busy ? "Opening secure checkout…" : `Pay ${money(price.total, plan.currency)}`}
+          {busy ? "Opening secure checkout…" : paymentMethod === "crypto" && cryptoAvailable ? `Pay ${money(price.total, plan.currency)} with crypto` : `Pay ${money(price.total, plan.currency)}`}
           {!busy ? <ArrowRight size={17} /> : null}
         </button>
         <Link href="/pricing" className="button-secondary" style={{ marginTop: 10, width: "100%", justifyContent: "center" }}>Back to pricing</Link>
