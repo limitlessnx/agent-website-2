@@ -110,14 +110,22 @@ export const FLUX_FEATURE_LABELS: Record<FluxFeatureKey, string> = {
   custom_integrations: "Custom integrations",
 };
 
+function normalizePlanLookupKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
 const SLUG_TO_PLAN = Object.values(FLUX_PLAN_DEFINITIONS).reduce<Record<string, FluxPlanCode>>((accumulator, plan) => {
-  for (const slug of plan.legacySlugs) accumulator[slug] = plan.code;
+  for (const slug of plan.legacySlugs) {
+    accumulator[slug] = plan.code;
+    accumulator[normalizePlanLookupKey(slug)] = plan.code;
+  }
   accumulator[plan.name.toLowerCase()] = plan.code;
+  accumulator[normalizePlanLookupKey(plan.name)] = plan.code;
   return accumulator;
 }, {});
 
 export function normalizeFluxPlanCode(value: string | null | undefined): FluxPlanCode {
-  const normalized = String(value || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  const normalized = normalizePlanLookupKey(String(value || ""));
   if (normalized === "business+" || normalized === "business_plus") return "business_plus";
   return SLUG_TO_PLAN[normalized] || "basic";
 }
