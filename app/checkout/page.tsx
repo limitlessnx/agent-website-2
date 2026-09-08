@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getPublicPlan } from "@/lib/payments/catalog";
 import { getRequestBillingRegion } from "@/lib/payments/region";
+import { isPrepaidTerm } from "@/lib/payments/terms";
 import CheckoutClient from "./CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -13,13 +14,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const allowedTerms = new Set([1, 3, 6, 12]);
-
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string; term?: string }> }) {
   const params = await searchParams;
   const planSlug = typeof params.plan === "string" ? params.plan : "";
-  const requestedTerm = Number(params.term || 1);
-  const durationMonths = allowedTerms.has(requestedTerm) ? requestedTerm : 1;
+  const initialTerm = isPrepaidTerm(params.term) ? params.term : null;
   if (!planSlug) notFound();
 
   const [{ region }, session] = await Promise.all([
@@ -36,7 +34,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
           <div className="brand-heading">
             <span className="brand-eyebrow">Secure checkout</span>
             <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)", lineHeight: 1 }}>Get your AI system started.</h1>
-            <p>Your currency is locked to the billing region detected by Fluxknight. There is no manual currency switch.</p>
+            <p>Your currency is locked to the billing region detected by Fluxknight. Monthly and prepaid duration options stay attached to the selected plan.</p>
           </div>
           <CheckoutClient
             plan={{
@@ -47,7 +45,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
               installationFee: plan.installationFee,
               recurringFee: plan.recurringFee,
             }}
-            durationMonths={durationMonths}
+            initialTerm={initialTerm}
             customer={session ? { name: session.organizationSlug, email: session.email } : null}
           />
         </div>
