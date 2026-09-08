@@ -162,7 +162,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
         <span className={styles.mobileMenuTitle}>Navigation</span>
         <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
       </div>
-      <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>AI Operations Platform</small></Link>
+      <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}><FluxknightLogo className={extras.wordmark} /><small>Serve Better. Operate Smarter.</small></Link>
       <div className={extras.workspaceSwitcher}><span className={extras.workspaceIcon}><Building2 size={16} /></span><span><small>Current scope</small><strong>{workspaceName}</strong></span></div>
       <nav className={`admin-nav ${styles.nav}`} aria-label="Platform, home agent, client onboarding and public website navigation">
         <section className={styles.group}>
