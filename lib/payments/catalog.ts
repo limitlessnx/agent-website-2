@@ -1,4 +1,5 @@
 import { supabaseRest } from "@/lib/supabase-server-rest";
+import { getFluxPlanDefinition } from "@/lib/fluxknight-plans";
 import type { BillingCurrency, BillingRegion } from "@/lib/payments/region";
 
 export type PublicPlan = {
@@ -27,6 +28,7 @@ type BillingPlanRow = {
 };
 
 const PUBLIC_PRICING: Record<string, {
+  planCode: "basic" | "plus" | "business" | "business_plus";
   name: string;
   description: string;
   custom: boolean;
@@ -34,6 +36,7 @@ const PUBLIC_PRICING: Record<string, {
   international: { setup: number; recurring: number };
 }> = {
   "whatsapp-ai-starter": {
+    planCode: "basic",
     name: "Basic",
     description: "AI front desk for customer questions, enquiries, qualification, capture and human handoff.",
     custom: false,
@@ -41,13 +44,15 @@ const PUBLIC_PRICING: Record<string, {
     international: { setup: 500, recurring: 100 },
   },
   "ai-call-receptionist": {
-    name: "Starter",
+    planCode: "plus",
+    name: "Plus",
     description: "Everything in Basic, plus automated follow-up, reminders, nurture and missed-lead recovery.",
     custom: false,
     ng: { setup: 300000, recurring: 100000 },
     international: { setup: 1000, recurring: 250 },
   },
   "ai-front-desk-suite": {
+    planCode: "business",
     name: "Business",
     description: "Customer operations automation with higher usage, admin controls, cross-channel workflows, reporting and Leo Admin Assistance.",
     custom: false,
@@ -55,6 +60,7 @@ const PUBLIC_PRICING: Record<string, {
     international: { setup: 2500, recurring: 500 },
   },
   "custom-ai-operations": {
+    planCode: "business_plus",
     name: "Business+",
     description: "Custom implementation with industry databases, deeper workflows, integrations, dashboards and operational data systems.",
     custom: true,
@@ -74,6 +80,7 @@ export async function getPublicPlan(slug: string, region: BillingRegion): Promis
   if (!plan || plan.metadata?.public_catalog !== true) return null;
 
   const selected = region === "NG" ? pricing.ng : pricing.international;
+  const fluxPlan = getFluxPlanDefinition(pricing.planCode);
 
   return {
     id: plan.id,
@@ -88,6 +95,8 @@ export async function getPublicPlan(slug: string, region: BillingRegion): Promis
     metadata: {
       ...(plan.metadata || {}),
       custom: pricing.custom,
+      plan_code: pricing.planCode,
+      monthly_credits: fluxPlan.monthlyCredits,
       pricing_version: "v2-2026-09",
     },
   };
