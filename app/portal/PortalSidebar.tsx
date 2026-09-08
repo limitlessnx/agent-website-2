@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Bot, Boxes, ChevronDown, LayoutDashboard, LifeBuoy, Menu, Settings, ShoppingBag, X, Zap } from "@/components/admin/ServerIcons";
+import { Bell, Bot, Boxes, ChevronDown, LayoutDashboard, LifeBuoy, Menu, Settings, ShoppingBag, WalletCards, X, Zap } from "@/components/admin/ServerIcons";
 import { useState } from "react";
 
 export default function PortalSidebar({ organization, unreadNotifications = 0 }: { organization: string; unreadNotifications?: number }) {
@@ -24,6 +24,7 @@ export default function PortalSidebar({ organization, unreadNotifications = 0 }:
         <nav aria-label="Client dashboard navigation">
           <Link href="/portal" className={active("/portal", true) ? "active" : ""} onClick={() => setOpen(false)}><LayoutDashboard size={18} /><span>Dashboard</span></Link>
           <Link href="/portal/notifications" className={active("/portal/notifications") ? "active" : ""} onClick={() => setOpen(false)}><Bell size={18} /><span>Notifications</span>{unreadNotifications > 0 ? <small>{unreadNotifications > 99 ? "99+" : unreadNotifications}</small> : null}</Link>
+          <Link href="/portal/billing" className={active("/portal/billing") ? "active" : ""} onClick={() => setOpen(false)}><WalletCards size={18} /><span>Billing</span></Link>
           <Link href="/portal/systems" className={active("/portal/systems") ? "active" : ""} onClick={() => setOpen(false)}><Boxes size={18} /><span>My Systems</span></Link>
           <Link href="/portal/marketplace" className={active("/portal/marketplace") ? "active" : ""} onClick={() => setOpen(false)}><ShoppingBag size={18} /><span>AI Agents Systems</span></Link>
           <section className={`portal-nav-drawer ${agentsActive ? "active" : ""}`}>
