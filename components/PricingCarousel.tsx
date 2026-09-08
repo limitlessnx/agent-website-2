@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, Layers3, MessageSquareText, Network, Workflow } from "@/components/admin/ServerIcons";
-import { calculatePrepaidPrice, PREPAID_TERMS, type PrepaidTerm } from "@/lib/payments/terms";
+import { calculatePrepaidPrice, type PrepaidTerm } from "@/lib/payments/terms";
 import { usePublicPricing } from "@/lib/use-public-pricing";
 import styles from "@/components/PricingCarousel.module.css";
 
@@ -51,32 +51,33 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
     icon: MessageSquareText,
     name: "Basic",
-    description: "A focused AI front desk for questions, enquiries, qualification, customer capture and human handoff.",
+    description: "One AI customer-service channel for questions, enquiries, qualification, capture and human handoff.",
     features: [
       "2,500 monthly Flux Credits",
-      "WhatsApp AI or Web AI support",
+      "Choose 1 channel: Website AI, WhatsApp AI, or Voice Agent",
       "24/7 questions and enquiries",
       "Approved product, service and FAQ responses",
       "Basic customer and lead capture",
+      "Up to 2 human handoff recipients",
       "Conversation history",
-      "Human-agent handoff",
-      "Leo Chat",
       "Basic dashboard access",
+      "No automated follow-up or reminder sequences",
     ],
   },
   "ai-call-receptionist": {
     icon: Workflow,
     name: "Plus",
-    description: "Everything in Basic, plus automated follow-up, reminders, nurture and missed-lead recovery.",
+    description: "Everything in Basic, with higher credits, up to two channels, automated follow-up, reminders, nurture and missed-lead recovery.",
     features: [
       "5,000 monthly Flux Credits",
       "Everything in Basic",
+      "Use up to 2 customer channels",
+      "Examples: WhatsApp + Voice, Website + WhatsApp, or Website + Voice",
       "Automated customer follow-up",
       "Product or service-specific follow-up",
-      "Appointment, booking, quote or inspection reminders",
+      "Appointment, booking, quote, inspection, payment or renewal reminders where relevant",
       "Missed-lead recovery",
-      "Scheduled nurture sequences",
-      "Simple lead status tracking",
+      "Scheduled nurture and re-engagement sequences",
     ],
   },
   "ai-front-desk-suite": {
@@ -86,28 +87,29 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
     features: [
       "12,000 monthly Flux Credits",
       "Everything in Plus",
-      "Higher monthly usage and AI credits",
+      "Multi-channel customer operations",
+      "Website, WhatsApp, Voice and Email workflows where applicable",
       "Admin workspace and team access",
-      "WhatsApp and email follow-up",
-      "Leo Voice",
       "Cross-channel customer context",
-      "Workflow visibility and reporting",
-      "Human escalation controls",
+      "CRM and workflow visibility",
+      "Reporting and operational oversight",
+      "Expanded human escalation controls",
       "Leo Admin Assistance",
     ],
   },
   "custom-ai-operations": {
     icon: Layers3,
     name: "Business+",
-    description: "A custom AI operating system with industry databases, deeper workflows, integrations, dashboards and operational data systems.",
+    description: "Advanced customer operations with configurable credits, industry databases, deeper workflows, integrations, dashboards and operational data systems.",
     features: [
       "25,000+ configurable monthly Flux Credits",
       "Everything in Business",
       "Industry-specific customer or operations database",
       "Custom client, member or operational records",
+      "Advanced workflow automation",
       "Deeper record history and lifecycle visibility",
       "Advanced reporting and segmentation",
-      "Custom workflows and integrations",
+      "Custom integrations where required",
       "Custom dashboards where required",
       "Managed deployment and support",
     ],
@@ -116,24 +118,24 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
 
 const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: string }> = {
   "whatsapp-ai-starter": {
-    fit: "Businesses that need a reliable AI front desk without follow-up workflows",
+    fit: "Businesses that need one reliable AI customer-service channel without follow-up workflows",
     outcome: "Handle questions and enquiries faster, qualify customers, capture details and hand the right conversations to staff.",
     cta: "Start with Basic",
   },
   "ai-call-receptionist": {
-    fit: "Businesses that need customer conversations to continue after the first enquiry",
-    outcome: "Add automatic follow-up, reminders and missed-lead recovery so interested customers are less likely to disappear.",
+    fit: "Businesses that need up to two channels and customer conversations to continue after the first enquiry",
+    outcome: "Add automated follow-up, reminders and missed-lead recovery with higher monthly credits.",
     cta: "Start with Plus",
   },
   "ai-front-desk-suite": {
-    fit: "Growing organizations that need a connected customer operations layer",
-    outcome: "Coordinate conversations, follow-up, email, voice, reporting and staff visibility with higher usage capacity.",
+    fit: "Growing organizations that need a connected multi-channel customer operations layer",
+    outcome: "Coordinate conversations, follow-up, reporting, staff visibility and customer context with higher usage capacity.",
     cta: "Deploy Business",
   },
   "custom-ai-operations": {
-    fit: "Organizations that need databases, deeper integrations or custom operating workflows",
-    outcome: "Build the system around the organization, including customer databases and industry-specific operational structures.",
-    cta: "Plan Business+",
+    fit: "Organizations that need deeper operational data, advanced workflows, integrations and higher configurable usage",
+    outcome: "Connect customer conversations to structured business records, dashboards and advanced operational workflows.",
+    cta: "Deploy Business+",
   },
 };
 
@@ -271,7 +273,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const detected = prices[plan.slug];
           const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
-          const isCustom = detected?.custom ?? plan.custom ?? (plan.slug === "custom-ai-operations" || plan.slug === "business-plus");
+          const isCustom = detected?.custom ?? plan.custom ?? (plan.slug === "custom-ai-operations");
           const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
           const checkoutSlug = detected?.slug ?? (isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug);
           const prepaid = billingTerm !== "monthly" && detected && !detected.custom
