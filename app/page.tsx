@@ -56,12 +56,12 @@ const pricingPlans = [
       "Human handoff or escalation",
       "Basic conversation visibility",
     ],
-    cta: "View Basic",
+    cta: "Choose Basic",
   },
   {
     icon: Workflow,
-    slug: "starter",
-    name: "Starter",
+    slug: "plus",
+    name: "Plus",
     firstMonth: "₦200,000",
     ongoing: "₦100,000/month",
     description: "Everything in Basic, plus automated follow-up and reminders through the same channel the lead originally used.",
@@ -73,7 +73,7 @@ const pricingPlans = [
       "Scheduled nurture sequences",
       "Simple lead status tracking",
     ],
-    cta: "View Starter",
+    cta: "Choose Plus",
   },
   {
     icon: Network,
@@ -81,9 +81,9 @@ const pricingPlans = [
     name: "Business",
     firstMonth: "₦400,000",
     ongoing: "₦250,000/month",
-    description: "Everything in Starter, with higher usage, admin controls, cross-channel follow-up, deeper workflows and Leo Admin Assistance.",
+    description: "Everything in Plus, with higher usage, admin controls, cross-channel follow-up, deeper workflows and Leo Admin Assistance.",
     features: [
-      "Everything in Starter",
+      "Everything in Plus",
       "Higher monthly usage and credits",
       "Admin workspace and team access",
       "WhatsApp and email follow-up",
@@ -92,7 +92,7 @@ const pricingPlans = [
       "Human escalation controls",
       "Leo Admin Assistance",
     ],
-    cta: "View Business",
+    cta: "Choose Business",
     featured: true,
   },
   {
@@ -110,7 +110,7 @@ const pricingPlans = [
       "Structured operational data for staff",
       "Industry database modules released progressively",
     ],
-    cta: "Explore Business+",
+    cta: "Configure Business+",
     custom: true,
   },
 ];
@@ -175,14 +175,14 @@ export default function HomePage() {
         <div className="brand-shell">
           <div className="brand-heading">
             <span className="brand-eyebrow">Choose your automation level</span>
-            <h2>Basic. Starter. Business. Business+.</h2>
-            <p>The same four Fluxknight tiers now stay consistent across the homepage, pricing page and every industry page. Start with conversations, add follow-up, connect the customer journey, then add the industry-specific operating database when needed.</p>
+            <h2>Basic. Plus. Business. Business+.</h2>
+            <p>The same four Fluxknight tiers stay consistent across the homepage, pricing page and industry pages. Choose a duration, compare the plans, then continue directly to checkout for ready-made plans.</p>
           </div>
-          <PricingCarousel plans={pricingPlans} compact />
+          <PricingCarousel plans={pricingPlans} compact showDurationSelector />
           <div className="hero-buttons production-pricing-route-link">
             <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
           </div>
-          <p className="production-pricing-note">Final scope can vary with channels, usage, workflow depth, integrations and industry-specific data requirements.</p>
+          <p className="production-pricing-note">Business+ remains custom-scoped because its database and integrations depend on the organization. Ready-made plans go directly to checkout.</p>
         </div>
       </section>
 
