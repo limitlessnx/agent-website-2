@@ -271,7 +271,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const detected = prices[plan.slug];
           const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
-          const isCustom = detected?.custom ?? plan.custom ?? plan.slug === "custom-ai-operations" || plan.slug === "business-plus";
+          const isCustom = detected?.custom ?? plan.custom ?? (plan.slug === "custom-ai-operations" || plan.slug === "business-plus");
           const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
           const checkoutSlug = detected?.slug ?? (isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug);
           const prepaid = billingTerm !== "monthly" && detected && !detected.custom
