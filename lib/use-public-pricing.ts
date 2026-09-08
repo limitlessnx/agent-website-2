@@ -38,6 +38,11 @@ const slugAliases: Record<string, string[]> = {
   "custom-ai-operations": ["business-plus"],
 };
 
+function persistPricingView(view: "nigeria" | "international") {
+  window.localStorage.setItem(PRICE_VIEW_KEY, view);
+  document.cookie = `${PRICE_VIEW_KEY}=${view}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
+
 function formatAmount(currency: "NGN" | "USD", amount: number) {
   return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
     style: "currency",
@@ -94,19 +99,21 @@ export function usePublicPricing() {
 
   useEffect(() => {
     const savedView = typeof window !== "undefined" ? window.localStorage.getItem(PRICE_VIEW_KEY) : null;
-    const controller = loadPricing(savedView === "international" ? "international" : "nigeria");
+    const normalizedView = savedView === "international" ? "international" : "nigeria";
+    persistPricingView(normalizedView);
+    const controller = loadPricing(normalizedView);
     return () => controller.abort();
   }, [loadPricing]);
 
   const showInternational = useCallback(() => {
     if (!canViewInternational) return;
-    window.localStorage.setItem(PRICE_VIEW_KEY, "international");
+    persistPricingView("international");
     loadPricing("international");
   }, [canViewInternational, loadPricing]);
 
   const showNigeria = useCallback(() => {
     if (detectedRegion !== "NG") return;
-    window.localStorage.setItem(PRICE_VIEW_KEY, "nigeria");
+    persistPricingView("nigeria");
     loadPricing("nigeria");
   }, [detectedRegion, loadPricing]);
 
