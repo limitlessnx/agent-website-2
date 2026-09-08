@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import PricingClient from "./PricingClient";
 
-const description = "Choose the Fluxknight operating level that fits your organization: Basic, Starter, Business, or Business+, then see how scope changes for your industry, channels, usage, workflows, and integrations.";
+const description = "Choose the Fluxknight operating level that fits your organization: Basic, Plus, Business, or Business+, then see how scope changes for your industry, channels, usage, workflows, and integrations.";
 
 export const metadata: Metadata = {
   title: "Pricing",
