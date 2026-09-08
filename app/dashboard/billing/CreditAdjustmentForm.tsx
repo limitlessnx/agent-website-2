@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 export default function CreditAdjustmentForm({ organizationId }: { organizationId: string }) {
   const [amount, setAmount] = useState("");
@@ -8,7 +8,7 @@ export default function CreditAdjustmentForm({ organizationId }: { organizationI
   const [type, setType] = useState("adjustment");
   const [status, setStatus] = useState<string | null>(null);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("Saving...");
     const response = await fetch("/api/admin/billing", {
