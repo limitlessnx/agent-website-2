@@ -36,6 +36,7 @@ export default function CheckoutClient({ plan, customer, initialTerm = "3m" }: P
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const price = calculatePrepaidPrice(plan.installationFee, plan.recurringFee, term);
+  const prepaidRenewals = plan.recurringFee * price.months;
 
   async function startCheckout() {
     setBusy(true);
@@ -95,18 +96,29 @@ export default function CheckoutClient({ plan, customer, initialTerm = "3m" }: P
 
         <div style={{ display: "grid", gap: 12, margin: "22px 0" }}>
           <div>
-            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>ONE-TIME IMPLEMENTATION</span>
+            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>IMPLEMENTATION COST</span>
             <strong style={{ display: "block", fontSize: 22, marginTop: 5 }}>{money(plan.installationFee, plan.currency)}</strong>
+            <small style={{ display: "block", marginTop: 4, opacity: .65 }}>One-time system setup, configuration and deployment</small>
           </div>
           <div>
-            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>PLATFORM &amp; SUPPORT</span>
+            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>MONTHLY RENEWAL</span>
             <strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{money(plan.recurringFee, plan.currency)}/month</strong>
+            <small style={{ display: "block", marginTop: 4, opacity: .65 }}>Platform, support and included plan usage</small>
+          </div>
+          <div>
+            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>{price.label.toUpperCase()} PREPAID RENEWALS</span>
+            <strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{money(prepaidRenewals, plan.currency)}</strong>
+          </div>
+          <div>
+            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>DURATION DISCOUNT</span>
+            <strong style={{ display: "block", fontSize: 20, marginTop: 5, color: "#d8b4fe" }}>−{money(price.discount, plan.currency)}</strong>
+            <small style={{ display: "block", marginTop: 4, opacity: .65 }}>{price.discountPercent}% off the implementation + prepaid renewal subtotal</small>
           </div>
           <div style={{ padding: 16, borderRadius: 14, background: "rgba(139,92,246,.09)", border: "1px solid rgba(168,85,247,.24)" }}>
-            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>{price.label.toUpperCase()} PREPAID TOTAL</span>
+            <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>TOTAL DUE TODAY</span>
             <strong style={{ display: "block", fontSize: 34, marginTop: 5 }}>{money(price.total, plan.currency)}</strong>
             <small style={{ display: "block", marginTop: 5, color: "#d8b4fe" }}>
-              Save {money(price.discount, plan.currency)} ({price.discountPercent}% off {money(price.subtotal, plan.currency)})
+              {money(plan.installationFee, plan.currency)} implementation + {money(prepaidRenewals, plan.currency)} renewals − {money(price.discount, plan.currency)} discount
             </small>
           </div>
         </div>
