@@ -1,12 +1,13 @@
+import FluxknightLogo from "@/components/admin/FluxknightLogo";
+
 export default function FluxLogo({ compact = false, className = "" }: { compact?: boolean; className?: string }) {
   return (
     <span
       className={`flux-wordmark ${compact ? "compact" : ""} ${className}`.trim()}
       aria-label="Fluxknight"
+      style={{ display: "inline-flex", alignItems: "center", width: compact ? 150 : 205, maxWidth: "100%", lineHeight: 0 }}
     >
-      <span>FLU</span>
-      <span className="flux-wordmark-x">X</span>
-      <span>KNIGHT</span>
+      <FluxknightLogo style={{ display: "block", width: "100%", height: "auto", color: "currentColor" }} />
     </span>
   );
 }
