@@ -29,7 +29,7 @@ type PricingCarouselProps = {
 
 type PlanPresentation = Pick<PricingCarouselPlan, "icon" | "name" | "description" | "features">;
 
-const pricingFrameworkSlugs = new Set(["basic", "starter", "business", "business-plus"]);
+const pricingFrameworkSlugs = new Set(["basic", "plus", "starter", "business", "business-plus"]);
 
 const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
@@ -37,20 +37,23 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
     name: "Basic",
     description: "A focused AI front desk for questions, enquiries, qualification, customer capture and human handoff.",
     features: [
+      "2,500 monthly Flux Credits",
       "WhatsApp AI or Web AI support",
       "24/7 questions and enquiries",
       "Approved product, service and FAQ responses",
       "Basic customer and lead capture",
       "Conversation history",
       "Human-agent handoff",
+      "Leo Chat",
       "Basic dashboard access",
     ],
   },
   "ai-call-receptionist": {
     icon: Workflow,
-    name: "Starter",
+    name: "Plus",
     description: "Everything in Basic, plus automated follow-up, reminders, nurture and missed-lead recovery.",
     features: [
+      "5,000 monthly Flux Credits",
       "Everything in Basic",
       "Automated customer follow-up",
       "Product or service-specific follow-up",
@@ -65,11 +68,12 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
     name: "Business",
     description: "A connected customer operations system with higher usage, admin controls, cross-channel workflows, reporting and Leo Admin Assistance.",
     features: [
-      "Everything in Starter",
+      "12,000 monthly Flux Credits",
+      "Everything in Plus",
       "Higher monthly usage and AI credits",
       "Admin workspace and team access",
       "WhatsApp and email follow-up",
-      "Inbound voice support",
+      "Leo Voice",
       "Cross-channel customer context",
       "Workflow visibility and reporting",
       "Human escalation controls",
@@ -81,6 +85,7 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
     name: "Business+",
     description: "A custom AI operating system with industry databases, deeper workflows, integrations, dashboards and operational data systems.",
     features: [
+      "25,000+ configurable monthly Flux Credits",
       "Everything in Business",
       "Industry-specific customer or operations database",
       "Custom client, member or operational records",
@@ -102,7 +107,7 @@ const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: stri
   "ai-call-receptionist": {
     fit: "Businesses that need customer conversations to continue after the first enquiry",
     outcome: "Add automatic follow-up, reminders and missed-lead recovery so interested customers are less likely to disappear.",
-    cta: "Start with Starter",
+    cta: "Start with Plus",
   },
   "ai-front-desk-suite": {
     fit: "Growing organizations that need a connected customer operations layer",
