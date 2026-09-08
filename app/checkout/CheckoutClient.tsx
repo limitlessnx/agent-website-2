@@ -15,6 +15,7 @@ type Plan = {
 
 type Props = {
   plan: Plan;
+  durationMonths: number;
   customer: { name: string; email: string } | null;
 };
 
@@ -26,12 +27,13 @@ function money(value: number, currency: "NGN" | "USD") {
   }).format(value);
 }
 
-export default function CheckoutClient({ plan, customer }: Props) {
+export default function CheckoutClient({ plan, durationMonths, customer }: Props) {
   const [name, setName] = useState(customer?.name || "");
   const [email, setEmail] = useState(customer?.email || "");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const termValue = plan.installationFee + Math.max(0, durationMonths - 1) * plan.recurringFee;
 
   async function startCheckout() {
     setBusy(true);
@@ -43,6 +45,7 @@ export default function CheckoutClient({ plan, customer }: Props) {
         body: JSON.stringify({
           planSlug: plan.slug,
           billingType: "setup",
+          durationMonths,
           customer: { name, email, phone },
         }),
       });
@@ -70,11 +73,16 @@ export default function CheckoutClient({ plan, customer }: Props) {
             <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>FROM MONTH 2 · CONSECUTIVE</span>
             <strong style={{ display: "block", fontSize: 23, marginTop: 5 }}>{money(plan.recurringFee, plan.currency)}/month</strong>
           </div>
+          <div style={{ padding: 14, borderRadius: 12, border: "1px solid rgba(192,132,252,.18)", background: "rgba(139,92,246,.07)" }}>
+            <span style={{ fontSize: 11, opacity: .7, letterSpacing: ".08em" }}>SELECTED DURATION</span>
+            <strong style={{ display: "block", fontSize: 20, marginTop: 5 }}>{durationMonths} {durationMonths === 1 ? "month" : "months"}</strong>
+            <small style={{ display: "block", marginTop: 5, opacity: .62, lineHeight: 1.5 }}>Term value at the current rate: {money(termValue, plan.currency)}. Today you pay the first month; subsequent platform billing continues monthly.</small>
+          </div>
         </div>
         <div style={{ display: "grid", gap: 11 }}>
           {[
             "Payment is verified before onboarding is unlocked",
-            "Your selected currency stays locked",
+            "Your selected currency and duration are carried into the checkout record",
             "Your organization is attached to the payment when logged in",
             "After successful payment you continue directly to onboarding",
           ].map((item) => (
