@@ -14,6 +14,90 @@ function normalizeRequestedPlan(value: string | null): PlanKey | null {
   return value as PlanKey | null;
 }
 
+type ComparisonValue = {
+  label: string;
+  tone?: "included" | "locked" | "limited" | "neutral";
+};
+
+type ComparisonRow = {
+  capability: string;
+  basic: ComparisonValue;
+  starter: ComparisonValue;
+  business: ComparisonValue;
+  businessPlus: ComparisonValue;
+};
+
+const included = (label = "Included"): ComparisonValue => ({ label, tone: "included" });
+const locked = (label: string): ComparisonValue => ({ label, tone: "locked" });
+const limited = (label: string): ComparisonValue => ({ label, tone: "limited" });
+const neutral = (label: string): ComparisonValue => ({ label, tone: "neutral" });
+
+const comparisonRows: ComparisonRow[] = [
+  {
+    capability: "Monthly Flux Credits",
+    basic: neutral("2,500"),
+    starter: neutral("5,000"),
+    business: neutral("12,000"),
+    businessPlus: neutral("25,000+ configurable"),
+  },
+  {
+    capability: "Basic free trial",
+    basic: neutral("7 days · 500 credits"),
+    starter: neutral("—"),
+    business: neutral("—"),
+    businessPlus: neutral("—"),
+  },
+  {
+    capability: "Core AI support",
+    basic: included(), starter: included(), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Website / WhatsApp support",
+    basic: included(), starter: included(), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Leo Chat",
+    basic: included(), starter: included(), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Automated follow-up",
+    basic: locked("Unlock on Plus"), starter: included(), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Reminders",
+    basic: locked("Unlock on Plus"), starter: included(), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Admin / team tools",
+    basic: locked("Unlock on Business"), starter: locked("Unlock on Business"), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Cross-channel workflows",
+    basic: locked("Unlock on Business"), starter: locked("Unlock on Business"), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Leo Voice",
+    basic: locked("Unlock on Business"), starter: locked("Unlock on Business"), business: included(), businessPlus: included(),
+  },
+  {
+    capability: "Client / industry database",
+    basic: locked("Unlock on Business+"), starter: locked("Unlock on Business+"), business: locked("Unlock on Business+"), businessPlus: included(),
+  },
+  {
+    capability: "Custom workflows / integrations",
+    basic: locked("Unlock on Business+"), starter: locked("Unlock on Business+"), business: limited("Supported integrations"), businessPlus: included("Advanced / custom"),
+  },
+];
+
+function ComparisonCell({ value }: { value: ComparisonValue }) {
+  return (
+    <span className={`pricing-compare-value is-${value.tone ?? "neutral"}`}>
+      {value.tone === "included" ? <CheckCircle2 size={16} /> : null}
+      {value.label}
+    </span>
+  );
+}
+
 export default function PricingClient() {
   const [activePlan, setActivePlan] = useState<PlanKey>("basic");
   const [industrySlug, setIndustrySlug] = useState("");
@@ -48,7 +132,7 @@ export default function PricingClient() {
           <div className="brand-heading pricing-page-heading">
             <span className="brand-eyebrow">Fluxknight Plans</span>
             <h1>Choose the level of automation your organization actually needs.</h1>
-            <p>Basic, Plus, Business and Business+ stay consistent across industries. The workflow, channels and operational data layer change to match how each organization actually works.</p>
+            <p>Basic, Plus, Business and Business+ stay consistent across industries. Each step unlocks a specific layer of capability, so the difference between plans is clear before you choose.</p>
             {canViewInternational ? (
               <div className="pricing-region-switch" aria-label="Choose pricing view">
                 <button type="button" className={!viewingInternational ? "is-active" : ""} onClick={showNigeria}>Nigeria</button>
@@ -92,13 +176,45 @@ export default function PricingClient() {
                 >
                   <span className="pricing-plan-eyebrow">{plan.eyebrow}</span>
                   <h2>{plan.name}</h2>
-                  {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.first}</strong><span> + {planPrice.ongoing}</span></div> : null}
+                  {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.first}</strong><span> implementation · {planPrice.ongoing} ongoing</span></div> : null}
                   <p>{plan.summary}</p>
                   <span className="pricing-plan-action">{selected ? "Selected" : "View full explanation"} <ArrowRight size={14} /></span>
                 </button>
               );
             })}
           </div>
+
+          <section className="pricing-compare-section" aria-labelledby="pricing-comparison-title">
+            <div className="pricing-compare-heading">
+              <span className="brand-eyebrow">Plan differences</span>
+              <h2 id="pricing-comparison-title">See exactly what each plan unlocks.</h2>
+              <p>Credits control how much you can use. Your plan controls which capabilities are available. Buying more credits never unlocks a higher-plan feature.</p>
+            </div>
+            <div className="pricing-compare-scroll" role="region" aria-label="Fluxknight plan comparison" tabIndex={0}>
+              <table className="pricing-compare-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Capability</th>
+                    <th scope="col">Basic</th>
+                    <th scope="col">Plus</th>
+                    <th scope="col">Business</th>
+                    <th scope="col">Business+</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((row) => (
+                    <tr key={row.capability}>
+                      <th scope="row">{row.capability}</th>
+                      <td><ComparisonCell value={row.basic} /></td>
+                      <td><ComparisonCell value={row.starter} /></td>
+                      <td><ComparisonCell value={row.business} /></td>
+                      <td><ComparisonCell value={row.businessPlus} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
           <section id="plan-details" className="pricing-detail-panel">
             <span className="brand-eyebrow">{active.name} plan</span>
@@ -163,6 +279,11 @@ export default function PricingClient() {
         .pricing-plan-mini-price{margin-bottom:12px;color:#d8b4fe}.pricing-plan-mini-price strong{display:block;font-size:17px}.pricing-plan-mini-price span{font-size:11px;color:#8f829f}
         .pricing-plan-card p{display:block;margin:0!important;color:#aaa0bb!important;font-size:14px!important;line-height:1.7!important;overflow-wrap:normal!important;word-break:normal!important}
         .pricing-plan-action{display:inline-flex;align-items:center;gap:6px;margin-top:22px;color:#d8b4fe;font-size:13px;font-weight:850}
+        .pricing-compare-section{margin-top:34px;padding:clamp(22px,4vw,36px);border:1px solid rgba(168,85,247,.22);border-radius:24px;background:rgba(18,9,31,.72)}
+        .pricing-compare-heading{max-width:780px;margin-bottom:22px}.pricing-compare-heading h2{margin:10px 0 10px;font-size:clamp(1.9rem,4vw,3rem);line-height:1.08;letter-spacing:-.04em}.pricing-compare-heading p{margin:0;color:#aaa0bb;line-height:1.7}
+        .pricing-compare-scroll{width:100%;overflow-x:auto;border:1px solid rgba(168,85,247,.16);border-radius:16px;background:#0d0716;scrollbar-width:thin}.pricing-compare-scroll:focus-visible{outline:2px solid #c084fc;outline-offset:4px}
+        .pricing-compare-table{width:100%;min-width:900px;border-collapse:collapse}.pricing-compare-table th,.pricing-compare-table td{padding:16px 14px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:middle}.pricing-compare-table thead th{position:sticky;top:0;color:#f7efff;background:#12091f;font-size:12px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.pricing-compare-table tbody th{width:26%;color:#f7efff;font-size:13px}.pricing-compare-table tbody td{width:18.5%;color:#aaa0bb;font-size:12px}.pricing-compare-table tbody tr:last-child th,.pricing-compare-table tbody tr:last-child td{border-bottom:0}
+        .pricing-compare-value{display:inline-flex;align-items:center;gap:7px;line-height:1.35}.pricing-compare-value.is-included{color:#d8b4fe;font-weight:800}.pricing-compare-value.is-included svg{color:#c084fc;flex:0 0 auto}.pricing-compare-value.is-locked{color:#81758d}.pricing-compare-value.is-limited{color:#e7c7ff;font-weight:750}.pricing-compare-value.is-neutral{color:#f4eff8;font-weight:750}
         .pricing-detail-panel{scroll-margin-top:110px;margin-top:28px;padding:clamp(24px,4vw,40px);border-radius:24px;background:rgba(18,9,31,.94);border:1px solid rgba(192,132,252,.36)}
         .pricing-detail-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(280px,.95fr);gap:32px;align-items:start;margin-top:12px}
         .pricing-detail-copy h2{margin:0 0 16px;font-size:clamp(2.1rem,4vw,3.4rem);line-height:1.04;letter-spacing:-.045em}
@@ -173,7 +294,7 @@ export default function PricingClient() {
         .pricing-scope-card{padding:24px;border-radius:20px;background:rgba(255,255,255,.025);border:1px solid rgba(168,85,247,.2)}.pricing-scope-card>span{display:block;color:#d8b4fe;font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.pricing-current-price{display:grid;gap:12px;margin:14px 0 20px;padding:16px;border-radius:14px;background:rgba(139,92,246,.08);border:1px solid rgba(168,85,247,.2)}.pricing-current-price small{display:block;color:#8f829f;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.pricing-current-price strong{display:block;margin-top:4px;font-size:22px;color:#fff}.pricing-scope-card h3{margin:10px 0;font-size:26px}.pricing-scope-card p{margin:0;color:#aaa0bb;line-height:1.7;font-size:14px}.pricing-scope-card>div{margin-top:16px}.pricing-scope-card>div>strong{display:block;margin-bottom:8px;font-size:13px}.pricing-scope-card ul{margin:0;padding-left:18px;color:#aaa0bb;font-size:13px;line-height:1.7}.pricing-industry-note{padding:14px;border-radius:14px;background:rgba(126,34,206,.1);border:1px solid rgba(168,85,247,.22)}.pricing-industry-note p{font-size:13px!important;line-height:1.65!important}.pricing-scope-card .button-primary{margin-top:22px}
         .pricing-footnote{opacity:.65;margin-top:2.5rem;font-size:13px;line-height:1.6}
         @media(max-width:980px){.pricing-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pricing-detail-grid{grid-template-columns:1fr}.pricing-plan-card{min-height:280px}}
-        @media(max-width:780px){.pricing-page-hero{padding-top:7.5rem;padding-bottom:2.5rem}.pricing-page-heading{text-align:left}.pricing-page-heading h1{font-size:clamp(2.2rem,10vw,3.4rem)}.pricing-industry-selector{grid-template-columns:1fr}.pricing-plan-grid{grid-template-columns:1fr;gap:12px}.pricing-plan-card{min-height:0;padding:20px!important;border-radius:18px!important}.pricing-plan-card h2{font-size:2rem!important;margin:10px 0 7px!important}.pricing-plan-card p{font-size:.9rem!important;line-height:1.58!important}.pricing-plan-action{margin-top:16px}.pricing-detail-panel{padding:20px 16px;border-radius:20px}.pricing-detail-copy h2{font-size:2rem}.pricing-scope-card{padding:18px}.pricing-industry-box{padding:18px}}
+        @media(max-width:780px){.pricing-page-hero{padding-top:7.5rem;padding-bottom:2.5rem}.pricing-page-heading{text-align:left}.pricing-page-heading h1{font-size:clamp(2.2rem,10vw,3.4rem)}.pricing-industry-selector{grid-template-columns:1fr}.pricing-plan-grid{grid-template-columns:1fr;gap:12px}.pricing-plan-card{min-height:0;padding:20px!important;border-radius:18px!important}.pricing-plan-card h2{font-size:2rem!important;margin:10px 0 7px!important}.pricing-plan-card p{font-size:.9rem!important;line-height:1.58!important}.pricing-plan-action{margin-top:16px}.pricing-compare-section{padding:20px 14px;border-radius:20px}.pricing-compare-heading h2{font-size:2rem}.pricing-compare-heading p{font-size:.9rem}.pricing-compare-scroll{margin-inline:0}.pricing-compare-table th,.pricing-compare-table td{padding:14px 12px}.pricing-detail-panel{padding:20px 16px;border-radius:20px}.pricing-detail-copy h2{font-size:2rem}.pricing-scope-card{padding:18px}.pricing-industry-box{padding:18px}}
       `}</style>
     </main>
   );
