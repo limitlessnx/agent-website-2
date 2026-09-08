@@ -131,7 +131,7 @@ export default function PricingClient() {
                   <div><strong>What changes the price</strong><ul>{pricingProfile.scopeDrivers.map((driver) => <li key={driver}>{driver}</li>)}</ul></div>
                   <div className="pricing-industry-note"><strong>{active.name} for {selectedIndustry?.name}</strong><p>{pricingProfile.planNotes[active.key]}</p></div>
                 </> : <p>Choose an industry above to see its pricing drivers. Exact scope depends on channels, usage, integrations, workflow depth and the operational data layer required.</p>}
-                <Link href={evaluationHref} className="button-primary">Evaluate this plan <ArrowRight size={16} /></Link>
+                <Link href={evaluationHref} className="button-primary">Choose this plan <ArrowRight size={16} /></Link>
               </aside>
             </div>
           </section>
