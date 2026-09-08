@@ -27,11 +27,11 @@ export type PublicPriceDisplay = {
 };
 
 const PRICE_VIEW_KEY = "fluxknight-pricing-view";
-const slugAliases: Record<string, string> = {
-  "whatsapp-ai-starter": "basic",
-  "ai-call-receptionist": "starter",
-  "ai-front-desk-suite": "business",
-  "custom-ai-operations": "business-plus",
+const slugAliases: Record<string, string[]> = {
+  "whatsapp-ai-starter": ["basic"],
+  "ai-call-receptionist": ["plus", "starter"],
+  "ai-front-desk-suite": ["business"],
+  "custom-ai-operations": ["business-plus"],
 };
 
 function formatAmount(currency: "NGN" | "USD", amount: number) {
@@ -67,8 +67,7 @@ export function usePublicPricing() {
             currency: plan.currency,
           } satisfies PublicPriceDisplay;
           next[plan.slug] = display;
-          const alias = slugAliases[plan.slug];
-          if (alias) next[alias] = display;
+          for (const alias of slugAliases[plan.slug] || []) next[alias] = display;
         });
 
         setPrices(next);
