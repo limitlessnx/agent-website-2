@@ -78,6 +78,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Platform Governance",
     sections: [{
       items: [
+        { href: "/dashboard/billing", label: "Billing & Credits" },
         { href: "/dashboard/ai-models", label: "AI Model Control" },
         { href: "/dashboard/knowledge", label: "Knowledge Center" },
         { href: "/dashboard/memory", label: "Memory Center" },
