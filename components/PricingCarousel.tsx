@@ -13,7 +13,7 @@ export type PricingCarouselPlan = {
   name: string;
   firstMonth?: string;
   first?: string;
-  ongoing: string;
+  ongoing?: string;
   description?: string;
   tag?: string;
   features: string[];
@@ -38,6 +38,7 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
     description: "A focused AI front desk for questions, enquiries, qualification, customer capture and human handoff.",
     features: [
       "2,500 monthly Flux Credits",
+      "One primary customer route",
       "WhatsApp AI or Web AI support",
       "24/7 questions and enquiries",
       "Approved product, service and FAQ responses",
@@ -51,11 +52,12 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   "ai-call-receptionist": {
     icon: Workflow,
     name: "Plus",
-    description: "Everything in Basic, plus automated follow-up, reminders, nurture and missed-lead recovery.",
+    description: "Everything in Basic, with follow-up and reminders on one selected customer route: WhatsApp AI or a Voice Call Agent.",
     features: [
       "5,000 monthly Flux Credits",
       "Everything in Basic",
-      "Automated customer follow-up",
+      "Choose one route: WhatsApp AI or Voice Call Agent",
+      "Automated follow-up on the selected route",
       "Product or service-specific follow-up",
       "Appointment, booking, quote or inspection reminders",
       "Missed-lead recovery",
@@ -66,13 +68,15 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   "ai-front-desk-suite": {
     icon: Network,
     name: "Business",
-    description: "A connected customer operations system with higher usage, admin controls, cross-channel workflows, reporting and Leo Admin Assistance.",
+    description: "A connected customer operations system where multiple AI agents and customer routes can work together with email automation, higher usage and admin controls.",
     features: [
       "12,000 monthly Flux Credits",
       "Everything in Plus",
+      "Multiple AI agents and routes working together",
+      "WhatsApp AI + Voice Call Agent + Web AI as configured",
+      "Email automation and email follow-up",
       "Higher monthly usage and AI credits",
       "Admin workspace and team access",
-      "WhatsApp and email follow-up",
       "Leo Voice",
       "Cross-channel customer context",
       "Workflow visibility and reporting",
@@ -82,10 +86,10 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   },
   "custom-ai-operations": {
     icon: Layers3,
-    name: "Business+",
-    description: "A custom AI operating system with industry databases, deeper workflows, integrations, dashboards and operational data systems.",
+    name: "Custom",
+    description: "A tailored AI operating system for organizations that need industry databases, deeper workflows, integrations, dashboards or operational data systems.",
     features: [
-      "25,000+ configurable monthly Flux Credits",
+      "Configurable Flux Credit allowance",
       "Everything in Business",
       "Industry-specific customer or operations database",
       "Custom client, member or operational records",
@@ -105,19 +109,19 @@ const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: stri
     cta: "Start with Basic",
   },
   "ai-call-receptionist": {
-    fit: "Businesses that need customer conversations to continue after the first enquiry",
-    outcome: "Add automatic follow-up, reminders and missed-lead recovery so interested customers are less likely to disappear.",
+    fit: "Businesses that want one customer route with automated follow-up and reminders",
+    outcome: "Choose WhatsApp AI or a Voice Call Agent, then keep customers moving with follow-up, reminders and missed-lead recovery on that route.",
     cta: "Start with Plus",
   },
   "ai-front-desk-suite": {
-    fit: "Growing organizations that need a connected customer operations layer",
-    outcome: "Coordinate conversations, follow-up, email, voice, reporting and staff visibility with higher usage capacity.",
+    fit: "Growing organizations that need several AI agents and channels working together",
+    outcome: "Run WhatsApp, voice and web agents together as configured, add email automation, and give staff one connected operational view.",
     cta: "Deploy Business",
   },
   "custom-ai-operations": {
     fit: "Organizations that need databases, deeper integrations or custom operating workflows",
-    outcome: "Build the system around the organization, including customer databases and industry-specific operational structures.",
-    cta: "Plan Business+",
+    outcome: "Scope the system around the organization, including customer databases, industry-specific structures and bespoke integrations.",
+    cta: "Discuss Custom",
   },
 };
 
@@ -221,14 +225,14 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
         {presentedPlans.map((plan, index) => {
           const Icon = plan.icon;
           const detected = prices[plan.slug];
-          const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
-          const ongoingPrice = detected?.ongoing ?? plan.ongoing;
-          const isCustom = plan.custom || plan.slug === "custom-ai-operations";
+          const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "";
+          const ongoingPrice = detected?.ongoing ?? plan.ongoing ?? "";
+          const isCustom = plan.custom || plan.slug === "custom-ai-operations" || plan.slug === "business-plus";
           const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
-          const href = isFrameworkPlan
-            ? `/pricing?plan=${encodeURIComponent(plan.slug)}#plan-details`
-            : isCustom
-              ? "/evaluation"
+          const href = isCustom
+            ? "/evaluation"
+            : isFrameworkPlan
+              ? `/pricing?plan=${encodeURIComponent(plan.slug)}#plan-details`
               : `/checkout?plan=${encodeURIComponent(plan.slug)}`;
           const decision = planDecisionCopy[plan.slug];
           const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
@@ -248,10 +252,12 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
                   <p>{decision.outcome}</p>
                 </div>
               ) : null}
-              <div className={styles.priceBlock}>
-                <div><span>Implementation</span><strong>{firstPrice}</strong></div>
-                <div><span>Ongoing platform &amp; support</span><strong>{ongoingPrice}</strong></div>
-              </div>
+              {!isCustom ? (
+                <div className={styles.priceBlock}>
+                  <div><span>Implementation</span><strong>{firstPrice}</strong></div>
+                  <div><span>Ongoing platform &amp; support</span><strong>{ongoingPrice}</strong></div>
+                </div>
+              ) : null}
               <h4>What&apos;s included</h4>
               <div className={styles.features}>{plan.features.map((feature) => <span key={feature}><CheckCircle2 size={16} />{feature}</span>)}</div>
               <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>
