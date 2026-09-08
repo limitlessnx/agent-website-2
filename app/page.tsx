@@ -46,15 +46,17 @@ const pricingPlans = [
     name: "Basic",
     firstMonth: "₦100,000",
     ongoing: "₦50,000/month",
-    description: "A focused customer-facing system for organizations that mainly need instant response, qualification and human handoff without automated follow-up.",
+    description: "One AI customer-service channel for businesses that need instant answers, enquiry handling, qualification and clean human handoff without automated follow-up.",
     features: [
-      "One primary customer channel",
-      "Website support agent",
-      "Approved FAQ, product or service knowledge",
-      "Lead qualification or sales intake",
-      "Customer detail capture",
-      "Human handoff or escalation",
-      "Basic conversation visibility",
+      "2,500 monthly Flux Credits",
+      "Choose 1 channel: Website AI, WhatsApp AI, or Voice Agent",
+      "24/7 questions, enquiries and support",
+      "Approved FAQ, product and service knowledge",
+      "Lead or customer detail capture",
+      "Basic qualification and intent capture",
+      "Up to 2 human handoff recipients",
+      "Conversation history and basic dashboard visibility",
+      "No automated follow-up or reminder sequences",
     ],
     cta: "Choose Basic",
   },
@@ -64,14 +66,18 @@ const pricingPlans = [
     name: "Plus",
     firstMonth: "₦200,000",
     ongoing: "₦100,000/month",
-    description: "Everything in Basic, plus automated follow-up and reminders through the same channel the lead originally used.",
+    description: "Everything in Basic, with higher credits, up to two customer channels, plus automated follow-up and reminder workflows that keep enquiries moving.",
     features: [
+      "5,000 monthly Flux Credits",
       "Everything in Basic",
-      "Same-channel automated follow-up",
-      "Appointment, booking, quote or inspection reminders",
+      "Use up to 2 customer channels",
+      "Examples: WhatsApp + Voice, Website + WhatsApp, or Website + Voice",
+      "Automated customer follow-up",
+      "Product or service-specific follow-up",
+      "Appointment, booking, quote, inspection, payment or renewal reminders where relevant",
       "Missed-lead recovery",
-      "Scheduled nurture sequences",
-      "Simple lead status tracking",
+      "Scheduled nurture and re-engagement sequences",
+      "Human handoff across the selected channels",
     ],
     cta: "Choose Plus",
   },
@@ -81,15 +87,17 @@ const pricingPlans = [
     name: "Business",
     firstMonth: "₦400,000",
     ongoing: "₦250,000/month",
-    description: "Everything in Plus, with higher usage, admin controls, cross-channel follow-up, deeper workflows and Leo Admin Assistance.",
+    description: "A broader customer-operations system for teams that need higher usage, multiple connected channels, admin controls, cross-channel context and deeper automation.",
     features: [
+      "12,000 monthly Flux Credits",
       "Everything in Plus",
-      "Higher monthly usage and credits",
+      "Multi-channel customer operations",
+      "Website, WhatsApp, Voice and Email workflows where applicable",
       "Admin workspace and team access",
-      "WhatsApp and email follow-up",
       "Cross-channel customer context",
-      "Workflow visibility and reporting",
-      "Human escalation controls",
+      "CRM and workflow visibility",
+      "Reporting and operational oversight",
+      "Expanded human escalation controls",
       "Leo Admin Assistance",
     ],
     cta: "Choose Business",
@@ -98,19 +106,19 @@ const pricingPlans = [
   {
     icon: Rocket,
     slug: "business-plus",
-    name: "Business+",
+    name: "Custom",
     firstMonth: "Custom",
     ongoing: "Custom",
-    description: "Everything in Business, plus an industry-specific customer or operations database designed around how the organization actually works.",
+    description: "A fully custom Fluxknight deployment built around the client’s exact goals, channels, workflows, integrations, data requirements and expected usage.",
     features: [
-      "Everything in Business",
-      "Industry-specific customer or operations database",
-      "Deeper record history and lifecycle visibility",
-      "Advanced reporting and segmentation",
-      "Structured operational data for staff",
-      "Industry database modules released progressively",
+      "Custom Flux Credit allocation",
+      "Custom number and combination of customer channels",
+      "Custom AI agents where required",
+      "Custom follow-up, reminder and operational workflows",
+      "Custom integrations, databases or dashboards where required",
+      "Scope, deployment and support defined around the client’s requirements",
     ],
-    cta: "Configure Business+",
+    cta: "Build a Custom Plan",
     custom: true,
   },
 ];
@@ -175,14 +183,14 @@ export default function HomePage() {
         <div className="brand-shell">
           <div className="brand-heading">
             <span className="brand-eyebrow">Choose your automation level</span>
-            <h2>Basic. Plus. Business. Business+.</h2>
-            <p>The same four Fluxknight tiers stay consistent across the homepage, pricing page and industry pages. Choose a duration, compare the plans, then continue directly to checkout for ready-made plans.</p>
+            <h2>Basic. Plus. Business. Custom.</h2>
+            <p>Choose the number of channels and automation depth your organization needs. Basic, Plus and Business have defined scopes and can continue to checkout. Custom is designed around the client’s specific requirements.</p>
           </div>
           <PricingCarousel plans={pricingPlans} compact showDurationSelector />
           <div className="hero-buttons production-pricing-route-link">
             <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
           </div>
-          <p className="production-pricing-note">Business+ remains custom-scoped because its database and integrations depend on the organization. Ready-made plans go directly to checkout.</p>
+          <p className="production-pricing-note">Basic supports one customer channel. Plus supports up to two channels with higher credits and follow-up automation. Business expands into connected customer operations. Custom is scoped entirely around the client.</p>
         </div>
       </section>
 
