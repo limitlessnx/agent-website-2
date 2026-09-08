@@ -8,6 +8,11 @@ import { industryPricingBySlug } from "@/lib/industryPricing";
 import { usePublicPricing } from "@/lib/use-public-pricing";
 
 const planOrder: PlanKey[] = ["basic", "starter", "business", "business-plus"];
+const checkoutSlugByPlan: Record<Exclude<PlanKey, "business-plus">, string> = {
+  basic: "whatsapp-ai-starter",
+  starter: "ai-call-receptionist",
+  business: "ai-front-desk-suite",
+};
 
 function normalizeRequestedPlan(value: string | null): PlanKey | null {
   if (value === "plus") return "starter";
@@ -38,8 +43,11 @@ export default function PricingClient() {
   const selectedIndustry = industries.find((industry) => industry.slug === industrySlug);
   const pricingProfile = industrySlug ? industryPricingBySlug[industrySlug] : undefined;
   const activePrice = prices[active.key];
-  const evaluationPlan = active.key === "starter" ? "plus" : active.key;
-  const evaluationHref = `/evaluation?plan=${encodeURIComponent(evaluationPlan)}${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
+  const evaluationHref = `/evaluation?plan=business-plus${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
+  const checkoutHref = active.key === "business-plus"
+    ? evaluationHref
+    : `/checkout?plan=${encodeURIComponent(checkoutSlugByPlan[active.key])}&term=1`;
+  const planCtaLabel = active.key === "business-plus" ? "Configure Business+" : "Continue to checkout";
 
   return (
     <main className="quantix-home pricing-page-shell">
@@ -131,7 +139,7 @@ export default function PricingClient() {
                   <div><strong>What changes the price</strong><ul>{pricingProfile.scopeDrivers.map((driver) => <li key={driver}>{driver}</li>)}</ul></div>
                   <div className="pricing-industry-note"><strong>{active.name} for {selectedIndustry?.name}</strong><p>{pricingProfile.planNotes[active.key]}</p></div>
                 </> : <p>Choose an industry above to see its pricing drivers. Exact scope depends on channels, usage, integrations, workflow depth and the operational data layer required.</p>}
-                <Link href={evaluationHref} className="button-primary">Choose this plan <ArrowRight size={16} /></Link>
+                <Link href={checkoutHref} className="button-primary">{planCtaLabel} <ArrowRight size={16} /></Link>
               </aside>
             </div>
           </section>
