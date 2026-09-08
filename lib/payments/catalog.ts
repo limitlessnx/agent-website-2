@@ -62,8 +62,8 @@ const PUBLIC_PRICING: Record<string, {
   "custom-ai-operations": {
     planCode: "business_plus",
     name: "Business+",
-    description: "Custom implementation with industry databases, deeper workflows, integrations, dashboards and operational data systems.",
-    custom: true,
+    description: "Advanced customer operations with configurable credits, industry databases, deeper workflows, integrations, dashboards and operational data systems.",
+    custom: false,
     ng: { setup: 2000000, recurring: 500000 },
     international: { setup: 5000, recurring: 1000 },
   },
