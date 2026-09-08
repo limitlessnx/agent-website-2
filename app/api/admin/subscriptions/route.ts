@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
+import { ensureFluxWallet } from "@/lib/flux-credits";
+import { getFluxPlanDefinition } from "@/lib/fluxknight-plans";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function PUT(request: NextRequest) {
@@ -19,12 +21,22 @@ export async function PUT(request: NextRequest) {
     const admin = createAdminClient();
     const [{ data: organization, error: organizationError }, { data: plan, error: planError }] = await Promise.all([
       admin.from("organizations").select("id,name").eq("id", organizationId).maybeSingle(),
-      admin.from("billing_plans").select("id,name,status").eq("id", planId).eq("status", "active").maybeSingle(),
+      admin.from("billing_plans").select("id,name,slug,status,metadata").eq("id", planId).eq("status", "active").maybeSingle(),
     ]);
     if (organizationError) throw organizationError;
     if (planError) throw planError;
     if (!organization) return NextResponse.json({ error: "Organization not found." }, { status: 404 });
     if (!plan) return NextResponse.json({ error: "Active billing plan not found." }, { status: 404 });
+
+    const fluxPlan = getFluxPlanDefinition(
+      String((plan.metadata as Record<string, unknown> | null)?.plan_code || plan.slug || plan.name || "basic"),
+    );
+    const requestedCredits = Number(body.monthlyCredits || (plan.metadata as Record<string, unknown> | null)?.monthly_credits || fluxPlan.monthlyCredits);
+    const monthlyCredits = fluxPlan.configurableMonthlyCredits && Number.isFinite(requestedCredits)
+      ? Math.max(25000, requestedCredits)
+      : fluxPlan.monthlyCredits;
+    const now = new Date();
+    const trialEndsAt = status === "trialing" ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
 
     const { data: existing, error: existingError } = await admin
       .from("organization_subscriptions")
@@ -41,16 +53,25 @@ export async function PUT(request: NextRequest) {
       plan_id: planId,
       provider: "manual",
       status,
-      current_period_start: status === "active" ? new Date().toISOString() : null,
-      current_period_end: null,
-      metadata: { activated_by: session.email, activation_source: "phase_14_admin" },
-      updated_at: new Date().toISOString(),
+      current_period_start: status === "active" || status === "trialing" ? now.toISOString() : null,
+      current_period_end: status === "active" ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : trialEndsAt,
+      trial_ends_at: trialEndsAt,
+      metadata: {
+        activated_by: session.email,
+        activation_source: "phase_14_admin",
+        plan_code: fluxPlan.code,
+        monthly_credits: status === "trialing" ? 500 : monthlyCredits,
+        trial_credit_limit: status === "trialing" ? 500 : null,
+      },
+      updated_at: now.toISOString(),
     };
 
     const result = existing
       ? await admin.from("organization_subscriptions").update(payload).eq("id", existing.id).select("id,status").single()
       : await admin.from("organization_subscriptions").insert(payload).select("id,status").single();
     if (result.error) throw result.error;
+
+    await ensureFluxWallet(organizationId);
 
     return NextResponse.json({ ok: true, subscription: result.data });
   } catch (error) {
