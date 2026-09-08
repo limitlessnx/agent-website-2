@@ -25,11 +25,25 @@ export type PricingCarouselPlan = {
 type PricingCarouselProps = {
   plans: PricingCarouselPlan[];
   compact?: boolean;
+  showDurationSelector?: boolean;
 };
 
 type PlanPresentation = Pick<PricingCarouselPlan, "icon" | "name" | "description" | "features">;
 
 const pricingFrameworkSlugs = new Set(["basic", "plus", "starter", "business", "business-plus"]);
+const checkoutSlugByFramework: Record<string, string> = {
+  basic: "whatsapp-ai-starter",
+  plus: "ai-call-receptionist",
+  starter: "ai-call-receptionist",
+  business: "ai-front-desk-suite",
+  "business-plus": "custom-ai-operations",
+};
+const durationOptions = [
+  { months: 1, label: "1 month" },
+  { months: 3, label: "3 months" },
+  { months: 6, label: "6 months" },
+  { months: 12, label: "12 months" },
+] as const;
 
 const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
@@ -121,8 +135,17 @@ const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: stri
   },
 };
 
-export default function PricingCarousel({ plans, compact = false }: PricingCarouselProps) {
+function formatMoney(currency: "NGN" | "USD", amount: number) {
+  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export default function PricingCarousel({ plans, compact = false, showDurationSelector = false }: PricingCarouselProps) {
   const [active, setActive] = useState(0);
+  const [durationMonths, setDurationMonths] = useState(1);
   const trackRef = useRef<HTMLDivElement>(null);
   const settledRef = useRef<number | null>(null);
   const programmaticRef = useRef<number | null>(null);
@@ -217,21 +240,45 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
         </div>
       </div>
 
+      {showDurationSelector ? (
+        <div className={styles.durationBar}>
+          <div>
+            <span className={styles.durationLabel}>Choose duration</span>
+            <div className={styles.durationOptions} role="group" aria-label="Choose plan duration">
+              {durationOptions.map((option) => (
+                <button
+                  key={option.months}
+                  type="button"
+                  className={durationMonths === option.months ? styles.durationActive : styles.durationButton}
+                  aria-pressed={durationMonths === option.months}
+                  onClick={() => setDurationMonths(option.months)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <small>Current rates are used for the selected term. First-month setup is paid at checkout, then platform billing continues monthly.</small>
+        </div>
+      ) : null}
+
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
         {presentedPlans.map((plan, index) => {
           const Icon = plan.icon;
           const detected = prices[plan.slug];
           const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
-          const isCustom = plan.custom || plan.slug === "custom-ai-operations";
+          const isCustom = plan.custom || plan.slug === "custom-ai-operations" || plan.slug === "business-plus";
           const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
-          const href = isFrameworkPlan
-            ? `/pricing?plan=${encodeURIComponent(plan.slug)}#plan-details`
-            : isCustom
-              ? "/evaluation"
-              : `/checkout?plan=${encodeURIComponent(plan.slug)}`;
+          const checkoutSlug = isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug;
+          const href = isCustom
+            ? `/evaluation?plan=${encodeURIComponent(plan.slug === "custom-ai-operations" ? "business-plus" : plan.slug)}`
+            : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector ? `&term=${durationMonths}` : ""}`;
           const decision = planDecisionCopy[plan.slug];
           const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
+          const termValue = showDurationSelector && detected && !detected.custom
+            ? detected.installationFee + Math.max(0, durationMonths - 1) * detected.recurringFee
+            : null;
           return (
             <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.slug} aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}>
               <div className={styles.cardGlow} aria-hidden="true" />
@@ -249,8 +296,14 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
                 </div>
               ) : null}
               <div className={styles.priceBlock}>
-                <div><span>Implementation</span><strong>{firstPrice}</strong></div>
-                <div><span>Ongoing platform &amp; support</span><strong>{ongoingPrice}</strong></div>
+                <div><span>First month · setup + service</span><strong>{firstPrice}</strong></div>
+                <div><span>From month 2</span><strong>{ongoingPrice}</strong></div>
+                {termValue !== null && detected ? (
+                  <div className={styles.termValue}>
+                    <span>{durationMonths}-month term value at current rate</span>
+                    <strong>{formatMoney(detected.currency, termValue)}</strong>
+                  </div>
+                ) : null}
               </div>
               <h4>What&apos;s included</h4>
               <div className={styles.features}>{plan.features.map((feature) => <span key={feature}><CheckCircle2 size={16} />{feature}</span>)}</div>
