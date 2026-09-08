@@ -42,7 +42,7 @@ test("notification transitions use stable keys and resolve stale risk and expans
   assert.match(notifications, /signal\.lifecycle === "resolved"/);
 });
 
-test("hourly cron is secret protected and observe-recommend only", () => {
+test("scheduled cron is secret protected and observe-recommend only", () => {
   assert.match(cronRoute, /process\.env\.CRON_SECRET/);
   assert.match(cronRoute, /status: 401/);
   assert.match(cronRoute, /reconcileLeoProactiveSignals/);
@@ -51,9 +51,9 @@ test("hourly cron is secret protected and observe-recommend only", () => {
   assert.doesNotMatch(cronRoute, /createLeoOperationalTask|sendEmail|resend|executeTool/);
 });
 
-test("Vercel schedules lifecycle monitoring hourly without preview deploys for the feature branch", () => {
+test("Vercel provides a daily lifecycle safety-net without feature-branch previews", () => {
   assert.equal(vercel.git.deploymentEnabled["feature/proactive-lifecycle-monitoring"], false);
   const cron = vercel.crons.find((item) => item.path === "/api/cron/leo-lifecycle-monitor");
   assert.ok(cron);
-  assert.equal(cron.schedule, "17 * * * *");
+  assert.equal(cron.schedule, "17 6 * * *");
 });
