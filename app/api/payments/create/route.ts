@@ -5,6 +5,7 @@ import { getPublicPlan } from "@/lib/payments/catalog";
 import { currencyForRegion, resolveBillingRegionFromHeaders } from "@/lib/payments/region";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
 import { getClientSession } from "@/lib/client-auth";
+import { calculatePrepaidPrice, isPrepaidTerm } from "@/lib/payments/terms";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
     const planSlug = typeof body?.planSlug === "string" ? body.planSlug.trim() : "";
     const billingType = body?.billingType === "subscription" ? "subscription" : "setup";
+    const prepaidTerm = isPrepaidTerm(body?.term) ? body.term : null;
     const clientSession = await getClientSession();
     const customerName = typeof body?.customer?.name === "string" && body.customer.name.trim()
       ? body.customer.name.trim()
@@ -46,15 +48,16 @@ export async function POST(request: Request) {
     const currency = currencyForRegion(region);
     const plan = await getPublicPlan(planSlug, region);
     if (!plan) return NextResponse.json({ error: currency === "USD" ? "This international price is not configured yet." : "That plan is unavailable." }, { status: 409 });
-    if (plan.custom) return NextResponse.json({ error: "Custom AI Operations requires an evaluation before payment." }, { status: 409 });
+    if (plan.custom) return NextResponse.json({ error: "Business+ requires an evaluation before payment." }, { status: 409 });
 
     const paymentPlanId = Number((plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[currency.toLowerCase()]);
     if (billingType === "subscription" && !paymentPlanId) {
       return NextResponse.json({ error: "Recurring billing is not configured for this plan yet. Complete payment-plan provisioning first." }, { status: 409 });
     }
 
+    const termPrice = prepaidTerm ? calculatePrepaidPrice(plan.installationFee, plan.recurringFee, prepaidTerm) : null;
     const txRef = `FK-${plan.slug}-${crypto.randomUUID()}`;
-    const amount = plan.installationFee;
+    const amount = termPrice?.total ?? plan.installationFee;
     const recurringAmount = plan.recurringFee;
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.FLUXKNIGHT_APP_URL || "https://www.fluxknight.space").replace(/\/$/, "");
 
@@ -73,12 +76,25 @@ export async function POST(request: Request) {
         customer_phone: customerPhone,
         organization_id: clientSession?.organizationId || null,
         provider: "flutterwave",
-        metadata: { source: clientSession ? "fluxknight_client_marketplace" : "fluxknight_public_pricing", currency_locked: true, organization_id: clientSession?.organizationId || null },
+        metadata: {
+          source: clientSession ? "fluxknight_client_marketplace" : "fluxknight_public_pricing",
+          currency_locked: true,
+          organization_id: clientSession?.organizationId || null,
+          prepaid_term: prepaidTerm,
+          prepaid_months: termPrice?.months ?? null,
+          discount_percent: termPrice?.discountPercent ?? 0,
+          undiscounted_total: termPrice?.subtotal ?? plan.installationFee,
+          discount_amount: termPrice?.discount ?? 0,
+        },
       }),
     });
 
     const session = inserted[0];
     if (!session) throw new Error("Unable to create checkout session.");
+
+    const description = termPrice
+      ? `${plan.name} · ${termPrice.label} prepaid · ${termPrice.discountPercent}% discount`
+      : `${plan.name} setup and deployment`;
 
     const payload: Record<string, unknown> = {
       tx_ref: txRef,
@@ -88,8 +104,17 @@ export async function POST(request: Request) {
       customer: { email: customerEmail, name: customerName, phonenumber: customerPhone || undefined },
       payment_options: currency === "NGN" && billingType === "setup" ? "card, banktransfer, ussd" : "card",
       configurations: { session_duration: 30, max_retry_attempt: 5 },
-      customizations: { title: "Fluxknight AI Automation", description: `${plan.name} setup and deployment` },
-      meta: { fluxknight_session_id: session.id, plan_slug: plan.slug, billing_type: billingType, billing_region: region, organization_id: clientSession?.organizationId || null },
+      customizations: { title: "Fluxknight AI Automation", description },
+      meta: {
+        fluxknight_session_id: session.id,
+        plan_slug: plan.slug,
+        billing_type: billingType,
+        billing_region: region,
+        organization_id: clientSession?.organizationId || null,
+        prepaid_term: prepaidTerm,
+        prepaid_months: termPrice?.months ?? null,
+        discount_percent: termPrice?.discountPercent ?? 0,
+      },
     };
     if (billingType === "subscription") payload.payment_plan = paymentPlanId;
 
@@ -98,7 +123,7 @@ export async function POST(request: Request) {
       const checkoutUrl = response.data?.link;
       if (!checkoutUrl) throw new Error("Flutterwave did not return a checkout link.");
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, { method: "PATCH", body: JSON.stringify({ checkout_url: checkoutUrl, provider_payload: response }) });
-      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true, authenticated: Boolean(clientSession) });
+      return NextResponse.json({ checkoutUrl, txRef, region, currency, currencyLocked: true, authenticated: Boolean(clientSession), term: termPrice });
     } catch (error) {
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, { method: "PATCH", body: JSON.stringify({ status: "failed", provider_payload: { error: String(error) } }) }).catch(() => undefined);
       throw error;
