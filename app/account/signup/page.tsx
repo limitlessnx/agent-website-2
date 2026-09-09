@@ -6,11 +6,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function ClientSignupPage({ searchParams }: { searchParams: Promise<{ tx_ref?: string; next?: string }> }) {
+export default async function ClientSignupPage({ searchParams }: { searchParams: Promise<{ tx_ref?: string; next?: string; trial?: string }> }) {
   const params = await searchParams;
+  const trialPlan = params.trial === "basic" ? "basic" : "";
   return (
     <section className="admin-login-page">
-      <SignupForm txRef={String(params.tx_ref || "")} nextPath={String(params.next || "/portal")} />
+      <SignupForm txRef={String(params.tx_ref || "")} nextPath={String(params.next || "/portal")} trialPlan={trialPlan} />
     </section>
   );
 }
