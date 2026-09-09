@@ -73,35 +73,18 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
         <h2>{plan.name}</h2>
         <p>{plan.description}</p>
 
-        <div className="checkout-term-switch">
-          <button
-            type="button"
-            className="checkout-term-option"
-            aria-pressed={term === "monthly"}
-            onClick={() => setTerm("monthly")}
-            style={{ borderRadius: 12, border: term === "monthly" ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: term === "monthly" ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer" }}
-          >
-            <strong>Monthly</strong>
-            <small style={{ color: "#d8b4fe" }}>Standard</small>
-          </button>
-          {(Object.keys(PREPAID_TERMS) as PrepaidTerm[]).map((key) => {
-            const option = PREPAID_TERMS[key];
-            const selected = term === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                className="checkout-term-option"
-                aria-pressed={selected}
-                onClick={() => setTerm(key)}
-                style={{ borderRadius: 12, border: selected ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: selected ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer" }}
-              >
-                <strong>{option.label}</strong>
-                <small style={{ color: "#d8b4fe" }}>Save {option.discountPercent}%</small>
-              </button>
-            );
-          })}
-        </div>
+        <label className="checkout-term-field">
+          <span>Billing duration</span>
+          <div className="checkout-term-select-wrap">
+            <select value={term} onChange={(event) => setTerm(event.target.value as BillingTerm)} aria-label="Choose billing duration">
+              <option value="monthly">Monthly · Standard</option>
+              {(Object.keys(PREPAID_TERMS) as PrepaidTerm[]).map((key) => {
+                const option = PREPAID_TERMS[key];
+                return <option key={key} value={key}>{option.label} · Save {option.discountPercent}%</option>;
+              })}
+            </select>
+          </div>
+        </label>
 
         <div style={{ display: "grid", gap: 12, margin: "22px 0" }}>
           <div>
@@ -158,6 +141,17 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
         <span className="brand-eyebrow"><ShieldCheck size={15} /> Checkout details</span>
         {!customer ? <p style={{ marginTop: 10 }}>Enter your details. You can create or finish your client account during the payment-to-onboarding handoff.</p> : <p style={{ marginTop: 10 }}>Your existing client account is detected. Payment will be attached to your organization.</p>}
 
+        {isBasicPlan ? (
+          <div className="checkout-trial-card">
+            <span>Want to test it first?</span>
+            <strong>Start a 14-day Basic free trial</strong>
+            <p>250 Flux Credits · Web AI + WhatsApp AI · no card required.</p>
+            <Link href={trialHref} className="button-primary checkout-trial-cta">
+              Start Free Trial <ArrowRight size={16} />
+            </Link>
+          </div>
+        ) : null}
+
         <label style={{ display: "grid", gap: 7, marginTop: 20 }}>
           <span>Name</span>
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name or organization" autoComplete="name" />
@@ -177,11 +171,6 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
           {busy ? "Opening secure checkout…" : `Pay ${money(dueToday, plan.currency)}`}
           {!busy ? <ArrowRight size={17} /> : null}
         </button>
-        {isBasicPlan ? (
-          <Link href={trialHref} className="button-secondary checkout-trial-cta">
-            Start Free Trial <ArrowRight size={16} />
-          </Link>
-        ) : null}
         <Link href="/pricing" className="button-secondary" style={{ marginTop: 10, width: "100%", justifyContent: "center" }}>Back to pricing</Link>
       </article>
     </section>
