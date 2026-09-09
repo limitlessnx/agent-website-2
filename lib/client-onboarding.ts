@@ -16,6 +16,15 @@ export type ProvisionClientOrganizationResult = {
   role_id: string;
   agent_family_id: string | null;
   project_id: string | null;
+  trial?: {
+    started: boolean;
+    reason?: string;
+    subscription_id?: string;
+    trial_ends_at?: string;
+    credit_limit?: number;
+    balance?: number;
+    wallet_status?: string;
+  };
 };
 
 function assertUuid(value: string, field: string) {
@@ -50,7 +59,7 @@ export async function provisionClientOrganization(input: ProvisionClientOrganiza
   const validated = validateProvisionClientInput(input);
 
   return supabaseServerRequest<ProvisionClientOrganizationResult>(
-    "rpc/provision_client_organization",
+    "rpc/provision_trial_client_organization",
     {
       method: "POST",
       body: JSON.stringify({

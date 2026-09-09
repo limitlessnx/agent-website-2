@@ -11,6 +11,10 @@ import {
   type FluxPlanCode,
 } from "@/lib/fluxknight-plans";
 
+export const BASIC_FREE_TRIAL_DAYS = 14;
+export const BASIC_FREE_TRIAL_CREDITS = 250;
+const BASIC_FREE_TRIAL_ACTIONS = new Set<FluxCreditAction>(["web_ai", "whatsapp_ai"]);
+
 export type FluxWalletSummary = {
   organizationId: string;
   planCode: FluxPlanCode;
@@ -86,6 +90,10 @@ function requireWalletRow(value: unknown): WalletRow {
   return wallet as WalletRow;
 }
 
+function isFreeTrialWallet(wallet: Pick<WalletRow, "trial_ends_at" | "trial_credit_limit">) {
+  return Boolean(wallet.trial_ends_at || wallet.trial_credit_limit !== null);
+}
+
 export async function getActiveFluxSubscription(organizationId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -107,12 +115,13 @@ export async function ensureFluxWallet(organizationId: string): Promise<WalletRo
   const configuredMonthlyCredits = numberValue(subscription?.metadata?.monthly_credits, plan.monthlyCredits);
   const monthlyCredits = plan.configurableMonthlyCredits ? Math.max(25000, configuredMonthlyCredits) : plan.monthlyCredits;
   const isTrial = subscription?.status === "trialing";
-  const trialCreditLimit = isTrial ? 500 : null;
+  const configuredTrialLimit = numberValue(subscription?.metadata?.trial_credit_limit, BASIC_FREE_TRIAL_CREDITS);
+  const trialCreditLimit = isTrial ? Math.min(BASIC_FREE_TRIAL_CREDITS, Math.max(0, configuredTrialLimit)) : null;
 
   const { data, error } = await admin.rpc("ensure_flux_credit_wallet", {
     target_organization_id: organizationId,
     target_plan_code: plan.code,
-    target_monthly_allowance: isTrial ? 500 : monthlyCredits,
+    target_monthly_allowance: isTrial ? trialCreditLimit : monthlyCredits,
     target_trial_credit_limit: trialCreditLimit,
     target_trial_ends_at: isTrial ? subscription?.trial_ends_at || null : null,
     target_current_period_end: subscription?.current_period_end || null,
@@ -128,6 +137,7 @@ function toWalletSummary(wallet: WalletRow): FluxWalletSummary {
   const percentUsed = calculateUsagePercent(balance, allowance);
   const threshold = getThresholdLevel(percentUsed);
   const trialExpired = wallet.trial_ends_at ? new Date(wallet.trial_ends_at).getTime() <= Date.now() : false;
+  const trial = isFreeTrialWallet(wallet);
   const chargeableAiPaused = wallet.status === "paused" || percentUsed >= 100 || trialExpired;
   return {
     organizationId: wallet.organization_id,
@@ -142,14 +152,20 @@ function toWalletSummary(wallet: WalletRow): FluxWalletSummary {
     trialCreditLimit: wallet.trial_credit_limit,
     threshold,
     chargeableAiPaused,
-    canTopUp: !wallet.trial_ends_at,
-    canRollover: !wallet.trial_ends_at,
+    canTopUp: !trial,
+    canRollover: !trial,
     customerMessage: chargeableAiPaused
-      ? "Chargeable AI is paused. Your dashboard, data, billing and human operations remain available. New customer-facing AI messages should be handed to your team."
+      ? trial
+        ? "Your free trial has ended or its Flux Credits are exhausted. Customer-facing AI is paused until you upgrade. Your workspace and data remain available."
+        : "Chargeable AI is paused. Your dashboard, data, billing and human operations remain available. New customer-facing AI messages should be handed to your team."
       : threshold === 90
-        ? "Credits are nearly used. Add credits or upgrade before chargeable AI pauses."
+        ? trial
+          ? "Your free-trial credits are nearly exhausted. Upgrade to keep customer-facing AI active."
+          : "Credits are nearly used. Add credits or upgrade before chargeable AI pauses."
         : threshold === 70
-          ? "Credits are being used faster than usual this cycle."
+          ? trial
+            ? "You have used most of your free-trial credits."
+            : "Credits are being used faster than usual this cycle."
           : null,
   };
 }
@@ -197,6 +213,11 @@ export async function getFluxInternalUsageSummary(organizationId: string): Promi
 
 export async function assertFluxFeatureAccess(organizationId: string, feature: FluxFeatureKey) {
   const wallet = await ensureFluxWallet(organizationId);
+  if (isFreeTrialWallet(wallet) && feature !== "core_ai_support") {
+    const error = new Error("This feature is not included in the Basic free trial. Upgrade to unlock it.");
+    error.name = "FluxTrialFeatureGateError";
+    throw error;
+  }
   if (!planIncludesFeature(wallet.plan_code, feature)) {
     const requiredPlan = getRequiredPlanForFeature(feature);
     const error = new Error(`${requiredPlan.name} is required for this feature.`);
@@ -210,8 +231,15 @@ export async function assertFluxCreditsAvailable(organizationId: string, action:
   const credits = calculateFluxCredits(action, quantity);
   const wallet = await ensureFluxWallet(organizationId);
   const summary = toWalletSummary(wallet);
+  if (isFreeTrialWallet(wallet) && !BASIC_FREE_TRIAL_ACTIONS.has(action)) {
+    const error = new Error("The Basic free trial includes Web AI and WhatsApp AI only. Upgrade to use this action.");
+    error.name = "FluxTrialFeatureGateError";
+    throw error;
+  }
   if (summary.chargeableAiPaused || summary.balance < credits) {
-    const error = new Error("Flux Credits exhausted. Chargeable AI must hand off to a human operator.");
+    const error = new Error(summary.trialEndsAt
+      ? "Your free trial has ended or its Flux Credits are exhausted. Upgrade to resume customer-facing AI."
+      : "Flux Credits exhausted. Chargeable AI must hand off to a human operator.");
     error.name = "FluxCreditLimitError";
     throw error;
   }
