@@ -3,15 +3,11 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, Loader2, PlugZap, Trash2 } from "@/components/admin/ServerIcons";
+import WhatsAppOnboardingControl from "./WhatsAppOnboardingControl";
 
 const PLATFORM_MANAGED_PROVIDERS = new Set(["openai", "n8n", "supabase"]);
 
 const providerFields: Record<string, Array<{ key: string; label: string; type?: string }>> = {
-  whatsapp: [
-    { key: "access_token", label: "Access token", type: "password" },
-    { key: "phone_number_id", label: "Phone number ID" },
-    { key: "business_account_id", label: "Business account ID" },
-  ],
   telegram: [
     { key: "bot_token", label: "Telegram bot token", type: "password" },
     { key: "bot_username", label: "Bot username" },
@@ -48,6 +44,9 @@ export default function IntegrationCredentialControl({ integration }: Props) {
   const [message, setMessage] = useState("");
 
   if (PLATFORM_MANAGED_PROVIDERS.has(integration.provider)) return null;
+  if (integration.provider === "whatsapp") {
+    return <WhatsAppOnboardingControl integration={{ id: integration.id, status: integration.status, has_credentials: integration.has_credentials, secret_keys: integration.secret_keys }} />;
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault();
