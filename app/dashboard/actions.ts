@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
 import { uploadPublicImages, updatePropertyImages } from "@/lib/supabase-storage";
 import { getAdminSession } from "@/lib/admin-auth";
+import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { createLead, createProperty, deleteLead, deleteProperty, importLeads, updateProperty, type Lead } from "@/lib/limitless-data";
 
 async function requireAdmin() { const session = await getAdminSession(); if (!session) redirect("/login?next=/dashboard"); }
@@ -22,3 +23,23 @@ export async function updatePropertyAction(formData:FormData){await requireAdmin
 export async function uploadPropertyImagesAction(formData:FormData){await requireAdmin();const propertyId=String(formData.get("property_id")||"");const files=getPropertyFiles(formData);if(!propertyId)throw new Error("Choose a property before uploading an image.");if(!files.length)throw new Error("Choose an image.");const uploads=await uploadPublicImages([files[0]],`properties/${propertyId}`);await updatePropertyImages(propertyId,[uploads[0].url],uploads[0].url);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
 export async function deletePropertyAction(formData:FormData){await requireAdmin();const propertyId=String(formData.get("property_id")||"");if(!propertyId)throw new Error("Property ID is missing.");await deleteProperty(propertyId);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
 export async function deleteLeadAction(formData:FormData){await requireAdmin();const leadId=String(formData.get("lead_id")||"");if(!leadId)throw new Error("Lead ID is missing.");await deleteLead(leadId);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/leads");revalidatePath("/dashboard/limitless/campaigns");}
+
+export async function recordGencouvTelegramConversationAction(formData: FormData) {
+  await requireAdmin();
+  const sourceCohort = String(formData.get("source_cohort") || "").trim();
+  const note = String(formData.get("note") || "").trim().slice(0, 500);
+  const allowedCohorts = new Set(["", "organic", "email_1", "email_2", "email_3", "email_4", "email_5", "email_6", "email_7", "unknown"]);
+  if (!allowedCohorts.has(sourceCohort)) throw new Error("Invalid Telegram conversation source.");
+
+  await supabaseServerRequest("gencouv_telegram_conversations", {
+    method: "POST",
+    body: JSON.stringify({
+      source_cohort: sourceCohort || null,
+      source_campaign: sourceCohort.startsWith("email_") ? "gencouv_primary_sequence" : null,
+      note: note || null,
+      recorded_by: "dashboard",
+    }),
+  });
+
+  revalidatePath("/dashboard/gencouv");
+}
