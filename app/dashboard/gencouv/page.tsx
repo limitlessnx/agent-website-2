@@ -349,6 +349,25 @@ export default async function GencouvWorkspacePage() {
     websiteEvents.map((event) => event.utm_campaign || event.campaign || event.utm_source),
   );
   const ctaBreakdown = tally(telegramClicks.map((event) => event.cta_name || "Telegram CTA"));
+  const emailStepPerformance = Array.from({ length: 7 }, (_, index) => {
+    const emailNumber = index + 1;
+    const cohort = `email_${emailNumber}`;
+    const cohortPageViews = pageViews.filter((event) => event.cohort === cohort);
+    const cohortTelegramClicks = telegramClicks.filter((event) => event.cohort === cohort);
+    const visitorSessions = new Set(cohortPageViews.map((event) => event.session_id).filter(Boolean));
+    const telegramSessions = new Set(cohortTelegramClicks.map((event) => event.session_id).filter(Boolean));
+    const conversionRate = visitorSessions.size
+      ? ((telegramSessions.size / visitorSessions.size) * 100).toFixed(1)
+      : "0.0";
+
+    return {
+      emailNumber,
+      visitors: visitorSessions.size,
+      telegramVisitors: telegramSessions.size,
+      telegramClicks: cohortTelegramClicks.length,
+      conversionRate,
+    };
+  });
 
   return (
     <main className="admin-page">
@@ -410,6 +429,40 @@ export default async function GencouvWorkspacePage() {
             <div className="admin-checklist">
               {topEntries(ctaBreakdown).length ? topEntries(ctaBreakdown).map(([label, value]) => <span key={label}>{label}: {value} clicks</span>) : <span>No Telegram clicks recorded yet</span>}
             </div>
+          </div>
+        </div>
+
+        <div className="admin-panel" style={{ margin: "16px 0 0" }}>
+          <div className="admin-panel-header">
+            <div>
+              <h2 style={{ fontSize: "1rem" }}>Primary sequence · Email 1–7</h2>
+              <p>Unique website visitors and Telegram intent attributed to each tagged Resend email.</p>
+            </div>
+            <span className="admin-status">30d</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
+              <thead>
+                <tr style={{ textAlign: "left", color: "var(--admin-text-muted)" }}>
+                  <th style={{ padding: "10px 12px" }}>Email</th>
+                  <th style={{ padding: "10px 12px" }}>Website visitors</th>
+                  <th style={{ padding: "10px 12px" }}>Telegram visitors</th>
+                  <th style={{ padding: "10px 12px" }}>Telegram clicks</th>
+                  <th style={{ padding: "10px 12px" }}>Visit → Telegram</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emailStepPerformance.map((row) => (
+                  <tr key={row.emailNumber} style={{ borderTop: "1px solid var(--admin-border)" }}>
+                    <td style={{ padding: "12px" }}><strong>Email {row.emailNumber}</strong></td>
+                    <td style={{ padding: "12px" }}>{row.visitors}</td>
+                    <td style={{ padding: "12px" }}>{row.telegramVisitors}</td>
+                    <td style={{ padding: "12px" }}>{row.telegramClicks}</td>
+                    <td style={{ padding: "12px" }}>{row.conversionRate}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
