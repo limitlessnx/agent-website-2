@@ -40,6 +40,8 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
   const prepaid = term === "monthly" ? null : calculatePrepaidPrice(plan.installationFee, plan.recurringFee, term);
   const prepaidRenewals = prepaid ? plan.recurringFee * prepaid.months : 0;
   const dueToday = prepaid?.total ?? plan.installationFee;
+  const isBasicPlan = plan.slug === "whatsapp-ai-starter";
+  const trialHref = "/account/signup?trial=basic&next=%2Fportal";
 
   async function startCheckout() {
     setBusy(true);
@@ -71,14 +73,15 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
         <h2>{plan.name}</h2>
         <p>{plan.description}</p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8, margin: "24px 0 18px" }}>
+        <div className="checkout-term-switch">
           <button
             type="button"
+            className="checkout-term-option"
             aria-pressed={term === "monthly"}
             onClick={() => setTerm("monthly")}
-            style={{ padding: "14px 8px", borderRadius: 12, border: term === "monthly" ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: term === "monthly" ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer" }}
+            style={{ borderRadius: 12, border: term === "monthly" ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: term === "monthly" ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer" }}
           >
-            <strong style={{ display: "block" }}>Monthly</strong>
+            <strong>Monthly</strong>
             <small style={{ color: "#d8b4fe" }}>Standard</small>
           </button>
           {(Object.keys(PREPAID_TERMS) as PrepaidTerm[]).map((key) => {
@@ -88,11 +91,12 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
               <button
                 key={key}
                 type="button"
+                className="checkout-term-option"
                 aria-pressed={selected}
                 onClick={() => setTerm(key)}
-                style={{ padding: "14px 8px", borderRadius: 12, border: selected ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: selected ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer" }}
+                style={{ borderRadius: 12, border: selected ? "1px solid rgba(192,132,252,.8)" : "1px solid rgba(168,85,247,.22)", background: selected ? "rgba(126,34,206,.24)" : "rgba(255,255,255,.025)", color: "inherit", cursor: "pointer" }}
               >
-                <strong style={{ display: "block" }}>{option.label}</strong>
+                <strong>{option.label}</strong>
                 <small style={{ color: "#d8b4fe" }}>Save {option.discountPercent}%</small>
               </button>
             );
@@ -173,6 +177,11 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
           {busy ? "Opening secure checkout…" : `Pay ${money(dueToday, plan.currency)}`}
           {!busy ? <ArrowRight size={17} /> : null}
         </button>
+        {isBasicPlan ? (
+          <Link href={trialHref} className="button-secondary checkout-trial-cta">
+            Start Free Trial <ArrowRight size={16} />
+          </Link>
+        ) : null}
         <Link href="/pricing" className="button-secondary" style={{ marginTop: 10, width: "100%", justifyContent: "center" }}>Back to pricing</Link>
       </article>
     </section>
