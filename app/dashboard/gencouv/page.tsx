@@ -101,6 +101,24 @@ type CampaignSettings = {
   status?: string;
 };
 
+type WebEvent = {
+  id?: number;
+  created_at?: string;
+  event_name?: "page_view" | "telegram_cta_click" | "email_campaign_landing";
+  session_id?: string;
+  page?: string;
+  landing_page?: string;
+  cta_name?: string;
+  campaign?: string;
+  cohort?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  referrer?: string;
+  device?: string;
+  country?: string;
+};
+
 const dashboardUrl =
   process.env.GENCOUV_DASHBOARD_API_URL ||
   "https://n8n.srv1720757.hstgr.cloud/webhook/gencouv-dashboard-data";
@@ -177,6 +195,31 @@ function formatTime(value?: string) {
   }).format(date);
 }
 
+function lagosDate(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function tally(values: Array<string | undefined>) {
+  return values.reduce<Record<string, number>>((acc, value) => {
+    const label = value?.trim();
+    if (!label) return acc;
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function topEntries(items: Record<string, number>, limit = 6) {
+  return Object.entries(items).sort((a, b) => b[1] - a[1]).slice(0, limit);
+}
+
 function Breakdown({ title, items }: { title: string; items?: Record<string, number> }) {
   const rows = Object.entries(items || {}).filter(([, value]) => value > 0);
 
@@ -229,7 +272,9 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export default async function GencouvWorkspacePage() {
-  const [organizations, dashboard, emailMessages, campaignEnrollments, rawLeads, rejectedLeads, qualifiedLeads, dailyCohorts, campaignSettings] = await Promise.all([
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const [organizations, dashboard, emailMessages, campaignEnrollments, rawLeads, rejectedLeads, qualifiedLeads, dailyCohorts, campaignSettings, websiteEvents] = await Promise.all([
     supabaseServerRequest<any[]>("organizations?select=id,name,slug,status,metadata&slug=eq.gencouv&limit=1").catch(() => []),
     getGencouvDashboard(),
     supabaseServerRequest<any[]>("gencouv_email_messages?select=*&order=created_at.desc&limit=500").catch(() => []),
@@ -239,6 +284,7 @@ export default async function GencouvWorkspacePage() {
     supabaseServerRequest<PipelineLead[]>("gencouv_qualified_leads?select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
     supabaseServerRequest<DailyCohort[]>("gencouv_daily_cohorts?select=*&order=cohort_date.desc&limit=30").catch(() => []),
     supabaseServerRequest<CampaignSettings[]>("gencouv_campaign_settings?select=*&campaign_key=eq.gencouv_long_form_copy_trading&limit=1").catch(() => []),
+    supabaseServerRequest<WebEvent[]>(`gencouv_web_events?select=id,created_at,event_name,session_id,page,landing_page,cta_name,campaign,cohort,utm_source,utm_medium,utm_campaign,device,country&created_at=gte.${encodeURIComponent(thirtyDaysAgo)}&order=created_at.desc&limit=10000`).catch(() => []),
   ]);
 
   const organization = organizations[0];
@@ -257,6 +303,7 @@ export default async function GencouvWorkspacePage() {
   const emailMetrics = {
     sent: countMessages(outboundMessages, (message) => Boolean(message.sent_at) || ["sent", "delivered", "opened", "clicked", "replied"].includes(message.status || "")),
     delivered: countMessages(outboundMessages, (message) => Boolean(message.delivered_at) || ["delivered", "opened", "clicked", "replied"].includes(message.status || "")),
+    clicked: countMessages(outboundMessages, (message) => Boolean(message.clicked_at) || ["clicked", "replied"].includes(message.status || "")),
     bounced: countMessages(outboundMessages, (message) => Boolean(message.bounced_at) || message.status === "bounced"),
     suppressed: countMessages(outboundMessages, (message) => Boolean(message.suppressed_at) || message.status === "suppressed"),
     failed: countMessages(outboundMessages, (message) => Boolean(message.failed_at) || message.status === "failed"),
@@ -271,6 +318,12 @@ export default async function GencouvWorkspacePage() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+  const websiteToday = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
   const latestCohort = dailyCohorts.find((cohort) => cohort.cohort_date === today) || dailyCohorts[0];
   const settings = campaignSettings[0] || {};
   const rawToday = rawLeads.filter((lead) => lead.cohort_date === today || lead.created_at?.startsWith(today)).length;
@@ -278,13 +331,32 @@ export default async function GencouvWorkspacePage() {
   const qualifiedToday = qualifiedLeads.filter((lead) => lead.cohort_date === today || lead.created_at?.startsWith(today)).length;
   const enrolledToday = campaignEnrollments.filter((row: any) => row.cohort_date === today).length;
 
+  const pageViews = websiteEvents.filter((event) => event.event_name === "page_view");
+  const telegramClicks = websiteEvents.filter((event) => event.event_name === "telegram_cta_click");
+  const uniqueVisitorSessions = new Set(pageViews.map((event) => event.session_id).filter(Boolean));
+  const telegramVisitorSessions = new Set(telegramClicks.map((event) => event.session_id).filter(Boolean));
+  const visitorsToday = new Set(
+    pageViews.filter((event) => lagosDate(event.created_at) === websiteToday).map((event) => event.session_id).filter(Boolean),
+  ).size;
+  const visitorsSevenDays = new Set(
+    pageViews.filter((event) => event.created_at && new Date(event.created_at).getTime() >= sevenDaysAgo).map((event) => event.session_id).filter(Boolean),
+  ).size;
+  const visitToTelegramRate = uniqueVisitorSessions.size
+    ? ((telegramVisitorSessions.size / uniqueVisitorSessions.size) * 100).toFixed(1)
+    : "0.0";
+  const pageBreakdown = tally(pageViews.map((event) => event.page?.split("?")[0] || "/"));
+  const campaignBreakdown = tally(
+    websiteEvents.map((event) => event.utm_campaign || event.campaign || event.utm_source),
+  );
+  const ctaBreakdown = tally(telegramClicks.map((event) => event.cta_name || "Telegram CTA"));
+
   return (
     <main className="admin-page">
       <header className="admin-page-header">
         <div>
           <p className="admin-kicker">Gencouv Workspace</p>
           <h1>Trading and Client Operations</h1>
-          <p>Monitor Gencouv leads, copy-trading interest, onboarding movement, broker mix, and email sequence readiness from one Flux Knight control room.</p>
+          <p>Monitor Gencouv leads, copy-trading interest, website conversion, onboarding movement, broker mix, and email sequence readiness from one Flux Knight control room.</p>
         </div>
         <span className="admin-status live">{organization?.status || "active"}</span>
       </header>
@@ -304,6 +376,43 @@ export default async function GencouvWorkspacePage() {
           </div>
         </section>
       ) : null}
+
+      <section id="website-funnel" className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2><LineChart size={18} /> Website funnel analytics</h2>
+            <p>Live Gencouv.com traffic and Telegram handoff events. Website dates use Africa/Lagos.</p>
+          </div>
+          <span className="admin-status live">live tracking</span>
+        </div>
+        <div className="admin-metric-grid">
+          <MetricCard icon={Users} tone="cyan" label="Visitors · 30d" value={uniqueVisitorSessions.size} detail={`${pageViews.length} page views recorded`} trend={`${visitorsSevenDays} in 7d`} />
+          <MetricCard icon={Activity} tone="emerald" label="Visitors today" value={visitorsToday} detail="Unique browser sessions today" trend="Africa/Lagos" />
+          <MetricCard icon={Bot} tone="violet" label="Telegram visitors" value={telegramVisitorSessions.size} detail={`${telegramClicks.length} Telegram CTA clicks`} trend="30d" />
+          <MetricCard icon={LineChart} tone="amber" label="Visit → Telegram" value={`${visitToTelegramRate}%`} detail="Unique visitors who clicked Telegram" trend="conversion" />
+          <MetricCard icon={Mail} tone="rose" label="Email clicks" value={emailMetrics.clicked} detail="Recorded Resend click events" trend="email → site" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16, marginTop: 16 }}>
+          <div className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-header"><div><h2 style={{ fontSize: "1rem" }}>Top website pages</h2><p>Where visitors spend attention.</p></div></div>
+            <div className="admin-checklist">
+              {topEntries(pageBreakdown).length ? topEntries(pageBreakdown).map(([label, value]) => <span key={label}>{label}: {value} views</span>) : <span>No page views recorded yet</span>}
+            </div>
+          </div>
+          <div className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-header"><div><h2 style={{ fontSize: "1rem" }}>Campaign attribution</h2><p>UTM or campaign sources reaching Gencouv.com.</p></div></div>
+            <div className="admin-checklist">
+              {topEntries(campaignBreakdown).length ? topEntries(campaignBreakdown).map(([label, value]) => <span key={label}>{label}: {value} events</span>) : <span>No campaign attribution yet</span>}
+            </div>
+          </div>
+          <div className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-header"><div><h2 style={{ fontSize: "1rem" }}>Telegram CTA sources</h2><p>Which calls to action are producing handoffs.</p></div></div>
+            <div className="admin-checklist">
+              {topEntries(ctaBreakdown).length ? topEntries(ctaBreakdown).map(([label, value]) => <span key={label}>{label}: {value} clicks</span>) : <span>No Telegram clicks recorded yet</span>}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="admin-metric-grid">
         <MetricCard icon={Users} tone="cyan" label="Raw leads today" value={latestCohort?.raw_generated ?? rawToday} detail="Candidates generated before validation" trend="Supabase" />
