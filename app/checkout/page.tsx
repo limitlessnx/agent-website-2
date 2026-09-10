@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getPublicPlan } from "@/lib/payments/catalog";
-import { getRequestBillingRegion } from "@/lib/payments/region";
+import { getRequestBillingRegion, type BillingRegion } from "@/lib/payments/region";
 import { isPrepaidTerm } from "@/lib/payments/terms";
 import CheckoutClient from "./CheckoutClient";
 
@@ -20,10 +21,18 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   const initialTerm = isPrepaidTerm(params.term) ? params.term : null;
   if (!planSlug) notFound();
 
-  const [{ region }, session] = await Promise.all([
+  const [{ region: detectedRegion }, session, cookieStore] = await Promise.all([
     getRequestBillingRegion(),
     getClientSession(),
+    cookies(),
   ]);
+
+  const savedPricingView = cookieStore.get("fluxknight-pricing-view")?.value;
+  let region: BillingRegion = detectedRegion;
+  if (detectedRegion === "NG" && savedPricingView === "international") {
+    region = "INTERNATIONAL";
+  }
+
   const plan = await getPublicPlan(planSlug, region);
   if (!plan || plan.custom) notFound();
 
@@ -34,7 +43,9 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
           <div className="brand-heading">
             <span className="brand-eyebrow">Secure checkout</span>
             <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)", lineHeight: 1 }}>Get your AI system started.</h1>
-            <p>Your currency is locked to the billing region detected by Fluxknight. Monthly and prepaid duration options stay attached to the selected plan.</p>
+            <p>
+              Checkout is using your selected pricing region: {region === "NG" ? "Nigeria (NGN)" : "International (USD)"}. Billing duration remains attached to the selected plan.
+            </p>
           </div>
           <CheckoutClient
             plan={{
