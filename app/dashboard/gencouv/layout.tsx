@@ -2,6 +2,7 @@ import { Bot, LineChart, Users } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { recordGencouvTelegramConversationAction } from "../actions";
+import "./gencouv-premium.css";
 
 type WebEvent = {
   event_name?: "page_view" | "telegram_cta_click" | "email_campaign_landing";
@@ -48,10 +49,15 @@ export default async function GencouvLayout({ children }: { children: React.Reac
     return { emailNumber: index + 1, handoffs: cohortHandoffs, conversations: cohortConversations, rate };
   });
 
+  const maxHandoffs = Math.max(...emailRows.map((row) => row.handoffs), 1);
+  const maxConversations = Math.max(...emailRows.map((row) => row.conversations), 1);
+
   return (
-    <>
+    <div className="gencouv-premium">
       {children}
-      <section className="admin-page" style={{ paddingTop: 0 }}>
+
+      <section className="admin-page gencouv-reconcile">
+        <p className="gencouv-section-label">Conversation intelligence</p>
         <section id="telegram-conversation-gap" className="admin-panel">
           <div className="admin-panel-header">
             <div>
@@ -68,7 +74,37 @@ export default async function GencouvLayout({ children }: { children: React.Reac
             <MetricCard icon={Users} tone="amber" label="Conversation gap" value={gap} detail="Handoffs with no recorded conversation" trend="diagnostic" />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, .8fr) minmax(420px, 1.2fr)", gap: 16, marginTop: 16 }}>
+          <div className="gencouv-chart-grid">
+            <article className="gencouv-chart-card">
+              <h3>Telegram handoffs by email</h3>
+              <p>Unique handoff sessions attributed to each primary-sequence email.</p>
+              <div className="gencouv-bars">
+                {emailRows.map((row) => (
+                  <div className="gencouv-bar-row" key={`handoff-${row.emailNumber}`}>
+                    <span className="gencouv-bar-label">Email {row.emailNumber}</span>
+                    <span className="gencouv-bar-track"><span className="gencouv-bar-fill" style={{ width: `${Math.max((row.handoffs / maxHandoffs) * 100, row.handoffs ? 8 : 0)}%` }} /></span>
+                    <span className="gencouv-bar-value">{row.handoffs}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="gencouv-chart-card">
+              <h3>Real conversations by email</h3>
+              <p>Recorded genuine Telegram conversations attributed to Email 1–7.</p>
+              <div className="gencouv-bars">
+                {emailRows.map((row) => (
+                  <div className="gencouv-bar-row" key={`conversation-${row.emailNumber}`}>
+                    <span className="gencouv-bar-label">Email {row.emailNumber}</span>
+                    <span className="gencouv-bar-track"><span className="gencouv-bar-fill secondary" style={{ width: `${Math.max((row.conversations / maxConversations) * 100, row.conversations ? 8 : 0)}%` }} /></span>
+                    <span className="gencouv-bar-value">{row.conversations}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="gencouv-reconcile-grid">
             <div className="admin-panel" style={{ margin: 0 }}>
               <div className="admin-panel-header">
                 <div>
@@ -134,6 +170,6 @@ export default async function GencouvLayout({ children }: { children: React.Reac
           </div>
         </section>
       </section>
-    </>
+    </div>
   );
 }
