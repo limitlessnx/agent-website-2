@@ -32,6 +32,7 @@ export type PublicPriceDisplay = {
 };
 
 const PRICE_VIEW_KEY = "fluxknight-pricing-view";
+const PRICE_VIEW_COOKIE = "fluxknight-pricing-view";
 const slugAliases: Record<string, string[]> = {
   "whatsapp-ai-starter": ["basic"],
   "ai-call-receptionist": ["plus", "starter"],
@@ -45,6 +46,11 @@ function formatAmount(currency: "NGN" | "USD", amount: number) {
     currency,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function persistPricingView(view: "nigeria" | "international") {
+  window.localStorage.setItem(PRICE_VIEW_KEY, view);
+  document.cookie = `${PRICE_VIEW_COOKIE}=${view}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 
 export function usePublicPricing() {
@@ -96,19 +102,21 @@ export function usePublicPricing() {
 
   useEffect(() => {
     const savedView = typeof window !== "undefined" ? window.localStorage.getItem(PRICE_VIEW_KEY) : null;
-    const controller = loadPricing(savedView === "international" ? "international" : "nigeria");
+    const normalizedView = savedView === "international" ? "international" : "nigeria";
+    if (typeof window !== "undefined") persistPricingView(normalizedView);
+    const controller = loadPricing(normalizedView);
     return () => controller.abort();
   }, [loadPricing]);
 
   const showInternational = useCallback(() => {
     if (!canViewInternational) return;
-    window.localStorage.setItem(PRICE_VIEW_KEY, "international");
+    persistPricingView("international");
     loadPricing("international");
   }, [canViewInternational, loadPricing]);
 
   const showNigeria = useCallback(() => {
     if (detectedRegion !== "NG") return;
-    window.localStorage.setItem(PRICE_VIEW_KEY, "nigeria");
+    persistPricingView("nigeria");
     loadPricing("nigeria");
   }, [detectedRegion, loadPricing]);
 
