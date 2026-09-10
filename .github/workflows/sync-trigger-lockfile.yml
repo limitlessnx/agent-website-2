@@ -1,0 +1,40 @@
+name: Sync Trigger.dev lockfile
+
+on:
+  push:
+    branches:
+      - fix/trigger-lockfile
+    paths:
+      - package.json
+      - .github/workflows/sync-trigger-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Regenerate package lockfile
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Commit synchronized lockfile
+        run: |
+          if git diff --quiet package-lock.json; then
+            echo "package-lock.json already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Sync Trigger.dev dependency lockfile"
+          git push
