@@ -41,7 +41,7 @@ const checkoutSlugByFramework: Record<string, string> = {
   "business-plus": "custom-ai-operations",
 };
 const durationOptions: Array<{ key: BillingTerm; label: string; saving?: string }> = [
-  { key: "monthly", label: "Monthly" },
+  { key: "monthly", label: "Monthly", saving: "Standard" },
   { key: "3m", label: "3 months", saving: "Save 10%" },
   { key: "6m", label: "6 months", saving: "Save 15%" },
   { key: "12m", label: "1 year", saving: "Save 20%" },
@@ -120,7 +120,7 @@ const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: stri
   "whatsapp-ai-starter": {
     fit: "Businesses that need one reliable AI customer-service channel without follow-up workflows",
     outcome: "Handle questions and enquiries faster, qualify customers, capture details and hand the right conversations to staff.",
-    cta: "Start with Basic",
+    cta: "Choose paid Basic",
   },
   "ai-call-receptionist": {
     fit: "Businesses that need up to two channels and customer conversations to continue after the first enquiry",
@@ -245,25 +245,39 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
       </div>
 
       {showDurationSelector ? (
-        <div className={styles.durationBar}>
-          <div>
+        <div className={styles.durationBar} style={{ alignItems: "center" }}>
+          <label style={{ display: "grid", gap: 8, width: "min(100%, 360px)" }}>
             <span className={styles.durationLabel}>Billing duration</span>
-            <div className={styles.durationOptions} role="group" aria-label="Choose billing duration">
-              {durationOptions.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  className={billingTerm === option.key ? styles.durationActive : styles.durationButton}
-                  aria-pressed={billingTerm === option.key}
-                  onClick={() => setBillingTerm(option.key)}
-                >
-                  <span>{option.label}</span>
-                  {option.saving ? <small>{option.saving}</small> : <small>Standard</small>}
-                </button>
-              ))}
-            </div>
-          </div>
-          <small>Monthly keeps standard renewal. Prepay 3, 6 or 12 months to apply the existing duration savings at checkout.</small>
+            <span style={{ position: "relative", display: "block" }}>
+              <select
+                value={billingTerm}
+                onChange={(event) => setBillingTerm(event.target.value as BillingTerm)}
+                aria-label="Choose billing duration"
+                style={{
+                  width: "100%",
+                  minHeight: 52,
+                  padding: "0 44px 0 15px",
+                  appearance: "none",
+                  WebkitAppearance: "none",
+                  borderRadius: 13,
+                  border: "1px solid rgba(192,132,252,.34)",
+                  background: "linear-gradient(180deg,rgba(29,15,48,.98),rgba(14,7,25,.98))",
+                  color: "#fbf8ff",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  outline: "none",
+                  cursor: "pointer",
+                  boxShadow: "inset 0 1px rgba(255,255,255,.04),0 12px 28px rgba(34,9,61,.18)",
+                }}
+              >
+                {durationOptions.map((option) => (
+                  <option key={option.key} value={option.key}>{option.label} · {option.saving}</option>
+                ))}
+              </select>
+              <span aria-hidden="true" style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-55%)", color: "#d8b4fe", pointerEvents: "none", fontSize: 18 }}>⌄</span>
+            </span>
+          </label>
+          <small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to the totals shown on each plan.</small>
         </div>
       ) : null}
 
@@ -275,6 +289,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
           const isCustom = detected?.custom ?? plan.custom ?? (plan.slug === "custom-ai-operations");
           const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
+          const isBasic = plan.slug === "basic" || detected?.slug === "whatsapp-ai-starter";
           const checkoutSlug = detected?.slug ?? (isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug);
           const prepaid = billingTerm !== "monthly" && detected && !detected.custom
             ? calculatePrepaidPrice(detected.installationFee, detected.recurringFee, billingTerm)
@@ -289,10 +304,17 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
               <div className={styles.cardGlow} aria-hidden="true" />
               <div className={styles.cardHeader}>
                 <span className={styles.icon}><Icon size={22} /></span>
-                {plan.featured ? <span className={styles.badge}>Recommended</span> : null}
+                {isBasic ? <span className={styles.badge}>14-day free trial</span> : plan.featured ? <span className={styles.badge}>Recommended</span> : null}
               </div>
               <h3>{plan.name}</h3>
               <p className={styles.description}>{plan.description ?? plan.tag}</p>
+              {isBasic ? (
+                <div style={{ marginTop: 16, padding: "14px 15px", borderRadius: 14, border: "1px solid rgba(192,132,252,.32)", background: "linear-gradient(145deg,rgba(126,34,206,.15),rgba(255,255,255,.02))" }}>
+                  <span style={{ display: "block", color: "#d8b4fe", fontSize: 10, fontWeight: 850, letterSpacing: ".1em", textTransform: "uppercase" }}>Try Basic before paying</span>
+                  <strong style={{ display: "block", marginTop: 6, color: "#fff", fontSize: 15 }}>14 days · 250 Flux Credits</strong>
+                  <small style={{ display: "block", marginTop: 5, color: "#9586a3", lineHeight: 1.5 }}>Web AI + WhatsApp AI · no card required</small>
+                </div>
+              ) : null}
               {decision ? (
                 <div className={styles.decisionBlock}>
                   <span>Best for</span>
@@ -313,7 +335,26 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
               </div>
               <h4>What&apos;s included</h4>
               <div className={styles.features}>{plan.features.map((feature) => <span key={feature}><CheckCircle2 size={16} />{feature}</span>)}</div>
-              <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>
+              {isBasic ? (
+                <div style={{ display: "grid", gap: 9, marginTop: "auto" }}>
+                  <Link
+                    href="/account/signup?trial=basic&next=%2Fportal"
+                    className={styles.cta}
+                    aria-label="Start Basic free trial"
+                  >
+                    Start Free Trial <ArrowRight size={16} />
+                  </Link>
+                  <Link
+                    href={href}
+                    aria-label="Choose paid Basic"
+                    style={{ minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: 11, border: "1px solid rgba(192,132,252,.28)", color: "#d8b4fe", textDecoration: "none", fontSize: 12, fontWeight: 850, background: "rgba(255,255,255,.025)" }}
+                  >
+                    Choose paid Basic <ArrowRight size={14} />
+                  </Link>
+                </div>
+              ) : (
+                <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>
+              )}
             </article>
           );
         })}
