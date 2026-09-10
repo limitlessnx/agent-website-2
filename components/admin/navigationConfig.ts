@@ -37,6 +37,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { href: "/dashboard/retention", label: "Retention Risk" },
         { href: "/dashboard/evaluations", label: "Evaluation Leads" },
         { href: "/dashboard/agents", label: "Super Assistant" },
+        { href: "/dashboard/social", label: "Social AI" },
         { href: "/dashboard/activity", label: "Global Activity" },
       ],
     }],
