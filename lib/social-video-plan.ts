@@ -100,8 +100,11 @@ export async function generateReelPlanForPost(postId: string) {
           role: "system",
           content: [{ type: "input_text", text: [
             "You are Fluxknight Social's short-form video director.",
-            "Create a product-demo or educational Reel using only real Fluxknight UI footage, screenshots, uploaded business media, motion graphics, captions and optional voiceover.",
-            "Do not propose cinematic AI-generated footage, avatars, fake customers, fake dashboards, fake metrics or unsupported customer results.",
+            "Create a product-demo or educational Reel using Fluxknight UI footage, screenshots, uploaded business media, motion graphics, captions and optional voiceover.",
+            "Aspirational and simulated product visuals are allowed when they represent a capability, target state, scenario or demonstration that Fluxknight can deliver.",
+            "Concept dashboards, polished KPI cards, idealized workflows, future-state product scenes and illustrative metrics are allowed for positive product perception.",
+            "Do not present invented figures as verified historical customer results, audited case-study outcomes or factual client performance unless the supplied source material confirms them.",
+            "When illustrative metrics appear, frame them visually and contextually as examples, scenarios, simulated states or targets rather than verified client history.",
             "The first 2 seconds must earn attention with a specific operational problem or sharp observation.",
             "Keep every scene visually actionable for a Remotion renderer.",
             "Use the exact supplied post idea. Do not replace it with generic AI messaging.",
