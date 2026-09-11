@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { scheduleSocialPostAction, transitionSocialPostAction } from "@/app/dashboard/social/actions";
+import { generateCarouselAction } from "@/app/dashboard/social/carousels/actions";
 import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/actions";
 import { listSocialPosts, listSocialSchedules, type SocialPostStatus } from "@/lib/social";
 
@@ -29,7 +30,7 @@ export default async function SocialPostsPage() {
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Posts</h1>
-          <p>Controlled lifecycle: draft → review → approved → scheduled → published. AI-generated Phase 3.1 plans enter review before anything can move toward publishing.</p>
+          <p>Controlled lifecycle: draft → review → approved → scheduled → published. AI-generated plans enter review before anything can move toward publishing.</p>
         </div>
         <Link href="/dashboard/social/create" className="admin-status live">Create content</Link>
       </header>
@@ -44,7 +45,9 @@ export default async function SocialPostsPage() {
             const creativeBrief = contentString(post.content, "creative_brief");
             const aiGenerated = post.metadata?.ai_generated === true;
             const hasPrimaryAsset = typeof post.metadata?.primary_asset_id === "string";
+            const carouselAssetIds = Array.isArray(post.metadata?.carousel_asset_ids) ? post.metadata.carousel_asset_ids : [];
             const canGenerateStatic = post.format === "image" && ["draft", "review", "approved"].includes(post.status);
+            const canGenerateCarousel = post.format === "carousel" && ["draft", "review", "approved"].includes(post.status);
 
             return (
               <div key={post.id} className="admin-list-row" style={{ alignItems: "flex-start", gap: 18 }}>
@@ -52,7 +55,8 @@ export default async function SocialPostsPage() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                     <strong>{post.title || "Untitled post"}</strong>
                     {aiGenerated ? <span className="admin-status">AI · Phase 3.1</span> : null}
-                    {hasPrimaryAsset ? <span className="admin-status live">Graphic ready</span> : null}
+                    {post.format === "carousel" && carouselAssetIds.length ? <span className="admin-status live">Carousel ready · {carouselAssetIds.length} slides</span> : null}
+                    {post.format === "image" && hasPrimaryAsset ? <span className="admin-status live">Graphic ready</span> : null}
                   </div>
                   <span>{post.format} · {post.platforms.join(", ")} · {post.caption ? `${post.caption.slice(0, 180)}${post.caption.length > 180 ? "…" : ""}` : "No caption yet"}</span>
                   {hook ? <span><strong>Hook:</strong> {hook}</span> : null}
@@ -73,6 +77,14 @@ export default async function SocialPostsPage() {
                         <input type="hidden" name="post_id" value={post.id} />
                         <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>
                           {hasPrimaryAsset ? "Regenerate graphic" : "Generate graphic"}
+                        </button>
+                      </form>
+                    ) : null}
+                    {canGenerateCarousel ? (
+                      <form action={generateCarouselAction}>
+                        <input type="hidden" name="post_id" value={post.id} />
+                        <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>
+                          {carouselAssetIds.length ? "Regenerate carousel" : "Generate carousel"}
                         </button>
                       </form>
                     ) : null}
