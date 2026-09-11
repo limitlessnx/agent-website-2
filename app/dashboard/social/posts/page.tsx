@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { scheduleSocialPostAction, transitionSocialPostAction } from "@/app/dashboard/social/actions";
+import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/actions";
 import { listSocialPosts, listSocialSchedules, type SocialPostStatus } from "@/lib/social";
 
 const NEXT_ACTIONS: Partial<Record<SocialPostStatus, Array<{ status: SocialPostStatus; label: string }>>> = {
@@ -42,6 +43,8 @@ export default async function SocialPostsPage() {
             const objective = contentString(post.content, "objective");
             const creativeBrief = contentString(post.content, "creative_brief");
             const aiGenerated = post.metadata?.ai_generated === true;
+            const hasPrimaryAsset = typeof post.metadata?.primary_asset_id === "string";
+            const canGenerateStatic = post.format === "image" && ["draft", "review", "approved"].includes(post.status);
 
             return (
               <div key={post.id} className="admin-list-row" style={{ alignItems: "flex-start", gap: 18 }}>
@@ -49,6 +52,7 @@ export default async function SocialPostsPage() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                     <strong>{post.title || "Untitled post"}</strong>
                     {aiGenerated ? <span className="admin-status">AI · Phase 3.1</span> : null}
+                    {hasPrimaryAsset ? <span className="admin-status live">Graphic ready</span> : null}
                   </div>
                   <span>{post.format} · {post.platforms.join(", ")} · {post.caption ? `${post.caption.slice(0, 180)}${post.caption.length > 180 ? "…" : ""}` : "No caption yet"}</span>
                   {hook ? <span><strong>Hook:</strong> {hook}</span> : null}
@@ -64,6 +68,14 @@ export default async function SocialPostsPage() {
                         <button type="submit" className="admin-status" style={{ cursor: "pointer" }}>{action.label}</button>
                       </form>
                     ))}
+                    {canGenerateStatic ? (
+                      <form action={generateStaticGraphicAction}>
+                        <input type="hidden" name="post_id" value={post.id} />
+                        <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>
+                          {hasPrimaryAsset ? "Regenerate graphic" : "Generate graphic"}
+                        </button>
+                      </form>
+                    ) : null}
                   </div>
 
                   {post.status === "approved" ? (
