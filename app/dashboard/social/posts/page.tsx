@@ -2,6 +2,7 @@ import Link from "next/link";
 import { scheduleSocialPostAction, transitionSocialPostAction } from "@/app/dashboard/social/actions";
 import { generateCarouselAction } from "@/app/dashboard/social/carousels/actions";
 import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/actions";
+import { generateReelPlanAction, renderReelAction } from "@/app/dashboard/social/video/actions";
 import { listSocialPosts, listSocialSchedules, type SocialPostStatus } from "@/lib/social";
 
 const NEXT_ACTIONS: Partial<Record<SocialPostStatus, Array<{ status: SocialPostStatus; label: string }>>> = {
@@ -48,6 +49,10 @@ export default async function SocialPostsPage() {
             const carouselAssetIds = Array.isArray(post.metadata?.carousel_asset_ids) ? post.metadata.carousel_asset_ids : [];
             const canGenerateStatic = post.format === "image" && ["draft", "review", "approved"].includes(post.status);
             const canGenerateCarousel = post.format === "carousel" && ["draft", "review", "approved"].includes(post.status);
+            const canGenerateReel = ["reel", "video"].includes(post.format) && ["draft", "review", "approved"].includes(post.status);
+            const hasReelPlan = Boolean(post.metadata?.reel_plan);
+            const reelRenderStatus = typeof post.metadata?.reel_render_status === "string" ? post.metadata.reel_render_status : "";
+            const reelReady = typeof post.metadata?.reel_asset_id === "string" && reelRenderStatus === "ready";
 
             return (
               <div key={post.id} className="admin-list-row" style={{ alignItems: "flex-start", gap: 18 }}>
@@ -57,6 +62,9 @@ export default async function SocialPostsPage() {
                     {aiGenerated ? <span className="admin-status">AI · Phase 3.1</span> : null}
                     {post.format === "carousel" && carouselAssetIds.length ? <span className="admin-status live">Carousel ready · {carouselAssetIds.length} slides</span> : null}
                     {post.format === "image" && hasPrimaryAsset ? <span className="admin-status live">Graphic ready</span> : null}
+                    {canGenerateReel && hasReelPlan ? <span className="admin-status">Storyboard ready</span> : null}
+                    {canGenerateReel && reelRenderStatus === "queued" ? <span className="admin-status">Reel queued</span> : null}
+                    {canGenerateReel && reelReady ? <span className="admin-status live">Reel ready</span> : null}
                   </div>
                   <span>{post.format} · {post.platforms.join(", ")} · {post.caption ? `${post.caption.slice(0, 180)}${post.caption.length > 180 ? "…" : ""}` : "No caption yet"}</span>
                   {hook ? <span><strong>Hook:</strong> {hook}</span> : null}
@@ -87,6 +95,24 @@ export default async function SocialPostsPage() {
                           {carouselAssetIds.length ? "Regenerate carousel" : "Generate carousel"}
                         </button>
                       </form>
+                    ) : null}
+                    {canGenerateReel ? (
+                      <>
+                        <form action={generateReelPlanAction}>
+                          <input type="hidden" name="post_id" value={post.id} />
+                          <button type="submit" className="admin-status" style={{ cursor: "pointer" }}>
+                            {hasReelPlan ? "Regenerate storyboard" : "Generate storyboard"}
+                          </button>
+                        </form>
+                        {hasReelPlan ? (
+                          <form action={renderReelAction}>
+                            <input type="hidden" name="post_id" value={post.id} />
+                            <button type="submit" className="admin-status live" style={{ cursor: "pointer" }} disabled={reelRenderStatus === "queued"}>
+                              {reelReady ? "Render again" : reelRenderStatus === "queued" ? "Render queued" : "Render Reel"}
+                            </button>
+                          </form>
+                        ) : null}
+                      </>
                     ) : null}
                   </div>
 
