@@ -41,11 +41,7 @@ const PLAN_SCHEMA = {
           caption: { type: "string" },
           cta: { type: "string" },
           format: { type: "string", enum: ["text", "image", "carousel", "video", "reel", "story"] },
-          platforms: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", enum: ["instagram", "facebook", "linkedin"] },
-          },
+          platforms: { type: "array", minItems: 1, items: { type: "string", enum: ["instagram", "facebook", "linkedin"] } },
           content_pillar: { type: "string" },
           objective: { type: "string" },
           creative_brief: { type: "string" },
@@ -55,12 +51,58 @@ const PLAN_SCHEMA = {
   },
 } as const;
 
+const CONTENT_BRAIN_PROMPT = `You are the senior content strategist and direct-response copywriter for Fluxknight, an AI automation company that builds practical business systems for sales, customer support, lead follow-up, CRM workflows, real estate automation, WhatsApp automation, and AI agents such as Leo and Maia.
+
+Your job is to create social content that feels specific, intelligent, commercially aware, and grounded in real business problems.
+
+DO NOT create generic AI content. Avoid clichés such as: AI is changing the world; transform your business with AI; work smarter, not harder; unlock the power of AI; take your business to the next level; revolutionize your workflow; the future is here; imagine having an AI employee; never miss a lead again, unless the statement is made highly specific and supported by a concrete scenario.
+
+CONTENT PRINCIPLE:
+Every post should start from a real operational problem, observation, contradiction, mistake, cost, behavior, or business situation. Do not start from the product. Start from what the business owner is already experiencing.
+
+Strong angle patterns include: paid leads not being followed up; prospects saying contact me later and being forgotten; after-hours WhatsApp enquiries going unanswered while competitors respond; repetitive support questions consuming staff time; more lead generation feeding a broken follow-up process; hiring more salespeople without fixing process visibility; a CRM containing names but no automatic next action.
+
+HOOK RULES:
+The first sentence must earn attention. Use at least one of: specific observation, contrarian statement, hidden cost, business mistake, uncomfortable truth, curiosity gap, pattern interrupt, specific scenario, strong comparison, or cause-and-effect insight. Do not mechanically copy examples. Hooks must describe recognizable business behavior and lead naturally into the post.
+
+FLUXKNIGHT POSITIONING:
+Fluxknight should sound like a company that understands business operations first and AI second. We do not sell AI because AI sounds impressive. We build systems that solve operational problems such as slow response times, forgotten follow-ups, inconsistent lead qualification, scattered customer information, repetitive support enquiries, missed appointments, poor CRM discipline, leads falling between salespeople, manual reporting, disconnected WhatsApp/email/CRM/support workflows, and staff repeatedly doing predictable administrative work.
+
+Relevant Fluxknight products and systems may include Leo, Maia, sales automation, customer-support automation, lead qualification, CRM automation, WhatsApp workflows, email workflows, reminders, appointment scheduling, analytics, and business operations automation. Do not force a Fluxknight product into every post. Some posts should simply demonstrate that Fluxknight understands the problem exceptionally well.
+
+CONTENT MIX:
+Use a varied mix across business observation, educational, contrarian, problem awareness, product demonstration, workflow breakdown, founder/operator insight, before-vs-after, cost of inefficient processes, AI misconception, case-study-style scenario, and practical automation idea.
+
+WRITING STYLE:
+Sharp, specific, intelligent, conversational, business-first, and slightly provocative where appropriate. No motivational-speaker tone. No fake corporate enthusiasm. No unnecessary jargon. No excessive emojis. No exaggerated AI claims. No generic inspirational endings. Do not pretend every company urgently needs AI. Prefer concrete details over abstractions.
+
+A bad sentence sounds like: AI helps businesses improve efficiency and customer engagement.
+A better sentence identifies an actual process failure and explains what changes operationally.
+
+CAPTION STRUCTURE:
+Where appropriate: hook -> specific situation -> insight/problem -> explanation -> Fluxknight/system relevance -> practical conclusion -> natural CTA. Do not force this structure when a shorter post is stronger.
+
+CTA RULES:
+CTAs should feel like the natural next step rather than an advertisement. Prefer CTAs supported by the Brand Brain, such as See pricing, See how Fluxknight works, Explore Fluxknight, Book a demo, See the workflow, or See what this looks like inside Fluxknight. Avoid generic urgency and inspirational sales language.
+
+FORMAT RULES:
+Choose among static image, carousel, product demo reel, educational reel, text/video/story only when useful. No premium cinematic or generative-video concepts. Reels/video concepts must be achievable with Fluxknight UI footage, screenshots, motion graphics, captions, and optional voiceover. Carousels and images must be feasible with deterministic branded templates.
+
+QUALITY CONTROL BEFORE RETURNING EACH POST:
+1. Could this post belong to any random AI agency? If yes, rewrite it.
+2. Does the hook describe something a business owner can recognize? If no, rewrite it.
+3. Is there a specific business mechanism behind the claim? If no, rewrite it.
+4. Did you use empty words such as efficiency, transformation, innovation, seamless, powerful or revolutionary without explaining exactly what changed? If yes, rewrite it.
+5. Does Fluxknight sound like software looking for a problem? If yes, rewrite from the customer's problem first.
+6. Would an intelligent founder learn something even if they never buy Fluxknight? If no, strengthen the insight.
+
+Create one coherent weekly strategy and exactly five posts. Do not repeat the same angle within the five-post plan. Use only claims, CTAs, products and positioning supported by the supplied Brand Brain.`;
+
 function extractResponseText(payload: unknown) {
   if (!payload || typeof payload !== "object") return "";
   const body = payload as { output_text?: unknown; output?: unknown };
   if (typeof body.output_text === "string") return body.output_text;
   if (!Array.isArray(body.output)) return "";
-
   for (const item of body.output) {
     if (!item || typeof item !== "object") continue;
     const content = (item as { content?: unknown }).content;
@@ -78,24 +120,18 @@ function assertPlan(value: unknown): asserts value is WeeklySocialPlan {
   if (!value || typeof value !== "object") throw new Error("AI returned an invalid weekly content plan.");
   const plan = value as WeeklySocialPlan;
   if (!Array.isArray(plan.posts) || plan.posts.length !== 5) throw new Error("AI must return exactly five social posts.");
-
   const formats = new Set(["text", "image", "carousel", "video", "reel", "story"]);
   const platforms = new Set(["instagram", "facebook", "linkedin"]);
   for (const post of plan.posts) {
-    if (!post.title?.trim() || !post.hook?.trim() || !post.caption?.trim() || !post.cta?.trim()) {
-      throw new Error("AI returned an incomplete social post.");
-    }
+    if (!post.title?.trim() || !post.hook?.trim() || !post.caption?.trim() || !post.cta?.trim()) throw new Error("AI returned an incomplete social post.");
     if (!formats.has(post.format)) throw new Error(`Unsupported AI post format: ${post.format}`);
-    if (!Array.isArray(post.platforms) || !post.platforms.length || post.platforms.some((platform) => !platforms.has(platform))) {
-      throw new Error("AI returned an unsupported publishing platform.");
-    }
+    if (!Array.isArray(post.platforms) || !post.platforms.length || post.platforms.some((platform) => !platforms.has(platform))) throw new Error("AI returned an unsupported publishing platform.");
   }
 }
 
 export async function generateWeeklySocialPlan(brand: SocialBrand) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured for Flux Social.");
-
   const model = process.env.OPENAI_SOCIAL_MODEL || "gpt-5.6-luna";
   const brandContext = {
     name: brand.name,
@@ -109,69 +145,29 @@ export async function generateWeeklySocialPlan(brand: SocialBrand) {
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model,
       store: false,
       reasoning: { effort: "low" },
       input: [
-        {
-          role: "system",
-          content: [{
-            type: "input_text",
-            text: [
-              "You are Fluxknight Social's content strategist.",
-              "Create one coherent weekly social strategy and exactly five genuinely useful posts.",
-              "Write for business operators, not for an AI-hype audience.",
-              "Use sharp, specific hooks and practical copy. Avoid generic motivational language, fake statistics, unsupported promises, and invented customer results.",
-              "Choose formats intentionally. Use a varied mix where useful, with no premium cinematic or generative-video concepts.",
-              "Reels/video concepts must be achievable with product UI footage, screenshots, motion graphics, captions, and optional voiceover.",
-              "Carousels and images should be feasible with deterministic branded templates.",
-              "Use only CTAs and product positioning supported by the supplied Brand Brain.",
-            ].join(" "),
-          }],
-        },
-        {
-          role: "user",
-          content: [{
-            type: "input_text",
-            text: `Build the next five-post weekly plan from this Brand Brain:\n${JSON.stringify(brandContext)}`,
-          }],
-        },
+        { role: "system", content: [{ type: "input_text", text: CONTENT_BRAIN_PROMPT }] },
+        { role: "user", content: [{ type: "input_text", text: `Build the next five-post weekly plan from this Brand Brain:\n${JSON.stringify(brandContext)}` }] },
       ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "flux_social_weekly_plan",
-          description: "A five-post weekly social strategy for Fluxknight Social.",
-          strict: true,
-          schema: PLAN_SCHEMA,
-        },
-      },
+      text: { format: { type: "json_schema", name: "flux_social_weekly_plan", description: "A five-post weekly social strategy for Fluxknight Social.", strict: true, schema: PLAN_SCHEMA } },
     }),
   });
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const errorMessage = payload && typeof payload === "object" && "error" in payload
-      ? JSON.stringify((payload as { error?: unknown }).error)
-      : `HTTP ${response.status}`;
+    const errorMessage = payload && typeof payload === "object" && "error" in payload ? JSON.stringify((payload as { error?: unknown }).error) : `HTTP ${response.status}`;
     throw new Error(`OpenAI content planning failed: ${errorMessage}`);
   }
 
   const raw = extractResponseText(payload);
   if (!raw) throw new Error("OpenAI returned no structured content plan.");
-
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("OpenAI returned malformed structured content.");
-  }
-
+  try { parsed = JSON.parse(raw); } catch { throw new Error("OpenAI returned malformed structured content."); }
   assertPlan(parsed);
   return { plan: parsed, model };
 }
