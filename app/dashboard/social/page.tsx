@@ -35,7 +35,7 @@ export default async function SocialOverviewPage() {
 
       <section className="admin-grid two">
         <Link href="/dashboard/social/create" className="admin-panel compact">
-          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post and choose its target platforms.</p></div></div>
+          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week's AI content plan.</p></div></div>
         </Link>
         <Link href="/dashboard/social/posts" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Posts</h2><p>Move content through review and approval.</p></div></div>
@@ -45,6 +45,9 @@ export default async function SocialOverviewPage() {
         </Link>
         <Link href="/dashboard/social/brand" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Brand Brain</h2><p>Control voice, audience, pillars, products and CTAs.</p></div></div>
+        </Link>
+        <Link href="/dashboard/social/assets" className="admin-panel compact">
+          <div className="admin-panel-header"><div><h2>Asset Library</h2><p>Private Supabase media storage for graphics, carousels, reels and audio.</p></div></div>
         </Link>
       </section>
 
