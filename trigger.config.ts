@@ -5,4 +5,8 @@ export default defineConfig({
   runtime: "node-24",
   dirs: ["./src/trigger"],
   maxDuration: 300,
+  build: {
+    external: ["@remotion/bundler", "@remotion/renderer", "remotion"],
+    autoDetectExternal: false,
+  },
 });

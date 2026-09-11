@@ -17,7 +17,7 @@
     "@remotion/renderer": "4.0.523",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.55.0",
-    "@trigger.dev/sdk": "^4.5.15",
+    "@trigger.dev/sdk": "4.5.16",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
@@ -28,7 +28,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@trigger.dev/build": "^4.5.15",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19.2.4",

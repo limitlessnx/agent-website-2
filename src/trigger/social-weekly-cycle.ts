@@ -55,7 +55,6 @@ export const fluxSocialWeeklyCycle = task({
   run: async (payload: { organizationId: string; brandId: string; weekStart?: string }) => {
     const supabase = createSocialAdminClient();
     const weekStart = payload.weekStart || weekStartUtc();
-    const idempotencyKey = `${payload.organizationId}:${payload.brandId}:${weekStart}`;
 
     const { data: existingRun, error: existingRunError } = await supabase
       .from("social_weekly_runs")
@@ -119,9 +118,8 @@ export const fluxSocialWeeklyCycle = task({
         organization_id: payload.organizationId,
         brand_id: payload.brandId,
         week_start: weekStart,
-        idempotency_key: idempotencyKey,
         status: "planning",
-        context,
+        generation_summary: { context, total: 0, queued: 0, skipped: 0, succeeded: 0, failed: 0 },
         started_at: new Date().toISOString(),
         last_error: null,
       }, { onConflict: "organization_id,brand_id,week_start" })
@@ -236,14 +234,21 @@ export const fluxSocialWeeklyCycle = task({
         .from("social_weekly_runs")
         .update({
           status: queued > 0 ? "generating" : "review_ready",
-          strategy: {
-            strategy_summary: plan.strategy_summary,
-            weekly_objective: plan.weekly_objective,
-            audience_angle: plan.audience_angle,
-            model,
-          },
           post_ids: postIds,
-          generation_summary: { total: generationJobs.length, queued, skipped, succeeded: skipped, failed: 0 },
+          generation_summary: {
+            context,
+            strategy: {
+              strategy_summary: plan.strategy_summary,
+              weekly_objective: plan.weekly_objective,
+              audience_angle: plan.audience_angle,
+              model,
+            },
+            total: generationJobs.length,
+            queued,
+            skipped,
+            succeeded: skipped,
+            failed: 0,
+          },
           completed_at: queued > 0 ? null : generatedAt,
           last_error: null,
         })
