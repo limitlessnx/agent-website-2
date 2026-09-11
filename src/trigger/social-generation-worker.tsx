@@ -2,11 +2,16 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ImageResponse } from "next/og";
 import { logger, schedules, task } from "@trigger.dev/sdk";
 import { fluxSocialRenderReel } from "./social-reel-renderer";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import type { ReactElement } from "react";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
 const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 const WIDTH = 1080;
 const HEIGHT = 1350;
+const GEIST_REGULAR_FONT_PATH = path.join(process.cwd(), "node_modules", "next", "dist", "compiled", "@vercel", "og", "Geist-Regular.ttf");
+let geistRegularFont: Promise<ArrayBuffer> | undefined;
 
 type GenerationJob = {
   id: string;
@@ -189,6 +194,21 @@ async function getCanonicalLogoUrl(supabase: SupabaseClient, organizationId: str
   return signed.signedUrl;
 }
 
+async function loadGeistRegularFont() {
+  geistRegularFont ??= readFile(GEIST_REGULAR_FONT_PATH).then((font) =>
+    font.buffer.slice(font.byteOffset, font.byteOffset + font.byteLength),
+  );
+  return geistRegularFont;
+}
+
+async function imageResponse(children: ReactElement) {
+  return new ImageResponse(children, {
+    width: WIDTH,
+    height: HEIGHT,
+    fonts: [{ name: "Geist", data: await loadGeistRegularFont(), style: "normal", weight: 400 }],
+  });
+}
+
 async function uploadAsset(supabase: SupabaseClient, input: {
   organizationId: string;
   brandId: string;
@@ -230,8 +250,8 @@ async function uploadAsset(supabase: SupabaseClient, input: {
   return asset.id as string;
 }
 
-function renderStatic(input: { logoUrl: string; hook: string; pillar: string; footer: string }) {
-  return new ImageResponse(
+async function renderStatic(input: { logoUrl: string; hook: string; pillar: string; footer: string }) {
+  return imageResponse(
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "76px 72px 62px", color: "white", fontFamily: "Arial, Helvetica, sans-serif", background: "radial-gradient(circle at 82% 12%, rgba(124,58,237,.38), transparent 34%), linear-gradient(145deg,#050507,#0b0b12 55%,#050507)", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, opacity: .08, backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -248,12 +268,11 @@ function renderStatic(input: { logoUrl: string; hook: string; pillar: string; fo
         <div style={{ fontSize: 21, color: "#a78bfa", fontWeight: 700 }}>Fluxknight.space</div>
       </div>
     </div>,
-    { width: WIDTH, height: HEIGHT },
   );
 }
 
-function renderCarouselSlide(input: { logoUrl: string; slide: { type: string; headline: string; body: string }; index: number; total: number; pillar: string }) {
-  return new ImageResponse(
+async function renderCarouselSlide(input: { logoUrl: string; slide: { type: string; headline: string; body: string }; index: number; total: number; pillar: string }) {
+  return imageResponse(
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "72px 72px 58px", color: "white", fontFamily: "Arial, Helvetica, sans-serif", background: "radial-gradient(circle at 82% 12%, rgba(124,58,237,.34), transparent 34%), linear-gradient(145deg,#050507,#0b0b12 55%,#050507)", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, opacity: .08, backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -271,13 +290,12 @@ function renderCarouselSlide(input: { logoUrl: string; slide: { type: string; he
         <span style={{ color: "#a78bfa", fontWeight: 700 }}>Fluxknight.space</span>
       </div>
     </div>,
-    { width: WIDTH, height: HEIGHT },
   );
 }
 
 async function processStatic(supabase: SupabaseClient, post: PostRow, logoUrl: string) {
   const content = post.content || {};
-  const response = renderStatic({
+  const response = await renderStatic({
     logoUrl,
     hook: String(content.hook || post.title || "Build a smarter operating system."),
     pillar: String(content.content_pillar || "Business automation"),
@@ -312,7 +330,7 @@ async function processCarousel(supabase: SupabaseClient, brand: BrandRow, post: 
 
   const assetIds: string[] = [];
   for (let i = 0; i < slides.length; i += 1) {
-    const response = renderCarouselSlide({ logoUrl, slide: slides[i], index: i + 1, total: slides.length, pillar: String(content.content_pillar || "Business automation") });
+    const response = await renderCarouselSlide({ logoUrl, slide: slides[i], index: i + 1, total: slides.length, pillar: String(content.content_pillar || "Business automation") });
     const bytes = new Uint8Array(await response.arrayBuffer());
     const assetId = await uploadAsset(supabase, {
       organizationId: post.organization_id,
