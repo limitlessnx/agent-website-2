@@ -20,7 +20,7 @@ export default async function SocialOverviewPage() {
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Social AI Control Center</h1>
-          <p>Plan, review, approve, schedule and publish branded content through one tenant-safe pipeline.</p>
+          <p>Plan, review, approve, measure, schedule and publish branded content through one tenant-safe pipeline.</p>
         </div>
         <span className={failedJobs ? "admin-status warning" : "admin-status live"}>
           {failedJobs ? `${failedJobs} publish issue${failedJobs === 1 ? "" : "s"}` : "Publishing healthy"}
@@ -40,6 +40,9 @@ export default async function SocialOverviewPage() {
         </Link>
         <Link href="/dashboard/social/review" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Review & Approval</h2><p>Preview copy and media together, edit, reject, regenerate or approve.</p></div><span className={reviewCount ? "admin-status warning" : "admin-status live"}>{reviewCount}</span></div>
+        </Link>
+        <Link href="/dashboard/social/analytics" className="admin-panel compact">
+          <div className="admin-panel-header"><div><h2>Analytics</h2><p>Track post performance, account growth, conversion and attributed revenue.</p></div><span className="admin-status">3.7</span></div>
         </Link>
         <Link href="/dashboard/social/posts" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Posts</h2><p>Inspect the complete content lifecycle and status history.</p></div></div>
