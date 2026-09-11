@@ -1,11 +1,11 @@
 import React from "react";
 import { Composition, registerRoot } from "remotion";
-import { FluxSocialReel, type FluxSocialReelProps } from "./FluxSocialReel";
+import { FluxSocialReel } from "./FluxSocialReel";
 
 const FPS = 30;
 
 const Root = () => (
-  <Composition<FluxSocialReelProps>
+  <Composition
     id="FluxSocialReel"
     component={FluxSocialReel}
     width={1080}
@@ -36,7 +36,12 @@ const Root = () => (
       website: "Fluxknight.space",
     }}
     calculateMetadata={({ props }) => ({
-      durationInFrames: Math.max(1, Math.round(props.plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0) * FPS)),
+      durationInFrames: Math.max(
+        1,
+        Math.round(
+          props.plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0) * FPS,
+        ),
+      ),
       props,
     })}
   />
