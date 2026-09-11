@@ -13,6 +13,11 @@ const NEXT_ACTIONS: Partial<Record<SocialPostStatus, Array<{ status: SocialPostS
 
 const inputStyle = { padding: "9px 11px", borderRadius: 9, border: "1px solid var(--admin-border, #2d2d35)", background: "transparent", color: "inherit" } as const;
 
+function contentString(content: Record<string, unknown>, key: string) {
+  const value = content?.[key];
+  return typeof value === "string" ? value : "";
+}
+
 export default async function SocialPostsPage() {
   const [posts, schedules] = await Promise.all([listSocialPosts(200), listSocialSchedules(200)]);
   const scheduleByPost = new Map(schedules.map((schedule) => [schedule.post_id, schedule]));
@@ -23,20 +28,32 @@ export default async function SocialPostsPage() {
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Posts</h1>
-          <p>Controlled lifecycle: draft → review → approved → scheduled → published.</p>
+          <p>Controlled lifecycle: draft → review → approved → scheduled → published. AI-generated Phase 3.1 plans enter review before anything can move toward publishing.</p>
         </div>
-        <Link href="/dashboard/social/create" className="admin-status live">Create post</Link>
+        <Link href="/dashboard/social/create" className="admin-status live">Create content</Link>
       </header>
 
       <section className="admin-panel">
         <div className="admin-list">
           {posts.map((post) => {
             const schedule = scheduleByPost.get(post.id);
+            const hook = contentString(post.content, "hook");
+            const pillar = contentString(post.content, "content_pillar");
+            const objective = contentString(post.content, "objective");
+            const creativeBrief = contentString(post.content, "creative_brief");
+            const aiGenerated = post.metadata?.ai_generated === true;
+
             return (
               <div key={post.id} className="admin-list-row" style={{ alignItems: "flex-start", gap: 18 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong>{post.title || "Untitled post"}</strong>
-                  <span>{post.format} · {post.platforms.join(", ")} · {post.caption ? `${post.caption.slice(0, 140)}${post.caption.length > 140 ? "…" : ""}` : "No caption yet"}</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                    <strong>{post.title || "Untitled post"}</strong>
+                    {aiGenerated ? <span className="admin-status">AI · Phase 3.1</span> : null}
+                  </div>
+                  <span>{post.format} · {post.platforms.join(", ")} · {post.caption ? `${post.caption.slice(0, 180)}${post.caption.length > 180 ? "…" : ""}` : "No caption yet"}</span>
+                  {hook ? <span><strong>Hook:</strong> {hook}</span> : null}
+                  {pillar || objective ? <span>{pillar ? `Pillar: ${pillar}` : ""}{pillar && objective ? " · " : ""}{objective ? `Objective: ${objective}` : ""}</span> : null}
+                  {creativeBrief ? <span><strong>Creative brief:</strong> {creativeBrief}</span> : null}
                   {schedule ? <span>Scheduled: {new Date(schedule.scheduled_for).toLocaleString()} · {schedule.status}</span> : null}
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
@@ -68,7 +85,7 @@ export default async function SocialPostsPage() {
               </div>
             );
           })}
-          {!posts.length ? <div className="admin-list-row"><div><strong>No social posts yet</strong><span>Create the first Fluxknight draft to start the pipeline.</span></div><em>empty</em></div> : null}
+          {!posts.length ? <div className="admin-list-row"><div><strong>No social posts yet</strong><span>Create a draft or generate the first five-post AI weekly plan.</span></div><em>empty</em></div> : null}
         </div>
       </section>
     </main>
