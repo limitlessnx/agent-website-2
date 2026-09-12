@@ -1,0 +1,213 @@
+/* Dashboard Phase B: readability, contrast, and control consistency.
+   Loaded after legacy dashboard styles so the final UI follows one shared system. */
+
+:root{
+  --dash-text:#f3f5f8;
+  --dash-text-secondary:#b2bac6;
+  --dash-text-muted:#929ba9;
+  --dash-text-subtle:#7f8997;
+  --dash-placeholder:#8d97a5;
+  --dash-border:#2a313c;
+  --dash-border-accent:rgba(168,132,246,.34);
+  --dash-control-bg:#0c1016;
+  --dash-control-height:44px;
+  --dash-control-height-compact:40px;
+  --dash-radius:10px;
+  --dash-radius-small:8px;
+  --dash-radius-pill:999px;
+}
+
+/* Shared dashboard text hierarchy */
+.admin-shell,.portal-shell,.dashboard-shell,.client-dashboard{
+  color:var(--dash-text);
+  font-size:14px;
+  line-height:1.55;
+}
+
+.admin-page-header h1,.portal-page-header h1,.admin-hero-panel h1,.portal-hero h1{
+  color:var(--dash-text)!important;
+  font-size:clamp(1.85rem,3vw,2.35rem)!important;
+  line-height:1.08!important;
+  letter-spacing:-.035em!important;
+}
+
+.admin-panel-header h2,.portal-panel h2,.portal-card h2{
+  color:var(--dash-text)!important;
+  font-size:1.25rem!important;
+  line-height:1.2!important;
+}
+
+.admin-panel h3,.portal-panel h3,.dashboard-card h3{
+  color:var(--dash-text)!important;
+  font-size:1rem!important;
+  line-height:1.3!important;
+}
+
+.admin-page-header p,.portal-page-header p,.admin-hero-panel p,.portal-hero p,
+.admin-panel p,.portal-panel p,.portal-card p,.admin-muted,.portal-muted{
+  color:var(--dash-text-secondary)!important;
+  font-size:.875rem!important;
+  line-height:1.6!important;
+}
+
+.admin-kicker,.section-label,.portal-eyebrow,.portal-kicker{
+  font-size:.75rem!important;
+  line-height:1.2!important;
+}
+
+.admin-status,.portal-status,.status-pill,.campaign-status{
+  min-height:28px;
+  padding:5px 9px!important;
+  border-radius:var(--dash-radius-pill)!important;
+  font-size:.75rem!important;
+  line-height:1.15!important;
+}
+
+/* Form controls: one usable size rather than 30/40/46/50px roulette. */
+.admin-login-card input,.admin-form-grid input,.admin-form-grid select,.admin-form-grid textarea,
+.portal-form input,.portal-form select,.portal-form textarea,.campaign-panel input,.campaign-panel select,.campaign-panel textarea,
+.admin-search,.lead-filter-bar input,.lead-filter-bar select{
+  border-radius:var(--dash-radius)!important;
+  border-color:var(--dash-border)!important;
+  color:var(--dash-text)!important;
+  background:var(--dash-control-bg)!important;
+  font-size:14px!important;
+}
+
+.admin-form-grid input,.admin-form-grid select,.portal-form input,.portal-form select,
+.campaign-panel input,.campaign-panel select,.lead-filter-bar input,.lead-filter-bar select{
+  min-height:var(--dash-control-height)!important;
+}
+
+.admin-form-grid textarea,.portal-form textarea,.campaign-panel textarea{
+  min-height:104px!important;
+}
+
+.admin-shell input::placeholder,.admin-shell textarea::placeholder,
+.portal-shell input::placeholder,.portal-shell textarea::placeholder,
+.dashboard-shell input::placeholder,.client-dashboard input::placeholder{
+  color:var(--dash-placeholder)!important;
+  opacity:1!important;
+}
+
+/* Shared interactive controls */
+.admin-shell button,.admin-shell a[class*="button"],.admin-shell a[class*="Button"],
+.portal-shell button,.portal-button,.primary-button,.campaign-action{
+  min-height:var(--dash-control-height)!important;
+  border-radius:var(--dash-radius-small)!important;
+  font-size:14px!important;
+  line-height:1.1!important;
+}
+
+.admin-icon-button,.admin-topbar-actions button,.portal-icon-button{
+  width:var(--dash-control-height)!important;
+  height:var(--dash-control-height)!important;
+  min-height:var(--dash-control-height)!important;
+  padding:0!important;
+  border-radius:var(--dash-radius-small)!important;
+}
+
+.admin-nav a,.portal-sidebar nav a,.portal-nav-drawer button,
+.admin-list-row,.portal-list-row,.campaign-recipient-row{
+  border-radius:var(--dash-radius-small)!important;
+}
+
+.admin-page-header,.portal-page-header,.admin-hero-panel,.portal-hero,
+.admin-panel,.portal-card,.portal-panel,.admin-metric-card,.portal-stat,.dashboard-card{
+  border-radius:var(--dash-radius)!important;
+}
+
+/* Super Leo / Business Command Center readability.
+   Scoped by aria-label so CSS-module hashes do not matter. */
+section[aria-label="Fluxknight command center"]{
+  color:var(--dash-text);
+  font-size:14px;
+  line-height:1.55;
+}
+
+section[aria-label="Fluxknight command center"] h1{
+  font-size:clamp(1.9rem,3vw,2.5rem)!important;
+  line-height:1.08!important;
+}
+
+section[aria-label="Fluxknight command center"] h2{
+  font-size:clamp(1.55rem,2.5vw,2.15rem)!important;
+  line-height:1.12!important;
+}
+
+section[aria-label="Fluxknight command center"] h3{
+  font-size:1rem!important;
+  line-height:1.3!important;
+}
+
+section[aria-label="Fluxknight command center"] p{
+  color:var(--dash-text-secondary)!important;
+  font-size:14px!important;
+  line-height:1.6!important;
+}
+
+section[aria-label="Fluxknight command center"] small{
+  color:var(--dash-text-muted)!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+
+section[aria-label="Fluxknight command center"] span{
+  line-height:1.35;
+}
+
+/* Never render operational labels at microscopic 8–10px sizes. */
+section[aria-label="Fluxknight command center"] [class*="eyebrow"],
+section[aria-label="Fluxknight command center"] [class*="Label"],
+section[aria-label="Fluxknight command center"] [class*="label"],
+section[aria-label="Fluxknight command center"] [class*="Status"],
+section[aria-label="Fluxknight command center"] [class*="status"],
+section[aria-label="Fluxknight command center"] [class*="severity"],
+section[aria-label="Fluxknight command center"] [class*="Footer"]{
+  font-size:12px!important;
+}
+
+section[aria-label="Fluxknight command center"] input{
+  min-height:var(--dash-control-height)!important;
+  border-radius:var(--dash-radius-small)!important;
+  color:var(--dash-text)!important;
+  font-size:14px!important;
+}
+
+section[aria-label="Fluxknight command center"] input::placeholder{
+  color:var(--dash-placeholder)!important;
+  opacity:1!important;
+}
+
+section[aria-label="Fluxknight command center"] button,
+section[aria-label="Fluxknight command center"] a[class*="Button"],
+section[aria-label="Fluxknight command center"] a[class*="button"]{
+  min-height:var(--dash-control-height-compact)!important;
+  border-radius:var(--dash-radius-small)!important;
+  font-size:14px!important;
+}
+
+/* Icon-only controls remain compact but comfortably tappable. */
+section[aria-label="Fluxknight command center"] a[aria-label]:not([class*="Button"]):not([class*="button"]){
+  min-width:40px;
+  min-height:40px;
+}
+
+/* Keep supporting text readable on mobile rather than shrinking again. */
+@media(max-width:640px){
+  .admin-shell,.portal-shell,.dashboard-shell,.client-dashboard,
+  section[aria-label="Fluxknight command center"]{
+    font-size:14px;
+  }
+
+  section[aria-label="Fluxknight command center"] p{font-size:13px!important}
+  section[aria-label="Fluxknight command center"] small{font-size:12px!important}
+  section[aria-label="Fluxknight command center"] [class*="severity"],
+  section[aria-label="Fluxknight command center"] [class*="Status"],
+  section[aria-label="Fluxknight command center"] [class*="status"]{font-size:11px!important}
+
+  .admin-form-grid input,.admin-form-grid select,.admin-form-grid textarea,
+  .portal-form input,.portal-form select,.portal-form textarea{
+    font-size:16px!important;
+  }
+}
