@@ -21,16 +21,15 @@ function socialMediaRuntimeAssets() {
       target: "dev" | "deploy";
       addLayer: (layer: {
         id: string;
-        image: { pkgs?: string[]; instructions?: string[] };
+        image: { instructions?: string[] };
       }) => void;
     }) {
       if (context.target === "dev") return;
       context.addLayer({
         id: "flux-social-runtime-assets",
         image: {
-          pkgs: ["fonts-dejavu-core"],
           instructions: [
-            "RUN mkdir -p /app/node_modules/next/dist/compiled/@vercel/og && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+            "RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core && mkdir -p /app/node_modules/next/dist/compiled/@vercel/og && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf && rm -rf /var/lib/apt/lists/*",
           ],
         },
       });
