@@ -497,7 +497,8 @@ export const fluxSocialGenerationWorker = task({
     for (const rawJob of jobs || []) {
       const job = rawJob as GenerationJob;
       const now = new Date().toISOString();
-      const { data: claimed, error: claimError } = await supabase.from("social_generation_jobs").update({ status: "running", attempt_count: Number(job.attempt_count || 0) + 1, started_at: now, last_error: null }).eq("id", job.id).eq("status", "queued").select("id").maybeSingle();
+      const claimAttempt = Number(job.attempt_count || 0) + 1;
+      const { data: claimed, error: claimError } = await supabase.from("social_generation_jobs").update({ status: "running", attempt_count: claimAttempt, started_at: now, last_error: null }).eq("id", job.id).eq("status", "queued").select("id").maybeSingle();
       if (claimError) throw claimError;
       if (!claimed) continue;
 
@@ -519,11 +520,20 @@ export const fluxSocialGenerationWorker = task({
           output = { skipped: true };
         }
 
-        const { error: successError } = await supabase.from("social_generation_jobs").update({ status: job.job_type === "none" ? "skipped" : "succeeded", completed_at: new Date().toISOString(), last_error: null, metadata: { ...(job.metadata || {}), output } }).eq("id", job.id);
+        const { error: successError } = await supabase.from("social_generation_jobs").update({ status: job.job_type === "none" ? "skipped" : "succeeded", completed_at: new Date().toISOString(), last_error: null, metadata: { ...(job.metadata || {}), output } }).eq("id", job.id).eq("status", "running").eq("attempt_count", claimAttempt);
         if (successError) throw successError;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        await supabase.from("social_generation_jobs").update({ status: "failed", completed_at: new Date().toISOString(), last_error: message }).eq("id", job.id);
+        const { data: failedJob, error: failedJobError } = await supabase
+          .from("social_generation_jobs")
+          .update({ status: "failed", completed_at: new Date().toISOString(), last_error: message })
+          .eq("id", job.id)
+          .eq("status", "running")
+          .eq("attempt_count", claimAttempt)
+          .select("id")
+          .maybeSingle();
+        if (failedJobError) throw failedJobError;
+        if (!failedJob) continue;
         const { data: failedPost, error: failedPostError } = await supabase.from("social_posts").select("id,organization_id,brand_id,title,caption,format,status,content,metadata").eq("organization_id", run.organization_id).eq("id", job.post_id).maybeSingle();
         if (failedPostError) throw failedPostError;
         if (failedPost) await markPostMediaFailed(supabase, failedPost as PostRow, message);
