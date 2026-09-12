@@ -40,11 +40,18 @@ function noticeSeverity(type: string) {
   return "Info";
 }
 
+function healthDetail(systemHealth: string) {
+  if (systemHealth === "Operational") return "Current platform checks passed";
+  if (systemHealth === "Critical") return "Current evidence reports critical conditions";
+  if (systemHealth === "Attention") return "One or more current checks need review";
+  return "Measurement unavailable";
+}
+
 export default function LeoOverview({ newLeads, clients, liveClients, pendingClients, attentionCount, systemHealth, notifications }: Props) {
   const pathname = usePathname();
   const { sessionId, messages, busy, error, operationState, sendMessage, setSessionId, appendTranscript } = useLeoConversation();
-  const healthPercent = systemHealth === "Operational" ? 98 : 64;
-  const taskCount = Math.max(1, attentionCount + newLeads);
+  const taskCount = attentionCount + newLeads;
+  const clientLivePercent = clients.length ? Math.round((liveClients / clients.length) * 100) : null;
   const pageContext = useMemo(() => ({ pathname, section: "leo", resourceType: "platform-operations", localTime: new Date().toString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }), [pathname]);
   const leoStateLabel = operationState === "investigating" ? "Investigating" : operationState === "executing" ? "Executing" : operationState === "approval_required" ? "Approval required" : operationState === "completed" ? "Executed" : operationState === "error" ? "Needs attention" : "Ready";
   const latestLeoMessage = [...messages].reverse().find((message) => message.role === "assistant");
@@ -105,10 +112,10 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
       <LeoActionCenter />
 
       <div className={styles.metrics}>
-        <article><div className={styles.metricIcon}><Bot size={16} /></div><span>AI workforce</span><strong>{clients.length + 2}</strong><small>{liveClients} client workspaces live</small></article>
+        <article><div className={styles.metricIcon}><Bot size={16} /></div><span>Client workspaces</span><strong>{clients.length}</strong><small>{liveClients} currently live</small></article>
         <article><div className={styles.metricIcon}><Target size={16} /></div><span>New leads</span><strong>{newLeads}</strong><small>Ready for qualification</small></article>
         <article className={attentionCount ? styles.warning : ""}><div className={styles.metricIcon}><AlertTriangle size={16} /></div><span>Attention queue</span><strong>{attentionCount}</strong><small>{attentionCount ? "Signals need review" : "Nothing urgent"}</small></article>
-        <article><div className={styles.metricIcon}><Gauge size={16} /></div><span>Automation health</span><strong>{healthPercent}%</strong><small>{systemHealth} · responding normally</small></article>
+        <article><div className={styles.metricIcon}><Gauge size={16} /></div><span>Platform state</span><strong>{systemHealth}</strong><small>{healthDetail(systemHealth)}</small></article>
       </div>
 
       <div className={styles.mainGrid}>
@@ -120,7 +127,7 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
               <div className={styles.attentionCopy}><strong>{item.title}</strong><small>{item.detail}</small></div>
               <div className={styles.attentionActions}><button type="button" disabled={busy} onClick={() => investigate(item)}><Search size={12} /> Investigate</button><Link href={item.href} aria-label={`View ${item.title}`}><ArrowUpRight size={13} /></Link></div>
             </div>; })}
-            {!notifications.length && <div className={styles.empty}><CheckCircle2 size={18} /><div><strong>All systems quiet</strong><span>No operational signals require attention.</span></div></div>}
+            {!notifications.length && <div className={styles.empty}><CheckCircle2 size={18} /><div><strong>No current attention signals</strong><span>No measured operational signal in this view currently requires review.</span></div></div>}
           </div>
         </article>
 
@@ -137,27 +144,27 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
 
       <div className={styles.bottomGrid}>
         <article className={styles.panel}>
-          <header className={styles.panelHeader}><div><span>WORKSPACES</span><h3>Organization health</h3><p>Current operational state by workspace.</p></div><Link href="/dashboard/organizations">View all <ArrowUpRight size={13} /></Link></header>
+          <header className={styles.panelHeader}><div><span>WORKSPACES</span><h3>Organization status</h3><p>Known workspace state from current records.</p></div><Link href="/dashboard/organizations">View all <ArrowUpRight size={13} /></Link></header>
           <div className={styles.orgs}>
-            <Link href="/dashboard/limitless/leads"><span className={styles.orgIcon}>LR</span><div><strong>Limitless Realty</strong><small>{newLeads} new leads · owned workspace</small></div><b>Active</b></Link>
-            <Link href="/dashboard/gencouv"><span className={styles.orgIcon}>GC</span><div><strong>Gencouv</strong><small>Trading operations · owned workspace</small></div><b>Active</b></Link>
-            {clients.slice(0, 3).map((client) => <Link href="/dashboard/clients" key={client.id}><span className={styles.orgIcon}>AI</span><div><strong>{client.business_name || "Client workspace"}</strong><small>{client.status.replaceAll("_", " ")} · {client.business_email || "No email"}</small></div><b>{client.status === "live" ? "Live" : "Review"}</b></Link>)}
+            <Link href="/dashboard/limitless/leads"><span className={styles.orgIcon}>LR</span><div><strong>Limitless Realty</strong><small>{newLeads} new leads · owned workspace</small></div><b>Owned</b></Link>
+            <Link href="/dashboard/gencouv"><span className={styles.orgIcon}>GC</span><div><strong>Gencouv</strong><small>Trading operations · owned workspace</small></div><b>Owned</b></Link>
+            {clients.slice(0, 3).map((client) => <Link href="/dashboard/clients" key={client.id}><span className={styles.orgIcon}>AI</span><div><strong>{client.business_name || "Client workspace"}</strong><small>{client.status.replaceAll("_", " ")} · {client.business_email || "No email"}</small></div><b>{client.status === "live" ? "Live" : client.status.replaceAll("_", " ")}</b></Link>)}
           </div>
         </article>
 
         <article className={styles.panel}>
-          <header className={styles.panelHeader}><div><span>SYSTEM COVERAGE</span><h3>Automation health</h3><p>Service readiness across the platform.</p></div><span className={styles.healthPill}><span className={styles.liveDot} /> Healthy</span></header>
+          <header className={styles.panelHeader}><div><span>MEASURED STATUS</span><h3>Operational coverage</h3><p>Only values supported by current dashboard evidence are shown.</p></div><span className={styles.healthPill}>{systemHealth}</span></header>
           <div className={styles.coverage}>
-            <div><span>Lead operations</span><strong>92%</strong><i><b style={{ width: "92%" }} /></i></div>
-            <div><span>Follow-up automation</span><strong>87%</strong><i><b style={{ width: "87%" }} /></i></div>
-            <div><span>Workflow execution</span><strong>{healthPercent}%</strong><i><b style={{ width: `${healthPercent}%` }} /></i></div>
-            <div><span>Workspace readiness</span><strong>{pendingClients ? "72%" : "100%"}</strong><i><b style={{ width: `${pendingClients ? 72 : 100}%` }} /></i></div>
+            <div><span>New lead queue</span><strong>{newLeads}</strong><small>Current records marked new</small></div>
+            <div><span>Client workspaces live</span><strong>{clientLivePercent === null ? "Unavailable" : `${clientLivePercent}%`}</strong>{clientLivePercent !== null ? <i><b style={{ width: `${clientLivePercent}%` }} /></i> : <small>No client workspace records available</small>}</div>
+            <div><span>Workflow / platform state</span><strong>{systemHealth}</strong><small>{healthDetail(systemHealth)}</small></div>
+            <div><span>Attention signals</span><strong>{attentionCount}</strong><small>{attentionCount ? "Current signals requiring review" : "No current attention signals"}</small></div>
           </div>
-          <div className={styles.coverageFoot}><Clock3 size={13} /> Last platform check <strong>Live</strong></div>
+          <div className={styles.coverageFoot}><Clock3 size={13} /> Unmeasured health scores are shown as <strong>Unavailable</strong>, never estimated.</div>
         </article>
       </div>
 
-      <footer className={styles.footerLine}><span><Activity size={13} /> {taskCount} operational signals tracked</span><span>Human approval remains required for sensitive actions.</span></footer>
+      <footer className={styles.footerLine}><span><Activity size={13} /> {taskCount} surfaced item{taskCount === 1 ? "" : "s"} in this view</span><span>Human approval remains required for sensitive actions.</span></footer>
     </section>
   );
 }
