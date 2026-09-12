@@ -1,5 +1,5 @@
 import { defineConfig } from "@trigger.dev/sdk";
-import { cp } from "node:fs/promises";
+import { access, cp, copyFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 function remotionSourceFiles() {
@@ -10,6 +10,26 @@ function remotionSourceFiles() {
         recursive: true,
       });
       context.logger.log("Copied Remotion source files into the Trigger build image.");
+
+      const systemFont = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+      const bundledFont = path.join(
+        manifest.outputPath,
+        "node_modules",
+        "next",
+        "dist",
+        "compiled",
+        "@vercel",
+        "og",
+        "Geist-Regular.ttf",
+      );
+      try {
+        await access(systemFont);
+        await mkdir(path.dirname(bundledFont), { recursive: true });
+        await copyFile(systemFont, bundledFont);
+        context.logger.log("Bundled Flux Social ImageResponse runtime font into the Trigger artifact.");
+      } catch {
+        context.logger.log("System font was not available during Trigger artifact preparation; ImageResponse font fallback was not bundled.");
+      }
     },
   };
 }
