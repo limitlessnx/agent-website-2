@@ -548,6 +548,14 @@ export const fluxSocialGenerationSweeper = schedules.task({
     if (error) throw error;
     const triggered: string[] = [];
     for (const run of runs || []) {
+      const { count: runningJobs, error: runningJobsError } = await supabase
+        .from("social_generation_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("weekly_run_id", run.id)
+        .eq("status", "running");
+      if (runningJobsError) throw runningJobsError;
+      if ((runningJobs || 0) > 0) continue;
+
       const handle = await fluxSocialGenerationWorker.trigger({ weeklyRunId: run.id });
       triggered.push(handle.id);
     }
