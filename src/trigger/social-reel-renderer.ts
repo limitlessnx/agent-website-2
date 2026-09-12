@@ -11,6 +11,7 @@ const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 
 export const fluxSocialRenderReel = task({
   id: "flux-social-render-reel",
+  machine: "large-1x",
   maxDuration: 900,
   retry: { maxAttempts: 2, minTimeoutInMs: 10_000, maxTimeoutInMs: 60_000, factor: 2 },
   run: async (payload: { organizationId: string; postId: string }) => {
@@ -90,9 +91,9 @@ export const fluxSocialRenderReel = task({
         codec: "h264",
         outputLocation,
         inputProps,
-        crf: 18,
+        crf: 20,
         x264Preset: "veryfast",
-        concurrency: "50%",
+        concurrency: 1,
         logLevel: "info",
       });
 
@@ -125,6 +126,8 @@ export const fluxSocialRenderReel = task({
             brand_asset_policy: "canonical-logo-only",
             storage_policy: "supabase-only",
             illustrative_scenarios_allowed: true,
+            render_machine: "large-1x",
+            render_concurrency: 1,
           },
         })
         .select("id")
