@@ -36,10 +36,7 @@ const PLAN_SCHEMA = {
         additionalProperties: false,
         required: ["title", "hook", "caption", "cta", "format", "platforms", "content_pillar", "objective", "creative_brief"],
         properties: {
-          title: { type: "string" },
-          hook: { type: "string" },
-          caption: { type: "string" },
-          cta: { type: "string" },
+          title: { type: "string" }, hook: { type: "string" }, caption: { type: "string" }, cta: { type: "string" },
           format: { type: "string", enum: ["text", "image", "carousel", "video", "reel", "story"] },
           platforms: { type: "array", minItems: 1, items: { type: "string", enum: ["instagram", "facebook", "linkedin"] } },
           content_pillar: { type: "string" },
@@ -133,23 +130,12 @@ export async function generateWeeklySocialPlan(brand: SocialBrand) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured for Flux Social.");
   const model = process.env.OPENAI_SOCIAL_MODEL || "gpt-5.6-luna";
-  const brandContext = {
-    name: brand.name,
-    tone: brand.tone,
-    audience: brand.audience,
-    content_pillars: brand.content_pillars,
-    ctas: brand.ctas,
-    products: brand.products,
-    visual_rules: brand.visual_rules,
-  };
-
+  const brandContext = { name: brand.name, tone: brand.tone, audience: brand.audience, content_pillars: brand.content_pillars, ctas: brand.ctas, products: brand.products, visual_rules: brand.visual_rules };
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
-      store: false,
-      reasoning: { effort: "low" },
+      model, store: false, reasoning: { effort: "low" },
       input: [
         { role: "system", content: [{ type: "input_text", text: CONTENT_BRAIN_PROMPT }] },
         { role: "user", content: [{ type: "input_text", text: `Build the next five-post weekly plan from this Brand Brain:\n${JSON.stringify(brandContext)}` }] },
@@ -157,13 +143,11 @@ export async function generateWeeklySocialPlan(brand: SocialBrand) {
       text: { format: { type: "json_schema", name: "flux_social_weekly_plan", description: "A five-post weekly social strategy for Fluxknight Social.", strict: true, schema: PLAN_SCHEMA } },
     }),
   });
-
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
     const errorMessage = payload && typeof payload === "object" && "error" in payload ? JSON.stringify((payload as { error?: unknown }).error) : `HTTP ${response.status}`;
     throw new Error(`OpenAI content planning failed: ${errorMessage}`);
   }
-
   const raw = extractResponseText(payload);
   if (!raw) throw new Error("OpenAI returned no structured content plan.");
   let parsed: unknown;

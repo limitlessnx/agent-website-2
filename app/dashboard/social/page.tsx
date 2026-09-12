@@ -11,6 +11,7 @@ export default async function SocialOverviewPage() {
 
   const scheduled = posts.filter((post) => post.status === "scheduled").length;
   const published = posts.filter((post) => post.status === "published").length;
+  const reviewCount = posts.filter((post) => post.status === "review").length;
   const failedJobs = jobs.filter((job) => job.status === "failed").length;
 
   return (
@@ -19,7 +20,7 @@ export default async function SocialOverviewPage() {
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Social AI Control Center</h1>
-          <p>Plan, approve, schedule and publish branded content through one tenant-safe pipeline.</p>
+          <p>Plan, review, approve, measure, schedule and publish branded content through one tenant-safe pipeline.</p>
         </div>
         <span className={failedJobs ? "admin-status warning" : "admin-status live"}>
           {failedJobs ? `${failedJobs} publish issue${failedJobs === 1 ? "" : "s"}` : "Publishing healthy"}
@@ -28,17 +29,23 @@ export default async function SocialOverviewPage() {
 
       <section className="admin-grid two">
         <div className="admin-panel compact"><strong>{posts.length}</strong><p>Total posts</p></div>
+        <div className="admin-panel compact"><strong>{reviewCount}</strong><p>Awaiting review</p></div>
         <div className="admin-panel compact"><strong>{scheduled}</strong><p>Scheduled</p></div>
         <div className="admin-panel compact"><strong>{published}</strong><p>Published</p></div>
-        <div className="admin-panel compact"><strong>{jobs.filter((job) => job.status === "succeeded").length}</strong><p>Successful publish jobs</p></div>
       </section>
 
       <section className="admin-grid two">
         <Link href="/dashboard/social/create" className="admin-panel compact">
-          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post and choose its target platforms.</p></div></div>
+          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week's AI content plan.</p></div></div>
+        </Link>
+        <Link href="/dashboard/social/review" className="admin-panel compact">
+          <div className="admin-panel-header"><div><h2>Review & Approval</h2><p>Preview copy and media together, edit, reject, regenerate or approve.</p></div><span className={reviewCount ? "admin-status warning" : "admin-status live"}>{reviewCount}</span></div>
+        </Link>
+        <Link href="/dashboard/social/analytics" className="admin-panel compact">
+          <div className="admin-panel-header"><div><h2>Analytics</h2><p>Track post performance, account growth, conversion and attributed revenue.</p></div><span className="admin-status">3.7</span></div>
         </Link>
         <Link href="/dashboard/social/posts" className="admin-panel compact">
-          <div className="admin-panel-header"><div><h2>Posts</h2><p>Move content through review and approval.</p></div></div>
+          <div className="admin-panel-header"><div><h2>Posts</h2><p>Inspect the complete content lifecycle and status history.</p></div></div>
         </Link>
         <Link href="/dashboard/social/calendar" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Calendar</h2><p>Schedule approved posts and inspect publishing state.</p></div></div>
@@ -46,11 +53,14 @@ export default async function SocialOverviewPage() {
         <Link href="/dashboard/social/brand" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Brand Brain</h2><p>Control voice, audience, pillars, products and CTAs.</p></div></div>
         </Link>
+        <Link href="/dashboard/social/assets" className="admin-panel compact">
+          <div className="admin-panel-header"><div><h2>Asset Library</h2><p>Private Supabase media storage for graphics, carousels, reels and audio.</p></div></div>
+        </Link>
       </section>
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <div><h2>Brand Brain</h2><p>The context future content agents will inherit before generating anything.</p></div>
+          <div><h2>Brand Brain</h2><p>The context future content agents inherit before generating anything.</p></div>
         </div>
         {brand ? (
           <div className="admin-list">
