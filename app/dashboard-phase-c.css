@@ -1,0 +1,111 @@
+/* Dashboard Phase C: hierarchy and information density.
+   Loaded after Phase B so the dashboard has one page title and quieter section headings. */
+
+/* Super Leo is a working section inside the Business Command Center, not a second page hero. */
+section[aria-label="Super Leo operations assistant"]{
+  color:var(--dash-text);
+  font-size:14px;
+  line-height:1.55;
+  gap:14px!important;
+}
+
+section[aria-label="Super Leo operations assistant"] > header{
+  margin-top:2px;
+  padding:4px 2px 0;
+}
+
+section[aria-label="Super Leo operations assistant"] > header h2{
+  margin:5px 0 3px!important;
+  font-size:1.35rem!important;
+  line-height:1.2!important;
+  letter-spacing:-.02em!important;
+}
+
+section[aria-label="Super Leo operations assistant"] > header p{
+  max-width:720px;
+  margin:0!important;
+  color:var(--dash-text-secondary)!important;
+  font-size:13px!important;
+  line-height:1.5!important;
+}
+
+section[aria-label="Super Leo operations assistant"] [class*="hero"]{
+  min-height:0!important;
+}
+
+section[aria-label="Super Leo operations assistant"] [class*="heroCopy"] h3{
+  margin:8px 0 5px!important;
+  font-size:clamp(1.35rem,2vw,1.75rem)!important;
+  line-height:1.15!important;
+  letter-spacing:-.03em!important;
+}
+
+section[aria-label="Super Leo operations assistant"] [class*="heroCopy"] > p{
+  color:var(--dash-text-secondary)!important;
+  font-size:13px!important;
+  line-height:1.5!important;
+}
+
+section[aria-label="Super Leo operations assistant"] p{
+  color:var(--dash-text-secondary)!important;
+  font-size:14px!important;
+  line-height:1.6!important;
+}
+
+section[aria-label="Super Leo operations assistant"] small{
+  color:var(--dash-text-muted)!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+
+section[aria-label="Super Leo operations assistant"] [class*="eyebrow"],
+section[aria-label="Super Leo operations assistant"] [class*="Label"],
+section[aria-label="Super Leo operations assistant"] [class*="label"],
+section[aria-label="Super Leo operations assistant"] [class*="Status"],
+section[aria-label="Super Leo operations assistant"] [class*="status"],
+section[aria-label="Super Leo operations assistant"] [class*="severity"],
+section[aria-label="Super Leo operations assistant"] [class*="Footer"]{
+  font-size:12px!important;
+}
+
+section[aria-label="Super Leo operations assistant"] input{
+  min-height:var(--dash-control-height)!important;
+  border-radius:var(--dash-radius-small)!important;
+  color:var(--dash-text)!important;
+  font-size:14px!important;
+}
+
+section[aria-label="Super Leo operations assistant"] input::placeholder{
+  color:var(--dash-placeholder)!important;
+  opacity:1!important;
+}
+
+section[aria-label="Super Leo operations assistant"] button,
+section[aria-label="Super Leo operations assistant"] a[class*="Button"],
+section[aria-label="Super Leo operations assistant"] a[class*="button"]{
+  min-height:var(--dash-control-height-compact)!important;
+  border-radius:var(--dash-radius-small)!important;
+  font-size:14px!important;
+}
+
+section[aria-label="Super Leo operations assistant"] a[aria-label]:not([class*="Button"]):not([class*="button"]){
+  min-width:40px;
+  min-height:40px;
+}
+
+/* The executive snapshot owns the only page-level H1. */
+section[aria-label="Business Operations OS command center"] h1{
+  color:var(--dash-text)!important;
+}
+
+section[aria-label="Business Operations OS command center"] h2{
+  color:var(--dash-text)!important;
+}
+
+@media(max-width:640px){
+  section[aria-label="Super Leo operations assistant"]{gap:12px!important}
+  section[aria-label="Super Leo operations assistant"] > header h2{font-size:1.25rem!important}
+  section[aria-label="Super Leo operations assistant"] [class*="heroCopy"] h3{font-size:1.35rem!important}
+  section[aria-label="Super Leo operations assistant"] p{font-size:13px!important}
+  section[aria-label="Super Leo operations assistant"] small{font-size:12px!important}
+}
