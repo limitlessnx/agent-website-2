@@ -28,7 +28,11 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
   return (
     <section className={styles.shell} aria-label="Business Operations OS command center">
       <header className={styles.header}>
-        <div><span className={styles.eyebrow}>PHASE 8 · BUSINESS OPERATIONS OS</span><h2>Business Command Center</h2><p>{snapshot.headline}</p></div>
+        <div>
+          <span className={styles.eyebrow}>PLATFORM OPERATIONS</span>
+          <h1>Business Command Center</h1>
+          <p>{snapshot.headline}</p>
+        </div>
         <span className={`${styles.status} ${styles[snapshot.status]}`}>{snapshot.status}</span>
       </header>
 
@@ -41,7 +45,7 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
 
       <div className={styles.grid}>
         <article className={styles.panel}>
-          <header><div><span>PRIORITY RISKS</span><h3>What needs attention now</h3></div><Link href="/dashboard/activity">Open activity</Link></header>
+          <header><div><span>PRIORITY RISKS</span><h2>Needs attention</h2></div><Link href="/dashboard/activity">Open activity</Link></header>
           <div className={styles.list}>
             {snapshot.priorityRisks.slice(0, 5).map((risk) => <div className={styles.row} key={risk.key}><b className={`${styles.badge} ${styles[risk.severity] || ""}`}>{risk.severity}</b><div><strong>{label(risk.title)}</strong><small>{risk.detail}</small></div></div>)}
             {!snapshot.priorityRisks.length && <div className={styles.empty}>No current high-priority operating risks.</div>}
@@ -49,7 +53,7 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
         </article>
 
         <article className={styles.panel}>
-          <header><div><span>NEXT OPERATIONS</span><h3>Calendar and deadlines</h3></div><span>{snapshot.metrics.risks.dueSoon} due soon</span></header>
+          <header><div><span>NEXT OPERATIONS</span><h2>Upcoming deadlines</h2></div><span>{snapshot.metrics.risks.dueSoon} due soon</span></header>
           <div className={styles.list}>
             {snapshot.upcoming.slice(0, 5).map((item) => <div className={styles.row} key={item.id}><b className={styles.badge}>{item.timing}</b><div><strong>{item.title}</strong><small>{label(item.type)} · {time(item.dueAt)}{item.workspace ? ` · ${item.workspace}` : ""}</small></div></div>)}
             {!snapshot.upcoming.length && <div className={styles.empty}>No overdue or near-term operational calendar items.</div>}
@@ -59,7 +63,7 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
 
       <div className={styles.grid}>
         <article className={styles.panel}>
-          <header><div><span>RECOMMENDATIONS</span><h3>Next best actions</h3></div><span>{snapshot.metrics.optimizations} optimization proposals</span></header>
+          <header><div><span>RECOMMENDATIONS</span><h2>Next actions</h2></div><span>{snapshot.metrics.optimizations} optimization proposals</span></header>
           <div className={styles.list}>
             {snapshot.recommendations.slice(0, 5).map((item, index) => <div className={styles.row} key={`${item.source}-${index}`}><b className={styles.badge}>{item.requiresApproval ? "approval" : "review"}</b><div><strong>{label(item.title)}</strong><small>{item.detail}</small></div></div>)}
             {!snapshot.recommendations.length && <div className={styles.empty}>No evidence-backed intervention is currently recommended.</div>}
@@ -67,7 +71,7 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
         </article>
 
         <article className={styles.panel}>
-          <header><div><span>BUSINESS EVENTS</span><h3>Recent operating changes</h3></div><span>last 24 hours</span></header>
+          <header><div><span>BUSINESS EVENTS</span><h2>Recent changes</h2></div><span>last 24 hours</span></header>
           <div className={styles.list}>
             {snapshot.recentEvents.slice(0, 5).map((event) => <div className={styles.row} key={event.id}><b className={`${styles.badge} ${styles[event.severity] || ""}`}>{event.severity}</b><div><strong>{label(event.type)}</strong><small>{event.workspace || event.organizationId} · {time(event.occurredAt)}</small></div></div>)}
             {!snapshot.recentEvents.length && <div className={styles.empty}>No normalized business events recorded in the last 24 hours.</div>}
