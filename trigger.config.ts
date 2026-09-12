@@ -29,7 +29,7 @@ function socialMediaRuntimeAssets() {
         id: "flux-social-runtime-assets",
         image: {
           instructions: [
-            "RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core && mkdir -p /app/node_modules/next/dist/compiled/@vercel/og && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf && rm -rf /var/lib/apt/lists/*",
+            "RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core && rm -rf /var/lib/apt/lists/*",
           ],
         },
       });
