@@ -18,7 +18,7 @@ function socialMediaRuntimeAssets() {
   return {
     name: "socialMediaRuntimeAssets",
     onBuildComplete(context: {
-      target: "dev" | "deploy";
+      target: "dev" | "deploy" | "unmanaged";
       addLayer: (layer: {
         id: string;
         image: { instructions?: string[] };
