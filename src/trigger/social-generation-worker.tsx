@@ -1,17 +1,17 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { ImageResponse } from "next/og";
+import { bundle } from "@remotion/bundler";
+import { renderStill, selectComposition } from "@remotion/renderer";
 import { logger, schedules, task } from "@trigger.dev/sdk";
 import { fluxSocialRenderReel } from "./social-reel-renderer";
-import { readFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
-import type { ReactElement } from "react";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
 const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 const WIDTH = 1080;
 const HEIGHT = 1350;
-const GEIST_REGULAR_FONT_PATH = path.join(process.cwd(), "node_modules", "next", "dist", "compiled", "@vercel", "og", "Geist-Regular.ttf");
-let geistRegularFont: Promise<ArrayBuffer> | undefined;
+let graphicServeUrl: Promise<string> | undefined;
 
 type GenerationJob = {
   id: string;
@@ -59,6 +59,18 @@ type ReelPlan = {
     source_media: "fluxknight_ui" | "screenshot" | "motion_graphics" | "uploaded_media";
   }>;
   cta: string;
+};
+
+type GraphicInput = {
+  kind: "static" | "carousel";
+  logoUrl: string;
+  pillar: string;
+  headline: string;
+  body?: string;
+  footer?: string;
+  slideType?: string;
+  index?: number;
+  total?: number;
 };
 
 const CAROUSEL_SCHEMA = {
@@ -194,19 +206,27 @@ async function getCanonicalLogoUrl(supabase: SupabaseClient, organizationId: str
   return signed.signedUrl;
 }
 
-async function loadGeistRegularFont() {
-  geistRegularFont ??= readFile(GEIST_REGULAR_FONT_PATH).then((font) =>
-    font.buffer.slice(font.byteOffset, font.byteOffset + font.byteLength),
-  );
-  return geistRegularFont;
-}
-
-async function imageResponse(children: ReactElement) {
-  return new ImageResponse(children, {
-    width: WIDTH,
-    height: HEIGHT,
-    fonts: [{ name: "Geist", data: await loadGeistRegularFont(), style: "normal", weight: 400 }],
+async function renderGraphic(input: GraphicInput) {
+  graphicServeUrl ??= bundle({
+    entryPoint: path.join(process.cwd(), "src/remotion/index.tsx"),
+    onProgress: (progress) => logger.info("Flux Social graphic bundle", { progress: Math.round(progress * 100) }),
   });
+  const serveUrl = await graphicServeUrl;
+  const composition = await selectComposition({ serveUrl, id: "FluxSocialGraphic", inputProps: input });
+  const output = path.join(tmpdir(), `flux-social-graphic-${crypto.randomUUID()}.png`);
+  try {
+    await renderStill({
+      composition,
+      serveUrl,
+      output,
+      inputProps: input,
+      imageFormat: "png",
+      logLevel: "warn",
+    });
+    return new Uint8Array(await readFile(output));
+  } finally {
+    await rm(output, { force: true }).catch(() => undefined);
+  }
 }
 
 async function uploadAsset(supabase: SupabaseClient, input: {
@@ -250,58 +270,15 @@ async function uploadAsset(supabase: SupabaseClient, input: {
   return asset.id as string;
 }
 
-async function renderStatic(input: { logoUrl: string; hook: string; pillar: string; footer: string }) {
-  return imageResponse(
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "76px 72px 62px", color: "white", fontFamily: "Arial, Helvetica, sans-serif", background: "radial-gradient(circle at 82% 12%, rgba(124,58,237,.38), transparent 34%), linear-gradient(145deg,#050507,#0b0b12 55%,#050507)", position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, opacity: .08, backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
-      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <img src={input.logoUrl} style={{ width: 250, height: 72, objectFit: "contain", objectPosition: "left center" }} />
-        <div style={{ fontSize: 18, color: "#a1a1aa", letterSpacing: ".08em" }}>AI BUSINESS SYSTEMS</div>
-      </div>
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 28, maxWidth: 900 }}>
-        <div style={{ display: "flex", alignSelf: "flex-start", border: "1px solid rgba(139,92,246,.42)", background: "rgba(139,92,246,.08)", borderRadius: 999, padding: "10px 18px", color: "#c4b5fd", fontSize: 22 }}>{input.pillar.slice(0, 42)}</div>
-        <div style={{ fontSize: 86, lineHeight: 1.02, fontWeight: 800, letterSpacing: "-.045em" }}>{input.hook.slice(0, 140)}</div>
-        <div style={{ width: 150, height: 8, borderRadius: 99, background: "linear-gradient(90deg,#8b5cf6,#c084fc)" }} />
-      </div>
-      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div style={{ fontSize: 22, color: "#d4d4d8", maxWidth: 700, lineHeight: 1.35 }}>{input.footer.slice(0, 120)}</div>
-        <div style={{ fontSize: 21, color: "#a78bfa", fontWeight: 700 }}>Fluxknight.space</div>
-      </div>
-    </div>,
-  );
-}
-
-async function renderCarouselSlide(input: { logoUrl: string; slide: { type: string; headline: string; body: string }; index: number; total: number; pillar: string }) {
-  return imageResponse(
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "72px 72px 58px", color: "white", fontFamily: "Arial, Helvetica, sans-serif", background: "radial-gradient(circle at 82% 12%, rgba(124,58,237,.34), transparent 34%), linear-gradient(145deg,#050507,#0b0b12 55%,#050507)", position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, opacity: .08, backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
-      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <img src={input.logoUrl} style={{ width: 250, height: 72, objectFit: "contain", objectPosition: "left center" }} />
-        <div style={{ fontSize: 20, color: "#a1a1aa" }}>{String(input.index).padStart(2, "0")} / {String(input.total).padStart(2, "0")}</div>
-      </div>
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 28, maxWidth: 900 }}>
-        <div style={{ display: "flex", alignSelf: "flex-start", border: "1px solid rgba(139,92,246,.42)", background: "rgba(139,92,246,.08)", borderRadius: 999, padding: "10px 18px", color: "#c4b5fd", fontSize: 21 }}>{(input.index === 1 ? input.pillar : input.slide.type.toUpperCase()).slice(0, 38)}</div>
-        <div style={{ fontSize: input.index === 1 ? 84 : 72, lineHeight: 1.02, fontWeight: 800, letterSpacing: "-.04em" }}>{input.slide.headline.slice(0, input.index === 1 ? 120 : 100)}</div>
-        <div style={{ fontSize: 34, lineHeight: 1.3, color: "#d4d4d8", maxWidth: 870 }}>{input.slide.body.slice(0, 270)}</div>
-        <div style={{ width: 140, height: 7, borderRadius: 99, background: "linear-gradient(90deg,#8b5cf6,#c084fc)" }} />
-      </div>
-      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", fontSize: 21 }}>
-        <span style={{ color: "#a1a1aa" }}>Business systems, not AI theatre.</span>
-        <span style={{ color: "#a78bfa", fontWeight: 700 }}>Fluxknight.space</span>
-      </div>
-    </div>,
-  );
-}
-
 async function processStatic(supabase: SupabaseClient, post: PostRow, logoUrl: string) {
   const content = post.content || {};
-  const response = await renderStatic({
+  const bytes = await renderGraphic({
+    kind: "static",
     logoUrl,
-    hook: String(content.hook || post.title || "Build a smarter operating system."),
+    headline: String(content.hook || post.title || "Build a smarter operating system."),
     pillar: String(content.content_pillar || "Business automation"),
     footer: String(content.objective || post.caption || "Smarter operations with Fluxknight."),
   });
-  const bytes = new Uint8Array(await response.arrayBuffer());
   const assetId = await uploadAsset(supabase, {
     organizationId: post.organization_id,
     brandId: post.brand_id,
@@ -309,10 +286,10 @@ async function processStatic(supabase: SupabaseClient, post: PostRow, logoUrl: s
     assetType: "image",
     bytes,
     fileName: `fluxknight-static-${post.id}.png`,
-    metadata: { renderer: "next-image-response-trigger-v1", template: "fluxknight-social-static-v2", brand_asset_policy: "canonical-logo-only", storage_policy: "supabase-only" },
+    metadata: { renderer: "remotion-still-4.0.523", template: "fluxknight-social-static-v3", brand_asset_policy: "canonical-logo-only", storage_policy: "supabase-only" },
   });
   const oldAssets = Array.isArray(post.metadata?.media_assets) ? post.metadata.media_assets : [];
-  const { error } = await supabase.from("social_posts").update({ metadata: { ...post.metadata, media_assets: [...oldAssets, assetId], primary_asset_id: assetId, static_graphic_template: "fluxknight-social-static-v2", generation_status: "ready" } }).eq("organization_id", post.organization_id).eq("id", post.id);
+  const { error } = await supabase.from("social_posts").update({ metadata: { ...post.metadata, media_assets: [...oldAssets, assetId], primary_asset_id: assetId, static_graphic_template: "fluxknight-social-static-v3", generation_status: "ready" } }).eq("organization_id", post.organization_id).eq("id", post.id);
   if (error) throw error;
   return { assetIds: [assetId] };
 }
@@ -330,8 +307,16 @@ async function processCarousel(supabase: SupabaseClient, brand: BrandRow, post: 
 
   const assetIds: string[] = [];
   for (let i = 0; i < slides.length; i += 1) {
-    const response = await renderCarouselSlide({ logoUrl, slide: slides[i], index: i + 1, total: slides.length, pillar: String(content.content_pillar || "Business automation") });
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const bytes = await renderGraphic({
+      kind: "carousel",
+      logoUrl,
+      pillar: String(content.content_pillar || "Business automation"),
+      headline: slides[i].headline,
+      body: slides[i].body,
+      slideType: slides[i].type,
+      index: i + 1,
+      total: slides.length,
+    });
     const assetId = await uploadAsset(supabase, {
       organizationId: post.organization_id,
       brandId: post.brand_id,
@@ -339,13 +324,13 @@ async function processCarousel(supabase: SupabaseClient, brand: BrandRow, post: 
       assetType: "carousel_slide",
       bytes,
       fileName: `fluxknight-carousel-${post.id}-${i + 1}.png`,
-      metadata: { renderer: "next-image-response-trigger-v1", template: "fluxknight-social-carousel-v2", carousel_index: i + 1, carousel_total: slides.length, slide_type: slides[i].type, model, brand_asset_policy: "canonical-logo-only", storage_policy: "supabase-only" },
+      metadata: { renderer: "remotion-still-4.0.523", template: "fluxknight-social-carousel-v3", carousel_index: i + 1, carousel_total: slides.length, slide_type: slides[i].type, model, brand_asset_policy: "canonical-logo-only", storage_policy: "supabase-only" },
     });
     assetIds.push(assetId);
   }
 
   const oldAssets = Array.isArray(post.metadata?.media_assets) ? post.metadata.media_assets : [];
-  const { error } = await supabase.from("social_posts").update({ metadata: { ...post.metadata, media_assets: [...oldAssets, ...assetIds], carousel_asset_ids: assetIds, primary_asset_id: assetIds[0] || null, carousel_plan: parsed, carousel_template: "fluxknight-social-carousel-v2", carousel_generated_at: new Date().toISOString(), generation_status: "ready" } }).eq("organization_id", post.organization_id).eq("id", post.id);
+  const { error } = await supabase.from("social_posts").update({ metadata: { ...post.metadata, media_assets: [...oldAssets, ...assetIds], carousel_asset_ids: assetIds, primary_asset_id: assetIds[0] || null, carousel_plan: parsed, carousel_template: "fluxknight-social-carousel-v3", carousel_generated_at: new Date().toISOString(), generation_status: "ready" } }).eq("organization_id", post.organization_id).eq("id", post.id);
   if (error) throw error;
   return { assetIds };
 }
