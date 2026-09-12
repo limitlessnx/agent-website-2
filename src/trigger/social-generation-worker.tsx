@@ -180,7 +180,7 @@ async function structuredOpenAI(name: string, schema: object, system: string, us
   return { parsed: JSON.parse(raw) as Record<string, unknown>, model };
 }
 
-async function getCanonicalLogoUrl(supabase: SupabaseClient, organizationId: string, brandId: string) {
+async function getCanonicalLogoDataUrl(supabase: SupabaseClient, organizationId: string, brandId: string) {
   const { data: registry, error: registryError } = await supabase
     .from("social_brand_assets")
     .select("social_asset_id")
@@ -196,7 +196,7 @@ async function getCanonicalLogoUrl(supabase: SupabaseClient, organizationId: str
 
   const { data: asset, error: assetError } = await supabase
     .from("social_assets")
-    .select("bucket_id,storage_path")
+    .select("bucket_id,storage_path,mime_type")
     .eq("organization_id", organizationId)
     .eq("id", registry.social_asset_id)
     .single();
@@ -204,7 +204,12 @@ async function getCanonicalLogoUrl(supabase: SupabaseClient, organizationId: str
 
   const { data: signed, error: signedError } = await supabase.storage.from(asset.bucket_id).createSignedUrl(asset.storage_path, 3600);
   if (signedError) throw signedError;
-  return signed.signedUrl;
+
+  const logoResponse = await fetch(signed.signedUrl);
+  if (!logoResponse.ok) throw new Error(`Failed to load canonical Fluxknight logo: HTTP ${logoResponse.status}`);
+
+  const logoBytes = Buffer.from(await logoResponse.arrayBuffer());
+  return `data:${asset.mime_type ?? "image/png"};base64,${logoBytes.toString("base64")}`;
 }
 
 async function renderGraphic(input: GraphicInput) {
@@ -216,6 +221,7 @@ async function renderGraphic(input: GraphicInput) {
   const composition = await selectComposition({ serveUrl, id: "FluxSocialGraphic", inputProps: input });
   const output = path.join(tmpdir(), `flux-social-graphic-${crypto.randomUUID()}.png`);
   try {
+    logger.info("Flux Social graphic still render started", { kind: input.kind, index: input.index, total: input.total });
     await renderStill({
       composition,
       serveUrl,
@@ -223,8 +229,16 @@ async function renderGraphic(input: GraphicInput) {
       inputProps: input,
       imageFormat: "png",
       logLevel: "warn",
+      timeoutInMilliseconds: 60_000,
+      chromiumOptions: {
+        disableWebSecurity: true,
+        enableMultiProcessOnLinux: false,
+        ignoreCertificateErrors: true,
+      },
     });
-    return new Uint8Array(await readFile(output));
+    const bytes = new Uint8Array(await readFile(output));
+    logger.info("Flux Social graphic still render completed", { kind: input.kind, index: input.index, total: input.total, bytes: bytes.byteLength });
+    return bytes;
   } finally {
     await rm(output, { force: true }).catch(() => undefined);
   }
@@ -482,10 +496,10 @@ export const fluxSocialGenerationWorker = task({
 
         let output: unknown;
         if (job.job_type === "static") {
-          const logoUrl = await getCanonicalLogoUrl(supabase, run.organization_id, run.brand_id);
+          const logoUrl = await getCanonicalLogoDataUrl(supabase, run.organization_id, run.brand_id);
           output = await processStatic(supabase, typedPost, logoUrl);
         } else if (job.job_type === "carousel") {
-          const logoUrl = await getCanonicalLogoUrl(supabase, run.organization_id, run.brand_id);
+          const logoUrl = await getCanonicalLogoDataUrl(supabase, run.organization_id, run.brand_id);
           output = await processCarousel(supabase, brand as BrandRow, typedPost, logoUrl);
         } else if (job.job_type === "reel_plan" || job.job_type === "reel_render") {
           output = await processReel(supabase, brand as BrandRow, typedPost);
