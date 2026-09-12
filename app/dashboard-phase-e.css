@@ -1,0 +1,141 @@
+/* Dashboard Phase E: QA and regression hardening.
+   Loaded last so the final dashboard remains resilient across long content, keyboard use,
+   reduced-motion preferences, empty/loading states, and narrow viewports. */
+
+/* Prevent flex/grid children with long operational content from forcing horizontal overflow. */
+.admin-shell *,
+.portal-shell *,
+.dashboard-shell *,
+.client-dashboard *,
+section[aria-label="Super Leo operations assistant"] *,
+section[aria-label="Business Operations OS command center"] *{
+  min-width:0;
+}
+
+.admin-shell,
+.portal-shell,
+.dashboard-shell,
+.client-dashboard,
+section[aria-label="Super Leo operations assistant"],
+section[aria-label="Business Operations OS command center"]{
+  max-width:100%;
+  overflow-x:clip;
+}
+
+/* Long identifiers, emails and generated operational text should wrap instead of widening cards. */
+.admin-shell p,.admin-shell small,.admin-shell td,.admin-shell th,
+.portal-shell p,.portal-shell small,.portal-shell td,.portal-shell th,
+section[aria-label="Super Leo operations assistant"] p,
+section[aria-label="Super Leo operations assistant"] small,
+section[aria-label="Business Operations OS command center"] p,
+section[aria-label="Business Operations OS command center"] small{
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+
+/* Keyboard users need an obvious final-state focus treatment on the dark UI. */
+.admin-shell :is(a,button,input,select,textarea):focus-visible,
+.portal-shell :is(a,button,input,select,textarea):focus-visible,
+.dashboard-shell :is(a,button,input,select,textarea):focus-visible,
+.client-dashboard :is(a,button,input,select,textarea):focus-visible,
+section[aria-label="Super Leo operations assistant"] :is(a,button,input):focus-visible,
+section[aria-label="Business Operations OS command center"] :is(a,button):focus-visible{
+  outline:2px solid #b69cff!important;
+  outline-offset:2px;
+  box-shadow:0 0 0 4px rgba(139,92,246,.16)!important;
+}
+
+/* Disabled controls should remain legible while clearly unavailable. */
+.admin-shell :is(button,input,select,textarea):disabled,
+.portal-shell :is(button,input,select,textarea):disabled,
+section[aria-label="Super Leo operations assistant"] :is(button,input):disabled{
+  opacity:.58!important;
+}
+
+/* Keep status pills and labels from clipping when real status text is longer than expected. */
+.admin-status,.portal-status,.status-pill,.campaign-status,
+section[aria-label="Super Leo operations assistant"] [class*="severity"],
+section[aria-label="Super Leo operations assistant"] [class*="Status"],
+section[aria-label="Super Leo operations assistant"] [class*="status"],
+section[aria-label="Business Operations OS command center"] [class*="badge"],
+section[aria-label="Business Operations OS command center"] [class*="status"]{
+  max-width:100%;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+
+/* Empty/loading states should occupy enough space to read as intentional UI, not missing content. */
+.admin-empty,.portal-empty,.empty-state,
+section[aria-label="Super Leo operations assistant"] [class*="empty"],
+section[aria-label="Business Operations OS command center"] [class*="empty"]{
+  min-height:56px;
+  align-content:center;
+  line-height:1.5;
+}
+
+/* Media and icons may never push dashboard cards wider than their containers. */
+.admin-shell img,.portal-shell img,.dashboard-shell img,.client-dashboard img,
+section[aria-label="Super Leo operations assistant"] img,
+section[aria-label="Business Operations OS command center"] img{
+  max-width:100%;
+  height:auto;
+}
+
+/* Tables remain usable on smaller screens rather than breaking the entire page width. */
+.admin-table,.portal-table{
+  width:100%;
+  max-width:100%;
+}
+
+.admin-table :is(th,td),.portal-table :is(th,td){
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+
+/* Final tablet pass: do not wait for phone width before collapsing dense operational grids. */
+@media(max-width:900px){
+  section[aria-label="Business Operations OS command center"] [class*="metrics"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="mainGrid"],
+  section[aria-label="Super Leo operations assistant"] [class*="bottomGrid"]{
+    grid-template-columns:1fr!important;
+  }
+}
+
+@media(max-width:640px){
+  .admin-shell,.portal-shell,.dashboard-shell,.client-dashboard{
+    overflow-x:hidden;
+  }
+
+  .admin-panel-header,.portal-panel-header,
+  section[aria-label="Super Leo operations assistant"] [class*="panelHeader"],
+  section[aria-label="Business Operations OS command center"] [class*="header"]{
+    flex-wrap:wrap;
+  }
+
+  .admin-shell button,.portal-shell button,
+  section[aria-label="Super Leo operations assistant"] button{
+    max-width:100%;
+  }
+
+  section[aria-label="Business Operations OS command center"] [class*="metrics"]{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* Respect OS accessibility settings and stop decorative pulsing/animation when requested. */
+@media(prefers-reduced-motion:reduce){
+  .admin-shell *,
+  .portal-shell *,
+  .dashboard-shell *,
+  .client-dashboard *,
+  section[aria-label="Super Leo operations assistant"] *,
+  section[aria-label="Business Operations OS command center"] *{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
