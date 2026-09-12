@@ -14,6 +14,30 @@ function remotionSourceFiles() {
   };
 }
 
+function socialMediaRuntimeAssets() {
+  return {
+    name: "socialMediaRuntimeAssets",
+    onBuildComplete(context: {
+      target: "dev" | "deploy";
+      addLayer: (layer: {
+        id: string;
+        image: { pkgs?: string[]; instructions?: string[] };
+      }) => void;
+    }) {
+      if (context.target === "dev") return;
+      context.addLayer({
+        id: "flux-social-runtime-assets",
+        image: {
+          pkgs: ["fonts-dejavu-core"],
+          instructions: [
+            "RUN mkdir -p /app/node_modules/next/dist/compiled/@vercel/og && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+          ],
+        },
+      });
+    },
+  };
+}
+
 export default defineConfig({
   project: "proj_ckweruqrgwndssqpjdvg",
   runtime: "node-24",
@@ -22,6 +46,6 @@ export default defineConfig({
   build: {
     external: ["@remotion/bundler", "@remotion/renderer", "remotion"],
     autoDetectExternal: false,
-    extensions: [remotionSourceFiles()],
+    extensions: [remotionSourceFiles(), socialMediaRuntimeAssets()],
   },
 });
