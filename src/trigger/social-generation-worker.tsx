@@ -11,7 +11,6 @@ const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
 const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 const WIDTH = 1080;
 const HEIGHT = 1350;
-let graphicServeUrl: Promise<string> | undefined;
 
 type GenerationJob = {
   id: string;
@@ -213,12 +212,25 @@ async function getCanonicalLogoDataUrl(supabase: SupabaseClient, organizationId:
 }
 
 async function renderGraphic(input: GraphicInput) {
-  graphicServeUrl ??= bundle({
+  logger.info("Flux Social graphic bundle started", { kind: input.kind, index: input.index, total: input.total });
+  const serveUrl = await bundle({
     entryPoint: path.join(process.cwd(), "src/remotion/index.tsx"),
-    onProgress: (progress) => logger.info("Flux Social graphic bundle", { progress: Math.round(progress * 100) }),
+    onProgress: (progress) => console.log(`Flux Social graphic bundle ${Math.round(progress * 100)}%`),
   });
-  const serveUrl = await graphicServeUrl;
-  const composition = await selectComposition({ serveUrl, id: "FluxSocialGraphic", inputProps: input });
+  logger.info("Flux Social graphic bundle completed", { kind: input.kind, index: input.index, total: input.total });
+  logger.info("Flux Social graphic composition select started", { kind: input.kind, index: input.index, total: input.total });
+  const composition = await selectComposition({
+    serveUrl,
+    id: "FluxSocialGraphic",
+    inputProps: input,
+    timeoutInMilliseconds: 60_000,
+    chromiumOptions: {
+      disableWebSecurity: true,
+      enableMultiProcessOnLinux: false,
+      ignoreCertificateErrors: true,
+    },
+  });
+  logger.info("Flux Social graphic composition select completed", { kind: input.kind, index: input.index, total: input.total });
   const output = path.join(tmpdir(), `flux-social-graphic-${crypto.randomUUID()}.png`);
   try {
     logger.info("Flux Social graphic still render started", { kind: input.kind, index: input.index, total: input.total });
