@@ -70,12 +70,12 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
   }
 
   return (
-    <section className={styles.shell} aria-label="Fluxknight command center">
+    <section className={styles.shell} aria-label="Super Leo operations assistant">
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <div className={styles.eyebrow}><span className={styles.liveDot} /> Platform command center</div>
-          <div className={styles.titleRow}><h1>Super Leo.</h1><span className={styles.liveBadge}><span className={styles.liveDot} /> {leoStateLabel}</span></div>
-          <p>One operational assistant across your AI workforce, client workspaces and automations.</p>
+          <div className={styles.eyebrow}><span className={styles.liveDot} /> AI operations assistant</div>
+          <div className={styles.titleRow}><h2>Super Leo</h2><span className={styles.liveBadge}><span className={styles.liveDot} /> {leoStateLabel}</span></div>
+          <p>Investigate current operations, prepare next actions, and execute only with the required approval.</p>
         </div>
         <div className={styles.headerActions}>
           <Link href="/dashboard/agents" className={styles.secondaryButton}><Bot size={14} /> Manage agents</Link>
@@ -85,9 +85,9 @@ export default function LeoOverview({ newLeads, clients, liveClients, pendingCli
 
       <div className={styles.hero}>
         <div className={styles.heroCopy}>
-          <span className={styles.heroLabel}><Sparkles size={14} /> AI operations layer</span>
-          <h2>Your workforce is running. <span>Leo keeps watch.</span></h2>
-          <p>Observe, investigate, recommend, request approval, act and verify with evidence. Human judgment stays in control where it matters.</p>
+          <span className={styles.heroLabel}><Sparkles size={14} /> Current operations</span>
+          <h3>Ask Leo what needs attention.</h3>
+          <p>Investigate, recommend, act with approval, and verify against current evidence.</p>
           <div className={styles.quickActions}>{quickActions.map((action) => <Link href={action.href} key={action.label}><action.icon size={14} /><span>{action.label}</span><ChevronRight size={13} /></Link>)}</div>
         </div>
         <div className={styles.leoCard}>
