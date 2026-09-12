@@ -28,6 +28,7 @@ export type SocialPost = {
   id: string;
   organization_id: string;
   brand_id: string;
+  content_plan_id: string | null;
   title: string;
   caption: string;
   format: SocialPostFormat;
