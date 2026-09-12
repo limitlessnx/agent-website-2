@@ -26,6 +26,10 @@ function generationJobForFormat(format: SocialPostFormat) {
   return "reel_plan" as const;
 }
 
+function initialStatusForFormat(format: SocialPostFormat) {
+  return generationJobForFormat(format) === "none" ? "review" : "draft";
+}
+
 function summarizeMetricRows(rows: Array<Record<string, unknown>>) {
   const latest = new Map<string, Record<string, unknown>>();
   for (const row of rows) {
@@ -58,7 +62,7 @@ export const fluxSocialWeeklyCycle = task({
 
     const { data: existingRun, error: existingRunError } = await supabase
       .from("social_weekly_runs")
-      .select("id,status,post_ids")
+      .select("id,status,content_plan_id,post_ids")
       .eq("organization_id", payload.organizationId)
       .eq("brand_id", payload.brandId)
       .eq("week_start", weekStart)
@@ -66,6 +70,15 @@ export const fluxSocialWeeklyCycle = task({
     if (existingRunError) throw existingRunError;
     if (existingRun && ["planning", "generating", "review_ready"].includes(existingRun.status)) {
       return { runId: existingRun.id, weekStart, skipped: true, reason: `already_${existingRun.status}`, postIds: existingRun.post_ids || [] };
+    }
+    if (existingRun && Array.isArray(existingRun.post_ids) && existingRun.post_ids.length > 0) {
+      return {
+        runId: existingRun.id,
+        weekStart,
+        skipped: true,
+        reason: `existing_${existingRun.status || "run"}_with_posts`,
+        postIds: existingRun.post_ids,
+      };
     }
 
     const { data: brandRow, error: brandError } = await supabase
@@ -182,7 +195,7 @@ export const fluxSocialWeeklyCycle = task({
             title: post.title.trim(),
             caption: post.caption.trim(),
             format: post.format,
-            status: "review",
+            status: initialStatusForFormat(post.format),
             platforms: post.platforms,
             content: {
               source: "ai_content_brain",
@@ -234,6 +247,7 @@ export const fluxSocialWeeklyCycle = task({
         .from("social_weekly_runs")
         .update({
           status: queued > 0 ? "generating" : "review_ready",
+          content_plan_id: contentPlanId,
           post_ids: postIds,
           generation_summary: {
             context,

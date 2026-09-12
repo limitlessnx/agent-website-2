@@ -31,6 +31,7 @@ type PostRow = {
   title: string;
   caption: string;
   format: string;
+  status: string;
   content: Record<string, unknown>;
   metadata: Record<string, unknown>;
 };
@@ -270,6 +271,53 @@ async function uploadAsset(supabase: SupabaseClient, input: {
   return asset.id as string;
 }
 
+function appendUniqueAssetIds(existing: unknown, next: string[]) {
+  return [...new Set([...(Array.isArray(existing) ? existing : []), ...next].filter((id): id is string => typeof id === "string"))];
+}
+
+function reviewStatusAfterMedia(post: PostRow) {
+  return ["draft", "failed"].includes(post.status) ? "review" : post.status;
+}
+
+async function markPostMediaReady(supabase: SupabaseClient, post: PostRow, metadata: Record<string, unknown>) {
+  const nextStatus = reviewStatusAfterMedia(post);
+  const patch: Record<string, unknown> = {
+    status: nextStatus,
+    metadata: {
+      ...post.metadata,
+      ...metadata,
+      generation_status: "ready",
+      generation_error: null,
+    },
+  };
+  if (["draft", "failed", "review"].includes(post.status)) patch.approved_at = null;
+
+  const { error } = await supabase
+    .from("social_posts")
+    .update(patch)
+    .eq("organization_id", post.organization_id)
+    .eq("id", post.id);
+  if (error) throw error;
+}
+
+async function markPostMediaFailed(supabase: SupabaseClient, post: PostRow, message: string) {
+  const { error } = await supabase
+    .from("social_posts")
+    .update({
+      status: "draft",
+      approved_at: null,
+      metadata: {
+        ...(post.metadata || {}),
+        generation_status: "failed",
+        generation_error: message,
+        generation_failed_at: new Date().toISOString(),
+      },
+    })
+    .eq("organization_id", post.organization_id)
+    .eq("id", post.id);
+  if (error) throw error;
+}
+
 async function processStatic(supabase: SupabaseClient, post: PostRow, logoUrl: string) {
   const content = post.content || {};
   const bytes = await renderGraphic({
@@ -288,9 +336,11 @@ async function processStatic(supabase: SupabaseClient, post: PostRow, logoUrl: s
     fileName: `fluxknight-static-${post.id}.png`,
     metadata: { renderer: "remotion-still-4.0.523", template: "fluxknight-social-static-v3", brand_asset_policy: "canonical-logo-only", storage_policy: "supabase-only" },
   });
-  const oldAssets = Array.isArray(post.metadata?.media_assets) ? post.metadata.media_assets : [];
-  const { error } = await supabase.from("social_posts").update({ metadata: { ...post.metadata, media_assets: [...oldAssets, assetId], primary_asset_id: assetId, static_graphic_template: "fluxknight-social-static-v3", generation_status: "ready" } }).eq("organization_id", post.organization_id).eq("id", post.id);
-  if (error) throw error;
+  await markPostMediaReady(supabase, post, {
+    media_assets: appendUniqueAssetIds(post.metadata?.media_assets, [assetId]),
+    primary_asset_id: assetId,
+    static_graphic_template: "fluxknight-social-static-v3",
+  });
   return { assetIds: [assetId] };
 }
 
@@ -329,9 +379,14 @@ async function processCarousel(supabase: SupabaseClient, brand: BrandRow, post: 
     assetIds.push(assetId);
   }
 
-  const oldAssets = Array.isArray(post.metadata?.media_assets) ? post.metadata.media_assets : [];
-  const { error } = await supabase.from("social_posts").update({ metadata: { ...post.metadata, media_assets: [...oldAssets, ...assetIds], carousel_asset_ids: assetIds, primary_asset_id: assetIds[0] || null, carousel_plan: parsed, carousel_template: "fluxknight-social-carousel-v3", carousel_generated_at: new Date().toISOString(), generation_status: "ready" } }).eq("organization_id", post.organization_id).eq("id", post.id);
-  if (error) throw error;
+  await markPostMediaReady(supabase, post, {
+    media_assets: appendUniqueAssetIds(post.metadata?.media_assets, assetIds),
+    carousel_asset_ids: assetIds,
+    primary_asset_id: assetIds[0] || null,
+    carousel_plan: parsed,
+    carousel_template: "fluxknight-social-carousel-v3",
+    carousel_generated_at: new Date().toISOString(),
+  });
   return { assetIds };
 }
 
@@ -355,6 +410,14 @@ async function processReel(supabase: SupabaseClient, brand: BrandRow, post: Post
 
   const result = await fluxSocialRenderReel.triggerAndWait({ organizationId: post.organization_id, postId: post.id });
   if (!result.ok) throw new Error(`Reel render failed: ${String(result.error || "unknown render error")}`);
+  const { data: renderedPost, error: renderedPostError } = await supabase
+    .from("social_posts")
+    .select("id,organization_id,brand_id,title,caption,format,status,content,metadata")
+    .eq("organization_id", post.organization_id)
+    .eq("id", post.id)
+    .single();
+  if (renderedPostError) throw renderedPostError;
+  await markPostMediaReady(supabase, renderedPost as PostRow, {});
   return result.output;
 }
 
@@ -413,7 +476,7 @@ export const fluxSocialGenerationWorker = task({
       if (!claimed) continue;
 
       try {
-        const { data: post, error: postError } = await supabase.from("social_posts").select("id,organization_id,brand_id,title,caption,format,content,metadata").eq("organization_id", run.organization_id).eq("id", job.post_id).single();
+        const { data: post, error: postError } = await supabase.from("social_posts").select("id,organization_id,brand_id,title,caption,format,status,content,metadata").eq("organization_id", run.organization_id).eq("id", job.post_id).single();
         if (postError) throw postError;
         const typedPost = post as PostRow;
 
@@ -435,7 +498,9 @@ export const fluxSocialGenerationWorker = task({
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         await supabase.from("social_generation_jobs").update({ status: "failed", completed_at: new Date().toISOString(), last_error: message }).eq("id", job.id);
-        await supabase.from("social_posts").update({ metadata: { generation_status: "failed", generation_error: message } }).eq("organization_id", run.organization_id).eq("id", job.post_id);
+        const { data: failedPost, error: failedPostError } = await supabase.from("social_posts").select("id,organization_id,brand_id,title,caption,format,status,content,metadata").eq("organization_id", run.organization_id).eq("id", job.post_id).maybeSingle();
+        if (failedPostError) throw failedPostError;
+        if (failedPost) await markPostMediaFailed(supabase, failedPost as PostRow, message);
         logger.error("Flux Social media generation job failed", { jobId: job.id, postId: job.post_id, jobType: job.job_type, error: message });
       }
     }
