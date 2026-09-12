@@ -1,0 +1,163 @@
+/* Dashboard Phase D: truncation, mobile readability, and detail access.
+   Loaded after Phase C so meaningful operational content is not reduced to single-line ellipses. */
+
+/* Super Leo: let important operational descriptions breathe. */
+section[aria-label="Super Leo operations assistant"] [class*="attentionCopy"] strong,
+section[aria-label="Super Leo operations assistant"] [class*="attentionCopy"] small,
+section[aria-label="Super Leo operations assistant"] [class*="recommendations"] strong,
+section[aria-label="Super Leo operations assistant"] [class*="recommendations"] small,
+section[aria-label="Super Leo operations assistant"] [class*="orgs"] strong,
+section[aria-label="Super Leo operations assistant"] [class*="orgs"] small,
+section[aria-label="Super Leo operations assistant"] [class*="metrics"] small{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+}
+
+section[aria-label="Super Leo operations assistant"] [class*="attentionCopy"] small,
+section[aria-label="Super Leo operations assistant"] [class*="recommendations"] small,
+section[aria-label="Super Leo operations assistant"] [class*="orgs"] small{
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  line-clamp:2;
+  overflow:hidden!important;
+}
+
+/* Critical Leo result text should remain complete. */
+section[aria-label="Super Leo operations assistant"] [class*="operationCard"] p,
+section[aria-label="Super Leo operations assistant"] [class*="commandIntro"] span,
+section[aria-label="Super Leo operations assistant"] [class*="coverageFoot"]{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+}
+
+/* Executive command-center rows contain decision context, so never single-line truncate them. */
+section[aria-label="Business Operations OS command center"] [class*="row"] strong,
+section[aria-label="Business Operations OS command center"] [class*="row"] small,
+section[aria-label="Business Operations OS command center"] [class*="empty"]{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+}
+
+/* General admin record/list descriptions get a sensible two-line allowance. */
+.admin-list-row p,.admin-list-row small,.portal-list-row p,.portal-list-row small,
+.admin-record-summary-main span,.campaign-recipient-row small{
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+
+/* Mobile operating layout: actions remain visible and controls stay tappable. */
+@media(max-width:640px){
+  section[aria-label="Super Leo operations assistant"] [class*="headerActions"]{
+    display:flex!important;
+    width:100%;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="headerActions"] a{
+    flex:1 1 145px;
+    justify-content:center;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="commandBar"]{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="commandForm"]{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="commandForm"] input,
+  section[aria-label="Super Leo operations assistant"] [class*="commandForm"] button{
+    width:100%!important;
+    min-height:46px!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="attentionItem"]{
+    grid-template-columns:1fr!important;
+    align-items:start!important;
+    gap:8px!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="attentionActions"]{
+    width:100%;
+    justify-content:flex-start;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="attentionActions"] button{
+    flex:1 1 auto;
+    min-height:42px!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="attentionActions"] a{
+    min-width:42px!important;
+    min-height:42px!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="metrics"]{
+    grid-template-columns:1fr!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="mainGrid"],
+  section[aria-label="Super Leo operations assistant"] [class*="bottomGrid"]{
+    grid-template-columns:1fr!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="recommendations"] a,
+  section[aria-label="Super Leo operations assistant"] [class*="orgs"] a{
+    min-height:58px;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="footerLine"]{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px!important;
+  }
+
+  section[aria-label="Business Operations OS command center"] [class*="metrics"]{
+    grid-template-columns:1fr!important;
+  }
+
+  section[aria-label="Business Operations OS command center"] [class*="grid"]{
+    grid-template-columns:1fr!important;
+  }
+
+  section[aria-label="Business Operations OS command center"] [class*="row"]{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+  }
+
+  section[aria-label="Business Operations OS command center"] [class*="badge"]{
+    width:max-content;
+    max-width:100%;
+  }
+
+  .admin-record-summary-meta{
+    justify-content:flex-start!important;
+  }
+
+  .admin-status,.portal-status,.status-pill,.campaign-status{
+    min-height:30px!important;
+    font-size:12px!important;
+  }
+}
+
+@media(max-width:420px){
+  section[aria-label="Super Leo operations assistant"] [class*="quickActions"]{
+    grid-template-columns:1fr!important;
+  }
+
+  section[aria-label="Super Leo operations assistant"] [class*="headerActions"] a{
+    flex-basis:100%;
+  }
+}
