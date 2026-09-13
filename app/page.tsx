@@ -15,6 +15,7 @@ import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import FluxRebuildHero from "@/components/home/FluxRebuildHero";
+import FluxStoryJourney from "@/components/home/FluxStoryJourney";
 
 const automationPillars = [
   {
@@ -152,6 +153,7 @@ export default function HomePage() {
 
       <MaiaCaseStudyTeaser />
       <IndustryCarousel />
+      <FluxStoryJourney />
 
       <section className="brand-section" id="services">
         <div className="brand-shell">
