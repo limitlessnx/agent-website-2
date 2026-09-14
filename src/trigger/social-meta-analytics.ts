@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { logger, schedules, task } from "@trigger.dev/sdk";
-import { collectMetaAnalytics, metaConfigFromEnvironment } from "@/lib/social-meta-analytics";
+import { collectMetaAnalytics, metaConfigFromEnvironment, metaConfigFromIntegration } from "@/lib/social-meta-analytics";
 import { ingestSocialMetricBatch } from "@/lib/social-metric-ingestion";
 import { buildSocialLearningSnapshot } from "@/lib/social-learning";
 
@@ -13,9 +13,24 @@ function createSocialAdminClient() {
   return createClient(url.replace(/\/$/, ""), key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+async function resolveMetaConfig(supabase: ReturnType<typeof createSocialAdminClient>, organizationId: string) {
+  try {
+    return await metaConfigFromIntegration(supabase, organizationId);
+  } catch (error) {
+    if (process.env.META_ACCESS_TOKEN) {
+      logger.warn("Using temporary Meta environment fallback because no dashboard integration credential is available.", {
+        organizationId,
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+      return metaConfigFromEnvironment();
+    }
+    throw error;
+  }
+}
+
 async function runMetaCollection(input: { organizationId: string; brandId: string }) {
   const supabase = createSocialAdminClient();
-  const config = metaConfigFromEnvironment();
+  const config = await resolveMetaConfig(supabase, input.organizationId);
   const collected = await collectMetaAnalytics({ supabase, organizationId: input.organizationId, brandId: input.brandId, config });
   const ingestion = await ingestSocialMetricBatch({
     supabase,

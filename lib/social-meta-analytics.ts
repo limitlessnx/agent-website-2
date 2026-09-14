@@ -3,7 +3,7 @@ import type { SocialAccountMetricSample, SocialPostMetricSample } from "@/lib/so
 
 type Json = Record<string, unknown>;
 
-type MetaConfig = {
+export type MetaConfig = {
   accessToken: string;
   apiVersion: string;
   pageId?: string;
@@ -139,7 +139,35 @@ export async function collectMetaAnalytics(input: {
   return { postSamples, accountSamples, capturedAt };
 }
 
-export function metaConfigFromEnvironment() {
+export async function metaConfigFromIntegration(supabase: SupabaseClient, organizationId: string): Promise<MetaConfig> {
+  const rpcClient = supabase as any;
+  const [{ data: credentials, error: credentialError }, { data: integration, error: integrationError }] = await Promise.all([
+    rpcClient.rpc("get_organization_integration_credentials", {
+      p_organization_id: organizationId,
+      p_provider: "meta",
+    }),
+    supabase
+      .from("organization_integrations")
+      .select("configuration,status")
+      .eq("organization_id", organizationId)
+      .eq("provider", "meta")
+      .maybeSingle(),
+  ]);
+  if (credentialError) throw credentialError;
+  if (integrationError) throw integrationError;
+  const secret = (credentials || {}) as Json;
+  const configuration = ((integration?.configuration || {}) as Json);
+  const accessToken = typeof secret.access_token === "string" ? secret.access_token : "";
+  if (!accessToken) throw new Error("Meta integration has no stored access token.");
+  return {
+    accessToken,
+    apiVersion: typeof configuration.api_version === "string" ? configuration.api_version : process.env.META_GRAPH_API_VERSION || "v24.0",
+    pageId: typeof configuration.page_id === "string" ? configuration.page_id : undefined,
+    instagramBusinessAccountId: typeof configuration.instagram_business_account_id === "string" ? configuration.instagram_business_account_id : undefined,
+  };
+}
+
+export function metaConfigFromEnvironment(): MetaConfig {
   const accessToken = process.env.META_ACCESS_TOKEN;
   if (!accessToken) throw new Error("META_ACCESS_TOKEN is not configured in the Trigger.dev environment.");
   return {
@@ -147,5 +175,5 @@ export function metaConfigFromEnvironment() {
     apiVersion: process.env.META_GRAPH_API_VERSION || "v24.0",
     pageId: process.env.META_PAGE_ID || undefined,
     instagramBusinessAccountId: process.env.META_IG_ACCOUNT_ID || undefined,
-  } satisfies MetaConfig;
+  };
 }
