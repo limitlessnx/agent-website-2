@@ -253,3 +253,40 @@
     transition: none;
   }
 }
+
+/* Keep the first viewport eager and allow later product sections to render on demand. */
+.fk-strict-home > section:not(.fk-rebuild-hero):not(.astral-insights) {
+  content-visibility: auto;
+  contain-intrinsic-size: 720px;
+}
+
+.fk-strict-home .fk-rebuild-dashboard,
+.fk-strict-home .astral-dashboard,
+.fk-strict-home .fk-rebuild-dashboard-glow {
+  contain: layout paint;
+}
+
+.fk-strict-home .fk-rebuild-dashboard-glow,
+.fk-strict-home .astral-ambient {
+  will-change: transform, opacity;
+}
+
+@media (max-width: 760px) {
+  .fk-strict-home {
+    overflow-x: clip;
+  }
+
+  .fk-strict-home .fk-rebuild-hero {
+    padding-bottom: 1px;
+  }
+
+  .fk-strict-home .fk-rebuild-dashboard-wrap,
+  .fk-strict-home .astral-dashboard {
+    max-width: 100%;
+  }
+
+  .fk-strict-home .fk-rebuild-dashboard,
+  .fk-strict-home .astral-dashboard {
+    transform: none;
+  }
+}
