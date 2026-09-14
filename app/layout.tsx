@@ -26,6 +26,7 @@ import "./flux-story-rebuild.css";
 import "./dtask-home.css";
 import "./astral-insights.css";
 import "./astral-home-theme.css";
+import "./fluxknight-platform.css";
 import SiteShell from "@/components/SiteShell";
 import GlobalLoadingProvider from "@/components/GlobalLoadingProvider";
 

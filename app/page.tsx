@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import {
-  ArrowRight,
   Database,
   Layers3,
   MessageSquareText,
@@ -11,16 +9,8 @@ import {
   Workflow,
 } from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
-import IndustryCarousel from "@/components/IndustryCarousel";
-import ClientReviews from "@/components/ClientReviews";
-import PricingCarousel from "@/components/PricingCarousel";
-import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
-import FluxRebuildHero from "@/components/home/FluxRebuildHero";
-import FluxStoryJourney from "@/components/home/FluxStoryJourney";
-import FluxNumbers from "@/components/home/FluxNumbers";
-import FluxMobileProduct from "@/components/home/FluxMobileProduct";
 import FluxMotionDirector from "@/components/home/FluxMotionDirector";
-import AstralInsights from "@/components/home/AstralInsights";
+import FluxknightLanding from "@/components/home/FluxknightLanding";
 
 const automationPillars = [
   {
@@ -161,68 +151,7 @@ export default function HomePage() {
     <main className="quantix-home fk-strict-home">
       <FluxMotionDirector />
       <PublicLeoConsultant />
-      <FluxRebuildHero />
-      <AstralInsights />
-
-      <FluxNumbers />
-      <IndustryCarousel />
-      <FluxStoryJourney />
-
-      <section className="brand-section fk-control-section" id="services">
-        <div className="brand-shell">
-          <div className="brand-heading">
-            <h2>Control in one place.</h2>
-            <p>Start with customer conversations, add follow-up when you need it, then connect the wider operation as the business grows.</p>
-          </div>
-          <div className="brand-grid">
-            {automationPillars.map(({ icon: Icon, title, text, detail }) => (
-              <article className="brand-card" key={title}>
-                <span className="brand-icon"><Icon size={21} /></span>
-                <h3>{title}</h3>
-                <p>{text}</p>
-                <small>{detail}</small>
-                <Link href="/services">Explore capabilities <ArrowRight size={15} /></Link>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <MaiaCaseStudyTeaser />
-      <ClientReviews />
-
-      <section className="brand-section production-pricing-carousel" id="pricing">
-        <div className="brand-shell">
-          <div className="brand-heading">
-            <span className="brand-eyebrow">Choose your automation level</span>
-            <h2>Basic. Plus. Business. Business+. Custom.</h2>
-            <p>Compare channel limits, Flux Credits and automation depth directly on the homepage. Basic through Business+ have defined package scopes. Custom is built around whatever the client needs automated and set up.</p>
-          </div>
-          <PricingCarousel plans={pricingPlans} showDurationSelector />
-          <div className="hero-buttons production-pricing-route-link">
-            <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
-          </div>
-          <p className="production-pricing-note">Basic supports one channel and up to two human handoff recipients. Plus adds a second channel, higher credits, follow-ups and reminders. Business expands into multi-channel operations. Business+ adds the advanced operational data layer. Custom is defined entirely around the client’s requirements.</p>
-        </div>
-      </section>
-
-      <FluxMobileProduct />
-
-      <section className="brand-section evaluation-journey" id="evaluation-journey">
-        <div className="brand-shell">
-          <div className="evaluation-conversion-card">
-            <div>
-              <span className="brand-eyebrow">Not sure where your business fits?</span>
-              <h3>Show us the workflow. We’ll identify the best place to automate first.</h3>
-              <p>Tell us where enquiries get lost, where follow-up breaks down, or where your team spends too much time on repetitive work.</p>
-            </div>
-            <div className="evaluation-conversion-actions">
-              <Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link>
-              <small>No package selection required before the evaluation.</small>
-            </div>
-          </div>
-        </div>
-      </section>
+      <FluxknightLanding automationPillars={automationPillars} pricingPlans={pricingPlans} />
     </main>
   );
 }

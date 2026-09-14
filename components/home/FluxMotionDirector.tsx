@@ -38,6 +38,28 @@ export default function FluxMotionDirector() {
         scrollTrigger: { trigger: ".astral-insights [data-astral-stagger]", start: "top 84%", once: true },
       });
     }
+
+    const platformReveal = document.querySelector<HTMLElement>(".fk-platform [data-fk-reveal]");
+    if (platformReveal) {
+      gsap.fromTo(platformReveal, { y: 36, scale: 0.97 }, {
+        y: 0,
+        scale: 1,
+        duration: 0.8,
+        ease: "power2.out",
+        scrollTrigger: { trigger: platformReveal, start: "top 86%", once: true },
+      });
+    }
+
+    const platformCards = gsap.utils.toArray<HTMLElement>(".fk-platform [data-fk-stagger] .fk-agent-card");
+    if (platformCards.length) {
+      gsap.fromTo(platformCards, { y: 24 }, {
+        y: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: { trigger: ".fk-platform [data-fk-stagger]", start: "top 84%", once: true },
+      });
+    }
   });
 
   return null;
