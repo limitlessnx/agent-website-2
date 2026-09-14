@@ -258,6 +258,73 @@
   transition: background-color .35s ease, border-color .35s ease, box-shadow .35s ease;
 }
 
+.fk-strict-home header[data-home-nav] [class*="_siteNav"] {
+  border-color: rgba(192, 132, 252, .24);
+  background: rgba(10, 10, 20, .88);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .48), inset 0 1px rgba(255, 255, 255, .05);
+  backdrop-filter: blur(18px);
+}
+
+.fk-strict-home header[data-home-nav] [class*="_demoLink"],
+.fk-strict-home header[data-home-nav] [class*="_mobileActions"] a[class*="_primary"] {
+  color: var(--astral-secondary);
+  background: var(--astral-primary);
+  box-shadow: 0 12px 32px rgba(192, 132, 252, .24);
+}
+
+.fk-strict-home header[data-home-nav] [class*="_mobileToggle"],
+.fk-strict-home header[data-home-nav] [class*="_closeButton"],
+.fk-strict-home header[data-home-nav] [class*="_drawer"] {
+  border-color: rgba(192, 132, 252, .28);
+  background: var(--astral-secondary);
+}
+
+body:has(.fk-strict-home) .flux-footer {
+  background: var(--astral-secondary) !important;
+  border-top: 1px solid var(--astral-border) !important;
+  color: var(--astral-text);
+}
+
+body:has(.fk-strict-home) .flux-footer-cta {
+  border-color: var(--astral-border) !important;
+  color: var(--astral-muted) !important;
+}
+
+body:has(.fk-strict-home) .flux-footer-cta a {
+  color: var(--astral-secondary) !important;
+  background: var(--astral-primary) !important;
+  box-shadow: 0 12px 32px rgba(192, 132, 252, .22);
+}
+
+body:has(.fk-strict-home) .flux-socials a {
+  border-color: var(--astral-border);
+  color: var(--astral-primary);
+  background: rgba(192, 132, 252, .08);
+}
+
+body:has(.fk-strict-home) .flux-socials a:hover {
+  color: var(--astral-secondary);
+  background: var(--astral-primary);
+}
+
+body:has(.fk-strict-home) .flux-footer-group h4 {
+  color: var(--astral-primary) !important;
+}
+
+body:has(.fk-strict-home) .flux-footer-group a,
+body:has(.fk-strict-home) .flux-footer-brand p {
+  color: var(--astral-muted) !important;
+}
+
+body:has(.fk-strict-home) .flux-footer-group a:hover {
+  color: var(--astral-text) !important;
+}
+
+body:has(.fk-strict-home) .flux-footer-bottom {
+  border-color: var(--astral-border) !important;
+  color: var(--astral-muted) !important;
+}
+
 .fk-strict-home .fk-control-section .brand-icon {
   background: rgba(192, 132, 252, .14);
   box-shadow: 0 0 0 5px rgba(192, 132, 252, .06);

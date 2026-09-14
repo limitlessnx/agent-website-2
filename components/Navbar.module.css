@@ -235,6 +235,42 @@
   .mobileToggle { display: grid; }
 }
 
+@media (max-width: 920px) {
+  .drawer {
+    width: min(420px, 100vw);
+  }
+
+  .mobileLinks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 8px;
+    padding: 16px 0;
+  }
+
+  .mobileLinks a {
+    min-height: 46px;
+    padding: 0 11px;
+    font-size: .86rem;
+    line-height: 1.15;
+  }
+
+  .mobileLinks a:nth-child(6) {
+    grid-column: 1 / -1;
+  }
+
+  .mobileActions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 12px;
+  }
+
+  .mobileActions a {
+    min-height: 46px;
+    padding: 10px 8px;
+    font-size: .84rem;
+  }
+}
+
 @media (max-height: 700px) and (max-width: 920px) {
   .drawerHeader { min-height: 60px; padding-bottom: 10px; }
   .mobileLinks { gap: 7px; padding: 12px 0; }
