@@ -10,42 +10,17 @@ export default function FluxMotionDirector() {
   useGSAP(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    gsap.utils.toArray<HTMLElement>(".fk-strict-home [data-flux-media]").forEach((media) => {
-      gsap.timeline({
-        scrollTrigger: { trigger: media, start: "top bottom", end: "bottom top", scrub: true },
-      })
-        .fromTo(media, { scale: 0.8, opacity: 0.3 }, { scale: 1, opacity: 1, ease: "none", duration: 1 })
-        .to(media, { scale: 0.98, opacity: 0.35, ease: "none", duration: 0.4 });
-    });
-
-    const words = gsap.utils.toArray<HTMLElement>(".fk-strict-home [data-flux-word]");
-    if (words.length) {
-      gsap.fromTo(words, { opacity: 0.14 }, {
-        opacity: 1,
-        ease: "none",
-        stagger: 0.06,
-        scrollTrigger: {
-          trigger: ".fk-story-copy",
-          start: "top 78%",
-          end: "bottom 48%",
-          scrub: true,
-        },
-      });
-    }
-
-    gsap.fromTo(".fk-strict-home [data-flux-step]", { y: 34, opacity: 0 }, {
+    gsap.fromTo(".fk-strict-home [data-flux-step]", { y: 24 }, {
       y: 0,
-      opacity: 1,
       stagger: 0.12,
       ease: "power2.out",
-      scrollTrigger: { trigger: ".fk-story-canvas", start: "top 78%", end: "bottom 35%", scrub: true },
+      scrollTrigger: { trigger: ".fk-story-canvas", start: "top 78%", once: true },
     });
 
     const astralDashboard = document.querySelector<HTMLElement>(".astral-insights [data-astral-reveal]");
     if (astralDashboard) {
-      gsap.fromTo(astralDashboard, { y: 30, opacity: 0, scale: 0.97 }, {
+      gsap.fromTo(astralDashboard, { y: 30, scale: 0.97 }, {
         y: 0,
-        opacity: 1,
         scale: 1,
         duration: 0.8,
         ease: "power2.out",
@@ -55,9 +30,8 @@ export default function FluxMotionDirector() {
 
     const astralCards = gsap.utils.toArray<HTMLElement>(".astral-insights [data-astral-stagger] .astral-feature");
     if (astralCards.length) {
-      gsap.fromTo(astralCards, { y: 24, opacity: 0 }, {
+      gsap.fromTo(astralCards, { y: 24 }, {
         y: 0,
-        opacity: 1,
         duration: 0.55,
         stagger: 0.1,
         ease: "power2.out",

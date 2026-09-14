@@ -224,6 +224,7 @@
 
 .fk-strict-home .fk-control-section .brand-card:hover {
   border-color: var(--astral-primary);
+  transform: translateY(-4px);
 }
 
 .fk-strict-home .fk-control-section .brand-card p,
@@ -234,6 +235,27 @@
 .fk-strict-home .fk-control-section .brand-card a,
 .fk-strict-home .fk-control-section .brand-icon {
   color: var(--astral-primary);
+}
+
+.fk-strict-home .fk-rebuild-metrics article:hover {
+  transform: translateY(-4px);
+}
+
+.fk-strict-home .fk-rebuild-metrics article,
+.fk-strict-home .fk-control-section .brand-card,
+.fk-strict-home .astral-feature {
+  opacity: 1;
+  transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease;
+  will-change: transform;
+}
+
+.fk-strict-home .astral-feature:hover {
+  transform: translateY(-4px);
+  border-color: var(--astral-primary);
+}
+
+.fk-strict-home header[data-home-nav] {
+  transition: background-color .35s ease, border-color .35s ease, box-shadow .35s ease;
 }
 
 .fk-strict-home .fk-control-section .brand-icon {
@@ -249,7 +271,9 @@
 @media (prefers-reduced-motion: reduce) {
   .fk-strict-home .fk-rebuild-primary,
   .fk-strict-home .fk-rebuild-secondary,
-  .fk-strict-home .fk-control-section .brand-card {
+  .fk-strict-home .fk-control-section .brand-card,
+  .fk-strict-home .astral-feature,
+  .fk-strict-home header[data-home-nav] {
     transition: none;
   }
 }
