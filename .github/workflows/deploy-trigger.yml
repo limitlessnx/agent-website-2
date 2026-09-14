@@ -5,8 +5,10 @@ on:
     branches:
       - main
       - feat/flux-social-phase-3-8
+      - feat/flux-social-phase-3-9
     paths:
       - "src/trigger/**"
+      - "lib/social-learning.ts"
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
