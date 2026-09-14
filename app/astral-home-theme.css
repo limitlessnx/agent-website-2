@@ -1,0 +1,255 @@
+:root {
+  --astral-primary: #c084fc;
+  --astral-secondary: #0a0a14;
+  --astral-accent: #fb923c;
+  --astral-background: #03000a;
+  --astral-surface: #18181b;
+  --astral-text: #ffffff;
+  --astral-muted: #a1a1aa;
+  --astral-border: #27272a;
+}
+
+.fk-strict-home {
+  background: var(--astral-background);
+  color: var(--astral-text);
+  font-family: Inter, Arial, sans-serif;
+}
+
+.fk-strict-home header[data-home-nav] {
+  background: var(--astral-secondary);
+  color: var(--astral-text);
+}
+
+.fk-strict-home header[data-home-nav][class*="scrolled"] {
+  background: rgba(10, 10, 20, .94);
+  border-bottom: 1px solid var(--astral-border);
+  backdrop-filter: blur(16px);
+}
+
+.fk-strict-home header[data-home-nav] nav > div:nth-child(2) a,
+.fk-strict-home header[data-home-nav] nav > div:nth-child(3) a:first-child {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home header[data-home-nav] nav > div:nth-child(2) a:hover,
+.fk-strict-home header[data-home-nav] nav > div:nth-child(3) a:first-child:hover {
+  color: var(--astral-text);
+  background: rgba(192, 132, 252, .1);
+}
+
+.fk-strict-home header[data-home-nav] nav > div:nth-child(3) a:last-child {
+  color: var(--astral-secondary);
+  background: var(--astral-primary);
+}
+
+/* The hero is the first full-strength expression of the Astral palette. */
+.fk-strict-home .fk-rebuild-hero {
+  background: var(--astral-background);
+}
+
+.fk-strict-home .fk-rebuild-hero:before {
+  background:
+    radial-gradient(circle at 70% 8%, rgba(192, 132, 252, .2), transparent 33%),
+    linear-gradient(135deg, #03000a 0%, #0a0a14 62%, #18181b 100%);
+}
+
+.fk-strict-home .fk-rebuild-hero:after {
+  background: linear-gradient(62deg, transparent 44%, rgba(192, 132, 252, .07) 44% 60%, transparent 60%);
+}
+
+.fk-strict-home .fk-rebuild-copy h1 span {
+  background: linear-gradient(100deg, #fff 0%, var(--astral-primary) 58%, var(--astral-accent) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.fk-strict-home .fk-rebuild-copy p,
+.fk-strict-home .fk-rebuild-proof,
+.fk-strict-home .fk-rebuild-dashboard-topbar > span {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-rebuild-primary {
+  color: var(--astral-secondary);
+  background: var(--astral-primary);
+  box-shadow: 0 16px 42px rgba(192, 132, 252, .24);
+}
+
+.fk-strict-home .fk-rebuild-secondary {
+  color: var(--astral-text);
+  border-color: var(--astral-border);
+  background: rgba(24, 24, 27, .72);
+}
+
+.fk-strict-home .fk-rebuild-dashboard-wrap .fk-rebuild-dashboard {
+  background: var(--astral-surface);
+  border-color: var(--astral-border);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, .58), 0 0 0 1px rgba(192, 132, 252, .12);
+}
+
+.fk-strict-home .fk-rebuild-sidebar,
+.fk-strict-home .fk-rebuild-dashboard-main {
+  background: var(--astral-secondary);
+}
+
+.fk-strict-home .fk-rebuild-dashboard-main {
+  color: var(--astral-text);
+}
+
+.fk-strict-home .fk-rebuild-sidebar nav span.is-active {
+  background: rgba(192, 132, 252, .14);
+  box-shadow: inset 2px 0 var(--astral-primary);
+}
+
+.fk-strict-home .fk-rebuild-brandmark,
+.fk-strict-home .fk-rebuild-metrics article:first-child,
+.fk-strict-home .fk-rebuild-ring {
+  background: var(--astral-primary);
+}
+
+.fk-strict-home .fk-rebuild-metrics article,
+.fk-strict-home .fk-rebuild-activity-card,
+.fk-strict-home .fk-rebuild-conversion-card {
+  background: var(--astral-surface);
+  border-color: var(--astral-border);
+  box-shadow: none;
+}
+
+.fk-strict-home .fk-rebuild-metrics article:first-child {
+  color: var(--astral-secondary);
+  border-color: var(--astral-primary);
+}
+
+.fk-strict-home .fk-rebuild-metrics span,
+.fk-strict-home .fk-rebuild-activity-card header > span {
+  color: var(--astral-secondary);
+  background: var(--astral-primary);
+}
+
+.fk-strict-home .fk-rebuild-metrics small,
+.fk-strict-home .fk-rebuild-activity-card header small,
+.fk-strict-home .fk-rebuild-activity-row small,
+.fk-strict-home .fk-rebuild-conversion-card > small {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-rebuild-activity-row {
+  border-color: var(--astral-border);
+}
+
+.fk-strict-home .fk-rebuild-activity-row i,
+.fk-strict-home .fk-rebuild-sidebar-foot i {
+  background: var(--astral-accent);
+  box-shadow: 0 0 12px rgba(251, 146, 60, .6);
+}
+
+.fk-strict-home .fk-rebuild-ring {
+  background: conic-gradient(var(--astral-primary) 0 68%, var(--astral-border) 68% 100%);
+}
+
+.fk-strict-home .fk-rebuild-ring:before {
+  background: var(--astral-surface);
+}
+
+.fk-strict-home .fk-rebuild-integrations,
+.fk-strict-home .fk-control-section,
+.fk-strict-home .evaluation-journey,
+.fk-strict-home .production-pricing-carousel {
+  background: var(--astral-secondary);
+  color: var(--astral-text);
+}
+
+.fk-strict-home .fk-rebuild-integrations p,
+.fk-strict-home .production-pricing-note,
+.fk-strict-home .production-pricing-carousel .brand-heading p,
+.fk-strict-home .fk-control-section .brand-heading p {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-rebuild-integration-row span {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-story-section {
+  background: var(--astral-background);
+  color: var(--astral-text);
+}
+
+.fk-strict-home .fk-story-section:before {
+  background-image:
+    linear-gradient(rgba(192, 132, 252, .06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(192, 132, 252, .06) 1px, transparent 1px);
+}
+
+.fk-strict-home .fk-story-copy > span,
+.fk-strict-home .fk-story-card-top small,
+.fk-strict-home .fk-story-card > span {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-story-copy p {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-story-line {
+  background: linear-gradient(180deg, transparent, var(--astral-primary), transparent);
+}
+
+.fk-strict-home .fk-story-card {
+  background: var(--astral-surface);
+  border-color: var(--astral-border);
+  color: var(--astral-text);
+}
+
+.fk-strict-home .fk-story-card:after {
+  background: var(--astral-accent);
+}
+
+.fk-strict-home .fk-story-card.is-outcome {
+  background: var(--astral-primary);
+  border-color: var(--astral-primary);
+  color: var(--astral-secondary);
+}
+
+.fk-strict-home .fk-control-section .brand-heading h2,
+.fk-strict-home .production-pricing-carousel .brand-heading h2 {
+  color: var(--astral-text);
+}
+
+.fk-strict-home .fk-control-section .brand-card {
+  background: var(--astral-surface);
+  border-color: var(--astral-border);
+  color: var(--astral-text);
+}
+
+.fk-strict-home .fk-control-section .brand-card:hover {
+  border-color: var(--astral-primary);
+}
+
+.fk-strict-home .fk-control-section .brand-card p,
+.fk-strict-home .fk-control-section .brand-card small {
+  color: var(--astral-muted);
+}
+
+.fk-strict-home .fk-control-section .brand-card a,
+.fk-strict-home .fk-control-section .brand-icon {
+  color: var(--astral-primary);
+}
+
+.fk-strict-home .fk-control-section .brand-icon {
+  background: rgba(192, 132, 252, .14);
+  box-shadow: 0 0 0 5px rgba(192, 132, 252, .06);
+}
+
+.fk-strict-home .flux-footer {
+  background: var(--astral-secondary);
+  border-top: 1px solid var(--astral-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fk-strict-home .fk-rebuild-primary,
+  .fk-strict-home .fk-rebuild-secondary,
+  .fk-strict-home .fk-control-section .brand-card {
+    transition: none;
+  }
+}
