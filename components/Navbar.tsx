@@ -22,9 +22,17 @@ export default function Navbar() {
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const menuOpen = menuPath === pathname;
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 18);
+    let lastScrollY = window.scrollY;
+    const onScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 18);
+      if (currentScrollY < 80 || currentScrollY < lastScrollY - 4) setHidden(false);
+      else if (currentScrollY > lastScrollY + 4) setHidden(true);
+      lastScrollY = currentScrollY;
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -52,7 +60,7 @@ export default function Navbar() {
   const closeMenu = () => setMenuPath(null);
 
   return (
-    <header className={`${styles.siteHeader} ${scrolled ? styles.scrolled : ""}`} data-home-nav={pathname === "/" ? "" : undefined}>
+    <header className={`${styles.siteHeader} ${scrolled ? styles.scrolled : ""} ${hidden && !menuOpen ? styles.hidden : ""}`} data-home-nav={pathname === "/" ? "" : undefined}>
       <nav className={styles.siteNav} aria-label="Primary navigation">
         <Link className={styles.siteBrand} href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
         <div className={styles.desktopLinks}>

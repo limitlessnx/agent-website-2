@@ -4,10 +4,14 @@
   z-index: 10000;
   padding: 16px 20px;
   pointer-events: none;
-  transition: padding .25s ease;
+  transition: transform .35s ease, padding .25s ease;
 }
 
 .scrolled { padding-top: 10px; }
+
+.hidden {
+  transform: translateY(-120%);
+}
 
 .siteNav {
   pointer-events: auto;
