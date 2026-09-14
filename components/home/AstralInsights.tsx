@@ -5,7 +5,7 @@ import { ArrowRight, BarChart2, Bot, Database, LineChart, Network, ShieldCheck, 
 
 const features = [
   { icon: Database, title: "Unify Your Data", text: "Bring conversations, customer records, follow-up, and operations into one clear working view.", className: "astral-feature-wide" },
-  { icon: TrendingUp, title: "Real-time Insights", text: "See what is moving, what needs attention, and where the next opportunity sits.", className: "astral-feature-tall" },
+  { icon: LineChart, title: "Real-time Insights", text: "See what is moving, what needs attention, and where the next opportunity sits.", className: "astral-feature-tall" },
   { icon: Bot, title: "Automate Smarter", text: "Turn repeatable decisions into dependable workflows with Maia and connected AI agents.", className: "astral-feature-tall" },
   { icon: ShieldCheck, title: "Enterprise Ready", text: "Keep ownership, approvals, records, and team visibility organized as the business grows.", className: "astral-feature-wide" },
 ];

@@ -40,6 +40,30 @@ export default function FluxMotionDirector() {
       ease: "power2.out",
       scrollTrigger: { trigger: ".fk-story-canvas", start: "top 78%", end: "bottom 35%", scrub: true },
     });
+
+    const astralDashboard = document.querySelector<HTMLElement>(".astral-insights [data-astral-reveal]");
+    if (astralDashboard) {
+      gsap.fromTo(astralDashboard, { y: 30, opacity: 0, scale: 0.97 }, {
+        y: 0,
+        opacity: 1,
+        scale: 1,
+        duration: 0.8,
+        ease: "power2.out",
+        scrollTrigger: { trigger: astralDashboard, start: "top 82%", once: true },
+      });
+    }
+
+    const astralCards = gsap.utils.toArray<HTMLElement>(".astral-insights [data-astral-stagger] .astral-feature");
+    if (astralCards.length) {
+      gsap.fromTo(astralCards, { y: 24, opacity: 0 }, {
+        y: 0,
+        opacity: 1,
+        duration: 0.55,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: { trigger: ".astral-insights [data-astral-stagger]", start: "top 84%", once: true },
+      });
+    }
   });
 
   return null;
