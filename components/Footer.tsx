@@ -11,6 +11,7 @@ const groups = [
 export default function Footer() {
   return (
     <footer className="flux-footer">
+      <div className="flux-footer-cta"><span>Ready to get started?</span><Link href="/evaluation">Evaluate My Business <ExternalLink size={15} /></Link></div>
       <div className="flux-footer-grid">
         <div className="flux-footer-brand">
           <Link href="/" aria-label="Fluxknight home"><FluxLogo /></Link>

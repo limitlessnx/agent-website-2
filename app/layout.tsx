@@ -23,6 +23,7 @@ import "./dashboard-phase-d.css";
 import "./dashboard-phase-e.css";
 import "./flux-home-rebuild.css";
 import "./flux-story-rebuild.css";
+import "./dtask-home.css";
 import SiteShell from "@/components/SiteShell";
 import GlobalLoadingProvider from "@/components/GlobalLoadingProvider";
 

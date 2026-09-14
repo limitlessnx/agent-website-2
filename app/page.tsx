@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Database,
+  Layers3,
   MessageSquareText,
   Network,
   Rocket,
@@ -16,6 +17,9 @@ import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import FluxRebuildHero from "@/components/home/FluxRebuildHero";
 import FluxStoryJourney from "@/components/home/FluxStoryJourney";
+import FluxNumbers from "@/components/home/FluxNumbers";
+import FluxMobileProduct from "@/components/home/FluxMobileProduct";
+import FluxMotionDirector from "@/components/home/FluxMotionDirector";
 
 const automationPillars = [
   {
@@ -35,6 +39,12 @@ const automationPillars = [
     title: "Connected business operations",
     text: "Connect customer activity to the systems your team uses so information, next actions, and management visibility stay organized.",
     detail: "Email automation · CRM · Databases · Admin visibility · Custom workflows",
+  },
+  {
+    icon: Layers3,
+    title: "Organization layer",
+    text: "Keep customer records, owners, next actions, follow-up status, appointment status, and reminders organized around one operating view.",
+    detail: "Owners · Stages · Records · Reminders · Team visibility",
   },
 ];
 
@@ -147,19 +157,19 @@ const pricingPlans = [
 
 export default function HomePage() {
   return (
-    <main className="quantix-home">
+    <main className="quantix-home fk-strict-home">
+      <FluxMotionDirector />
       <PublicLeoConsultant />
       <FluxRebuildHero />
 
-      <MaiaCaseStudyTeaser />
+      <FluxNumbers />
       <IndustryCarousel />
       <FluxStoryJourney />
 
-      <section className="brand-section" id="services">
+      <section className="brand-section fk-control-section" id="services">
         <div className="brand-shell">
           <div className="brand-heading">
-            <span className="brand-eyebrow">What Fluxknight automates</span>
-            <h2>Three layers. One connected business system.</h2>
+            <h2>Control in one place.</h2>
             <p>Start with customer conversations, add follow-up when you need it, then connect the wider operation as the business grows.</p>
           </div>
           <div className="brand-grid">
@@ -176,6 +186,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      <MaiaCaseStudyTeaser />
       <ClientReviews />
 
       <section className="brand-section production-pricing-carousel" id="pricing">
@@ -192,6 +203,8 @@ export default function HomePage() {
           <p className="production-pricing-note">Basic supports one channel and up to two human handoff recipients. Plus adds a second channel, higher credits, follow-ups and reminders. Business expands into multi-channel operations. Business+ adds the advanced operational data layer. Custom is defined entirely around the client’s requirements.</p>
         </div>
       </section>
+
+      <FluxMobileProduct />
 
       <section className="brand-section evaluation-journey" id="evaluation-journey">
         <div className="brand-shell">

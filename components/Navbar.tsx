@@ -55,7 +55,7 @@ export default function Navbar() {
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <header className={`${styles.siteHeader} ${scrolled ? styles.scrolled : ""}`}>
+    <header className={`${styles.siteHeader} ${scrolled ? styles.scrolled : ""}`} data-home-nav={pathname === "/" ? "" : undefined}>
       <nav className={styles.siteNav} aria-label="Primary navigation">
         <Link className={styles.siteBrand} href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
         <div className={styles.desktopLinks}>

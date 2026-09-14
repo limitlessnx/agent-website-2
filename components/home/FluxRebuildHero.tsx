@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, Database, MessageSquareText, Network, Workflow } from "@/components/admin/ServerIcons";
+import { ArrowRight, Database, MessageSquareText, Network, Workflow } from "@/components/admin/ServerIcons";
 
 const integrations = ["WhatsApp", "Gmail", "Google Calendar", "Resend", "ElevenLabs", "n8n"];
 const activity = [
@@ -25,11 +25,6 @@ export default function FluxRebuildHero() {
               <Link className="fk-rebuild-primary" href="/evaluation">Evaluate My Business <ArrowRight size={17} /></Link>
               <Link className="fk-rebuild-secondary" href="#services">See What We Automate <ArrowRight size={16} /></Link>
             </div>
-            <div className="fk-rebuild-proof">
-              <span><CheckCircle2 size={14} /> Works 24/7</span>
-              <span><CheckCircle2 size={14} /> Built around your workflow</span>
-              <span><CheckCircle2 size={14} /> Human handoff stays available</span>
-            </div>
           </motion.div>
 
           <motion.div className="fk-rebuild-dashboard-wrap" initial={{ opacity: 0, y: 48, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.85, delay: 0.18 }}>
@@ -47,7 +42,7 @@ export default function FluxRebuildHero() {
               </aside>
 
               <div className="fk-rebuild-dashboard-main">
-                <div className="fk-rebuild-dashboard-topbar"><div><small>Customer operations</small><h2>Good morning</h2></div><button type="button" aria-label="Open notifications">3</button></div>
+                <div className="fk-rebuild-dashboard-topbar"><div><small>Customer operations</small><h2>Overview</h2></div><span>Live activity</span></div>
                 <div className="fk-rebuild-metrics">
                   <article><small>Active conversations</small><strong>128</strong><span>+12.8%</span></article>
                   <article><small>Qualified leads</small><strong>46</strong><span>+8.2%</span></article>
@@ -70,7 +65,7 @@ export default function FluxRebuildHero() {
         </div>
       </section>
 
-      <section className="fk-rebuild-integrations"><div className="fk-rebuild-integrations-shell"><p>Works with the tools your business already uses.</p><div className="fk-rebuild-integration-row">{integrations.map((name) => <span key={name}>{name}</span>)}</div></div></section>
+      <section className="fk-rebuild-integrations"><div className="fk-rebuild-integrations-shell"><p>Works with the tools your business already uses.</p><div className="fk-rebuild-integration-viewport"><div className="fk-rebuild-integration-row">{[...integrations, ...integrations].map((name, index) => <span key={`${name}-${index}`} aria-hidden={index >= integrations.length}>{name}</span>)}</div></div></div></section>
     </>
   );
 }
