@@ -20,6 +20,7 @@ import FluxStoryJourney from "@/components/home/FluxStoryJourney";
 import FluxNumbers from "@/components/home/FluxNumbers";
 import FluxMobileProduct from "@/components/home/FluxMobileProduct";
 import FluxMotionDirector from "@/components/home/FluxMotionDirector";
+import AstralInsights from "@/components/home/AstralInsights";
 
 const automationPillars = [
   {
@@ -161,6 +162,7 @@ export default function HomePage() {
       <FluxMotionDirector />
       <PublicLeoConsultant />
       <FluxRebuildHero />
+      <AstralInsights />
 
       <FluxNumbers />
       <IndustryCarousel />
