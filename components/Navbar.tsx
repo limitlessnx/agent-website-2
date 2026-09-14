@@ -19,7 +19,8 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === pathname;
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -30,10 +31,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     if (!menuOpen) return;
     const body = document.body;
     const html = document.documentElement;
@@ -42,7 +39,7 @@ export default function Navbar() {
     body.style.overflow = "hidden";
     html.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") setMenuPath(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -52,7 +49,7 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = () => setMenuPath(null);
 
   return (
     <header className={`${styles.siteHeader} ${scrolled ? styles.scrolled : ""}`} data-home-nav={pathname === "/" ? "" : undefined}>
@@ -67,7 +64,7 @@ export default function Navbar() {
           <Link className={styles.loginLink} href="/account/login">Login</Link>
           <Link className={styles.demoLink} href="/evaluation">Book a Demo <span>↗</span></Link>
         </div>
-        <button className={styles.mobileToggle} type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={22} /></button>
+        <button className={styles.mobileToggle} type="button" onClick={() => setMenuPath(pathname)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={22} /></button>
       </nav>
       {menuOpen ? (
         <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Mobile navigation">

@@ -16,7 +16,7 @@ export default function Footer() {
         <div className="flux-footer-brand">
           <Link href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
           <p><strong>Serve Better. Operate Smarter.</strong><br />Fluxknight builds connected AI systems that help organizations serve customers faster, keep follow-up moving, and run customer operations with less friction.</p>
-          <div className="flux-socials"><a href="/" aria-label="Website"><Globe2 size={17} /></a><a href="/contact" aria-label="Email"><Mail size={17} /></a><a href="/about" aria-label="Company profile"><ExternalLink size={17} /></a></div>
+          <div className="flux-socials"><Link href="/" aria-label="Website"><Globe2 size={17} /></Link><Link href="/contact" aria-label="Email"><Mail size={17} /></Link><Link href="/about" aria-label="Company profile"><ExternalLink size={17} /></Link></div>
         </div>
         {groups.map((group) => <div key={group.title} className="flux-footer-group"><h4>{group.title}</h4>{group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</div>)}
       </div>
