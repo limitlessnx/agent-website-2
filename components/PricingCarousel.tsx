@@ -40,6 +40,7 @@ const checkoutSlugByFramework: Record<string, string> = {
   business: "ai-front-desk-suite",
   "business-plus": "custom-ai-operations",
 };
+
 const durationOptions: Array<{ key: BillingTerm; label: string; saving?: string }> = [
   { key: "monthly", label: "Monthly", saving: "Standard" },
   { key: "3m", label: "3 months", saving: "Save 10%" },
@@ -162,29 +163,19 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     showNigeria,
   } = usePublicPricing();
 
-  const presentedPlans = plans.map((plan) => ({
-    ...plan,
-    ...(publicPlanPresentation[plan.slug] || {}),
-  }));
+  const presentedPlans = plans.map((plan) => ({ ...plan, ...(publicPlanPresentation[plan.slug] || {}) }));
 
   const goTo = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const track = trackRef.current;
     const card = track?.children[index] as HTMLElement | undefined;
     if (!track || !card) return;
-
     setActive(index);
     window.requestAnimationFrame(() => {
-      if (behavior === "smooth") {
-        card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-        return;
-      }
-      track.scrollLeft = 0;
+      if (behavior === "smooth") card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      else track.scrollLeft = 0;
     });
-
     if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
-    programmaticRef.current = window.setTimeout(() => {
-      programmaticRef.current = null;
-    }, behavior === "smooth" ? 700 : 40);
+    programmaticRef.current = window.setTimeout(() => { programmaticRef.current = null; }, behavior === "smooth" ? 700 : 40);
   }, []);
 
   useEffect(() => () => {
@@ -199,14 +190,9 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     const cards = Array.from(track.children) as HTMLElement[];
     let closest = 0;
     let distance = Number.POSITIVE_INFINITY;
-
     cards.forEach((card, index) => {
-      const cardCenter = card.offsetLeft + card.clientWidth / 2;
-      const nextDistance = Math.abs(cardCenter - center);
-      if (nextDistance < distance) {
-        closest = index;
-        distance = nextDistance;
-      }
+      const nextDistance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
+      if (nextDistance < distance) { closest = index; distance = nextDistance; }
     });
     setActive(closest);
   };
@@ -217,59 +203,46 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     settledRef.current = window.setTimeout(updateActive, 80);
   };
 
-  const move = (direction: number) => {
-    const next = Math.min(presentedPlans.length - 1, Math.max(0, active + direction));
-    goTo(next);
-  };
+  const move = (direction: number) => goTo(Math.min(presentedPlans.length - 1, Math.max(0, active + direction)));
+
+  const regionControl = canViewInternational ? (
+    <div className={styles.regionSwitch} aria-label="Choose pricing view">
+      <button type="button" className={!viewingInternational ? styles.regionSwitchActive : ""} onClick={showNigeria}>Nigeria</button>
+      <button type="button" className={viewingInternational ? styles.regionSwitchActive : ""} onClick={showInternational}>International</button>
+    </div>
+  ) : null;
+
+  const durationControl = showDurationSelector ? (
+    <label className={styles.durationField}>
+      <span className={styles.durationLabel}>Billing duration</span>
+      <span className={styles.durationSelectWrap}>
+        <select value={billingTerm} onChange={(event) => setBillingTerm(event.target.value as BillingTerm)} aria-label="Choose billing duration" className={styles.durationSelect}>
+          {durationOptions.map((option) => <option key={option.key} value={option.key}>{option.label} · {option.saving}</option>)}
+        </select>
+        <span aria-hidden="true" className={styles.durationCaret}>⌄</span>
+      </span>
+    </label>
+  ) : null;
 
   return (
-    <div
-      className={`${styles.carousel} ${compact ? styles.compact : ""}`}
-      onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
-        if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
-      }}
-      aria-roledescription="carousel"
-      aria-label="Fluxknight pricing plans"
-    >
-      <div className={styles.topControls}>
-        <div className={styles.controlCopy}>
-          <p aria-live="polite">Plan {active + 1} of {presentedPlans.length}</p>
-          <span>{currency ? `Pricing shown in ${currency} · ` : ""}Swipe or use the arrows to compare</span>
-          {canViewInternational ? (
-            <div className={styles.regionSwitch} aria-label="Choose pricing view">
-              <button type="button" className={!viewingInternational ? styles.regionSwitchActive : ""} onClick={showNigeria}>Nigeria</button>
-              <button type="button" className={viewingInternational ? styles.regionSwitchActive : ""} onClick={showInternational}>International</button>
-            </div>
-          ) : null}
+    <div className={`${styles.carousel} ${compact ? styles.compact : ""}`} onKeyDown={(event) => {
+      if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
+      if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
+    }} aria-roledescription="carousel" aria-label="Fluxknight pricing plans">
+      <div className={styles.desktopControls}>
+        <div className={styles.topControls}>
+          <div className={styles.controlCopy}>
+            <p aria-live="polite">Plan {active + 1} of {presentedPlans.length}</p>
+            <span>{currency ? `Pricing shown in ${currency} · ` : ""}Swipe or use the arrows to compare</span>
+            {regionControl}
+          </div>
+          <div className={styles.arrowControls}>
+            <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={18} /></button>
+            <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={18} /></button>
+          </div>
         </div>
-        <div className={styles.arrowControls}>
-          <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={18} /></button>
-          <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={18} /></button>
-        </div>
+        {showDurationSelector ? <div className={styles.durationBar}>{durationControl}<small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to the totals shown on each plan.</small></div> : null}
       </div>
-
-      {showDurationSelector ? (
-        <div className={styles.durationBar}>
-          <label className={styles.durationField}>
-            <span className={styles.durationLabel}>Billing duration</span>
-            <span className={styles.durationSelectWrap}>
-              <select
-                value={billingTerm}
-                onChange={(event) => setBillingTerm(event.target.value as BillingTerm)}
-                aria-label="Choose billing duration"
-                className={styles.durationSelect}
-              >
-                {durationOptions.map((option) => (
-                  <option key={option.key} value={option.key}>{option.label} · {option.saving}</option>
-                ))}
-              </select>
-              <span aria-hidden="true" className={styles.durationCaret}>⌄</span>
-            </span>
-          </label>
-          <small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to the totals shown on each plan.</small>
-        </div>
-      ) : null}
 
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
         {presentedPlans.map((plan, index) => {
@@ -293,6 +266,26 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           return (
             <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.slug} aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}>
               <div className={styles.cardGlow} aria-hidden="true" />
+
+              {index === active ? (
+                <div className={styles.mobileControls}>
+                  <div className={styles.mobileControlTopline}>
+                    <div>
+                      <span className={styles.mobilePlanCount}>Plan {active + 1} of {presentedPlans.length}</span>
+                      <small>{currency ? `Pricing shown in ${currency}` : "Pricing"}</small>
+                    </div>
+                    <div className={styles.arrowControls}>
+                      <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={16} /></button>
+                      <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={16} /></button>
+                    </div>
+                  </div>
+                  <div className={styles.mobileControlGrid}>
+                    {regionControl}
+                    {durationControl}
+                  </div>
+                </div>
+              ) : null}
+
               <div className={styles.cardHeader}>
                 <span className={styles.icon}><Icon size={22} /></span>
                 {isBasic ? <span className={styles.badge}>14-day free trial</span> : plan.featured ? <span className={styles.badge}>Recommended</span> : <span className={styles.badgeSpacer} aria-hidden="true" />}
@@ -302,33 +295,15 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
               <p className={styles.description}>{plan.description ?? plan.tag}</p>
 
               <div className={`${styles.planNote} ${isBasic ? styles.planNoteVisible : ""}`} aria-hidden={!isBasic}>
-                {isBasic ? (
-                  <>
-                    <span>Try Basic before paying</span>
-                    <strong>14 days · 250 Flux Credits</strong>
-                    <small>Web AI + WhatsApp AI · no card required</small>
-                  </>
-                ) : <span>&nbsp;</span>}
+                {isBasic ? <><span>Try Basic before paying</span><strong>14 days · 250 Flux Credits</strong><small>Web AI + WhatsApp AI · no card required</small></> : <span>&nbsp;</span>}
               </div>
 
-              {decision ? (
-                <div className={styles.decisionBlock}>
-                  <span>Best for</span>
-                  <strong>{decision.fit}</strong>
-                  <p>{decision.outcome}</p>
-                </div>
-              ) : null}
+              {decision ? <div className={styles.decisionBlock}><span>Best for</span><strong>{decision.fit}</strong><p>{decision.outcome}</p></div> : null}
 
               <div className={styles.priceBlock}>
                 <div><span>Implementation</span><strong>{firstPrice}</strong></div>
                 <div><span>Monthly renewal</span><strong>{ongoingPrice}</strong></div>
-                {prepaid && detected ? (
-                  <div className={styles.termValue}>
-                    <span>{prepaid.label} prepaid · save {prepaid.discountPercent}%</span>
-                    <strong>{formatMoney(detected.currency, prepaid.total)}</strong>
-                    <small>Save {formatMoney(detected.currency, prepaid.discount)} from {formatMoney(detected.currency, prepaid.subtotal)}</small>
-                  </div>
-                ) : null}
+                {prepaid && detected ? <div className={styles.termValue}><span>{prepaid.label} prepaid · save {prepaid.discountPercent}%</span><strong>{formatMoney(detected.currency, prepaid.total)}</strong><small>Save {formatMoney(detected.currency, prepaid.discount)} from {formatMoney(detected.currency, prepaid.subtotal)}</small></div> : null}
               </div>
 
               <h4>What&apos;s included</h4>
@@ -336,16 +311,10 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
 
               {isBasic ? (
                 <div className={styles.ctaStack}>
-                  <Link href="/account/signup?trial=basic&next=%2Fportal" className={styles.cta} aria-label="Start Basic free trial">
-                    Start Free Trial <ArrowRight size={16} />
-                  </Link>
-                  <Link href={href} aria-label="Choose paid Basic" className={styles.secondaryCta}>
-                    Choose paid Basic <ArrowRight size={14} />
-                  </Link>
+                  <Link href="/account/signup?trial=basic&next=%2Fportal" className={styles.cta} aria-label="Start Basic free trial">Start Free Trial <ArrowRight size={16} /></Link>
+                  <Link href={href} aria-label="Choose paid Basic" className={styles.secondaryCta}>Choose paid Basic <ArrowRight size={14} /></Link>
                 </div>
-              ) : (
-                <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>
-              )}
+              ) : <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>}
             </article>
           );
         })}
