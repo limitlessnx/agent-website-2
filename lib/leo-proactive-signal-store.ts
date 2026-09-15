@@ -28,9 +28,14 @@ async function writeSignal(signal: LeoPersistedSignal, actor = "fluxknight_admin
   const key = rowKey(signal.id);
   const stored: LeoPersistedSignal = { ...signal, lastActor: actor };
   const payload = { user_id: key, role: ROLE, content: JSON.stringify(stored), created_at: signal.firstDetectedAt };
-  const updated = await supabaseServerRequest<StoredSignalRow[]>(`bot_sessions?user_id=eq.${encodeURIComponent(key)}&role=eq.${ROLE}`, { method: "PATCH", body: JSON.stringify(payload) }).catch(() => []);
-  if (updated.length) return stored;
-  await supabaseServerRequest("bot_sessions", { method: "POST", body: JSON.stringify(payload) });
+
+  // `user_id` is unique. Use a single atomic upsert instead of PATCH-then-POST so
+  // overlapping monitor runs cannot race into a 23505 duplicate-key failure.
+  await supabaseServerRequest<StoredSignalRow[]>("bot_sessions?on_conflict=user_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(payload),
+  });
   return stored;
 }
 
