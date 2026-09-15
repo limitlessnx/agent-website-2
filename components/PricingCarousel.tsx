@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import type { ComponentType, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, Layers3, MessageSquareText, Network, Workflow } from "@/components/admin/ServerIcons";
@@ -51,67 +51,61 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
     icon: MessageSquareText,
     name: "Basic",
-    description: "One AI customer-service channel for questions, enquiries, qualification, capture and human handoff.",
+    description: "One AI channel for enquiries, support, qualification, capture and human handoff.",
     features: [
       "2,500 monthly Flux Credits",
-      "Choose 1 channel: Website AI, WhatsApp AI, or Voice Agent",
-      "24/7 questions and enquiries",
-      "Approved product, service and FAQ responses",
-      "Basic customer and lead capture",
+      "1 channel: Website, WhatsApp or Voice",
+      "24/7 enquiries and support",
+      "Approved product, service and FAQ answers",
+      "Lead capture + basic qualification",
       "Up to 2 human handoff recipients",
-      "Conversation history",
-      "Basic dashboard access",
-      "No automated follow-up or reminder sequences",
+      "Conversation history + dashboard",
+      "No automated follow-up or reminders",
     ],
   },
   "ai-call-receptionist": {
     icon: Workflow,
     name: "Plus",
-    description: "Everything in Basic, with higher credits, up to two channels, automated follow-up, reminders, nurture and missed-lead recovery.",
+    description: "Two channels with automated follow-up, reminders, nurture and missed-lead recovery.",
     features: [
       "5,000 monthly Flux Credits",
       "Everything in Basic",
-      "Use up to 2 customer channels",
-      "Examples: WhatsApp + Voice, Website + WhatsApp, or Website + Voice",
-      "Automated customer follow-up",
-      "Product or service-specific follow-up",
-      "Appointment, booking, quote, inspection, payment or renewal reminders where relevant",
+      "Up to 2 customer channels",
+      "Automated follow-up + reminders",
+      "Product or service follow-up",
       "Missed-lead recovery",
-      "Scheduled nurture and re-engagement sequences",
+      "Nurture + re-engagement sequences",
+      "Human handoff across both channels",
     ],
   },
   "ai-front-desk-suite": {
     icon: Network,
     name: "Business",
-    description: "A connected customer operations system with higher usage, admin controls, cross-channel workflows, reporting and Leo Admin Assistance.",
+    description: "Connected multi-channel customer operations with team controls, CRM visibility, reporting and Leo assistance.",
     features: [
       "12,000 monthly Flux Credits",
       "Everything in Plus",
-      "Multi-channel customer operations",
-      "Website, WhatsApp, Voice and Email workflows where applicable",
-      "Admin workspace and team access",
+      "Website, WhatsApp, Voice + Email workflows",
+      "Admin workspace + team access",
       "Cross-channel customer context",
-      "CRM and workflow visibility",
-      "Reporting and operational oversight",
-      "Expanded human escalation controls",
+      "CRM + workflow visibility",
+      "Reporting + escalation controls",
       "Leo Admin Assistance",
     ],
   },
   "custom-ai-operations": {
     icon: Layers3,
     name: "Business+",
-    description: "Advanced customer operations with configurable credits, industry databases, deeper workflows, integrations, dashboards and operational data systems.",
+    description: "Advanced operations with structured data, deeper workflows, integrations and dashboards.",
     features: [
-      "25,000+ configurable monthly Flux Credits",
+      "25,000+ configurable Flux Credits",
       "Everything in Business",
-      "Industry-specific customer or operations database",
-      "Custom client, member or operational records",
+      "Industry or operations database",
+      "Custom records + lifecycle history",
       "Advanced workflow automation",
-      "Deeper record history and lifecycle visibility",
-      "Advanced reporting and segmentation",
-      "Custom integrations where required",
-      "Custom dashboards where required",
-      "Managed deployment and support",
+      "Advanced reporting + segmentation",
+      "Custom integrations + dashboards",
+      "Managed deployment + support",
     ],
   },
 };
@@ -143,9 +137,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
 
   const goTo = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const track = trackRef.current;
-    const card = track?.children[index] as HTMLElement | undefined;
-    if (!track || !card) return;
-
+    if (!track) return;
     const nextIndex = Math.min(presentedPlans.length - 1, Math.max(0, index));
     const nextCard = track.children[nextIndex] as HTMLElement | undefined;
     if (!nextCard) return;
@@ -188,6 +180,12 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
 
   const move = (direction: number) => goTo(active + direction);
 
+  const updateMousePos = (event: ReactMouseEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--mouse-x", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--mouse-y", `${event.clientY - rect.top}px`);
+  };
+
   const regionControl = canViewInternational ? (
     <div className={styles.regionSwitch} aria-label="Choose pricing view">
       <button type="button" className={!viewingInternational ? styles.regionSwitchActive : ""} onClick={showNigeria}>Nigeria</button>
@@ -196,15 +194,23 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
   ) : null;
 
   const durationControl = showDurationSelector ? (
-    <label className={styles.durationField}>
+    <div className={styles.durationField} aria-label="Billing duration">
       <span className={styles.durationLabel}>Billing duration</span>
-      <span className={styles.durationSelectWrap}>
-        <select value={billingTerm} onChange={(event) => setBillingTerm(event.target.value as BillingTerm)} aria-label="Choose billing duration" className={styles.durationSelect}>
-          {durationOptions.map((option) => <option key={option.key} value={option.key}>{option.label} · {option.saving}</option>)}
-        </select>
-        <span aria-hidden="true" className={styles.durationCaret}>⌄</span>
-      </span>
-    </label>
+      <div className={styles.durationSwitch}>
+        {durationOptions.map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            className={billingTerm === option.key ? styles.durationActive : ""}
+            onClick={() => setBillingTerm(option.key)}
+            aria-pressed={billingTerm === option.key}
+          >
+            <span>{option.label}</span>
+            <small>{option.saving}</small>
+          </button>
+        ))}
+      </div>
+    </div>
   ) : null;
 
   return (
@@ -212,6 +218,8 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
       if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
       if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
     }} aria-roledescription="carousel" aria-label="Fluxknight pricing plans">
+      <div className={styles.structuralLines} aria-hidden="true"><span /><span /><span /><span /></div>
+
       <div className={styles.desktopControls}>
         <div className={styles.topControls}>
           <div className={styles.controlCopy}>
@@ -224,7 +232,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
             <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={18} /></button>
           </div>
         </div>
-        {showDurationSelector ? <div className={styles.durationBar}>{durationControl}<small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to each plan.</small></div> : null}
+        {showDurationSelector ? <div className={styles.durationBar}>{durationControl}</div> : null}
       </div>
 
       <div className={styles.mobileToolbar}>
@@ -238,10 +246,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
             <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={15} /></button>
           </div>
         </div>
-        <div className={styles.mobileControlGrid}>
-          {regionControl}
-          {durationControl}
-        </div>
+        <div className={styles.mobileControlGrid}>{regionControl}{durationControl}</div>
       </div>
 
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
@@ -263,8 +268,17 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const ctaLabel = plan.cta ?? "Get started";
 
           return (
-            <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.slug} aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}>
-              <div className={styles.cardGlow} aria-hidden="true" />
+            <article
+              className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`}
+              key={plan.slug}
+              aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}
+              onMouseMove={updateMousePos}
+            >
+              <div className={styles.flashlight} aria-hidden="true" />
+              <i className={`${styles.corner} ${styles.cornerTL}`} aria-hidden="true" />
+              <i className={`${styles.corner} ${styles.cornerTR}`} aria-hidden="true" />
+              <i className={`${styles.corner} ${styles.cornerBL}`} aria-hidden="true" />
+              <i className={`${styles.corner} ${styles.cornerBR}`} aria-hidden="true" />
 
               <div className={styles.cardHeader}>
                 <span className={styles.icon}><Icon size={22} /></span>
@@ -289,10 +303,10 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
 
               {isBasic ? (
                 <div className={styles.ctaStack}>
-                  <Link href="/account/signup?trial=basic&next=%2Fportal" className={styles.cta} aria-label="Start Basic free trial">Start Free Trial <ArrowRight size={16} /></Link>
+                  <Link href="/account/signup?trial=basic&next=%2Fportal" className={styles.cta} aria-label="Start Basic free trial"><b />Start Free Trial <ArrowRight size={16} /></Link>
                   <Link href={href} aria-label="Choose paid Basic" className={styles.secondaryCta}>Choose paid Basic <ArrowRight size={14} /></Link>
                 </div>
-              ) : <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}>{ctaLabel} <ArrowRight size={16} /></Link>}
+              ) : <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}><b />{ctaLabel} <ArrowRight size={16} /></Link>}
             </article>
           );
         })}
