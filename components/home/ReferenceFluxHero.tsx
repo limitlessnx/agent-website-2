@@ -83,7 +83,7 @@ export default function ReferenceFluxHero() {
           </motion.div>
 
           <h1 className="text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl lg:text-7xl">
-            {["Turn more leads", "into customers", "with AI."].map((line, index) => (
+            {["Grow your organization", "without growing", "the workload."].map((line, index) => (
               <div key={line} className="overflow-hidden pb-1">
                 <motion.div
                   initial={{ y: "110%" }}
@@ -98,7 +98,7 @@ export default function ReferenceFluxHero() {
           </h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, delay: .72 }} className="max-w-md text-lg font-normal leading-relaxed text-neutral-400">
-            Fluxknight replies to leads, qualifies them, follows up, sends reminders, books appointments and keeps your team updated.
+            Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, delay: .84 }} className="flex flex-col items-center gap-4 pt-2 sm:flex-row">
