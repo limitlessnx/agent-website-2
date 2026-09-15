@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import styles from "./BillingOperations.module.css";
 
 export default function CreditAdjustmentForm({ organizationId }: { organizationId: string }) {
   const [amount, setAmount] = useState("");
@@ -27,17 +28,29 @@ export default function CreditAdjustmentForm({ organizationId }: { organizationI
   }
 
   return (
-    <form className="admin-card" onSubmit={submit} style={{ display: "grid", gap: 12 }}>
-      <strong>Adjust credits</strong>
-      <select value={type} onChange={(event) => setType(event.target.value)}>
-        <option value="adjustment">Adjustment</option>
-        <option value="bonus">Bonus credits</option>
-        <option value="top_up">Top-up credits</option>
-      </select>
-      <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="numeric" placeholder="Credits, e.g. 1000 or -250" />
-      <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason" />
-      <button className="admin-button" type="submit">Apply credit change</button>
-      {status ? <small>{status}</small> : null}
+    <form className={styles.adjustPanel} onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+      <strong>Credit adjustment</strong>
+      <p className={styles.adjustHint}>Manual changes are internal controls. Use them only when there is a clear operational or commercial reason.</p>
+      <div className={styles.adjustGrid}>
+        <label className={styles.field}>
+          <span>Type</span>
+          <select value={type} onChange={(event) => setType(event.target.value)}>
+            <option value="adjustment">Adjustment</option>
+            <option value="bonus">Bonus credits</option>
+            <option value="top_up">Top-up credits</option>
+          </select>
+        </label>
+        <label className={styles.field}>
+          <span>Credits</span>
+          <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="numeric" placeholder="1000 or -250" />
+        </label>
+        <label className={styles.field}>
+          <span>Reason</span>
+          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Operational or commercial reason" />
+        </label>
+        <button className={styles.submit} type="submit">Apply change</button>
+      </div>
+      {status ? <p className={styles.feedback}>{status}</p> : null}
     </form>
   );
 }
