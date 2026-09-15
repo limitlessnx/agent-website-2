@@ -116,29 +116,6 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   },
 };
 
-const planDecisionCopy: Record<string, { fit: string; outcome: string; cta: string }> = {
-  "whatsapp-ai-starter": {
-    fit: "Businesses that need one reliable AI customer-service channel without follow-up workflows",
-    outcome: "Handle questions and enquiries faster, qualify customers, capture details and hand the right conversations to staff.",
-    cta: "Choose paid Basic",
-  },
-  "ai-call-receptionist": {
-    fit: "Businesses that need up to two channels and customer conversations to continue after the first enquiry",
-    outcome: "Add automated follow-up, reminders and missed-lead recovery with higher monthly credits.",
-    cta: "Start with Plus",
-  },
-  "ai-front-desk-suite": {
-    fit: "Growing organizations that need a connected multi-channel customer operations layer",
-    outcome: "Coordinate conversations, follow-up, reporting, staff visibility and customer context with higher usage capacity.",
-    cta: "Deploy Business",
-  },
-  "custom-ai-operations": {
-    fit: "Organizations that need deeper operational data, advanced workflows, integrations and higher configurable usage",
-    outcome: "Connect customer conversations to structured business records, dashboards and advanced operational workflows.",
-    cta: "Deploy Business+",
-  },
-};
-
 function formatMoney(currency: "NGN" | "USD", amount: number) {
   return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
     style: "currency",
@@ -168,21 +145,25 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     const track = trackRef.current;
     const card = track?.children[index] as HTMLElement | undefined;
     if (!track || !card) return;
-    setActive(index);
-    window.requestAnimationFrame(() => {
-      if (behavior === "smooth") card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-      else track.scrollLeft = 0;
-    });
+
+    const nextIndex = Math.min(presentedPlans.length - 1, Math.max(0, index));
+    const nextCard = track.children[nextIndex] as HTMLElement | undefined;
+    if (!nextCard) return;
+
+    setActive(nextIndex);
+    const left = nextCard.offsetLeft - (track.clientWidth - nextCard.clientWidth) / 2;
+    track.scrollTo({ left: Math.max(0, left), behavior });
+
     if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
-    programmaticRef.current = window.setTimeout(() => { programmaticRef.current = null; }, behavior === "smooth" ? 700 : 40);
-  }, []);
+    programmaticRef.current = window.setTimeout(() => { programmaticRef.current = null; }, behavior === "smooth" ? 450 : 40);
+  }, [presentedPlans.length]);
 
   useEffect(() => () => {
     if (settledRef.current !== null) window.clearTimeout(settledRef.current);
     if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
   }, []);
 
-  const updateActive = () => {
+  const updateActive = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
     const center = track.scrollLeft + track.clientWidth / 2;
@@ -191,18 +172,21 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     let distance = Number.POSITIVE_INFINITY;
     cards.forEach((card, index) => {
       const nextDistance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
-      if (nextDistance < distance) { closest = index; distance = nextDistance; }
+      if (nextDistance < distance) {
+        closest = index;
+        distance = nextDistance;
+      }
     });
     setActive(closest);
-  };
+  }, []);
 
   const onScroll = () => {
     if (programmaticRef.current !== null) return;
     if (settledRef.current !== null) window.clearTimeout(settledRef.current);
-    settledRef.current = window.setTimeout(updateActive, 80);
+    settledRef.current = window.setTimeout(updateActive, 70);
   };
 
-  const move = (direction: number) => goTo(Math.min(presentedPlans.length - 1, Math.max(0, active + direction)));
+  const move = (direction: number) => goTo(active + direction);
 
   const regionControl = canViewInternational ? (
     <div className={styles.regionSwitch} aria-label="Choose pricing view">
@@ -240,7 +224,24 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
             <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={18} /></button>
           </div>
         </div>
-        {showDurationSelector ? <div className={styles.durationBar}>{durationControl}<small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to the totals shown on each plan.</small></div> : null}
+        {showDurationSelector ? <div className={styles.durationBar}>{durationControl}<small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to each plan.</small></div> : null}
+      </div>
+
+      <div className={styles.mobileToolbar}>
+        <div className={styles.mobileControlTopline}>
+          <div>
+            <span className={styles.mobilePlanCount}>Plan {active + 1} of {presentedPlans.length}</span>
+            <small>{currency ? `Pricing shown in ${currency}` : "Swipe to compare"}</small>
+          </div>
+          <div className={styles.arrowControls}>
+            <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={15} /></button>
+            <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={15} /></button>
+          </div>
+        </div>
+        <div className={styles.mobileControlGrid}>
+          {regionControl}
+          {durationControl}
+        </div>
       </div>
 
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
@@ -259,31 +260,11 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const href = isCustom
             ? `/evaluation?plan=${encodeURIComponent(plan.slug === "custom-ai-operations" ? "business-plus" : plan.slug)}`
             : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector && billingTerm !== "monthly" ? `&term=${encodeURIComponent(billingTerm)}` : ""}`;
-          const decision = planDecisionCopy[plan.slug];
-          const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
+          const ctaLabel = plan.cta ?? "Get started";
 
           return (
             <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.slug} aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}>
               <div className={styles.cardGlow} aria-hidden="true" />
-
-              {index === active ? (
-                <div className={styles.mobileControls}>
-                  <div className={styles.mobileControlTopline}>
-                    <div>
-                      <span className={styles.mobilePlanCount}>Plan {active + 1} of {presentedPlans.length}</span>
-                      <small>{currency ? `Pricing shown in ${currency}` : "Pricing"}</small>
-                    </div>
-                    <div className={styles.arrowControls}>
-                      <button type="button" onClick={() => move(-1)} disabled={active === 0} aria-label="Previous pricing plan"><ArrowLeft size={16} /></button>
-                      <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={16} /></button>
-                    </div>
-                  </div>
-                  <div className={styles.mobileControlGrid}>
-                    {regionControl}
-                    {durationControl}
-                  </div>
-                </div>
-              ) : null}
 
               <div className={styles.cardHeader}>
                 <span className={styles.icon}><Icon size={22} /></span>
@@ -296,8 +277,6 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
               <div className={`${styles.planNote} ${isBasic ? styles.planNoteVisible : ""}`} aria-hidden={!isBasic}>
                 {isBasic ? <><span>Try Basic before paying</span><strong>14 days · 250 Flux Credits</strong><small>Web AI + WhatsApp AI · no card required</small></> : <span>&nbsp;</span>}
               </div>
-
-              {decision ? <div className={styles.decisionBlock}><span>Best for</span><strong>{decision.fit}</strong><p>{decision.outcome}</p></div> : null}
 
               <div className={styles.priceBlock}>
                 <div><span>Implementation</span><strong>{firstPrice}</strong></div>
