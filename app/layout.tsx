@@ -4,6 +4,7 @@ import "./flux-theme.css";
 import "./home-responsive.css";
 import "./brand-refresh.css";
 import "./production-home-enhancements.css";
+import "./homepage-header-fix.css";
 import "./checkout-mobile-fix.css";
 import "./dashboard-light-fix.css";
 import "./fluxknight-unified-colors.css";
