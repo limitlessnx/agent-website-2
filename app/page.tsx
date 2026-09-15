@@ -44,17 +44,16 @@ const pricingPlans = [
     name: "Basic",
     firstMonth: "₦150,000",
     ongoing: "₦50,000/month",
-    description: "One AI customer-service channel for businesses that need instant answers, enquiry handling, qualification and clean human handoff without automated follow-up.",
+    description: "One AI channel for enquiries, support, qualification, capture and human handoff.",
     features: [
       "2,500 monthly Flux Credits",
-      "Choose 1 channel: Website AI, WhatsApp AI, or Voice Agent",
-      "24/7 questions, enquiries and support",
-      "Approved FAQ, product and service knowledge",
-      "Lead or customer detail capture",
-      "Basic qualification and intent capture",
+      "1 channel: Web, WhatsApp or Voice",
+      "24/7 enquiries and support",
+      "FAQ, product and service answers",
+      "Lead capture + basic qualification",
       "Up to 2 human handoff recipients",
-      "Conversation history and basic dashboard visibility",
-      "No automated follow-up or reminder sequences",
+      "Conversation history + dashboard",
+      "No automated follow-up or reminders",
     ],
     cta: "Choose Basic",
   },
@@ -64,18 +63,15 @@ const pricingPlans = [
     name: "Plus",
     firstMonth: "₦300,000",
     ongoing: "₦100,000/month",
-    description: "Everything in Basic, with higher credits, up to two customer channels, plus automated follow-up and reminder workflows that keep enquiries moving.",
+    description: "Two customer channels with automated follow-up, reminders and missed-lead recovery.",
     features: [
       "5,000 monthly Flux Credits",
       "Everything in Basic",
       "Use up to 2 customer channels",
-      "Examples: WhatsApp + Voice, Website + WhatsApp, or Website + Voice",
-      "Automated customer follow-up",
-      "Product or service-specific follow-up",
-      "Appointment, booking, quote, inspection, payment or renewal reminders where relevant",
+      "Automated follow-up + reminders",
       "Missed-lead recovery",
-      "Scheduled nurture and re-engagement sequences",
-      "Human handoff across the selected channels",
+      "Nurture + re-engagement sequences",
+      "Human handoff across both channels",
     ],
     cta: "Choose Plus",
   },
@@ -85,17 +81,14 @@ const pricingPlans = [
     name: "Business",
     firstMonth: "₦750,000",
     ongoing: "₦250,000/month",
-    description: "A broader customer-operations system for teams that need higher usage, multiple connected channels, admin controls, cross-channel context and deeper automation.",
+    description: "Multi-channel customer operations with team controls, CRM visibility, reporting and Leo assistance.",
     features: [
       "12,000 monthly Flux Credits",
       "Everything in Plus",
-      "Multi-channel customer operations",
-      "Website, WhatsApp, Voice and Email workflows where applicable",
-      "Admin workspace and team access",
-      "Cross-channel customer context",
-      "CRM and workflow visibility",
-      "Reporting and operational oversight",
-      "Expanded human escalation controls",
+      "Website, WhatsApp, Voice + Email workflows",
+      "Admin workspace + team access",
+      "Cross-channel context + CRM visibility",
+      "Reporting + escalation controls",
       "Leo Admin Assistance",
     ],
     cta: "Choose Business",
@@ -107,18 +100,16 @@ const pricingPlans = [
     name: "Business+",
     firstMonth: "₦2,000,000",
     ongoing: "₦500,000/month",
-    description: "Everything in Business, plus the deeper operational layer needed when customer conversations must connect to structured business data, advanced workflows and integrations.",
+    description: "Advanced operations with structured business data, deeper workflows, integrations and dashboards.",
     features: [
-      "25,000+ configurable monthly Flux Credits",
+      "25,000+ configurable Flux Credits",
       "Everything in Business",
-      "Industry-specific customer or operations database",
-      "Custom client, member or operational records",
+      "Industry or operations database",
+      "Custom records + lifecycle history",
       "Advanced workflow automation",
-      "Deeper record history and lifecycle visibility",
-      "Advanced reporting and segmentation",
-      "Custom integrations where required",
-      "Custom dashboards where required",
-      "Managed deployment and support",
+      "Advanced reporting + segmentation",
+      "Custom integrations + dashboards",
+      "Managed deployment + support",
     ],
     cta: "Choose Business+",
   },
@@ -128,16 +119,15 @@ const pricingPlans = [
     name: "Custom",
     firstMonth: "Custom",
     ongoing: "Custom",
-    description: "Anything the client needs automated, integrated or set up. The system is scoped around the client’s exact goals, workflows, channels, data, integrations and expected usage.",
+    description: "A tailored system built around your exact workflows, channels, data and automation goals.",
     features: [
-      "Custom automation scope",
-      "Custom Flux Credit allocation",
-      "Any required combination of customer channels",
-      "Custom AI agents where required",
-      "Custom follow-up, reminder and operational workflows",
-      "Custom integrations, databases and dashboards where required",
-      "Custom internal tools or process automation",
-      "Deployment, onboarding and support defined around the client",
+      "Custom automation scope + credits",
+      "Any required channel combination",
+      "Custom AI agents",
+      "Follow-up, reminder + ops workflows",
+      "Custom integrations, databases + dashboards",
+      "Internal tools + process automation",
+      "Deployment, onboarding + support",
     ],
     cta: "Build a Custom Plan",
     custom: true,
@@ -182,14 +172,14 @@ export default function HomePage() {
         <div className="brand-shell">
           <div className="brand-heading">
             <span className="brand-eyebrow">Choose your automation level</span>
-            <h2>Basic. Plus. Business. Business+. Custom.</h2>
-            <p>Compare channel limits, Flux Credits and automation depth directly on the homepage. Basic through Business+ have defined package scopes. Custom is built around whatever the client needs automated and set up.</p>
+            <h2>Plans built for different levels of automation.</h2>
+            <p>Compare channels, Flux Credits and automation depth. Swipe through each plan to see what fits.</p>
           </div>
           <PricingCarousel plans={pricingPlans} showDurationSelector />
           <div className="hero-buttons production-pricing-route-link">
-            <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
+            <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing details <ArrowRight size={16} /></Link>
           </div>
-          <p className="production-pricing-note">Basic supports one channel and up to two human handoff recipients. Plus adds a second channel, higher credits, follow-ups and reminders. Business expands into multi-channel operations. Business+ adds the advanced operational data layer. Custom is defined entirely around the client’s requirements.</p>
+          <p className="production-pricing-note">Basic starts with one channel. Plus adds follow-up. Business expands to multi-channel operations. Business+ adds deeper data and workflows. Custom is fully tailored.</p>
         </div>
       </section>
 
