@@ -1,0 +1,52 @@
+/* Fluxknight dashboard mobile system. Shared hierarchy for dense operational screens. */
+@media(max-width:900px){
+  .admin-page-header{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;padding:18px!important;border:1px solid rgba(148,163,184,.14)!important;border-radius:18px!important;background:#0d1117!important}
+  .admin-page-header>div{min-width:0!important}
+  .admin-page-header h1{margin:0!important;color:#f3f4f6!important;font-size:clamp(2rem,9vw,2.65rem)!important;line-height:.98!important;letter-spacing:-.04em!important;word-break:normal!important;hyphens:none!important}
+  .admin-page-header>div>p:not(.admin-kicker){margin:10px 0 0!important;color:#98a1af!important;font-size:.9rem!important;line-height:1.5!important}
+  .admin-page-header>.admin-status{justify-self:start!important}
+
+  .admin-metric-grid,.retention-metrics,.knowledge-metrics,.activity-metrics{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .admin-metric-card,.activity-metrics>.admin-panel.compact{min-width:0!important;min-height:116px!important;padding:13px!important;border:1px solid rgba(148,163,184,.13)!important;border-radius:14px!important;background:#0e131a!important;box-shadow:none!important}
+  .admin-metric-card p,.activity-metrics>.admin-panel.compact>p{display:flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#919aa8!important;font-size:.7rem!important;font-weight:750!important;line-height:1.25!important}
+  .admin-metric-card strong,.activity-metrics>.admin-panel.compact>strong{display:block!important;margin-top:10px!important;color:#f1f3f5!important;font-size:1.75rem!important;line-height:1!important}
+  .admin-metric-card>span,.activity-metrics>.admin-panel.compact>span{display:block!important;margin-top:7px!important;color:#7f8794!important;font-size:.66rem!important;line-height:1.35!important}
+
+  .retention-account{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important;align-items:start!important;padding:14px!important;border:1px solid rgba(148,163,184,.12)!important;border-radius:14px!important;background:#10151c!important}
+  .retention-account-main{display:grid!important;gap:10px!important;min-width:0!important}
+  .retention-account-heading{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:7px!important}
+  .retention-account-heading>strong{width:100%!important;color:#f3f4f6!important;font-size:.92rem!important}
+  .retention-account-main>span{display:block!important;color:#949ca9!important;font-size:.74rem!important;line-height:1.5!important;overflow-wrap:anywhere!important}
+  .retention-signals{display:grid!important;gap:7px!important;margin-top:2px!important}
+  .retention-signals .admin-list-row{padding:10px!important;border:1px solid rgba(148,163,184,.1)!important;border-radius:10px!important;background:rgba(255,255,255,.018)!important}
+  .retention-signals strong{display:block!important;margin-bottom:4px!important;font-size:.76rem!important}
+  .retention-signals span{font-size:.7rem!important;line-height:1.42!important}
+  .retention-recommendation{padding:10px 11px!important;border-radius:10px!important;background:rgba(139,92,246,.08)!important;color:#cfc5e8!important}
+  .retention-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;min-width:0!important}
+  .retention-actions .admin-button{min-width:0!important;min-height:40px!important;padding:8px!important;text-align:center!important;font-size:.7rem!important}
+
+  .knowledge-list{display:grid!important;gap:8px!important}
+  .knowledge-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important;align-items:start!important;padding:13px!important;border:1px solid rgba(148,163,184,.11)!important;border-radius:12px!important;background:#10151c!important}
+  .knowledge-row-copy{display:grid!important;gap:5px!important;min-width:0!important}
+  .knowledge-row-copy strong{color:#f0f2f5!important;font-size:.86rem!important;line-height:1.25!important}
+  .knowledge-row-copy span{color:#969eaa!important;font-size:.73rem!important;line-height:1.45!important;overflow-wrap:anywhere!important}
+  .knowledge-row-copy small{color:#6f7784!important;font-size:.65rem!important}
+  .knowledge-status{align-self:start!important;margin:0!important;padding:5px 8px!important;border:1px solid rgba(148,163,184,.12)!important;border-radius:999px!important;background:rgba(255,255,255,.025)!important;color:#b8c0cb!important;font-size:.63rem!important;font-style:normal!important;white-space:nowrap!important}
+
+  .activity-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  .activity-page .admin-list{display:grid!important;gap:7px!important}
+  .activity-page .admin-list-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:10px!important;align-items:center!important;padding:11px!important;border:1px solid rgba(148,163,184,.1)!important;border-radius:11px!important;background:#10151c!important;text-decoration:none!important}
+  .activity-page .admin-list-row>div{display:grid!important;gap:4px!important;min-width:0!important}
+  .activity-page .admin-list-row strong{color:#eef0f3!important;font-size:.78rem!important;line-height:1.25!important}
+  .activity-page .admin-list-row span{color:#8d96a4!important;font-size:.68rem!important;line-height:1.4!important;overflow-wrap:anywhere!important}
+  .activity-page .admin-list-row em{margin:0!important;color:#aaa2bd!important;font-size:.66rem!important;font-style:normal!important;white-space:nowrap!important}
+
+  .admin-empty{margin:0!important;padding:14px!important;border:1px dashed rgba(148,163,184,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.015)!important;color:#858e9c!important;font-size:.76rem!important;line-height:1.45!important}
+}
+
+@media(max-width:390px){
+  .admin-metric-grid,.retention-metrics,.knowledge-metrics,.activity-metrics{grid-template-columns:1fr!important}
+  .retention-actions{grid-template-columns:1fr!important}
+  .knowledge-row{grid-template-columns:minmax(0,1fr)!important}
+  .knowledge-status{justify-self:start!important}
+}

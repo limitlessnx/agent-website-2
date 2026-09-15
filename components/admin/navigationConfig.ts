@@ -19,71 +19,70 @@ export type AdminNavGroup = {
 
 /**
  * Canonical navigation inventory for the Fluxknight admin dashboard.
+ *
+ * The dashboard is one platform with many organization workspaces. Routes are
+ * preserved, but navigation is grouped by operator intent rather than by the
+ * historical implementation phases that created each page.
  */
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
-    id: "fluxknight-core",
-    label: "Fluxknight Platform",
+    id: "overview",
+    label: "Overview",
     sections: [{
       items: [
         { href: "/dashboard", label: "Command Center", exact: true },
-        { href: "/dashboard/control-center", label: "Lifecycle Control Center" },
-        { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
-        { href: "/dashboard/support", label: "Agent Leo AI Support" },
-        { href: "/dashboard/notifications", label: "Admin Notifications" },
-        { href: "/dashboard/health", label: "Customer Health" },
-        { href: "/dashboard/value", label: "Usage & Value" },
-        { href: "/dashboard/expansion", label: "Growth Opportunities" },
-        { href: "/dashboard/retention", label: "Retention Risk" },
-        { href: "/dashboard/evaluations", label: "Evaluation Leads" },
-        { href: "/dashboard/agents", label: "Super Assistant" },
-        { href: "/dashboard/social", label: "Social AI" },
-        { href: "/dashboard/activity", label: "Global Activity" },
       ],
     }],
   },
   {
-    id: "home-agents",
-    label: "Home Agents",
-    sections: [
-      {
-        label: "Limitless Realty",
-        items: [
-          { href: "/dashboard/limitless/leads", label: "Leads" },
-          { href: "/dashboard/limitless/daily-briefs", label: "Daily Briefs" },
-          { href: "/dashboard/limitless/followups", label: "Follow-ups" },
-          { href: "/dashboard/limitless/properties", label: "Properties" },
-          { href: "/dashboard/limitless/media", label: "Knowledge & Media" },
-          { href: "/dashboard/limitless/campaigns", label: "Campaigns" },
-          { href: "/dashboard/limitless/agentic", label: "Agentic Systems" },
-          { href: "/dashboard/workflows", label: "Workflows" },
-          { href: "/dashboard/limitless/payments", label: "Payments" },
-        ],
-      },
-      {
-        label: "Gencouv",
-        items: [
-          { href: "/dashboard/gencouv", label: "Overview", exact: true },
-          { href: "/dashboard/gencouv#email-control", label: "Email Control" },
-          { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox" },
-          { href: "/dashboard/gencouv#lead-board", label: "Lead Board" },
-          { href: "/dashboard/gencouv#sequence-status", label: "Sequence Status" },
-          { href: "/dashboard/gencouv#acquisition", label: "Acquisition" },
-          { href: "/dashboard/gencouv#operations", label: "Operations" },
-        ],
-      },
-    ],
+    id: "operations",
+    label: "Operations",
+    sections: [{
+      items: [
+        { href: "/dashboard/control-center", label: "Lifecycle Control" },
+        { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
+        { href: "/dashboard/workflows", label: "Automations" },
+        { href: "/dashboard/agents", label: "Agents" },
+        { href: "/dashboard/social", label: "Social" },
+        { href: "/dashboard/activity", label: "Activity" },
+      ],
+    }],
   },
   {
-    id: "platform-governance",
-    label: "Platform Governance",
+    id: "customers",
+    label: "Customers",
+    sections: [{
+      items: [
+        { href: "/dashboard/health", label: "Customer Health" },
+        { href: "/dashboard/retention", label: "Retention" },
+        { href: "/dashboard/expansion", label: "Growth" },
+        { href: "/dashboard/value", label: "Usage & Value" },
+        { href: "/dashboard/evaluations", label: "Evaluation Leads" },
+      ],
+    }],
+  },
+  {
+    id: "workspaces",
+    label: "Workspaces",
+    sections: [{
+      items: [
+        { href: "/dashboard/limitless/leads", label: "Limitless Realty" },
+        { href: "/dashboard/gencouv", label: "Gencouv", exact: true },
+        { href: "/dashboard/clients", label: "Client Workspaces", exact: true },
+        { href: "/dashboard/onboarding#new-client", label: "Add Workspace" },
+      ],
+    }],
+  },
+  {
+    id: "platform",
+    label: "Platform",
     sections: [{
       items: [
         { href: "/dashboard/billing", label: "Billing & Credits" },
-        { href: "/dashboard/ai-models", label: "AI Model Control" },
-        { href: "/dashboard/knowledge", label: "Knowledge Center" },
-        { href: "/dashboard/memory", label: "Memory Center" },
-        { href: "/dashboard/settings", label: "Platform Settings" },
+        { href: "/dashboard/knowledge", label: "Knowledge" },
+        { href: "/dashboard/ai-models", label: "AI Models" },
+        { href: "/dashboard/memory", label: "Memory" },
+        { href: "/dashboard/settings", label: "Settings" },
       ],
     }],
   },
@@ -133,8 +132,7 @@ export function isAdminNavItemActive(pathname: string, href: string, exact = fal
 }
 
 export function getActiveAdminNavGroup(pathname: string) {
-  const groups = [...ADMIN_NAV_GROUPS, CLIENT_ONBOARDING_NAV]
-  return groups.find((group) =>
+  return ADMIN_NAV_GROUPS.find((group) =>
     group.sections.some((section) =>
       section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact)),
     ),

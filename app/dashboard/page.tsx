@@ -4,6 +4,7 @@ import { resolveLeoIdentity } from "@/lib/leo-core";
 import { buildLeoBusinessCommandCenter, compactLeoBusinessCommandCenter } from "@/lib/leo-business-command-center";
 import LeoOverview from "@/components/admin/LeoOverview";
 import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
+import CommandCenterExpansion from "@/components/admin/CommandCenterExpansion";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,49 @@ export default async function DashboardPage() {
     ...pendingClients.slice(0, 3).map((client) => ({ title: "Client workspace needs attention", detail: client.business_name || client.business_email || "Client organization requires review", href: "/dashboard/clients", type: "platform" })),
   ].slice(0, 6);
 
+  const topRecommendation = commandCenter?.recommendations?.[0];
+  const leoSummary = commandCenter
+    ? commandCenter.status === "healthy"
+      ? "Leo sees no critical operating issue in the current evidence."
+      : `${commandCenter.priorityRisks.length} operating signal${commandCenter.priorityRisks.length === 1 ? "" : "s"} currently need attention.`
+    : "Leo does not have enough connected evidence to produce a complete operating brief.";
+
   return (
     <main className="admin-page">
       <BusinessCommandCenterPanel snapshot={commandCenter} />
+      <CommandCenterExpansion
+        pulse={{
+          leads: leads.length,
+          conversations: null,
+          conversions: null,
+          activeClients: liveClients.length,
+          aiResolutions: null,
+          valueGenerated: null,
+          creditsUsed: null,
+        }}
+        workforce={[
+          {
+            name: "Leo",
+            role: "Operations intelligence",
+            state: systemHealth === "Critical" || systemHealth === "Attention" ? "attention" : "active",
+            note: identity ? "context connected" : "limited context",
+          },
+        ]}
+        health={[
+          { name: "Supabase", state: supabase.ready ? "operational" : "attention", note: supabase.ready ? "connected" : "readiness issue" },
+          { name: "n8n", state: automationStatus.error ? "attention" : "operational", note: automationStatus.error ? "status unavailable" : "connected" },
+          { name: "WhatsApp", state: "unknown", note: "not summarized on this view" },
+          { name: "Email", state: "unknown", note: "not summarized on this view" },
+          { name: "Voice", state: "unknown", note: "not summarized on this view" },
+          { name: "Trigger.dev", state: "unknown", note: "not summarized on this view" },
+          { name: "Payments", state: "unknown", note: "not summarized on this view" },
+        ]}
+        leo={{
+          summary: leoSummary,
+          recommendation: topRecommendation?.title || "Review the operating signals before taking action.",
+          requiresApproval: topRecommendation?.requiresApproval ?? false,
+        }}
+      />
       <LeoOverview
         newLeads={newLeads.length}
         clients={clients.map((client) => ({ id: client.id, business_name: client.business_name, business_email: client.business_email, status: client.status }))}
