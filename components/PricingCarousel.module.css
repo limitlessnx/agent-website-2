@@ -147,42 +147,94 @@
 @media(max-width:640px){
   .desktopControls{display:none}
   .carousel::before{display:none}
-  .track{gap:10px;padding:8px 14px 18px;scroll-padding-inline:14px;align-items:flex-start}
-  .card{flex-basis:calc(100vw - 28px);padding:14px 14px 16px;border-radius:16px;opacity:.58;transform:none}
+  .track{
+    gap:12px;
+    padding:6px max(18px,calc((100vw - min(91vw,354px))/2)) 16px;
+    scroll-padding-inline:max(18px,calc((100vw - min(91vw,354px))/2));
+    align-items:flex-start;
+  }
+  .card{
+    flex-basis:min(91vw,354px);
+    padding:12px 12px 14px;
+    border-radius:15px;
+    opacity:.5;
+    transform:none;
+  }
   .card:hover,.card.active{transform:none}
   .card.active{opacity:1}
-  .mobileControls{position:relative;z-index:6;display:grid;gap:9px;margin:0 0 14px;padding:10px;border:1px solid rgba(192,132,252,.18);border-radius:12px;background:rgba(9,4,16,.56);box-shadow:inset 0 1px rgba(255,255,255,.025)}
-  .mobileControlTopline{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .mobileControlTopline>div:first-child{display:grid;gap:2px}
-  .mobilePlanCount{color:#d8cde2;font-size:.62rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
-  .mobileControlTopline small{color:#796f83;font-size:.58rem}
-  .mobileControlTopline .arrowControls button{width:32px;height:32px;border-radius:9px}
-  .mobileControlGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;align-items:end}
-  .mobileControlGrid .regionSwitch{width:100%;margin:0;display:grid;grid-template-columns:1fr 1fr;padding:2px;border-radius:9px}
-  .mobileControlGrid .regionSwitch button{min-height:35px;padding:4px 5px;font-size:.51rem;letter-spacing:.035em}
-  .mobileControlGrid .durationField{width:100%;gap:4px}
-  .mobileControlGrid .durationLabel{font-size:.49rem;letter-spacing:.07em}
-  .mobileControlGrid .durationSelect{min-height:39px;padding-left:9px;padding-right:26px;border-radius:9px;font-size:.61rem}
-  .mobileControlGrid .durationCaret{right:9px;font-size:.82rem}
-  .cardHeader{min-height:16px}
-  .icon{position:relative;left:auto;top:auto;width:42px;height:42px;transform:none;margin:0 auto 7px;border-radius:11px}
-  .badge{position:absolute;right:0;top:0;padding:5px 7px;font-size:.47rem}
+
+  .mobileControls{
+    position:relative;
+    z-index:6;
+    display:grid;
+    gap:7px;
+    margin:0 0 10px;
+    padding:8px;
+    border:1px solid rgba(192,132,252,.16);
+    border-radius:10px;
+    background:rgba(9,4,16,.5);
+    box-shadow:inset 0 1px rgba(255,255,255,.02);
+  }
+  .mobileControlTopline{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .mobileControlTopline>div:first-child{display:grid;gap:1px}
+  .mobilePlanCount{color:#d8cde2;font-size:.58rem;font-weight:750;letter-spacing:.075em;text-transform:uppercase}
+  .mobileControlTopline small{color:#776b81;font-size:.53rem}
+  .mobileControlTopline .arrowControls{gap:5px}
+  .mobileControlTopline .arrowControls button{width:28px;height:28px;border-radius:8px}
+
+  .mobileControlGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:end}
+  .mobileControlGrid .regionSwitch{width:100%;margin:0;display:grid;grid-template-columns:1fr 1fr;padding:2px;border-radius:8px}
+  .mobileControlGrid .regionSwitch button{min-height:31px;padding:3px 4px;font-size:.47rem;letter-spacing:.025em}
+  .mobileControlGrid .durationField{width:100%;gap:3px}
+  .mobileControlGrid .durationLabel{font-size:.45rem;letter-spacing:.06em}
+  .mobileControlGrid .durationSelect{min-height:35px;padding-left:8px;padding-right:22px;border-radius:8px;font-size:.55rem}
+  .mobileControlGrid .durationCaret{right:8px;font-size:.72rem}
+
+  .cardHeader{min-height:12px}
+  .icon{position:relative;left:auto;top:auto;width:38px;height:38px;transform:none;margin:0 auto 5px;border-radius:10px}
+  .badge{position:absolute;right:0;top:0;padding:4px 6px;font-size:.42rem;letter-spacing:.06em}
   .badgeSpacer{min-height:0}
-  .card h3{margin:3px 0 6px;font-size:1.55rem}
-  .description{font-size:.71rem;line-height:1.45}
-  .planNote{margin-top:9px;padding:9px}
-  .decisionBlock{margin-top:9px;padding-top:9px}
+  .card h3{margin:2px 0 4px;font-size:1.42rem;line-height:1}
+  .description{font-size:.64rem;line-height:1.35;max-width:30rem;margin-inline:auto}
+
+  .planNote{margin-top:7px;padding:7px 8px;border-radius:9px;gap:2px}
+  .planNote>span{font-size:.45rem;letter-spacing:.06em}
+  .planNote strong{font-size:.73rem}
+  .planNote small{font-size:.54rem;line-height:1.25}
+
+  .decisionBlock{margin-top:7px;padding-top:7px}
   .decisionBlock p{display:none}
-  .decisionBlock strong{font-size:.65rem;line-height:1.35}
-  .priceBlock{gap:7px;margin:10px 0 12px;padding:11px 0}
-  .priceBlock strong{font-size:1.16rem}
-  .priceBlock>div+div strong{font-size:.78rem}
-  .card h4{margin-bottom:8px;font-size:.53rem}
-  .features{grid-template-columns:1fr 1fr;gap:6px 8px;margin-bottom:13px}
-  .features span{font-size:.61rem;line-height:1.27;gap:5px}
-  .features svg{width:12px;height:12px}
-  .cta,.secondaryCta{min-height:40px;font-size:.61rem}
-  .compact .card{flex-basis:calc(100vw - 28px);padding:14px}
+  .decisionBlock strong{font-size:.59rem;line-height:1.25}
+
+  .priceBlock{gap:6px;margin:8px 0 9px;padding:9px 0}
+  .priceBlock span{font-size:.47rem;letter-spacing:.06em}
+  .priceBlock strong{font-size:1.02rem;margin-top:2px}
+  .priceBlock>div+div strong{font-size:.7rem}
+  .termValue{padding-top:7px}
+  .termValue strong{font-size:.78rem!important}
+  .termValue small{font-size:.5rem}
+
+  .card h4{margin-bottom:6px;font-size:.48rem;letter-spacing:.08em}
+  .features{grid-template-columns:1fr 1fr;gap:5px 7px;margin-bottom:10px}
+  .features span{font-size:.56rem;line-height:1.18;gap:4px}
+  .features svg{width:11px;height:11px;margin-top:0}
+
+  .ctaStack{gap:6px}
+  .cta,.secondaryCta{min-height:36px;border-radius:9px;font-size:.56rem;letter-spacing:.04em}
+  .dots{gap:6px;margin-top:0}
+  .dot,.dotActive{width:6px;height:6px}
+  .dotActive{width:20px}
+  .compact .card{flex-basis:min(91vw,354px);padding:12px}
+}
+
+@media(max-width:390px){
+  .track{padding-inline:max(14px,calc((100vw - min(92vw,340px))/2));scroll-padding-inline:max(14px,calc((100vw - min(92vw,340px))/2))}
+  .card{flex-basis:min(92vw,340px)}
+  .mobileControlGrid{grid-template-columns:1fr}
+  .mobileControlGrid .regionSwitch{max-width:none}
+  .features{gap:5px 6px}
+  .features span{font-size:.54rem}
+  .compact .card{flex-basis:min(92vw,340px)}
 }
 
 @media(prefers-reduced-motion:reduce){.card,.cta,.secondaryCta,.dot,.dotActive,.arrowControls button{transition:none}}
