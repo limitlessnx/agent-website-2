@@ -7,10 +7,7 @@ export default function MobileAdminHeader() {
   return (
     <header className={styles.header} aria-label="Fluxknight mobile header">
       <FluxknightLogo className={styles.logo} />
-      <div className={styles.scope}>
-        <span>Admin</span>
-        <strong>Fluxknight</strong>
-      </div>
+      <span className={styles.context}>Operations</span>
     </header>
   );
 }
