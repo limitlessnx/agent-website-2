@@ -20,6 +20,10 @@
 # production
 /build
 
+# local deployment caches
+.deploy/
+**/.deploy/
+
 # misc
 .DS_Store
 *.pem

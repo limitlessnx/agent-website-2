@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSupabaseReadiness } from "@/lib/limitless-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 import WorkflowRegistryClient from "@/app/dashboard/automations/WorkflowRegistryClient";
@@ -48,6 +49,16 @@ export default async function SettingsPage() {
           {supabase.ready ? "Database live" : "Database schema pending"}
         </span>
       </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Platform Integrations</h2>
+            <p>Connect Meta and future social platforms to Fluxknight from the dashboard.</p>
+          </div>
+          <Link href="/dashboard/settings/integrations" className="admin-btn primary">Open Integrations</Link>
+        </div>
+      </section>
 
       <section className="admin-panel">
         <div className="admin-panel-header">
