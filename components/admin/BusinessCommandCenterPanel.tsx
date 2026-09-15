@@ -1,4 +1,3 @@
-import Link from "next/link";
 import styles from "./BusinessCommandCenterPanel.module.css";
 
 type Snapshot = {
@@ -55,7 +54,6 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
         <article className={`${styles.panel} ${styles.priorityPanel}`}>
           <header>
             <div><span>NEEDS ATTENTION</span><h2>What requires review</h2><p>Highest-priority signals from the current operating state.</p></div>
-            <Link href="/dashboard/activity">View activity</Link>
           </header>
           <div className={styles.list}>
             {snapshot.priorityRisks.slice(0, 4).map((risk) => (
