@@ -78,12 +78,12 @@ export default function ReferenceFluxHero() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }} className="flex items-start">
             <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 backdrop-blur-md">
               <Sparkles className="h-4 w-4 text-purple-400" strokeWidth={1.5} />
-              <span className="text-xs font-medium uppercase tracking-wide text-purple-300">AI-Powered Customer Operations</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-purple-300">AI-Powered Sales & Customer Operations</span>
             </div>
           </motion.div>
 
           <h1 className="text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl lg:text-7xl">
-            {["Grow your organization", "without growing", "the workload."].map((line, index) => (
+            {["Turn more leads", "into customers", "with AI."].map((line, index) => (
               <div key={line} className="overflow-hidden pb-1">
                 <motion.div
                   initial={{ y: "110%" }}
@@ -98,15 +98,15 @@ export default function ReferenceFluxHero() {
           </h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, delay: .72 }} className="max-w-md text-lg font-normal leading-relaxed text-neutral-400">
-            Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.
+            Fluxknight replies to leads, qualifies them, follows up, sends reminders, books appointments and keeps your team updated.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8, delay: .84 }} className="flex flex-col items-center gap-4 pt-2 sm:flex-row">
-            <Link href="/evaluation" className="group flex w-full items-center justify-center gap-2 rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-950 transition-all duration-300 hover:scale-[1.02] hover:bg-white hover:shadow-[0_4px_20px_rgba(255,255,255,0.15)] sm:w-auto">
-              Evaluate My Business <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <Link href="/pricing" className="group flex w-full items-center justify-center gap-2 rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-950 transition-all duration-300 hover:scale-[1.02] hover:bg-white hover:shadow-[0_4px_20px_rgba(255,255,255,0.15)] sm:w-auto">
+              See Pricing <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link href="#services" className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white backdrop-blur-md transition-all duration-300 hover:bg-white/10 sm:w-auto">
-              See What We Automate <PlayCircle className="h-5 w-5 text-neutral-300" />
+              Watch how it works <PlayCircle className="h-5 w-5 text-neutral-300" />
             </Link>
           </motion.div>
         </div>
