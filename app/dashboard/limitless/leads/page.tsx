@@ -26,16 +26,12 @@ export default async function LeadsPage({
   const saved = params.saved === "1";
 
   return (
-    <div className="admin-page">
+    <div className="admin-page limitless-lead-page">
       <section className="admin-hero-panel leads-hero-panel">
         <div>
           <p className="admin-kicker">Limitless Realty</p>
           <h1>Lead CRM</h1>
-          <p>Review names and lead status first. Expand a record only when you need the full profile or actions.</p>
-          <div className="admin-hero-actions">
-            <a href="#lead-control">Review pipeline</a>
-            <a href="#lead-tools">Add or import contacts</a>
-          </div>
+          <p>Review lead quality, follow-up state, and customer context from one operating view.</p>
         </div>
         <div className="admin-launch-score">
           <span>{hotLeads}</span>
@@ -65,7 +61,7 @@ export default async function LeadsPage({
         <LeadsCrm leads={leads} groups={groups} />
       </div>
 
-      <section id="lead-tools" className="admin-grid two">
+      <section id="lead-tools" className="admin-grid two lead-tools-grid">
         <details className="admin-form-disclosure">
           <summary>Add a contact <span className="admin-status warning">{undocumented} undocumented</span></summary>
           <div className="admin-form-disclosure-body">
