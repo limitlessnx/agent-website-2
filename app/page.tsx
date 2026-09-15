@@ -18,7 +18,7 @@ import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
-import ReferenceFluxHero from "@/components/home/ReferenceFluxHero";
+import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
 
 const automationPillars = [
   {
@@ -151,7 +151,7 @@ export default function HomePage() {
     <main className="quantix-home">
       <PublicLeoConsultant />
 
-      <ReferenceFluxHero />
+      <ReferenceFluxHeroPhase1 />
 
       <MaiaCaseStudyTeaser />
 
