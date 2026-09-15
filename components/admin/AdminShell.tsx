@@ -6,7 +6,6 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import WorkspaceRail from "@/components/admin/WorkspaceRail";
 import LeoFloatingButton from "@/components/admin/LeoFloatingButton";
 import ThemeToggle from "@/components/admin/ThemeToggle";
-import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import MobileAdminHeader from "@/components/admin/MobileAdminHeader";
 import MobileBottomNav from "@/components/admin/MobileBottomNav";
@@ -41,8 +40,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
                 <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
                 <AdminSearch />
                 <div className="admin-topbar-actions">
-                  <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
-                  <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
+                  <ThemeToggle />
                 </div>
               </header>
               <WorkspaceRail />
