@@ -1,98 +1,150 @@
-import { Bot, Building2, Database, Megaphone, Workflow } from "@/components/admin/ServerIcons";
+import { getAgentManagementSummary } from "@/lib/agent-management";
 import { getCampaignReports, getLeads, getN8nStatus, getProperties, getSupabaseReadiness } from "@/lib/limitless-data";
+import styles from "./ActivityTimeline.module.css";
 
 export const dynamic = "force-dynamic";
 
+type ActivityEvent = {
+  id: string;
+  kind: "agent" | "campaign" | "crm" | "data";
+  title: string;
+  detail: string;
+  state: string;
+  href: string;
+  timestamp: string | null;
+};
+
+function dateLabel(value: string | null) {
+  if (!value) return "Time unavailable";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Time unavailable";
+  return date.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function marker(kind: ActivityEvent["kind"]) {
+  return kind === "agent" ? "AI" : kind === "campaign" ? "CP" : kind === "crm" ? "CRM" : "DQ";
+}
+
 export default async function UnifiedActivityPage() {
-  const [leads, properties, campaigns, n8n, supabase] = await Promise.all([
-    getLeads(200),
-    getProperties(200),
-    getCampaignReports(50),
+  const [leads, properties, campaigns, n8n, supabase, agentSummary] = await Promise.all([
+    getLeads(120),
+    getProperties(120),
+    getCampaignReports(30),
     getN8nStatus(),
     getSupabaseReadiness(),
+    getAgentManagementSummary().catch(() => ({ configured: false, agents: [], projects: [], workflows: [], links: [] })),
   ]);
 
-  const recentCampaigns = campaigns.slice(0, 12);
-  const missingMedia = properties.filter((property) => !property.drive_photos_link).slice(0, 8);
-  const activeLeads = leads.filter((lead) => !["closed", "converted", "cold"].includes(String(lead.status || "").toLowerCase())).slice(0, 8);
+  const activeLeads = leads.filter((lead) => !["closed", "converted", "cold"].includes(String(lead.status || "").toLowerCase()));
+  const missingMedia = properties.filter((property) => !property.drive_photos_link);
+  const liveAgents = agentSummary.agents.filter((agent) => agent.status !== "draft");
+  const agentAttention = liveAgents.filter((agent) => ["paused", "disabled", "error"].includes(String(agent.status).toLowerCase())).length;
+
+  const events: ActivityEvent[] = [
+    ...agentSummary.agents.slice(0, 20).map((agent) => ({
+      id: `agent-${agent.id}`,
+      kind: "agent" as const,
+      title: `${agent.name} ${agent.status === "draft" ? "saved as draft" : "workforce status updated"}`,
+      detail: `${agent.agent_type || "Custom agent"} · ${Array.isArray(agent.communication_channels) && agent.communication_channels.length ? agent.communication_channels.map(String).join(" · ") : "No channels connected"}`,
+      state: String(agent.status || "unknown"),
+      href: "/dashboard/agents",
+      timestamp: agent.updated_at || agent.created_at || null,
+    })),
+    ...campaigns.slice(0, 20).map((campaign) => ({
+      id: `campaign-${campaign.id}`,
+      kind: "campaign" as const,
+      title: campaign.campaign_topic,
+      detail: `${campaign.accepted} sent · ${campaign.failed} failed · ${campaign.skipped} skipped`,
+      state: campaign.failed > 0 ? "attention" : "completed",
+      href: "/dashboard/limitless/campaigns",
+      timestamp: campaign.created_at || null,
+    })),
+    ...leads.slice(0, 20).map((lead) => ({
+      id: `lead-${lead.id}`,
+      kind: "crm" as const,
+      title: lead.name || "Unnamed lead",
+      detail: [lead.phone, lead.location_preference, lead.budget].filter(Boolean).join(" · ") || "CRM record updated",
+      state: lead.score || lead.status || "active",
+      href: "/dashboard/limitless/leads",
+      timestamp: lead.last_contacted_at || lead.last_follow_up_at || lead.created_at || null,
+    })),
+    ...missingMedia.slice(0, 12).map((property) => ({
+      id: `property-${property.id}`,
+      kind: "data" as const,
+      title: `${property.title} needs media`,
+      detail: [property.location_area, property.location_city].filter(Boolean).join(", ") || "Property media link is missing",
+      state: "attention",
+      href: "/dashboard/limitless/media",
+      timestamp: property.created_at || null,
+    })),
+  ].sort((a, b) => {
+    const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+    const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+    return bTime - aTime;
+  });
 
   return (
-    <main className="admin-page activity-page">
-      <header className="admin-page-header">
+    <main className={`admin-page ${styles.page}`}>
+      <header className={`admin-page-header ${styles.hero}`}>
         <div>
           <p className="admin-kicker">Operations</p>
-          <h1>Activity Center</h1>
-          <p>Recent CRM, campaign, workflow and data-quality activity in one place.</p>
+          <h1>Activity</h1>
+          <p>One operational timeline for AI workforce changes, customer activity, campaign delivery and records that need attention.</p>
         </div>
-        <span className={supabase.ready && !n8n.error ? "admin-status live" : "admin-status warning"}>
-          {supabase.ready && !n8n.error ? "Platform operational" : "Review required"}
-        </span>
+        <div className={styles.heroStatus}>
+          <strong>{supabase.ready && !n8n.error ? "Operational" : "Review required"}</strong>
+          <span>{agentAttention ? `${agentAttention} agent state${agentAttention === 1 ? "" : "s"} need attention` : "No agent alerts"}</span>
+        </div>
       </header>
 
-      <div className="admin-grid four activity-metrics">
-        <section className="admin-panel compact"><p>Active CRM records</p><strong>{activeLeads.length}</strong><span className="admin-muted">Visible activity sample</span></section>
-        <section className="admin-panel compact"><p>Recent campaigns</p><strong>{recentCampaigns.length}</strong><span className="admin-muted">Delivery reports</span></section>
-        <section className="admin-panel compact"><p>Workflow inventory</p><strong>{n8n.workflows.length}</strong><span className="admin-muted">{n8n.activeWorkflows} active</span></section>
-        <section className="admin-panel compact"><p>Media actions</p><strong>{missingMedia.length}</strong><span className="admin-muted">Visible missing records</span></section>
-      </div>
+      <section className={styles.summary} aria-label="Activity summary">
+        <div><span>Live agents</span><strong>{liveAgents.length}</strong></div>
+        <div><span>Active CRM records</span><strong>{activeLeads.length}</strong></div>
+        <div><span>Active workflows</span><strong>{n8n.activeWorkflows}</strong></div>
+        <div><span>Data actions</span><strong>{missingMedia.length}</strong></div>
+      </section>
 
-      <div className="admin-grid two activity-grid">
-        <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Campaign Activity</h2><p>Recent Maia outbound operations.</p></div><Megaphone size={18} /></div>
-          <div className="admin-list">
-            {recentCampaigns.map((campaign) => (
-              <a href="/dashboard/limitless/campaigns" className="admin-list-row compact" key={campaign.id}>
-                <div><strong>{campaign.campaign_topic}</strong><span>{campaign.accepted} sent · {campaign.failed} failed · {campaign.skipped} skipped</span></div>
-                <em>{campaign.attempted}</em>
+      <section className={styles.layout}>
+        <article className={styles.timelinePanel}>
+          <header className={styles.panelHeader}>
+            <div>
+              <p className="admin-kicker">Operational timeline</p>
+              <h2>Recent changes</h2>
+              <p>Important AI, CRM, campaign and data-quality events ordered by the latest available timestamp.</p>
+            </div>
+            <span>{events.length} events</span>
+          </header>
+          <div className={styles.timeline}>
+            {events.length ? events.slice(0, 40).map((event) => (
+              <a href={event.href} key={event.id} className={styles.event}>
+                <span className={styles.marker}>{marker(event.kind)}</span>
+                <div className={styles.eventBody}><strong>{event.title}</strong><span>{event.detail}</span></div>
+                <div className={styles.eventMeta}><span>{event.state}</span><small>{dateLabel(event.timestamp)}</small></div>
               </a>
-            ))}
-            {!recentCampaigns.length ? <p className="admin-empty">No campaign activity is visible yet.</p> : null}
+            )) : <div className="admin-empty-state"><strong>No recent activity</strong><span>Meaningful operational changes will appear here as the platform runs.</span></div>}
           </div>
-        </section>
+        </article>
 
-        <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Workflow Activity</h2><p>Automation operational state.</p></div><Workflow size={18} /></div>
-          <div className="admin-list">
-            {n8n.workflows.slice(0, 12).map((workflow) => (
-              <a href="/dashboard/workflows" className="admin-list-row compact" key={workflow.id}>
+        <aside className={styles.secondaryPanel}>
+          <header className={styles.panelHeader}>
+            <div>
+              <p className="admin-kicker">Automation state</p>
+              <h2>Workflow inventory</h2>
+              <p>Current n8n workflow state remains visible without becoming a second activity dashboard.</p>
+            </div>
+            <span>{n8n.workflows.length} total</span>
+          </header>
+          <div className={styles.secondaryList}>
+            {n8n.workflows.slice(0, 16).map((workflow) => (
+              <a href="/dashboard/workflows" className={styles.secondaryRow} key={workflow.id}>
                 <div><strong>{workflow.name}</strong><span>{workflow.id}</span></div>
-                <em className={workflow.active ? "good" : "muted"}>{workflow.active ? "active" : "off"}</em>
+                <em data-state={workflow.active ? "active" : "off"}>{workflow.active ? "active" : "off"}</em>
               </a>
             ))}
-            {!n8n.workflows.length ? <p className="admin-empty">No workflow activity returned from the automation engine.</p> : null}
+            {!n8n.workflows.length ? <div className="admin-empty-state"><strong>No workflow inventory</strong><span>The automation engine did not return any workflows.</span></div> : null}
           </div>
-        </section>
-      </div>
-
-      <div className="admin-grid two activity-grid">
-        <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>CRM Activity</h2><p>Active Limitless Realty leads.</p></div><Bot size={18} /></div>
-          <div className="admin-list">
-            {activeLeads.map((lead) => (
-              <a href="/dashboard/limitless/leads" className="admin-list-row compact" key={lead.id}>
-                <div><strong>{lead.name || "Unnamed lead"}</strong><span>{[lead.phone, lead.location_preference, lead.budget].filter(Boolean).join(" · ")}</span></div>
-                <em>{lead.score || lead.status || "active"}</em>
-              </a>
-            ))}
-            {!activeLeads.length ? <p className="admin-empty">No active CRM activity is visible yet.</p> : null}
-          </div>
-        </section>
-
-        <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Data Quality</h2><p>Records requiring organization action.</p></div><Database size={18} /></div>
-          <div className="admin-list">
-            {missingMedia.map((property) => (
-              <a href="/dashboard/limitless/media" className="admin-list-row compact" key={property.id}>
-                <div><strong>{property.title}</strong><span>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "Location not saved"}</span></div>
-                <em>media</em>
-              </a>
-            ))}
-            {!missingMedia.length ? (
-              <div className="admin-list-row compact"><div><strong>Property media healthy</strong><span>No missing image links found in the visible catalog.</span></div><Building2 size={17} /></div>
-            ) : null}
-          </div>
-        </section>
-      </div>
+        </aside>
+      </section>
     </main>
   );
 }
