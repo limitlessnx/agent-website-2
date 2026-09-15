@@ -1,0 +1,378 @@
+.page{
+  gap:14px!important;
+}
+
+.hero{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:end!important;
+  gap:24px!important;
+}
+
+.hero>div:first-child{
+  max-width:760px;
+}
+
+.hero p:not(:first-child){
+  max-width:680px;
+  margin:8px 0 0;
+  line-height:1.55;
+}
+
+.heroStatus{
+  min-width:138px;
+  text-align:right;
+}
+
+.heroStatus strong{
+  display:block;
+  color:#f1f3f6;
+  font-size:2rem;
+  line-height:1;
+  font-weight:760;
+  letter-spacing:-.045em;
+}
+
+.heroStatus span{
+  display:block;
+  margin-top:6px;
+  color:#8f97a5;
+  font-size:.66rem;
+  font-weight:750;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:1px;
+  overflow:hidden;
+  border:1px solid rgba(143,151,165,.14);
+  border-radius:12px;
+  background:rgba(143,151,165,.14);
+}
+
+.summary>div{
+  min-height:78px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+  padding:14px 16px;
+  background:#0e1218;
+}
+
+.summary span{
+  color:#8f97a5;
+  font-size:.66rem;
+  font-weight:700;
+}
+
+.summary strong{
+  color:#f1f3f6;
+  font-size:1.4rem;
+  line-height:1;
+  font-weight:760;
+  letter-spacing:-.035em;
+}
+
+.operatingGrid{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);
+  gap:12px;
+}
+
+.primaryPanel,
+.conversationPanel,
+.pipelinePanel{
+  overflow:hidden;
+  border:1px solid rgba(143,151,165,.14);
+  border-radius:12px;
+  background:#0e1218;
+}
+
+.panelHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding:16px 18px;
+  border-bottom:1px solid rgba(143,151,165,.12);
+}
+
+.panelHeader h2{
+  margin:3px 0 0;
+  color:#f1f3f6;
+  font-size:1rem;
+  font-weight:730;
+  letter-spacing:-.02em;
+}
+
+.panelHeader p:not(:first-child){
+  max-width:560px;
+  margin:5px 0 0;
+  color:#8f97a5;
+  font-size:.7rem;
+  line-height:1.5;
+}
+
+.panelHeader>span{
+  flex:0 0 auto;
+  margin-top:2px;
+  padding:5px 8px;
+  border:1px solid rgba(143,151,165,.14);
+  border-radius:999px;
+  background:#11161d;
+  color:#aab1bb;
+  font-size:.62rem;
+  font-weight:750;
+}
+
+.customerList,
+.conversationList,
+.leadList{
+  display:grid;
+}
+
+.customerRow,
+.conversationRow,
+.leadRow{
+  border-bottom:1px solid rgba(143,151,165,.10);
+}
+
+.customerRow:last-child,
+.conversationRow:last-child,
+.leadRow:last-child{
+  border-bottom:0;
+}
+
+.customerRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  min-height:66px;
+  padding:11px 18px;
+}
+
+.identity{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+
+.identity strong,
+.conversationRow strong,
+.leadRow strong{
+  min-width:0;
+  overflow:hidden;
+  color:#e8ebef;
+  font-size:.76rem;
+  font-weight:720;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.identity span,
+.conversationRow>div:first-child span{
+  overflow:hidden;
+  color:#7f8895;
+  font-size:.67rem;
+  line-height:1.35;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.rowMeta{
+  display:grid;
+  justify-items:end;
+  gap:5px;
+}
+
+.rowMeta>span,
+.conversationState>span{
+  padding:4px 7px;
+  border:1px solid rgba(143,151,165,.13);
+  border-radius:999px;
+  background:#11161d;
+  color:#c2c8d0;
+  font-size:.59rem;
+  font-weight:760;
+  text-transform:capitalize;
+}
+
+.rowMeta small,
+.conversationState small,
+.leadRow small{
+  color:#69727e;
+  font-size:.6rem;
+}
+
+.rowMeta>span[data-status="active"]{
+  color:#35d48a;
+}
+
+.rowMeta>span[data-status="suspended"],
+.rowMeta>span[data-status="inactive"]{
+  color:#f5b140;
+}
+
+.conversationRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  min-height:66px;
+  padding:11px 16px;
+}
+
+.conversationRow>div:first-child{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+
+.conversationState{
+  display:grid;
+  justify-items:end;
+  gap:5px;
+}
+
+.conversationState>span[data-priority="high"]{
+  color:#f5b140;
+}
+
+.conversationState>span[data-priority="critical"]{
+  color:#f43f5e;
+}
+
+.pipelinePanel{
+  min-width:0;
+}
+
+.leadRow{
+  display:grid;
+  grid-template-columns:minmax(220px,1.4fr) minmax(110px,.6fr) minmax(110px,.6fr) minmax(110px,.6fr);
+  align-items:center;
+  gap:12px;
+  min-height:52px;
+  padding:10px 18px;
+}
+
+.leadRow>span{
+  color:#aeb5bf;
+  font-size:.66rem;
+  text-transform:capitalize;
+}
+
+.customerList :global(.admin-empty-state),
+.conversationList :global(.admin-empty-state),
+.leadList :global(.admin-empty-state){
+  margin:14px;
+}
+
+@media(max-width:980px){
+  .operatingGrid{
+    grid-template-columns:1fr;
+  }
+
+  .conversationPanel{
+    order:-1;
+  }
+}
+
+@media(max-width:700px){
+  .page{
+    gap:10px!important;
+  }
+
+  .hero{
+    grid-template-columns:1fr!important;
+    align-items:start!important;
+    gap:12px!important;
+  }
+
+  .heroStatus{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    min-width:0;
+    text-align:left;
+  }
+
+  .heroStatus strong{
+    font-size:1.45rem;
+  }
+
+  .heroStatus span{
+    margin:0;
+  }
+
+  .summary{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .summary>div{
+    min-height:68px;
+    padding:12px 13px;
+  }
+
+  .summary strong{
+    font-size:1.22rem;
+  }
+
+  .panelHeader{
+    padding:14px;
+  }
+
+  .panelHeader p:not(:first-child){
+    font-size:.67rem;
+  }
+
+  .customerRow,
+  .conversationRow{
+    padding:11px 14px;
+  }
+
+  .leadRow{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:5px 10px;
+    padding:11px 14px;
+  }
+
+  .leadRow strong{
+    grid-column:1/2;
+  }
+
+  .leadRow>span:first-of-type{
+    grid-column:2/3;
+    grid-row:1;
+    text-align:right;
+  }
+
+  .leadRow>span:nth-of-type(2){
+    grid-column:1/2;
+    grid-row:2;
+  }
+
+  .leadRow small{
+    grid-column:2/3;
+    grid-row:2;
+    text-align:right;
+  }
+}
+
+@media(max-width:390px){
+  .customerRow,
+  .conversationRow{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .rowMeta,
+  .conversationState{
+    grid-auto-flow:column;
+    justify-content:start;
+    justify-items:start;
+  }
+}
