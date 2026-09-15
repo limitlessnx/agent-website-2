@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Globe2, Mail } from "@/components/admin/ServerIcons";
 import FluxLogo from "@/components/FluxLogo";
@@ -10,6 +13,8 @@ const groups = [
 ];
 
 export default function Footer() {
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+
   return (
     <footer className={styles.footer}>
       <div className={styles.shell}>
@@ -33,14 +38,29 @@ export default function Footer() {
         </div>
 
         <nav className={styles.mobileNav} aria-label="Footer navigation">
-          {groups.map((group) => (
-            <details key={group.title} className={styles.accordion}>
-              <summary>{group.title}</summary>
-              <div className={styles.accordionLinks}>
-                {group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
-              </div>
-            </details>
-          ))}
+          {groups.map((group) => {
+            const isOpen = openGroup === group.title;
+            const panelId = `footer-${group.title.toLowerCase()}`;
+            return (
+              <section key={group.title} className={`${styles.accordion} ${isOpen ? styles.accordionOpen : ""}`}>
+                <button
+                  type="button"
+                  className={styles.accordionTrigger}
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => setOpenGroup(isOpen ? null : group.title)}
+                >
+                  <span>{group.title}</span>
+                  <span className={styles.accordionIcon} aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                </button>
+                <div id={panelId} className={styles.accordionPanel} hidden={!isOpen}>
+                  <div className={styles.accordionLinks}>
+                    {group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
         </nav>
 
         <div className={styles.bottom}>
