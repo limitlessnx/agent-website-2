@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
 
 const COOKIE = "__Host-flux_meta_oauth_state";
 type Json = Record<string, unknown>;
@@ -14,7 +15,7 @@ type MetaPage = {
 };
 
 function back(request: Request, key: "meta" | "error", value: string) {
-  const url = new URL("/dashboard/settings/integrations", request.url);
+  const url = new URL("/dashboard/social/integrations", request.url);
   url.searchParams.set(key, value);
   return NextResponse.redirect(url);
 }
@@ -48,11 +49,13 @@ export async function GET(request: Request) {
       return back(request, "error", "Meta authorization state was invalid or expired");
     }
 
-    const appId = process.env.META_APP_ID;
-    const appSecret = process.env.META_APP_SECRET;
+    const organization = await getFluxknightOrganization();
+    const storedCredentials = await getMetaCredentials(organization.id);
+    const appId = String(storedCredentials?.app_id || "");
+    const appSecret = String(storedCredentials?.app_secret || "");
     if (!appId || !appSecret) return back(request, "error", "Meta app credentials are not configured");
 
-    const apiVersion = process.env.META_GRAPH_API_VERSION || "v24.0";
+    const apiVersion = String(storedCredentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
     const redirectUri = new URL("/api/integrations/meta/callback", request.url).toString();
 
     const shortTokenUrl = new URL(`https://graph.facebook.com/${apiVersion}/oauth/access_token`);
@@ -81,17 +84,9 @@ export async function GET(request: Request) {
     const selected = pages.find((page) => page.instagram_business_account?.id) || pages[0];
     if (!selected?.id) throw new Error("No Facebook Page is available to this Meta account.");
 
-    const admin = createAdminClient();
-    const { data: organization, error: organizationError } = await admin
-      .from("organizations")
-      .select("id")
-      .eq("slug", "fluxknight")
-      .maybeSingle();
-    if (organizationError) throw organizationError;
-    if (!organization?.id) throw new Error("Fluxknight organization was not found.");
-
     const pageToken = selected.access_token || userAccessToken;
     const configuration = {
+      app_id: appId,
       page_id: selected.id,
       page_name: selected.name || null,
       instagram_business_account_id: selected.instagram_business_account?.id || null,
@@ -100,12 +95,17 @@ export async function GET(request: Request) {
       oauth_connected_at: new Date().toISOString(),
     };
 
-    const rpcAdmin = admin as any;
-    const { error: storeError } = await rpcAdmin.rpc("store_organization_integration_credentials", {
+    const admin = createAdminClient() as any;
+    const { error: storeError } = await admin.rpc("store_organization_integration_credentials", {
       p_organization_id: organization.id,
       p_provider: "meta",
       p_display_name: "Meta",
-      p_credentials: { access_token: pageToken },
+      p_credentials: {
+        ...(storedCredentials || {}),
+        app_id: appId,
+        app_secret: appSecret,
+        access_token: pageToken,
+      },
       p_configuration: configuration,
     });
     if (storeError) throw storeError;
