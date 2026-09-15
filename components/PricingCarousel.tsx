@@ -223,10 +223,15 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
   };
 
   return (
-    <div className={`${styles.carousel} ${compact ? styles.compact : ""}`} onKeyDown={(event) => {
-      if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
-      if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
-    }} aria-roledescription="carousel" aria-label="Fluxknight pricing plans">
+    <div
+      className={`${styles.carousel} ${compact ? styles.compact : ""}`}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
+        if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
+      }}
+      aria-roledescription="carousel"
+      aria-label="Fluxknight pricing plans"
+    >
       <div className={styles.topControls}>
         <div className={styles.controlCopy}>
           <p aria-live="polite">Plan {active + 1} of {presentedPlans.length}</p>
@@ -245,36 +250,21 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
       </div>
 
       {showDurationSelector ? (
-        <div className={styles.durationBar} style={{ alignItems: "center" }}>
-          <label style={{ display: "grid", gap: 8, width: "min(100%, 360px)" }}>
+        <div className={styles.durationBar}>
+          <label className={styles.durationField}>
             <span className={styles.durationLabel}>Billing duration</span>
-            <span style={{ position: "relative", display: "block" }}>
+            <span className={styles.durationSelectWrap}>
               <select
                 value={billingTerm}
                 onChange={(event) => setBillingTerm(event.target.value as BillingTerm)}
                 aria-label="Choose billing duration"
-                style={{
-                  width: "100%",
-                  minHeight: 52,
-                  padding: "0 44px 0 15px",
-                  appearance: "none",
-                  WebkitAppearance: "none",
-                  borderRadius: 13,
-                  border: "1px solid rgba(192,132,252,.34)",
-                  background: "linear-gradient(180deg,rgba(29,15,48,.98),rgba(14,7,25,.98))",
-                  color: "#fbf8ff",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  outline: "none",
-                  cursor: "pointer",
-                  boxShadow: "inset 0 1px rgba(255,255,255,.04),0 12px 28px rgba(34,9,61,.18)",
-                }}
+                className={styles.durationSelect}
               >
                 {durationOptions.map((option) => (
                   <option key={option.key} value={option.key}>{option.label} · {option.saving}</option>
                 ))}
               </select>
-              <span aria-hidden="true" style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-55%)", color: "#d8b4fe", pointerEvents: "none", fontSize: 18 }}>⌄</span>
+              <span aria-hidden="true" className={styles.durationCaret}>⌄</span>
             </span>
           </label>
           <small>Monthly keeps the standard renewal. Prepaid terms apply the existing savings directly to the totals shown on each plan.</small>
@@ -299,22 +289,28 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
             : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector && billingTerm !== "monthly" ? `&term=${encodeURIComponent(billingTerm)}` : ""}`;
           const decision = planDecisionCopy[plan.slug];
           const ctaLabel = decision?.cta ?? plan.cta ?? "Get started";
+
           return (
             <article className={`${styles.card} ${plan.featured ? styles.featured : ""} ${index === active ? styles.active : ""}`} key={plan.slug} aria-label={`${plan.name}${plan.featured ? ", recommended business plan" : ""}`}>
               <div className={styles.cardGlow} aria-hidden="true" />
               <div className={styles.cardHeader}>
                 <span className={styles.icon}><Icon size={22} /></span>
-                {isBasic ? <span className={styles.badge}>14-day free trial</span> : plan.featured ? <span className={styles.badge}>Recommended</span> : null}
+                {isBasic ? <span className={styles.badge}>14-day free trial</span> : plan.featured ? <span className={styles.badge}>Recommended</span> : <span className={styles.badgeSpacer} aria-hidden="true" />}
               </div>
+
               <h3>{plan.name}</h3>
               <p className={styles.description}>{plan.description ?? plan.tag}</p>
-              {isBasic ? (
-                <div style={{ marginTop: 16, padding: "14px 15px", borderRadius: 14, border: "1px solid rgba(192,132,252,.32)", background: "linear-gradient(145deg,rgba(126,34,206,.15),rgba(255,255,255,.02))" }}>
-                  <span style={{ display: "block", color: "#d8b4fe", fontSize: 10, fontWeight: 850, letterSpacing: ".1em", textTransform: "uppercase" }}>Try Basic before paying</span>
-                  <strong style={{ display: "block", marginTop: 6, color: "#fff", fontSize: 15 }}>14 days · 250 Flux Credits</strong>
-                  <small style={{ display: "block", marginTop: 5, color: "#9586a3", lineHeight: 1.5 }}>Web AI + WhatsApp AI · no card required</small>
-                </div>
-              ) : null}
+
+              <div className={`${styles.planNote} ${isBasic ? styles.planNoteVisible : ""}`} aria-hidden={!isBasic}>
+                {isBasic ? (
+                  <>
+                    <span>Try Basic before paying</span>
+                    <strong>14 days · 250 Flux Credits</strong>
+                    <small>Web AI + WhatsApp AI · no card required</small>
+                  </>
+                ) : <span>&nbsp;</span>}
+              </div>
+
               {decision ? (
                 <div className={styles.decisionBlock}>
                   <span>Best for</span>
@@ -322,6 +318,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
                   <p>{decision.outcome}</p>
                 </div>
               ) : null}
+
               <div className={styles.priceBlock}>
                 <div><span>Implementation</span><strong>{firstPrice}</strong></div>
                 <div><span>Monthly renewal</span><strong>{ongoingPrice}</strong></div>
@@ -333,22 +330,16 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
                   </div>
                 ) : null}
               </div>
+
               <h4>What&apos;s included</h4>
               <div className={styles.features}>{plan.features.map((feature) => <span key={feature}><CheckCircle2 size={16} />{feature}</span>)}</div>
+
               {isBasic ? (
-                <div style={{ display: "grid", gap: 9, marginTop: "auto" }}>
-                  <Link
-                    href="/account/signup?trial=basic&next=%2Fportal"
-                    className={styles.cta}
-                    aria-label="Start Basic free trial"
-                  >
+                <div className={styles.ctaStack}>
+                  <Link href="/account/signup?trial=basic&next=%2Fportal" className={styles.cta} aria-label="Start Basic free trial">
                     Start Free Trial <ArrowRight size={16} />
                   </Link>
-                  <Link
-                    href={href}
-                    aria-label="Choose paid Basic"
-                    style={{ minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: 11, border: "1px solid rgba(192,132,252,.28)", color: "#d8b4fe", textDecoration: "none", fontSize: 12, fontWeight: 850, background: "rgba(255,255,255,.025)" }}
-                  >
+                  <Link href={href} aria-label="Choose paid Basic" className={styles.secondaryCta}>
                     Choose paid Basic <ArrowRight size={14} />
                   </Link>
                 </div>
