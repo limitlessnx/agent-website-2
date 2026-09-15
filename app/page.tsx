@@ -1,16 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  Calendar,
   Database,
-  Mail,
   MessageSquareText,
   Network,
   Rocket,
-  Sparkles,
-  UserRound,
   Workflow,
 } from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
@@ -138,14 +135,6 @@ const pricingPlans = [
   },
 ];
 
-const evaluationSignals = [
-  { icon: Mail, title: "Enquiries", detail: "Leads & emails" },
-  { icon: MessageSquareText, title: "Support", detail: "Customer queries" },
-  { icon: UserRound, title: "Follow-up", detail: "Chase & nurture" },
-  { icon: Calendar, title: "Scheduling", detail: "Bookings & calls" },
-  { icon: Database, title: "CRM", detail: "Data & updates" },
-];
-
 export default function HomePage() {
   return (
     <main className="quantix-home">
@@ -197,36 +186,23 @@ export default function HomePage() {
 
       <section className="brand-section evaluation-journey" id="evaluation-journey">
         <div className="brand-shell">
-          <div className="evaluation-conversion-card evaluation-conversion-card--visual">
+          <div className="evaluation-conversion-card evaluation-conversion-card--visual evaluation-conversion-card--image">
             <div className="evaluation-conversion-copy">
               <span className="brand-eyebrow">Not sure where your business fits?</span>
               <h3>Show us the workflow. We’ll identify the best place to automate first.</h3>
               <p>Tell us where enquiries get lost, where follow-up breaks down, or where your team spends too much time on repetitive work.</p>
             </div>
 
-            <div className="evaluation-workflow-visual" aria-label="Fluxknight analyses business enquiries, support, follow-up, scheduling and CRM workflows to identify the best place to automate first.">
-              <div className="evaluation-signal-stack">
-                {evaluationSignals.map(({ icon: Icon, title, detail }) => (
-                  <div className="evaluation-signal" key={title}>
-                    <span><Icon size={17} /></span>
-                    <div><strong>{title}</strong><small>{detail}</small></div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="evaluation-analysis-node">
-                <span className="evaluation-node-icon"><Sparkles size={22} /></span>
-                <strong>AI analysis</strong>
-                <small>Finds your biggest opportunity</small>
-              </div>
-
-              <div className="evaluation-result-node">
-                <span className="evaluation-result-label">Recommended</span>
-                <span className="evaluation-node-icon"><Workflow size={22} /></span>
-                <strong>Best place to automate first</strong>
-                <small>Save time. Get bigger results.</small>
-              </div>
-            </div>
+            <picture className="evaluation-workflow-artwork">
+              <source media="(max-width: 640px)" srcSet="/evaluation-workflow-mobile.svg" />
+              <Image
+                src="/evaluation-workflow-desktop.svg"
+                alt="Enquiries, support, follow-up, scheduling and CRM flowing into Fluxknight AI, which identifies the best place to automate first."
+                width={760}
+                height={680}
+                sizes="(max-width: 640px) calc(100vw - 72px), (max-width: 980px) 72vw, 52vw"
+              />
+            </picture>
 
             <div className="evaluation-conversion-actions">
               <Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link>
