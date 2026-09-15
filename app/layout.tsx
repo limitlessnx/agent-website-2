@@ -22,6 +22,7 @@ import "./dashboard-phase-b.css";
 import "./dashboard-phase-c.css";
 import "./dashboard-phase-d.css";
 import "./dashboard-phase-e.css";
+import "./dashboard-system.css";
 import SiteShell from "@/components/SiteShell";
 import GlobalLoadingProvider from "@/components/GlobalLoadingProvider";
 
