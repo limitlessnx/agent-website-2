@@ -122,6 +122,12 @@ function canonicalPricingSlug(slug: string) {
   return pricingFrameworkSlugs.has(slug) ? checkoutSlugByFramework[slug] : slug;
 }
 
+function visibleCardsForWidth(width: number) {
+  if (width > 980) return 3;
+  if (width > 640) return 2;
+  return 1;
+}
+
 export default function PricingCarousel({ plans, compact = false, showDurationSelector = false }: PricingCarouselProps) {
   const [active, setActive] = useState(0);
   const [billingTerm, setBillingTerm] = useState<BillingTerm>("monthly");
@@ -147,13 +153,25 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     if (!track) return;
 
     const nextIndex = Math.min(presentedPlans.length - 1, Math.max(0, index));
-    const nextCard = track.children[nextIndex] as HTMLElement | undefined;
+    const cards = Array.from(track.children) as HTMLElement[];
+    const nextCard = cards[nextIndex];
     if (!nextCard) return;
 
     setActive(nextIndex);
-    const centeredLeft = nextCard.offsetLeft - (track.clientWidth - nextCard.clientWidth) / 2;
+
+    const visibleCount = visibleCardsForWidth(track.clientWidth);
+    let targetLeft = 0;
+
+    if (visibleCount === 1) {
+      targetLeft = nextCard.offsetLeft - (track.clientWidth - nextCard.clientWidth) / 2;
+    } else {
+      const maxStartIndex = Math.max(0, cards.length - visibleCount);
+      const startIndex = Math.min(maxStartIndex, Math.max(0, nextIndex - 1));
+      targetLeft = cards[startIndex]?.offsetLeft ?? 0;
+    }
+
     const maxLeft = Math.max(0, track.scrollWidth - track.clientWidth);
-    track.scrollTo({ left: Math.min(maxLeft, Math.max(0, centeredLeft)), behavior });
+    track.scrollTo({ left: Math.min(maxLeft, Math.max(0, targetLeft)), behavior });
 
     if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
     programmaticRef.current = window.setTimeout(() => {
@@ -161,27 +179,60 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     }, behavior === "smooth" ? 420 : 40);
   }, [presentedPlans.length]);
 
-  useEffect(() => () => {
-    if (settledRef.current !== null) window.clearTimeout(settledRef.current);
-    if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
+  useEffect(() => {
+    const track = trackRef.current;
+    if (track) {
+      track.scrollTo({ left: 0, behavior: "auto" });
+      setActive(0);
+    }
+
+    const resetToStart = () => {
+      const currentTrack = trackRef.current;
+      if (!currentTrack) return;
+      const visibleCount = visibleCardsForWidth(currentTrack.clientWidth);
+      if (visibleCount > 1 && currentTrack.scrollLeft < 2) {
+        currentTrack.scrollLeft = 0;
+      }
+    };
+
+    window.addEventListener("resize", resetToStart);
+    return () => {
+      window.removeEventListener("resize", resetToStart);
+      if (settledRef.current !== null) window.clearTimeout(settledRef.current);
+      if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
+    };
   }, []);
 
   const updateActive = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
 
-    const center = track.scrollLeft + track.clientWidth / 2;
     const cards = Array.from(track.children) as HTMLElement[];
+    if (!cards.length) return;
+
+    const visibleCount = visibleCardsForWidth(track.clientWidth);
     let closest = 0;
     let distance = Number.POSITIVE_INFINITY;
 
-    cards.forEach((card, index) => {
-      const nextDistance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
-      if (nextDistance < distance) {
-        closest = index;
-        distance = nextDistance;
-      }
-    });
+    if (visibleCount === 1) {
+      const center = track.scrollLeft + track.clientWidth / 2;
+      cards.forEach((card, index) => {
+        const nextDistance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
+        if (nextDistance < distance) {
+          closest = index;
+          distance = nextDistance;
+        }
+      });
+    } else {
+      const leftEdge = track.scrollLeft;
+      cards.forEach((card, index) => {
+        const nextDistance = Math.abs(card.offsetLeft - leftEdge);
+        if (nextDistance < distance) {
+          closest = index;
+          distance = nextDistance;
+        }
+      });
+    }
 
     setActive(closest);
   }, []);
