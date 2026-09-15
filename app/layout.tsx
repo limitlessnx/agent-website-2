@@ -18,6 +18,7 @@ import "./limitless-recipient-ui.css";
 import "./public-color-unification.css";
 import "./homepage-phase7.css";
 import "./homepage-phase89.css";
+import "./evaluation-image-card.css";
 import "./dashboard-phase-b.css";
 import "./dashboard-phase-c.css";
 import "./dashboard-phase-d.css";
