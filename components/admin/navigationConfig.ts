@@ -39,7 +39,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Operations",
     sections: [{
       items: [
-        { href: "/dashboard/control-center", label: "Lifecycle Control" },
         { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
         { href: "/dashboard/workflows", label: "Automations" },
         { href: "/dashboard/agents", label: "Agents" },
@@ -69,7 +68,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { href: "/dashboard/limitless/leads", label: "Limitless Realty" },
         { href: "/dashboard/gencouv", label: "Gencouv", exact: true },
         { href: "/dashboard/clients", label: "Client Workspaces", exact: true },
-        { href: "/dashboard/onboarding#new-client", label: "Add Workspace" },
       ],
     }],
   },
