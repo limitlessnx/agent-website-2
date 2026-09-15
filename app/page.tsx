@@ -16,28 +16,8 @@ import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
+import AutomationJourney from "@/components/home/AutomationJourney";
 import styles from "./HomepageHeaderRestore.module.css";
-
-const automationPillars = [
-  {
-    icon: MessageSquareText,
-    title: "Customer conversations",
-    text: "Handle enquiries and support across customer-facing channels, answer approved questions, capture context, and hand the right conversations to your team.",
-    detail: "WhatsApp · Web support · Inquiry handling · Support desk · Human handoff",
-  },
-  {
-    icon: Workflow,
-    title: "Follow-up & customer journey",
-    text: "Keep interested customers moving after the first conversation instead of relying on staff memory or manual chasing.",
-    detail: "Lead qualification · Follow-up · Reminders · Scheduling · Re-engagement",
-  },
-  {
-    icon: Database,
-    title: "Connected business operations",
-    text: "Connect customer activity to the systems your team uses so information, next actions, and management visibility stay organized.",
-    detail: "Email automation · CRM · Databases · Admin visibility · Custom workflows",
-  },
-];
 
 const pricingPlans = [
   {
@@ -102,26 +82,7 @@ export default function HomePage() {
       <MaiaCaseStudyTeaser />
       <IndustryCarousel />
 
-      <section className="brand-section" id="services">
-        <div className="brand-shell">
-          <div className="brand-heading">
-            <span className="brand-eyebrow">What Fluxknight automates</span>
-            <h2>Three layers. One connected business system.</h2>
-            <p>Start with customer conversations, add follow-up when you need it, then connect the wider operation as the business grows.</p>
-          </div>
-          <div className="brand-grid">
-            {automationPillars.map(({ icon: Icon, title, text, detail }) => (
-              <article className="brand-card" key={title}>
-                <span className="brand-icon"><Icon size={21} /></span>
-                <h3>{title}</h3>
-                <p>{text}</p>
-                <small>{detail}</small>
-                <Link href="/services">Explore capabilities <ArrowRight size={15} /></Link>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <AutomationJourney />
 
       <ClientReviews />
 
