@@ -1,15 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
-  CheckCircle2,
   Database,
   MessageSquareText,
   Network,
   Rocket,
-  Sparkles,
   Workflow,
 } from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
@@ -17,6 +15,8 @@ import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
+import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
+import styles from "./HomepageHeaderRestore.module.css";
 
 const automationPillars = [
   {
@@ -46,18 +46,8 @@ const pricingPlans = [
     name: "Basic",
     firstMonth: "₦150,000",
     ongoing: "₦50,000/month",
-    description: "One AI customer-service channel for businesses that need instant answers, enquiry handling, qualification and clean human handoff without automated follow-up.",
-    features: [
-      "2,500 monthly Flux Credits",
-      "Choose 1 channel: Website AI, WhatsApp AI, or Voice Agent",
-      "24/7 questions, enquiries and support",
-      "Approved FAQ, product and service knowledge",
-      "Lead or customer detail capture",
-      "Basic qualification and intent capture",
-      "Up to 2 human handoff recipients",
-      "Conversation history and basic dashboard visibility",
-      "No automated follow-up or reminder sequences",
-    ],
+    description: "One AI channel for enquiries, support, qualification, capture and human handoff.",
+    features: ["2,500 monthly Flux Credits", "1 channel: Web, WhatsApp or Voice", "24/7 enquiries and support", "FAQ, product and service answers", "Lead capture + basic qualification", "Up to 2 human handoff recipients", "Conversation history + dashboard", "No automated follow-up or reminders"],
     cta: "Choose Basic",
   },
   {
@@ -66,19 +56,8 @@ const pricingPlans = [
     name: "Plus",
     firstMonth: "₦300,000",
     ongoing: "₦100,000/month",
-    description: "Everything in Basic, with higher credits, up to two customer channels, plus automated follow-up and reminder workflows that keep enquiries moving.",
-    features: [
-      "5,000 monthly Flux Credits",
-      "Everything in Basic",
-      "Use up to 2 customer channels",
-      "Examples: WhatsApp + Voice, Website + WhatsApp, or Website + Voice",
-      "Automated customer follow-up",
-      "Product or service-specific follow-up",
-      "Appointment, booking, quote, inspection, payment or renewal reminders where relevant",
-      "Missed-lead recovery",
-      "Scheduled nurture and re-engagement sequences",
-      "Human handoff across the selected channels",
-    ],
+    description: "Two customer channels with automated follow-up, reminders and missed-lead recovery.",
+    features: ["5,000 monthly Flux Credits", "Everything in Basic", "Use up to 2 customer channels", "Automated follow-up + reminders", "Missed-lead recovery", "Nurture + re-engagement sequences", "Human handoff across both channels"],
     cta: "Choose Plus",
   },
   {
@@ -87,19 +66,8 @@ const pricingPlans = [
     name: "Business",
     firstMonth: "₦750,000",
     ongoing: "₦250,000/month",
-    description: "A broader customer-operations system for teams that need higher usage, multiple connected channels, admin controls, cross-channel context and deeper automation.",
-    features: [
-      "12,000 monthly Flux Credits",
-      "Everything in Plus",
-      "Multi-channel customer operations",
-      "Website, WhatsApp, Voice and Email workflows where applicable",
-      "Admin workspace and team access",
-      "Cross-channel customer context",
-      "CRM and workflow visibility",
-      "Reporting and operational oversight",
-      "Expanded human escalation controls",
-      "Leo Admin Assistance",
-    ],
+    description: "Multi-channel customer operations with team controls, CRM visibility, reporting and Leo assistance.",
+    features: ["12,000 monthly Flux Credits", "Everything in Plus", "Website, WhatsApp, Voice + Email workflows", "Admin workspace + team access", "Cross-channel context + CRM visibility", "Reporting + escalation controls", "Leo Admin Assistance"],
     cta: "Choose Business",
     featured: true,
   },
@@ -109,19 +77,8 @@ const pricingPlans = [
     name: "Business+",
     firstMonth: "₦2,000,000",
     ongoing: "₦500,000/month",
-    description: "Everything in Business, plus the deeper operational layer needed when customer conversations must connect to structured business data, advanced workflows and integrations.",
-    features: [
-      "25,000+ configurable monthly Flux Credits",
-      "Everything in Business",
-      "Industry-specific customer or operations database",
-      "Custom client, member or operational records",
-      "Advanced workflow automation",
-      "Deeper record history and lifecycle visibility",
-      "Advanced reporting and segmentation",
-      "Custom integrations where required",
-      "Custom dashboards where required",
-      "Managed deployment and support",
-    ],
+    description: "Advanced operations with structured business data, deeper workflows, integrations and dashboards.",
+    features: ["25,000+ configurable Flux Credits", "Everything in Business", "Industry or operations database", "Custom records + lifecycle history", "Advanced workflow automation", "Advanced reporting + segmentation", "Custom integrations + dashboards", "Managed deployment + support"],
     cta: "Choose Business+",
   },
   {
@@ -130,17 +87,8 @@ const pricingPlans = [
     name: "Custom",
     firstMonth: "Custom",
     ongoing: "Custom",
-    description: "Anything the client needs automated, integrated or set up. The system is scoped around the client’s exact goals, workflows, channels, data, integrations and expected usage.",
-    features: [
-      "Custom automation scope",
-      "Custom Flux Credit allocation",
-      "Any required combination of customer channels",
-      "Custom AI agents where required",
-      "Custom follow-up, reminder and operational workflows",
-      "Custom integrations, databases and dashboards where required",
-      "Custom internal tools or process automation",
-      "Deployment, onboarding and support defined around the client",
-    ],
+    description: "A tailored system built around your exact workflows, channels, data and automation goals.",
+    features: ["Custom automation scope + credits", "Any required channel combination", "Custom AI agents", "Follow-up, reminder + ops workflows", "Custom integrations, databases + dashboards", "Internal tools + process automation", "Deployment, onboarding + support"],
     cta: "Build a Custom Plan",
     custom: true,
   },
@@ -148,35 +96,10 @@ const pricingPlans = [
 
 export default function HomePage() {
   return (
-    <main className="quantix-home">
+    <main className={`quantix-home ${styles.home}`}>
       <PublicLeoConsultant />
-
-      <section className="quantix-hero production-animated-hero outcome-first-hero">
-        <div className="hero-stars" />
-        <div className="violet-arc" />
-        <div className="hero-haze" />
-        <motion.div className="hero-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
-          <div className="hero-pill" style={{ position: "relative", zIndex: 4, maxWidth: "min(100%, 520px)", justifyContent: "center", lineHeight: 1.25, background: "rgba(17,8,31,.88)", borderColor: "rgba(207,170,255,.3)", backdropFilter: "blur(14px)", boxShadow: "0 12px 34px rgba(19,5,42,.28), inset 0 1px rgba(255,255,255,.035)" }}><Sparkles size={13} /> AI automation that drives real business outcomes</div>
-          <h1>Grow your organization <span>without growing the workload.</span></h1>
-          <p>Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.</p>
-          <div className="hero-buttons">
-            <Link className="button-primary" href="/evaluation" data-cta="hero-evaluation">Evaluate My Business <ArrowRight size={17} /></Link>
-            <Link className="button-secondary" href="#services" data-cta="hero-services">See What We Automate <ArrowRight size={16} /></Link>
-          </div>
-          <div className="hero-proof-row" aria-label="Fluxknight operating principles">
-            <span><CheckCircle2 size={14} /> Works 24/7</span>
-            <span><CheckCircle2 size={14} /> Built around your workflow</span>
-            <span><CheckCircle2 size={14} /> Human handoff stays available</span>
-          </div>
-        </motion.div>
-        <motion.div className="product-shot outcome-product-shot" initial={{ opacity: 0, y: 42, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .9, delay: .25 }}>
-          <div className="outcome-dashboard-label"><span>Business impact, live</span><strong>Customer operations</strong></div>
-          <img src="/flux-dashboard.svg" alt="Fluxknight customer operations dashboard showing conversations, leads, bookings and business activity" />
-        </motion.div>
-      </section>
-
+      <ReferenceFluxHeroPhase1 />
       <MaiaCaseStudyTeaser />
-
       <IndustryCarousel />
 
       <section className="brand-section" id="services">
@@ -206,25 +129,29 @@ export default function HomePage() {
         <div className="brand-shell">
           <div className="brand-heading">
             <span className="brand-eyebrow">Choose your automation level</span>
-            <h2>Basic. Plus. Business. Business+. Custom.</h2>
-            <p>Compare channel limits, Flux Credits and automation depth directly on the homepage. Basic through Business+ have defined package scopes. Custom is built around whatever the client needs automated and set up.</p>
+            <h2>Plans built for different levels of automation.</h2>
+            <p>Compare channels, Flux Credits and automation depth. Swipe through each plan to see what fits.</p>
           </div>
           <PricingCarousel plans={pricingPlans} showDurationSelector />
           <div className="hero-buttons production-pricing-route-link">
-            <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing &amp; package details <ArrowRight size={16} /></Link>
+            <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing details <ArrowRight size={16} /></Link>
           </div>
-          <p className="production-pricing-note">Basic supports one channel and up to two human handoff recipients. Plus adds a second channel, higher credits, follow-ups and reminders. Business expands into multi-channel operations. Business+ adds the advanced operational data layer. Custom is defined entirely around the client’s requirements.</p>
+          <p className="production-pricing-note">Basic starts with one channel. Plus adds follow-up. Business expands to multi-channel operations. Business+ adds deeper data and workflows. Custom is fully tailored.</p>
         </div>
       </section>
 
       <section className="brand-section evaluation-journey" id="evaluation-journey">
         <div className="brand-shell">
-          <div className="evaluation-conversion-card">
-            <div>
+          <div className="evaluation-conversion-card evaluation-conversion-card--visual evaluation-conversion-card--image">
+            <div className="evaluation-conversion-copy">
               <span className="brand-eyebrow">Not sure where your business fits?</span>
               <h3>Show us the workflow. We’ll identify the best place to automate first.</h3>
               <p>Tell us where enquiries get lost, where follow-up breaks down, or where your team spends too much time on repetitive work.</p>
             </div>
+            <picture className="evaluation-workflow-artwork">
+              <source media="(max-width: 640px)" srcSet="/evaluation-workflow-mobile.svg" />
+              <Image src="/evaluation-workflow-desktop.svg" alt="Enquiries, support, follow-up, scheduling and CRM flowing into Fluxknight AI, which identifies the best place to automate first." width={760} height={680} sizes="(max-width: 640px) calc(100vw - 72px), (max-width: 980px) 72vw, 52vw" />
+            </picture>
             <div className="evaluation-conversion-actions">
               <Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link>
               <small>No package selection required before the evaluation.</small>

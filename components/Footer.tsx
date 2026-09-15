@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Globe2, Mail } from "@/components/admin/ServerIcons";
 import FluxLogo from "@/components/FluxLogo";
+import styles from "@/components/Footer.module.css";
 
 const groups = [
   { title: "Services", links: [["AI Sales Agent", "/services#ai-sales-agent"], ["WhatsApp AI", "/services#whatsapp"], ["AI Voice Agent", "/services#voice"], ["Lead Generation", "/services#lead-generation"], ["CRM Automation", "/services#crm"]] },
@@ -9,17 +13,61 @@ const groups = [
 ];
 
 export default function Footer() {
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+
   return (
-    <footer className="flux-footer">
-      <div className="flux-footer-grid">
-        <div className="flux-footer-brand">
-          <Link href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
-          <p><strong>Serve Better. Operate Smarter.</strong><br />Fluxknight builds connected AI systems that help organizations serve customers faster, keep follow-up moving, and run customer operations with less friction.</p>
-          <div className="flux-socials"><a href="/" aria-label="Website"><Globe2 size={17} /></a><a href="/contact" aria-label="Email"><Mail size={17} /></a><a href="/about" aria-label="Company profile"><ExternalLink size={17} /></a></div>
+    <footer className={styles.footer}>
+      <div className={styles.shell}>
+        <div className={styles.desktopGrid}>
+          <div className={styles.brand}>
+            <Link href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
+            <p><strong>Serve Better. Operate Smarter.</strong><br />AI automation for customer operations, follow-up and business workflows.</p>
+            <div className={styles.socials}>
+              <a href="/" aria-label="Website"><Globe2 size={17} /></a>
+              <a href="/contact" aria-label="Email"><Mail size={17} /></a>
+              <a href="/about" aria-label="Company profile"><ExternalLink size={17} /></a>
+            </div>
+          </div>
+
+          {groups.map((group) => (
+            <div key={group.title} className={styles.group}>
+              <h4>{group.title}</h4>
+              {group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+            </div>
+          ))}
         </div>
-        {groups.map((group) => <div key={group.title} className="flux-footer-group"><h4>{group.title}</h4>{group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</div>)}
+
+        <nav className={styles.mobileNav} aria-label="Footer navigation">
+          {groups.map((group) => {
+            const isOpen = openGroup === group.title;
+            const panelId = `footer-${group.title.toLowerCase()}`;
+            return (
+              <section key={group.title} className={`${styles.accordion} ${isOpen ? styles.accordionOpen : ""}`}>
+                <button
+                  type="button"
+                  className={styles.accordionTrigger}
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => setOpenGroup(isOpen ? null : group.title)}
+                >
+                  <span>{group.title}</span>
+                  <span className={styles.accordionIcon} aria-hidden="true">{isOpen ? "−" : "+"}</span>
+                </button>
+                <div id={panelId} className={styles.accordionPanel} hidden={!isOpen}>
+                  <div className={styles.accordionLinks}>
+                    {group.links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+        </nav>
+
+        <div className={styles.bottom}>
+          <span>© {new Date().getFullYear()} Fluxknight. All rights reserved.</span>
+          <span>Serve Better. Operate Smarter.</span>
+        </div>
       </div>
-      <div className="flux-footer-bottom"><span>© {new Date().getFullYear()} Fluxknight. All rights reserved.</span><span>Serve Better. Operate Smarter.</span></div>
     </footer>
   );
 }

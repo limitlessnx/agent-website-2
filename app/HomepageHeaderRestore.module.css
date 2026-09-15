@@ -1,0 +1,33 @@
+/* Keep the homepage hero on the intended near-black surface regardless of the reference component's internal Tailwind background. */
+.home > :global(section:first-of-type) {
+  background: #050505 !important;
+}
+
+.home :global(nav a[href="/evaluation"]) {
+  border-color: transparent !important;
+  background: linear-gradient(to right, #a855f7, #f97316) !important;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3) !important;
+}
+
+.home :global(nav a[href="/evaluation"]:hover) {
+  background: linear-gradient(to right, #a855f7, #f97316) !important;
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.5) !important;
+}
+
+.home :global(nav a[href="/login"]),
+.home :global(nav a[href="#product"]),
+.home :global(nav a[href="#features"]),
+.home :global(nav a[href="#integrations"]),
+.home :global(nav a[href="/pricing"]),
+.home :global(nav a[href="/resources"]) {
+  color: #d4d4d4 !important;
+}
+
+.home :global(nav a[href="/login"]:hover),
+.home :global(nav a[href="#product"]:hover),
+.home :global(nav a[href="#features"]:hover),
+.home :global(nav a[href="#integrations"]:hover),
+.home :global(nav a[href="/pricing"]:hover),
+.home :global(nav a[href="/resources"]:hover) {
+  color: #ffffff !important;
+}
