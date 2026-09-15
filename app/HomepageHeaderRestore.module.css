@@ -1,3 +1,4 @@
+/* Keep the homepage hero on the intended near-black surface regardless of the reference component's internal Tailwind background. */
 .home > :global(section:first-of-type) {
   background: #050505 !important;
 }
