@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
-  CheckCircle2,
   Database,
   MessageSquareText,
   Network,
   Rocket,
-  Sparkles,
   Workflow,
 } from "@/components/admin/ServerIcons";
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
@@ -17,6 +14,7 @@ import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
+import ReferenceFluxHero from "@/components/home/ReferenceFluxHero";
 
 const automationPillars = [
   {
@@ -151,29 +149,7 @@ export default function HomePage() {
     <main className="quantix-home">
       <PublicLeoConsultant />
 
-      <section className="quantix-hero production-animated-hero outcome-first-hero">
-        <div className="hero-stars" />
-        <div className="violet-arc" />
-        <div className="hero-haze" />
-        <motion.div className="hero-content" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
-          <div className="hero-pill" style={{ position: "relative", zIndex: 4, maxWidth: "min(100%, 520px)", justifyContent: "center", lineHeight: 1.25, background: "rgba(17,8,31,.88)", borderColor: "rgba(207,170,255,.3)", backdropFilter: "blur(14px)", boxShadow: "0 12px 34px rgba(19,5,42,.28), inset 0 1px rgba(255,255,255,.035)" }}><Sparkles size={13} /> AI automation that drives real business outcomes</div>
-          <h1>Grow your organization <span>without growing the workload.</span></h1>
-          <p>Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.</p>
-          <div className="hero-buttons">
-            <Link className="button-primary" href="/evaluation" data-cta="hero-evaluation">Evaluate My Business <ArrowRight size={17} /></Link>
-            <Link className="button-secondary" href="#services" data-cta="hero-services">See What We Automate <ArrowRight size={16} /></Link>
-          </div>
-          <div className="hero-proof-row" aria-label="Fluxknight operating principles">
-            <span><CheckCircle2 size={14} /> Works 24/7</span>
-            <span><CheckCircle2 size={14} /> Built around your workflow</span>
-            <span><CheckCircle2 size={14} /> Human handoff stays available</span>
-          </div>
-        </motion.div>
-        <motion.div className="product-shot outcome-product-shot" initial={{ opacity: 0, y: 42, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .9, delay: .25 }}>
-          <div className="outcome-dashboard-label"><span>Business impact, live</span><strong>Customer operations</strong></div>
-          <img src="/flux-dashboard.svg" alt="Fluxknight customer operations dashboard showing conversations, leads, bookings and business activity" />
-        </motion.div>
-      </section>
+      <ReferenceFluxHero />
 
       <MaiaCaseStudyTeaser />
 
