@@ -18,14 +18,20 @@
 
 .shell {
   position: relative;
-  width: min(1180px, calc(100% - 40px));
+  width: min(1220px, calc(100% - 40px));
   margin: 0 auto;
 }
 
+.headingRow {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 42px;
+}
+
 .heading {
-  max-width: 960px;
-  margin-bottom: 46px;
-  text-align: left;
+  max-width: 900px;
 }
 
 .eyebrow {
@@ -39,58 +45,102 @@
 }
 
 .heading h2 {
-  max-width: 980px;
+  max-width: 900px;
   margin: 0;
   color: #fff;
-  font-size: clamp(2.55rem, 5.8vw, 5.15rem);
+  font-size: clamp(2.55rem, 5.3vw, 4.9rem);
   font-weight: 430;
   line-height: .95;
   letter-spacing: -.057em;
 }
 
 .heading p {
-  max-width: 760px;
-  margin: 22px 0 0;
+  max-width: 720px;
+  margin: 21px 0 0;
   color: #aaa4b3;
   font-size: clamp(.94rem, 1.5vw, 1.04rem);
-  line-height: 1.72;
+  line-height: 1.7;
 }
 
-.expandingCards {
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.controls button {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 50%;
+  background: rgba(255,255,255,.035);
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.controls button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(183, 135, 255, .3);
+  background: rgba(139, 92, 246, .12);
+}
+
+.controls span {
+  min-width: 62px;
+  color: #8e8797;
+  text-align: center;
+  font-size: .71rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.viewport {
+  overflow: hidden;
+}
+
+.track {
   display: flex;
   gap: 14px;
-  min-height: 520px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  padding: 3px 1px 12px;
 }
+
+.track::-webkit-scrollbar { display: none; }
 
 .card {
   position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 520px;
+  flex: 0 0 clamp(260px, 24.8vw, 324px);
+  min-height: 500px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.095);
+  border: 1px solid rgba(255,255,255,.09);
   border-radius: 22px;
   background: #0b0a0d;
-  box-shadow: 0 22px 58px rgba(0,0,0,.32);
+  box-shadow: 0 22px 58px rgba(0,0,0,.28);
   outline: none;
   isolation: isolate;
-  transition:
-    flex .54s cubic-bezier(.2,.8,.2,1),
-    border-color .35s ease,
-    box-shadow .35s ease,
-    transform .35s ease;
+  scroll-snap-align: center;
+  transition: flex-basis .45s cubic-bezier(.2,.8,.2,1), border-color .3s ease, box-shadow .3s ease, transform .3s ease;
 }
 
+.card.active,
 .card:hover,
 .card:focus-visible,
 .card:focus-within {
-  flex: 2.25 1 0;
-  border-color: rgba(177, 123, 255, .38);
-  box-shadow: 0 28px 80px rgba(0,0,0,.48), 0 0 56px rgba(120,65,230,.10);
+  flex-basis: clamp(320px, 34vw, 440px);
+  transform: translateY(-2px);
+  border-color: rgba(177, 123, 255, .34);
+  box-shadow: 0 28px 80px rgba(0,0,0,.48), 0 0 56px rgba(120,65,230,.09);
 }
 
 .card:focus-visible {
-  box-shadow: 0 0 0 2px rgba(196, 148, 255, .7), 0 28px 80px rgba(0,0,0,.48);
+  box-shadow: 0 0 0 2px rgba(196, 148, 255, .68), 0 28px 80px rgba(0,0,0,.48);
 }
 
 .cardImage {
@@ -101,15 +151,16 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transform: scale(1.015);
-  filter: saturate(.92) brightness(.86);
-  transition: transform .58s cubic-bezier(.2,.8,.2,1), filter .45s ease;
+  transform: scale(1.01);
+  filter: saturate(.9) brightness(.82);
+  transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .4s ease;
 }
 
+.card.active .cardImage,
 .card:hover .cardImage,
 .card:focus-within .cardImage {
-  transform: scale(1.055);
-  filter: saturate(1) brightness(.95);
+  transform: scale(1.045);
+  filter: saturate(1) brightness(.94);
 }
 
 .cardShade {
@@ -117,8 +168,8 @@
   inset: 0;
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(3,3,5,.18) 0%, rgba(3,3,5,.12) 40%, rgba(3,3,5,.78) 79%, rgba(3,3,5,.96) 100%),
-    linear-gradient(90deg, rgba(3,3,5,.18), transparent 58%);
+    linear-gradient(180deg, rgba(3,3,5,.18) 0%, rgba(3,3,5,.1) 34%, rgba(3,3,5,.68) 71%, rgba(3,3,5,.97) 100%),
+    linear-gradient(90deg, rgba(3,3,5,.16), transparent 62%);
 }
 
 .card::after {
@@ -127,7 +178,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(128deg, rgba(153, 91, 255, .08), transparent 38%, rgba(255,255,255,.02));
+  background: linear-gradient(128deg, rgba(153, 91, 255, .07), transparent 38%, rgba(255,255,255,.018));
 }
 
 .cardTopline {
@@ -161,26 +212,42 @@
   letter-spacing: .15em;
 }
 
-.cardTitle {
+.cardLabel {
   position: absolute;
-  top: 66px;
   left: 18px;
   right: 18px;
+  bottom: 28px;
   z-index: 3;
+  transition: transform .38s cubic-bezier(.2,.8,.2,1), opacity .3s ease;
 }
 
-.cardTitle span {
+.cardLabel span {
   display: inline-flex;
-  max-width: 100%;
-  padding: 8px 10px;
-  color: white;
+  margin-bottom: 9px;
+  padding: 7px 9px;
+  color: #d6c5ef;
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px;
-  background: rgba(7,6,9,.36);
+  border-radius: 9px;
+  background: rgba(7,6,9,.38);
   backdrop-filter: blur(12px);
-  font-size: clamp(.9rem, 1.35vw, 1.03rem);
-  font-weight: 680;
-  white-space: nowrap;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cardLabel h3 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.85rem, 2.5vw, 2.65rem);
+  line-height: .98;
+  letter-spacing: -.045em;
+}
+
+.card.active .cardLabel,
+.card:hover .cardLabel,
+.card:focus-within .cardLabel {
+  transform: translateY(-174px);
 }
 
 .reveal {
@@ -191,11 +258,12 @@
   z-index: 4;
   padding: 18px;
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(16px);
   pointer-events: none;
-  transition: opacity .38s ease .08s, transform .44s cubic-bezier(.2,.8,.2,1) .05s;
+  transition: opacity .35s ease .05s, transform .42s cubic-bezier(.2,.8,.2,1);
 }
 
+.card.active .reveal,
 .card:hover .reveal,
 .card:focus-within .reveal {
   opacity: 1;
@@ -204,59 +272,33 @@
 }
 
 .revealPanel {
-  padding: 20px;
+  padding: 18px;
   border: 1px solid rgba(255,255,255,.10);
-  border-radius: 16px;
-  background: rgba(10,9,13,.74);
+  border-radius: 15px;
+  background: rgba(10,9,13,.78);
   box-shadow: 0 18px 38px rgba(0,0,0,.26);
   backdrop-filter: blur(18px);
 }
 
-.kicker {
-  margin: 0 0 8px !important;
-  color: #c59cff !important;
-  font-size: .67rem !important;
-  font-weight: 800;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-}
-
-.revealPanel h3 {
-  max-width: 540px;
-  margin: 0 0 9px;
-  color: #fff;
-  font-size: clamp(1.5rem, 2.5vw, 2.3rem);
-  line-height: 1.02;
-  letter-spacing: -.035em;
-}
-
-.revealPanel > p:not(.kicker) {
-  max-width: 620px;
+.revealPanel p {
   margin: 0;
   color: #c2bdc8;
-  font-size: .88rem;
+  font-size: .85rem;
   line-height: 1.58;
-}
-
-.revealPanel small {
-  display: block;
-  margin-top: 11px;
-  color: #8f8997;
-  font-size: .72rem;
 }
 
 .link {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin-top: 15px;
+  margin-top: 14px;
   padding: 9px 11px;
   color: #fff;
   border: 1px solid rgba(255,255,255,.13);
   border-radius: 9px;
   background: rgba(255,255,255,.07);
   text-decoration: none;
-  font-size: .78rem;
+  font-size: .77rem;
   font-weight: 760;
   transition: background .2s ease, border-color .2s ease, transform .2s ease;
 }
@@ -267,119 +309,71 @@
   transform: translateY(-1px);
 }
 
-.directory {
-  display: grid;
-  grid-template-columns: minmax(190px, .7fr) minmax(0, 2.3fr);
-  gap: 28px;
-  align-items: start;
-  margin-top: 34px;
-  padding-top: 28px;
-  border-top: 1px solid rgba(255,255,255,.08);
-}
-
-.directoryHeading span {
-  display: block;
-  color: #f4f1f7;
-  font-size: .92rem;
-  font-weight: 720;
-}
-
-.directoryHeading p {
-  margin: 6px 0 0;
-  color: #77717e;
-  font-size: .77rem;
-  line-height: 1.5;
-}
-
-.industryLinks {
+.dots {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.industryLink {
-  display: inline-flex;
+  justify-content: center;
   align-items: center;
-  gap: 7px;
-  padding: 9px 11px;
-  color: #a9a4ae;
-  border: 1px solid rgba(255,255,255,.075);
-  border-radius: 999px;
-  background: rgba(255,255,255,.025);
-  text-decoration: none;
-  font-size: .73rem;
-  font-weight: 680;
-  transition: color .2s ease, border-color .2s ease, background .2s ease;
+  gap: 8px;
+  margin-top: 18px;
 }
 
-.industryLink svg:last-child {
-  opacity: .42;
+.dot,
+.dotActive {
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  min-height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .2s ease, background .2s ease;
 }
 
-.industryLink:hover {
-  color: #fff;
-  border-color: rgba(178,126,255,.24);
-  background: rgba(139,92,246,.08);
-}
+.dot { background: rgba(211, 192, 232, .24); }
+.dotActive { background: #a755ff; transform: scale(1.35); }
 
 @media (max-width: 960px) {
-  .section { padding: 82px 0 86px; }
-  .heading { margin-bottom: 34px; }
-  .expandingCards { min-height: 470px; }
-  .card { min-height: 470px; }
-  .card:hover, .card:focus-visible, .card:focus-within { flex: 1.8 1 0; }
-  .revealPanel { padding: 17px; }
-  .directory { grid-template-columns: 1fr; gap: 16px; }
+  .section { padding: 82px 0 88px; }
+  .headingRow { align-items: flex-start; }
+  .card { flex-basis: 290px; min-height: 470px; }
+  .card.active, .card:hover, .card:focus-visible, .card:focus-within { flex-basis: 365px; }
 }
 
 @media (max-width: 760px) {
   .section { padding: 62px 0 68px; }
-  .shell { width: min(100% - 24px, 1180px); }
-
-  .heading {
-    margin-bottom: 26px;
-    padding: 0 4px;
+  .shell { width: min(100% - 24px, 1220px); }
+  .headingRow { display: block; margin-bottom: 26px; }
+  .heading h2 { font-size: clamp(2.1rem, 10.8vw, 3.25rem); line-height: .98; }
+  .heading p { margin-top: 16px; font-size: .9rem; line-height: 1.58; }
+  .controls { margin-top: 18px; }
+  .controls button { width: 38px; height: 38px; }
+  .viewport { overflow: visible; }
+  .track {
+    margin-right: calc((100vw - 100%) * -1);
+    padding-right: 22px;
+    scroll-padding-left: 0;
   }
-
-  .heading h2 {
-    font-size: clamp(2.1rem, 10.8vw, 3.25rem);
-    line-height: .98;
-  }
-
-  .heading p {
-    margin-top: 16px;
-    font-size: .9rem;
-    line-height: 1.58;
-  }
-
-  .expandingCards {
-    flex-direction: column;
-    gap: 12px;
-    min-height: auto;
-  }
-
   .card,
+  .card.active,
   .card:hover,
   .card:focus-visible,
   .card:focus-within {
-    flex: none;
-    min-height: 390px;
+    flex-basis: min(84vw, 330px);
+    min-height: 430px;
     border-radius: 18px;
+    transform: none;
   }
-
-  .cardImage {
-    object-position: center top;
+  .cardLabel,
+  .card.active .cardLabel,
+  .card:hover .cardLabel,
+  .card:focus-within .cardLabel {
+    bottom: 160px;
+    transform: none;
   }
-
-  .cardTitle {
-    top: 62px;
-  }
-
-  .cardTitle span {
-    font-size: .91rem;
-  }
-
+  .cardLabel h3 { font-size: clamp(1.8rem, 8vw, 2.35rem); }
   .reveal,
+  .card.active .reveal,
   .card:hover .reveal,
   .card:focus-within .reveal {
     padding: 14px;
@@ -387,45 +381,28 @@
     transform: none;
     pointer-events: auto;
   }
-
-  .revealPanel {
-    padding: 16px;
-    border-radius: 14px;
-    background: rgba(8,7,10,.79);
-  }
-
-  .revealPanel h3 {
-    font-size: clamp(1.45rem, 7vw, 2rem);
-  }
-
-  .revealPanel > p:not(.kicker) {
+  .revealPanel { padding: 15px; border-radius: 14px; background: rgba(8,7,10,.82); }
+  .revealPanel p {
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-size: .82rem;
+    font-size: .81rem;
   }
-
-  .directory {
-    margin-top: 24px;
-    padding-top: 22px;
-  }
-
-  .industryLinks {
-    gap: 7px;
-  }
-
-  .industryLink {
-    padding: 8px 10px;
-    font-size: .69rem;
-  }
+  .dots { justify-content: flex-start; overflow-x: auto; padding: 2px 2px 4px; scrollbar-width: none; }
+  .dots::-webkit-scrollbar { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .track { scroll-behavior: auto; }
   .card,
   .cardImage,
+  .cardLabel,
   .reveal,
-  .link {
+  .link,
+  .controls button,
+  .dot,
+  .dotActive {
     transition: none;
   }
 }
