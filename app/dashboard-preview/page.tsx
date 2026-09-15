@@ -33,9 +33,13 @@ const snapshot = {
   ],
 };
 
-const primaryNav = ["Command Center", "CRM", "Conversations", "Automations", "Agents", "Social", "Activity"];
-const workspaceNav = ["Limitless Realty", "Gencouv", "Clients"];
-const platformNav = ["Billing & Usage", "Knowledge", "AI Models", "Integrations", "Settings"];
+const navGroups = [
+  { label: "Overview", items: ["Command Center"] },
+  { label: "Operations", items: ["Lifecycle Control", "Customer Lifecycle", "Automations", "Agents", "Social", "Activity"] },
+  { label: "Customers", items: ["Customer Health", "Retention", "Growth", "Usage & Value", "Evaluation Leads"] },
+  { label: "Workspaces", items: ["Limitless Realty", "Gencouv", "Client Workspaces", "Add Workspace"] },
+  { label: "Platform", items: ["Billing & Credits", "Knowledge", "AI Models", "Memory", "Settings"] },
+];
 
 export default function DashboardPreviewPage() {
   return (
@@ -50,14 +54,21 @@ export default function DashboardPreviewPage() {
 
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
-          <span className={styles.sectionLabel}>Overview</span>
-          <nav className={styles.nav}>
-            {primaryNav.map((item, index) => <a key={item} href="#" className={index === 0 ? styles.navItemActive : styles.navItem}><span>{item}</span>{index === 0 && <b />}</a>)}
-          </nav>
-          <span className={styles.sectionLabel}>Workspaces</span>
-          <nav className={styles.nav}>{workspaceNav.map((item) => <a key={item} href="#" className={styles.navItem}>{item}</a>)}</nav>
-          <span className={styles.sectionLabel}>Platform</span>
-          <nav className={styles.nav}>{platformNav.map((item) => <a key={item} href="#" className={styles.navItem}>{item}</a>)}</nav>
+          <button className={styles.workspaceCard} type="button">
+            <span className={styles.workspaceMark}>F</span>
+            <span><small>Current workspace</small><strong>Fluxknight</strong></span>
+            <b>⌄</b>
+          </button>
+
+          {navGroups.map((group) => <div key={group.label} className={styles.navGroup}>
+            <span className={styles.sectionLabel}>{group.label}</span>
+            <nav className={styles.nav}>
+              {group.items.map((item) => {
+                const active = item === "Command Center";
+                return <a key={item} href="#" className={active ? styles.navItemActive : styles.navItem}><span>{item}</span>{active && <b />}</a>;
+              })}
+            </nav>
+          </div>)}
         </aside>
 
         <section className={styles.content}>
