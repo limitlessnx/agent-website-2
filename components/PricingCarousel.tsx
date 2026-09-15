@@ -118,6 +118,10 @@ function formatMoney(currency: "NGN" | "USD", amount: number) {
   }).format(amount);
 }
 
+function canonicalPricingSlug(slug: string) {
+  return pricingFrameworkSlugs.has(slug) ? checkoutSlugByFramework[slug] : slug;
+}
+
 export default function PricingCarousel({ plans, compact = false, showDurationSelector = false }: PricingCarouselProps) {
   const [active, setActive] = useState(0);
   const [billingTerm, setBillingTerm] = useState<BillingTerm>("monthly");
@@ -133,21 +137,28 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     showNigeria,
   } = usePublicPricing();
 
-  const presentedPlans = plans.map((plan) => ({ ...plan, ...(publicPlanPresentation[plan.slug] || {}) }));
+  const presentedPlans = plans.map((plan) => {
+    const presentation = publicPlanPresentation[canonicalPricingSlug(plan.slug)];
+    return { ...plan, ...(presentation || {}) };
+  });
 
   const goTo = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const track = trackRef.current;
     if (!track) return;
+
     const nextIndex = Math.min(presentedPlans.length - 1, Math.max(0, index));
     const nextCard = track.children[nextIndex] as HTMLElement | undefined;
     if (!nextCard) return;
 
     setActive(nextIndex);
-    const left = nextCard.offsetLeft - (track.clientWidth - nextCard.clientWidth) / 2;
-    track.scrollTo({ left: Math.max(0, left), behavior });
+    const centeredLeft = nextCard.offsetLeft - (track.clientWidth - nextCard.clientWidth) / 2;
+    const maxLeft = Math.max(0, track.scrollWidth - track.clientWidth);
+    track.scrollTo({ left: Math.min(maxLeft, Math.max(0, centeredLeft)), behavior });
 
     if (programmaticRef.current !== null) window.clearTimeout(programmaticRef.current);
-    programmaticRef.current = window.setTimeout(() => { programmaticRef.current = null; }, behavior === "smooth" ? 450 : 40);
+    programmaticRef.current = window.setTimeout(() => {
+      programmaticRef.current = null;
+    }, behavior === "smooth" ? 420 : 40);
   }, [presentedPlans.length]);
 
   useEffect(() => () => {
@@ -158,10 +169,12 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
   const updateActive = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
+
     const center = track.scrollLeft + track.clientWidth / 2;
     const cards = Array.from(track.children) as HTMLElement[];
     let closest = 0;
     let distance = Number.POSITIVE_INFINITY;
+
     cards.forEach((card, index) => {
       const nextDistance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
       if (nextDistance < distance) {
@@ -169,13 +182,14 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
         distance = nextDistance;
       }
     });
+
     setActive(closest);
   }, []);
 
   const onScroll = () => {
     if (programmaticRef.current !== null) return;
     if (settledRef.current !== null) window.clearTimeout(settledRef.current);
-    settledRef.current = window.setTimeout(updateActive, 70);
+    settledRef.current = window.setTimeout(updateActive, 80);
   };
 
   const move = (direction: number) => goTo(active + direction);
@@ -214,10 +228,15 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
   ) : null;
 
   return (
-    <div className={`${styles.carousel} ${compact ? styles.compact : ""}`} onKeyDown={(event) => {
-      if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
-      if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
-    }} aria-roledescription="carousel" aria-label="Fluxknight pricing plans">
+    <div
+      className={`${styles.carousel} ${compact ? styles.compact : ""}`}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") { event.preventDefault(); move(-1); }
+        if (event.key === "ArrowRight") { event.preventDefault(); move(1); }
+      }}
+      aria-roledescription="carousel"
+      aria-label="Fluxknight pricing plans"
+    >
       <div className={styles.structuralLines} aria-hidden="true"><span /><span /><span /><span /></div>
 
       <div className={styles.desktopControls}>
@@ -252,18 +271,19 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
         {presentedPlans.map((plan, index) => {
           const Icon = plan.icon;
-          const detected = prices[plan.slug];
+          const canonicalSlug = canonicalPricingSlug(plan.slug);
+          const detected = prices[plan.slug] ?? prices[canonicalSlug];
           const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
-          const isCustom = detected?.custom ?? plan.custom ?? (plan.slug === "custom-ai-operations");
-          const isFrameworkPlan = pricingFrameworkSlugs.has(plan.slug);
-          const isBasic = plan.slug === "basic" || detected?.slug === "whatsapp-ai-starter";
-          const checkoutSlug = detected?.slug ?? (isFrameworkPlan ? checkoutSlugByFramework[plan.slug] : plan.slug);
-          const prepaid = billingTerm !== "monthly" && detected && !detected.custom
+          const isExplicitCustom = plan.custom === true || plan.slug === "custom";
+          const isCustom = isExplicitCustom || (plan.slug !== "business-plus" && plan.custom === undefined && detected?.custom === true);
+          const isBasic = plan.slug === "basic" || canonicalSlug === "whatsapp-ai-starter";
+          const checkoutSlug = detected?.slug ?? canonicalSlug;
+          const prepaid = billingTerm !== "monthly" && detected && !isCustom
             ? calculatePrepaidPrice(detected.installationFee, detected.recurringFee, billingTerm)
             : null;
           const href = isCustom
-            ? `/evaluation?plan=${encodeURIComponent(plan.slug === "custom-ai-operations" ? "business-plus" : plan.slug)}`
+            ? `/evaluation?plan=${encodeURIComponent(plan.slug)}`
             : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector && billingTerm !== "monthly" ? `&term=${encodeURIComponent(billingTerm)}` : ""}`;
           const ctaLabel = plan.cta ?? "Get started";
 
@@ -294,8 +314,14 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
 
               <div className={styles.priceBlock}>
                 <div><span>Implementation</span><strong>{firstPrice}</strong></div>
-                <div><span>Monthly renewal</span><strong>{ongoingPrice}</strong></div>
-                {prepaid && detected ? <div className={styles.termValue}><span>{prepaid.label} prepaid · save {prepaid.discountPercent}%</span><strong>{formatMoney(detected.currency, prepaid.total)}</strong><small>Save {formatMoney(detected.currency, prepaid.discount)} from {formatMoney(detected.currency, prepaid.subtotal)}</small></div> : null}
+                <div><span>{billingTerm === "monthly" ? "Monthly renewal" : "Standard renewal"}</span><strong>{ongoingPrice}</strong></div>
+                {prepaid && detected ? (
+                  <div className={styles.termValue}>
+                    <span>{prepaid.label} prepaid · save {prepaid.discountPercent}%</span>
+                    <strong>{formatMoney(detected.currency, prepaid.total)}</strong>
+                    <small>Save {formatMoney(detected.currency, prepaid.discount)} from {formatMoney(detected.currency, prepaid.subtotal)}</small>
+                  </div>
+                ) : null}
               </div>
 
               <h4>What&apos;s included</h4>
@@ -306,14 +332,25 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
                   <Link href="/account/signup?trial=basic&next=%2Fportal" className={styles.cta} aria-label="Start Basic free trial"><b />Start Free Trial <ArrowRight size={16} /></Link>
                   <Link href={href} aria-label="Choose paid Basic" className={styles.secondaryCta}>Choose paid Basic <ArrowRight size={14} /></Link>
                 </div>
-              ) : <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}><b />{ctaLabel} <ArrowRight size={16} /></Link>}
+              ) : (
+                <Link className={styles.cta} href={href} aria-label={`${ctaLabel} with ${plan.name}`}><b />{ctaLabel} <ArrowRight size={16} /></Link>
+              )}
             </article>
           );
         })}
       </div>
 
       <div className={styles.dots} role="group" aria-label="Choose a pricing plan">
-        {presentedPlans.map((plan, index) => <button type="button" key={plan.slug} aria-current={index === active ? "true" : undefined} aria-label={`Show ${plan.name}`} className={index === active ? styles.dotActive : styles.dot} onClick={() => goTo(index)} />)}
+        {presentedPlans.map((plan, index) => (
+          <button
+            type="button"
+            key={plan.slug}
+            aria-current={index === active ? "true" : undefined}
+            aria-label={`Show ${plan.name}`}
+            className={index === active ? styles.dotActive : styles.dot}
+            onClick={() => goTo(index)}
+          />
+        ))}
       </div>
     </div>
   );
