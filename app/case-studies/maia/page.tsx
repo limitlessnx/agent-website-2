@@ -11,27 +11,26 @@ import {
   UsersRound,
   Workflow,
 } from "@/components/admin/ServerIcons";
-import MaiaSystemRing from "@/components/MaiaSystemRing";
 import styles from "./page.module.css";
 
 const maiaDescription =
-  "See how a real estate company can use Maia to connect enquiries, lead qualification, campaigns, follow-up, scheduling, relationship automation, payment reminders, CRM, admin visibility, and human handoff in one operating system.";
+  "See how Maia helps a real estate business turn property enquiries into qualified buyer conversations, follow-up, inspections, CRM activity, and human handoff.";
 
 export const metadata: Metadata = {
-  title: "Maia Real Estate Automation Case Study",
+  title: "Maia for Real Estate | Fluxknight",
   description: maiaDescription,
   alternates: { canonical: "/case-studies/maia" },
   openGraph: {
     type: "website",
     url: "/case-studies/maia",
-    title: "Maia Real Estate Automation Case Study | Fluxknight",
+    title: "Maia for Real Estate | Fluxknight",
     description: maiaDescription,
     siteName: "Fluxknight",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Maia real estate automation system by Fluxknight" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Maia Real Estate Automation Case Study | Fluxknight",
+    title: "Maia for Real Estate | Fluxknight",
     description: maiaDescription,
     images: ["/twitter-image"],
   },
@@ -65,34 +64,13 @@ const journey = [
 ];
 
 const relationshipAutomations = [
-  {
-    title: "New property campaigns",
-    text: "When a new property or offer arrives, a real estate company can select relevant, eligible leads from the CRM and send a WhatsApp campaign through Maia instead of manually contacting every prospect.",
-  },
-  {
-    title: "Installment payment reminders",
-    text: "If a property is being paid for in installments, Maia can use the client's payment schedule to send reminders before the due date, on the due date, and follow up on overdue balances while keeping the account record visible to the team.",
-  },
-  {
-    title: "Personal client reminders",
-    text: "Create a specific reminder for one customer based on what matters to that relationship, whether it is a promised follow-up, inspection date, document reminder, payment date, or future check-in.",
-  },
-  {
-    title: "Birthday messages",
-    text: "Save a client's birthday in the CRM and let Maia send a personalized birthday greeting from the business automatically when the date arrives.",
-  },
-  {
-    title: "Anniversary and seasonal greetings",
-    text: "Automate meaningful relationship messages such as anniversaries, festive greetings, seasonal notes, and other dates that matter to the customer rather than contacting them only when the business wants another sale.",
-  },
-  {
-    title: "Periodic relationship check-ins",
-    text: "Schedule thoughtful periodic messages that keep the business present in the customer's mind without turning every interaction into a sales request.",
-  },
-  {
-    title: "CRM-driven personalization",
-    text: "Use stored preferences, previous enquiries, payment status, important dates, and customer history to determine what message should be sent, when it should be sent, and when a human should step in.",
-  },
+  { title: "New property campaigns", text: "When a new property or offer arrives, a real estate company can select relevant, eligible leads from the CRM and send a WhatsApp campaign through Maia instead of manually contacting every prospect." },
+  { title: "Installment payment reminders", text: "If a property is being paid for in installments, Maia can use the client's payment schedule to send reminders before the due date, on the due date, and follow up on overdue balances while keeping the account record visible to the team." },
+  { title: "Personal client reminders", text: "Create a specific reminder for one customer based on what matters to that relationship, whether it is a promised follow-up, inspection date, document reminder, payment date, or future check-in." },
+  { title: "Birthday messages", text: "Save a client's birthday in the CRM and let Maia send a personalized birthday greeting from the business automatically when the date arrives." },
+  { title: "Anniversary and seasonal greetings", text: "Automate meaningful relationship messages such as anniversaries, festive greetings, seasonal notes, and other dates that matter to the customer rather than contacting them only when the business wants another sale." },
+  { title: "Periodic relationship check-ins", text: "Schedule thoughtful periodic messages that keep the business present in the customer's mind without turning every interaction into a sales request." },
+  { title: "CRM-driven personalization", text: "Use stored preferences, previous enquiries, payment status, important dates, and customer history to determine what message should be sent, when it should be sent, and when a human should step in." },
 ];
 
 const industryExamples = [
@@ -102,53 +80,114 @@ const industryExamples = [
   ["Professional & service businesses", "Remember customer preferences, important follow-up dates, completed jobs, payment dates, anniversaries, and periodic check-ins so relationships continue after the first transaction."],
 ];
 
+const beforeItems = [
+  "Property enquiries sit in WhatsApp until an agent is available",
+  "Lead details live across chats, notes and staff memory",
+  "Follow-up becomes inconsistent once the prospect pauses",
+  "Inspection scheduling and reminders require manual chasing",
+];
+
+const afterItems = [
+  "Maia answers immediately and captures the enquiry context",
+  "Budget, location, property type and intent become structured lead data",
+  "Follow-up and reminders continue without depending on memory",
+  "Qualified buyers move toward inspections with the team entering at the right moment",
+];
+
 export default function MaiaCaseStudyPage() {
   return (
     <main className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.heroGlow} />
         <div className={styles.shell}>
-          <span className={styles.eyebrow}>Case study · Real estate company</span>
-          <h1>How a real estate company can run customer operations with Maia.</h1>
-          <p>
-            Maia connects enquiries, lead qualification, follow-up, campaigns, support, inspection scheduling, relationship reminders, payment reminders, CRM updates, admin visibility, and human handoff in one operating flow.
-          </p>
-          <div className={styles.actions}>
-            <Link className={styles.primary} href="/pricing" data-cta="maia-case-study-pricing">See Business+ pricing <ArrowRight size={17} /></Link>
-            <Link className={styles.secondary} href="/">Back to homepage</Link>
-          </div>
-          <div className={styles.heroImage} role="img" aria-label="Modern luxury real estate residence at dusk">
-            <div className={styles.heroImageShade} />
-            <div className={styles.heroImageCaption}>
-              <span>Example operating environment</span>
-              <strong>Real estate customer operations</strong>
+          <div className={styles.heroLayout}>
+            <div className={styles.heroCopy}>
+              <span className={styles.eyebrow}>Maia for real estate</span>
+              <h1>Turn property enquiries into qualified buyer conversations.</h1>
+              <p>
+                Maia helps a real estate business respond faster, qualify buyer intent, keep follow-up moving, coordinate inspections, and preserve customer context until the right human needs to step in.
+              </p>
+              <div className={styles.actions}>
+                <Link className={styles.primary} href="/pricing" data-cta="maia-case-study-pricing">See pricing <ArrowRight size={17} /></Link>
+                <Link className={styles.secondary} href="#maia-story">See how it works</Link>
+              </div>
+              <div className={styles.heroProof}>
+                <span>Enquiry handling</span><span>Lead qualification</span><span>Follow-up</span><span>Inspection scheduling</span>
+              </div>
+            </div>
+
+            <div className={styles.heroVisual} role="img" aria-label="Real estate buyer journey supported by Maia">
+              <div className={styles.heroVisualShade} />
+              <div className={styles.heroUiCard + " " + styles.heroUiTop}>
+                <small>New enquiry</small>
+                <strong>“Is the 4-bedroom still available?”</strong>
+                <span>Maia replied · now</span>
+              </div>
+              <div className={styles.heroUiCard + " " + styles.heroUiBottom}>
+                <small>Lead status</small>
+                <strong>Qualified buyer</strong>
+                <span>Inspection next step</span>
+              </div>
+              <div className={styles.heroImageCaption}>
+                <span>Customer journey</span>
+                <strong>From first enquiry to serious buyer action</strong>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className={styles.mapSection}>
+      <section className={styles.problemSection}>
         <div className={styles.shell}>
-          <div className={styles.heading}>
-            <span className={styles.eyebrow}>Real estate operating system</span>
-            <h2>How the Maia system works.</h2>
-            <p>Maia connects enquiry handling, qualification, follow-up, scheduling, support, CRM updates, reminders, admin visibility, and human handoff in one operating flow.</p>
+          <div className={styles.sectionIndex}>01 · The problem</div>
+          <div className={styles.problemLayout}>
+            <div className={styles.problemIntro}>
+              <span className={styles.eyebrow}>Before Maia</span>
+              <h2>Interest arrives quickly. Operations often move slower.</h2>
+              <p>Real estate businesses can generate enquiries and still lose serious buyers because the customer journey breaks between the first message and the next meaningful action.</p>
+            </div>
+            <div className={styles.problemGrid}>
+              {["Slow replies cool buyer intent","Agents restart conversations from zero","Follow-up depends on memory","Inspection coordination gets delayed","Important dates get missed","Past prospects disappear after the first conversation"].map((item, index) => (
+                <article key={item}>
+                  <span className={styles.problemNumber}>{String(index + 1).padStart(2, "0")}</span>
+                  <span>{item}</span>
+                </article>
+              ))}
+            </div>
           </div>
-          <MaiaSystemRing />
         </div>
       </section>
 
-      <section className={styles.problemSection}>
+      <section className={styles.beforeAfterSection} id="maia-story">
         <div className={styles.shell}>
+          <div className={styles.sectionIndex}>02 · The shift</div>
           <div className={styles.heading}>
-            <span className={styles.eyebrow}>The operational problem</span>
-            <h2>Real estate leads are often lost between first enquiry and serious action.</h2>
-            <p>Slow replies, forgotten follow-up, scattered customer details, missed inspections, disconnected campaigns, missed payment reminders, and low admin visibility create friction long before an agent gets a chance to close.</p>
+            <span className={styles.eyebrow}>Before → after</span>
+            <h2>The customer journey stops depending on whoever remembers what happens next.</h2>
+            <p>Maia does not remove the agent. It gives the agent a cleaner, better-prepared conversation to enter.</p>
           </div>
-          <div className={styles.problemGrid}>
-            {["Leads wait too long for replies","Agents restart conversations from scratch","Follow-up depends on memory","Inspection coordination gets delayed","Payment reminders get missed","Past customers are rarely nurtured after the sale"].map((item) => (
-              <article key={item}><CheckCircle2 size={18} /><span>{item}</span></article>
-            ))}
+
+          <div className={styles.beforeAfterGrid}>
+            <article className={styles.beforeCard}>
+              <div className={styles.stateLabel}><span className={styles.stateDot} />Before</div>
+              <h3>Manual, fragmented and easy to lose.</h3>
+              <div className={styles.stateList}>
+                {beforeItems.map((item) => <p key={item}><span>×</span>{item}</p>)}
+              </div>
+            </article>
+
+            <div className={styles.shiftRail} aria-hidden="true">
+              <span>Maia</span>
+              <ArrowRight size={18} />
+            </div>
+
+            <article className={styles.afterCard}>
+              <div className={styles.stateLabel}><span className={styles.stateDot} />With Maia</div>
+              <h3>Responsive, structured and ready for human action.</h3>
+              <div className={styles.stateList}>
+                {afterItems.map((item) => <p key={item}><CheckCircle2 size={15}/>{item}</p>)}
+              </div>
+            </article>
           </div>
         </div>
       </section>
