@@ -1,13 +1,7 @@
 .carousel{
-  --flux-bg:#07030f;
-  --flux-panel:#10081a;
-  --flux-panel-2:#160b25;
   --flux-border:rgba(192,132,252,.20);
   --flux-border-strong:rgba(192,132,252,.44);
-  --flux-violet:#a855f7;
-  --flux-violet-soft:#d8b4fe;
   --flux-text:#f8f5fb;
-  --flux-muted:#9c90a8;
   position:relative;
   width:100%;
   isolation:isolate;
@@ -28,6 +22,7 @@
 }
 
 .desktopControls{display:block}
+.mobileToolbar{display:none}
 .topControls{position:relative;z-index:4;width:min(1180px,100%);margin:0 auto 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .controlCopy{display:grid;gap:5px}
 .topControls p{margin:0;color:#c9bfd3;font-size:.7rem;font-weight:650;letter-spacing:.11em;text-transform:uppercase}
@@ -58,8 +53,8 @@
   gap:18px;
   width:100%;
   overflow-x:auto;
-  padding:44px max(20px,calc((100vw - min(88vw,380px))/2)) 28px;
-  scroll-padding-inline:max(20px,calc((100vw - min(88vw,380px))/2));
+  padding:44px max(32px,calc((100% - 360px)/2)) 28px;
+  scroll-padding-inline:max(32px,calc((100% - 360px)/2));
   scroll-snap-type:x mandatory;
   overscroll-behavior-x:contain;
   scrollbar-width:none;
@@ -71,12 +66,11 @@
 
 .card{
   position:relative;
-  flex:0 0 clamp(320px,31vw,380px);
+  flex:0 0 360px;
   min-width:0;
   padding:52px 22px 22px;
   display:flex;
   flex-direction:column;
-  overflow:visible;
   scroll-snap-align:center;
   scroll-snap-stop:always;
   border:1px solid var(--flux-border);
@@ -94,7 +88,6 @@
 .featured{border-color:rgba(216,180,254,.5);background:radial-gradient(circle at 50% 0%,rgba(168,85,247,.12),transparent 34%),linear-gradient(180deg,rgba(30,13,48,.99),rgba(11,5,20,.99))}
 .cardGlow{position:absolute;inset:0;border-radius:18px;background:radial-gradient(520px circle at 50% -18%,rgba(168,85,247,.08),transparent 58%);pointer-events:none;overflow:hidden}
 
-.mobileControls{display:none}
 .cardHeader{position:relative;min-height:28px;display:flex;align-items:center;justify-content:center}
 .icon{position:absolute;left:50%;top:-79px;width:52px;height:52px;transform:translateX(-50%);display:inline-grid;place-items:center;z-index:5;border:1px solid rgba(192,132,252,.35);border-radius:14px;color:#d8b4fe;background:linear-gradient(180deg,#171021,#0d0814);box-shadow:0 12px 28px rgba(28,8,44,.28)}
 .featured .icon{border-color:rgba(216,180,254,.62);box-shadow:0 0 28px rgba(168,85,247,.18),0 14px 34px rgba(38,12,59,.28)}
@@ -108,11 +101,6 @@
 .planNote>span{color:#cda9e9;font-size:.56rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
 .planNote strong{color:#fff;font-size:.88rem;font-weight:650}
 .planNote small{color:#8e809a;font-size:.66rem;line-height:1.35}
-
-.decisionBlock{display:grid;gap:4px;margin:13px 0 0;padding:12px 0 0;border-top:1px solid rgba(192,132,252,.13)}
-.decisionBlock>span{color:#8f7e9d;font-size:.56rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
-.decisionBlock strong{color:#e1d7e8;font-size:.73rem;font-weight:600;line-height:1.42}
-.decisionBlock p{margin:0;color:#887b92;font-size:.68rem;line-height:1.45}
 
 .priceBlock{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0;margin:14px 0 16px;padding:14px 0;border-top:1px solid rgba(192,132,252,.14);border-bottom:1px solid rgba(192,132,252,.14);text-align:left}
 .priceBlock>div{min-width:0}
@@ -135,60 +123,53 @@
 .dot,.dotActive{appearance:none;width:7px;height:7px;padding:0;border:1px solid rgba(192,132,252,.35);border-radius:999px;cursor:pointer;background:transparent;transition:width .18s ease,background .18s ease,border-color .18s ease}
 .dotActive{width:24px;background:#a855f7;border-color:#a855f7}
 
-.compact .card{flex-basis:clamp(300px,30vw,350px);padding:48px 20px 20px}
+.compact .card{flex-basis:350px;padding:48px 20px 20px}
 .compact .description{font-size:.75rem}
-
-@media(min-width:900px){
-  .track{padding-left:max(32px,calc((100vw - 380px)/2));padding-right:max(32px,calc((100vw - 380px)/2));}
-  .card{flex-basis:360px}
-  .dots{margin-top:4px}
-}
 
 @media(max-width:640px){
   .desktopControls{display:none}
   .carousel::before{display:none}
-  .track{
-    gap:12px;
-    padding:6px max(18px,calc((100vw - min(91vw,354px))/2)) 16px;
-    scroll-padding-inline:max(18px,calc((100vw - min(91vw,354px))/2));
-    align-items:flex-start;
-  }
-  .card{
-    flex-basis:min(91vw,354px);
-    padding:12px 12px 14px;
-    border-radius:15px;
-    opacity:.5;
-    transform:none;
-  }
-  .card:hover,.card.active{transform:none}
-  .card.active{opacity:1}
-
-  .mobileControls{
-    position:relative;
-    z-index:6;
+  .mobileToolbar{
     display:grid;
-    gap:7px;
-    margin:0 0 10px;
-    padding:8px;
+    gap:8px;
+    width:calc(100% - 16px);
+    margin:0 auto 8px;
+    padding:9px;
     border:1px solid rgba(192,132,252,.16);
-    border-radius:10px;
-    background:rgba(9,4,16,.5);
-    box-shadow:inset 0 1px rgba(255,255,255,.02);
+    border-radius:12px;
+    background:linear-gradient(180deg,rgba(17,8,28,.92),rgba(9,4,16,.94));
+    box-shadow:inset 0 1px rgba(255,255,255,.025);
   }
   .mobileControlTopline{display:flex;align-items:center;justify-content:space-between;gap:8px}
   .mobileControlTopline>div:first-child{display:grid;gap:1px}
   .mobilePlanCount{color:#d8cde2;font-size:.58rem;font-weight:750;letter-spacing:.075em;text-transform:uppercase}
   .mobileControlTopline small{color:#776b81;font-size:.53rem}
   .mobileControlTopline .arrowControls{gap:5px}
-  .mobileControlTopline .arrowControls button{width:28px;height:28px;border-radius:8px}
-
+  .mobileControlTopline .arrowControls button{width:30px;height:30px;border-radius:8px}
   .mobileControlGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:end}
+  .mobileControlGrid:has(.durationField:only-child){grid-template-columns:1fr}
   .mobileControlGrid .regionSwitch{width:100%;margin:0;display:grid;grid-template-columns:1fr 1fr;padding:2px;border-radius:8px}
-  .mobileControlGrid .regionSwitch button{min-height:31px;padding:3px 4px;font-size:.47rem;letter-spacing:.025em}
-  .mobileControlGrid .durationField{width:100%;gap:3px}
+  .mobileControlGrid .regionSwitch button{min-height:32px;padding:3px 4px;font-size:.48rem;letter-spacing:.025em}
+  .mobileControlGrid .durationField{width:100%;max-width:none;gap:3px}
   .mobileControlGrid .durationLabel{font-size:.45rem;letter-spacing:.06em}
-  .mobileControlGrid .durationSelect{min-height:35px;padding-left:8px;padding-right:22px;border-radius:8px;font-size:.55rem}
+  .mobileControlGrid .durationSelect{min-height:36px;padding-left:8px;padding-right:24px;border-radius:8px;font-size:.56rem}
   .mobileControlGrid .durationCaret{right:8px;font-size:.72rem}
+
+  .track{
+    gap:12px;
+    padding:6px 8px 14px;
+    scroll-padding-inline:8px;
+    align-items:flex-start;
+  }
+  .card{
+    flex:0 0 calc(100% - 16px);
+    padding:12px 12px 14px;
+    border-radius:15px;
+    opacity:.46;
+    transform:none;
+  }
+  .card:hover,.card.active{transform:none}
+  .card.active{opacity:1}
 
   .cardHeader{min-height:12px}
   .icon{position:relative;left:auto;top:auto;width:38px;height:38px;transform:none;margin:0 auto 5px;border-radius:10px}
@@ -201,10 +182,6 @@
   .planNote>span{font-size:.45rem;letter-spacing:.06em}
   .planNote strong{font-size:.73rem}
   .planNote small{font-size:.54rem;line-height:1.25}
-
-  .decisionBlock{margin-top:7px;padding-top:7px}
-  .decisionBlock p{display:none}
-  .decisionBlock strong{font-size:.59rem;line-height:1.25}
 
   .priceBlock{gap:6px;margin:8px 0 9px;padding:9px 0}
   .priceBlock span{font-size:.47rem;letter-spacing:.06em}
@@ -224,17 +201,13 @@
   .dots{gap:6px;margin-top:0}
   .dot,.dotActive{width:6px;height:6px}
   .dotActive{width:20px}
-  .compact .card{flex-basis:min(91vw,354px);padding:12px}
+  .compact .card{flex-basis:calc(100% - 16px);padding:12px}
 }
 
 @media(max-width:390px){
-  .track{padding-inline:max(14px,calc((100vw - min(92vw,340px))/2));scroll-padding-inline:max(14px,calc((100vw - min(92vw,340px))/2))}
-  .card{flex-basis:min(92vw,340px)}
   .mobileControlGrid{grid-template-columns:1fr}
-  .mobileControlGrid .regionSwitch{max-width:none}
   .features{gap:5px 6px}
   .features span{font-size:.54rem}
-  .compact .card{flex-basis:min(92vw,340px)}
 }
 
 @media(prefers-reduced-motion:reduce){.card,.cta,.secondaryCta,.dot,.dotActive,.arrowControls button{transition:none}}
