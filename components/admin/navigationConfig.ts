@@ -39,6 +39,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Operations",
     sections: [{
       items: [
+        { href: "/dashboard/lifecycle", label: "Customer Intelligence" },
         { href: "/dashboard/workflows", label: "Automations" },
         { href: "/dashboard/agents", label: "Agents" },
         { href: "/dashboard/social", label: "Social" },
@@ -51,7 +52,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Customers",
     sections: [{
       items: [
-        { href: "/dashboard/lifecycle", label: "Customer Intelligence" },
         { href: "/dashboard/evaluations", label: "Evaluation Leads" },
       ],
     }],
@@ -61,9 +61,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Workspaces",
     sections: [{
       items: [
-        { href: "/dashboard/limitless/leads", label: "Limitless Realty" },
-        { href: "/dashboard/gencouv", label: "Gencouv", exact: true },
-        { href: "/dashboard/clients", label: "Client Workspaces", exact: true },
+        { href: "/dashboard/clients", label: "Workspaces", exact: true },
       ],
     }],
   },
@@ -99,7 +97,7 @@ export const CLIENT_ONBOARDING_NAV: AdminNavGroup = {
       items: [
         { href: "/dashboard/onboarding#new-client", label: "New Client" },
         { href: "/dashboard/onboarding#queue", label: "Onboarding Queue" },
-        { href: "/dashboard/clients", label: "Client Registry", exact: true },
+        { href: "/dashboard/clients", label: "Workspace Directory", exact: true },
       ],
     },
     {
@@ -113,7 +111,7 @@ export function buildClientWorkspaceNav(tenants: Array<{ organizationId: string;
   return {
     label: "Client Workspaces",
     items: tenants.map((tenant) => ({
-      href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
+      href: `/dashboard/clients/${encodeURIComponent(tenant.organizationId)}/setup`,
       label: tenant.name,
       meta: tenant.status.replaceAll("_", " "),
     })),
