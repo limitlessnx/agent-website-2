@@ -71,16 +71,18 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     ? "Gencouv"
     : pathname.startsWith("/dashboard/limitless")
       ? "Limitless Realty"
-      : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding")
-        ? "Client Workspaces"
-        : "Fluxknight";
+      : pathname.startsWith("/dashboard/clients/")
+        ? "Client workspace"
+        : pathname === "/dashboard/clients" || pathname.startsWith("/dashboard/onboarding")
+          ? "Workspaces"
+          : "Fluxknight";
 
   const workspaceLinks = [
     { href: "/dashboard", label: "Fluxknight", meta: "Platform" },
     { href: "/dashboard/limitless/leads", label: "Limitless Realty", meta: "Internal workspace" },
     { href: "/dashboard/gencouv", label: "Gencouv", meta: "Internal workspace" },
     ...tenants.slice(0, 6).map((tenant) => ({
-      href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
+      href: `/dashboard/clients/${encodeURIComponent(tenant.organizationId)}/setup`,
       label: tenant.name,
       meta: tenant.status.replaceAll("_", " "),
     })),
@@ -110,7 +112,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
             <span><strong>{workspace.label}</strong><small>{workspace.meta}</small></span>
           </Link>)}
           <Link href="/dashboard/clients" onClick={() => { setWorkspaceOpen(false); closeMenu(); }} className={extras.manageWorkspaces}>
-            <Search size={13} /><span>Browse workspaces</span>
+            <Search size={13} /><span>Browse all workspaces</span>
           </Link>
         </div> : null}
       </div>
