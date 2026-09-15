@@ -43,9 +43,8 @@ const checkoutSlugByFramework: Record<string, string> = {
 
 const durationOptions: Array<{ key: BillingTerm; label: string; saving?: string }> = [
   { key: "monthly", label: "Monthly", saving: "Standard" },
-  { key: "3m", label: "3 months", saving: "Save 10%" },
   { key: "6m", label: "6 months", saving: "Save 15%" },
-  { key: "12m", label: "1 year", saving: "Save 20%" },
+  { key: "12m", label: "Yearly", saving: "Save 20%" },
 ];
 
 const publicPlanPresentation: Record<string, PlanPresentation> = {
