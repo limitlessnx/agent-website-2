@@ -39,7 +39,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Operations",
     sections: [{
       items: [
-        { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
         { href: "/dashboard/workflows", label: "Automations" },
         { href: "/dashboard/agents", label: "Agents" },
         { href: "/dashboard/social", label: "Social" },
@@ -52,10 +51,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Customers",
     sections: [{
       items: [
-        { href: "/dashboard/health", label: "Customer Health" },
-        { href: "/dashboard/retention", label: "Retention" },
-        { href: "/dashboard/expansion", label: "Growth" },
-        { href: "/dashboard/value", label: "Usage & Value" },
+        { href: "/dashboard/lifecycle", label: "Customer Intelligence" },
         { href: "/dashboard/evaluations", label: "Evaluation Leads" },
       ],
     }],
