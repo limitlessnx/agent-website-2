@@ -12,12 +12,13 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/portal") ||
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/account");
+  const hasEmbeddedHomepageNavigation = pathname === "/";
 
   if (isApplicationArea) return <main>{children}</main>;
 
   return (
     <>
-      <Navbar />
+      {!hasEmbeddedHomepageNavigation ? <Navbar /> : null}
       <main>{children}</main>
       <Footer />
     </>
