@@ -1,4 +1,5 @@
 import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
+import styles from "./preview.module.css";
 
 export const dynamic = "force-static";
 
@@ -32,13 +33,50 @@ const snapshot = {
   ],
 };
 
+const primaryNav = ["Command Center", "CRM", "Conversations", "Automations", "Agents", "Social", "Activity"];
+const workspaceNav = ["Limitless Realty", "Gencouv", "Clients"];
+const platformNav = ["Billing & Usage", "Knowledge", "AI Models", "Integrations", "Settings"];
+
 export default function DashboardPreviewPage() {
   return (
-    <main style={{ minHeight: "100vh", background: "#080b10", color: "#eef0f6", padding: "24px" }}>
-      <div style={{ maxWidth: 1440, margin: "0 auto" }}>
-        <div style={{ marginBottom: 16, color: "#8f97a5", fontSize: 12, fontWeight: 800, letterSpacing: ".12em" }}>DASHBOARD UI PREVIEW · MOCK DATA · NO LOGIN REQUIRED</div>
-        <BusinessCommandCenterPanel snapshot={snapshot} />
+    <main className={styles.page}>
+      <header className={styles.topbar}>
+        <div className={styles.brand}>
+          <div className={styles.mark}>FX</div>
+          <div className={styles.brandCopy}><strong>Fluxknight</strong><span>Operations OS</span></div>
+        </div>
+        <div className={styles.previewChip}>Preview · Mock data</div>
+      </header>
+
+      <div className={styles.layout}>
+        <aside className={styles.sidebar}>
+          <span className={styles.sectionLabel}>Overview</span>
+          <nav className={styles.nav}>
+            {primaryNav.map((item, index) => <a key={item} href="#" className={index === 0 ? styles.navItemActive : styles.navItem}><span>{item}</span>{index === 0 && <b />}</a>)}
+          </nav>
+          <span className={styles.sectionLabel}>Workspaces</span>
+          <nav className={styles.nav}>{workspaceNav.map((item) => <a key={item} href="#" className={styles.navItem}>{item}</a>)}</nav>
+          <span className={styles.sectionLabel}>Platform</span>
+          <nav className={styles.nav}>{platformNav.map((item) => <a key={item} href="#" className={styles.navItem}>{item}</a>)}</nav>
+        </aside>
+
+        <section className={styles.content}>
+          <div className={styles.hero}>
+            <div className={styles.heroCopy}>
+              <span>Fluxknight workspace</span>
+              <h1>Command Center</h1>
+              <p>See what is happening, what needs attention, what changed, and what should happen next across your businesses and client workspaces.</p>
+            </div>
+            <div className={styles.state}><i /> Needs attention</div>
+          </div>
+
+          <BusinessCommandCenterPanel snapshot={snapshot} />
+        </section>
       </div>
+
+      <nav className={styles.mobileNav} aria-label="Preview mobile navigation">
+        <span className={styles.active}>Home</span><span>Workspaces</span><span>Agents</span><span>Activity</span><span>Menu</span>
+      </nav>
     </main>
   );
 }
