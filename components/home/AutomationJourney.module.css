@@ -1,0 +1,482 @@
+.section {
+  padding: 84px 24px;
+  border-top: 1px solid rgba(174, 112, 255, 0.14);
+  background:
+    radial-gradient(circle at 74% 28%, rgba(81, 43, 170, 0.13), transparent 31%),
+    radial-gradient(circle at 26% 66%, rgba(130, 65, 225, 0.08), transparent 32%),
+    #07030f;
+}
+
+.frame {
+  position: relative;
+  max-width: 1180px;
+  min-height: 760px;
+  margin: 0 auto;
+  padding: 54px 48px;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.78fr) minmax(560px, 1.22fr);
+  gap: 42px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(139, 76, 245, 0.5);
+  border-radius: 22px;
+  background:
+    linear-gradient(rgba(7, 3, 15, 0.94), rgba(7, 3, 15, 0.96)),
+    radial-gradient(circle at 70% 28%, rgba(86, 46, 186, 0.28), transparent 34%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 30px 100px rgba(0,0,0,0.28);
+}
+
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(rgba(151, 95, 245, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(151, 95, 245, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at 65% 50%, black, transparent 76%);
+}
+
+.copy {
+  position: relative;
+  z-index: 4;
+  align-self: center;
+  max-width: 390px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 18px;
+  border: 1px solid rgba(154, 86, 255, 0.52);
+  border-radius: 999px;
+  color: #b990ff;
+  background: rgba(100, 45, 191, 0.12);
+  box-shadow: inset 0 0 22px rgba(145, 73, 255, 0.08);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.copy h2 {
+  margin: 27px 0 24px;
+  color: #fbf8ff;
+  font-size: clamp(2.6rem, 4.2vw, 4.25rem);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.copy h2 span {
+  color: #9b4dff;
+  background: linear-gradient(90deg, #a45cff 0%, #7d2dff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.copy > p {
+  max-width: 360px;
+  margin: 0;
+  color: #a99cbc;
+  font-size: 1.02rem;
+  line-height: 1.72;
+}
+
+.cta {
+  width: min(100%, 300px);
+  min-height: 66px;
+  margin-top: 34px;
+  padding: 0 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  color: #fff;
+  border: 1px solid rgba(213, 181, 255, 0.38);
+  border-radius: 10px;
+  background: linear-gradient(100deg, #7541ff 0%, #b450f1 100%);
+  box-shadow: 0 14px 42px rgba(124, 54, 236, 0.24), inset 0 1px rgba(255,255,255,0.18);
+  text-decoration: none;
+  font-size: 1.02rem;
+  font-weight: 800;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 50px rgba(139, 67, 247, 0.34), inset 0 1px rgba(255,255,255,0.18);
+}
+
+.copy small {
+  display: block;
+  margin-top: 14px;
+  color: #81758f;
+  font-size: 0.76rem;
+}
+
+.journey {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  min-height: 660px;
+  align-self: center;
+}
+
+.connector {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(129, 70, 230, 0.25));
+}
+
+.connector path {
+  fill: none;
+  stroke: rgba(129, 73, 225, 0.72);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.step {
+  --tone: #9b5cff;
+  --tone-rgb: 155, 92, 255;
+  position: absolute;
+  width: 78%;
+  min-height: 98px;
+  display: flex;
+  align-items: center;
+}
+
+.step1 { top: 0; right: 0; }
+.step2 { top: 108px; left: 0; }
+.step3 { top: 216px; right: 0; }
+.step4 { top: 324px; left: 0; }
+.step5 { top: 432px; right: 0; }
+.step6 { top: 540px; left: 0; }
+
+.cyan { --tone: #16d8f4; --tone-rgb: 22, 216, 244; }
+.violet { --tone: #9d55ff; --tone-rgb: 157, 85, 255; }
+.blue { --tone: #3187ff; --tone-rgb: 49, 135, 255; }
+.pink { --tone: #f25ad6; --tone-rgb: 242, 90, 214; }
+.green { --tone: #42df88; --tone-rgb: 66, 223, 136; }
+.gold { --tone: #ffc65a; --tone-rgb: 255, 198, 90; }
+
+.number {
+  position: absolute;
+  left: -64px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--tone);
+  font-size: 2.05rem;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  text-shadow: 0 0 20px rgba(var(--tone-rgb), 0.22);
+}
+
+.node {
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 23px;
+  height: 23px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--tone);
+  border-radius: 50%;
+  background: #090413;
+  box-shadow: 0 0 14px rgba(var(--tone-rgb), 0.25);
+}
+
+.node span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 12px rgba(var(--tone-rgb), 0.7);
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  min-height: 96px;
+  padding: 17px 24px 17px 100px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(var(--tone-rgb), 0.8);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(var(--tone-rgb), 0.29), rgba(var(--tone-rgb), 0.12) 60%, rgba(var(--tone-rgb), 0.2)),
+    rgba(9, 5, 18, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 14px 35px rgba(0,0,0,0.22),
+    0 0 30px rgba(var(--tone-rgb), 0.07);
+}
+
+.iconWrap {
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  width: 88px;
+  height: 88px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 7px solid rgba(var(--tone-rgb), 0.74);
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(230, 226, 238, 0.96));
+  box-shadow:
+    0 0 0 5px rgba(var(--tone-rgb), 0.17),
+    0 8px 22px rgba(0,0,0,0.38),
+    0 0 28px rgba(var(--tone-rgb), 0.36),
+    inset 0 2px 4px rgba(255,255,255,0.9);
+}
+
+.iconCore {
+  width: 55px;
+  height: 55px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--tone) 68%, #26123c);
+  background: rgba(255,255,255,0.78);
+  box-shadow: inset 0 0 12px rgba(var(--tone-rgb), 0.14);
+}
+
+.cardCopy {
+  min-width: 0;
+}
+
+.cardCopy h3 {
+  margin: 0 0 5px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.cardCopy p {
+  max-width: 310px;
+  margin: 0;
+  color: #c4b9cf;
+  font-size: 0.76rem;
+  line-height: 1.38;
+}
+
+.endDot {
+  position: absolute;
+  right: 25%;
+  bottom: -8px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: #a66aff;
+  box-shadow: 0 0 22px rgba(166, 106, 255, 0.88), 0 0 42px rgba(166, 106, 255, 0.34);
+}
+
+.signature {
+  position: absolute;
+  right: 1%;
+  bottom: 4px;
+  color: #a880ff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  font-style: italic;
+  line-height: 1.05;
+  transform: rotate(-5deg);
+  opacity: 0.9;
+}
+
+@media (max-width: 1100px) {
+  .frame {
+    grid-template-columns: minmax(290px, 0.72fr) minmax(500px, 1.28fr);
+    gap: 26px;
+    padding-inline: 36px;
+  }
+
+  .step { width: 76%; }
+  .card { padding-right: 18px; padding-left: 92px; }
+  .iconWrap { width: 82px; height: 82px; }
+  .number { left: -57px; font-size: 1.85rem; }
+}
+
+@media (max-width: 900px) {
+  .section { padding: 68px 18px; }
+
+  .frame {
+    min-height: 0;
+    padding: 44px 30px 48px;
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+
+  .copy {
+    max-width: 650px;
+  }
+
+  .copy h2 {
+    max-width: 650px;
+    font-size: clamp(2.6rem, 8vw, 4.3rem);
+  }
+
+  .copy > p { max-width: 590px; }
+  .journey { width: min(100%, 650px); margin: 0 auto; }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 54px 14px;
+  }
+
+  .frame {
+    padding: 30px 18px 34px;
+    gap: 38px;
+    border-radius: 18px;
+  }
+
+  .eyebrow {
+    min-height: 30px;
+    padding: 6px 13px;
+    font-size: 0.64rem;
+  }
+
+  .copy h2 {
+    margin: 22px 0 18px;
+    font-size: clamp(2.45rem, 12.2vw, 3.45rem);
+    line-height: 0.98;
+  }
+
+  .copy > p {
+    font-size: 0.96rem;
+    line-height: 1.65;
+  }
+
+  .cta {
+    width: 100%;
+    min-height: 58px;
+    margin-top: 26px;
+    font-size: 0.98rem;
+  }
+
+  .copy small {
+    margin-top: 12px;
+    font-size: 0.72rem;
+  }
+
+  .journey {
+    min-height: 672px;
+    padding-left: 42px;
+  }
+
+  .connector {
+    left: 18px;
+    right: auto;
+    width: 36px;
+    height: 632px;
+  }
+
+  .connector path {
+    d: path("M18 0 C18 95 18 95 18 105 C18 200 18 200 18 210 C18 305 18 305 18 315 C18 410 18 410 18 420 C18 515 18 515 18 525 C18 610 18 610 18 632");
+  }
+
+  .step {
+    position: absolute;
+    left: 42px !important;
+    right: auto !important;
+    width: calc(100% - 42px);
+    min-height: 96px;
+  }
+
+  .step1 { top: 0; }
+  .step2 { top: 110px; }
+  .step3 { top: 220px; }
+  .step4 { top: 330px; }
+  .step5 { top: 440px; }
+  .step6 { top: 550px; }
+
+  .number {
+    left: -42px;
+    top: 14px;
+    transform: none;
+    font-size: 1.2rem;
+  }
+
+  .node {
+    left: -31px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .node span { width: 6px; height: 6px; }
+
+  .card {
+    min-height: 94px;
+    padding: 13px 13px 13px 76px;
+    border-radius: 22px 999px 999px 22px;
+  }
+
+  .iconWrap {
+    left: 6px;
+    width: 60px;
+    height: 60px;
+    border-width: 5px;
+  }
+
+  .iconCore {
+    width: 38px;
+    height: 38px;
+  }
+
+  .iconCore svg { width: 20px; height: 20px; }
+
+  .cardCopy h3 {
+    margin-bottom: 4px;
+    font-size: 0.88rem;
+  }
+
+  .cardCopy p {
+    max-width: none;
+    padding-right: 4px;
+    font-size: 0.67rem;
+    line-height: 1.35;
+  }
+
+  .endDot {
+    left: 22px;
+    right: auto;
+    bottom: 10px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .signature {
+    right: 4px;
+    bottom: 0;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .frame { padding-inline: 14px; }
+  .journey { padding-left: 38px; }
+  .step { left: 38px !important; width: calc(100% - 38px); }
+  .number { left: -38px; }
+  .card { padding-left: 68px; padding-right: 10px; }
+  .iconWrap { left: 5px; width: 54px; height: 54px; }
+  .cardCopy h3 { font-size: 0.82rem; }
+  .cardCopy p { font-size: 0.63rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta { transition: none; }
+}
