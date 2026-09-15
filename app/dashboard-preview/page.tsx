@@ -1,4 +1,5 @@
 import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
+import CommandCenterExpansion from "@/components/admin/CommandCenterExpansion";
 import styles from "./preview.module.css";
 
 export const dynamic = "force-static";
@@ -82,6 +83,28 @@ export default function DashboardPreviewPage() {
           </div>
 
           <BusinessCommandCenterPanel snapshot={snapshot} />
+          <CommandCenterExpansion
+            pulse={{ leads: 48, conversations: 126, conversions: 11, activeClients: 6, aiResolutions: 84, valueGenerated: "₦4.8m", creditsUsed: "62%" }}
+            workforce={[
+              { name: "Leo", role: "Operations intelligence", state: "attention", note: "2 signals need review" },
+              { name: "Maia", role: "Real estate sales", state: "active", note: "handling lead follow-up" },
+              { name: "Social AI", role: "Content operations", state: "idle", note: "awaiting review queue" },
+            ]}
+            health={[
+              { name: "WhatsApp", state: "attention", note: "delivery below baseline" },
+              { name: "Email", state: "operational", note: "sending normally" },
+              { name: "Voice", state: "operational", note: "available" },
+              { name: "n8n", state: "operational", note: "connected" },
+              { name: "Supabase", state: "operational", note: "connected" },
+              { name: "Trigger.dev", state: "operational", note: "jobs healthy" },
+              { name: "Payments", state: "operational", note: "connected" },
+            ]}
+            leo={{
+              summary: "Lead response is the most immediate revenue risk. Two high-intent enquiries are waiting beyond the preferred response window while the rest of the operating picture is stable.",
+              recommendation: "Move the newest hot leads into Maia's first follow-up queue, then review recent WhatsApp delivery failures.",
+              requiresApproval: false,
+            }}
+          />
         </section>
       </div>
 
