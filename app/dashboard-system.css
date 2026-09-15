@@ -1,0 +1,244 @@
+/* Fluxknight dashboard system: final dashboard-scoped visual authority. */
+.fluxknight-platform-shell{
+  --fk-bg:#080b10;
+  --fk-surface:#0e1218;
+  --fk-surface-2:#11161d;
+  --fk-surface-3:#151b23;
+  --fk-line:#202630;
+  --fk-line-soft:rgba(143,151,165,.14);
+  --fk-text:#f1f3f6;
+  --fk-muted:#8f97a5;
+  --fk-subtle:#68717e;
+  --fk-purple:#7c5cf6;
+  --fk-purple-strong:#6d43d7;
+  --fk-purple-soft:rgba(124,92,246,.11);
+  --fk-success:#35d48a;
+  --fk-warning:#f5b140;
+  --fk-danger:#f43f5e;
+  --fk-radius-sm:8px;
+  --fk-radius-md:12px;
+  --fk-radius-lg:16px;
+  --fk-shadow:0 16px 40px rgba(0,0,0,.20);
+  background:var(--fk-bg)!important;
+  color:var(--fk-text);
+}
+
+.fluxknight-platform-shell .admin-main,
+.fluxknight-platform-shell .admin-page,
+.fluxknight-platform-shell .dashboard-shell{
+  background:var(--fk-bg)!important;
+  background-image:none!important;
+}
+
+.fluxknight-platform-shell .admin-page{
+  gap:18px!important;
+}
+
+.fluxknight-platform-shell :is(.admin-page-header,.admin-hero-panel,.admin-panel,.admin-metric-card,.dashboard-card,.campaign-panel,.leads-crm-summary>div){
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--fk-line-soft)!important;
+  border-radius:var(--fk-radius-md)!important;
+  background:var(--fk-surface)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+
+.fluxknight-platform-shell :is(.admin-page-header,.admin-hero-panel,.admin-panel,.admin-metric-card,.dashboard-card):before{
+  content:none!important;
+}
+
+.fluxknight-platform-shell :is(.admin-page-header,.admin-hero-panel){
+  padding:22px!important;
+}
+
+.fluxknight-platform-shell .admin-panel{
+  padding:18px!important;
+}
+
+.fluxknight-platform-shell :is(.admin-page-header h1,.admin-hero-panel h1){
+  margin:0;
+  color:var(--fk-text)!important;
+  font-family:inherit!important;
+  font-size:clamp(1.65rem,2.7vw,2.35rem)!important;
+  font-weight:760!important;
+  line-height:1.08!important;
+  letter-spacing:-.035em!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  hyphens:none!important;
+}
+
+.fluxknight-platform-shell :is(.admin-panel-header h2,.admin-panel h2,.dashboard-card h2){
+  color:var(--fk-text)!important;
+  font-family:inherit!important;
+  font-weight:720!important;
+  letter-spacing:-.018em!important;
+}
+
+.fluxknight-platform-shell :is(.admin-muted,.admin-panel p,.admin-page-header p,.admin-hero-panel p,.admin-metric-card p,.admin-metric-card span){
+  color:var(--fk-muted)!important;
+}
+
+.fluxknight-platform-shell :is(.admin-kicker,.section-label){
+  color:#a18ae7!important;
+  font-size:.67rem!important;
+  font-weight:800!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+}
+
+.fluxknight-platform-shell :is(.admin-metric-grid,.admin-grid.four,.dashboard-grid){
+  gap:10px!important;
+}
+
+.fluxknight-platform-shell .admin-metric-card{
+  min-height:92px!important;
+  padding:15px 16px!important;
+}
+
+.fluxknight-platform-shell .admin-metric-card strong{
+  color:var(--fk-text)!important;
+  font-family:inherit!important;
+  font-size:1.55rem!important;
+  font-weight:740!important;
+  letter-spacing:-.025em!important;
+}
+
+/* Controls */
+.fluxknight-platform-shell :is(button,.primary-button,.portal-button,.campaign-action,.admin-form-grid button){
+  font-family:inherit;
+}
+
+.fluxknight-platform-shell :is(.primary-button,.portal-button.primary,.campaign-action.primary,.admin-form-grid button[type="submit"]){
+  min-height:38px;
+  padding:8px 13px;
+  border:1px solid rgba(124,92,246,.34)!important;
+  border-radius:var(--fk-radius-sm)!important;
+  background:var(--fk-purple-strong)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  font-size:.76rem;
+  font-weight:760;
+  letter-spacing:0;
+}
+
+.fluxknight-platform-shell :is(.primary-button,.portal-button.primary,.campaign-action.primary,.admin-form-grid button[type="submit"]):hover{
+  background:#7653e6!important;
+  border-color:rgba(161,138,231,.54)!important;
+}
+
+.fluxknight-platform-shell :is(.secondary-button,.ghost-button,.portal-button:not(.primary),.admin-period){
+  border:1px solid var(--fk-line-soft)!important;
+  border-radius:var(--fk-radius-sm)!important;
+  background:var(--fk-surface-2)!important;
+  color:#d9dde4!important;
+  box-shadow:none!important;
+}
+
+.fluxknight-platform-shell :is(.secondary-button,.ghost-button,.portal-button:not(.primary),.admin-period):hover{
+  border-color:rgba(143,151,165,.28)!important;
+  background:var(--fk-surface-3)!important;
+}
+
+.fluxknight-platform-shell :is(input,select,textarea),
+.fluxknight-platform-shell :is(.admin-form-grid input,.admin-form-grid select,.admin-form-grid textarea,.campaign-panel input,.campaign-panel select,.campaign-panel textarea){
+  border:1px solid var(--fk-line)!important;
+  border-radius:var(--fk-radius-sm)!important;
+  background:#0b0f14!important;
+  color:var(--fk-text)!important;
+  box-shadow:none!important;
+  outline:none;
+}
+
+.fluxknight-platform-shell :is(input,select,textarea):focus{
+  border-color:rgba(124,92,246,.62)!important;
+  box-shadow:0 0 0 3px rgba(124,92,246,.10)!important;
+}
+
+.fluxknight-platform-shell :is(input,textarea)::placeholder{
+  color:#626b78!important;
+}
+
+/* Tables and rows */
+.fluxknight-platform-shell :is(.admin-table,.portal-table){
+  width:100%;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+  overflow:hidden;
+  border:1px solid var(--fk-line-soft)!important;
+  border-radius:var(--fk-radius-md)!important;
+  background:var(--fk-surface)!important;
+}
+
+.fluxknight-platform-shell :is(.admin-table th,.portal-table th){
+  padding:10px 12px!important;
+  border-color:var(--fk-line-soft)!important;
+  background:#0c1016!important;
+  color:#99a2af!important;
+  font-size:.66rem!important;
+  font-weight:800!important;
+  letter-spacing:.08em!important;
+  text-transform:uppercase;
+}
+
+.fluxknight-platform-shell :is(.admin-table td,.portal-table td){
+  padding:11px 12px!important;
+  border-color:var(--fk-line-soft)!important;
+  background:transparent!important;
+  color:#dce0e6!important;
+}
+
+.fluxknight-platform-shell :is(.admin-list-row,.portal-list-row,.campaign-recipient-row){
+  border:1px solid var(--fk-line-soft)!important;
+  border-radius:var(--fk-radius-sm)!important;
+  background:#0b1016!important;
+  box-shadow:none!important;
+}
+
+/* Status language should communicate state, not brand. */
+.fluxknight-platform-shell :is(.admin-status,.portal-status,.status-pill,.campaign-status){
+  border:1px solid var(--fk-line-soft)!important;
+  border-radius:999px!important;
+  background:#11161d!important;
+  color:#c7cdd6!important;
+  box-shadow:none!important;
+}
+.fluxknight-platform-shell :is(.success,.healthy,[data-status="healthy"],[data-status="success"]){color:var(--fk-success)!important}
+.fluxknight-platform-shell :is(.warning,.attention,[data-status="warning"],[data-status="attention"]){color:var(--fk-warning)!important}
+.fluxknight-platform-shell :is(.critical,.error,[data-status="critical"],[data-status="error"]){color:var(--fk-danger)!important}
+
+/* Intentional empty/loading states. */
+.fluxknight-platform-shell :is(.admin-empty,.empty-state,.admin-empty-state){
+  min-height:120px;
+  display:grid;
+  align-content:center;
+  justify-items:start;
+  gap:6px;
+  padding:18px!important;
+  border:1px dashed rgba(143,151,165,.20)!important;
+  border-radius:var(--fk-radius-md)!important;
+  background:#0a0e13!important;
+  color:var(--fk-muted)!important;
+  box-shadow:none!important;
+}
+
+/* Remove ornamental purple framing from charts and rings. */
+.fluxknight-platform-shell :is(.admin-health-ring,.portal-health-ring,.progress-ring,.donut-chart){
+  border-color:rgba(143,151,165,.16)!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:900px){
+  .fluxknight-platform-shell .admin-page{gap:12px!important}
+  .fluxknight-platform-shell :is(.admin-page-header,.admin-hero-panel){padding:16px!important}
+  .fluxknight-platform-shell .admin-panel{padding:14px!important}
+  .fluxknight-platform-shell :is(.admin-metric-grid,.admin-grid.four,.dashboard-grid){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  .fluxknight-platform-shell .admin-metric-card{min-height:82px!important;padding:12px 13px!important}
+  .fluxknight-platform-shell .admin-metric-card strong{font-size:1.35rem!important}
+}
+
+@media(max-width:390px){
+  .fluxknight-platform-shell :is(.admin-metric-grid,.admin-grid.four,.dashboard-grid){grid-template-columns:1fr!important}
+}
