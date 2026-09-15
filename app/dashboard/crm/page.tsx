@@ -5,6 +5,31 @@ export const dynamic = "force-dynamic";
 
 type ConversationMetadata = Record<string, unknown> | null;
 
+type Customer = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+  status: string | null;
+  created_at: string;
+};
+
+type Lead = {
+  id: string;
+  title: string | null;
+  status: string | null;
+  stage: string | null;
+  source: string | null;
+  created_at: string;
+  customer_id: string | null;
+};
+
+type Conversation = {
+  status: string | null;
+  priority: string | null;
+  metadata: ConversationMetadata;
+};
+
 function textFromMetadata(metadata: ConversationMetadata, keys: string[]) {
   if (!metadata) return "";
   for (const key of keys) {
@@ -19,9 +44,46 @@ function humanize(value: string | null | undefined, fallback = "Unknown") {
   return normalized ? normalized.replace(/_/g, " ") : fallback;
 }
 
+function normalize(value: string | null | undefined) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function conversationBelongsToCustomer(conversation: Conversation, customer: Customer) {
+  const metadata = conversation.metadata;
+  if (!metadata) return false;
+
+  const metadataCustomerId = textFromMetadata(metadata, ["customer_id", "customerId", "crm_customer_id", "crmCustomerId"]);
+  if (metadataCustomerId && metadataCustomerId === customer.id) return true;
+
+  const candidates = [
+    textFromMetadata(metadata, ["customer_name", "customerName", "name", "contact_name", "contactName"]),
+    textFromMetadata(metadata, ["email", "customer_email", "customerEmail", "contact_email", "contactEmail"]),
+    textFromMetadata(metadata, ["phone", "customer_phone", "customerPhone", "contact_phone", "contactPhone"]),
+  ].map(normalize).filter(Boolean);
+
+  return [customer.display_name, customer.email, customer.phone]
+    .map(normalize)
+    .filter(Boolean)
+    .some((value) => candidates.includes(value));
+}
+
+function nextAction(customer: Customer, linkedLeads: Lead[], linkedConversations: Conversation[]) {
+  const urgentConversation = linkedConversations.find((conversation) => ["critical", "high"].includes(normalize(conversation.priority)) && !["resolved", "closed"].includes(normalize(conversation.status)));
+  if (urgentConversation) return "Respond to the highest-priority open conversation before advancing the pipeline.";
+
+  const activeLead = linkedLeads.find((lead) => !["closed", "lost", "converted"].includes(normalize(lead.status)));
+  if (activeLead) {
+    const stage = humanize(activeLead.stage, "current").toLowerCase();
+    return `Advance the ${stage} lead with the next appropriate follow-up.`;
+  }
+
+  if (normalize(customer.status) === "active") return "Maintain the relationship and watch for the next measurable opportunity or support signal.";
+  return "Review the customer record and decide whether follow-up, reactivation or closure is appropriate.";
+}
+
 export default async function CrmPage() {
   const { supabase, organizationId } = await requireTenant();
-  const [{ data: customers }, { data: leads }, conversationResult] = await Promise.all([
+  const [{ data: customersData }, { data: leadsData }, conversationResult] = await Promise.all([
     supabase
       .from("crm_customers")
       .select("id,display_name,email,phone,status,created_at")
@@ -41,15 +103,12 @@ export default async function CrmPage() {
       .limit(50),
   ]);
 
-  const conversations = conversationResult.data || [];
-  const activeConversations = conversations.filter((conversation) => !["resolved", "closed"].includes(String(conversation.status || "").toLowerCase()));
-  const urgentConversations = activeConversations.filter((conversation) => ["high", "critical"].includes(String(conversation.priority || "").toLowerCase()));
-  const openLeads = (leads || []).filter((lead) => !["closed", "lost", "converted"].includes(String(lead.status || "").toLowerCase()));
-  const linkedLeadCount = new Map<string, number>();
-
-  for (const lead of leads || []) {
-    if (lead.customer_id) linkedLeadCount.set(lead.customer_id, (linkedLeadCount.get(lead.customer_id) || 0) + 1);
-  }
+  const customers = (customersData || []) as Customer[];
+  const leads = (leadsData || []) as Lead[];
+  const conversations = (conversationResult.data || []) as Conversation[];
+  const activeConversations = conversations.filter((conversation) => !["resolved", "closed"].includes(normalize(conversation.status)));
+  const urgentConversations = activeConversations.filter((conversation) => ["high", "critical"].includes(normalize(conversation.priority)));
+  const openLeads = leads.filter((lead) => !["closed", "lost", "converted"].includes(normalize(lead.status)));
 
   return (
     <main className={`admin-page ${styles.page}`}>
@@ -66,7 +125,7 @@ export default async function CrmPage() {
       </section>
 
       <section className={styles.summary} aria-label="Customer operations summary">
-        <div><span>Customers</span><strong>{customers?.length || 0}</strong></div>
+        <div><span>Customers</span><strong>{customers.length}</strong></div>
         <div><span>Open leads</span><strong>{openLeads.length}</strong></div>
         <div><span>Active conversations</span><strong>{activeConversations.length}</strong></div>
         <div><span>Need attention</span><strong>{urgentConversations.length}</strong></div>
@@ -78,24 +137,85 @@ export default async function CrmPage() {
             <div>
               <p className="admin-kicker">Customer lifecycle</p>
               <h2>Customers</h2>
-              <p>Identity first, then lifecycle context and linked pipeline activity.</p>
+              <p>Open a customer to see their linked pipeline, conversation context and next operating move.</p>
             </div>
-            <span>{customers?.length || 0} total</span>
+            <span>{customers.length} total</span>
           </header>
 
           <div className={styles.customerList}>
-            {customers?.length ? customers.map((customer) => (
-              <div key={customer.id} className={styles.customerRow}>
-                <div className={styles.identity}>
-                  <strong>{customer.display_name || customer.email || customer.phone || "Unnamed customer"}</strong>
-                  <span>{customer.email || customer.phone || "No contact detail saved"}</span>
-                </div>
-                <div className={styles.rowMeta}>
-                  <span data-status={String(customer.status || "").toLowerCase()}>{humanize(customer.status, "No status")}</span>
-                  <small>{linkedLeadCount.get(customer.id) || 0} linked lead{(linkedLeadCount.get(customer.id) || 0) === 1 ? "" : "s"}</small>
-                </div>
-              </div>
-            )) : (
+            {customers.length ? customers.map((customer) => {
+              const linkedLeads = leads.filter((lead) => lead.customer_id === customer.id);
+              const linkedConversations = conversations.filter((conversation) => conversationBelongsToCustomer(conversation, customer));
+              const openLinkedConversations = linkedConversations.filter((conversation) => !["resolved", "closed"].includes(normalize(conversation.status)));
+              const action = nextAction(customer, linkedLeads, linkedConversations);
+
+              return (
+                <details key={customer.id} className={styles.customerRecord}>
+                  <summary className={styles.customerRow}>
+                    <div className={styles.identity}>
+                      <strong>{customer.display_name || customer.email || customer.phone || "Unnamed customer"}</strong>
+                      <span>{customer.email || customer.phone || "No contact detail saved"}</span>
+                    </div>
+                    <div className={styles.rowMeta}>
+                      <span data-status={normalize(customer.status)}>{humanize(customer.status, "No status")}</span>
+                      <small>{linkedLeads.length} lead{linkedLeads.length === 1 ? "" : "s"} · {openLinkedConversations.length} open conversation{openLinkedConversations.length === 1 ? "" : "s"}</small>
+                    </div>
+                  </summary>
+
+                  <div className={styles.customerDetail}>
+                    <div className={styles.detailOverview}>
+                      <div>
+                        <span>Next action</span>
+                        <strong>{action}</strong>
+                      </div>
+                      <div>
+                        <span>Relationship</span>
+                        <strong>{humanize(customer.status, "No status")}</strong>
+                      </div>
+                    </div>
+
+                    <div className={styles.detailGrid}>
+                      <section>
+                        <header>
+                          <span>Pipeline</span>
+                          <small>{linkedLeads.length} linked</small>
+                        </header>
+                        {linkedLeads.length ? linkedLeads.slice(0, 5).map((lead) => (
+                          <div key={lead.id} className={styles.detailRow}>
+                            <div>
+                              <strong>{lead.title || "Untitled lead"}</strong>
+                              <span>{lead.source ? humanize(lead.source) : "Source unavailable"}</span>
+                            </div>
+                            <small>{humanize(lead.stage, "No stage")} · {humanize(lead.status, "No status")}</small>
+                          </div>
+                        )) : <p className={styles.detailEmpty}>No linked lead record.</p>}
+                      </section>
+
+                      <section>
+                        <header>
+                          <span>Conversations</span>
+                          <small>{openLinkedConversations.length} open</small>
+                        </header>
+                        {linkedConversations.length ? linkedConversations.slice(0, 5).map((conversation, index) => {
+                          const metadata = conversation.metadata;
+                          const subject = textFromMetadata(metadata, ["subject", "topic", "summary", "title"]);
+                          const channel = textFromMetadata(metadata, ["channel", "source", "provider"]);
+                          return (
+                            <div key={`${customer.id}-conversation-${index}`} className={styles.detailRow}>
+                              <div>
+                                <strong>{subject || "Customer conversation"}</strong>
+                                <span>{channel ? humanize(channel) : "Channel unavailable"}</span>
+                              </div>
+                              <small data-priority={normalize(conversation.priority)}>{humanize(conversation.priority, "Normal")} · {humanize(conversation.status, "Open")}</small>
+                            </div>
+                          );
+                        }) : <p className={styles.detailEmpty}>No linked conversation context found.</p>}
+                      </section>
+                    </div>
+                  </div>
+                </details>
+              );
+            }) : (
               <div className="admin-empty-state">
                 <strong>No customers yet</strong>
                 <span>Customers will appear here once a lead becomes an active customer record.</span>
@@ -118,15 +238,15 @@ export default async function CrmPage() {
             {activeConversations.length ? activeConversations
               .sort((a, b) => {
                 const rank: Record<string, number> = { critical: 3, high: 2, medium: 1, normal: 0, low: 0 };
-                return (rank[String(b.priority || "").toLowerCase()] || 0) - (rank[String(a.priority || "").toLowerCase()] || 0);
+                return (rank[normalize(b.priority)] || 0) - (rank[normalize(a.priority)] || 0);
               })
               .slice(0, 12)
               .map((conversation, index) => {
-                const metadata = (conversation.metadata || null) as ConversationMetadata;
+                const metadata = conversation.metadata;
                 const customer = textFromMetadata(metadata, ["customer_name", "customerName", "name", "contact_name", "contactName"]);
                 const subject = textFromMetadata(metadata, ["subject", "topic", "summary", "title"]);
                 const channel = textFromMetadata(metadata, ["channel", "source", "provider"]);
-                const priority = String(conversation.priority || "normal").toLowerCase();
+                const priority = normalize(conversation.priority) || "normal";
                 return (
                   <div key={`${priority}-${index}`} className={styles.conversationRow}>
                     <div>
