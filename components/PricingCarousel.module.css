@@ -6,7 +6,6 @@
   --flux-violet-soft:#d8b4fe;
   --flux-text:#f8f5fb;
   --flux-muted:#998da4;
-  --card-width:clamp(18.75rem,28vw,20rem);
   position:relative;
   width:100%;
   max-width:76rem;
@@ -102,8 +101,8 @@
   width:min(70rem,100%);
   margin-inline:auto;
   overflow-x:auto;
-  padding:2.8rem calc((100% - var(--card-width))/2) 2rem;
-  scroll-padding-inline:calc((100% - var(--card-width))/2);
+  padding:2.8rem 0 2rem;
+  scroll-padding-inline:0;
   scroll-snap-type:x mandatory;
   overscroll-behavior-x:contain;
   scrollbar-width:none;
@@ -117,13 +116,13 @@
   --mouse-x:50%;
   --mouse-y:50%;
   position:relative;
-  flex:0 0 var(--card-width);
+  flex:0 0 calc((100% - 2.25rem)/3);
   min-width:0;
   padding:2.65rem 1.35rem 1.35rem;
   display:flex;
   flex-direction:column;
   text-align:center;
-  scroll-snap-align:center;
+  scroll-snap-align:start;
   scroll-snap-stop:always;
   border:1px solid rgba(192,132,252,.16);
   border-radius:0;
@@ -208,16 +207,16 @@
 .compact .description{font-size:.7rem}
 
 @media(max-width:980px){
-  .carousel{--card-width:clamp(18rem,42vw,19rem)}
   .track{width:min(48rem,100%)}
   .topControls{width:min(48rem,100%)}
+  .card{flex-basis:calc((100% - 1.125rem)/2)}
 }
 
 @media(max-width:640px){
   :global(.production-pricing-carousel .brand-heading){margin-bottom:1.6rem;text-align:left}
   :global(.production-pricing-carousel .production-pricing-note){text-align:left}
 
-  .carousel{--card-width:calc(100% - 1.25rem);max-width:100%}
+  .carousel{max-width:100%}
   .desktopControls{display:none}
   .structuralLines{display:none}
   .carousel::before{display:none}
@@ -259,6 +258,7 @@
     padding:2.1rem .82rem .9rem;
     opacity:.38;
     transform:none;
+    scroll-snap-align:center;
   }
   .card:hover,.card.active{transform:none}
   .card.active{opacity:1}
