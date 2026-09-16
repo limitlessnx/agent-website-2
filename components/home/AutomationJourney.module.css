@@ -48,7 +48,7 @@
 .cta:hover { transform:translateY(-2px);box-shadow:0 18px 50px rgba(139,67,247,.34),inset 0 1px rgba(255,255,255,.18); }
 .copy small { display:block;margin-top:14px;color:#81758f;font-size:.76rem; }
 
-.journey { position:relative;z-index:3;width:100%;min-height:660px;align-self:center; }
+.journey { position:relative;z-index:3;width:100%;min-height:660px;align-self:center;overflow:hidden; }
 .connector { position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;filter:drop-shadow(0 0 8px rgba(129,70,230,.25)); }
 .connector path { fill:none;stroke:rgba(129,73,225,.72);stroke-width:2;stroke-linecap:round; }
 .step { --tone:#9b5cff;--tone-rgb:155,92,255;position:absolute;width:78%;min-height:98px;display:flex;align-items:center; }
@@ -62,13 +62,14 @@
 .iconWrap { position:absolute;left:-3px;top:50%;width:88px;height:88px;transform:translateY(-50%);display:grid;place-items:center;border:7px solid rgba(var(--tone-rgb),.74);border-radius:50%;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(230,226,238,.96));box-shadow:0 0 0 5px rgba(var(--tone-rgb),.17),0 8px 22px rgba(0,0,0,.38),0 0 28px rgba(var(--tone-rgb),.36),inset 0 2px 4px rgba(255,255,255,.9); }
 .iconCore { width:55px;height:55px;display:grid;place-items:center;border-radius:50%;color:color-mix(in srgb,var(--tone) 68%,#26123c);background:rgba(255,255,255,.78);box-shadow:inset 0 0 12px rgba(var(--tone-rgb),.14); }
 .cardCopy { min-width:0; }.cardCopy h3 { margin:0 0 5px;color:#fff;font-size:1rem;font-weight:800;line-height:1.1; }.cardCopy p { max-width:310px;margin:0;color:#c4b9cf;font-size:.76rem;line-height:1.38; }
-.endDot { position:absolute;right:25%;bottom:-8px;width:23px;height:23px;border-radius:50%;background:#a66aff;box-shadow:0 0 22px rgba(166,106,255,.88),0 0 42px rgba(166,106,255,.34); }
-.signature { position:absolute;right:1%;bottom:4px;color:#a880ff;font-family:Georgia,"Times New Roman",serif;font-size:1.08rem;font-style:italic;line-height:1.05;transform:rotate(-5deg);opacity:.9; }
+.endDot { position:absolute;right:25%;bottom:8px;width:23px;height:23px;border-radius:50%;background:#a66aff;box-shadow:0 0 22px rgba(166,106,255,.88),0 0 42px rgba(166,106,255,.34); }
+.signature { position:absolute;right:2%;bottom:12px;color:#a880ff;font-family:Georgia,"Times New Roman",serif;font-size:1.08rem;font-style:italic;line-height:1.05;transform:rotate(-5deg);opacity:.9; }
 
 @media (max-width:1100px) and (min-width:901px) {
   .frame { grid-template-columns:minmax(270px,.72fr) minmax(410px,1.28fr);gap:24px;padding-inline:34px; }
   .journey { width:min(100%,540px);min-height:610px;margin-inline:auto; }
-  .connector { inset:0 4%;width:92%;height:100%; }
+  .connector { left:6%;right:6%;width:88%;height:100%; }
+  .connector path { d:path("M300 0 C300 66 350 72 350 112 C350 165 415 158 415 215 C415 270 350 262 350 318 C350 375 418 366 418 420 C418 485 350 476 350 525 C350 586 414 582 414 640 C414 700 350 692 350 745 C350 786 375 794 375 820"); }
   .step { width:64%;min-height:88px; }
   .step1 { top:0;right:5%; }.step2 { top:100px;left:18%; }.step3 { top:200px;right:5%; }.step4 { top:300px;left:18%; }.step5 { top:400px;right:5%; }.step6 { top:500px;left:18%; }
   .card { min-height:86px;padding:14px 16px 14px 82px; }
@@ -77,6 +78,7 @@
   .cardCopy h3 { font-size:.92rem; }.cardCopy p { font-size:.68rem;line-height:1.32; }
   .number { left:-72px;font-size:1.65rem; }.step2 .number,.step4 .number,.step6 .number { left:-58px; }
   .node { left:-18px;width:19px;height:19px; }.node span { width:7px;height:7px; }
+  .endDot { right:20%;bottom:6px; }.signature { right:2%;bottom:10px;font-size:1rem; }
 }
 
 @media (max-width:900px) and (min-width:641px) {
@@ -84,7 +86,8 @@
   .frame { min-height:0;padding:44px 30px 48px;grid-template-columns:1fr;gap:44px; }
   .copy { max-width:650px; }.copy h2 { max-width:650px;font-size:clamp(2.6rem,8vw,4.3rem); }.copy > p { max-width:590px; }
   .journey { width:min(88%,560px);min-height:570px;margin:0 auto; }
-  .connector { left:4%;right:4%;width:92%;height:100%; }
+  .connector { left:7%;right:7%;width:86%;height:100%; }
+  .connector path { d:path("M292 0 C292 66 350 72 350 112 C350 164 406 158 406 215 C406 270 350 263 350 318 C350 374 408 367 408 420 C408 483 350 477 350 525 C350 584 404 582 404 640 C404 699 350 693 350 745 C350 786 370 794 370 820"); }
   .step { width:66%;min-height:80px; }
   .step1 { top:0;right:2%; }.step2 { top:92px;left:17%; }.step3 { top:184px;right:2%; }.step4 { top:276px;left:17%; }.step5 { top:368px;right:2%; }.step6 { top:460px;left:17%; }
   .card { min-height:78px;padding:12px 15px 12px 72px; }
@@ -92,6 +95,7 @@
   .cardCopy h3 { font-size:.88rem; }.cardCopy p { max-width:270px;font-size:.65rem;line-height:1.3; }
   .number { left:-72px;font-size:1.5rem; }.step2 .number,.step4 .number,.step6 .number { left:-58px; }
   .node { left:-17px;width:17px;height:17px; }.node span { width:6px;height:6px; }
+  .endDot { right:18%;bottom:8px;width:19px;height:19px; }.signature { right:2%;bottom:10px;font-size:.92rem; }
 }
 
 @media (max-width:640px) {
@@ -101,9 +105,9 @@
   .copy h2 { margin:22px 0 18px;font-size:clamp(2.45rem,12.2vw,3.45rem);line-height:.98; }
   .copy > p { font-size:.96rem;line-height:1.65; }
   .cta { width:100%;min-height:58px;margin-top:26px;font-size:.98rem; }.copy small { margin-top:12px;font-size:.72rem; }
-  .journey { min-height:672px;padding-left:58px; }
-  .connector { left:26px;right:auto;width:36px;height:632px;overflow:visible; }
-  .connector path { d:path("M18 0 C18 95 18 95 18 105 C18 200 18 200 18 210 C18 305 18 305 18 315 C18 410 18 410 18 420 C18 515 18 515 18 525 C18 610 18 610 18 632"); }
+  .journey { min-height:686px;padding-left:58px;overflow:hidden; }
+  .connector { left:26px;right:auto;width:36px;height:632px;overflow:hidden; }
+  .connector path { d:path("M18 0 C18 95 18 95 18 105 C18 200 18 200 18 210 C18 305 18 305 18 315 C18 410 18 410 18 420 C18 515 18 515 18 525 C18 585 18 600 18 632"); }
   .step { position:absolute;left:58px !important;right:auto !important;width:calc(100% - 58px);min-height:96px; }
   .step1 { top:0; }.step2 { top:110px; }.step3 { top:220px; }.step4 { top:330px; }.step5 { top:440px; }.step6 { top:550px; }
   .number,.step2 .number,.step4 .number,.step6 .number { left:-50px;top:14px;transform:none;font-size:1.2rem; }
@@ -111,13 +115,14 @@
   .card { min-height:94px;padding:13px 13px 13px 76px;border-radius:22px 999px 999px 22px; }
   .iconWrap { left:6px;width:60px;height:60px;border-width:5px; }.iconCore { width:38px;height:38px; }.iconCore svg { width:20px;height:20px; }
   .cardCopy h3 { margin-bottom:4px;font-size:.88rem; }.cardCopy p { max-width:none;padding-right:4px;font-size:.67rem;line-height:1.35; }
-  .endDot { left:30px;right:auto;bottom:10px;width:16px;height:16px; }.signature { right:4px;bottom:0;font-size:.82rem; }
+  .endDot { left:36px;right:auto;bottom:22px;width:16px;height:16px; }.signature { right:8px;bottom:12px;font-size:.82rem; }
 }
 
 @media (max-width:390px) {
   .frame { padding-inline:14px; }.journey { padding-left:54px; }.step { left:54px !important;width:calc(100% - 54px); }
   .number,.step2 .number,.step4 .number,.step6 .number { left:-47px; }
   .card { padding-left:68px;padding-right:10px; }.iconWrap { left:5px;width:54px;height:54px; }.cardCopy h3 { font-size:.82rem; }.cardCopy p { font-size:.63rem; }
+  .signature { right:6px;bottom:12px;font-size:.78rem; }
 }
 
 @media (prefers-reduced-motion:reduce) { .cta { transition:none; } }
