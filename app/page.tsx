@@ -111,7 +111,7 @@ export default function HomePage() {
             </div>
             <picture className="evaluation-workflow-artwork">
               <source media="(max-width: 640px)" srcSet="/evaluation-workflow-mobile.svg" />
-              <Image src="/evaluation-workflow-desktop.svg" alt="Enquiries, support, follow-up, scheduling and CRM flowing into Fluxknight AI, which identifies the best place to automate first." width={760} height={680} sizes="(max-width: 640px) calc(100vw - 72px), (max-width: 980px) 72vw, 52vw" />
+              <Image src="/evaluation-workflow-desktop.svg" alt="Inbound calls, WhatsApp, website chat, email, social media and other enquiries flowing into Fluxknight AI for qualification, follow-up, booking, updates and automation recommendations." width={900} height={700} sizes="(max-width: 640px) calc(100vw - 72px), (max-width: 980px) 88vw, 62vw" />
             </picture>
             <div className="evaluation-conversion-actions">
               <Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link>
