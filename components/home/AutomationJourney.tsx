@@ -49,6 +49,10 @@ export default function AutomationJourney() {
           <svg className={styles.connector} viewBox="0 0 560 620" preserveAspectRatio="none" aria-hidden="true">
             <path d="M168 46 C130 72 130 78 168 100 C206 122 206 128 168 150 C130 172 130 178 168 200 C206 222 206 228 168 250 C130 272 130 278 168 300 C206 322 206 328 168 350 C130 372 130 378 168 400 C206 422 206 428 168 450 C130 472 130 478 168 500 C206 522 206 528 168 550" />
           </svg>
+          <svg className={styles.mobileConnector} viewBox="0 0 338 535" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M62 37 C62 80 286 80 286 123 C286 166 62 166 62 209 C62 252 286 252 286 295 C286 338 62 338 62 381 C62 424 286 424 286 467 C286 486 286 494 272 505" />
+            <circle cx="272" cy="505" r="5" />
+          </svg>
 
           {steps.map(({ number, title, text, icon: Icon, tone }, index) => (
             <article className={`${styles.step} ${styles[`step${index + 1}`]} ${styles[tone]}`} key={number}>
