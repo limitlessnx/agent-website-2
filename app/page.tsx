@@ -81,9 +81,8 @@ export default function HomePage() {
       <PublicLeoConsultant />
       <ReferenceFluxHeroPhase1 />
       <MaiaCaseStudyTeaser />
-      <IndustryCarousel />
-
       <AutomationJourney />
+      <IndustryCarousel />
 
       <ClientReviews />
 
