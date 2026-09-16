@@ -19,6 +19,7 @@ import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
 import AutomationJourney from "@/components/home/AutomationJourney";
 import styles from "./HomepageHeaderRestore.module.css";
 
+// Preview branch deployment marker: 2026-09-16 inbound workflow refresh.
 const pricingPlans = [
   {
     icon: MessageSquareText,
