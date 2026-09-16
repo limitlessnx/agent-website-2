@@ -56,7 +56,16 @@ export default function MaiaCaseStudyPage() {
                 <span><CheckCircle2 size={14} /> Better follow-through</span>
               </div>
             </div>
-            <div className={`${styles.heroImage} maiaStoryVisual`} aria-label="Generated Maia real estate buyer journey visual">
+            <div
+              className={styles.heroImage}
+              aria-label="Generated Maia real estate buyer journey visual"
+              style={{
+                backgroundImage: "url('/maia-hero-generated.webp')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }}
+            >
               <div className={styles.chatCardTop}><small>Prospect</small><strong>Is this property still available?</strong><span>New enquiry · now</span></div>
               <div className={styles.chatCardBottom}><small>Maia</small><strong>Enquiry captured</strong><span>Buyer context saved</span></div>
             </div>
@@ -127,9 +136,18 @@ export default function MaiaCaseStudyPage() {
             <p>From the first message to the right human handoff, Maia keeps context and next actions connected.</p>
           </div>
           <div className={styles.journeyGrid}>
-            {journey.map(([step, title, text]) => (
-              <article key={step} className={`${styles.journeyCard} maiaStoryRow`}>
-                <div className={`${styles.journeyVisual} maiaStoryVisual`} aria-label={`Generated visual for ${title}`} />
+            {journey.map(([step, title, text], index) => (
+              <article key={step} className={styles.journeyCard}>
+                <div
+                  className={styles.journeyVisual}
+                  aria-label={`Generated visual for ${title}`}
+                  style={{
+                    backgroundImage: "url('/maia-journey-generated.webp')",
+                    backgroundSize: "600% 100%",
+                    backgroundPosition: `${index * 20}% center`,
+                    backgroundRepeat: "no-repeat",
+                  }}
+                />
                 <div className={styles.journeyBody}>
                   <div className={styles.journeyTitle}><b>{step}</b><strong>{title}</strong></div>
                   <p>{text}</p>
