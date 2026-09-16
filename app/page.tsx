@@ -13,10 +13,10 @@ import {
 import PublicLeoConsultant from "@/components/PublicLeoConsultant";
 import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
-import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
 import AutomationJourney from "@/components/home/AutomationJourney";
+import HomePricingOverview from "@/components/home/HomePricingOverview";
 import styles from "./HomepageHeaderRestore.module.css";
 
 // Preview branch deployment marker: 2026-09-16 inbound workflow refresh.
@@ -91,9 +91,9 @@ export default function HomePage() {
           <div className="brand-heading">
             <span className="brand-eyebrow">Choose your automation level</span>
             <h2>Plans built for different levels of automation.</h2>
-            <p>Compare channels, Flux Credits and automation depth. Swipe through each plan to see what fits.</p>
+            <p>Start with the level that fits your operation today, then expand as your channels, workflows and customer volume grow.</p>
           </div>
-          <PricingCarousel plans={pricingPlans} showDurationSelector />
+          <HomePricingOverview plans={pricingPlans} />
           <div className="hero-buttons production-pricing-route-link">
             <Link className="button-secondary" href="/pricing" data-cta="pricing-details">See full pricing details <ArrowRight size={16} /></Link>
           </div>
