@@ -1,152 +1,126 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Briefcase, Building2, Dumbbell, Hotel, ShoppingCart, Stethoscope, Truck } from "@/components/admin/ServerIcons";
 import styles from "./IndustryCarousel.module.css";
 
 const industries = [
-  { id: "hotels", title: "Hotels", icon: Hotel, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?fit=crop&w=1400&q=86&fm=jpg", text: "Turn more guest enquiries into bookings and reduce pressure on your front desk." },
-  { id: "restaurants", title: "Restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?fit=crop&w=1400&q=86&fm=jpg", text: "Handle reservations, orders and customer questions faster so your team can stay focused on service." },
-  { id: "clinics", title: "Clinics", icon: Stethoscope, image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?fit=crop&w=1400&q=86&fm=jpg", text: "Improve patient experience with faster administrative answers, smoother appointments, and less front-desk work." },
-  { id: "sales-companies", title: "Sales Companies", icon: Briefcase, image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1400&q=86&v=2", text: "Qualify leads earlier and keep follow-up active until serious prospects are ready to buy." },
-  { id: "real-estate", title: "Real Estate", icon: Building2, image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?fit=crop&w=1400&q=86&fm=jpg", text: "Turn more property enquiries into inspections and serious buyer conversations." },
-  { id: "gyms", title: "Gyms", icon: Dumbbell, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?fit=crop&w=1400&q=86&fm=jpg", text: "Convert more prospects, reactivate interest, and keep members from quietly dropping off." },
-  { id: "service-businesses", title: "Service Businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1400&q=86&v=2", text: "Book jobs faster, keep customers updated, and reduce the back-and-forth that slows teams down." },
-  { id: "auto-shops", title: "Auto Shops", icon: Truck, image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1400&q=86&v=2", text: "Move repair enquiries into booked jobs and keep customers informed without constant manual chasing." },
-  { id: "ecommerce", title: "E-commerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=86&v=2", text: "Recover more purchase intent through better product help, order support, and follow-up." },
-  { id: "professional-services", title: "Professional Services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=86&v=2", text: "Respond faster, book consultations, and keep proposals moving without fragmented follow-up." },
+  { id: "hotels", title: "Hotels", icon: Hotel, image: "/industry-product-hospitality.svg", eyebrow: "Guest operations", text: "Answer guest questions, capture booking intent, coordinate reservations and hand over high-value conversations without front-desk bottlenecks." },
+  { id: "restaurants", title: "Restaurants", icon: ShoppingCart, image: "/industry-product-restaurants.svg", eyebrow: "Reservations & service", text: "Handle reservations, menu questions, order enquiries and follow-up while your team stays focused on service." },
+  { id: "clinics", title: "Clinics", icon: Stethoscope, image: "/industry-product-health.svg", eyebrow: "Patient administration", text: "Reduce repetitive front-desk work with appointment support, reminders, administrative answers and structured human handoff." },
+  { id: "sales-companies", title: "Sales Companies", icon: Briefcase, image: "/industry-product-sales.svg", eyebrow: "Lead conversion", text: "Qualify demand, keep follow-up active and preserve conversation context until a serious prospect is ready for your sales team." },
+  { id: "real-estate", title: "Real Estate", icon: Building2, image: "/industry-product-real-estate.svg", eyebrow: "Property enquiries", text: "Turn property interest into qualified conversations, inspection bookings and persistent follow-up across the buyer journey." },
+  { id: "gyms", title: "Gyms", icon: Dumbbell, image: "/industry-product-gyms.svg", eyebrow: "Membership growth", text: "Capture trial interest, answer membership questions, reactivate prospects and support renewals without manual chasing." },
+  { id: "service-businesses", title: "Service Businesses", icon: Briefcase, image: "/industry-product-services.svg", eyebrow: "Booking operations", text: "Move enquiries into booked jobs, collect the right details and keep customers updated while the team stays on delivery." },
+  { id: "auto-shops", title: "Auto Shops", icon: Truck, image: "/industry-product-auto.svg", eyebrow: "Repair workflow", text: "Turn repair enquiries into booked jobs, collect vehicle context and keep customers updated without constant back-and-forth." },
+  { id: "ecommerce", title: "E-commerce", icon: ShoppingCart, image: "/industry-product-commerce.svg", eyebrow: "Commerce support", text: "Help customers choose products, answer order questions and recover purchase intent with structured follow-up." },
+  { id: "professional-services", title: "Professional Services", icon: Briefcase, image: "/industry-product-professional.svg", eyebrow: "Client acquisition", text: "Respond faster, qualify opportunities, book consultations and keep proposals moving through a connected client journey." },
 ];
 
-const AUTOPLAY_MS = 4600;
-const INTERACTION_PAUSE_MS = 9000;
-
-function relativeIndex(index: number, active: number, length: number) {
-  let diff = index - active;
-  if (diff > length / 2) diff -= length;
-  if (diff < -length / 2) diff += length;
-  return diff;
-}
+const AUTOPLAY_MS = 5200;
 
 export default function IndustryCarousel() {
   const [active, setActive] = useState(0);
-  const touchStart = useRef<number | null>(null);
-  const pauseUntil = useRef(0);
-  const length = industries.length;
-  const activeIndustry = industries[active];
-
-  useEffect(() => {
-    industries.forEach((industry) => {
-      const image = new Image();
-      image.decoding = "async";
-      image.src = industry.image;
-    });
-  }, []);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const pausedUntil = useRef(0);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(max-width: 760px)").matches) return;
+
     const timer = window.setInterval(() => {
-      if (Date.now() < pauseUntil.current || document.hidden) return;
-      setActive((current) => (current + 1) % length);
+      if (document.hidden || Date.now() < pausedUntil.current) return;
+      setActive((current) => (current + 1) % industries.length);
     }, AUTOPLAY_MS);
+
     return () => window.clearInterval(timer);
-  }, [length]);
+  }, []);
 
-  const visible = useMemo(
-    () => industries.map((item, index) => ({ item, index, offset: relativeIndex(index, active, length) })),
-    [active, length],
-  );
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const card = track.children[active] as HTMLElement | undefined;
+    card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [active]);
 
-  const pauseAutoplay = () => {
-    pauseUntil.current = Date.now() + INTERACTION_PAUSE_MS;
-  };
-
-  const go = (direction: number, manual = false) => {
-    if (manual) pauseAutoplay();
-    setActive((current) => (current + direction + length) % length);
-  };
-
-  const select = (index: number) => {
-    pauseAutoplay();
-    setActive(index);
+  const choose = (index: number) => {
+    pausedUntil.current = Date.now() + 9000;
+    setActive((index + industries.length) % industries.length);
   };
 
   return (
     <section className={styles.section} id="industries" aria-labelledby="industry-carousel-title">
-      <div className={styles.glow} />
+      <div className={styles.glow} aria-hidden="true" />
       <div className={styles.shell}>
-        <div className={styles.heading}>
-          <span className={styles.eyebrow}>Industries</span>
-          <h2 id="industry-carousel-title">Built for organizations across industries.</h2>
-          <p>Different industries. Same outcome: stronger customer experiences, less friction, and better business results.</p>
+        <div className={styles.headingRow}>
+          <div className={styles.heading}>
+            <span className={styles.eyebrow}>Organizations</span>
+            <h2 id="industry-carousel-title">Built for organizations across industries.</h2>
+            <p>See how Fluxknight adapts the same AI operating layer to ten different customer journeys, teams and day-to-day realities.</p>
+          </div>
+
+          <div className={styles.controls} aria-label="Industry carousel controls">
+            <button type="button" onClick={() => choose(active - 1)} aria-label="Previous industry"><ArrowLeft size={18} /></button>
+            <span>{String(active + 1).padStart(2, "0")} / {String(industries.length).padStart(2, "0")}</span>
+            <button type="button" onClick={() => choose(active + 1)} aria-label="Next industry"><ArrowRight size={18} /></button>
+          </div>
         </div>
 
         <div
-          className={styles.carousel}
-          onMouseEnter={pauseAutoplay}
-          onTouchStart={(event) => {
-            pauseAutoplay();
-            touchStart.current = event.touches[0]?.clientX ?? null;
-          }}
-          onTouchEnd={(event) => {
-            if (touchStart.current === null) return;
-            const end = event.changedTouches[0]?.clientX ?? touchStart.current;
-            const delta = end - touchStart.current;
-            touchStart.current = null;
-            if (Math.abs(delta) > 45) go(delta < 0 ? 1 : -1, true);
-          }}
+          className={styles.viewport}
+          onMouseEnter={() => { pausedUntil.current = Date.now() + 9000; }}
         >
-          <button className={`${styles.navButton} ${styles.prev}`} onClick={() => go(-1, true)} aria-label="Previous industry"><ArrowLeft size={20} /></button>
-
-          <div className={styles.stage}>
-            {visible.map(({ item, index, offset }) => {
-              const Icon = item.icon;
-              const hidden = Math.abs(offset) > 2;
+          <div className={styles.track} ref={trackRef}>
+            {industries.map(({ id, title, icon: Icon, image, eyebrow, text }, index) => {
+              const isActive = index === active;
               return (
                 <article
-                  key={item.id}
-                  className={`${styles.card} ${offset === 0 ? styles.active : ""}`}
-                  style={{
-                    backgroundImage: hidden ? undefined : `linear-gradient(180deg, rgba(12,6,28,.12), rgba(8,3,20,.92)), url(${item.image})`,
-                    backgroundColor: "#0b0614",
-                    transform: `translateX(${offset * 56}%) scale(${offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.88 : 0.76}) rotateY(${offset * -6}deg)`,
-                    opacity: hidden ? 0 : offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.74 : 0.36,
-                    zIndex: 20 - Math.abs(offset),
-                    pointerEvents: hidden ? "none" : "auto",
-                  }}
-                  onClick={() => offset !== 0 && select(index)}
-                  aria-hidden={hidden}
+                  key={id}
+                  className={`${styles.card} ${isActive ? styles.active : ""}`}
+                  tabIndex={0}
+                  onMouseEnter={() => choose(index)}
+                  onFocus={() => choose(index)}
                 >
-                  <div className={styles.cardContent}>
-                    <span className={styles.icon}><Icon size={22} /></span>
-                    <span className={styles.counter}>{String(index + 1).padStart(2, "0")} / {String(length).padStart(2, "0")}</span>
-                    <div className={styles.copy}>
-                      <h3>{item.title}</h3>
-                      <p>{item.text}</p>
-                      {offset === 0 && (
-                        <Link href={`/industries/${item.id}`} className={styles.link} onClick={pauseAutoplay}>
-                          Explore {item.title} <ArrowRight size={16} />
-                        </Link>
-                      )}
+                  <img className={styles.cardImage} src={image} alt="" aria-hidden="true" />
+                  <div className={styles.cardShade} aria-hidden="true" />
+
+                  <div className={styles.cardTopline}>
+                    <span className={styles.cardIcon}><Icon size={18} /></span>
+                    <span className={styles.counter}>{String(index + 1).padStart(2, "0")}</span>
+                  </div>
+
+                  <div className={styles.cardLabel}>
+                    <span>{eyebrow}</span>
+                    <h3>{title}</h3>
+                  </div>
+
+                  <div className={styles.reveal}>
+                    <div className={styles.revealPanel}>
+                      <p>{text}</p>
+                      <Link href={`/industries/${id}`} className={styles.link}>
+                        Explore {title} <ArrowRight size={15} />
+                      </Link>
                     </div>
                   </div>
                 </article>
               );
             })}
           </div>
-
-          <button className={`${styles.navButton} ${styles.next}`} onClick={() => go(1, true)} aria-label="Next industry"><ArrowRight size={20} /></button>
         </div>
 
-        <div className={styles.footerControls}>
-          <div className={styles.dots} role="tablist" aria-label="Industry slides">
-            {industries.map((item, index) => (
-              <button key={item.id} className={index === active ? styles.dotActive : styles.dot} onClick={() => select(index)} aria-label={`Show ${item.title}`} aria-selected={index === active} role="tab" />
-            ))}
-          </div>
-          <Link href={`/industries/${activeIndustry.id}`} className={styles.mobileLink} onClick={pauseAutoplay}>
-            View {activeIndustry.title} <ArrowRight size={15} />
-          </Link>
+        <div className={styles.dots} role="tablist" aria-label="Industry slides">
+          {industries.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              className={index === active ? styles.dotActive : styles.dot}
+              onClick={() => choose(index)}
+              aria-label={`Show ${item.title}`}
+              aria-selected={index === active}
+              role="tab"
+            />
+          ))}
         </div>
       </div>
     </section>

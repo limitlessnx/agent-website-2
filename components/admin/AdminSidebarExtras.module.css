@@ -19,33 +19,95 @@
   text-transform: uppercase !important;
 }
 
+.workspaceWrap {
+  position: relative;
+  width: 100%;
+}
+
 .workspaceSwitcher {
   width: 100%;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0,1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 11px;
-  border: 1px solid rgba(167,139,250,.22);
+  padding: 10px 11px;
+  border: 1px solid rgba(167,139,250,.16);
   border-radius: 12px;
   color: var(--admin-text);
-  background: linear-gradient(145deg, rgba(124,58,237,.11), rgba(255,255,255,.02));
+  background: rgba(255,255,255,.025);
   text-align: left;
   cursor: pointer;
 }
+
+.workspaceSwitcher:hover {
+  border-color: rgba(167,139,250,.28);
+  background: rgba(124,58,237,.07);
+}
+
 .workspaceIcon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: inline-grid;
   place-items: center;
   border-radius: 9px;
   color: #d8c9ff;
-  background: rgba(124,58,237,.18);
+  background: rgba(124,58,237,.14);
 }
+
 .workspaceSwitcher small,
 .workspaceSwitcher strong { display: block; }
-.workspaceSwitcher small { color: var(--admin-text-muted); font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; }
-.workspaceSwitcher strong { margin-top: 3px; font-size: .82rem; }
+.workspaceSwitcher small { color: var(--admin-text-muted); font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; }
+.workspaceSwitcher strong { margin-top: 3px; overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.workspaceChevron,
+.workspaceChevronOpen {
+  color: var(--admin-text-muted);
+  transition: transform .18s ease;
+}
+
+.workspaceChevronOpen { transform: rotate(180deg); }
+
+.workspaceMenu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 4px;
+  padding: 7px;
+  border: 1px solid rgba(167,139,250,.16);
+  border-radius: 12px;
+  background: #0e1218;
+  box-shadow: 0 16px 36px rgba(0,0,0,.34);
+}
+
+.workspaceMenu a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: var(--admin-text);
+  text-decoration: none;
+}
+
+.workspaceMenu a:hover { background: rgba(124,58,237,.09); }
+.workspaceMenu a > span { min-width: 0; }
+.workspaceMenu strong,
+.workspaceMenu small { display: block; }
+.workspaceMenu strong { overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.workspaceMenu small { margin-top: 2px; color: var(--admin-text-muted); font-size: .62rem; text-transform: capitalize; }
+
+.manageWorkspaces {
+  margin-top: 3px;
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-radius: 0 0 8px 8px !important;
+  color: #c9baff !important;
+  font-size: .7rem;
+  font-weight: 800;
+}
 
 .addOrganization {
   min-height: 38px;
@@ -62,6 +124,7 @@
   font-size: .76rem;
   font-weight: 800;
 }
+
 .userCard {
   display: grid;
   grid-template-columns: auto minmax(0,1fr);

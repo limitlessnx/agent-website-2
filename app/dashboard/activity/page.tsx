@@ -1,4 +1,4 @@
-import { Activity, Bot, Building2, Database, Megaphone, Workflow } from "@/components/admin/ServerIcons";
+import { Bot, Building2, Database, Megaphone, Workflow } from "@/components/admin/ServerIcons";
 import { getCampaignReports, getLeads, getN8nStatus, getProperties, getSupabaseReadiness } from "@/lib/limitless-data";
 
 export const dynamic = "force-dynamic";
@@ -17,26 +17,26 @@ export default async function UnifiedActivityPage() {
   const activeLeads = leads.filter((lead) => !["closed", "converted", "cold"].includes(String(lead.status || "").toLowerCase())).slice(0, 8);
 
   return (
-    <main className="admin-page">
+    <main className="admin-page activity-page">
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Governance</p>
-          <h1>Unified Activity Center</h1>
-          <p>One operational timeline for organization data, Maia campaigns, agent infrastructure and workflow health.</p>
+          <p className="admin-kicker">Operations</p>
+          <h1>Activity Center</h1>
+          <p>Recent CRM, campaign, workflow and data-quality activity in one place.</p>
         </div>
         <span className={supabase.ready && !n8n.error ? "admin-status live" : "admin-status warning"}>
           {supabase.ready && !n8n.error ? "Platform operational" : "Review required"}
         </span>
       </header>
 
-      <div className="admin-grid four">
+      <div className="admin-grid four activity-metrics">
         <section className="admin-panel compact"><p>Active CRM records</p><strong>{activeLeads.length}</strong><span className="admin-muted">Visible activity sample</span></section>
         <section className="admin-panel compact"><p>Recent campaigns</p><strong>{recentCampaigns.length}</strong><span className="admin-muted">Delivery reports</span></section>
         <section className="admin-panel compact"><p>Workflow inventory</p><strong>{n8n.workflows.length}</strong><span className="admin-muted">{n8n.activeWorkflows} active</span></section>
         <section className="admin-panel compact"><p>Media actions</p><strong>{missingMedia.length}</strong><span className="admin-muted">Visible missing records</span></section>
       </div>
 
-      <div className="admin-grid two">
+      <div className="admin-grid two activity-grid">
         <section className="admin-panel">
           <div className="admin-panel-header"><div><h2>Campaign Activity</h2><p>Recent Maia outbound operations.</p></div><Megaphone size={18} /></div>
           <div className="admin-list">
@@ -51,7 +51,7 @@ export default async function UnifiedActivityPage() {
         </section>
 
         <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Workflow Activity</h2><p>Grouped automation operational state.</p></div><Workflow size={18} /></div>
+          <div className="admin-panel-header"><div><h2>Workflow Activity</h2><p>Automation operational state.</p></div><Workflow size={18} /></div>
           <div className="admin-list">
             {n8n.workflows.slice(0, 12).map((workflow) => (
               <a href="/dashboard/workflows" className="admin-list-row compact" key={workflow.id}>
@@ -64,7 +64,7 @@ export default async function UnifiedActivityPage() {
         </section>
       </div>
 
-      <div className="admin-grid two">
+      <div className="admin-grid two activity-grid">
         <section className="admin-panel">
           <div className="admin-panel-header"><div><h2>CRM Activity</h2><p>Active Limitless Realty leads.</p></div><Bot size={18} /></div>
           <div className="admin-list">
@@ -74,11 +74,12 @@ export default async function UnifiedActivityPage() {
                 <em>{lead.score || lead.status || "active"}</em>
               </a>
             ))}
+            {!activeLeads.length ? <p className="admin-empty">No active CRM activity is visible yet.</p> : null}
           </div>
         </section>
 
         <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Data Quality Activity</h2><p>Records requiring organization action.</p></div><Database size={18} /></div>
+          <div className="admin-panel-header"><div><h2>Data Quality</h2><p>Records requiring organization action.</p></div><Database size={18} /></div>
           <div className="admin-list">
             {missingMedia.map((property) => (
               <a href="/dashboard/limitless/media" className="admin-list-row compact" key={property.id}>

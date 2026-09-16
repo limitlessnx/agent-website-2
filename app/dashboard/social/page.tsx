@@ -44,6 +44,9 @@ export default async function SocialOverviewPage() {
         <Link href="/dashboard/social/analytics" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Analytics</h2><p>Track post performance, account growth, conversion and attributed revenue.</p></div><span className="admin-status">3.7</span></div>
         </Link>
+        <Link href="/dashboard/social/integrations" className="admin-panel compact">
+          <div className="admin-panel-header"><div><h2>Integrations</h2><p>Connect Meta and future social platforms directly from Flux Social.</p></div><span className="admin-status">3.9</span></div>
+        </Link>
         <Link href="/dashboard/social/posts" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Posts</h2><p>Inspect the complete content lifecycle and status history.</p></div></div>
         </Link>
