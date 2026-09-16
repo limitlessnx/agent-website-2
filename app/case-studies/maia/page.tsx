@@ -56,16 +56,23 @@ export default function MaiaCaseStudyPage() {
                 <span><CheckCircle2 size={14} /> Better follow-through</span>
               </div>
             </div>
-            <div
-              className={styles.heroImage}
-              aria-label="Generated Maia real estate buyer journey visual"
-              style={{
-                backgroundImage: "url('/maia-hero-generated.webp')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-              }}
-            >
+            <div className={styles.heroImage} aria-label="Generated Maia real estate buyer journey visual">
+              <img
+                src="/maia-hero-generated.webp"
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                fetchPriority="high"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: "center",
+                  display: "block",
+                }}
+              />
               <div className={styles.chatCardTop}><small>Prospect</small><strong>Is this property still available?</strong><span>New enquiry · now</span></div>
               <div className={styles.chatCardBottom}><small>Maia</small><strong>Enquiry captured</strong><span>Buyer context saved</span></div>
             </div>
@@ -141,13 +148,27 @@ export default function MaiaCaseStudyPage() {
                 <div
                   className={styles.journeyVisual}
                   aria-label={`Generated visual for ${title}`}
-                  style={{
-                    backgroundImage: "url('/maia-journey-generated.webp')",
-                    backgroundSize: "600% 100%",
-                    backgroundPosition: `${index * 20}% center`,
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
+                  style={{ position: "relative", overflow: "hidden" }}
+                >
+                  <img
+                    src="/maia-journey-generated.webp"
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    decoding="async"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      bottom: 0,
+                      left: `${index * -100}%`,
+                      width: "600%",
+                      maxWidth: "none",
+                      height: "100%",
+                      objectFit: "fill",
+                      display: "block",
+                    }}
+                  />
+                </div>
                 <div className={styles.journeyBody}>
                   <div className={styles.journeyTitle}><b>{step}</b><strong>{title}</strong></div>
                   <p>{text}</p>
