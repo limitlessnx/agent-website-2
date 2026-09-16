@@ -66,11 +66,11 @@
 .signature { position:absolute;right:1%;bottom:4px;color:#a880ff;font-family:Georgia,"Times New Roman",serif;font-size:1.08rem;font-style:italic;line-height:1.05;transform:rotate(-5deg);opacity:.9; }
 
 @media (max-width:1100px) and (min-width:901px) {
-  .frame { grid-template-columns:minmax(270px,.7fr) minmax(430px,1.3fr);gap:22px;padding-inline:32px; }
-  .journey { min-height:610px; }
-  .connector { inset:0 3% 0 3%;width:94%;height:100%; }
-  .step { width:68%;min-height:88px; }
-  .step1 { top:0;right:4%; }.step2 { top:100px;left:14%; }.step3 { top:200px;right:4%; }.step4 { top:300px;left:14%; }.step5 { top:400px;right:4%; }.step6 { top:500px;left:14%; }
+  .frame { grid-template-columns:minmax(270px,.72fr) minmax(410px,1.28fr);gap:24px;padding-inline:34px; }
+  .journey { width:min(100%,540px);min-height:610px;margin-inline:auto; }
+  .connector { inset:0 4%;width:92%;height:100%; }
+  .step { width:64%;min-height:88px; }
+  .step1 { top:0;right:5%; }.step2 { top:100px;left:18%; }.step3 { top:200px;right:5%; }.step4 { top:300px;left:18%; }.step5 { top:400px;right:5%; }.step6 { top:500px;left:18%; }
   .card { min-height:86px;padding:14px 16px 14px 82px; }
   .iconWrap { width:74px;height:74px;border-width:6px; }
   .iconCore { width:46px;height:46px; }.iconCore svg { width:23px;height:23px; }
@@ -83,14 +83,14 @@
   .section { padding:68px 18px; }
   .frame { min-height:0;padding:44px 30px 48px;grid-template-columns:1fr;gap:44px; }
   .copy { max-width:650px; }.copy h2 { max-width:650px;font-size:clamp(2.6rem,8vw,4.3rem); }.copy > p { max-width:590px; }
-  .journey { width:min(100%,650px);min-height:570px;margin:0 auto; }
-  .connector { left:6%;right:6%;width:88%;height:100%; }
-  .step { width:62%;min-height:80px; }
-  .step1 { top:0;right:4%; }.step2 { top:92px;left:15%; }.step3 { top:184px;right:4%; }.step4 { top:276px;left:15%; }.step5 { top:368px;right:4%; }.step6 { top:460px;left:15%; }
+  .journey { width:min(88%,560px);min-height:570px;margin:0 auto; }
+  .connector { left:4%;right:4%;width:92%;height:100%; }
+  .step { width:66%;min-height:80px; }
+  .step1 { top:0;right:2%; }.step2 { top:92px;left:17%; }.step3 { top:184px;right:2%; }.step4 { top:276px;left:17%; }.step5 { top:368px;right:2%; }.step6 { top:460px;left:17%; }
   .card { min-height:78px;padding:12px 15px 12px 72px; }
   .iconWrap { left:2px;width:64px;height:64px;border-width:5px; }.iconCore { width:40px;height:40px; }.iconCore svg { width:20px;height:20px; }
   .cardCopy h3 { font-size:.88rem; }.cardCopy p { max-width:270px;font-size:.65rem;line-height:1.3; }
-  .number { left:-76px;font-size:1.5rem; }.step2 .number,.step4 .number,.step6 .number { left:-60px; }
+  .number { left:-72px;font-size:1.5rem; }.step2 .number,.step4 .number,.step6 .number { left:-58px; }
   .node { left:-17px;width:17px;height:17px; }.node span { width:6px;height:6px; }
 }
 
