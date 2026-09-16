@@ -16,29 +16,10 @@ import ClientReviews from "@/components/ClientReviews";
 import PricingCarousel from "@/components/PricingCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
+import AutomationJourney from "@/components/home/AutomationJourney";
 import styles from "./HomepageHeaderRestore.module.css";
 
-const automationPillars = [
-  {
-    icon: MessageSquareText,
-    title: "Customer conversations",
-    text: "Handle enquiries and support across customer-facing channels, answer approved questions, capture context, and hand the right conversations to your team.",
-    detail: "WhatsApp · Web support · Inquiry handling · Support desk · Human handoff",
-  },
-  {
-    icon: Workflow,
-    title: "Follow-up & customer journey",
-    text: "Keep interested customers moving after the first conversation instead of relying on staff memory or manual chasing.",
-    detail: "Lead qualification · Follow-up · Reminders · Scheduling · Re-engagement",
-  },
-  {
-    icon: Database,
-    title: "Connected business operations",
-    text: "Connect customer activity to the systems your team uses so information, next actions, and management visibility stay organized.",
-    detail: "Email automation · CRM · Databases · Admin visibility · Custom workflows",
-  },
-];
-
+// Preview branch deployment marker: 2026-09-16 inbound workflow refresh.
 const pricingPlans = [
   {
     icon: MessageSquareText,
@@ -100,28 +81,8 @@ export default function HomePage() {
       <PublicLeoConsultant />
       <ReferenceFluxHeroPhase1 />
       <MaiaCaseStudyTeaser />
+      <AutomationJourney />
       <IndustryCarousel />
-
-      <section className="brand-section" id="services">
-        <div className="brand-shell">
-          <div className="brand-heading">
-            <span className="brand-eyebrow">What Fluxknight automates</span>
-            <h2>Three layers. One connected business system.</h2>
-            <p>Start with customer conversations, add follow-up when you need it, then connect the wider operation as the business grows.</p>
-          </div>
-          <div className="brand-grid">
-            {automationPillars.map(({ icon: Icon, title, text, detail }) => (
-              <article className="brand-card" key={title}>
-                <span className="brand-icon"><Icon size={21} /></span>
-                <h3>{title}</h3>
-                <p>{text}</p>
-                <small>{detail}</small>
-                <Link href="/services">Explore capabilities <ArrowRight size={15} /></Link>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
 
       <ClientReviews />
 
@@ -150,7 +111,7 @@ export default function HomePage() {
             </div>
             <picture className="evaluation-workflow-artwork">
               <source media="(max-width: 640px)" srcSet="/evaluation-workflow-mobile.svg" />
-              <Image src="/evaluation-workflow-desktop.svg" alt="Enquiries, support, follow-up, scheduling and CRM flowing into Fluxknight AI, which identifies the best place to automate first." width={760} height={680} sizes="(max-width: 640px) calc(100vw - 72px), (max-width: 980px) 72vw, 52vw" />
+              <Image src="/evaluation-workflow-desktop.svg" alt="Inbound calls, WhatsApp, website chat, email, social media and other enquiries flowing into Fluxknight AI for qualification, follow-up, booking, updates and automation recommendations." width={900} height={700} sizes="(max-width: 640px) calc(100vw - 72px), (max-width: 980px) 88vw, 62vw" />
             </picture>
             <div className="evaluation-conversion-actions">
               <Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link>

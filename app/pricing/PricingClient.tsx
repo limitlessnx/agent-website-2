@@ -15,7 +15,6 @@ const checkoutSlugByPlan: Record<PlanKey, string> = {
   business: "ai-front-desk-suite",
   "business-plus": "custom-ai-operations",
 };
-
 type BillingTerm = "monthly" | PrepaidTerm;
 
 function normalizeRequestedPlan(value: string | null): PlanKey | null {
@@ -89,28 +88,51 @@ export default function PricingClient() {
 
       <section className="brand-section pricing-page-content">
         <div className="brand-shell">
-          <div className="pricing-controls-box">
-            <div className="pricing-control-grid">
+          <div className="pricing-industry-box">
+            <span className="brand-eyebrow">Choose your industry</span>
+            <div className="pricing-industry-selector">
               <label>
-                <span>Choose a plan</span>
-                <select value={activePlan} onChange={(event) => setActivePlan(event.target.value as PlanKey)}>
-                  {planDefinitions.map((plan) => <option key={plan.key} value={plan.key}>{plan.name}</option>)}
-                </select>
-              </label>
-
-              <label>
-                <span>Choose your industry</span>
+                <span>See how scope changes for your operation</span>
                 <select value={industrySlug} onChange={(event) => setIndustrySlug(event.target.value)}>
                   <option value="">General pricing framework</option>
                   {industries.map((industry) => <option key={industry.slug} value={industry.slug}>{industry.name}</option>)}
                 </select>
               </label>
+              {selectedIndustry && <Link href={`/industries/${selectedIndustry.slug}#plans`} className="button-secondary">View {selectedIndustry.name} page</Link>}
             </div>
+          </div>
 
-            <div className="pricing-control-actions">
-              {selectedIndustry ? <Link href={`/industries/${selectedIndustry.slug}#plans`} className="button-secondary">View {selectedIndustry.name} page</Link> : null}
-              <Link href={customHref} className="button-secondary">Need a custom system? <ArrowRight size={15} /></Link>
-            </div>
+          <div className="pricing-plan-grid">
+            {planDefinitions.map((plan) => {
+              const selected = plan.key === activePlan;
+              const planPrice = prices[plan.key];
+              return (
+                <button
+                  key={plan.key}
+                  type="button"
+                  className={`pricing-plan-card${selected ? " is-selected" : ""}`}
+                  onClick={() => {
+                    setActivePlan(plan.key);
+                    requestAnimationFrame(() => document.getElementById("plan-details")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                  }}
+                  aria-pressed={selected}
+                >
+                  <span className="pricing-plan-eyebrow">{plan.eyebrow}</span>
+                  <h2>{plan.name}</h2>
+                  {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.first}</strong><span> + {planPrice.ongoing}</span></div> : null}
+                  {plan.key === "basic" ? <span className="pricing-trial-pill">14-day free trial available</span> : null}
+                  <p>{plan.summary}</p>
+                  <span className="pricing-plan-action">{selected ? "Selected" : "View full explanation"} <ArrowRight size={14} /></span>
+                </button>
+              );
+            })}
+            <Link href={customHref} className="pricing-plan-card pricing-custom-card">
+              <span className="pricing-plan-eyebrow">Built around your requirements</span>
+              <h2>Custom</h2>
+              <div className="pricing-plan-mini-price"><strong>Custom scope</strong><span>Pricing based on requirements</span></div>
+              <p>Anything the client needs automated, integrated or set up, including custom agents, workflows, databases, internal tools, integrations, dashboards and operational systems.</p>
+              <span className="pricing-plan-action">Build a Custom plan <ArrowRight size={14} /></span>
+            </Link>
           </div>
 
           <section id="plan-details" className="pricing-detail-panel">
@@ -201,13 +223,22 @@ export default function PricingClient() {
         .pricing-region-switch button{min-height:32px;padding:6px 12px;border:0;border-radius:999px;color:#8f829f;background:transparent;font-size:12px;font-weight:800;cursor:pointer}
         .pricing-region-switch button.is-active{color:#fff;background:rgba(139,92,246,.34)}
         .pricing-page-content{padding-top:0}
-        .pricing-controls-box{margin-bottom:28px;padding:22px;border-radius:18px;background:rgba(18,9,31,.9);border:1px solid rgba(168,85,247,.22)}
-        .pricing-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-        .pricing-control-grid label{display:grid;gap:8px;min-width:0}
-        .pricing-control-grid label>span{color:#aaa0bb;font-size:13px}
-        .pricing-control-grid select{width:100%;min-height:48px;padding:12px 14px;border-radius:12px;color:#fbf8ff;background:#12091f;border:1px solid rgba(168,85,247,.32)}
-        .pricing-control-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-        .pricing-detail-panel{scroll-margin-top:110px;padding:clamp(24px,4vw,40px);border-radius:24px;background:rgba(18,9,31,.94);border:1px solid rgba(192,132,252,.36)}
+        .pricing-industry-box{margin-bottom:28px;padding:22px;border-radius:18px;background:rgba(18,9,31,.9);border:1px solid rgba(168,85,247,.22)}
+        .pricing-industry-selector{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end;margin-top:12px}
+        .pricing-industry-selector label{display:grid;gap:8px;min-width:0}
+        .pricing-industry-selector label>span{color:#aaa0bb;font-size:13px}
+        .pricing-industry-selector select{width:100%;min-height:48px;padding:12px 14px;border-radius:12px;color:#fbf8ff;background:#12091f;border:1px solid rgba(168,85,247,.32)}
+        .pricing-plan-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+        .pricing-plan-card{display:block!important;width:100%;min-width:0;min-height:320px;padding:24px!important;text-align:left!important;cursor:pointer;border-radius:20px!important;color:#fbf8ff!important;background:rgba(18,9,31,.9)!important;border:1px solid rgba(168,85,247,.22)!important;box-shadow:none!important;overflow:hidden;text-decoration:none!important}
+        .pricing-plan-card.is-selected{background:linear-gradient(180deg,rgba(126,34,206,.25),rgba(18,9,31,.96))!important;border-color:rgba(192,132,252,.5)!important;box-shadow:0 22px 60px rgba(86,33,160,.14)!important}
+        .pricing-custom-card{background:linear-gradient(180deg,rgba(75,36,116,.2),rgba(18,9,31,.96))!important;border-style:dashed!important}
+        .pricing-plan-eyebrow{display:block;color:#d8b4fe;font-size:10px;font-weight:850;line-height:1.3;letter-spacing:.13em;text-transform:uppercase}
+        .pricing-plan-card h2{display:block;margin:14px 0 8px!important;font-size:30px!important;line-height:1.05!important;letter-spacing:-.035em!important;color:#fbf8ff!important}
+        .pricing-plan-mini-price{margin-bottom:12px;color:#d8b4fe}.pricing-plan-mini-price strong{display:block;font-size:17px}.pricing-plan-mini-price span{display:block;margin-top:3px;font-size:11px;color:#8f829f}
+        .pricing-trial-pill{display:inline-flex;margin:0 0 12px;padding:6px 9px;border:1px solid rgba(192,132,252,.3);border-radius:999px;background:rgba(126,34,206,.13);color:#e9d5ff;font-size:10px;font-weight:800;letter-spacing:.04em}
+        .pricing-plan-card p{display:block;margin:0!important;color:#aaa0bb!important;font-size:14px!important;line-height:1.7!important;overflow-wrap:normal!important;word-break:normal!important}
+        .pricing-plan-action{display:inline-flex;align-items:center;gap:6px;margin-top:22px;color:#d8b4fe;font-size:13px;font-weight:850}
+        .pricing-detail-panel{scroll-margin-top:110px;margin-top:28px;padding:clamp(24px,4vw,40px);border-radius:24px;background:rgba(18,9,31,.94);border:1px solid rgba(192,132,252,.36)}
         .pricing-detail-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(280px,.95fr);gap:32px;align-items:start;margin-top:12px}
         .pricing-detail-copy h2{margin:0 0 16px;font-size:clamp(2.1rem,4vw,3.4rem);line-height:1.04;letter-spacing:-.045em}
         .pricing-detail-copy>p{color:#aaa0bb;line-height:1.8}.pricing-detail-copy>p strong{color:#fbf8ff}.pricing-detail-copy h3{margin-top:28px}
@@ -216,10 +247,11 @@ export default function PricingClient() {
         .pricing-warning{margin-top:20px!important;color:#f4c27a!important;font-size:13px}.pricing-coming{margin-top:20px!important;color:#d8b4fe!important;font-size:13px}
         .pricing-scope-card{padding:24px;border-radius:20px;background:rgba(255,255,255,.025);border:1px solid rgba(168,85,247,.2)}.pricing-scope-card>span{display:block;color:#d8b4fe;font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.pricing-current-price{display:grid;gap:12px;margin:14px 0 20px;padding:16px;border-radius:14px;background:rgba(139,92,246,.08);border:1px solid rgba(168,85,247,.2)}.pricing-current-price small{display:block;color:#8f829f;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.pricing-current-price strong{display:block;margin-top:4px;font-size:22px;color:#fff}.pricing-scope-card h3{margin:10px 0;font-size:26px}.pricing-scope-card p{margin:0;color:#aaa0bb;line-height:1.7;font-size:14px}.pricing-scope-card>div{margin-top:16px}.pricing-scope-card>div>strong{display:block;margin-bottom:8px;font-size:13px}.pricing-scope-card ul{margin:0;padding-left:18px;color:#aaa0bb;font-size:13px;line-height:1.7}.pricing-industry-note{padding:14px;border-radius:14px;background:rgba(126,34,206,.1);border:1px solid rgba(168,85,247,.22)}.pricing-industry-note p{font-size:13px!important;line-height:1.65!important}.pricing-scope-card .button-primary,.pricing-scope-card .pricing-paid-cta{margin-top:22px}
         .pricing-free-trial-card{padding:18px!important;border-radius:16px!important;background:linear-gradient(145deg,rgba(126,34,206,.2),rgba(255,255,255,.025))!important;border:1px solid rgba(192,132,252,.38)!important}.pricing-free-trial-card>span{display:block;color:#caa7ef;font-size:10px;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.pricing-free-trial-card>strong{display:block!important;margin:7px 0!important;color:#fff;font-size:19px!important;line-height:1.25}.pricing-free-trial-card>p{font-size:12px!important;line-height:1.55!important}.pricing-free-trial-card .button-primary{width:100%;justify-content:center;margin-top:14px}
-        .pricing-term-box{padding:16px;border-radius:14px;background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.2)}.pricing-term-box>label{display:block;color:#aaa0bb;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.pricing-term-select-wrap{position:relative;margin-top:9px!important}.pricing-term-select-wrap:after{content:'⌄';position:absolute;right:15px;top:50%;transform:translateY(-55%);color:#d8b4fe;font-size:18px;pointer-events:none}.pricing-term-select-wrap select{width:100%;min-height:50px;padding:0 44px 0 14px;appearance:none;-webkit-appearance:none;border-radius:12px;border:1px solid rgba(192,132,252,.34);background:linear-gradient(180deg,rgba(29,15,48,.96),rgba(16,8,27,.98));color:#fbf8ff;font-size:13px;font-weight:750;outline:none;cursor:pointer}.pricing-term-total{margin-top:12px!important;padding:14px;border-radius:12px;background:rgba(139,92,246,.08);border:1px solid rgba(168,85,247,.2)}.pricing-term-total small{display:block;color:#8f829f;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.pricing-term-total strong{display:block;margin-top:4px;color:#fff;font-size:22px}.pricing-term-total span{display:block;margin-top:4px;color:#d8b4fe;font-size:11px;line-height:1.5}
+        .pricing-term-box{padding:16px;border-radius:14px;background:rgba(255,255,255,.02);border:1px solid rgba(168,85,247,.2)}.pricing-term-box>label{display:block;color:#aaa0bb;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.pricing-term-select-wrap{position:relative;margin-top:9px!important}.pricing-term-select-wrap:after{content:'⌄';position:absolute;right:15px;top:50%;transform:translateY(-55%);color:#d8b4fe;font-size:18px;pointer-events:none}.pricing-term-select-wrap select{width:100%;min-height:50px;padding:0 44px 0 14px;appearance:none;-webkit-appearance:none;border-radius:12px;border:1px solid rgba(192,132,252,.34);background:linear-gradient(180deg,rgba(29,15,48,.96),rgba(16,8,27,.98));color:#fbf8ff;font-size:13px;font-weight:750;outline:none;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}.pricing-term-select-wrap select:focus{border-color:rgba(216,180,254,.72);box-shadow:0 0 0 3px rgba(168,85,247,.11)}.pricing-term-total{margin-top:12px!important;padding:14px;border-radius:12px;background:rgba(139,92,246,.08);border:1px solid rgba(168,85,247,.2)}.pricing-term-total small{display:block;color:#8f829f;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.pricing-term-total strong{display:block;margin-top:4px;color:#fff;font-size:22px}.pricing-term-total span{display:block;margin-top:4px;color:#d8b4fe;font-size:11px;line-height:1.5}
         .pricing-footnote{opacity:.65;margin-top:2.5rem;font-size:13px;line-height:1.6}
-        @media(max-width:980px){.pricing-detail-grid{grid-template-columns:1fr}}
-        @media(max-width:780px){.pricing-page-hero{padding-top:7.5rem;padding-bottom:2.5rem}.pricing-page-heading{text-align:left}.pricing-page-heading h1{font-size:clamp(2.2rem,10vw,3.4rem)}.pricing-control-grid{grid-template-columns:1fr}.pricing-detail-panel{padding:20px 16px;border-radius:20px}.pricing-detail-copy h2{font-size:2rem}.pricing-scope-card{padding:18px}.pricing-controls-box{padding:18px}}
+        @media(max-width:1200px){.pricing-plan-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+        @media(max-width:980px){.pricing-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pricing-detail-grid{grid-template-columns:1fr}.pricing-plan-card{min-height:280px}}
+        @media(max-width:780px){.pricing-page-hero{padding-top:7.5rem;padding-bottom:2.5rem}.pricing-page-heading{text-align:left}.pricing-page-heading h1{font-size:clamp(2.2rem,10vw,3.4rem)}.pricing-industry-selector{grid-template-columns:1fr}.pricing-plan-grid{grid-template-columns:1fr;gap:12px}.pricing-plan-card{min-height:0;padding:20px!important;border-radius:18px!important}.pricing-plan-card h2{font-size:2rem!important;margin:10px 0 7px!important}.pricing-plan-card p{font-size:.9rem!important;line-height:1.58!important}.pricing-plan-action{margin-top:16px}.pricing-detail-panel{padding:20px 16px;border-radius:20px}.pricing-detail-copy h2{font-size:2rem}.pricing-scope-card{padding:18px}.pricing-industry-box{padding:18px}}
       `}</style>
     </main>
   );
