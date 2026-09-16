@@ -157,11 +157,11 @@
 }
 
 .step1 { top: 0; right: 0; }
-.step2 { top: 108px; left: 0; }
+.step2 { top: 108px; left: 72px; }
 .step3 { top: 216px; right: 0; }
-.step4 { top: 324px; left: 0; }
+.step4 { top: 324px; left: 72px; }
 .step5 { top: 432px; right: 0; }
-.step6 { top: 540px; left: 0; }
+.step6 { top: 540px; left: 72px; }
 
 .cyan { --tone: #16d8f4; --tone-rgb: 22, 216, 244; }
 .violet { --tone: #9d55ff; --tone-rgb: 157, 85, 255; }
@@ -172,7 +172,7 @@
 
 .number {
   position: absolute;
-  left: -64px;
+  left: -72px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--tone);
@@ -180,6 +180,12 @@
   font-weight: 900;
   letter-spacing: -0.055em;
   text-shadow: 0 0 20px rgba(var(--tone-rgb), 0.22);
+}
+
+.step2 .number,
+.step4 .number,
+.step6 .number {
+  left: -60px;
 }
 
 .node {
@@ -304,10 +310,13 @@
     padding-inline: 36px;
   }
 
-  .step { width: 76%; }
+  .step { width: 72%; }
+  .step1, .step3, .step5 { right: 8px; }
+  .step2, .step4, .step6 { left: 68px; }
   .card { padding-right: 18px; padding-left: 92px; }
   .iconWrap { width: 82px; height: 82px; }
-  .number { left: -57px; font-size: 1.85rem; }
+  .number { left: -70px; font-size: 1.85rem; }
+  .step2 .number, .step4 .number, .step6 .number { left: -56px; }
 }
 
 @media (max-width: 900px) {
@@ -331,6 +340,11 @@
 
   .copy > p { max-width: 590px; }
   .journey { width: min(100%, 650px); margin: 0 auto; }
+  .step { width: 70%; }
+  .step1, .step3, .step5 { right: 12px; }
+  .step2, .step4, .step6 { left: 76px; }
+  .number { left: -76px; }
+  .step2 .number, .step4 .number, .step6 .number { left: -62px; }
 }
 
 @media (max-width: 640px) {
@@ -375,11 +389,11 @@
 
   .journey {
     min-height: 672px;
-    padding-left: 42px;
+    padding-left: 58px;
   }
 
   .connector {
-    left: 18px;
+    left: 26px;
     right: auto;
     width: 36px;
     height: 632px;
@@ -391,9 +405,9 @@
 
   .step {
     position: absolute;
-    left: 42px !important;
+    left: 58px !important;
     right: auto !important;
-    width: calc(100% - 42px);
+    width: calc(100% - 58px);
     min-height: 96px;
   }
 
@@ -404,8 +418,11 @@
   .step5 { top: 440px; }
   .step6 { top: 550px; }
 
-  .number {
-    left: -42px;
+  .number,
+  .step2 .number,
+  .step4 .number,
+  .step6 .number {
+    left: -50px;
     top: 14px;
     transform: none;
     font-size: 1.2rem;
@@ -452,7 +469,7 @@
   }
 
   .endDot {
-    left: 22px;
+    left: 30px;
     right: auto;
     bottom: 10px;
     width: 16px;
@@ -468,9 +485,12 @@
 
 @media (max-width: 390px) {
   .frame { padding-inline: 14px; }
-  .journey { padding-left: 38px; }
-  .step { left: 38px !important; width: calc(100% - 38px); }
-  .number { left: -38px; }
+  .journey { padding-left: 54px; }
+  .step { left: 54px !important; width: calc(100% - 54px); }
+  .number,
+  .step2 .number,
+  .step4 .number,
+  .step6 .number { left: -47px; }
   .card { padding-left: 68px; padding-right: 10px; }
   .iconWrap { left: 5px; width: 54px; height: 54px; }
   .cardCopy h3 { font-size: 0.82rem; }
