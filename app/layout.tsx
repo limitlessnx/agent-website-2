@@ -25,6 +25,7 @@ import "./dashboard-phase-c.css";
 import "./dashboard-phase-d.css";
 import "./dashboard-phase-e.css";
 import "./leo-platform-ui.css";
+import "./astral-hero-colors.css";
 import SiteShell from "@/components/SiteShell";
 import GlobalLoadingProvider from "@/components/GlobalLoadingProvider";
 
