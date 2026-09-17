@@ -8,7 +8,7 @@ import styles from "./IndustryCarousel.module.css";
 
 const industryMeta = [
   { id: "real-estate", icon: Building2, image: "https://images.unsplash.com/photo-1767950470198-c9cd97f8ed87?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Real Estate", text: "Capture leads, qualify buyers, book inspections and keep follow-up moving automatically." },
-  { id: "hotels", icon: Hotel, image: "/industry-product-hospitality.svg", eyebrow: "Guest operations", text: "Answer guest questions, capture booking intent, coordinate reservations and hand over high-value conversations without front-desk bottlenecks." },
+  { id: "hotels", icon: Hotel, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Guest operations", text: "Answer guest questions, capture booking intent, coordinate reservations and hand over high-value conversations without front-desk bottlenecks." },
   { id: "restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Reservations & service", text: "Handle reservations, menu questions, order enquiries and follow-up while your team stays focused on service." },
   { id: "clinics", icon: Stethoscope, image: "/industry-product-health.svg", eyebrow: "Patient administration", text: "Reduce repetitive front-desk work with appointment support, reminders, administrative answers and structured human handoff." },
   { id: "sales-companies", icon: Briefcase, image: "/industry-product-sales.svg", eyebrow: "Lead conversion", text: "Qualify demand, keep follow-up active and preserve conversation context until a serious prospect is ready for your sales team." },
