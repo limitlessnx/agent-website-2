@@ -1,0 +1,12 @@
+/* Exact Astral palette restoration for the reference-led homepage hero only.
+   Source tokens: primary #C084FC, secondary #0A0A14, accent #FB923C,
+   background #03000A, surface #18181B, text secondary #A1A1AA, border #27272A. */
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"]{background:#03000A!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] [class*="text-[#a78bfa]"]{color:#C084FC!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] [class*="text-[#c4b5fd]"]{color:#C084FC!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] [class*="bg-[#8b5cf6]"]{background-color:#C084FC!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] [class*="border-[#a78bfa]"]{border-color:rgba(192,132,252,.28)!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] aside[class*="bg-[#0a0a0a]"]{background:#0A0A14!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] a[href="/evaluation"]{background:#C084FC!important;color:#03000A!important;box-shadow:0 12px 36px rgba(192,132,252,.18)!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] a[href="/evaluation"]:hover{background:#FB923C!important}
+section[class~="bg-[#0a0a0a]"][class~="selection:bg-[#8b5cf6]/30"] h1 div:last-child span{color:#FB923C!important}
