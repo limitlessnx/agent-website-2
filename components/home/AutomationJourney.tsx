@@ -46,8 +46,11 @@ export default function AutomationJourney() {
         </div>
 
         <div className={styles.journey} aria-label="Fluxknight automation workflow">
-          <svg className={styles.connector} viewBox="0 0 560 620" preserveAspectRatio="none" aria-hidden="true">
+          <svg className={`${styles.connector} ${styles.desktopConnector}`} viewBox="0 0 560 620" preserveAspectRatio="none" aria-hidden="true">
             <path d="M168 46 C130 72 130 78 168 100 C206 122 206 128 168 150 C130 172 130 178 168 200 C206 222 206 228 168 250 C130 272 130 278 168 300 C206 322 206 328 168 350 C130 372 130 378 168 400 C206 422 206 428 168 450 C130 472 130 478 168 500 C206 522 206 528 168 550" />
+          </svg>
+          <svg className={`${styles.connector} ${styles.mobileConnector}`} viewBox="0 0 340 500" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M88 38 C112 57 113 73 92 89 C69 107 69 124 92 141 C116 159 116 176 92 193 C69 211 69 228 92 245 C116 263 116 280 92 297 C69 315 69 332 92 349 C116 367 116 384 92 401 C72 416 76 435 101 452 C122 466 126 477 126 490" />
           </svg>
 
           {steps.map(({ number, title, text, icon: Icon, tone }, index) => (
