@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./public-design-system.css";
 import "./flux-theme.css";
 import "./home-responsive.css";
 import "./brand-refresh.css";
