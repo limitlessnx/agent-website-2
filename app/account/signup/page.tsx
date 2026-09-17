@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AuthExperience from "../AuthExperience";
 import SignupForm from "./SignupForm";
 
 export const metadata: Metadata = {
@@ -10,8 +11,8 @@ export default async function ClientSignupPage({ searchParams }: { searchParams:
   const params = await searchParams;
   const trialPlan = params.trial === "basic" ? "basic" : "";
   return (
-    <section className="admin-login-page">
+    <AuthExperience mode="signup">
       <SignupForm txRef={String(params.tx_ref || "")} nextPath={String(params.next || "/portal")} trialPlan={trialPlan} />
-    </section>
+    </AuthExperience>
   );
 }
