@@ -10,7 +10,6 @@ import {
   MessageSquareText,
 } from "@/components/admin/ServerIcons";
 import styles from "./MaiaCaseStudyTeaser.module.css";
-import maiaPhoneVisual from "./maiaPhoneVisual";
 
 const outcomes = [
   { icon: MessageSquareText, label: "24/7 replies" },
@@ -41,7 +40,7 @@ export default function MaiaCaseStudyTeaser() {
         transition={{ duration: 0.45 }}
       >
         <div className={styles.referenceVisual} aria-label="Maia real-phone conversation and CRM workflow">
-          <img className={styles.referenceVisualImage} src={maiaPhoneVisual} alt="Prospect WhatsApp conversation beside Maia AI sales agent and Limitless Realty CRM" />
+          <img className={styles.referenceVisualImage} src="/maia-homepage-conversation.webp" alt="Prospect using WhatsApp with Maia to explore Lagos property options" />
         </div>
 
         <div className={styles.content}>
