@@ -42,7 +42,7 @@ export default function MaiaCaseStudyTeaser() {
         <div className={styles.proofVisual} aria-label="Prospect and Maia conversation workflow preview" data-device-layout="dual-samsung-ultra">
           <div className={styles.visualAura} aria-hidden="true" />
 
-          <div className={`${styles.phone} ${styles.prospectPhone}`}>
+          <div className={`${styles.device} ${styles.prospectPhone}`}><span className={styles.sideKeyA} /><span className={styles.sideKeyB} /><div className={styles.screen}>
             <div className={styles.samsungCamera} aria-hidden="true" />
             <div className={styles.phoneTop}>
               <span>9:41</span>
@@ -60,6 +60,7 @@ export default function MaiaCaseStudyTeaser() {
               <div className={styles.messageIncoming}>Yes, please!<small>10:25 AM</small></div>
             </div>
             <div className={styles.messageBar}><span>＋</span><em>Type a message…</em><b>➤</b></div>
+            </div>
           </div>
 
           <div className={styles.agentBridge}>
@@ -68,7 +69,7 @@ export default function MaiaCaseStudyTeaser() {
           </div>
           <div className={styles.connectorLine} aria-hidden="true" />
 
-          <div className={`${styles.phone} ${styles.samsung}`}>
+          <div className={`${styles.device} ${styles.samsung}`}><span className={styles.sideKeyA} /><span className={styles.sideKeyB} /><div className={styles.screen}>
             <div className={styles.samsungCamera} aria-hidden="true" />
             <div className={styles.phoneTop}>
               <span>9:41</span>
@@ -96,6 +97,7 @@ export default function MaiaCaseStudyTeaser() {
                 <div><dt>Next step</dt><dd>Inspection booked</dd></div>
               </dl>
               <div className={styles.inspection}><CalendarCheck2 size={14} /><div><small>Inspection scheduled</small><strong>Sat, 16 Nov · 10:00 AM</strong></div></div>
+            </div>
             </div>
           </div>
 
