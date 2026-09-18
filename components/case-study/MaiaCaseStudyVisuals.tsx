@@ -108,7 +108,16 @@ export function CaptureVisual() {
     <div className={styles.splitVisual}>
       <section className={styles.sourcePanel}>
         <PanelLabel icon={<Megaphone size={14} />}>Acquisition source</PanelLabel>
-        <div className={styles.sourceHero}><span>Property launch</span><strong>Get priority updates</strong><p>Prospect moves from campaign interest into an identifiable conversation.</p></div>
+        <div className={styles.acquisitionContextFrame}>
+          <img
+            src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/ef264b55-8c9f-4499-82cd-94f7ae6c0f31.jpg"
+            alt="Fluxknight acquisition journey showing campaign interest moving into conversation and organized lead follow-up."
+            className={styles.acquisitionContextImage}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
+        </div>
         <div className={styles.sourcePath}><span>Ad / social</span><b>→</b><span>CTA</span><b>→</b><span>WhatsApp / web</span></div>
       </section>
       <section className={styles.chatPanel}>
