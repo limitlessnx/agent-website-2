@@ -233,11 +233,44 @@ export default function MaiaCaseStudyPage() {
 
       <section className={styles.outcomeSection}>
         <div className={styles.shell}>
-          <div className={styles.outcomeGrid}>
-            <article><span>01</span><strong>Faster first response</strong><p>Buyer intent can be handled while it is still fresh.</p></article>
-            <article><span>02</span><strong>Better lead organization</strong><p>Useful conversation context becomes a record the team can work with.</p></article>
-            <article><span>03</span><strong>More consistent follow-up</strong><p>Next actions no longer depend entirely on staff memory.</p></article>
-            <article><span>04</span><strong>Better prepared handoff</strong><p>Human agents receive the customer history before they take over.</p></article>
+          <div className={styles.outcomeHeading}>
+            <div>
+              <span className={styles.eyebrow}>Operational proof</span>
+              <h2>Maia is built around the work that usually gets dropped.</h2>
+            </div>
+            <p>The value is not a dramatic AI statistic. It is the removal of repeated operational gaps between marketing, conversations, follow-up, appointments and the sales team.</p>
+          </div>
+
+          <div className={styles.proofLedger} aria-label="Operational changes Maia is designed to create">
+            <article>
+              <span className={styles.proofNumber}>01</span>
+              <div><strong>First response</strong><p>New enquiries can be handled while buyer intent is still fresh.</p></div>
+              <div className={styles.proofShift}><span>Before</span><b>Inbox waits for a person</b></div>
+              <div className={styles.proofShiftActive}><span>With Maia</span><b>Conversation starts and context is captured</b></div>
+            </article>
+            <article>
+              <span className={styles.proofNumber}>02</span>
+              <div><strong>Customer memory</strong><p>Useful details from the conversation become structured lead context.</p></div>
+              <div className={styles.proofShift}><span>Before</span><b>Information sits in scattered chats</b></div>
+              <div className={styles.proofShiftActive}><span>With Maia</span><b>Preferences, history and next action stay connected</b></div>
+            </article>
+            <article>
+              <span className={styles.proofNumber}>03</span>
+              <div><strong>Follow-through</strong><p>Relevant follow-up can continue after the first conversation goes quiet.</p></div>
+              <div className={styles.proofShift}><span>Before</span><b>Staff memory decides who gets contacted</b></div>
+              <div className={styles.proofShiftActive}><span>With Maia</span><b>Configured follow-up and reminders keep moving</b></div>
+            </article>
+            <article>
+              <span className={styles.proofNumber}>04</span>
+              <div><strong>Human handoff</strong><p>The sales team receives a usable customer story instead of a cold contact.</p></div>
+              <div className={styles.proofShift}><span>Before</span><b>Agent starts by asking everything again</b></div>
+              <div className={styles.proofShiftActive}><span>With Maia</span><b>Buyer context, property interest and history arrive together</b></div>
+            </article>
+          </div>
+
+          <div className={styles.proofBoundary}>
+            <CheckCircle2 size={17} />
+            <p>Maia is designed to improve operational consistency. Actual commercial results still depend on lead quality, the business offer, workflow configuration and the human sales team.</p>
           </div>
         </div>
       </section>
@@ -245,14 +278,21 @@ export default function MaiaCaseStudyPage() {
       <section className={styles.ctaSection}>
         <div className={styles.shell}>
           <div className={styles.ctaCard}>
-            <div>
+            <div className={styles.ctaCopy}>
               <span className={styles.eyebrow}>Maia for real estate</span>
-              <h2>Turn property enquiries into a system your team can actually operate.</h2>
-              <p>See the Fluxknight plans built around customer conversations, follow-up, CRM and operational automation.</p>
+              <h2>Stop letting good property enquiries disappear between messages.</h2>
+              <p>Fluxknight connects the conversations, customer data, follow-up, viewing workflows and human handoff behind your real-estate sales process.</p>
+              <div className={styles.ctaProofLine}>
+                <span>Capture</span><b>→</b><span>Qualify</span><b>→</b><span>Follow up</span><b>→</b><span>Book</span><b>→</b><span>Hand off</span>
+              </div>
             </div>
-            <div className={styles.ctaActions}>
-              <Link className={styles.primary} href="/pricing">See pricing <ArrowRight size={17} /></Link>
-              <Link className={styles.secondary} href="/evaluation">Evaluate your business</Link>
+            <div className={styles.ctaAside}>
+              <span className={styles.ctaAsideLabel}>Ready to see the plans?</span>
+              <div className={styles.ctaActions}>
+                <Link className={styles.primary} href="/pricing">See pricing <ArrowRight size={17} /></Link>
+                <Link className={styles.secondary} href="/evaluation">Evaluate your business</Link>
+              </div>
+              <small>Choose a plan directly, or use the evaluation if you need help mapping Maia to your current workflow.</small>
             </div>
           </div>
         </div>
