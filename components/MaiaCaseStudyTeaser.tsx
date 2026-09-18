@@ -42,6 +42,7 @@ export default function MaiaCaseStudyTeaser() {
         <div className={styles.proofVisual} aria-label="Prospect and Maia conversation workflow preview" data-device-layout="dual-samsung-ultra">
           <div className={styles.visualAura} aria-hidden="true" />
 
+          <div className={styles.deviceRow}>
           <div className={`${styles.device} ${styles.prospectPhone}`}><span className={styles.sideKeyA} /><span className={styles.sideKeyB} /><div className={styles.screen}>
             <div className={styles.samsungCamera} aria-hidden="true" />
             <div className={styles.phoneTop}>
@@ -101,6 +102,7 @@ export default function MaiaCaseStudyTeaser() {
             </div>
           </div>
 
+          </div>
           <div className={styles.annotation}>More conversations.<br />More inspections.<br />More sold.</div>
         </div>
 
