@@ -42,8 +42,8 @@ export default function MaiaCaseStudyTeaser() {
         <div className={styles.proofVisual} aria-label="Prospect and Maia conversation workflow preview">
           <div className={styles.visualAura} aria-hidden="true" />
 
-          <div className={`${styles.phone} ${styles.iphone}`}>
-            <div className={styles.iphoneIsland} aria-hidden="true" />
+          <div className={`${styles.phone} ${styles.prospectPhone}`}>
+            <div className={styles.samsungCamera} aria-hidden="true" />
             <div className={styles.phoneTop}>
               <span>9:41</span>
               <div className={styles.phoneStatus}><i /><i /><i /><b>⌁</b></div>
