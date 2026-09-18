@@ -55,15 +55,15 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal" }: { 
       <div className="admin-login-icon"><LogIn size={22} /></div>
       <div>
         <p className="admin-kicker">Fluxknight Client Portal</p>
-        <h1>Client sign in</h1>
-        <p className="admin-muted">Access your organization workspace.</p>
+        <h1>Welcome back</h1>
+        <p className="admin-muted">Sign in to your Fluxknight workspace.</p>
       </div>
       {txRef ? <p className="admin-form-message">Your payment is verified. Sign in to continue to onboarding.</p> : null}
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <label>Password<input name="password" type="password" required autoComplete="current-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
       <button type="submit" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</button>
-      <p className="admin-muted">Need an account? <Link href={signupHref}>Create workspace</Link></p>
+      <p className="admin-muted">New to Fluxknight? <Link href={signupHref}>Create workspace</Link></p>
     </form>
   );
 }
