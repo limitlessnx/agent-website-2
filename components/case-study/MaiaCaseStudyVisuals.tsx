@@ -91,11 +91,12 @@ export function MarketingLeakVisual() {
     <div className={styles.leakVisual} aria-label="From marketing attention to an organized sales pipeline">
       <div className={styles.leakRenderXFrame}>
         <img
-          src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/97acd1de-e0ae-49ec-89db-b8bc3a5f534a.png"
-          alt="Fluxknight visual showing marketing attention from social media, WhatsApp, website chat and lead ads flowing through automation into an organized sales pipeline."
+          src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/543dc193-b053-45eb-b38b-8ef2d41188fb.png"
+          alt="Fluxknight visual showing marketing attention flowing through automation into an organized sales pipeline."
           className={styles.leakRenderXImage}
           loading="eager"
           decoding="async"
+          referrerPolicy="no-referrer"
         />
       </div>
     </div>
