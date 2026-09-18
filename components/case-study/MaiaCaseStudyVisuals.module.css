@@ -208,3 +208,15 @@
   .leakVisual{border-radius:20px}
   .leakRenderXFrame{aspect-ratio:16/9}
 }
+
+.leakDetailGrid{display:grid;grid-template-columns:1fr 56px 1fr;align-items:stretch;padding:18px;border-top:1px solid rgba(180,139,255,.12);background:#06030d}
+.campaignContextFrame{position:relative;width:100%;margin-top:18px;overflow:hidden;border-radius:15px;border:1px solid rgba(180,139,255,.12);background:#05020a;aspect-ratio:16/9}
+.campaignContextImage{display:block;width:100%;height:100%;object-fit:cover}
+@media(max-width:980px){
+  .leakDetailGrid{grid-template-columns:1fr}
+  .leakDetailGrid .leakArrow{height:44px;transform:rotate(90deg)}
+}
+@media(max-width:620px){
+  .leakDetailGrid{padding:12px}
+  .campaignContextFrame{border-radius:13px}
+}
