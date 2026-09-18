@@ -177,7 +177,7 @@ export function PropertyMatchVisual() {
             <article key={property.name}>
               <div className={styles.propertyImage}><span>{property.status}</span></div>
               <div><strong>{property.name}</strong><p>{property.meta}</p></div>
-              <button type="button">View details</button>
+              <span className={styles.visualAction}>View details</span>
             </article>
           ))}
         </div>
@@ -277,7 +277,7 @@ export function HandoffVisual() {
         <div className={styles.summaryCard}>
           <span>Conversation summary</span>
           <p>Alex came through the launch campaign, wants a 2-bedroom investment property, prefers a flexible payment plan and has booked a viewing. Key questions are payment schedule and documentation.</p>
-          <div className={styles.handoffActions}><button type="button">Open conversation</button><button type="button">View lead</button><button type="button" className={styles.primaryAction}>Take over</button></div>
+          <div className={styles.handoffActions}><span>Open conversation</span><span>View lead</span><span className={styles.primaryAction}>Take over</span></div>
         </div>
       </div>
     </div>
