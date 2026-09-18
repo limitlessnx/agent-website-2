@@ -2,3 +2,70 @@
 @media(max-width:1080px){.heroGrid{grid-template-columns:1fr;gap:46px}.heroCopy{max-width:780px}.chapterHeading{grid-template-columns:58px 1fr}.chapterHeading>p{grid-column:2}.problemIntro,.revealHeading{grid-template-columns:1fr}.problemIntro p,.revealHeading p{grid-column:auto}.outcomeHeading{grid-template-columns:1fr}.proofLedger article{grid-template-columns:36px 1fr 1fr}.proofLedger article>div:last-child{grid-column:2/-1}.ctaCard{grid-template-columns:1fr}.ctaAside{max-width:560px}}
 @media(max-width:760px){.hero{padding-top:112px;padding-bottom:62px}.heroCopy h1{font-size:clamp(3rem,14vw,4.7rem)}.chapterRailGrid{grid-template-columns:repeat(2,1fr)}.storySection,.chapterSection,.chapterSectionAlt,.revealSection{padding:72px 0}.chapterHeading{grid-template-columns:1fr;gap:14px}.chapterNumber{font-size:1.35rem}.chapterHeading>p{grid-column:auto}.storyStack{gap:58px}.problemIntro,.revealHeading{margin-bottom:26px}.outcomeSection{padding:68px 0 82px}.proofLedger article{grid-template-columns:28px 1fr}.proofLedger article>div{grid-column:2}.proofLedger article>div:last-child{grid-column:2}.ctaCard{padding:28px 24px}.ctaAside{max-width:none}}
 @media(max-width:500px){.shell{width:min(100% - 22px,1180px)}.heroCopy h1{font-size:clamp(2.7rem,15vw,4rem)}.heroBenefits{display:grid;grid-template-columns:1fr}.chapterRailGrid{grid-template-columns:1fr}.chapterRail article{min-height:0}.problemIntro h2,.revealHeading h2,.chapterHeading h2,.outcomeHeading h2{font-size:clamp(2.05rem,12vw,3.1rem)}.proofLedger article{padding:16px 14px}.proofShift,.proofShiftActive{padding:10px}.ctaProofLine{gap:6px}.ctaAside{padding:16px}}
+/* Phase 8 mobile refinement: keep the full Maia story readable rather than shrinking desktop UI into decorative noise. */
+@media(max-width:760px){
+  .page{overflow-x:clip}
+  .shell{width:min(100% - 28px,1180px)}
+  .hero{padding-top:104px;padding-bottom:54px}
+  .heroGlow{right:-28%;top:8%;width:88vw;height:88vw;filter:blur(28px)}
+  .heroGrid{gap:34px}
+  .heroCopy h1{max-width:680px;margin-top:14px;line-height:.94}
+  .heroCopy>p{font-size:.95rem;line-height:1.68}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .actions a{width:100%;min-height:50px}
+  .heroBenefits{display:grid;grid-template-columns:1fr;gap:7px}
+  .heroBenefits span{min-height:42px;font-size:.7rem}
+  .demoNote{font-size:.7rem!important}
+  .chapterRailGrid{grid-template-columns:1fr 1fr}
+  .chapterRail article{min-height:128px;padding:18px 16px}
+  .chapterRail strong{margin-top:13px;font-size:.88rem}
+  .chapterRail p{font-size:.7rem}
+  .storySection,.chapterSection,.chapterSectionAlt,.revealSection{padding:64px 0}
+  .problemIntro,.revealHeading,.outcomeHeading{gap:18px;margin-bottom:24px}
+  .problemIntro p,.revealHeading p,.outcomeHeading>p{font-size:.82rem;line-height:1.66}
+  .chapterHeading{margin-bottom:34px}
+  .chapterHeading h2{margin-top:8px}
+  .chapterHeading>p{font-size:.82rem;line-height:1.66}
+  .storyStack{gap:52px}
+  .storyBeat{gap:18px}
+  .storyCopy h3{font-size:clamp(1.55rem,7vw,2.15rem);line-height:1.04}
+  .storyCopy p{font-size:.82rem;line-height:1.66}
+  .outcomeSection{padding:60px 0 74px}
+  .proofLedger{border-radius:20px}
+  .proofLedger article{grid-template-columns:26px 1fr;padding:17px 15px;gap:10px}
+  .proofLedger article>div{grid-column:2}
+  .proofLedger article>div:last-child{grid-column:2}
+  .proofLedger strong{font-size:.84rem}
+  .proofLedger p{font-size:.69rem}
+  .proofShift,.proofShiftActive{padding:10px 11px}
+  .proofShift b,.proofShiftActive b{font-size:.65rem}
+  .proofBoundary{padding:12px}
+  .proofBoundary p{font-size:.68rem}
+  .ctaSection{padding-bottom:88px}
+  .ctaCard{gap:28px;padding:28px 22px;border-radius:24px}
+  .ctaCopy>p{font-size:.82rem}
+  .ctaProofLine{font-size:.63rem}
+  .ctaAside{padding:16px}
+  .ctaAside small{font-size:.63rem}
+}
+@media(max-width:520px){
+  .shell{width:min(100% - 22px,1180px)}
+  .hero{padding-top:96px;padding-bottom:48px}
+  .heroCopy h1{font-size:clamp(2.6rem,14.5vw,3.75rem)}
+  .actions{grid-template-columns:1fr}
+  .chapterRailGrid{grid-template-columns:1fr}
+  .chapterRail article{min-height:0;padding:17px 15px}
+  .chapterRail article>span{font-size:.61rem}
+  .storySection,.chapterSection,.chapterSectionAlt,.revealSection{padding:56px 0}
+  .problemIntro h2,.revealHeading h2,.chapterHeading h2,.outcomeHeading h2{font-size:clamp(2rem,11.5vw,3rem)}
+  .chapterNumber{font-size:1.12rem}
+  .storyStack{gap:46px}
+  .proofLedger article{padding:15px 13px}
+  .ctaCard{padding:24px 18px}
+  .ctaCopy h2{font-size:clamp(2rem,11vw,3rem)}
+  .ctaProofLine{display:grid;grid-template-columns:1fr;gap:4px}
+  .ctaProofLine b{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .page *{scroll-behavior:auto!important}
+}
