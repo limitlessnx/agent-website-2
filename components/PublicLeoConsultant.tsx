@@ -81,6 +81,15 @@ export default function PublicLeoConsultant() {
     if (messages.length === 0) setMessages([firstMessage]);
   }
 
+  function toggleLeo() {
+    if (open) {
+      stopCall();
+      setOpen(false);
+      return;
+    }
+    openLeo();
+  }
+
   async function saveLead(profile: LeadProfile) {
     setLeadSaving(true);
     try {
@@ -357,12 +366,18 @@ export default function PublicLeoConsultant() {
             </form>
           </div>
         </section>
-      ) : (
-        <button type="button" className="public-leo-launcher" onClick={openLeo} aria-label="Open Leo">
-          <span className="public-leo-pulse" aria-hidden="true" />
-          <MessageCircle size={22} />
-        </button>
-      )}
+      ) : null}
+
+      <button
+        type="button"
+        className="public-leo-launcher"
+        onClick={toggleLeo}
+        aria-label={open ? "Close Leo" : "Open Leo"}
+        aria-expanded={open}
+      >
+        <span className="public-leo-pulse" aria-hidden="true" />
+        <MessageCircle size={22} />
+      </button>
 
       <style jsx>{`
         .public-leo{position:fixed;right:20px;bottom:20px;z-index:80;color:#f8fbff;font-family:inherit}
