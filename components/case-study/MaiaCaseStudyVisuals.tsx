@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import {
   BellRing,
   CalendarCheck2,
@@ -88,20 +89,15 @@ export function HeroSystemVisual() {
 
 export function MarketingLeakVisual() {
   return (
-    <div className={styles.leakVisual} aria-label="Marketing attention and lead leakage illustration">
-      <div className={styles.campaignCard}>
-        <PanelLabel icon={<Megaphone size={14} />}>Property launch campaign</PanelLabel>
-        <div className={styles.campaignArtwork}><span>COMING SOON</span><strong>New residential release</strong></div>
-        <div className={styles.engagementRow}>
-          <span>Comments</span><span>Messages</span><span>WhatsApp clicks</span><span>Lead forms</span>
-        </div>
-      </div>
-      <div className={styles.leakArrow}>→</div>
-      <div className={styles.leakStack}>
-        <div><MessageSquareText size={15} /><span>Unanswered enquiry</span></div>
-        <div><Clock3 size={15} /><span>Follow-up forgotten</span></div>
-        <div><Database size={15} /><span>Contact never organized</span></div>
-        <div className={styles.savedPath}><Sparkles size={15} /><span>Maia converts the interaction into a tracked next action</span></div>
+    <div className={styles.leakVisual} aria-label="From marketing attention to an organized sales pipeline">
+      <div className={styles.leakRenderXFrame}>
+        <Image
+          src="/images/case-studies/maia/maia-leak-marketing-attention-renderx.webp"
+          alt="Fluxknight visual showing marketing attention from social media, WhatsApp, website chat and lead ads flowing through automation into an organized sales pipeline."
+          fill
+          sizes="(max-width: 760px) 100vw, 1180px"
+          className={styles.leakRenderXImage}
+        />
       </div>
     </div>
   );
