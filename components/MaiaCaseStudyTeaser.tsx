@@ -39,67 +39,8 @@ export default function MaiaCaseStudyTeaser() {
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.45 }}
       >
-        <div className={styles.proofVisual} aria-label="Prospect and Maia conversation workflow preview" data-device-layout="dual-samsung-ultra">
-          <div className={styles.visualAura} aria-hidden="true" />
-
-          <div className={`${styles.phone} ${styles.prospectPhone}`}>
-            <div className={styles.samsungCamera} aria-hidden="true" />
-            <div className={styles.phoneTop}>
-              <span>9:41</span>
-              <div className={styles.phoneStatus}><i /><i /><i /><b>⌁</b></div>
-            </div>
-            <div className={styles.phoneAppHeader}>
-              <div className={styles.whatsappMini}><WhatsAppMark /></div>
-              <img className={styles.avatar} src="/prospect-avatar.svg" alt="" aria-hidden="true" />
-              <div className={styles.phoneIdentity}><strong>Prospect</strong><small>online</small></div>
-              <span className={styles.chatMenu}>•••</span>
-            </div>
-            <div className={styles.phoneMessages}>
-              <div className={styles.messageIncoming}>Hi, I&apos;m interested in the property at 12 Riverdale Ave. Is it still available?<small>10:24 AM</small></div>
-              <div className={styles.messageOutgoing}>Thanks for your enquiry! I can help with that. Would you like to book an inspection?<small>10:24 AM ✓✓</small></div>
-              <div className={styles.messageIncoming}>Yes, please!<small>10:25 AM</small></div>
-            </div>
-            <div className={styles.messageBar}><span>＋</span><em>Type a message…</em><b>➤</b></div>
-          </div>
-
-          <div className={styles.agentBridge}>
-            <span>✦</span>
-            <div><small>AI Sales Agent</small><strong>Maia</strong></div>
-          </div>
-          <div className={styles.connectorLine} aria-hidden="true" />
-
-          <div className={`${styles.phone} ${styles.samsung}`}>
-            <div className={styles.samsungCamera} aria-hidden="true" />
-            <div className={styles.phoneTop}>
-              <span>9:41</span>
-              <div className={styles.phoneStatus}><i /><i /><i /><b>⌁</b></div>
-            </div>
-            <div className={styles.maiaHeader}>
-              <span className={styles.maiaMark}>✦</span>
-              <div className={styles.phoneIdentity}><strong>Maia</strong><small>Handling enquiry</small></div>
-              <span className={styles.liveState}>LIVE</span>
-            </div>
-            <div className={styles.maiaConversation}>
-              <div className={styles.maiaBubble}>New property enquiry received from Alex Chen.</div>
-              <div className={styles.maiaBubbleAccent}>Prospect qualified. Budget confirmed and inspection requested.</div>
-            </div>
-            <div className={styles.leadPanel}>
-              <div className={styles.leadPanelHead}><Database size={14} /><span>Limitless Realty</span></div>
-              <div className={styles.propertyRow}>
-                <div className={styles.propertyThumb} />
-                <div><small>New lead</small><strong>Alex Chen</strong></div>
-                <span className={styles.qualified}>Qualified</span>
-              </div>
-              <dl className={styles.leadDetails}>
-                <div><dt>Interested in</dt><dd>12 Riverdale Ave</dd></div>
-                <div><dt>Budget</dt><dd>$1.2M – $1.4M</dd></div>
-                <div><dt>Next step</dt><dd>Inspection booked</dd></div>
-              </dl>
-              <div className={styles.inspection}><CalendarCheck2 size={14} /><div><small>Inspection scheduled</small><strong>Sat, 16 Nov · 10:00 AM</strong></div></div>
-            </div>
-          </div>
-
-          <div className={styles.annotation}>More conversations.<br />More inspections.<br />More sold.</div>
+        <div className={styles.referenceVisual} aria-label="Maia real-phone conversation and CRM workflow">
+          <img className={styles.referenceVisualImage} src="/maia-homepage-conversation.webp" alt="Prospect using WhatsApp with Maia to explore Lagos property options" />
         </div>
 
         <div className={styles.content}>
