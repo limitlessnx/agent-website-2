@@ -76,7 +76,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       <div>
         <p className="admin-kicker">{isBasicTrial ? "Fluxknight Basic · Free Trial" : "Fluxknight Client Portal"}</p>
         <h1>{isBasicTrial ? "Start your Basic free trial" : "Create your workspace"}</h1>
-        <p className="admin-muted">{isBasicTrial ? "Create your company workspace and owner access. No payment is required to start the Basic trial." : "Create your company account and owner access."}</p>
+        <p className="admin-muted">{isBasicTrial ? "Create your workspace and owner access. No payment is required to start the Basic trial." : "Set up your Fluxknight workspace and owner access."}</p>
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue to onboarding.</p> : null}
       {isBasicTrial ? <p className="admin-form-message">Basic trial workspace · payment is not collected on this signup screen.</p> : null}
@@ -85,8 +85,8 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
-      <button type="submit" disabled={loading}>{loading ? "Creating workspace..." : isBasicTrial ? "Start Free Trial" : "Create account"}</button>
-      <p className="admin-muted">Already registered? <Link href={loginHref}>Sign in</Link></p>
+      <button type="submit" disabled={loading}>{loading ? "Creating workspace..." : isBasicTrial ? "Start Free Trial" : "Create workspace"}</button>
+      <p className="admin-muted">Already have an account? <Link href={loginHref}>Sign in</Link></p>
     </form>
   );
 }
