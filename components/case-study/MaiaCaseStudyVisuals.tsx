@@ -1,11 +1,13 @@
-"use client";
-
+import type { ReactNode } from "react";
 import {
+  BellRing,
   CalendarCheck2,
   CheckCircle2,
+  CircleDollarSign,
   Clock3,
   Database,
   Filter,
+  History,
   Megaphone,
   MessageSquareText,
   Send,
@@ -16,8 +18,16 @@ import {
 } from "@/components/admin/ServerIcons";
 import styles from "./MaiaCaseStudyVisuals.module.css";
 
-function StatePill({ children, tone = "violet" }: { children: React.ReactNode; tone?: "violet" | "green" | "amber" }) {
-  return <span className={`${styles.statePill} ${styles[tone]}`}>{children}</span>;
+function StatePill({ children, tone = "violet" }: { children: ReactNode; tone?: "violet" | "green" | "amber" | "rose" }) {
+  const toneClass =
+    tone === "green" ? styles.green :
+    tone === "amber" ? styles.amber :
+    tone === "rose" ? styles.rose : "";
+  return <span className={`${styles.statePill} ${toneClass}`}>{children}</span>;
+}
+
+function PanelLabel({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return <div className={styles.panelLabel}>{icon}{children}</div>;
 }
 
 export function HeroSystemVisual() {
@@ -30,21 +40,19 @@ export function HeroSystemVisual() {
         </div>
         <StatePill tone="green">Active</StatePill>
       </div>
-
       <div className={styles.heroSystemGrid}>
         <section className={styles.chatPanel}>
-          <div className={styles.panelLabel}><MessageSquareText size={14} /> Customer conversation</div>
+          <PanelLabel icon={<MessageSquareText size={14} />}>Customer conversation</PanelLabel>
           <div className={styles.chatIdentity}>
             <div className={styles.avatar}>AM</div>
             <div><strong>Alex Morgan</strong><span>Launch campaign enquiry</span></div>
           </div>
           <div className={styles.bubbleCustomer}>I&apos;m interested in the new development. When does it launch?</div>
-          <div className={styles.bubbleMaia}>I can help with that. I&apos;ll keep your interest linked to this development and can notify you when launch details are available.</div>
+          <div className={styles.bubbleMaia}>I can help with that. I&apos;ll keep your interest linked to this development and notify you when the approved launch details are available.</div>
           <div className={styles.systemEvent}><CheckCircle2 size={13} /> Context saved to lead record</div>
         </section>
-
         <section className={styles.profilePanel}>
-          <div className={styles.panelLabel}><Database size={14} /> Lead intelligence</div>
+          <PanelLabel icon={<Database size={14} />}>Lead intelligence</PanelLabel>
           <div className={styles.profileHead}>
             <div><strong>Alex Morgan</strong><span>Qualified prospect</span></div>
             <StatePill>Warm</StatePill>
@@ -60,9 +68,8 @@ export function HeroSystemVisual() {
             <div><span>Next action</span><strong>Send launch update when approved</strong></div>
           </div>
         </section>
-
         <section className={styles.actionPanel}>
-          <div className={styles.panelLabel}><Target size={14} /> Recommended next step</div>
+          <PanelLabel icon={<Target size={14} />}>Recommended next step</PanelLabel>
           <div className={styles.propertyThumb} aria-hidden="true">
             <div className={styles.propertyGlow} />
             <span>Property preview</span>
@@ -83,7 +90,7 @@ export function MarketingLeakVisual() {
   return (
     <div className={styles.leakVisual} aria-label="Marketing attention and lead leakage illustration">
       <div className={styles.campaignCard}>
-        <div className={styles.panelLabel}><Megaphone size={14} /> Property launch campaign</div>
+        <PanelLabel icon={<Megaphone size={14} />}>Property launch campaign</PanelLabel>
         <div className={styles.campaignArtwork}><span>COMING SOON</span><strong>New residential release</strong></div>
         <div className={styles.engagementRow}>
           <span>Comments</span><span>Messages</span><span>WhatsApp clicks</span><span>Lead forms</span>
@@ -104,15 +111,12 @@ export function CaptureVisual() {
   return (
     <div className={styles.splitVisual}>
       <section className={styles.sourcePanel}>
-        <div className={styles.panelLabel}><Megaphone size={14} /> Acquisition source</div>
+        <PanelLabel icon={<Megaphone size={14} />}>Acquisition source</PanelLabel>
         <div className={styles.sourceHero}><span>Property launch</span><strong>Get priority updates</strong><p>Prospect moves from campaign interest into an identifiable conversation.</p></div>
-        <div className={styles.sourcePath}>
-          <span>Ad / social</span><b>→</b><span>CTA</span><b>→</b><span>WhatsApp / web</span>
-        </div>
+        <div className={styles.sourcePath}><span>Ad / social</span><b>→</b><span>CTA</span><b>→</b><span>WhatsApp / web</span></div>
       </section>
-
       <section className={styles.chatPanel}>
-        <div className={styles.panelLabel}><MessageSquareText size={14} /> Maia responds</div>
+        <PanelLabel icon={<MessageSquareText size={14} />}>Maia responds</PanelLabel>
         <div className={styles.bubbleCustomer}>Can you notify me when this property officially launches?</div>
         <div className={styles.bubbleMaia}>Absolutely. I can keep your interest connected to this launch and send the approved update when it becomes available.</div>
         <div className={styles.systemEvent}><Database size={13} /> Lead created · source saved · interest linked</div>
@@ -125,7 +129,7 @@ export function QualificationVisual() {
   return (
     <div className={styles.splitVisual}>
       <section className={styles.chatPanel}>
-        <div className={styles.panelLabel}><MessageSquareText size={14} /> Natural qualification</div>
+        <PanelLabel icon={<MessageSquareText size={14} />}>Natural qualification</PanelLabel>
         <div className={styles.bubbleMaia}>What type of property are you considering, and is the purchase mainly for investment or personal use?</div>
         <div className={styles.bubbleCustomer}>A 2-bedroom investment property. I&apos;d prefer a flexible payment plan.</div>
         <div className={styles.bubbleMaia}>Understood. I&apos;ll keep those preferences attached to your profile so I can show relevant options.</div>
@@ -138,7 +142,7 @@ export function QualificationVisual() {
 export function LeadProfileVisual({ compact = false }: { compact?: boolean }) {
   return (
     <section className={`${styles.profilePanel} ${compact ? styles.compactProfile : ""}`}>
-      <div className={styles.panelLabel}><Database size={14} /> CRM profile</div>
+      <PanelLabel icon={<Database size={14} />}>CRM profile</PanelLabel>
       <div className={styles.profileHead}>
         <div><strong>Alex Morgan</strong><span>Customer context</span></div>
         <StatePill>Qualified</StatePill>
@@ -151,9 +155,7 @@ export function LeadProfileVisual({ compact = false }: { compact?: boolean }) {
         <div><dt>Location</dt><dd>Preferred area saved</dd></div>
         <div><dt>Timeline</dt><dd>3–6 months</dd></div>
       </dl>
-      <div className={styles.stageTrack}>
-        <span>New</span><i /><span className={styles.activeStage}>Qualified</span><i /><span>Viewing</span>
-      </div>
+      <div className={styles.stageTrack}><span>New</span><i /><span className={styles.activeStage}>Qualified</span><i /><span>Viewing</span></div>
     </section>
   );
 }
@@ -166,12 +168,12 @@ export function PropertyMatchVisual() {
   return (
     <div className={styles.propertyMatch}>
       <section className={styles.chatPanel}>
-        <div className={styles.panelLabel}><MessageSquareText size={14} /> Context-aware Q&A</div>
+        <PanelLabel icon={<MessageSquareText size={14} />}>Context-aware Q&A</PanelLabel>
         <div className={styles.bubbleCustomer}>Which options fit what I told you, and which one has a flexible payment plan?</div>
         <div className={styles.bubbleMaia}>I found two configured options that match your preferences. Parkside includes a payment-plan option in the property data.</div>
       </section>
       <section className={styles.recommendations}>
-        <div className={styles.panelLabel}><Target size={14} /> Property recommendations</div>
+        <PanelLabel icon={<Target size={14} />}>Property recommendations</PanelLabel>
         <div className={styles.propertyCards}>
           {properties.map((property) => (
             <article key={property.name}>
@@ -195,7 +197,7 @@ export function FollowUpVisual() {
   ];
   return (
     <div className={styles.timelinePanel}>
-      <div className={styles.panelLabel}><Clock3 size={14} /> Contextual follow-up</div>
+      <PanelLabel icon={<Clock3 size={14} />}>Contextual follow-up</PanelLabel>
       <div className={styles.timeline}>
         {events.map(([time, title, detail], index) => (
           <div className={styles.timelineItem} key={title}>
@@ -205,10 +207,7 @@ export function FollowUpVisual() {
           </div>
         ))}
       </div>
-      <div className={styles.followupMessage}>
-        <Send size={15} />
-        <p>You asked about the 2-bedroom units in the upcoming development. I can send the latest approved update if you&apos;re still interested.</p>
-      </div>
+      <div className={styles.followupMessage}><Send size={15} /><p>You asked about the 2-bedroom units in the upcoming development. I can send the latest approved update if you&apos;re still interested.</p></div>
     </div>
   );
 }
@@ -218,7 +217,7 @@ export function AudienceVisual() {
   return (
     <div className={styles.audiencePanel}>
       <div className={styles.audienceHead}>
-        <div className={styles.panelLabel}><UsersRound size={14} /> Reusable launch audience</div>
+        <PanelLabel icon={<UsersRound size={14} />}>Reusable launch audience</PanelLabel>
         <StatePill>Example segment</StatePill>
       </div>
       <div className={styles.filterRow}><Filter size={14} />{filters.map((filter) => <span key={filter}>{filter}</span>)}</div>
@@ -236,16 +235,98 @@ export function AudienceVisual() {
   );
 }
 
+export function LaunchCampaignVisual() {
+  return (
+    <div className={styles.launchPanel}>
+      <div className={styles.launchTop}>
+        <div>
+          <PanelLabel icon={<Megaphone size={14} />}>Launch communication</PanelLabel>
+          <h3>Property is live. Relevant prospects already exist.</h3>
+        </div>
+        <StatePill tone="green">Ready to send</StatePill>
+      </div>
+      <div className={styles.launchGrid}>
+        <section>
+          <span className={styles.microLabel}>Audience</span>
+          <strong>Launch-interest prospects</strong>
+          <div className={styles.segmentTokens}><span>2-bedroom</span><span>Investor</span><span>Warm</span><span>Opted for updates</span></div>
+        </section>
+        <section>
+          <span className={styles.microLabel}>Approved message</span>
+          <div className={styles.messagePreview}>The development you asked about is now open. I can show you the available units and current payment options.</div>
+        </section>
+        <section>
+          <span className={styles.microLabel}>System update</span>
+          <div className={styles.statusList}><span><CheckCircle2 size={13}/> Message logged</span><span><Database size={13}/> CRM activity updated</span><span><Clock3 size={13}/> Next action tracked</span></div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export function PromotionLifecycleVisual() {
+  const steps = [
+    ["Offer live", "Relevant audience selected", "green"],
+    ["7 days left", "Reminder window", "violet"],
+    ["48 hours left", "Expiry reminder", "amber"],
+    ["Final day", "Last approved reminder", "rose"],
+  ] as const;
+  return (
+    <div className={styles.promoPanel}>
+      <div className={styles.promoHead}>
+        <PanelLabel icon={<BellRing size={14} />}>Promotion lifecycle</PanelLabel>
+        <span>Example timing · configured per campaign</span>
+      </div>
+      <div className={styles.promoTimeline}>
+        {steps.map(([title, detail, tone], index) => (
+          <div className={styles.promoStep} key={title}>
+            <div className={styles.promoIndex}>{String(index + 1).padStart(2, "0")}</div>
+            <div><strong>{title}</strong><p>{detail}</p></div>
+            <StatePill tone={tone}>{index === 0 ? "Start" : index === 3 ? "Final" : "Scheduled"}</StatePill>
+          </div>
+        ))}
+      </div>
+      <div className={styles.followupMessage}><Send size={15}/><p>You previously asked about this property. The configured promotion is ending soon, and I can show you the current options if you are still considering it.</p></div>
+    </div>
+  );
+}
+
+export function LongTermNurtureVisual() {
+  const months = [
+    ["Jan", "Initial enquiry", "Buyer profile created"],
+    ["Feb", "Property comparison", "Preferences refined"],
+    ["Apr", "Relevant launch update", "Customer re-engaged"],
+    ["Jun", "New matching inventory", "Opportunity surfaced"],
+    ["Sep", "Buyer returns", "Viewing intent confirmed"],
+  ];
+  return (
+    <div className={styles.nurturePanel}>
+      <div className={styles.nurtureHead}>
+        <PanelLabel icon={<History size={14} />}>Long-term customer memory</PanelLabel>
+        <StatePill>Persistent context</StatePill>
+      </div>
+      <div className={styles.nurtureTrack}>
+        {months.map(([month, title, detail], index) => (
+          <div className={`${styles.nurtureEvent} ${index === months.length - 1 ? styles.nurtureActive : ""}`} key={month}>
+            <span>{month}</span><i />
+            <div><strong>{title}</strong><p>{detail}</p></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AppointmentVisual() {
   return (
     <div className={styles.appointmentVisual}>
       <section className={styles.chatPanel}>
-        <div className={styles.panelLabel}><MessageSquareText size={14} /> Buyer conversation</div>
+        <PanelLabel icon={<MessageSquareText size={14} />}>Buyer conversation</PanelLabel>
         <div className={styles.bubbleCustomer}>Saturday works for me.</div>
         <div className={styles.bubbleMaia}>Your viewing is confirmed for Saturday at 11:00 AM. I&apos;ll also send the configured reminder before the appointment.</div>
       </section>
       <section className={styles.calendarPanel}>
-        <div className={styles.panelLabel}><CalendarCheck2 size={14} /> Viewing booked</div>
+        <PanelLabel icon={<CalendarCheck2 size={14} />}>Viewing booked</PanelLabel>
         <div className={styles.calendarDate}><span>Saturday</span><strong>11:00 AM</strong></div>
         <dl>
           <div><dt>Prospect</dt><dd>Alex Morgan</dd></div>
@@ -258,11 +339,34 @@ export function AppointmentVisual() {
   );
 }
 
+export function AppointmentReminderVisual() {
+  const reminders = [
+    ["Booking confirmed", "Immediately", "green"],
+    ["Viewing reminder", "24 hours before", "violet"],
+    ["Final reminder", "2 hours before", "amber"],
+  ] as const;
+  return (
+    <div className={styles.reminderPanel}>
+      <PanelLabel icon={<BellRing size={14} />}>Appointment reminder sequence</PanelLabel>
+      <div className={styles.reminderGrid}>
+        {reminders.map(([title, timing, tone], index) => (
+          <article key={title}>
+            <span className={styles.reminderNumber}>{String(index + 1).padStart(2, "0")}</span>
+            <div><strong>{title}</strong><p>{timing}</p></div>
+            <StatePill tone={tone}>{index === 0 ? "Sent" : "Scheduled"}</StatePill>
+          </article>
+        ))}
+      </div>
+      <div className={styles.reminderMeta}><span>Customer notified</span><span>Agent notified</span><span>CRM event logged</span></div>
+    </div>
+  );
+}
+
 export function HandoffVisual() {
   return (
     <div className={styles.handoffPanel}>
       <div className={styles.handoffHead}>
-        <div><span className={styles.panelLabel}><UserCheck size={14} /> Human handoff</span><h3>Qualified buyer ready for a human agent.</h3></div>
+        <div><PanelLabel icon={<UserCheck size={14} />}>Human handoff</PanelLabel><h3>Qualified buyer ready for a human agent.</h3></div>
         <StatePill tone="green">Ready</StatePill>
       </div>
       <div className={styles.handoffGrid}>
@@ -284,6 +388,34 @@ export function HandoffVisual() {
   );
 }
 
+export function DealProgressionVisual() {
+  const stages = [
+    ["Qualified", "Maia", "green"],
+    ["Viewing booked", "Maia + team", "green"],
+    ["Viewed", "Human team", "violet"],
+    ["Offer / reservation", "Human team", "violet"],
+    ["Payment", "Human + system", "amber"],
+    ["Customer", "CRM", "green"],
+  ] as const;
+  return (
+    <div className={styles.dealPanel}>
+      <div className={styles.dealHead}>
+        <PanelLabel icon={<Target size={14} />}>Deal progression</PanelLabel>
+        <span>Automation supports the process. Humans own judgement and closing.</span>
+      </div>
+      <div className={styles.dealTrack}>
+        {stages.map(([stage, owner, tone], index) => (
+          <div className={styles.dealStage} key={stage}>
+            <div className={styles.dealNode}>{index + 1}</div>
+            <div><strong>{stage}</strong><p>{owner}</p></div>
+            <StatePill tone={tone}>{index < 2 ? "System-led" : index === 5 ? "Recorded" : "Human-led"}</StatePill>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function InstallmentVisual() {
   const schedule = [
     ["Deposit", "Paid", "green"],
@@ -292,17 +424,37 @@ export function InstallmentVisual() {
   ] as const;
   return (
     <div className={styles.installmentPanel}>
-      <div className={styles.panelLabel}><CalendarCheck2 size={14} /> Post-sale reminders</div>
+      <PanelLabel icon={<CircleDollarSign size={14} />}>Post-sale reminders</PanelLabel>
       <div className={styles.installmentGrid}>
         <div className={styles.paymentSchedule}>
           {schedule.map(([label, state, tone]) => (
             <div key={label}><span>{label}</span><StatePill tone={tone}>{state}</StatePill></div>
           ))}
         </div>
-        <div className={styles.followupMessage}>
-          <Send size={15} />
-          <p>Your next configured installment is coming up. I can send the approved payment details or route you to the team if you need help.</p>
-        </div>
+        <div className={styles.followupMessage}><Send size={15} /><p>Your next configured installment is coming up. I can send the approved payment details or route you to the team if you need help.</p></div>
+      </div>
+    </div>
+  );
+}
+
+export function FutureOpportunityVisual() {
+  return (
+    <div className={styles.futurePanel}>
+      <div className={styles.futureCustomer}>
+        <PanelLabel icon={<Database size={14} />}>Existing customer record</PanelLabel>
+        <div className={styles.futureIdentity}><div className={styles.avatar}>AM</div><div><strong>Alex Morgan</strong><span>Previous buyer · investment profile</span></div></div>
+        <dl className={styles.futureFacts}>
+          <div><dt>Known interest</dt><dd>Investment property</dd></div>
+          <div><dt>Payment preference</dt><dd>Flexible plan</dd></div>
+          <div><dt>Last transaction</dt><dd>Customer history retained</dd></div>
+        </dl>
+      </div>
+      <div className={styles.futureArrow}>→</div>
+      <div className={styles.futureMatch}>
+        <PanelLabel icon={<Sparkles size={14} />}>Future relevant opportunity</PanelLabel>
+        <strong>New investment release</strong>
+        <p>The system can surface this customer into an appropriate future audience based on configured preferences and consent.</p>
+        <StatePill>Relevant match</StatePill>
       </div>
     </div>
   );
@@ -313,7 +465,7 @@ export function OperatingSystemRevealVisual() {
     ["Marketing", "Ads · Social · Website · Lead campaigns"],
     ["Customer channels", "WhatsApp · Web · Supported forms / messaging"],
     ["Maia", "Converse · Qualify · Recommend · Follow up · Remind · Schedule · Escalate"],
-    ["Real estate operations", "Leads · Properties · Conversations · Follow-ups · Viewings · Audiences · Customer history"],
+    ["Real estate operations", "Leads · Properties · Conversations · Follow-ups · Viewings · Audiences · Payment schedules · Customer history"],
     ["Human team", "Priority leads · Handoffs · Viewings · Negotiation · Closing"],
   ];
   return (
@@ -324,7 +476,7 @@ export function OperatingSystemRevealVisual() {
           <div className={`${styles.systemLayer} ${index === 2 ? styles.maiaLayer : ""}`} key={title}>
             <span>{String(index + 1).padStart(2, "0")}</span>
             <div><strong>{title}</strong><p>{detail}</p></div>
-            {index < layers.length - 1 && <b>↓</b>}
+            {index < layers.length - 1 ? <b>↓</b> : <b aria-hidden="true" />}
           </div>
         ))}
       </div>
