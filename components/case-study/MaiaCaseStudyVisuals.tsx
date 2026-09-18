@@ -91,7 +91,16 @@ export function MarketingLeakVisual() {
     <div className={styles.leakVisual} aria-label="Marketing attention and lead leakage illustration">
       <div className={styles.campaignCard}>
         <PanelLabel icon={<Megaphone size={14} />}>Property launch campaign</PanelLabel>
-        <div className={styles.campaignArtwork}><span>COMING SOON</span><strong>New residential release</strong></div>
+        <div className={styles.campaignArtwork}>
+          <img
+            src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/37447d86-6e22-4706-b62c-eb24e3ee0ac6.jpg"
+            alt="Prospect viewing a Maia property recommendation on a laptop."
+            className={styles.campaignArtworkImage}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
+        </div>
         <div className={styles.engagementRow}>
           <span>Comments</span><span>Messages</span><span>WhatsApp clicks</span><span>Lead forms</span>
         </div>
