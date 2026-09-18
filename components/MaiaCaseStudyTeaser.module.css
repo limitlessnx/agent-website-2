@@ -52,3 +52,17 @@
  .agentBridge{top:47%}.connectorLine{top:47%}
 }
 @media(max-width:380px){.proofVisual{min-height:415px}}
+
+
+/* V3: exact two-device stage. Prevents either handset from dropping below the other. */
+.deviceRow{position:absolute;z-index:3;inset:5.5% 5% 7%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7%;align-items:stretch;perspective:1200px}
+.deviceRow .device{position:relative!important;inset:auto!important;width:100%!important;height:100%!important}
+.deviceRow .prospectPhone{transform:perspective(900px) rotateY(5deg) rotateZ(-.8deg);transform-origin:right center}
+.deviceRow .samsung{transform:perspective(900px) rotateY(-5deg) rotateZ(.8deg);transform-origin:left center}
+@media(max-width:560px){
+ .proofVisual{min-height:430px}
+ .deviceRow{inset:5% 3% 6%;gap:3%}
+ .deviceRow .prospectPhone{transform:rotateY(2deg) rotateZ(-.35deg)}
+ .deviceRow .samsung{transform:rotateY(-2deg) rotateZ(.35deg)}
+ .deviceRow .device{min-width:0}
+}
