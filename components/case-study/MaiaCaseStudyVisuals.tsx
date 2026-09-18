@@ -92,7 +92,7 @@ export function MarketingLeakVisual() {
     <div className={styles.leakVisual} aria-label="From marketing attention to an organized sales pipeline">
       <div className={styles.leakRenderXFrame}>
         <Image
-          src="/images/case-studies/maia/maia-leak-marketing-attention-renderx.webp"
+          src="/images/case-studies/maia/maia-vc-01-marketing-attention.webp"
           alt="Fluxknight visual showing marketing attention from social media, WhatsApp, website chat and lead ads flowing through automation into an organized sales pipeline."
           fill
           sizes="(max-width: 760px) 100vw, 1180px"
