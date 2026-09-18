@@ -39,7 +39,7 @@ export default function MaiaCaseStudyTeaser() {
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.45 }}
       >
-        <div className={styles.proofVisual} aria-label="Prospect and Maia conversation workflow preview">
+        <div className={styles.proofVisual} aria-label="Prospect and Maia conversation workflow preview" data-device-layout="dual-samsung-ultra">
           <div className={styles.visualAura} aria-hidden="true" />
 
           <div className={`${styles.phone} ${styles.prospectPhone}`}>
