@@ -1,0 +1,48 @@
+/* Fluxknight homepage final QA: unified premium metallic CTA language. */
+.flux-contact,
+.flux-mobile-actions .primary,
+.quantix-home .button-primary,
+.quantix-home .button-secondary,
+.quantix-home .hero-buttons a,
+.quantix-home .production-pricing-route-link a,
+.quantix-home .evaluation-conversion-actions a,
+.quantix-home .flux-metal-cta,
+.quantix-home a[data-cta="automation-maia-case-study"],
+.quantix-home .production-pricing-carousel a[href^="/checkout"],
+.quantix-home .production-pricing-carousel a[href^="/account/signup"],
+.quantix-home > section:first-of-type a[href="/evaluation"],
+.quantix-home > section:first-of-type a[href="#services"]{
+  position:relative!important;isolation:isolate;overflow:hidden;min-height:50px;
+  border:1px solid rgba(214,206,228,.24)!important;border-radius:13px!important;color:#f8f7fb!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.078),rgba(255,255,255,.024)) padding-box,linear-gradient(120deg,rgba(236,232,242,.54),rgba(136,115,164,.16) 38%,rgba(145,92,246,.54) 72%,rgba(239,235,246,.30)) border-box!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -10px 24px rgba(0,0,0,.14),0 14px 34px rgba(0,0,0,.24),0 0 0 1px rgba(255,255,255,.025)!important;
+  backdrop-filter:blur(16px) saturate(125%);-webkit-backdrop-filter:blur(16px) saturate(125%);
+  transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease,color .18s ease!important
+}
+.flux-contact::before,.flux-mobile-actions .primary::before,.quantix-home .button-primary::before,.quantix-home .button-secondary::before,.quantix-home .hero-buttons a::before,.quantix-home .production-pricing-route-link a::before,.quantix-home .evaluation-conversion-actions a::before,.quantix-home .flux-metal-cta::before,.quantix-home a[data-cta="automation-maia-case-study"]::before,.quantix-home .production-pricing-carousel a[href^="/checkout"]::before,.quantix-home .production-pricing-carousel a[href^="/account/signup"]::before,.quantix-home > section:first-of-type a[href="/evaluation"]::before,.quantix-home > section:first-of-type a[href="#services"]::before{
+  content:"";position:absolute;z-index:-1;inset:0 0 auto;height:42%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.09),transparent)
+}
+.quantix-home .button-primary,.quantix-home .evaluation-conversion-actions a,.quantix-home > section:first-of-type a[href="/evaluation"],.quantix-home .production-pricing-carousel a[href^="/account/signup"],.quantix-home .production-pricing-carousel article[class*="featured"] a[href^="/checkout"]{
+  background:linear-gradient(180deg,rgba(139,92,246,.22),rgba(88,49,158,.10)) padding-box,linear-gradient(120deg,rgba(242,238,247,.62),rgba(142,118,173,.22) 38%,rgba(158,104,255,.74) 72%,rgba(239,235,246,.36)) border-box!important;
+  border-color:rgba(203,181,237,.32)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.19),inset 0 -10px 24px rgba(0,0,0,.15),0 15px 36px rgba(0,0,0,.27),0 0 24px rgba(124,92,246,.11)!important
+}
+.quantix-home .button-secondary,.quantix-home .production-pricing-route-link a,.quantix-home > section:first-of-type a[href="#services"],.quantix-home .production-pricing-carousel a[href^="/checkout"]{
+  color:#ece9f1!important;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)) padding-box,linear-gradient(120deg,rgba(220,215,227,.38),rgba(121,108,140,.12) 55%,rgba(137,91,223,.31)) border-box!important
+}
+.quantix-home a[data-cta="automation-maia-case-study"]{min-height:72px;border-radius:18px!important;background:linear-gradient(180deg,rgba(255,255,255,.066),rgba(108,63,181,.055)) padding-box,linear-gradient(120deg,rgba(228,222,236,.45),rgba(141,111,181,.17) 42%,rgba(150,92,246,.48)) border-box!important}
+.flux-contact:hover,.flux-mobile-actions .primary:hover,.quantix-home .button-primary:hover,.quantix-home .button-secondary:hover,.quantix-home .hero-buttons a:hover,.quantix-home .production-pricing-route-link a:hover,.quantix-home .evaluation-conversion-actions a:hover,.quantix-home .flux-metal-cta:hover,.quantix-home a[data-cta="automation-maia-case-study"]:hover,.quantix-home .production-pricing-carousel a[href^="/checkout"]:hover,.quantix-home .production-pricing-carousel a[href^="/account/signup"]:hover,.quantix-home > section:first-of-type a[href="/evaluation"]:hover,.quantix-home > section:first-of-type a[href="#services"]:hover{
+  transform:translateY(-1px)!important;border-color:rgba(194,166,237,.46)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.19),inset 0 -10px 24px rgba(0,0,0,.14),0 17px 40px rgba(0,0,0,.29),0 0 23px rgba(124,92,246,.13)!important
+}
+.flux-contact:active,.flux-mobile-actions .primary:active,.quantix-home .button-primary:active,.quantix-home .button-secondary:active,.quantix-home .hero-buttons a:active,.quantix-home .production-pricing-route-link a:active,.quantix-home .evaluation-conversion-actions a:active,.quantix-home .flux-metal-cta:active,.quantix-home a[data-cta="automation-maia-case-study"]:active,.quantix-home .production-pricing-carousel a[href^="/checkout"]:active,.quantix-home .production-pricing-carousel a[href^="/account/signup"]:active,.quantix-home > section:first-of-type a[href="/evaluation"]:active,.quantix-home > section:first-of-type a[href="#services"]:active{
+  transform:translateY(0)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 2px 14px rgba(0,0,0,.22)!important
+}
+.quantix-home .button-primary svg,.quantix-home .button-secondary svg,.quantix-home .flux-metal-cta svg,.quantix-home .production-pricing-route-link svg,.quantix-home .evaluation-conversion-actions svg,.quantix-home > section:first-of-type a svg{
+  color:#f5f1fa!important;filter:drop-shadow(0 0 7px rgba(183,139,255,.20))
+}
+@media(max-width:640px){
+  .flux-contact,.flux-mobile-actions .primary,.quantix-home .button-primary,.quantix-home .button-secondary,.quantix-home .hero-buttons a,.quantix-home .production-pricing-route-link a,.quantix-home .evaluation-conversion-actions a,.quantix-home .flux-metal-cta,.quantix-home .production-pricing-carousel a[href^="/checkout"],.quantix-home .production-pricing-carousel a[href^="/account/signup"],.quantix-home > section:first-of-type a[href="/evaluation"],.quantix-home > section:first-of-type a[href="#services"]{min-height:52px;border-radius:13px!important}
+  .quantix-home a[data-cta="automation-maia-case-study"]{min-height:68px;border-radius:16px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .flux-contact,.flux-mobile-actions .primary,.quantix-home .button-primary,.quantix-home .button-secondary,.quantix-home .hero-buttons a,.quantix-home .production-pricing-route-link a,.quantix-home .evaluation-conversion-actions a,.quantix-home .flux-metal-cta,.quantix-home a[data-cta="automation-maia-case-study"],.quantix-home .production-pricing-carousel a[href^="/checkout"],.quantix-home .production-pricing-carousel a[href^="/account/signup"],.quantix-home > section:first-of-type a[href="/evaluation"],.quantix-home > section:first-of-type a[href="#services"]{transition:none!important}
+}
