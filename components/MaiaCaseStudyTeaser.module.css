@@ -24,3 +24,31 @@
  .connectorLine{top:44%}
 }
 @media(max-width:380px){.proofVisual{min-height:400px}}
+
+
+/* V2 DEVICE REBUILD: structural phone hardware, not the legacy framed mockup */
+.device{position:absolute;z-index:3;box-sizing:border-box;padding:7px;background:linear-gradient(145deg,#5b5963 0%,#17171d 10%,#050507 46%,#222129 88%,#77737e 100%);border:1px solid rgba(255,255,255,.34);box-shadow:0 34px 70px rgba(0,0,0,.72),0 0 0 1px rgba(124,58,237,.25),0 0 42px rgba(124,58,237,.22);overflow:visible}
+.device:before{content:"";position:absolute;inset:2px;border:1px solid rgba(255,255,255,.15);border-radius:inherit;pointer-events:none}
+.screen{position:relative;width:100%;height:100%;overflow:hidden;border-radius:24px;background:linear-gradient(180deg,#07070b,#030305 70%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),inset 0 0 22px rgba(0,0,0,.9)}
+.sideKeyA,.sideKeyB{position:absolute;right:-3px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(#77737e,#1b1a20);box-shadow:1px 0 2px rgba(0,0,0,.6)}
+.sideKeyA{top:23%;height:44px}.sideKeyB{top:37%;height:68px}
+.prospectPhone{left:6%;top:6%;width:40.5%;height:86%;border-radius:32px;transform:rotateY(7deg) rotateZ(-1.15deg);transform-origin:center right}
+.samsung{right:6%;top:6%;width:40.5%;height:86%;border-radius:32px;transform:rotateY(-7deg) rotateZ(1.15deg);transform-origin:center left}
+.device .samsungCamera{top:13px;z-index:12;width:9px;height:9px;background:#020203;box-shadow:0 0 0 2px #15151a,0 0 0 3px rgba(255,255,255,.06)}
+.device .phoneTop{padding-left:17px;padding-right:17px}
+.proofVisual{min-height:540px;border-color:rgba(139,92,246,.22);background:radial-gradient(ellipse at 50% 48%,rgba(139,92,246,.25),transparent 43%),radial-gradient(circle at 18% 15%,rgba(168,85,247,.09),transparent 26%),linear-gradient(180deg,#07040e,#020105 100%)}
+.visualAura{background:radial-gradient(circle at 20% 50%,rgba(124,58,237,.16),transparent 30%),radial-gradient(circle at 80% 50%,rgba(168,85,247,.13),transparent 30%)}
+.agentBridge{top:48%;z-index:15;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.58),0 0 34px rgba(168,85,247,.4)}
+.connectorLine{top:48%;z-index:2}
+.annotation{top:3%;right:3%;z-index:16}
+@media(max-width:560px){
+ .proofVisual{min-height:445px}
+ .device{padding:5px}
+ .screen{border-radius:18px}
+ .prospectPhone{left:3.5%;top:6%;width:45%;height:87%;border-radius:24px;transform:rotateY(4deg) rotateZ(-.6deg)}
+ .samsung{right:3.5%;top:6%;width:45%;height:87%;border-radius:24px;transform:rotateY(-4deg) rotateZ(.6deg)}
+ .sideKeyA{height:30px}.sideKeyB{height:46px}
+ .device .samsungCamera{top:9px;width:7px;height:7px}
+ .agentBridge{top:47%}.connectorLine{top:47%}
+}
+@media(max-width:380px){.proofVisual{min-height:415px}}
