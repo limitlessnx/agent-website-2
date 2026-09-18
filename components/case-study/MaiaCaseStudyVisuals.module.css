@@ -197,3 +197,13 @@
 @media(prefers-reduced-motion:reduce){
   .heroSystem,.leakVisual,.splitVisual,.propertyMatch,.timelinePanel,.audiencePanel,.appointmentVisual,.handoffPanel,.installmentPanel,.systemReveal,.launchPanel,.promoPanel,.nurturePanel,.reminderPanel,.dealPanel,.futurePanel{scroll-behavior:auto}
 }
+
+
+/* Render X: approved Marketing Attention visual lives inside the existing Leak card. */
+.leakVisual{display:block;padding:0;overflow:hidden;border-color:rgba(180,139,255,.2);background:#05020a}
+.leakRenderXFrame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#05020a}
+.leakRenderXImage{object-fit:cover;width:100%;height:100%;display:block}
+@media(max-width:760px){
+  .leakVisual{border-radius:20px}
+  .leakRenderXFrame{aspect-ratio:16/9}
+}
