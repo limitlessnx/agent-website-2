@@ -58,7 +58,10 @@ export default function MaiaCaseStudyTeaser() {
             <div className={styles.phoneMessages}>
               <div className={styles.messageIncoming}>Hi, I&apos;m interested in the property at 12 Riverdale Ave. Is it still available?<small>10:24 AM</small></div>
               <div className={styles.messageOutgoing}>Thanks for your enquiry! I can help with that. Would you like to book an inspection?<small>10:24 AM ✓✓</small></div>
-              <div className={styles.messageIncoming}>Yes, please!<small>10:25 AM</small></div>
+              <div className={styles.messageIncoming}>Yes, please!<small>9:42 AM</small></div>
+              <div className={styles.messageOutgoing}>Great! Here are a few available times this Saturday. Which time works for you?<small>9:43 AM ✓✓</small></div>
+              <div className={styles.messageIncoming}>10am works perfectly.<small>9:44 AM</small></div>
+              <div className={styles.messageOutgoing}>Perfect! I&apos;ve booked you in for Saturday at 10:00 AM. You&apos;ll receive a confirmation shortly.<small>9:44 AM ✓✓</small></div>
             </div>
             <div className={styles.messageBar}><span>＋</span><em>Type a message…</em><b>➤</b></div>
             </div>
@@ -82,15 +85,17 @@ export default function MaiaCaseStudyTeaser() {
               <span className={styles.liveState}>LIVE</span>
             </div>
             <div className={styles.maiaConversation}>
-              <div className={styles.maiaBubble}>New property enquiry received from Alex Chen.</div>
-              <div className={styles.maiaBubbleAccent}>Prospect qualified. Budget confirmed and inspection requested.</div>
+              <div className={styles.maiaBubble}>New property enquiry received from a WhatsApp lead.<small>9:41 AM</small></div>
+              <div className={styles.maiaBubbleAccent}>Prospect qualified. Budget confirmed and inspection requested.<small>9:43 AM</small></div>
             </div>
             <div className={styles.leadPanel}>
               <div className={styles.leadPanelHead}><Database size={14} /><span>Limitless Realty</span></div>
               <div className={styles.propertyRow}>
                 <div className={styles.propertyThumb} />
-                <div><small>New lead</small><strong>Alex Chen</strong></div>
-                <span className={styles.qualified}>Qualified</span>
+                <div><small>12 Riverdale Ave</small><strong>3-bed home</strong></div>
+                <span className={styles.qualified}>Property</span>
+              </div>
+              <div className={styles.contactRow}><span>AC</span><div><strong>Alex Chen</strong><small>+61 412 345 678</small></div><b>Qualified</b>
               </div>
               <dl className={styles.leadDetails}>
                 <div><dt>Interested in</dt><dd>12 Riverdale Ave</dd></div>
