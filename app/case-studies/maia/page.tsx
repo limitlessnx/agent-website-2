@@ -20,11 +20,11 @@ import {
   PropertyMatchVisual,
   QualificationVisual,
 } from "@/components/case-study/MaiaCaseStudyVisuals";
+import { maiaBatch1Storyboard } from "./context/storyboard";
 import styles from "./page.module.css";
 
 const description = "See how Maia connects real-estate marketing, customer conversations, CRM, follow-up, property discovery, viewing workflows and human handoff in one operating system.";
 
-const contextStoryboardUrl = "https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/579874da-dd95-40a7-a6b6-2cf066d56fb2.png";
 
 export const metadata: Metadata = {
   title: "Maia Real Estate Operating System | Fluxknight",
@@ -113,19 +113,16 @@ export default function MaiaCaseStudyPage() {
           <div className={styles.contextPair}>
             <figure className={styles.contextFrame}>
               <img
-                src={contextStoryboardUrl}
+                src={maiaBatch1Storyboard}
                 alt="A real-estate marketing team managing active property interest before Maia captures the enquiry."
                 className={[styles.contextImage, styles.contextImageMarketing].join(" ")}
                 loading="lazy"
                 decoding="async"
               />
-              <figcaption>
-                <span>01 · Marketing attention</span>
-                <strong>Demand exists before the system does.</strong>
-              </figcaption>
             </figure>
             <div className={styles.contextProof}><MarketingLeakVisual /></div>
           </div>
+          <p className={styles.contextDisclaimer}>Illustrative story context. The operational capability is demonstrated in the Maia product state beside it.</p>
         </div>
       </section>
 
@@ -143,16 +140,12 @@ export default function MaiaCaseStudyPage() {
               <div className={styles.contextPair}>
                 <figure className={styles.contextFrame}>
                   <img
-                    src={contextStoryboardUrl}
+                    src={maiaBatch1Storyboard}
                     alt="A prospective property buyer using her phone to begin an enquiry after seeing a property campaign."
                     className={[styles.contextImage, styles.contextImageEnquiry].join(" ")}
                     loading="lazy"
                     decoding="async"
                   />
-                  <figcaption>
-                    <span>02 · Enquiry entry</span>
-                    <strong>Interest becomes a real conversation.</strong>
-                  </figcaption>
                 </figure>
                 <div className={styles.contextProof}><CaptureVisual /></div>
               </div>
@@ -179,16 +172,12 @@ export default function MaiaCaseStudyPage() {
               <div className={[styles.contextPair, styles.contextPairReverse].join(" ")}>
                 <figure className={styles.contextFrame}>
                   <img
-                    src={contextStoryboardUrl}
+                    src={maiaBatch1Storyboard}
                     alt="A contemporary residential property shown as the buyer moves from enquiry to relevant property discovery."
                     className={[styles.contextImage, styles.contextImageProperty].join(" ")}
                     loading="lazy"
                     decoding="async"
                   />
-                  <figcaption>
-                    <span>03 · Property discovery</span>
-                    <strong>Context narrows the options that matter.</strong>
-                  </figcaption>
                 </figure>
                 <div className={styles.contextProof}><PropertyMatchVisual /></div>
               </div>
