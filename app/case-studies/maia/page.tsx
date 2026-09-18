@@ -2,15 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "@/components/admin/ServerIcons";
 import {
+  AppointmentReminderVisual,
   AppointmentVisual,
   AudienceVisual,
   CaptureVisual,
+  DealProgressionVisual,
   FollowUpVisual,
+  FutureOpportunityVisual,
   HandoffVisual,
   HeroSystemVisual,
   InstallmentVisual,
+  LaunchCampaignVisual,
+  LongTermNurtureVisual,
   MarketingLeakVisual,
   OperatingSystemRevealVisual,
+  PromotionLifecycleVisual,
   PropertyMatchVisual,
   QualificationVisual,
 } from "@/components/case-study/MaiaCaseStudyVisuals";
@@ -161,6 +167,18 @@ export default function MaiaCaseStudyPage() {
               <div className={styles.storyCopy}><span>Launch audience</span><h3>Build a reusable customer audience from real conversations.</h3><p>Relevant leads can be grouped by interest, stage, budget band or payment preference so approved launch and promotion updates reach the people who actually asked for them.</p></div>
               <AudienceVisual />
             </div>
+            <div className={styles.storyBeat}>
+              <div className={styles.storyCopy}><span>Property launch</span><h3>When the property goes live, the audience is already organized.</h3><p>Maia can send configured, approved updates to the relevant prospects and log that activity back into the customer record instead of starting another manual outreach exercise from zero.</p></div>
+              <LaunchCampaignVisual />
+            </div>
+            <div className={styles.storyBeat}>
+              <div className={styles.storyCopy}><span>Promotion lifecycle</span><h3>Keep time-sensitive offers visible without relying on staff memory.</h3><p>Promotions can have a defined communication sequence, from launch through expiry reminders, while keeping every message relevant to the prospect&apos;s recorded interest.</p></div>
+              <PromotionLifecycleVisual />
+            </div>
+            <div className={styles.storyBeat}>
+              <div className={styles.storyCopy}><span>Long-term nurture</span><h3>Keep the customer relationship useful beyond the first week.</h3><p>A prospect who is not ready today can still become valuable months later because their preferences, history and previous questions remain available when a genuinely relevant opportunity appears.</p></div>
+              <LongTermNurtureVisual />
+            </div>
           </div>
         </div>
       </section>
@@ -179,12 +197,24 @@ export default function MaiaCaseStudyPage() {
               <AppointmentVisual />
             </div>
             <div className={styles.storyBeat}>
+              <div className={styles.storyCopy}><span>Appointment reminders</span><h3>Keep the viewing moving before the agent has to chase it.</h3><p>The customer and team can receive configured reminders around the appointment while the booking remains connected to the lead and property record.</p></div>
+              <AppointmentReminderVisual />
+            </div>
+            <div className={styles.storyBeat}>
               <div className={styles.storyCopy}><span>Human handoff</span><h3>The agent enters informed, not blind.</h3><p>Before a human takes over, the buyer history, property interest, payment preference, questions and appointment context are already organized.</p></div>
               <HandoffVisual />
             </div>
             <div className={styles.storyBeat}>
+              <div className={styles.storyCopy}><span>Deal progression</span><h3>Automation supports the process. The human still closes the deal.</h3><p>Maia keeps records, reminders and next actions connected while the human team handles viewing, negotiation, documentation, relationship and closing.</p></div>
+              <DealProgressionVisual />
+            </div>
+            <div className={styles.storyBeat}>
               <div className={styles.storyCopy}><span>After the sale starts</span><h3>Keep repetitive customer operations moving.</h3><p>Where an installment workflow is configured, Maia can continue approved reminders while the customer record remains available for future relevant opportunities.</p></div>
               <InstallmentVisual />
+            </div>
+            <div className={styles.storyBeat}>
+              <div className={styles.storyCopy}><span>Future opportunity</span><h3>The customer record keeps creating value after the first transaction.</h3><p>When a future property matches known preferences and the communication is appropriate, the existing customer can be surfaced into a relevant campaign instead of being treated like a stranger again.</p></div>
+              <FutureOpportunityVisual />
             </div>
           </div>
         </div>
