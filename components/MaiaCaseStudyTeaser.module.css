@@ -125,3 +125,9 @@
  .inspection{margin-top:4px;padding:4px}.inspection small{font-size:.2rem}.inspection strong{font-size:.23rem}
  .agentBridge{top:49%;padding:5px 7px}.connectorLine{top:49%}
 }
+
+
+/* Approved real-phone visual replaces the CSS handset mockups */
+.referenceVisual{position:relative;width:100%;overflow:hidden;border:1px solid rgba(139,92,246,.24);border-radius:26px;background:#05020b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 24px 70px rgba(0,0,0,.34)}
+.referenceVisualImage{display:block;width:100%;height:auto;aspect-ratio:460/311;object-fit:cover;object-position:center top}
+@media(max-width:560px){.referenceVisual{border-radius:20px}.referenceVisualImage{width:100%;aspect-ratio:460/311;object-fit:cover}}
