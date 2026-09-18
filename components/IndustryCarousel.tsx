@@ -37,13 +37,41 @@ export default function IndustryCarousel() {
   const visibleRef = useRef(false);
   const scrollTimerRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
+  const renderedIndexRef = useRef(CLONES);
+  const restoringRef = useRef(false);
+
+  const cardCenterLeft = (renderedIndex: number) => {
+    const track = trackRef.current;
+    if (!track) return null;
+    const card = track.children[renderedIndex] as HTMLElement | undefined;
+    if (!card) return null;
+    return card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2;
+  };
 
   const centerRendered = (renderedIndex: number, behavior: ScrollBehavior = "smooth") => {
     const track = trackRef.current;
-    if (!track) return;
-    const card = track.children[renderedIndex] as HTMLElement | undefined;
-    if (!card) return;
-    track.scrollTo({ left: card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2, behavior });
+    const left = cardCenterLeft(renderedIndex);
+    if (!track || left === null) return;
+    renderedIndexRef.current = renderedIndex;
+    track.scrollTo({ left, behavior });
+  };
+
+  const restoreRendered = (renderedIndex: number) => {
+    const track = trackRef.current;
+    const left = cardCenterLeft(renderedIndex);
+    if (!track || left === null) return;
+
+    restoringRef.current = true;
+    renderedIndexRef.current = renderedIndex;
+
+    const previousBehavior = track.style.scrollBehavior;
+    track.style.scrollBehavior = "auto";
+    track.scrollLeft = left;
+
+    requestAnimationFrame(() => {
+      track.style.scrollBehavior = previousBehavior;
+      restoringRef.current = false;
+    });
   };
 
   useEffect(() => {
@@ -60,47 +88,81 @@ export default function IndustryCarousel() {
     requestAnimationFrame(() => centerRendered(CLONES, "auto"));
   }, []);
 
+  const logicalFromRendered = (renderedIndex: number) =>
+    (renderedIndex - CLONES + industries.length) % industries.length;
+
+  const moveRendered = (targetRendered: number, userInitiated = false) => {
+    if (userInitiated) pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+
+    const minRendered = 0;
+    const maxRendered = loopItems.length - 1;
+    const clamped = Math.max(minRendered, Math.min(maxRendered, targetRendered));
+    const logical = logicalFromRendered(clamped);
+
+    setActive(logical);
+    centerRendered(clamped, "smooth");
+  };
+
+  const moveBy = (direction: -1 | 1, userInitiated = false) => {
+    moveRendered(renderedIndexRef.current + direction, userInitiated);
+  };
+
   const goTo = (logicalIndex: number) => {
     pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
     const normalized = (logicalIndex + industries.length) % industries.length;
+    const canonical = CLONES + normalized;
+    const candidates = [canonical - industries.length, canonical, canonical + industries.length]
+      .filter((index) => index >= 0 && index < loopItems.length);
+    const current = renderedIndexRef.current;
+    const targetRendered = candidates.reduce((best, candidate) =>
+      Math.abs(candidate - current) < Math.abs(best - current) ? candidate : best
+    , candidates[0] ?? canonical);
+
     setActive(normalized);
-    const currentRendered = CLONES + active;
-    let targetRendered = CLONES + normalized;
-    if (active === industries.length - 1 && normalized === 0) targetRendered = currentRendered + 1;
-    if (active === 0 && normalized === industries.length - 1) targetRendered = currentRendered - 1;
-    centerRendered(targetRendered);
+    centerRendered(targetRendered, "smooth");
   };
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => {
       if (!visibleRef.current || document.hidden || Date.now() < pausedUntil.current) return;
-      goTo(active + 1);
+      moveBy(1, false);
     }, AUTOPLAY_MS);
     return () => window.clearInterval(timer);
-  }, [active, industries.length]);
+  }, [industries.length, loopItems.length]);
 
   useEffect(() => () => { if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current); }, []);
 
   const syncActiveFromScroll = () => {
-    pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+    if (restoringRef.current) return;
     if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
+
     scrollTimerRef.current = window.setTimeout(() => {
       const track = trackRef.current;
       if (!track) return;
+
       const center = track.scrollLeft + track.clientWidth / 2;
-      let closest = CLONES;
+      let closest = renderedIndexRef.current;
       let distance = Number.POSITIVE_INFINITY;
+
       Array.from(track.children).forEach((child, index) => {
         const card = child as HTMLElement;
         const nextDistance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center);
-        if (nextDistance < distance) { distance = nextDistance; closest = index; }
+        if (nextDistance < distance) {
+          distance = nextDistance;
+          closest = index;
+        }
       });
-      const logical = (closest - CLONES + industries.length) % industries.length;
-      setActive(logical);
-      if (closest < CLONES) requestAnimationFrame(() => centerRendered(closest + industries.length, "auto"));
-      else if (closest >= CLONES + industries.length) requestAnimationFrame(() => centerRendered(closest - industries.length, "auto"));
-    }, 70);
+
+      renderedIndexRef.current = closest;
+      setActive(logicalFromRendered(closest));
+
+      if (closest < CLONES) {
+        restoreRendered(closest + industries.length);
+      } else if (closest >= CLONES + industries.length) {
+        restoreRendered(closest - industries.length);
+      }
+    }, 90);
   };
 
   return (
@@ -114,14 +176,14 @@ export default function IndustryCarousel() {
             <p>Tailored AI automation for the industries that move the world.</p>
           </div>
           <div className={styles.controls} aria-label="Industry carousel controls">
-            <button className="flux-carousel-arrow" type="button" onClick={() => goTo(active - 1)} aria-label="Previous industry"><ArrowLeft size={18} /></button>
+            <button className="flux-carousel-arrow" type="button" onClick={() => moveBy(-1, true)} aria-label="Previous industry"><ArrowLeft size={18} /></button>
             <span>{String(active + 1).padStart(2, "0")} / {String(industries.length).padStart(2, "0")}</span>
-            <button className="flux-carousel-arrow" type="button" onClick={() => goTo(active + 1)} aria-label="Next industry"><ArrowRight size={18} /></button>
+            <button className="flux-carousel-arrow" type="button" onClick={() => moveBy(1, true)} aria-label="Next industry"><ArrowRight size={18} /></button>
           </div>
         </div>
 
         <div className={styles.viewport}>
-          <div className={styles.track} ref={trackRef} onScroll={syncActiveFromScroll} onPointerDown={() => { pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS; }} onTouchStart={() => { pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS; }}>
+          <div className={styles.track} ref={trackRef} onScroll={syncActiveFromScroll} onPointerDown={() => { pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS; }} onTouchStart={() => { pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS; }} onWheel={() => { pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS; }}>
             {loopItems.map(({ id, title, icon: Icon, image, eyebrow, text }, renderedIndex) => {
               const logicalIndex = (renderedIndex - CLONES + industries.length) % industries.length;
               const isActive = logicalIndex === active;
@@ -141,11 +203,11 @@ export default function IndustryCarousel() {
         </div>
 
         <div className={styles.mobileNav} aria-label="Industry carousel navigation">
-          <button className="flux-carousel-arrow" type="button" onClick={() => goTo(active - 1)} aria-label="Previous industry"><ArrowLeft size={19} /></button>
+          <button className="flux-carousel-arrow" type="button" onClick={() => moveBy(-1, true)} aria-label="Previous industry"><ArrowLeft size={19} /></button>
           <div className={`${styles.dots} flux-carousel-segments`}>
             {industries.map((item, index) => <button key={item.id} type="button" className={`${index === active ? styles.dotActive : styles.dot} flux-carousel-segment ${index === active ? "is-active" : ""}`} onClick={() => goTo(index)} aria-label={`Show ${item.title}`} aria-pressed={index === active} />)}
           </div>
-          <button className="flux-carousel-arrow" type="button" onClick={() => goTo(active + 1)} aria-label="Next industry"><ArrowRight size={19} /></button>
+          <button className="flux-carousel-arrow" type="button" onClick={() => moveBy(1, true)} aria-label="Next industry"><ArrowRight size={19} /></button>
         </div>
         <Link href="/industries" className={`${styles.allIndustries} flux-metal-cta`}>See All Industries <ArrowRight size={18} /></Link>
       </div>
