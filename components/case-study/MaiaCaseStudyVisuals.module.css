@@ -78,3 +78,122 @@
 .osFooter{display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(180,139,255,.1);background:#08040f;color:#81738d;font-size:.58rem;font-weight:750}.osFooter b{color:#5f506b}
 @media(max-width:980px){.osBoard{grid-template-columns:1fr 1fr;grid-template-areas:"sources maia" "operations human" "timeline timeline"}.osTimelineGrid{grid-template-columns:1fr}.osTimelineItem{grid-template-columns:40px 14px 1fr;padding:0 0 13px}.osTimelineItem:not(:last-child):after{top:20px;bottom:-2px;left:47px;right:auto;width:1px;height:auto}.osFooter{flex-wrap:wrap}}
 @media(max-width:620px){.osBoard{grid-template-columns:1fr;grid-template-areas:"sources" "maia" "operations" "timeline" "human";padding:12px}.osMaiaFlow{grid-template-columns:1fr 1fr}.osMetricGrid{grid-template-columns:1fr 1fr}.osHumanActions{grid-template-columns:1fr}.osFooter{display:grid;grid-template-columns:1fr auto;justify-content:stretch}.osFooter b{display:none}}
+
+/* Phase 8 mobile product-visual refinement */
+@media(max-width:760px){
+  .heroSystem,.leakVisual,.splitVisual,.propertyMatch,.timelinePanel,.audiencePanel,.appointmentVisual,.handoffPanel,.installmentPanel,.systemReveal,.launchPanel,.promoPanel,.nurturePanel,.reminderPanel,.dealPanel,.futurePanel{max-width:100%;border-radius:20px;box-shadow:0 20px 56px rgba(0,0,0,.26)}
+  .heroSystem{min-height:0}
+  .heroSystemHead,.audienceHead,.handoffHead,.systemRevealHead{padding:14px 15px;align-items:flex-start}
+  .heroSystemHead>div>span{font-size:.63rem}
+  .heroSystemHead>div>strong{font-size:.82rem}
+  .chatPanel,.profilePanel,.actionPanel,.sourcePanel,.recommendations,.calendarPanel,.timelinePanel,.audiencePanel,.handoffPanel,.installmentPanel{padding:15px}
+  .panelLabel{font-size:.62rem;line-height:1.4}
+  .statePill{font-size:.6rem;padding:5px 8px}
+  .bubbleCustomer,.bubbleMaia{max-width:96%;padding:11px 12px;font-size:.76rem;line-height:1.56}
+  .chatIdentity{margin:16px 0 14px}
+  .chatIdentity strong,.profileHead strong{font-size:.8rem}
+  .chatIdentity span,.profileHead span,.propertyMeta span,.campaignAction span{font-size:.63rem}
+  .systemEvent,.actionStrip,.reminderStrip{font-size:.63rem;line-height:1.45}
+  .profileGrid{grid-template-columns:1fr 1fr;gap:7px}
+  .profileGrid dt,.calendarPanel dt,.handoffGrid dt{font-size:.58rem}
+  .profileGrid dd,.calendarPanel dd,.handoffGrid dd{font-size:.68rem}
+  .propertyThumb{height:138px}
+  .leakVisual{padding:12px}
+  .campaignCard{padding:15px}
+  .campaignArtwork{min-height:160px;margin-top:14px;padding:16px}
+  .campaignArtwork strong{font-size:1.25rem}
+  .engagementRow{grid-template-columns:1fr 1fr}
+  .engagementRow span{font-size:.6rem}
+  .leakArrow{height:38px}
+  .leakStack>div{padding:11px 12px;font-size:.68rem}
+  .sourceHero{min-height:175px;margin-top:16px;padding:16px}
+  .sourceHero strong{font-size:1.3rem}
+  .sourceHero p{font-size:.68rem}
+  .sourcePath{gap:5px;overflow:hidden;font-size:.56rem}
+  .sourcePath span{min-width:0;text-align:center}
+  .propertyCards{grid-template-columns:1fr 1fr;gap:8px}
+  .propertyImage{height:108px}
+  .propertyCards strong{font-size:.72rem}
+  .propertyCards p{font-size:.6rem}
+  .timelineItem{grid-template-columns:15px 52px 1fr;gap:8px}
+  .timelineItem>span{font-size:.59rem}
+  .timelineItem strong{font-size:.7rem}
+  .timelineItem p{font-size:.62rem}
+  .followupMessage p{font-size:.69rem}
+  .filterRow{padding:11px}
+  .filterRow span{font-size:.58rem}
+  .audienceRows>div{grid-template-columns:32px 1fr;gap:9px}
+  .audienceRows>div>.rowAction{grid-column:2;margin-top:2px}
+  .audienceRows strong{font-size:.68rem}
+  .audienceRows span{font-size:.59rem}
+  .calendarPanel dl{grid-template-columns:1fr}
+  .calendarDate{padding:15px}
+  .handoffHead{display:grid}
+  .handoffHead h3{font-size:1.4rem}
+  .handoffGrid dl{grid-template-columns:1fr 1fr}
+  .summaryCard{padding:15px}
+  .summaryCard p{font-size:.7rem}
+  .handoffActions{display:grid;grid-template-columns:1fr}
+  .handoffActions span{width:100%;min-height:38px}
+  .installmentGrid{grid-template-columns:1fr}
+  .paymentSchedule>div{padding:11px;font-size:.68rem}
+  .launchPanel,.promoPanel,.nurturePanel,.reminderPanel,.dealPanel{padding:15px}
+  .launchTop,.promoHead,.nurtureHead,.dealHead{display:grid;gap:9px}
+  .launchTop h3{font-size:1.45rem}
+  .launchGrid{grid-template-columns:1fr;gap:8px}
+  .launchGrid>section:last-child{grid-column:auto}
+  .messagePreview{font-size:.69rem}
+  .promoTimeline{grid-template-columns:1fr 1fr}
+  .promoStep{padding:12px}
+  .promoStep strong{font-size:.69rem}
+  .promoStep p{font-size:.59rem}
+  .nurtureTrack{grid-template-columns:1fr}
+  .nurtureEvent{grid-template-columns:40px 14px 1fr;gap:9px}
+  .nurtureEvent:not(:last-child):after{left:46px}
+  .nurtureEvent strong{font-size:.69rem}
+  .nurtureEvent p{font-size:.6rem}
+  .reminderGrid{grid-template-columns:1fr}
+  .reminderGrid article{grid-template-columns:28px 1fr auto}
+  .reminderGrid .statePill{grid-column:auto}
+  .dealTrack{grid-template-columns:1fr 1fr}
+  .dealStage:not(:last-child):after{display:none}
+  .dealStage{padding:12px}
+  .futurePanel{padding:11px}
+  .futureCustomer,.futureMatch{padding:14px}
+  .futureArrow{height:36px}
+  .systemRevealHead>div{align-items:flex-start}
+  .osBoard{grid-template-columns:1fr;grid-template-areas:"sources" "maia" "operations" "timeline" "human";gap:8px;padding:10px}
+  .osSources,.osMaia,.osOperations,.osTimeline,.osHuman{padding:14px;border-radius:14px}
+  .osSourceHero{min-height:135px}
+  .osMaiaFlow{grid-template-columns:1fr 1fr}
+  .osConversation p{font-size:.64rem}
+  .osMetricGrid{grid-template-columns:1fr 1fr}
+  .osTimelineGrid{grid-template-columns:1fr}
+  .osTimelineItem{grid-template-columns:38px 12px 1fr;padding:0 0 13px}
+  .osTimelineItem:not(:last-child):after{left:43px}
+  .osTimelineItem strong{font-size:.64rem}
+  .osTimelineItem p{font-size:.56rem}
+  .osHumanActions{grid-template-columns:1fr}
+  .osHumanActions span{min-height:38px;font-size:.59rem}
+  .osBoundary{font-size:.59rem}
+  .osFooter{display:grid;grid-template-columns:1fr;gap:5px;padding:12px 14px;text-align:center}
+  .osFooter b{display:none}
+}
+@media(max-width:500px){
+  .profileGrid{grid-template-columns:1fr}
+  .propertyCards{grid-template-columns:1fr}
+  .propertyImage{height:132px}
+  .promoTimeline{grid-template-columns:1fr}
+  .dealTrack{grid-template-columns:1fr}
+  .handoffGrid dl{grid-template-columns:1fr}
+  .reminderGrid article{grid-template-columns:26px 1fr}
+  .reminderGrid .statePill{grid-column:2;justify-self:start}
+  .osMaiaFlow{grid-template-columns:1fr}
+  .osMetricGrid{grid-template-columns:1fr}
+  .osSourceList{grid-template-columns:1fr 1fr}
+  .systemRevealHead{display:grid;gap:9px}
+  .systemRevealHead>.statePill{justify-self:start}
+}
+@media(prefers-reduced-motion:reduce){
+  .heroSystem,.leakVisual,.splitVisual,.propertyMatch,.timelinePanel,.audiencePanel,.appointmentVisual,.handoffPanel,.installmentPanel,.systemReveal,.launchPanel,.promoPanel,.nurturePanel,.reminderPanel,.dealPanel,.futurePanel{scroll-behavior:auto}
+}
