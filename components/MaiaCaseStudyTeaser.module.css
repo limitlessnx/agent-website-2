@@ -131,3 +131,8 @@
 .referenceVisual{position:relative;width:100%;overflow:hidden;border:1px solid rgba(139,92,246,.24);border-radius:26px;background:#05020b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 24px 70px rgba(0,0,0,.34)}
 .referenceVisualImage{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center center}
 @media(max-width:560px){.referenceVisual{border-radius:20px}.referenceVisualImage{width:100%;aspect-ratio:16/9;object-fit:cover;object-position:center center}}
+
+/* Maia visual clarity pass: prevent soft scaling/compositor blur */
+.referenceVisual{background:#05020b;contain:paint}
+.referenceVisualImage{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center center;image-rendering:auto;filter:contrast(1.035) saturate(1.025);transform:translateZ(0);backface-visibility:hidden}
+@media(max-width:560px){.referenceVisualImage{aspect-ratio:16/9;object-fit:cover;object-position:center center;filter:contrast(1.045) saturate(1.02)}}
