@@ -28,6 +28,7 @@ import "./dashboard-phase-e.css";
 import "./leo-platform-ui.css";
 import "./astral-hero-colors.css";
 import "./hero-dashboard-mobile.css";
+import "./homepage-final-qa.css";
 import SiteShell from "@/components/SiteShell";
 import GlobalLoadingProvider from "@/components/GlobalLoadingProvider";
 
