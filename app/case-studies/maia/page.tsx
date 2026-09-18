@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, CheckCircle2 } from "@/components/admin/ServerIcons";
 import {
   AppointmentReminderVisual,
@@ -110,19 +109,7 @@ export default function MaiaCaseStudyPage() {
             <h2>Marketing creates attention. Most businesses lose what happens next.</h2>
             <p>Ads, posts and launch campaigns can generate real interest, but without a system the enquiry, context and next action often disappear into inboxes, staff memory and disconnected spreadsheets.</p>
           </div>
-          <div className={styles.contextPair}>
-            <figure className={styles.contextFrame}>
-              <Image
-                src="/images/case-studies/maia/maia-vc-01-marketing-attention.webp"
-                alt="A real-estate marketing team managing active property interest before Maia captures the enquiry."
-                className={styles.contextImage}
-                fill
-                sizes="(max-width: 760px) 100vw, 320px"
-              />
-            </figure>
-            <div className={styles.contextProof}><MarketingLeakVisual /></div>
-          </div>
-          <p className={styles.contextDisclaimer}>Illustrative story context. The operational capability is demonstrated in the Maia product state beside it.</p>
+          <MarketingLeakVisual />
         </div>
       </section>
 
@@ -137,18 +124,7 @@ export default function MaiaCaseStudyPage() {
           <div className={styles.storyStack}>
             <div className={styles.storyBeat}>
               <div className={styles.storyCopy}><span>Campaign → conversation</span><h3>Move interested prospects into a trackable interaction.</h3><p>Instead of treating every like as a CRM contact, the system uses supported paths such as WhatsApp, web chat or lead forms to turn campaign interest into an identifiable enquiry.</p></div>
-              <div className={styles.contextPair}>
-                <figure className={styles.contextFrame}>
-                  <Image
-                    src="/images/case-studies/maia/maia-vc-02-enquiry-entry.webp"
-                    alt="A prospective property buyer using her phone to begin an enquiry after seeing a property campaign."
-                    className={styles.contextImage}
-                    fill
-                    sizes="(max-width: 760px) 100vw, 320px"
-                  />
-                </figure>
-                <div className={styles.contextProof}><CaptureVisual /></div>
-              </div>
+              <CaptureVisual />
             </div>
           </div>
         </div>
@@ -169,18 +145,7 @@ export default function MaiaCaseStudyPage() {
             </div>
             <div className={styles.storyBeat}>
               <div className={styles.storyCopy}><span>Property discovery</span><h3>Use the same context to recommend relevant properties.</h3><p>Where configured catalogue data supports it, Maia can surface matching properties and answer follow-up questions without losing what the buyer already said.</p></div>
-              <div className={[styles.contextPair, styles.contextPairReverse].join(" ")}>
-                <figure className={styles.contextFrame}>
-                  <Image
-                    src="/images/case-studies/maia/maia-vc-03-property-discovery.webp"
-                    alt="A contemporary residential property shown as the buyer moves from enquiry to relevant property discovery."
-                    className={styles.contextImage}
-                    fill
-                    sizes="(max-width: 760px) 100vw, 320px"
-                  />
-                </figure>
-                <div className={styles.contextProof}><PropertyMatchVisual /></div>
-              </div>
+              <PropertyMatchVisual />
             </div>
           </div>
         </div>
