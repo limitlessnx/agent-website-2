@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import {
   BellRing,
   CalendarCheck2,
@@ -91,12 +90,12 @@ export function MarketingLeakVisual() {
   return (
     <div className={styles.leakVisual} aria-label="From marketing attention to an organized sales pipeline">
       <div className={styles.leakRenderXFrame}>
-        <Image
-          src="/images/case-studies/maia/maia-vc-01-marketing-attention.webp"
+        <img
+          src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/97acd1de-e0ae-49ec-89db-b8bc3a5f534a.png"
           alt="Fluxknight visual showing marketing attention from social media, WhatsApp, website chat and lead ads flowing through automation into an organized sales pipeline."
-          fill
-          sizes="(max-width: 760px) 100vw, 1180px"
           className={styles.leakRenderXImage}
+          loading="eager"
+          decoding="async"
         />
       </div>
     </div>
