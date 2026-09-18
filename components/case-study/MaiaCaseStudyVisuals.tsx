@@ -88,7 +88,7 @@ export function HeroSystemVisual() {
 
 export function MarketingLeakVisual() {
   return (
-    <div className={styles.leakVisual} aria-label="From marketing attention to an organized sales pipeline">
+    <div className={styles.leakVisual} aria-label="Marketing attention and lead leakage illustration">
       <div className={styles.leakRenderXFrame}>
         <img
           src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/543dc193-b053-45eb-b38b-8ef2d41188fb.png"
@@ -98,6 +98,32 @@ export function MarketingLeakVisual() {
           decoding="async"
           referrerPolicy="no-referrer"
         />
+      </div>
+
+      <div className={styles.leakDetailGrid}>
+        <div className={styles.campaignCard}>
+          <PanelLabel icon={<Megaphone size={14} />}>Property launch campaign</PanelLabel>
+          <div className={styles.campaignContextFrame}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/5a9cd5a8-6b6a-4921-b19f-954c506d15d7.jpg"
+              alt="Prospect viewing a Maia property recommendation during a property launch campaign."
+              className={styles.campaignContextImage}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div className={styles.engagementRow}>
+            <span>Comments</span><span>Messages</span><span>WhatsApp clicks</span><span>Lead forms</span>
+          </div>
+        </div>
+        <div className={styles.leakArrow}>→</div>
+        <div className={styles.leakStack}>
+          <div><MessageSquareText size={15} /><span>Unanswered enquiry</span></div>
+          <div><Clock3 size={15} /><span>Follow-up forgotten</span></div>
+          <div><Database size={15} /><span>Contact never organized</span></div>
+          <div className={styles.savedPath}><Sparkles size={15} /><span>Maia converts the interaction into a tracked next action</span></div>
+        </div>
       </div>
     </div>
   );
