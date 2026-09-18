@@ -461,24 +461,113 @@ export function FutureOpportunityVisual() {
 }
 
 export function OperatingSystemRevealVisual() {
-  const layers = [
-    ["Marketing", "Ads · Social · Website · Lead campaigns"],
-    ["Customer channels", "WhatsApp · Web · Supported forms / messaging"],
-    ["Maia", "Converse · Qualify · Recommend · Follow up · Remind · Schedule · Escalate"],
-    ["Real estate operations", "Leads · Properties · Conversations · Follow-ups · Viewings · Audiences · Payment schedules · Customer history"],
-    ["Human team", "Priority leads · Handoffs · Viewings · Negotiation · Closing"],
+  const activity = [
+    ["09:14", "Lead captured", "Launch campaign → WhatsApp"],
+    ["09:18", "Qualified", "Budget, intent and payment preference saved"],
+    ["Day 2", "Follow-up sent", "Previous property context retained"],
+    ["Fri", "Viewing booked", "Calendar, agent and CRM updated"],
+    ["Sat", "Human handoff", "Sales team receives full context"],
   ];
+
   return (
     <div className={styles.systemReveal}>
-      <div className={styles.systemRevealHead}><Sparkles size={16} /><span>Maia Real Estate Operating System</span></div>
-      <div className={styles.systemLayers}>
-        {layers.map(([title, detail], index) => (
-          <div className={`${styles.systemLayer} ${index === 2 ? styles.maiaLayer : ""}`} key={title}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <div><strong>{title}</strong><p>{detail}</p></div>
-            {index < layers.length - 1 ? <b>↓</b> : <b aria-hidden="true" />}
+      <div className={styles.systemRevealHead}>
+        <div>
+          <Sparkles size={16} />
+          <div><span>Maia Real Estate Operating System</span><small>One customer journey, one connected operating layer</small></div>
+        </div>
+        <StatePill tone="green">Connected</StatePill>
+      </div>
+
+      <div className={styles.osBoard}>
+        <section className={styles.osSources}>
+          <PanelLabel icon={<Megaphone size={14} />}>Marketing & entry points</PanelLabel>
+          <div className={styles.osSourceHero}>
+            <span>Property launch</span>
+            <strong>Campaign creates demand</strong>
+            <p>Ads, social, website and lead campaigns move prospects into identifiable conversations.</p>
           </div>
-        ))}
+          <div className={styles.osSourceList}>
+            <span>Paid ads</span><span>Organic social</span><span>Website</span><span>Lead forms</span>
+          </div>
+        </section>
+
+        <section className={styles.osMaia}>
+          <div className={styles.osMaiaHeader}>
+            <div className={styles.maiaOrb}>✦</div>
+            <div><span>AI operating layer</span><strong>Maia</strong></div>
+            <StatePill>Active</StatePill>
+          </div>
+          <div className={styles.osMaiaFlow}>
+            <div><MessageSquareText size={14} /><span>Converse</span></div>
+            <div><Target size={14} /><span>Qualify</span></div>
+            <div><Sparkles size={14} /><span>Recommend</span></div>
+            <div><Clock3 size={14} /><span>Follow up</span></div>
+            <div><BellRing size={14} /><span>Remind</span></div>
+            <div><CalendarCheck2 size={14} /><span>Schedule</span></div>
+          </div>
+          <div className={styles.osConversation}>
+            <span>Customer</span>
+            <p>I&apos;d like to see the 2-bedroom option this weekend.</p>
+            <span>Maia</span>
+            <p>Your preferences are already saved. I can move this into the viewing workflow and keep the assigned team member updated.</p>
+          </div>
+        </section>
+
+        <section className={styles.osOperations}>
+          <PanelLabel icon={<Database size={14} />}>Real estate operations</PanelLabel>
+          <div className={styles.osMetricGrid}>
+            <div><span>Lead</span><strong>Qualified</strong></div>
+            <div><span>Property</span><strong>Matched</strong></div>
+            <div><span>Follow-up</span><strong>Active</strong></div>
+            <div><span>Viewing</span><strong>Booked</strong></div>
+          </div>
+          <div className={styles.osOpsList}>
+            <span><CheckCircle2 size={13}/> Conversation history retained</span>
+            <span><CheckCircle2 size={13}/> Customer preferences structured</span>
+            <span><CheckCircle2 size={13}/> Appointment state connected</span>
+            <span><CheckCircle2 size={13}/> Next action visible to team</span>
+          </div>
+        </section>
+
+        <section className={styles.osTimeline}>
+          <div className={styles.osTimelineHead}>
+            <PanelLabel icon={<History size={14} />}>Customer activity</PanelLabel>
+            <span>Shared operational history</span>
+          </div>
+          <div className={styles.osTimelineGrid}>
+            {activity.map(([time, title, detail], index) => (
+              <div className={styles.osTimelineItem} key={title}>
+                <span>{time}</span>
+                <i className={index === activity.length - 1 ? styles.osTimelineActive : ""} />
+                <div><strong>{title}</strong><p>{detail}</p></div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.osHuman}>
+          <div className={styles.osHumanHead}>
+            <PanelLabel icon={<UserCheck size={14} />}>Human team</PanelLabel>
+            <StatePill tone="green">Context ready</StatePill>
+          </div>
+          <div className={styles.osHandoffCard}>
+            <div className={styles.avatar}>AM</div>
+            <div>
+              <span>Alex Morgan</span>
+              <strong>High-intent buyer · viewing booked</strong>
+              <p>Investment buyer, 2-bedroom preference, flexible payment interest. Key questions and conversation history are already attached.</p>
+            </div>
+          </div>
+          <div className={styles.osHumanActions}>
+            <span>View lead</span><span>Open conversation</span><span className={styles.primaryAction}>Take over</span>
+          </div>
+          <p className={styles.osBoundary}>Maia handles repetitive operational work. Humans own judgement, negotiation, documentation and closing.</p>
+        </section>
+      </div>
+
+      <div className={styles.osFooter}>
+        <span>Marketing</span><b>→</b><span>Customer channel</span><b>→</b><span>Maia</span><b>→</b><span>CRM & automation</span><b>→</b><span>Human team</span>
       </div>
     </div>
   );
