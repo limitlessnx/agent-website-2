@@ -32,57 +32,81 @@ function PanelLabel({ icon, children }: { icon: ReactNode; children: ReactNode }
 
 export function HeroSystemVisual() {
   return (
-    <div className={styles.heroShowcase} aria-label="Illustrative Maia real estate sales journey">
-      <div className={styles.heroAmbient} aria-hidden="true" />
+    <div className={styles.heroScene} aria-label="Maia real estate sales journey">
       <div className={styles.heroPhone}>
         <div className={styles.phoneTop}>
           <span className={styles.phoneBack}>‹</span>
           <div className={styles.phoneIdentity}>
-            <div className={styles.phoneAvatar}>AM</div>
+            <img src="/prospect-avatar.svg" alt="" className={styles.phoneAvatarImage} />
             <div><strong>Alex Morgan</strong><span>online</span></div>
           </div>
           <span className={styles.phoneDots}>•••</span>
         </div>
+
         <div className={styles.phoneThread}>
           <div className={styles.phoneIncoming}>Hi, is the 3-bedroom home still available?</div>
-          <div className={styles.phoneMaia}><b>Maia ✦</b><span>Yes, it is. I can show you matching options and schedule an inspection.</span></div>
+          <div className={styles.phoneMaia}>
+            <b>Maia ✦</b>
+            <span>Yes. I can show you matching options and schedule an inspection.</span>
+          </div>
           <div className={styles.phoneIncoming}>I&apos;d like to see it. Can you send the details?</div>
+
           <div className={styles.phoneProperty}>
-            <div className={styles.phonePropertyArt}><span>Property preview</span></div>
-            <strong>3 Bedroom Residence</strong>
-            <span>Matched to buyer preferences</span>
-            <button type="button" tabIndex={-1}>View property</button>
+            <img src="/images/case-studies/maia/maia-vc-03-property-discovery.webp" alt="" className={styles.phonePropertyImage} />
+            <div className={styles.phonePropertyCopy}>
+              <strong>3 Bedroom Residence</strong>
+              <span>Matched to buyer preferences</span>
+            </div>
+            <span className={styles.phonePropertyAction}>View property</span>
           </div>
         </div>
+
         <div className={styles.phoneComposer}><span>Message…</span><span>＋</span></div>
       </div>
 
-      <div className={styles.maiaCoreCard}>
-        <div className={styles.maiaOrb} aria-hidden="true" />
-        <strong>Maia AI</strong>
-        <span>Understands. Qualifies.<br/>Takes action.</span>
-        <ul>
-          <li><CheckCircle2 size={14}/> Captures enquiry</li>
-          <li><CheckCircle2 size={14}/> Qualifies buyer</li>
-          <li><CheckCircle2 size={14}/> Sends properties</li>
-          <li><CheckCircle2 size={14}/> Schedules inspection</li>
-          <li><CheckCircle2 size={14}/> Updates CRM</li>
-          <li><CheckCircle2 size={14}/> Notifies your team</li>
-        </ul>
+      <div className={styles.maiaRail}>
+        <div className={styles.maiaIdentity}>
+          <img src="/maia-portrait.svg" alt="" className={styles.maiaPortrait} />
+          <div><strong>Maia AI</strong><span>Understands. Qualifies. Takes action.</span></div>
+        </div>
+        <div className={styles.maiaActions}>
+          <span><CheckCircle2 size={14}/> Captures enquiry</span>
+          <span><CheckCircle2 size={14}/> Qualifies buyer</span>
+          <span><CheckCircle2 size={14}/> Sends properties</span>
+          <span><CheckCircle2 size={14}/> Books inspection</span>
+          <span><CheckCircle2 size={14}/> Updates CRM</span>
+          <span><CheckCircle2 size={14}/> Notifies your team</span>
+        </div>
       </div>
 
-      <div className={styles.crmStack}>
-        <div className={styles.captureToast}><MessageSquareText size={15}/><span>Lead captured from WhatsApp</span></div>
-        <div className={styles.crmCard}>
-          <div className={styles.crmTitle}><div><span>Lead in CRM</span><strong>Alex Morgan</strong></div><StatePill tone="green">Qualified</StatePill></div>
-          <dl>
+      <div className={styles.crmStage}>
+        <div className={styles.captureToast}>
+          <MessageSquareText size={16}/>
+          <span>Lead captured from WhatsApp</span>
+        </div>
+
+        <div className={styles.crmBoard}>
+          <div className={styles.crmBoardTop}>
+            <div>
+              <span>Lead in CRM</span>
+              <strong>Alex Morgan</strong>
+            </div>
+            <StatePill tone="green">Qualified</StatePill>
+          </div>
+
+          <dl className={styles.crmFields}>
             <div><dt>Source</dt><dd>Website / WhatsApp</dd></div>
             <div><dt>Interest</dt><dd>3 Bedroom Residence</dd></div>
-            <div><dt>Timeline</dt><dd>Ready to inspect</dd></div>
-            <div><dt>Next action</dt><dd>Inspection booking</dd></div>
+            <div><dt>Status</dt><dd>Qualified</dd></div>
+            <div><dt>Next action</dt><dd>Inspection · Friday, 10:00 AM</dd></div>
+            <div><dt>Assigned to</dt><dd>Sales team</dd></div>
           </dl>
         </div>
-        <div className={styles.inspectionCard}><CalendarCheck2 size={18}/><div><strong>Inspection booked</strong><span>Friday · 10:00 AM</span></div></div>
+
+        <div className={styles.inspectionCard}>
+          <CalendarCheck2 size={18}/>
+          <div><strong>Inspection booked</strong><span>Friday · 10:00 AM</span></div>
+        </div>
       </div>
     </div>
   );
