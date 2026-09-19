@@ -104,11 +104,6 @@ export default function MaiaCaseStudyPage() {
 
       <section className={styles.storySection}>
         <div className={styles.shell}>
-          <div className={styles.problemIntro}>
-            <span className={styles.eyebrow}>The leak</span>
-            <h2>Marketing creates attention. Most businesses lose what happens next.</h2>
-            <p>Ads, posts and launch campaigns can generate real interest, but without a system the enquiry, context and next action often disappear into inboxes, staff memory and disconnected spreadsheets.</p>
-          </div>
           <div className={styles.attentionRevenueVisual}>
             <img
               src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e6892ebc-a728-4ea9-af14-c0ff00014c05.jpg"
@@ -118,6 +113,11 @@ export default function MaiaCaseStudyPage() {
               decoding="async"
               referrerPolicy="no-referrer"
             />
+          </div>
+          <div className={styles.problemIntro}>
+            <span className={styles.eyebrow}>The leak</span>
+            <h2>Marketing creates attention. Most businesses lose what happens next.</h2>
+            <p>Ads, posts and launch campaigns can generate real interest, but without a system the enquiry, context and next action often disappear into inboxes, staff memory and disconnected spreadsheets.</p>
           </div>
           <MarketingLeakVisual />
         </div>
