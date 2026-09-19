@@ -37,10 +37,10 @@ export default function MaiaCaseStudyTeaser() {
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
+        transition={{ duration: 0.32, ease: "easeOut" }}
       >
         <div className={styles.referenceVisual} aria-label="Maia real-phone conversation and CRM workflow">
-          <img className={styles.referenceVisualImage} src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/9366e3a0-ece8-4429-9be8-bcd6d241dd7d.jpg" alt="Prospect using WhatsApp with Maia to explore Lagos property options" />
+          <img className={styles.referenceVisualImage} src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/9366e3a0-ece8-4429-9be8-bcd6d241dd7d.jpg" alt="Prospect using WhatsApp with Maia to explore Lagos property options" loading="lazy" decoding="async" fetchPriority="low" />
         </div>
 
         <div className={styles.content}>
