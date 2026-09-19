@@ -7,21 +7,21 @@ import { industries as industryCatalog } from "@/lib/industryCatalog";
 import styles from "./IndustryCarousel.module.css";
 
 const industryMeta = [
-  { id: "real-estate", icon: Building2, image: "https://images.unsplash.com/photo-1767950470198-c9cd97f8ed87?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Real Estate", text: "Capture leads, qualify buyers, book inspections and keep follow-up moving automatically." },
-  { id: "hotels", icon: Hotel, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Guest operations", text: "Answer guest questions, capture booking intent, coordinate reservations and hand over high-value conversations without front-desk bottlenecks." },
-  { id: "restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Reservations & service", text: "Handle reservations, menu questions, order enquiries and follow-up while your team stays focused on service." },
-  { id: "clinics", icon: Stethoscope, image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Patient administration", text: "Reduce repetitive front-desk work with appointment support, reminders, administrative answers and structured human handoff." },
-  { id: "sales-companies", icon: Briefcase, image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Lead conversion", text: "Qualify demand, keep follow-up active and preserve conversation context until a serious prospect is ready for your sales team." },
-  { id: "gyms", icon: Dumbbell, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Membership growth", text: "Capture trial interest, answer membership questions, reactivate prospects and support renewals without manual chasing." },
-  { id: "service-businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Booking operations", text: "Move enquiries into booked jobs, collect the right details and keep customers updated while the team stays on delivery." },
-  { id: "auto-shops", icon: Truck, image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Repair workflow", text: "Turn repair enquiries into booked jobs, collect vehicle context and keep customers updated without constant back-and-forth." },
-  { id: "ecommerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Commerce support", text: "Help customers choose products, answer order questions and recover purchase intent with structured follow-up." },
-  { id: "professional-services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&fm=jpg&q=82&w=1400", eyebrow: "Client acquisition", text: "Respond faster, qualify opportunities, book consultations and keep proposals moving through a connected client journey." },
+  { id: "real-estate", icon: Building2, image: "https://images.unsplash.com/photo-1767950470198-c9cd97f8ed87?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Real Estate", text: "Capture leads, qualify buyers, book inspections and keep follow-up moving automatically." },
+  { id: "hotels", icon: Hotel, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Guest operations", text: "Answer guest questions, capture booking intent, coordinate reservations and hand over high-value conversations without front-desk bottlenecks." },
+  { id: "restaurants", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Reservations & service", text: "Handle reservations, menu questions, order enquiries and follow-up while your team stays focused on service." },
+  { id: "clinics", icon: Stethoscope, image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Patient administration", text: "Reduce repetitive front-desk work with appointment support, reminders, administrative answers and structured human handoff." },
+  { id: "sales-companies", icon: Briefcase, image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Lead conversion", text: "Qualify demand, keep follow-up active and preserve conversation context until a serious prospect is ready for your sales team." },
+  { id: "gyms", icon: Dumbbell, image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Membership growth", text: "Capture trial interest, answer membership questions, reactivate prospects and support renewals without manual chasing." },
+  { id: "service-businesses", icon: Briefcase, image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Booking operations", text: "Move enquiries into booked jobs, collect the right details and keep customers updated while the team stays on delivery." },
+  { id: "auto-shops", icon: Truck, image: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Repair workflow", text: "Turn repair enquiries into booked jobs, collect vehicle context and keep customers updated without constant back-and-forth." },
+  { id: "ecommerce", icon: ShoppingCart, image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Commerce support", text: "Help customers choose products, answer order questions and recover purchase intent with structured follow-up." },
+  { id: "professional-services", icon: Briefcase, image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&fm=webp&q=72&w=720", eyebrow: "Client acquisition", text: "Respond faster, qualify opportunities, book consultations and keep proposals moving through a connected client journey." },
 ] as const;
 
 const AUTOPLAY_MS = 3000;
 const INTERACTION_PAUSE_MS = 3600;
-const CLONES = 2;
+const CLONES = 1;
 
 export default function IndustryCarousel() {
   const industries = useMemo(() => {
@@ -35,6 +35,7 @@ export default function IndustryCarousel() {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const pausedUntil = useRef(0);
   const visibleRef = useRef(false);
+  const activeRef = useRef(0);
   const scrollTimerRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
 
@@ -63,6 +64,7 @@ export default function IndustryCarousel() {
   const goTo = (logicalIndex: number) => {
     pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
     const normalized = (logicalIndex + industries.length) % industries.length;
+    activeRef.current = normalized;
     setActive(normalized);
     const currentRendered = CLONES + active;
     let targetRendered = CLONES + normalized;
@@ -75,10 +77,10 @@ export default function IndustryCarousel() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => {
       if (!visibleRef.current || document.hidden || Date.now() < pausedUntil.current) return;
-      goTo(active + 1);
+      goTo(activeRef.current + 1);
     }, AUTOPLAY_MS);
     return () => window.clearInterval(timer);
-  }, [active, industries.length]);
+  }, [industries.length]);
 
   useEffect(() => () => { if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current); }, []);
 
@@ -97,6 +99,7 @@ export default function IndustryCarousel() {
         if (nextDistance < distance) { distance = nextDistance; closest = index; }
       });
       const logical = (closest - CLONES + industries.length) % industries.length;
+      activeRef.current = logical;
       setActive(logical);
       if (closest < CLONES) requestAnimationFrame(() => centerRendered(closest + industries.length, "auto"));
       else if (closest >= CLONES + industries.length) requestAnimationFrame(() => centerRendered(closest - industries.length, "auto"));
@@ -127,7 +130,7 @@ export default function IndustryCarousel() {
               const isActive = logicalIndex === active;
               return (
                 <article key={`${id}-${renderedIndex}`} className={`${styles.card} ${isActive ? styles.active : ""}`} tabIndex={renderedIndex >= CLONES && renderedIndex < CLONES + industries.length ? 0 : -1} aria-current={isActive ? "true" : undefined}>
-                  <img className={styles.cardImage} src={image} alt="" aria-hidden="true" loading={Math.abs(renderedIndex - CLONES) < 3 ? "eager" : "lazy"} decoding="async" />
+                  <img className={styles.cardImage} src={image} alt="" aria-hidden="true" loading="lazy" decoding="async" fetchPriority="low" />
                   <div className={styles.cardShade} aria-hidden="true" />
                   <div className={styles.cardTopline}><span className={styles.cardIcon}><Icon size={20} /></span><span className={styles.counter}>{String(logicalIndex + 1).padStart(2, "0")}</span></div>
                   <div className={styles.cardContent}>
