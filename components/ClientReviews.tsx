@@ -111,7 +111,7 @@ export default function ClientReviews() {
         <div className="fade fade-bottom" />
       </div>
 
-      <style jsx>{`
+      <style>{`
         .testimonial-section{position:relative;overflow:hidden;content-visibility:auto;contain-intrinsic-size:720px;padding:96px 0 100px;background:radial-gradient(circle at 50% 18%,rgba(126,55,190,.12),transparent 29%),radial-gradient(circle at 50% 100%,rgba(92,34,160,.13),transparent 30%),#080a10;color:#fff}
         .testimonial-heading{position:relative;z-index:5;text-align:center;margin:0 auto 62px;padding:0 22px}
         .testimonial-kicker{display:flex;align-items:center;justify-content:center;gap:18px;color:#cf80ff;font-size:.72rem;font-weight:700;letter-spacing:.32em}
