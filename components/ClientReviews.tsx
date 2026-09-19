@@ -1,5 +1,3 @@
-"use client";
-
 const reviews = [
   { quote: "We stopped losing enquiries after hours. The AI handles the first conversation, captures what the guest needs, and gets the right request to our team without someone living inside WhatsApp.", name: "Ama M…..", role: "Hotel Operations", location: "Ghana" },
   { quote: "The biggest difference is response time. Prospects get answers immediately, and our agents receive qualified property enquiries instead of starting every conversation from zero.", name: "Thabo M…..", role: "Real Estate", location: "South Africa" },
@@ -114,7 +112,7 @@ export default function ClientReviews() {
       </div>
 
       <style jsx>{`
-        .testimonial-section{position:relative;overflow:hidden;padding:96px 0 100px;background:radial-gradient(circle at 50% 18%,rgba(126,55,190,.12),transparent 29%),radial-gradient(circle at 50% 100%,rgba(92,34,160,.13),transparent 30%),#080a10;color:#fff}
+        .testimonial-section{position:relative;overflow:hidden;content-visibility:auto;contain-intrinsic-size:720px;padding:96px 0 100px;background:radial-gradient(circle at 50% 18%,rgba(126,55,190,.12),transparent 29%),radial-gradient(circle at 50% 100%,rgba(92,34,160,.13),transparent 30%),#080a10;color:#fff}
         .testimonial-heading{position:relative;z-index:5;text-align:center;margin:0 auto 62px;padding:0 22px}
         .testimonial-kicker{display:flex;align-items:center;justify-content:center;gap:18px;color:#cf80ff;font-size:.72rem;font-weight:700;letter-spacing:.32em}
         .testimonial-kicker span{width:50px;height:1px;background:linear-gradient(90deg,transparent,#9b55d4)}
@@ -123,7 +121,7 @@ export default function ClientReviews() {
         .testimonial-heading h2 em{font-style:normal;background:linear-gradient(90deg,#d996ff,#9859e9);-webkit-background-clip:text;background-clip:text;color:transparent}
         .testimonial-heading p{margin:0;color:#b0b4c5;font-size:clamp(.98rem,1.5vw,1.18rem)}
         .testimonial-window{position:relative;width:100%;overflow:hidden;padding:18px 0 36px}
-        .testimonial-track{display:flex;width:max-content;gap:18px;animation:testimonial-scroll 82s linear infinite;will-change:transform}
+        .testimonial-track{display:flex;width:max-content;gap:18px;animation:testimonial-scroll 82s linear infinite}
         .testimonial-window:hover .testimonial-track{animation-play-state:paused}
         .testimonial-card{width:365px;min-height:455px;display:flex;flex-direction:column;flex-shrink:0;padding:32px 34px;border:1px solid rgba(118,121,139,.58);border-radius:26px;background:linear-gradient(145deg,rgba(25,27,37,.92),rgba(17,18,27,.78) 62%,rgba(50,29,69,.36));box-shadow:inset 0 1px rgba(255,255,255,.035),0 26px 70px rgba(0,0,0,.28);transition:transform .25s ease,border-color .25s ease}
         .testimonial-card:hover{transform:translateY(-5px);border-color:rgba(158,119,203,.72)}
