@@ -32,55 +32,57 @@ function PanelLabel({ icon, children }: { icon: ReactNode; children: ReactNode }
 
 export function HeroSystemVisual() {
   return (
-    <div className={styles.heroSystem} aria-label="Illustrative Maia buyer journey">
-      <div className={styles.heroSystemHead}>
-        <div>
-          <span>Live customer journey</span>
-          <strong>Maia · Real estate operating system</strong>
+    <div className={styles.heroShowcase} aria-label="Illustrative Maia real estate sales journey">
+      <div className={styles.heroAmbient} aria-hidden="true" />
+      <div className={styles.heroPhone}>
+        <div className={styles.phoneTop}>
+          <span className={styles.phoneBack}>‹</span>
+          <div className={styles.phoneIdentity}>
+            <div className={styles.phoneAvatar}>AM</div>
+            <div><strong>Alex Morgan</strong><span>online</span></div>
+          </div>
+          <span className={styles.phoneDots}>•••</span>
         </div>
-        <StatePill tone="green">Active</StatePill>
+        <div className={styles.phoneThread}>
+          <div className={styles.phoneIncoming}>Hi, is the 3-bedroom home still available?</div>
+          <div className={styles.phoneMaia}><b>Maia ✦</b><span>Yes, it is. I can show you matching options and schedule an inspection.</span></div>
+          <div className={styles.phoneIncoming}>I&apos;d like to see it. Can you send the details?</div>
+          <div className={styles.phoneProperty}>
+            <div className={styles.phonePropertyArt}><span>Property preview</span></div>
+            <strong>3 Bedroom Residence</strong>
+            <span>Matched to buyer preferences</span>
+            <button type="button" tabIndex={-1}>View property</button>
+          </div>
+        </div>
+        <div className={styles.phoneComposer}><span>Message…</span><span>＋</span></div>
       </div>
-      <div className={styles.heroSystemGrid}>
-        <section className={styles.chatPanel}>
-          <PanelLabel icon={<MessageSquareText size={14} />}>Customer conversation</PanelLabel>
-          <div className={styles.chatIdentity}>
-            <div className={styles.avatar}>AM</div>
-            <div><strong>Alex Morgan</strong><span>Launch campaign enquiry</span></div>
-          </div>
-          <div className={styles.bubbleCustomer}>I&apos;m interested in the new development. When does it launch?</div>
-          <div className={styles.bubbleMaia}>I can help with that. I&apos;ll keep your interest linked to this development and notify you when the approved launch details are available.</div>
-          <div className={styles.systemEvent}><CheckCircle2 size={13} /> Context saved to lead record</div>
-        </section>
-        <section className={styles.profilePanel}>
-          <PanelLabel icon={<Database size={14} />}>Lead intelligence</PanelLabel>
-          <div className={styles.profileHead}>
-            <div><strong>Alex Morgan</strong><span>Qualified prospect</span></div>
-            <StatePill>Warm</StatePill>
-          </div>
-          <dl className={styles.profileGrid}>
-            <div><dt>Source</dt><dd>Launch campaign</dd></div>
-            <div><dt>Interest</dt><dd>Upcoming development</dd></div>
-            <div><dt>Purpose</dt><dd>Investment</dd></div>
-            <div><dt>Timeline</dt><dd>3–6 months</dd></div>
+
+      <div className={styles.maiaCoreCard}>
+        <div className={styles.maiaOrb} aria-hidden="true" />
+        <strong>Maia AI</strong>
+        <span>Understands. Qualifies.<br/>Takes action.</span>
+        <ul>
+          <li><CheckCircle2 size={14}/> Captures enquiry</li>
+          <li><CheckCircle2 size={14}/> Qualifies buyer</li>
+          <li><CheckCircle2 size={14}/> Sends properties</li>
+          <li><CheckCircle2 size={14}/> Schedules inspection</li>
+          <li><CheckCircle2 size={14}/> Updates CRM</li>
+          <li><CheckCircle2 size={14}/> Notifies your team</li>
+        </ul>
+      </div>
+
+      <div className={styles.crmStack}>
+        <div className={styles.captureToast}><MessageSquareText size={15}/><span>Lead captured from WhatsApp</span></div>
+        <div className={styles.crmCard}>
+          <div className={styles.crmTitle}><div><span>Lead in CRM</span><strong>Alex Morgan</strong></div><StatePill tone="green">Qualified</StatePill></div>
+          <dl>
+            <div><dt>Source</dt><dd>Website / WhatsApp</dd></div>
+            <div><dt>Interest</dt><dd>3 Bedroom Residence</dd></div>
+            <div><dt>Timeline</dt><dd>Ready to inspect</dd></div>
+            <div><dt>Next action</dt><dd>Inspection booking</dd></div>
           </dl>
-          <div className={styles.nextAction}>
-            <Clock3 size={15} />
-            <div><span>Next action</span><strong>Send launch update when approved</strong></div>
-          </div>
-        </section>
-        <section className={styles.actionPanel}>
-          <PanelLabel icon={<Target size={14} />}>Recommended next step</PanelLabel>
-          <div className={styles.propertyThumb} aria-hidden="true">
-            <div className={styles.propertyGlow} />
-            <span>Property preview</span>
-          </div>
-          <div className={styles.propertyMeta}>
-            <span>Matching inventory</span>
-            <strong>2 suitable options available</strong>
-            <p>Maia can surface configured property information and move Alex toward a viewing when intent increases.</p>
-          </div>
-          <div className={styles.actionStrip}><CalendarCheck2 size={14} /> Viewing workflow ready</div>
-        </section>
+        </div>
+        <div className={styles.inspectionCard}><CalendarCheck2 size={18}/><div><strong>Inspection booked</strong><span>Friday · 10:00 AM</span></div></div>
       </div>
     </div>
   );
