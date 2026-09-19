@@ -10,7 +10,6 @@ import {
   FollowUpVisual,
   FutureOpportunityVisual,
   HandoffVisual,
-  HeroSystemVisual,
   InstallmentVisual,
   LaunchCampaignVisual,
   LongTermNurtureVisual,
@@ -64,32 +63,6 @@ function ChapterHeading({
 export default function MaiaCaseStudyPage() {
   return (
     <main className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroGlow} />
-        <div className={styles.shell}>
-          <div className={styles.heroGrid}>
-            <div className={styles.heroCopy}>
-              <span className={styles.eyebrow}>Case study · Maia for real estate</span>
-              <h1>From property interest <span>to booked inspection.</span></h1>
-              <p>Maia captures enquiries, qualifies buyers, follows up automatically, recommends relevant properties, books inspections, updates your CRM and hands serious prospects to your team with the full conversation history.</p>
-              <div className={styles.actions}>
-                <a className={styles.primary} href="#story">See the journey <ArrowRight size={17} /></a>
-                <a className={styles.secondary} href="#system">See Maia workflow</a>
-              </div>
-              <div className={styles.heroBenefits}>
-                <span><CheckCircle2 size={14} /> 24/7 first response</span>
-                <span><CheckCircle2 size={14} /> Lead qualification</span>
-                <span><CheckCircle2 size={14} /> CRM sync</span>
-                <span><CheckCircle2 size={14} /> Follow-up automation</span>
-                <span><CheckCircle2 size={14} /> Human handoff</span>
-              </div>
-              <p className={styles.demoNote}>Illustrative buyer journey. Product capabilities shown only where configured and supported by the connected business data.</p>
-            </div>
-            <HeroSystemVisual />
-          </div>
-        </div>
-      </section>
-
       <section className={styles.chapterRail} id="story">
         <div className={styles.shell}>
           <div className={styles.chapterRailGrid}>
