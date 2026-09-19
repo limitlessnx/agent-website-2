@@ -21,7 +21,7 @@ const industryMeta = [
 
 const AUTOPLAY_MS = 3000;
 const INTERACTION_PAUSE_MS = 3600;
-const CLONES = 2;
+const CLONES = 1;
 
 export default function IndustryCarousel() {
   const industries = useMemo(() => {
@@ -35,6 +35,7 @@ export default function IndustryCarousel() {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const pausedUntil = useRef(0);
   const visibleRef = useRef(false);
+  const activeRef = useRef(0);
   const scrollTimerRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
 
@@ -63,6 +64,7 @@ export default function IndustryCarousel() {
   const goTo = (logicalIndex: number) => {
     pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
     const normalized = (logicalIndex + industries.length) % industries.length;
+    activeRef.current = normalized;
     setActive(normalized);
     const currentRendered = CLONES + active;
     let targetRendered = CLONES + normalized;
@@ -75,10 +77,10 @@ export default function IndustryCarousel() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => {
       if (!visibleRef.current || document.hidden || Date.now() < pausedUntil.current) return;
-      goTo(active + 1);
+      goTo(activeRef.current + 1);
     }, AUTOPLAY_MS);
     return () => window.clearInterval(timer);
-  }, [active, industries.length]);
+  }, [industries.length]);
 
   useEffect(() => () => { if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current); }, []);
 
@@ -97,6 +99,7 @@ export default function IndustryCarousel() {
         if (nextDistance < distance) { distance = nextDistance; closest = index; }
       });
       const logical = (closest - CLONES + industries.length) % industries.length;
+      activeRef.current = logical;
       setActive(logical);
       if (closest < CLONES) requestAnimationFrame(() => centerRendered(closest + industries.length, "auto"));
       else if (closest >= CLONES + industries.length) requestAnimationFrame(() => centerRendered(closest - industries.length, "auto"));
