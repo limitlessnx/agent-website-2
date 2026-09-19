@@ -36,7 +36,7 @@ function money(currency: "NGN" | "USD", amount: number) {
   }).format(amount);
 }
 
-export default function HomePricingOverview({ plans }: { plans: PricingCarouselPlan[] }) {
+export default function HomePricingOverview({ plans }: { plans: Array<Omit<PricingCarouselPlan, "icon">> }) {
   const [term, setTerm] = useState<BillingTerm>("monthly");
   const trackRef = useRef<HTMLDivElement>(null);
   const { prices, currency, canViewInternational, viewingInternational, showInternational, showNigeria } = usePublicPricing();
