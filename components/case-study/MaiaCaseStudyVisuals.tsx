@@ -42,7 +42,7 @@ export function MarketingLeakVisual() {
               src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/5a9cd5a8-6b6a-4921-b19f-954c506d15d7.jpg"
               alt="Prospect viewing a Maia property recommendation during a property launch campaign."
               className={styles.campaignContextImage}
-              loading="lazy"
+              loading="eager"
               decoding="async"
               referrerPolicy="no-referrer"
             />
@@ -204,7 +204,7 @@ export function LaunchCampaignVisual() {
   return (
     <div className={styles.launchCampaignImageFrame}>
       <img
-        src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/dda57b32-bb9c-4322-8ccb-f367731b3702.jpg"
+        src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/dda57b32-bb9c-4322-8ccb-f367731b3702.jpg?v=20260919-2"
         alt="Property launch campaign visual showing social engagement, comments and buyer interest around a real estate launch."
         className={styles.launchCampaignImage}
         loading="lazy"
