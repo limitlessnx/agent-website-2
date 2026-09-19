@@ -10,7 +10,6 @@ import {
   FollowUpVisual,
   FutureOpportunityVisual,
   HandoffVisual,
-  HeroSystemVisual,
   InstallmentVisual,
   LaunchCampaignVisual,
   LongTermNurtureVisual,
@@ -23,6 +22,7 @@ import {
 import styles from "./page.module.css";
 
 const description = "See how Maia connects real-estate marketing, customer conversations, CRM, follow-up, property discovery, viewing workflows and human handoff in one operating system.";
+
 
 export const metadata: Metadata = {
   title: "Maia Real Estate Operating System | Fluxknight",
@@ -63,30 +63,6 @@ function ChapterHeading({
 export default function MaiaCaseStudyPage() {
   return (
     <main className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroGlow} />
-        <div className={styles.shell}>
-          <div className={styles.heroGrid}>
-            <div className={styles.heroCopy}>
-              <span className={styles.eyebrow}>Case study · Maia for real estate</span>
-              <h1>From property interest <span>to organized action.</span></h1>
-              <p>Maia connects marketing, customer conversations, CRM, follow-up, property discovery, viewing workflows and human handoff so the sales team does not have to manually rebuild the same customer journey every day.</p>
-              <div className={styles.actions}>
-                <Link className={styles.primary} href="/pricing">See pricing <ArrowRight size={17} /></Link>
-                <a className={styles.secondary} href="#story">See the journey</a>
-              </div>
-              <div className={styles.heroBenefits}>
-                <span><CheckCircle2 size={14} /> 24/7 first response</span>
-                <span><CheckCircle2 size={14} /> Context stored in CRM</span>
-                <span><CheckCircle2 size={14} /> Human handoff with history</span>
-              </div>
-              <p className={styles.demoNote}>Illustrative buyer journey. Product capabilities shown only where configured and supported by the connected business data.</p>
-            </div>
-            <HeroSystemVisual />
-          </div>
-        </div>
-      </section>
-
       <section className={styles.chapterRail} id="story">
         <div className={styles.shell}>
           <div className={styles.chapterRailGrid}>
@@ -103,6 +79,16 @@ export default function MaiaCaseStudyPage() {
 
       <section className={styles.storySection}>
         <div className={styles.shell}>
+          <div className={styles.attentionRevenueVisual}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e6892ebc-a728-4ea9-af14-c0ff00014c05.jpg"
+              alt="Fluxknight visual showing social media, WhatsApp, website chat and email leads flowing through Fluxknight into an organized sales pipeline."
+              className={styles.attentionRevenueImage}
+              loading="eager"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <div className={styles.problemIntro}>
             <span className={styles.eyebrow}>The leak</span>
             <h2>Marketing creates attention. Most businesses lose what happens next.</h2>
