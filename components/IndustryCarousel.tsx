@@ -165,11 +165,9 @@ export default function IndustryCarousel() {
         </div>
 
         <div className={styles.mobileNav} aria-label="Industry carousel navigation">
-          <button className="flux-carousel-arrow" type="button" onClick={() => goTo(active - 1)} aria-label="Previous industry"><ArrowLeft size={19} /></button>
           <div className={`${styles.dots} flux-carousel-segments`}>
             {industries.map((item, index) => <button key={item.id} type="button" className={`${index === active ? styles.dotActive : styles.dot} flux-carousel-segment ${index === active ? "is-active" : ""}`} onClick={() => goTo(index)} aria-label={`Show ${item.title}`} aria-pressed={index === active} />)}
           </div>
-          <button className="flux-carousel-arrow" type="button" onClick={() => goTo(active + 1)} aria-label="Next industry"><ArrowRight size={19} /></button>
         </div>
         <Link href="/industries" className={`${styles.allIndustries} flux-metal-cta`}>See All Industries <ArrowRight size={18} /></Link>
       </div>
