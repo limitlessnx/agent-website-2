@@ -112,3 +112,21 @@
   .heroBenefits span{font-size:.44rem;line-height:1.25}
   .heroBenefits svg{width:15px;height:15px}
 }
+
+/* Restored original text-only case study header */
+.heroTextOnly{position:relative;z-index:1;max-width:760px}
+.heroTextOnly .heroCopy{max-width:760px}
+.heroTextOnly .heroCopy h1{max-width:760px}
+.heroTextOnly .heroCopy>p{max-width:700px}
+.heroTextOnly .heroBenefits{max-width:680px;display:grid;grid-template-columns:1fr;gap:12px;margin-top:30px;padding-top:0;border-top:0}
+.heroTextOnly .heroBenefits span{min-height:58px;display:flex;align-items:center;gap:10px;padding:0 18px;border:1px solid rgba(180,139,255,.15);border-radius:14px;background:rgba(255,255,255,.018);color:#c8bdd1;font-size:.76rem;font-weight:760}
+.heroTextOnly .heroBenefits span+span{padding-left:18px;border-left:1px solid rgba(180,139,255,.15)}
+.heroTextOnly .heroBenefits svg{width:16px;height:16px}
+@media(max-width:760px){
+  .heroTextOnly{max-width:none}
+  .heroTextOnly .heroCopy h1{font-size:clamp(3rem,14vw,4.4rem);line-height:.92}
+  .heroTextOnly .actions{grid-template-columns:1fr}
+  .heroTextOnly .heroBenefits{grid-template-columns:1fr;gap:12px}
+  .heroTextOnly .heroBenefits span{min-height:58px;font-size:.76rem;padding:0 18px}
+  .heroTextOnly .heroBenefits span+span{padding-left:18px}
+}
