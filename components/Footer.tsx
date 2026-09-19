@@ -5,7 +5,7 @@ import styles from "@/components/Footer.module.css";
 
 const groups = [
   { title: "Services", links: [["AI Sales Agent", "/services#ai-sales-agent"], ["WhatsApp AI", "/services#whatsapp"], ["AI Voice Agent", "/services#voice"], ["Lead Generation", "/services#lead-generation"], ["CRM Automation", "/services#crm"]] },
-  { title: "Company", links: [["About", "/about"], ["Case Studies", "/case-studies"], ["Pricing", "/pricing"], ["Book a Demo", "/evaluation"], ["Login", "/account/login"]] },
+  { title: "Company", links: [["About", "/about"], ["Case Studies", "/case-studies"], ["Pricing", "/pricing"], ["Start Free Trial", "/account/signup?trial=basic&next=%2Fportal"], ["Login", "/account/login"]] },
   { title: "Industries", links: [["Real Estate", "/industries#real-estate"], ["Hospitality", "/industries#hotels"], ["Clinics", "/industries#clinics"], ["E-commerce", "/industries#ecommerce"], ["Professional Services", "/industries#professional-services"]] },
 ];
 
