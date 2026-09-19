@@ -70,16 +70,18 @@ export default function MaiaCaseStudyPage() {
           <div className={styles.heroGrid}>
             <div className={styles.heroCopy}>
               <span className={styles.eyebrow}>Case study · Maia for real estate</span>
-              <h1>From property interest <span>to organized action.</span></h1>
-              <p>Maia connects marketing, customer conversations, CRM, follow-up, property discovery, viewing workflows and human handoff so the sales team does not have to manually rebuild the same customer journey every day.</p>
+              <h1>From property interest <span>to booked inspection.</span></h1>
+              <p>Maia captures enquiries, qualifies buyers, follows up automatically, recommends relevant properties, books inspections, updates your CRM and hands serious prospects to your team with the full conversation history.</p>
               <div className={styles.actions}>
-                <Link className={styles.primary} href="/pricing">See pricing <ArrowRight size={17} /></Link>
-                <a className={styles.secondary} href="#story">See the journey</a>
+                <a className={styles.primary} href="#story">See the journey <ArrowRight size={17} /></a>
+                <a className={styles.secondary} href="#system">See Maia workflow</a>
               </div>
               <div className={styles.heroBenefits}>
                 <span><CheckCircle2 size={14} /> 24/7 first response</span>
-                <span><CheckCircle2 size={14} /> Context stored in CRM</span>
-                <span><CheckCircle2 size={14} /> Human handoff with history</span>
+                <span><CheckCircle2 size={14} /> Lead qualification</span>
+                <span><CheckCircle2 size={14} /> CRM sync</span>
+                <span><CheckCircle2 size={14} /> Follow-up automation</span>
+                <span><CheckCircle2 size={14} /> Human handoff</span>
               </div>
               <p className={styles.demoNote}>Illustrative buyer journey. Product capabilities shown only where configured and supported by the connected business data.</p>
             </div>
