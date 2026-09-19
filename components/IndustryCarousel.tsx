@@ -38,13 +38,20 @@ export default function IndustryCarousel() {
   const activeRef = useRef(0);
   const scrollTimerRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
 
   const centerRendered = (renderedIndex: number, behavior: ScrollBehavior = "smooth") => {
     const track = trackRef.current;
     if (!track) return;
     const card = track.children[renderedIndex] as HTMLElement | undefined;
     if (!card) return;
+
+    programmaticScrollRef.current = true;
     track.scrollTo({ left: card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2, behavior });
+
+    window.setTimeout(() => {
+      programmaticScrollRef.current = false;
+    }, behavior === "smooth" ? 420 : 0);
   };
 
   useEffect(() => {
@@ -61,15 +68,24 @@ export default function IndustryCarousel() {
     requestAnimationFrame(() => centerRendered(CLONES, "auto"));
   }, []);
 
-  const goTo = (logicalIndex: number) => {
-    pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+  const goTo = (logicalIndex: number, userInitiated = true) => {
+    if (userInitiated) pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+
+    const currentActive = activeRef.current;
     const normalized = (logicalIndex + industries.length) % industries.length;
+
+    let targetRendered = CLONES + normalized;
+    const currentRendered = CLONES + currentActive;
+
+    // Move through the edge clone instead of visibly scrolling back to the start/end.
+    if (currentActive === industries.length - 1 && normalized === 0) {
+      targetRendered = currentRendered + 1;
+    } else if (currentActive === 0 && normalized === industries.length - 1) {
+      targetRendered = currentRendered - 1;
+    }
+
     activeRef.current = normalized;
     setActive(normalized);
-    const currentRendered = CLONES + active;
-    let targetRendered = CLONES + normalized;
-    if (active === industries.length - 1 && normalized === 0) targetRendered = currentRendered + 1;
-    if (active === 0 && normalized === industries.length - 1) targetRendered = currentRendered - 1;
     centerRendered(targetRendered);
   };
 
@@ -77,7 +93,7 @@ export default function IndustryCarousel() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => {
       if (!visibleRef.current || document.hidden || Date.now() < pausedUntil.current) return;
-      goTo(activeRef.current + 1);
+      goTo(activeRef.current + 1, false);
     }, AUTOPLAY_MS);
     return () => window.clearInterval(timer);
   }, [industries.length]);
@@ -85,7 +101,9 @@ export default function IndustryCarousel() {
   useEffect(() => () => { if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current); }, []);
 
   const syncActiveFromScroll = () => {
-    pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+    if (!programmaticScrollRef.current) {
+      pausedUntil.current = Date.now() + INTERACTION_PAUSE_MS;
+    }
     if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
     scrollTimerRef.current = window.setTimeout(() => {
       const track = trackRef.current;
@@ -101,8 +119,11 @@ export default function IndustryCarousel() {
       const logical = (closest - CLONES + industries.length) % industries.length;
       activeRef.current = logical;
       setActive(logical);
-      if (closest < CLONES) requestAnimationFrame(() => centerRendered(closest + industries.length, "auto"));
-      else if (closest >= CLONES + industries.length) requestAnimationFrame(() => centerRendered(closest - industries.length, "auto"));
+      if (closest < CLONES) {
+        requestAnimationFrame(() => centerRendered(closest + industries.length, "auto"));
+      } else if (closest >= CLONES + industries.length) {
+        requestAnimationFrame(() => centerRendered(closest - industries.length, "auto"));
+      }
     }, 70);
   };
 
