@@ -69,6 +69,7 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
   const manualStopRef = useRef(false);
   const transcriptKeysRef = useRef(new Set<string>());
   const processedToolCallIdsRef = useRef(new Set<string>());
+  const inFlightToolSignaturesRef = useRef(new Set<string>());
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { onCallEndedRef.current = onCallEnded; }, [onCallEnded]);
@@ -158,6 +159,13 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     }
     let args: Record<string, unknown> = {};
     try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
+    const signature = `${event.name}:${event.arguments || "{}"}`;
+    if (inFlightToolSignaturesRef.current.has(signature)) {
+      reportLifecycle("error", { source: "leo_tool", code: "DUPLICATE_TOOL_IN_FLIGHT", call_id: event.call_id, tool_name: event.name });
+      sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ ok: false, error: "This operation is already in progress. Wait for its result before retrying." }) } });
+      return;
+    }
+    inFlightToolSignaturesRef.current.add(signature);
     let output: Record<string, unknown>;
     try {
       if (event.name === "leo_manage_task") {
@@ -171,6 +179,18 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       }
     } catch (cause) {
       output = { ok: false, error: cause instanceof Error ? cause.message : "Leo operation failed." };
+    } finally {
+      inFlightToolSignaturesRef.current.delete(signature);
+    }
+    if (output.ok === false) {
+      reportLifecycle("error", {
+        source: "leo_tool",
+        code: String(output.error_code || "TOOL_EXECUTION_FAILED"),
+        message: String(output.error || "Leo tool execution failed."),
+        call_id: event.call_id,
+        tool_name: event.name,
+        tool_key: String(args.tool_key || ""),
+      });
     }
     sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify(output) } });
     sendEvent({ type: "response.create" });
@@ -182,6 +202,7 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     manualStopRef.current = false;
     transcriptKeysRef.current.clear();
     processedToolCallIdsRef.current.clear();
+    inFlightToolSignaturesRef.current.clear();
     clearDisconnectTimer();
     setState("connecting"); setError(""); setMuted(false);
     try {
