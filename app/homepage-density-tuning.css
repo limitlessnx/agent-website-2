@@ -1,0 +1,240 @@
+/* Homepage spacing + typography refinement.
+   Scoped to the public homepage. Pricing and testimonials intentionally excluded. */
+
+/* Hero: preserve the composition, reduce excessive vertical mass. */
+.quantix-home > section:first-of-type > div.relative.z-10 {
+  min-height: 78vh !important;
+  gap: 2rem !important;
+  padding-top: 6.75rem !important;
+  padding-bottom: 6.5rem !important;
+}
+.quantix-home > section:first-of-type h1 {
+  font-size: clamp(3.6rem, 4.75vw, 4.25rem) !important;
+  line-height: 1.06 !important;
+  letter-spacing: -.035em !important;
+}
+.quantix-home > section:first-of-type h1 + p {
+  max-width: 31rem !important;
+  font-size: 1.04rem !important;
+  line-height: 1.68 !important;
+}
+
+/* Maia teaser: only tune type/spacing, do not alter its visual/story content. */
+#maia-case-study {
+  padding-top: 2rem !important;
+  padding-bottom: 1.75rem !important;
+}
+#maia-case-study h2 {
+  font-size: clamp(2.55rem, 3.6vw, 3.5rem) !important;
+  line-height: 1.01 !important;
+  letter-spacing: -.045em !important;
+}
+
+/* Connected operations section. */
+#services {
+  padding-top: 4rem !important;
+  padding-bottom: 4rem !important;
+}
+#services > div {
+  padding-top: 2.5rem !important;
+  padding-bottom: 2.5rem !important;
+}
+#services h2 {
+  font-size: clamp(2.45rem, 3.6vw, 3.35rem) !important;
+  line-height: 1 !important;
+  letter-spacing: -.045em !important;
+}
+#services h2 + p {
+  font-size: .98rem !important;
+  line-height: 1.62 !important;
+}
+
+/* Industries: retain the carousel, reduce oversized section/card scale. */
+#industries {
+  padding-top: 5.5rem !important;
+  padding-bottom: 6rem !important;
+}
+#industries h2 {
+  font-size: clamp(2.5rem, 4.2vw, 3.65rem) !important;
+  line-height: .99 !important;
+  letter-spacing: -.045em !important;
+}
+#industries article {
+  min-height: 490px !important;
+}
+#industries article h3 {
+  font-size: clamp(1.75rem, 2.1vw, 2.15rem) !important;
+}
+
+/* Final evaluation: compress the ending without changing content or CTA. */
+#evaluation-journey {
+  padding-top: 5rem !important;
+  padding-bottom: 5.5rem !important;
+}
+#evaluation-journey .evaluation-conversion-card--image {
+  padding: clamp(2rem, 3.5vw, 3rem) !important;
+  column-gap: clamp(2rem, 4vw, 3.5rem) !important;
+  row-gap: 1.4rem !important;
+}
+#evaluation-journey .evaluation-conversion-copy h3 {
+  margin-top: .7rem !important;
+  margin-bottom: .9rem !important;
+  font-size: clamp(2rem, 2.8vw, 2.75rem) !important;
+  line-height: 1.08 !important;
+}
+#evaluation-journey .evaluation-conversion-copy p {
+  font-size: 1rem !important;
+  line-height: 1.62 !important;
+}
+#evaluation-journey .evaluation-workflow-artwork {
+  max-width: 610px !important;
+}
+
+@media (max-width: 1023px) {
+  .quantix-home > section:first-of-type > div.relative.z-10 {
+    min-height: auto !important;
+    gap: 2rem !important;
+    padding-top: 6rem !important;
+    padding-bottom: 5rem !important;
+  }
+  .quantix-home > section:first-of-type h1 {
+    font-size: clamp(3rem, 7vw, 3.35rem) !important;
+    line-height: 1.06 !important;
+  }
+  .quantix-home > section:first-of-type > div.relative.z-10 > div:last-child {
+    width: min(100%, 680px) !important;
+    margin-inline: auto !important;
+  }
+
+  #maia-case-study h2 {
+    font-size: clamp(2.35rem, 6.4vw, 3rem) !important;
+  }
+
+  #services {
+    padding-top: 3.5rem !important;
+    padding-bottom: 3.5rem !important;
+  }
+  #services > div {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  #services h2 {
+    font-size: clamp(2.25rem, 6vw, 3rem) !important;
+  }
+
+  #industries {
+    padding-top: 4.5rem !important;
+    padding-bottom: 5rem !important;
+  }
+
+  #evaluation-journey {
+    padding-top: 4.25rem !important;
+    padding-bottom: 4.5rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .quantix-home > section:first-of-type > div.relative.z-10 {
+    gap: 1.8rem !important;
+    padding-top: 5.35rem !important;
+    padding-bottom: 4.5rem !important;
+  }
+  .quantix-home > section:first-of-type > div.relative.z-10 > div:first-child {
+    gap: 1.15rem !important;
+  }
+  .quantix-home > section:first-of-type h1 {
+    font-size: clamp(2.45rem, 10.3vw, 2.65rem) !important;
+    line-height: 1.06 !important;
+    letter-spacing: -.03em !important;
+  }
+  .quantix-home > section:first-of-type h1 + p {
+    max-width: 34rem !important;
+    font-size: .98rem !important;
+    line-height: 1.58 !important;
+  }
+
+  #maia-case-study {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+  #maia-case-study h2 {
+    font-size: clamp(2.05rem, 8.3vw, 2.3rem) !important;
+    line-height: 1.02 !important;
+  }
+
+  #services {
+    padding: 1.75rem .75rem !important;
+  }
+  #services > div {
+    padding-top: 1.2rem !important;
+    padding-bottom: 1.2rem !important;
+  }
+  #services h2 {
+    margin-top: .85rem !important;
+    margin-bottom: .65rem !important;
+    font-size: clamp(2rem, 8vw, 2.2rem) !important;
+    line-height: 1 !important;
+  }
+  #services h2 + p {
+    font-size: .82rem !important;
+    line-height: 1.5 !important;
+  }
+
+  #industries {
+    padding-top: 3.5rem !important;
+    padding-bottom: 4rem !important;
+  }
+  #industries h2 {
+    font-size: clamp(2.05rem, 8.7vw, 2.3rem) !important;
+    line-height: 1 !important;
+  }
+  #industries article {
+    min-height: 465px !important;
+  }
+  #industries article h3 {
+    font-size: clamp(1.72rem, 7.4vw, 2rem) !important;
+  }
+
+  #evaluation-journey {
+    padding-top: 3.5rem !important;
+    padding-bottom: 4rem !important;
+  }
+  #evaluation-journey .evaluation-conversion-card--image {
+    padding: 1.35rem 1.1rem 1.25rem !important;
+    gap: 1.15rem !important;
+  }
+  #evaluation-journey .evaluation-conversion-copy h3 {
+    margin: .65rem 0 .75rem !important;
+    font-size: clamp(1.9rem, 7.7vw, 2.05rem) !important;
+    line-height: 1.08 !important;
+  }
+  #evaluation-journey .evaluation-conversion-copy p {
+    font-size: .94rem !important;
+    line-height: 1.56 !important;
+  }
+  #evaluation-journey .evaluation-workflow-artwork {
+    width: min(100%, 520px) !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .quantix-home > section:first-of-type > div.relative.z-10 {
+    padding-top: 5rem !important;
+    padding-bottom: 4.1rem !important;
+  }
+  .quantix-home > section:first-of-type h1 {
+    font-size: 2.4rem !important;
+  }
+  #maia-case-study h2 {
+    font-size: 2rem !important;
+  }
+  #services h2 {
+    font-size: 1.98rem !important;
+  }
+  #industries h2 {
+    font-size: 2.05rem !important;
+  }
+  #evaluation-journey .evaluation-conversion-copy h3 {
+    font-size: 1.9rem !important;
+  }
+}
