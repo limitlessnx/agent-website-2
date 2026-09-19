@@ -130,3 +130,12 @@
   .heroTextOnly .heroBenefits span{min-height:58px;font-size:.76rem;padding:0 18px}
   .heroTextOnly .heroBenefits span+span{padding-left:18px}
 }
+
+/* Maia journey visual */
+.journeyVisualSection{padding:56px 0 64px;border-bottom:1px solid rgba(168,85,247,.10);background:#07040d}
+.journeyVisualFrame{width:min(940px,88%);margin:0 auto;overflow:hidden;border-radius:30px;border:1px solid rgba(180,139,255,.16);background:#06020d;box-shadow:0 26px 80px rgba(15,4,31,.34)}
+.journeyVisualImage{display:block;width:100%;height:auto;object-fit:contain}
+@media(max-width:760px){
+  .journeyVisualSection{padding:32px 0 42px}
+  .journeyVisualFrame{width:100%;border-radius:22px}
+}
