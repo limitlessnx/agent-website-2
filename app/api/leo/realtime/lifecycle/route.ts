@@ -5,7 +5,7 @@ import { auditLeoEvent, getOrCreateLeoSession } from "@/lib/leo-session-store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED_EVENTS = new Set(["connected", "canceled", "ended", "dropped", "backgrounded", "resumed"]);
+const ALLOWED_EVENTS = new Set(["connected", "canceled", "ended", "dropped", "backgrounded", "resumed", "error"]);
 
 export async function POST(request: NextRequest) {
   const identity = await resolveLeoIdentity({ channel: "voice", allowPublic: true });
