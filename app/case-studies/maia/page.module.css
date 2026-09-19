@@ -71,3 +71,44 @@
 }
 
 .attentionRevenueVisual{position:relative;width:100%;margin:0 0 30px;overflow:hidden;border-radius:28px;border:1px solid rgba(180,139,255,.16);background:#03000a;box-shadow:0 28px 72px rgba(12,4,28,.34)}.attentionRevenueImage{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}@media(max-width:760px){.attentionRevenueVisual{margin-bottom:22px;border-radius:20px}.attentionRevenueImage{aspect-ratio:16/9}}
+
+/* TasteSkill hero refinement */
+.hero{padding:clamp(118px,10vw,154px) 0 54px;background:radial-gradient(circle at 78% 26%,rgba(126,34,206,.13),transparent 30%),#03000a}
+.heroGlow{right:8%;top:20%;width:42vw;height:42vw;filter:blur(54px);opacity:.7}
+.heroGrid{grid-template-columns:minmax(390px,.82fr) minmax(0,1.18fr);gap:30px;align-items:center}
+.heroCopy{max-width:610px;padding-bottom:10px}
+.heroCopy h1{max-width:590px;margin:20px 0 22px;font-size:clamp(3.35rem,5.15vw,5.35rem);line-height:.91;letter-spacing:-.058em}
+.heroCopy>p{max-width:560px;color:#a79caf;font-size:1rem;line-height:1.7}
+.actions{gap:12px;margin-top:30px}.primary,.secondary{min-height:52px;padding:0 22px}
+.heroBenefits{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin-top:34px;padding-top:21px;border-top:1px solid rgba(180,139,255,.13)}
+.heroBenefits span{min-width:0;display:grid;justify-items:start;gap:7px;padding:0 12px 0 0;border:0;border-radius:0;background:none;color:#a99db3;font-size:.57rem;line-height:1.35;font-weight:720}
+.heroBenefits span+span{padding-left:12px;border-left:1px solid rgba(180,139,255,.11)}
+.heroBenefits svg{width:17px;height:17px;color:#c084fc}
+.demoNote{max-width:520px;margin-top:15px!important}
+
+@media(max-width:1080px){
+  .heroGrid{grid-template-columns:1fr;gap:32px}
+  .heroCopy{max-width:760px}
+  .heroCopy h1{max-width:760px}
+  .heroCopy>p{max-width:680px}
+  .heroBenefits{max-width:760px}
+}
+@media(max-width:760px){
+  .hero{padding-top:102px;padding-bottom:46px}
+  .heroGrid{gap:24px}
+  .heroCopy h1{max-width:620px;font-size:clamp(3rem,13.7vw,4.35rem);line-height:.92}
+  .heroCopy>p{font-size:.93rem;line-height:1.62}
+  .actions{grid-template-columns:1fr 1fr;margin-top:24px}
+  .heroBenefits{grid-template-columns:repeat(5,1fr);margin-top:26px;padding-top:18px}
+  .heroBenefits span{padding:0 7px 0 0;font-size:.5rem}
+  .heroBenefits span+span{padding-left:7px}
+}
+@media(max-width:520px){
+  .hero{padding-top:92px}
+  .heroCopy h1{font-size:clamp(2.85rem,14vw,3.7rem)}
+  .actions{grid-template-columns:1fr 1fr}
+  .primary,.secondary{min-height:48px;padding:0 13px;font-size:.74rem}
+  .heroBenefits{grid-template-columns:repeat(5,1fr);overflow:visible}
+  .heroBenefits span{font-size:.44rem;line-height:1.25}
+  .heroBenefits svg{width:15px;height:15px}
+}
