@@ -3,14 +3,69 @@
 @media(max-width:640px){.section{padding:34px 12px}.frame{padding:22px 13px 22px;gap:18px;border-radius:18px}.eyebrow{min-height:27px;padding:5px 10px;font-size:.58rem;letter-spacing:.075em}.copy h2{margin:16px 0 12px;font-size:clamp(1.95rem,9.3vw,2.55rem);line-height:.99;letter-spacing:-.05em}.copy>p{max-width:340px;font-size:.82rem;line-height:1.5}.journey{width:100%;min-height:508px;margin:0;overflow:visible}.desktopConnector{display:none}.mobileConnector{display:block;left:0;top:0;width:100%;height:500px}.mobileConnector path{stroke-width:2}.step{width:72%;min-height:62px}.step1{top:7px;left:25%;right:auto}.step2{top:89px;left:8%;right:auto}.step3{top:171px;left:25%;right:auto}.step4{top:253px;left:8%;right:auto}.step5{top:335px;left:25%;right:auto}.step6{top:417px;left:8%;right:auto}.number,.step2 .number,.step4 .number,.step6 .number{left:-48px;top:50%;font-size:1.08rem;font-weight:850;letter-spacing:-.04em}.node{left:-25px;width:14px;height:14px;border-width:1.5px}.node span{width:5px;height:5px}.card{min-height:61px;padding:8px 10px 8px 56px;border-radius:999px}.iconWrap{left:2px;width:48px;height:48px;border-width:4px;box-shadow:0 0 0 3px rgba(var(--tone-rgb),.14),0 6px 16px rgba(0,0,0,.32),0 0 18px rgba(var(--tone-rgb),.22)}.iconCore{width:31px;height:31px}.iconCore svg{width:17px;height:17px}.cardCopy h3{margin:0 0 3px;font-size:.78rem;font-weight:800;letter-spacing:-.015em;line-height:1.08}.cardCopy p{max-width:none;font-size:.59rem;letter-spacing:-.005em;line-height:1.28}.signature{right:7%;bottom:0;font-size:.72rem;line-height:1.02}.stackedAction{width:100%;min-height:64px;margin:2px auto 0;padding:8px 12px;gap:10px}.stackedAction .playMark{width:41px;height:41px;flex-basis:41px}.stackedAction .playMark span{border-top-width:6px;border-bottom-width:6px;border-left-width:9px}.stackedAction .actionCopy{gap:2px}.stackedAction .actionCopy strong{font-size:.84rem;letter-spacing:-.01em}.stackedAction .actionCopy small{font-size:.61rem}.stackedAction .actionArrow{width:17px;height:17px}}
 @media(max-width:390px){.frame{padding-inline:11px}.journey{min-height:500px}.step{width:73%}.step1,.step3,.step5{left:24%}.step2,.step4,.step6{left:7%}.number,.step2 .number,.step4 .number,.step6 .number{left:-44px;font-size:1rem}.node{left:-23px}.card{padding-left:53px;padding-right:8px}.iconWrap{width:45px;height:45px}.cardCopy h3{font-size:.74rem}.cardCopy p{font-size:.56rem}.signature{right:6%;font-size:.69rem}.stackedAction{padding-inline:10px}.stackedAction .actionCopy strong{font-size:.8rem}}
 @media(prefers-reduced-motion:reduce){.actionLink{transition:none}}
-/* Keep mobile journey numbering safely inside the frame while preserving the stagger. */
+
+/* Mobile journey composition: dedicated number rail + staggered cards.
+   Numbers are anchored to the journey, not to each card, so the rail stays visually stable. */
 @media(max-width:640px){
-  .step1,.step3,.step5{left:27%;right:auto}
-  .step2,.step4,.step6{left:14%;right:auto}
-  .number,.step2 .number,.step4 .number,.step6 .number{left:-42px}
+  .journey{position:relative}
+
+  .step,
+  .step1,.step2,.step3,.step4,.step5,.step6{
+    left:0!important;
+    right:auto!important;
+    width:100%!important;
+  }
+
+  .step1{top:7px}
+  .step2{top:89px}
+  .step3{top:171px}
+  .step4{top:253px}
+  .step5{top:335px}
+  .step6{top:417px}
+
+  .step1 .card,.step3 .card,.step5 .card{
+    width:73%;
+    margin-left:27%;
+  }
+
+  .step2 .card,.step4 .card,.step6 .card{
+    width:78%;
+    margin-left:14%;
+  }
+
+  .number,
+  .step2 .number,.step4 .number,.step6 .number{
+    left:8px!important;
+    top:50%;
+    width:34px;
+    transform:translateY(-50%);
+    text-align:right;
+    font-size:1.02rem;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-.035em;
+  }
+
+  /* The icon already acts as the visual node on mobile. Removing the extra ring
+     prevents the stage number from visually reading as 010 / 020 / 030. */
+  .node{display:none!important}
 }
+
 @media(max-width:390px){
-  .step1,.step3,.step5{left:27%}
-  .step2,.step4,.step6{left:14%}
-  .number,.step2 .number,.step4 .number,.step6 .number{left:-40px}
+  .step1 .card,.step3 .card,.step5 .card{
+    width:74%;
+    margin-left:26%;
+  }
+
+  .step2 .card,.step4 .card,.step6 .card{
+    width:79%;
+    margin-left:14%;
+  }
+
+  .number,
+  .step2 .number,.step4 .number,.step6 .number{
+    left:5px!important;
+    width:32px;
+    font-size:.96rem;
+  }
 }
