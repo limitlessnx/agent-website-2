@@ -30,12 +30,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/case-studies/maia" },
 };
 
-const chapterNav = [
-  ["01", "Capture", "Turn attention into identifiable customer opportunities."],
-  ["02", "Understand", "Turn conversation into useful sales intelligence."],
-  ["03", "Nurture", "Keep context, follow-up and launch communication moving."],
-  ["04", "Convert & operate", "Move qualified intent toward the human sales team."],
-];
 
 function ChapterHeading({
   number,
@@ -86,16 +80,17 @@ export default function MaiaCaseStudyPage() {
         </div>
       </section>
 
-      <section className={styles.chapterRail} id="story">
+      <section className={styles.journeyVisualSection} id="story">
         <div className={styles.shell}>
-          <div className={styles.chapterRailGrid}>
-            {chapterNav.map(([number, title, text]) => (
-              <article key={number}>
-                <span>{number}</span>
-                <strong>{title}</strong>
-                <p>{text}</p>
-              </article>
-            ))}
+          <div className={styles.journeyVisualFrame}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/968f71cf-feec-441c-9904-131b0e06e88c.png"
+              alt="Maia case study journey showing Capture, Understand, Nurture, and Convert and operate as a four-stage workflow."
+              className={styles.journeyVisualImage}
+              loading="eager"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
           </div>
         </div>
       </section>
