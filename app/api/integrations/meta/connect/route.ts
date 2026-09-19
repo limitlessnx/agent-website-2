@@ -5,6 +5,11 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
 
 const COOKIE = "__Host-flux_meta_oauth_state";
+const PRODUCTION_ORIGIN = "https://fluxknight.space";
+
+function oauthOrigin(request: Request) {
+  return process.env.NODE_ENV === "production" ? PRODUCTION_ORIGIN : new URL(request.url).origin;
+}
 
 export async function GET(request: Request) {
   const session = await getAdminSession();
@@ -29,7 +34,7 @@ export async function GET(request: Request) {
   });
 
   const apiVersion = String(credentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
-  const redirectUri = new URL("/api/integrations/meta/callback", request.url).toString();
+  const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
   const scope = process.env.META_OAUTH_SCOPES || "pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights";
   const authorization = new URL(`https://www.facebook.com/${apiVersion}/dialog/oauth`);
   authorization.searchParams.set("client_id", appId);

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
 
 const COOKIE = "__Host-flux_meta_oauth_state";
+const PRODUCTION_ORIGIN = "https://fluxknight.space";
 type Json = Record<string, unknown>;
 
 type MetaPage = {
@@ -14,8 +15,12 @@ type MetaPage = {
   instagram_business_account?: { id: string; username?: string; name?: string };
 };
 
+function oauthOrigin(request: Request) {
+  return process.env.NODE_ENV === "production" ? PRODUCTION_ORIGIN : new URL(request.url).origin;
+}
+
 function back(request: Request, key: "meta" | "error", value: string) {
-  const url = new URL("/dashboard/social/integrations", request.url);
+  const url = new URL("/dashboard/social/integrations", oauthOrigin(request));
   url.searchParams.set(key, value);
   return NextResponse.redirect(url);
 }
@@ -56,7 +61,7 @@ export async function GET(request: Request) {
     if (!appId || !appSecret) return back(request, "error", "Meta app credentials are not configured");
 
     const apiVersion = String(storedCredentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
-    const redirectUri = new URL("/api/integrations/meta/callback", request.url).toString();
+    const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
 
     const shortTokenUrl = new URL(`https://graph.facebook.com/${apiVersion}/oauth/access_token`);
     shortTokenUrl.searchParams.set("client_id", appId);
