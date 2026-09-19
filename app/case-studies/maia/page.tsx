@@ -63,6 +63,29 @@ function ChapterHeading({
 export default function MaiaCaseStudyPage() {
   return (
     <main className={styles.page}>
+      <section className={styles.hero}>
+        <div className={styles.heroGlow} />
+        <div className={styles.shell}>
+          <div className={styles.heroTextOnly}>
+            <div className={styles.heroCopy}>
+              <span className={styles.eyebrow}>Case study · Maia for real estate</span>
+              <h1>From property interest <span>to organized action.</span></h1>
+              <p>Maia connects marketing, customer conversations, CRM, follow-up, property discovery, viewing workflows and human handoff so the sales team does not have to manually rebuild the same customer journey every day.</p>
+              <div className={styles.actions}>
+                <Link className={styles.primary} href="/pricing">See pricing <ArrowRight size={17} /></Link>
+                <a className={styles.secondary} href="#story">See the journey</a>
+              </div>
+              <div className={styles.heroBenefits}>
+                <span><CheckCircle2 size={14} /> 24/7 first response</span>
+                <span><CheckCircle2 size={14} /> Context stored in CRM</span>
+                <span><CheckCircle2 size={14} /> Human handoff with history</span>
+              </div>
+              <p className={styles.demoNote}>Illustrative buyer journey. Product capabilities shown only where configured and supported by the connected business data.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.chapterRail} id="story">
         <div className={styles.shell}>
           <div className={styles.chapterRailGrid}>
