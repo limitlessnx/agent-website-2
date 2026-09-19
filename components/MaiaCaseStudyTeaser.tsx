@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   CalendarCheck2,
@@ -32,13 +29,7 @@ export default function MaiaCaseStudyTeaser() {
   return (
     <section className={styles.section} id="maia-case-study" aria-labelledby="maia-case-study-title">
       <div className={styles.glow} aria-hidden="true" />
-      <motion.article
-        className={styles.card}
-        initial={{ opacity: 0, y: 18 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.32, ease: "easeOut" }}
-      >
+      <article className={styles.card}>
         <div className={styles.referenceVisual} aria-label="Maia real-phone conversation and CRM workflow">
           <img className={styles.referenceVisualImage} src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/9366e3a0-ece8-4429-9be8-bcd6d241dd7d.jpg" alt="Prospect using WhatsApp with Maia to explore Lagos property options" loading="lazy" decoding="async" fetchPriority="low" />
         </div>
@@ -63,7 +54,7 @@ export default function MaiaCaseStudyTeaser() {
             View case study <ArrowRight size={19} />
           </Link>
         </div>
-      </motion.article>
+      </article>
     </section>
   );
 }
