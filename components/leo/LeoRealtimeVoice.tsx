@@ -5,7 +5,15 @@ import { LoaderCircle, Mic, MicOff, PhoneCall, PhoneOff, X } from "@/components/
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
-type RealtimeToolEvent = { type?: string; name?: string; call_id?: string; arguments?: string; transcript?: string };
+type RealtimeToolEvent = {
+  type?: string;
+  name?: string;
+  call_id?: string;
+  event_id?: string;
+  arguments?: string;
+  transcript?: string;
+  error?: { type?: string; code?: string; message?: string; event_id?: string };
+};
 type LeoRealtimeVoiceProps = {
   sessionId?: string;
   pageContext?: Record<string, unknown>;
@@ -60,6 +68,9 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
   const startingRef = useRef(false);
   const manualStopRef = useRef(false);
   const transcriptKeysRef = useRef(new Set<string>());
+  const processedToolCallIdsRef = useRef(new Set<string>());
+  const inFlightToolSignaturesRef = useRef(new Set<string>());
+  const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { onCallEndedRef.current = onCallEnded; }, [onCallEnded]);
   useEffect(() => { onSessionIdRef.current = onSessionId; }, [onSessionId]);
@@ -71,13 +82,21 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     if (channel?.readyState === "open") channel.send(JSON.stringify(event));
   }
 
-  function reportLifecycle(event: "connected" | "canceled" | "ended" | "dropped" | "backgrounded" | "resumed", details: Record<string, unknown> = {}) {
+  function reportLifecycle(event: "connected" | "canceled" | "ended" | "dropped" | "backgrounded" | "resumed" | "error", details: Record<string, unknown> = {}) {
     const activeSessionId = activeSessionIdRef.current;
     if (!activeSessionId) return;
     void fetch("/api/leo/realtime/lifecycle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: activeSessionId, event, details }), keepalive: true }).catch(() => null);
   }
 
+  function clearDisconnectTimer() {
+    if (disconnectTimerRef.current) {
+      clearTimeout(disconnectTimerRef.current);
+      disconnectTimerRef.current = null;
+    }
+  }
+
   function cleanupConnection() {
+    clearDisconnectTimer();
     channelRef.current?.close(); channelRef.current = null;
     peerRef.current?.close(); peerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null;
@@ -127,6 +146,11 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
 
   async function handleToolCall(event: RealtimeToolEvent) {
     if (!event.name || !event.call_id) return;
+    if (processedToolCallIdsRef.current.has(event.call_id)) return;
+    processedToolCallIdsRef.current.add(event.call_id);
+    if (processedToolCallIdsRef.current.size > 120) {
+      processedToolCallIdsRef.current = new Set(Array.from(processedToolCallIdsRef.current).slice(-80));
+    }
     if (event.name === "leo_end_call") {
       sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ ok: true }) } });
       sendEvent({ type: "response.create" });
@@ -135,6 +159,13 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     }
     let args: Record<string, unknown> = {};
     try { args = event.arguments ? JSON.parse(event.arguments) as Record<string, unknown> : {}; } catch { args = {}; }
+    const signature = `${event.name}:${event.arguments || "{}"}`;
+    if (inFlightToolSignaturesRef.current.has(signature)) {
+      reportLifecycle("error", { source: "leo_tool", code: "DUPLICATE_TOOL_IN_FLIGHT", call_id: event.call_id, tool_name: event.name });
+      sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ ok: false, error: "This operation is already in progress. Wait for its result before retrying." }) } });
+      return;
+    }
+    inFlightToolSignaturesRef.current.add(signature);
     let output: Record<string, unknown>;
     try {
       if (event.name === "leo_manage_task") {
@@ -148,6 +179,18 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       }
     } catch (cause) {
       output = { ok: false, error: cause instanceof Error ? cause.message : "Leo operation failed." };
+    } finally {
+      inFlightToolSignaturesRef.current.delete(signature);
+    }
+    if (output.ok === false) {
+      reportLifecycle("error", {
+        source: "leo_tool",
+        code: String(output.error_code || "TOOL_EXECUTION_FAILED"),
+        message: String(output.error || "Leo tool execution failed."),
+        call_id: event.call_id,
+        tool_name: event.name,
+        tool_key: String(args.tool_key || ""),
+      });
     }
     sendEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify(output) } });
     sendEvent({ type: "response.create" });
@@ -158,6 +201,9 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     startingRef.current = true;
     manualStopRef.current = false;
     transcriptKeysRef.current.clear();
+    processedToolCallIdsRef.current.clear();
+    inFlightToolSignaturesRef.current.clear();
+    clearDisconnectTimer();
     setState("connecting"); setError(""); setMuted(false);
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser.");
@@ -171,7 +217,24 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       audioRef.current = audio;
       peer.ontrack = (event) => { audio.srcObject = event.streams[0]; void audio.play().catch(() => null); };
       peer.onconnectionstatechange = () => {
-        if (peer.connectionState === "failed" || peer.connectionState === "disconnected") handleUnexpectedDrop("Leo voice connection was interrupted. You can reconnect or continue by message.");
+        const connectionState = peer.connectionState;
+        if (connectionState === "connected") {
+          clearDisconnectTimer();
+          return;
+        }
+        if (connectionState === "failed" || connectionState === "closed") {
+          clearDisconnectTimer();
+          handleUnexpectedDrop("Leo voice connection was interrupted. You can reconnect or continue by message.");
+          return;
+        }
+        if (connectionState === "disconnected" && !disconnectTimerRef.current) {
+          disconnectTimerRef.current = setTimeout(() => {
+            disconnectTimerRef.current = null;
+            if (peerRef.current === peer && peer.connectionState === "disconnected") {
+              handleUnexpectedDrop("Leo voice connection was interrupted. You can reconnect or continue by message.");
+            }
+          }, 7000);
+        }
       };
       const dataChannel = peer.createDataChannel("oai-events");
       channelRef.current = dataChannel;
@@ -181,6 +244,19 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
           if (event.type === "response.function_call_arguments.done") void handleToolCall(event);
           else if (event.type === "conversation.item.input_audio_transcription.completed" && event.transcript) void persistTranscript("user", event.transcript);
           else if (event.type === "response.output_audio_transcript.done" && event.transcript) void persistTranscript("assistant", event.transcript);
+          else if (event.type === "error") {
+            const realtimeError = event.error || {};
+            const details = {
+              source: "openai_realtime",
+              type: realtimeError.type || null,
+              code: realtimeError.code || null,
+              message: realtimeError.message || "Unknown Realtime error",
+              event_id: realtimeError.event_id || event.event_id || null,
+              call_id: event.call_id || null,
+            };
+            console.error("[leo/realtime] session error", details);
+            reportLifecycle("error", details);
+          }
         } catch {}
       };
       dataChannel.onopen = () => {
@@ -233,7 +309,16 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       if (state === "live") {
         reportLifecycle("resumed");
         const connectionState = peerRef.current?.connectionState;
-        if (connectionState === "failed" || connectionState === "disconnected" || connectionState === "closed") handleUnexpectedDrop("Leo voice connection was interrupted while the app was in the background. Reconnect to continue the call.");
+        if (connectionState === "failed" || connectionState === "closed") {
+          handleUnexpectedDrop("Leo voice connection was interrupted while the app was in the background. Reconnect to continue the call.");
+        } else if (connectionState === "disconnected" && !disconnectTimerRef.current) {
+          disconnectTimerRef.current = setTimeout(() => {
+            disconnectTimerRef.current = null;
+            if (peerRef.current?.connectionState === "disconnected") {
+              handleUnexpectedDrop("Leo voice connection was interrupted while the app was in the background. Reconnect to continue the call.");
+            }
+          }, 7000);
+        }
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
