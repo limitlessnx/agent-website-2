@@ -69,3 +69,5 @@
 @media(prefers-reduced-motion:reduce){
   .page *{scroll-behavior:auto!important}
 }
+
+.attentionRevenueVisual{position:relative;width:100%;margin:0 0 30px;overflow:hidden;border-radius:28px;border:1px solid rgba(180,139,255,.16);background:#03000a;box-shadow:0 28px 72px rgba(12,4,28,.34)}.attentionRevenueImage{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}@media(max-width:760px){.attentionRevenueVisual{margin-bottom:22px;border-radius:20px}.attentionRevenueImage{aspect-ratio:16/9}}
