@@ -30,78 +30,34 @@ function PanelLabel({ icon, children }: { icon: ReactNode; children: ReactNode }
   return <div className={styles.panelLabel}>{icon}{children}</div>;
 }
 
-export function HeroSystemVisual() {
-  return (
-    <div className={styles.heroSystem} aria-label="Illustrative Maia buyer journey">
-      <div className={styles.heroSystemHead}>
-        <div>
-          <span>Live customer journey</span>
-          <strong>Maia · Real estate operating system</strong>
-        </div>
-        <StatePill tone="green">Active</StatePill>
-      </div>
-      <div className={styles.heroSystemGrid}>
-        <section className={styles.chatPanel}>
-          <PanelLabel icon={<MessageSquareText size={14} />}>Customer conversation</PanelLabel>
-          <div className={styles.chatIdentity}>
-            <div className={styles.avatar}>AM</div>
-            <div><strong>Alex Morgan</strong><span>Launch campaign enquiry</span></div>
-          </div>
-          <div className={styles.bubbleCustomer}>I&apos;m interested in the new development. When does it launch?</div>
-          <div className={styles.bubbleMaia}>I can help with that. I&apos;ll keep your interest linked to this development and notify you when the approved launch details are available.</div>
-          <div className={styles.systemEvent}><CheckCircle2 size={13} /> Context saved to lead record</div>
-        </section>
-        <section className={styles.profilePanel}>
-          <PanelLabel icon={<Database size={14} />}>Lead intelligence</PanelLabel>
-          <div className={styles.profileHead}>
-            <div><strong>Alex Morgan</strong><span>Qualified prospect</span></div>
-            <StatePill>Warm</StatePill>
-          </div>
-          <dl className={styles.profileGrid}>
-            <div><dt>Source</dt><dd>Launch campaign</dd></div>
-            <div><dt>Interest</dt><dd>Upcoming development</dd></div>
-            <div><dt>Purpose</dt><dd>Investment</dd></div>
-            <div><dt>Timeline</dt><dd>3–6 months</dd></div>
-          </dl>
-          <div className={styles.nextAction}>
-            <Clock3 size={15} />
-            <div><span>Next action</span><strong>Send launch update when approved</strong></div>
-          </div>
-        </section>
-        <section className={styles.actionPanel}>
-          <PanelLabel icon={<Target size={14} />}>Recommended next step</PanelLabel>
-          <div className={styles.propertyThumb} aria-hidden="true">
-            <div className={styles.propertyGlow} />
-            <span>Property preview</span>
-          </div>
-          <div className={styles.propertyMeta}>
-            <span>Matching inventory</span>
-            <strong>2 suitable options available</strong>
-            <p>Maia can surface configured property information and move Alex toward a viewing when intent increases.</p>
-          </div>
-          <div className={styles.actionStrip}><CalendarCheck2 size={14} /> Viewing workflow ready</div>
-        </section>
-      </div>
-    </div>
-  );
-}
 
 export function MarketingLeakVisual() {
   return (
     <div className={styles.leakVisual} aria-label="Marketing attention and lead leakage illustration">
-      <div className={styles.campaignCard}>
-        <PanelLabel icon={<Megaphone size={14} />}>Property launch campaign</PanelLabel>
-        <div className={styles.campaignArtwork}><span>COMING SOON</span><strong>New residential release</strong></div>
-        <div className={styles.engagementRow}>
-          <span>Comments</span><span>Messages</span><span>WhatsApp clicks</span><span>Lead forms</span>
+      <div className={styles.leakDetailGrid}>
+        <div className={styles.campaignCard}>
+          <PanelLabel icon={<Megaphone size={14} />}>Property launch campaign</PanelLabel>
+          <div className={styles.campaignContextFrame}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/5a9cd5a8-6b6a-4921-b19f-954c506d15d7.jpg"
+              alt="Prospect viewing a Maia property recommendation during a property launch campaign."
+              className={styles.campaignContextImage}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div className={styles.engagementRow}>
+            <span>Comments</span><span>Messages</span><span>WhatsApp clicks</span><span>Lead forms</span>
+          </div>
         </div>
-      </div>
-      <div className={styles.leakArrow}>→</div>
-      <div className={styles.leakStack}>
-        <div><MessageSquareText size={15} /><span>Unanswered enquiry</span></div>
-        <div><Clock3 size={15} /><span>Follow-up forgotten</span></div>
-        <div><Database size={15} /><span>Contact never organized</span></div>
-        <div className={styles.savedPath}><Sparkles size={15} /><span>Maia converts the interaction into a tracked next action</span></div>
+        <div className={styles.leakArrow}>→</div>
+        <div className={styles.leakStack}>
+          <div><MessageSquareText size={15} /><span>Unanswered enquiry</span></div>
+          <div><Clock3 size={15} /><span>Follow-up forgotten</span></div>
+          <div><Database size={15} /><span>Contact never organized</span></div>
+          <div className={styles.savedPath}><Sparkles size={15} /><span>Maia converts the interaction into a tracked next action</span></div>
+        </div>
       </div>
     </div>
   );
@@ -112,7 +68,16 @@ export function CaptureVisual() {
     <div className={styles.splitVisual}>
       <section className={styles.sourcePanel}>
         <PanelLabel icon={<Megaphone size={14} />}>Acquisition source</PanelLabel>
-        <div className={styles.sourceHero}><span>Property launch</span><strong>Get priority updates</strong><p>Prospect moves from campaign interest into an identifiable conversation.</p></div>
+        <div className={styles.acquisitionContextFrame}>
+          <img
+            src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/ef264b55-8c9f-4499-82cd-94f7ae6c0f31.jpg"
+            alt="Fluxknight acquisition journey showing campaign interest moving into conversation and organized lead follow-up."
+            className={styles.acquisitionContextImage}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
+        </div>
         <div className={styles.sourcePath}><span>Ad / social</span><b>→</b><span>CTA</span><b>→</b><span>WhatsApp / web</span></div>
       </section>
       <section className={styles.chatPanel}>
