@@ -202,29 +202,15 @@ export function AudienceVisual() {
 
 export function LaunchCampaignVisual() {
   return (
-    <div className={styles.launchPanel}>
-      <div className={styles.launchTop}>
-        <div>
-          <PanelLabel icon={<Megaphone size={14} />}>Launch communication</PanelLabel>
-          <h3>Property is live. Relevant prospects already exist.</h3>
-        </div>
-        <StatePill tone="green">Ready to send</StatePill>
-      </div>
-      <div className={styles.launchGrid}>
-        <section>
-          <span className={styles.microLabel}>Audience</span>
-          <strong>Launch-interest prospects</strong>
-          <div className={styles.segmentTokens}><span>2-bedroom</span><span>Investor</span><span>Warm</span><span>Opted for updates</span></div>
-        </section>
-        <section>
-          <span className={styles.microLabel}>Approved message</span>
-          <div className={styles.messagePreview}>The development you asked about is now open. I can show you the available units and current payment options.</div>
-        </section>
-        <section>
-          <span className={styles.microLabel}>System update</span>
-          <div className={styles.statusList}><span><CheckCircle2 size={13}/> Message logged</span><span><Database size={13}/> CRM activity updated</span><span><Clock3 size={13}/> Next action tracked</span></div>
-        </section>
-      </div>
+    <div className={styles.launchCampaignImageFrame}>
+      <img
+        src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/dda57b32-bb9c-4322-8ccb-f367731b3702.jpg"
+        alt="Property launch campaign visual showing social engagement, comments and buyer interest around a real estate launch."
+        className={styles.launchCampaignImage}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+      />
     </div>
   );
 }
