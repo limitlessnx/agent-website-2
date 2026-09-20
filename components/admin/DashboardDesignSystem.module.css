@@ -390,3 +390,81 @@
   .designSystem :global(.admin-metric-card){border-radius:14px!important;box-shadow:none!important}
   .designSystem :global(.admin-page-header){padding-top:0!important}
 }
+
+
+/* Dashboard V3 Phase 4: global shell */
+.designSystem :global(.admin-shell){
+  min-height:100dvh!important;
+  background:var(--fk-canvas)!important;
+}
+.designSystem :global(.admin-sidebar){
+  background:color-mix(in srgb,var(--fk-surface) 94%,transparent)!important;
+  border-right:1px solid var(--fk-border)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(18px);
+}
+.designSystem :global(.admin-topbar){
+  min-height:64px!important;
+  background:color-mix(in srgb,var(--fk-canvas) 88%,transparent)!important;
+  border-bottom:1px solid var(--fk-border)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(18px);
+}
+.designSystem :global(.admin-breadcrumb){
+  gap:8px!important;
+}
+.designSystem :global(.admin-breadcrumb strong){
+  color:var(--fk-text)!important;
+  font-weight:var(--fk-weight-semibold)!important;
+}
+.designSystem :global(.admin-breadcrumb span){
+  color:var(--fk-text-muted)!important;
+}
+.designSystem :global(.admin-topbar-actions){
+  gap:8px!important;
+}
+.designSystem :global(.admin-icon-button),
+.designSystem :global(.admin-period),
+.designSystem :global(.admin-text-button){
+  background:transparent!important;
+  border:1px solid var(--fk-border)!important;
+  color:var(--fk-text-secondary)!important;
+  box-shadow:none!important;
+  border-radius:var(--fk-radius-control)!important;
+}
+.designSystem :global(.admin-icon-button:hover),
+.designSystem :global(.admin-period:hover),
+.designSystem :global(.admin-text-button:hover){
+  color:var(--fk-text)!important;
+  border-color:var(--fk-border-strong)!important;
+  background:var(--fk-brand-soft)!important;
+}
+.designSystem :global(.admin-nav a){
+  min-height:38px!important;
+  border:1px solid transparent!important;
+  border-radius:10px!important;
+  color:var(--fk-text-secondary)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.designSystem :global(.admin-nav a:hover){
+  color:var(--fk-text)!important;
+  background:var(--fk-surface-hover)!important;
+  border-color:transparent!important;
+}
+.designSystem :global(.admin-nav a[aria-current="page"]){
+  color:var(--fk-text)!important;
+  background:var(--fk-brand-soft)!important;
+  border-color:color-mix(in srgb,var(--fk-brand) 28%,transparent)!important;
+  box-shadow:inset 3px 0 0 var(--fk-brand)!important;
+}
+.designSystem :global(.workspace-rail){
+  background:transparent!important;
+  border-bottom:1px solid var(--fk-border)!important;
+  box-shadow:none!important;
+}
+@media(max-width:900px){
+  .designSystem :global(.admin-main){padding-bottom:84px!important}
+  .designSystem :global(.admin-topbar){display:none!important}
+  .designSystem :global(.admin-sidebar){border-right:1px solid var(--fk-border)!important}
+}
