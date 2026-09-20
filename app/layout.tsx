@@ -66,6 +66,28 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
+const themeBootScript = `
+(function(){
+  try {
+    var key = "limitless-dashboard-theme";
+    var saved = localStorage.getItem(key);
+    var theme = saved === "light" || saved === "dark"
+      ? saved
+      : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch (_) {
+    document.documentElement.dataset.theme = "dark";
+    document.documentElement.style.colorScheme = "dark";
+  }
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body><GlobalLoadingProvider><SiteShell>{children}</SiteShell></GlobalLoadingProvider></body></html>;
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeBootScript }} /></head>
+      <body><GlobalLoadingProvider><SiteShell>{children}</SiteShell></GlobalLoadingProvider></body>
+    </html>
+  );
 }
