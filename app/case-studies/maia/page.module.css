@@ -144,3 +144,8 @@
 .convertHeaderVisual{position:relative;width:100%;margin:0 0 34px;overflow:hidden;border:1px solid rgba(180,139,255,.16);border-radius:24px;background:#05020a;box-shadow:0 24px 64px rgba(0,0,0,.28)}
 .convertHeaderImage{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;object-position:center;image-rendering:auto;filter:contrast(1.02) saturate(1.02)}
 @media(max-width:620px){.convertHeaderVisual{margin-bottom:28px;border-radius:18px}.convertHeaderImage{aspect-ratio:4/3;object-fit:cover;object-position:center}}
+
+/* Render X: Understand chapter header visual */
+.understandHeaderVisual{position:relative;width:100%;margin:0 0 34px;overflow:hidden;border:1px solid rgba(180,139,255,.16);border-radius:24px;background:#05020a;box-shadow:0 24px 64px rgba(0,0,0,.28)}
+.understandHeaderImage{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center;image-rendering:auto;filter:contrast(1.02) saturate(1.02)}
+@media(max-width:620px){.understandHeaderVisual{margin-bottom:28px;border-radius:18px}.understandHeaderImage{aspect-ratio:16/9;object-fit:cover;object-position:center}}
