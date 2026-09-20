@@ -38,7 +38,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="admin-page">
+    <main className="admin-page dashboard-v2-page">
       <div className="admin-page-header">
         <div>
           <p className="admin-kicker">Platform Control</p>
@@ -121,6 +121,6 @@ export default async function SettingsPage() {
           )}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

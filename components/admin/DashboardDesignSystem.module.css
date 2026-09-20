@@ -1,0 +1,214 @@
+.designSystem{
+  --fk-bg:#08090d;
+  --fk-surface:#0d1016;
+  --fk-surface-raised:#11151d;
+  --fk-surface-hover:#151a23;
+  --fk-border:#202630;
+  --fk-border-strong:#303744;
+  --fk-text:#f2f3f5;
+  --fk-text-secondary:#a2a9b4;
+  --fk-text-muted:#747d89;
+  --fk-accent:#8b5cf6;
+  --fk-accent-hover:#9f7aea;
+  --fk-accent-soft:rgba(139,92,246,.12);
+  --fk-success:#4fd394;
+  --fk-warning:#e9b65d;
+  --fk-danger:#ef7474;
+  --fk-font-xs:11px;
+  --fk-font-sm:12px;
+  --fk-font-md:14px;
+  --fk-font-lg:16px;
+  --fk-font-section:20px;
+  --fk-font-page:30px;
+  --fk-line-tight:1.15;
+  --fk-line-body:1.5;
+  --fk-space-1:4px;
+  --fk-space-2:8px;
+  --fk-space-3:12px;
+  --fk-space-4:16px;
+  --fk-space-5:24px;
+  --fk-space-6:32px;
+  --fk-space-7:48px;
+  --fk-radius-sm:7px;
+  --fk-radius-md:10px;
+  --fk-radius-lg:14px;
+  --fk-control-sm:32px;
+  --fk-control-md:40px;
+  --fk-control-lg:48px;
+  --fk-motion-fast:140ms;
+  --fk-motion-base:200ms;
+  --fk-ease:cubic-bezier(.2,.8,.2,1);
+  --fk-content-max:1520px;
+  min-height:100vh;
+  color:var(--fk-text);
+  background:var(--fk-bg);
+}
+.designSystem :global(*),.designSystem :global(*::before),.designSystem :global(*::after){box-sizing:border-box}
+.designSystem :global(:focus-visible){outline:2px solid color-mix(in srgb,var(--fk-accent) 78%,white);outline-offset:2px}
+.designSystem :global(button),.designSystem :global(a),.designSystem :global(input),.designSystem :global(select),.designSystem :global(textarea){font:inherit}
+.designSystem :global(button),.designSystem :global(a){-webkit-tap-highlight-color:transparent}
+.designSystem :global(.admin-page-header h1){color:var(--fk-text);font-size:var(--fk-font-page);font-weight:720;line-height:var(--fk-line-tight);letter-spacing:-.035em}
+.designSystem :global(.admin-page-header p){color:var(--fk-text-muted);font-size:var(--fk-font-md);line-height:var(--fk-line-body)}
+.designSystem :global(.admin-panel-header h2){color:var(--fk-text);font-size:var(--fk-font-lg);font-weight:700;line-height:1.3}
+.designSystem :global(.admin-panel-header p){color:var(--fk-text-muted);font-size:var(--fk-font-sm);line-height:var(--fk-line-body)}
+.designSystem :global(.admin-button){min-height:var(--fk-control-md);padding:0 14px;border:1px solid var(--fk-border-strong);border-radius:var(--fk-radius-sm);transition:background var(--fk-motion-fast) var(--fk-ease),border-color var(--fk-motion-fast) var(--fk-ease),color var(--fk-motion-fast) var(--fk-ease),transform var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-button:active){transform:translateY(1px)}
+@media(max-width:900px){.designSystem{--fk-font-page:26px;--fk-font-section:18px}}
+@media(prefers-reduced-motion:reduce){.designSystem :global(*),.designSystem :global(*::before),.designSystem :global(*::after){scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Dashboard V2 Phase 3: shared component grammar */
+.designSystem :global(.admin-panel),
+.designSystem :global(.admin-card),
+.designSystem :global(.dashboard-card),
+.designSystem :global(.admin-metric-card){
+  border:1px solid var(--fk-border)!important;
+  background:var(--fk-surface)!important;
+  box-shadow:none!important;
+}
+.designSystem :global(.admin-panel),
+.designSystem :global(.admin-card),
+.designSystem :global(.dashboard-card){border-radius:var(--fk-radius-md)!important;padding:var(--fk-space-5)!important}
+.designSystem :global(.admin-metric-card){min-height:112px;border-radius:var(--fk-radius-md)!important;padding:var(--fk-space-4)!important}
+.designSystem :global(.admin-metric-card p),
+.designSystem :global(.admin-metric-card span){color:var(--fk-text-muted)!important;font-size:var(--fk-font-xs)!important;line-height:1.4!important}
+.designSystem :global(.admin-metric-card strong){color:var(--fk-text)!important;font-size:28px!important;font-weight:720!important;line-height:1.08!important;letter-spacing:-.035em!important}
+.designSystem :global(.admin-button),
+.designSystem :global(.primary-button),
+.designSystem :global(.secondary-button){
+  min-height:var(--fk-control-md);display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 14px;border:1px solid var(--fk-border-strong)!important;border-radius:var(--fk-radius-sm)!important;
+  color:var(--fk-text-secondary)!important;background:var(--fk-surface-raised)!important;
+  font-size:var(--fk-font-sm)!important;font-weight:700!important;text-decoration:none;cursor:pointer;
+}
+.designSystem :global(.admin-button:hover),
+.designSystem :global(.secondary-button:hover){color:var(--fk-text)!important;background:var(--fk-surface-hover)!important;border-color:#3a4350!important}
+.designSystem :global(.primary-button){color:white!important;border-color:#7352c7!important;background:#6f4bc8!important}
+.designSystem :global(.primary-button:hover){background:#7d59d4!important;border-color:#8664d7!important}
+.designSystem :global(button:disabled),
+.designSystem :global(.admin-button:disabled){opacity:.45!important;cursor:not-allowed!important;transform:none!important}
+.designSystem :global(input),
+.designSystem :global(select),
+.designSystem :global(textarea){
+  border:1px solid var(--fk-border-strong)!important;border-radius:var(--fk-radius-sm)!important;
+  color:var(--fk-text)!important;background:#0c1016!important;
+  transition:border-color var(--fk-motion-fast) var(--fk-ease),box-shadow var(--fk-motion-fast) var(--fk-ease)!important
+}
+.designSystem :global(input:focus),
+.designSystem :global(select:focus),
+.designSystem :global(textarea:focus){outline:0!important;border-color:#624d91!important;box-shadow:0 0 0 3px rgba(139,92,246,.08)!important}
+.designSystem :global(.admin-table){width:100%;border-collapse:collapse!important}
+.designSystem :global(.admin-table th){height:42px;padding:0 14px!important;color:var(--fk-text-muted)!important;background:#0b0f14!important;border-bottom:1px solid var(--fk-border)!important;font-size:var(--fk-font-xs)!important;font-weight:750!important;text-align:left!important}
+.designSystem :global(.admin-table td){padding:13px 14px!important;color:#d7dbe1!important;border-bottom:1px solid rgba(32,38,48,.72)!important;font-size:var(--fk-font-sm)!important;line-height:1.45!important}
+.designSystem :global(.admin-table tbody tr){transition:background var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-table tbody tr:hover){background:rgba(255,255,255,.018)!important}
+.designSystem :global(.admin-badge),
+.designSystem :global(.status-badge){min-height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:1px solid var(--fk-border);border-radius:999px;color:var(--fk-text-secondary);background:var(--fk-surface-raised);font-size:10px;font-weight:750;line-height:1}
+.designSystem :global([role="tablist"]){gap:4px}
+.designSystem :global([role="tab"]){min-height:36px;padding:0 11px;border:1px solid transparent;border-radius:var(--fk-radius-sm);color:var(--fk-text-muted);background:transparent;font-size:var(--fk-font-sm);font-weight:700;cursor:pointer}
+.designSystem :global([role="tab"]:hover){color:var(--fk-text);background:var(--fk-surface-raised)}
+.designSystem :global([role="tab"][aria-selected="true"]){color:#eee9fb;border-color:#342b49;background:var(--fk-accent-soft)}
+.designSystem :global(.admin-empty-state),
+.designSystem :global(.empty-state){display:grid;place-items:center;min-height:180px;padding:var(--fk-space-5);border:1px dashed var(--fk-border-strong);border-radius:var(--fk-radius-md);color:var(--fk-text-muted);text-align:center;background:rgba(255,255,255,.01)}
+@media(max-width:640px){
+ .designSystem :global(.admin-panel),.designSystem :global(.admin-card),.designSystem :global(.dashboard-card){padding:16px!important}
+ .designSystem :global(.admin-metric-card){min-height:96px;padding:14px!important}
+ .designSystem :global(.admin-table th),.designSystem :global(.admin-table td){padding-left:11px!important;padding-right:11px!important}
+}
+
+
+/* Dashboard V2 Phase 4: page-family composition */
+.designSystem :global(.admin-page){display:grid;gap:24px}
+.designSystem :global(.admin-page-header){display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:24px!important}
+.designSystem :global(.admin-page-header>div:first-child){min-width:0}
+.designSystem :global(.admin-kicker){margin:0 0 7px!important;color:#9180bd!important;font-size:10px!important;font-weight:800!important;letter-spacing:.11em!important;text-transform:uppercase!important}
+.designSystem :global(.admin-page-header h1){margin:0!important}
+.designSystem :global(.admin-page-header h1+p){margin:8px 0 0!important}
+.designSystem :global(.admin-status){min-height:26px;display:inline-flex!important;align-items:center!important;gap:6px!important;flex:0 0 auto;padding:0 9px!important;border:1px solid var(--fk-border)!important;border-radius:999px!important;color:var(--fk-text-secondary)!important;background:var(--fk-surface-raised)!important;font-size:10px!important;font-weight:750!important;white-space:nowrap}
+.designSystem :global(.admin-status.live){color:#8de2b7!important;border-color:rgba(79,211,148,.22)!important;background:rgba(79,211,148,.07)!important}
+.designSystem :global(.admin-status.warning){color:#f0c978!important;border-color:rgba(233,182,93,.24)!important;background:rgba(233,182,93,.07)!important}
+.designSystem :global(.admin-grid){display:grid;gap:16px}
+.designSystem :global(.admin-grid.two){grid-template-columns:repeat(2,minmax(0,1fr))}
+.designSystem :global(.admin-grid.three){grid-template-columns:repeat(3,minmax(0,1fr))}
+.designSystem :global(.admin-grid.four){grid-template-columns:repeat(4,minmax(0,1fr))}
+.designSystem :global(.admin-metric-grid){display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+.designSystem :global(a.admin-panel){position:relative;text-decoration:none!important;transition:border-color var(--fk-motion-fast) var(--fk-ease),background var(--fk-motion-fast) var(--fk-ease),transform var(--fk-motion-fast) var(--fk-ease)!important}
+.designSystem :global(a.admin-panel:hover){border-color:#343c48!important;background:var(--fk-surface-raised)!important;transform:translateY(-1px)}
+.designSystem :global(a.admin-panel:active){transform:translateY(0)}
+.designSystem :global(.admin-panel.compact){padding:16px!important}
+.designSystem :global(.admin-panel.compact>strong){display:block;color:var(--fk-text)!important;font-size:26px!important;line-height:1.1!important;letter-spacing:-.035em!important}
+.designSystem :global(.admin-panel.compact>p){margin:6px 0 0!important;color:var(--fk-text-muted)!important;font-size:11px!important}
+.designSystem :global(.admin-panel-header){display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;margin-bottom:16px!important}
+.designSystem :global(.admin-panel-header h2){margin:0!important}
+.designSystem :global(.admin-panel-header h2+p){margin:5px 0 0!important}
+.designSystem :global(.admin-list){display:grid}
+.designSystem :global(.admin-list-row){min-width:0;display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;padding:13px 0!important;border-bottom:1px solid rgba(32,38,48,.72)!important;color:inherit;text-decoration:none}
+.designSystem :global(.admin-list-row:last-child){border-bottom:0!important}
+.designSystem :global(.admin-list-row>div){min-width:0;display:grid;gap:4px}
+.designSystem :global(.admin-list-row strong){color:#e7e9ed!important;font-size:12px!important;font-weight:700!important;line-height:1.4!important}
+.designSystem :global(.admin-list-row span){color:var(--fk-text-muted)!important;font-size:11px!important;line-height:1.45!important}
+.designSystem :global(.admin-list-row em){flex:0 0 auto;color:#818a96!important;font-size:10px!important;font-style:normal!important;font-weight:700!important}
+.designSystem :global(.admin-list-row em.good){color:var(--fk-success)!important}
+.designSystem :global(.admin-list-row em.bad){color:var(--fk-danger)!important}
+.designSystem :global(.admin-list-row:hover:is(a)){background:rgba(255,255,255,.012)}
+.designSystem :global(.admin-empty){margin:0!important;padding:24px!important;color:var(--fk-text-muted)!important;font-size:12px!important;text-align:center!important}
+@media(max-width:1100px){
+ .designSystem :global(.admin-metric-grid),.designSystem :global(.admin-grid.four){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:700px){
+ .designSystem :global(.admin-page){gap:16px}
+ .designSystem :global(.admin-page-header){align-items:flex-start!important;flex-direction:column!important;gap:12px!important}
+ .designSystem :global(.admin-grid.two),.designSystem :global(.admin-grid.three){grid-template-columns:1fr!important}
+ .designSystem :global(.admin-metric-grid),.designSystem :global(.admin-grid.four){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ .designSystem :global(.admin-list-row){gap:10px!important}
+}
+@media(max-width:420px){
+ .designSystem :global(.admin-metric-grid),.designSystem :global(.admin-grid.four){grid-template-columns:1fr!important}
+}
+
+
+/* Dashboard V2 Phase 5: restrained interaction system */
+.designSystem :global(.dashboard-v2-page){animation:fkPageIn 220ms var(--fk-ease) both}
+.designSystem :global(.admin-panel),.designSystem :global(.admin-metric-card){transition:border-color var(--fk-motion-fast) var(--fk-ease),background var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-metric-card:hover){border-color:#303844!important;background:#0f131a!important}
+.designSystem :global(.admin-list-row:is(a,button)){transition:background var(--fk-motion-fast) var(--fk-ease),color var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-list-row:is(a,button):hover){background:rgba(255,255,255,.018)!important}
+.designSystem :global([aria-expanded="true"] svg){transition:transform var(--fk-motion-base) var(--fk-ease)}
+.designSystem :global([data-state="open"]){animation:fkReveal 180ms var(--fk-ease) both}
+@keyframes fkPageIn{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:none}}
+@keyframes fkReveal{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.designSystem :global(.dashboard-v2-page),.designSystem :global([data-state="open"]){animation:none!important}}
+
+
+/* Dashboard V2 Phase 6: responsive + accessibility hardening */
+.designSystem :global(a),.designSystem :global(button),.designSystem :global([role="button"]),.designSystem :global([role="tab"]){touch-action:manipulation}
+.designSystem :global(.admin-page){width:min(100%,var(--fk-content-max));margin-inline:auto}
+.designSystem :global(.admin-page img),.designSystem :global(.admin-page video),.designSystem :global(.admin-page canvas){max-width:100%;height:auto}
+.designSystem :global(.admin-panel),.designSystem :global(.admin-metric-card),.designSystem :global(.admin-list-row>div){min-width:0}
+.designSystem :global(.admin-list-row strong),.designSystem :global(.admin-list-row span),.designSystem :global(.admin-panel p){overflow-wrap:anywhere}
+.designSystem :global(.admin-button),.designSystem :global(.primary-button),.designSystem :global(.secondary-button),.designSystem :global([role="tab"]){min-width:0}
+.designSystem :global(.admin-button svg),.designSystem :global(.primary-button svg),.designSystem :global(.secondary-button svg){width:16px;height:16px;flex:0 0 auto}
+.designSystem :global(input),.designSystem :global(select),.designSystem :global(textarea){min-height:40px}
+.designSystem :global(textarea){min-height:96px;resize:vertical}
+.designSystem :global(.admin-table-wrap),.designSystem :global(.table-scroll){max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.designSystem :global(.admin-table){min-width:620px}
+.designSystem :global(.admin-status){max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.designSystem :global([aria-disabled="true"]){cursor:not-allowed;opacity:.48}
+@media(max-width:900px){
+ .designSystem :global(.admin-page){padding-inline:16px!important;padding-bottom:96px!important}
+ .designSystem :global(.admin-page-header){padding-top:8px!important}
+ .designSystem :global(.admin-panel-header){gap:12px!important}
+}
+@media(max-width:640px){
+ .designSystem :global(.admin-page){padding-inline:12px!important}
+ .designSystem :global(.admin-page-header h1){font-size:25px!important}
+ .designSystem :global(.admin-page-header p){font-size:13px!important}
+ .designSystem :global(.admin-panel-header){flex-direction:column!important}
+ .designSystem :global(.admin-panel-header>.admin-status){align-self:flex-start}
+ .designSystem :global(.admin-list-row){align-items:flex-start!important}
+ .designSystem :global(.admin-list-row>.admin-button){min-height:40px}
+}
+@media(max-width:420px){
+ .designSystem :global(.admin-page){padding-inline:10px!important}
+ .designSystem :global(.admin-page-header h1){font-size:23px!important}
+}

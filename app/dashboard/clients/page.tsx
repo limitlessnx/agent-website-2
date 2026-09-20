@@ -20,7 +20,7 @@ export default async function ClientsPage() {
   const live = profiles.filter((profile) => profile.status === "live").length;
 
   return (
-    <div className="admin-page">
+    <main className="admin-page dashboard-v2-page">
       <div className="admin-page-header">
         <div>
           <p className="admin-kicker">Client operations</p>
@@ -57,6 +57,6 @@ export default async function ClientsPage() {
           {!profiles.length && !error ? <p className="admin-empty">No client workspaces exist yet. Use Client Onboarding → New Client.</p> : null}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

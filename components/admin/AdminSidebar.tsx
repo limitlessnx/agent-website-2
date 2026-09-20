@@ -156,9 +156,9 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
         {platformGroups.map((group) => {
           const hasActiveItem = groupItems(group).some((item) => isAdminNavItemActive(pathname, item.href, item.exact));
           const isOpen = openGroups.includes(group.id);
-          return <section key={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
+          return <section key={group.id} data-nav-group={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
             <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}>
-              <span>{group.label}</span>
+              <span className={styles.triggerLabel}>{group.label}</span>
               <ChevronDown size={15} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />
             </button>
             <div className={`${styles.items} ${isOpen ? styles.itemsOpen : ""}`}>
@@ -167,7 +167,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
                 const hasActiveSectionItem = section.items.some((item) => isAdminNavItemActive(pathname, item.href, item.exact));
                 const isSectionOpen = openSections.includes(nestedSectionId);
                 return <div key={nestedSectionId} className={styles.section}>
-                  {section.label ? <button type="button" className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`} onClick={() => toggleSection(nestedSectionId)} aria-expanded={isSectionOpen}><span>{section.label}</span><ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} /></button> : null}
+                  {section.label ? <button type="button" className={`${styles.sectionTrigger} ${hasActiveSectionItem ? styles.sectionTriggerActive : ""}`} onClick={() => toggleSection(nestedSectionId)} aria-expanded={isSectionOpen}><span className={styles.sectionLabelText}>{section.label}</span><ChevronDown size={14} className={`${styles.chevron} ${isSectionOpen ? styles.chevronOpen : ""}`} /></button> : null}
                   <div className={`${section.label ? styles.sectionItems : ""} ${!section.label || isSectionOpen ? styles.sectionItemsOpen : ""}`}>
                     {section.items.map((item) => {
                       const active = isAdminNavItemActive(pathname, item.href, item.exact);

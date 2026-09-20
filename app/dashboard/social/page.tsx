@@ -27,14 +27,14 @@ export default async function SocialOverviewPage() {
         </span>
       </header>
 
-      <section className="admin-grid two">
+      <section className="admin-grid four">
         <div className="admin-panel compact"><strong>{posts.length}</strong><p>Total posts</p></div>
         <div className="admin-panel compact"><strong>{reviewCount}</strong><p>Awaiting review</p></div>
         <div className="admin-panel compact"><strong>{scheduled}</strong><p>Scheduled</p></div>
         <div className="admin-panel compact"><strong>{published}</strong><p>Published</p></div>
       </section>
 
-      <section className="admin-grid two">
+      <section className="admin-grid two" aria-label="Social workspace navigation">
         <Link href="/dashboard/social/create" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week's AI content plan.</p></div></div>
         </Link>

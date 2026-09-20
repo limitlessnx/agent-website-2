@@ -30,7 +30,7 @@ export default async function AgentManagementPage() {
     .filter((group) => group.agents.length > 0);
 
   return (
-    <main className="admin-page">
+    <main className="admin-page dashboard-v2-page">
       <header className="admin-page-header">
         <div>
           <p className="admin-kicker">AI Workforce</p>
