@@ -308,3 +308,85 @@
 @media(max-width:700px){
  .designSystem{--fk-type-title:27px;--fk-type-section:18px;--fk-page-gap:20px;--fk-section-gap:14px;--fk-panel-padding:16px}
 }
+
+
+/* Dashboard V3 Phase 3: surface and layer hierarchy */
+.designSystem{
+  --fk-radius-panel:16px;
+  --fk-radius-control:10px;
+  --fk-surface-border:color-mix(in srgb,var(--fk-border) 82%,transparent);
+  --fk-surface-shadow:0 14px 38px rgba(2,0,15,.16);
+}
+:global(html[data-theme="light"]) .designSystem{
+  --fk-surface-shadow:0 12px 32px rgba(49,36,86,.07);
+}
+.designSystem :global(.admin-main){
+  background:
+    radial-gradient(circle at 52% -12%,var(--fk-brand-glow),transparent 34rem),
+    var(--fk-canvas)!important;
+}
+.designSystem :global(.admin-page){
+  background:transparent!important;
+}
+.designSystem :global(.admin-page-header){
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  padding:4px 0 10px!important;
+  overflow:visible!important;
+}
+.designSystem :global(.admin-page-header::before),
+.designSystem :global(.admin-page-header::after){display:none!important}
+.designSystem :global(.admin-panel),
+.designSystem :global(.admin-hero-panel),
+.designSystem :global(.dashboard-card),
+.designSystem :global(.admin-metric-card){
+  background:var(--fk-surface)!important;
+  border:1px solid var(--fk-surface-border)!important;
+  border-radius:var(--fk-radius-panel)!important;
+  box-shadow:var(--fk-surface-shadow)!important;
+}
+.designSystem :global(.admin-panel::before),
+.designSystem :global(.admin-panel::after),
+.designSystem :global(.admin-metric-card::before),
+.designSystem :global(.admin-metric-card::after),
+.designSystem :global(.dashboard-card::before),
+.designSystem :global(.dashboard-card::after){opacity:.22!important}
+.designSystem :global(.admin-list-row){
+  background:transparent!important;
+  border:0!important;
+  border-bottom:1px solid var(--fk-border)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.designSystem :global(.admin-list-row:last-child){border-bottom:0!important}
+.designSystem :global(.admin-list-row:hover){background:var(--fk-row-hover)!important}
+.designSystem :global(.admin-table){
+  background:transparent!important;
+}
+.designSystem :global(.admin-table th){
+  background:var(--fk-table-head)!important;
+}
+.designSystem :global(.admin-table td),
+.designSystem :global(.admin-table th){
+  border-color:var(--fk-border)!important;
+}
+.designSystem :global(input),
+.designSystem :global(select),
+.designSystem :global(textarea),
+.designSystem :global(.admin-search){
+  border-radius:var(--fk-radius-control)!important;
+  box-shadow:none!important;
+}
+.designSystem :global(.admin-status),
+.designSystem :global(.admin-badge),
+.designSystem :global(.status-badge){
+  border-radius:999px!important;
+}
+@media(max-width:700px){
+  .designSystem :global(.admin-panel),
+  .designSystem :global(.admin-hero-panel),
+  .designSystem :global(.dashboard-card),
+  .designSystem :global(.admin-metric-card){border-radius:14px!important;box-shadow:none!important}
+  .designSystem :global(.admin-page-header){padding-top:0!important}
+}
