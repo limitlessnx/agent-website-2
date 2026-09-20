@@ -1,4 +1,4 @@
-html[data-theme="light"] body:has(.fluxknight-platform-shell) {
+[data-dashboard-theme="light"] {
   --admin-bg: #f3f6fb;
   --admin-shell-bg: #edf2f8;
   --admin-sidebar-bg: #ffffff;
@@ -19,33 +19,33 @@ html[data-theme="light"] body:has(.fluxknight-platform-shell) {
   --text-muted: #748198;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) body,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) main,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .fluxknight-platform-shell,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-shell,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-main {
+[data-dashboard-theme="light"] body,
+[data-dashboard-theme="light"] main,
+[data-dashboard-theme="light"] .fluxknight-platform-shell,
+[data-dashboard-theme="light"] .admin-shell,
+[data-dashboard-theme="light"] .admin-main {
   background: #f3f6fb !important;
   color: #111827 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-topbar,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-sidebar {
+[data-dashboard-theme="light"] .admin-topbar,
+[data-dashboard-theme="light"] .admin-sidebar {
   background: #ffffff !important;
   background-image: none !important;
   border-color: rgba(15, 23, 42, 0.12) !important;
   box-shadow: 0 12px 34px rgba(15, 23, 42, 0.07) !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-hero-panel,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-panel,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .lead-card,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .leads-crm-summary > div,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .enterprise-grid-shell,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="workspaceSwitcher"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="userCard"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="drawer"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="palette"] {
+[data-dashboard-theme="light"] .admin-hero-panel,
+[data-dashboard-theme="light"] .admin-panel,
+[data-dashboard-theme="light"] .admin-metric-card,
+[data-dashboard-theme="light"] .lead-card,
+[data-dashboard-theme="light"] .leads-crm-summary > div,
+[data-dashboard-theme="light"] .enterprise-grid-shell,
+[data-dashboard-theme="light"] [class*="workspaceSwitcher"],
+[data-dashboard-theme="light"] [class*="userCard"],
+[data-dashboard-theme="light"] [class*="drawer"],
+[data-dashboard-theme="light"] [class*="palette"] {
   background: #ffffff !important;
   background-image: none !important;
   border-color: rgba(15, 23, 42, 0.12) !important;
@@ -53,153 +53,153 @@ html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="palette"]
   color: #111827 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-hero-panel::before,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-hero-panel::after,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card::before,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card::after,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-panel::before,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-panel::after {
+[data-dashboard-theme="light"] .admin-hero-panel::before,
+[data-dashboard-theme="light"] .admin-hero-panel::after,
+[data-dashboard-theme="light"] .admin-metric-card::before,
+[data-dashboard-theme="light"] .admin-metric-card::after,
+[data-dashboard-theme="light"] .admin-panel::before,
+[data-dashboard-theme="light"] .admin-panel::after {
   opacity: 0.035 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page h1,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page h2,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page h3,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page strong,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card strong,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-list-row strong,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-breadcrumb strong,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-sidebar strong,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="drawer"] strong,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="palette"] strong {
+[data-dashboard-theme="light"] .admin-page h1,
+[data-dashboard-theme="light"] .admin-page h2,
+[data-dashboard-theme="light"] .admin-page h3,
+[data-dashboard-theme="light"] .admin-page strong,
+[data-dashboard-theme="light"] .admin-metric-card strong,
+[data-dashboard-theme="light"] .admin-list-row strong,
+[data-dashboard-theme="light"] .admin-breadcrumb strong,
+[data-dashboard-theme="light"] .admin-sidebar strong,
+[data-dashboard-theme="light"] [class*="drawer"] strong,
+[data-dashboard-theme="light"] [class*="palette"] strong {
   color: #111827 !important;
   text-shadow: none !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page p,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page span,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-page em,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-muted,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-panel-header p,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card p,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card span,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-list-row span,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-list-row em,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-breadcrumb span,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-sidebar small,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="drawer"] span,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="palette"] small {
+[data-dashboard-theme="light"] .admin-page p,
+[data-dashboard-theme="light"] .admin-page span,
+[data-dashboard-theme="light"] .admin-page em,
+[data-dashboard-theme="light"] .admin-muted,
+[data-dashboard-theme="light"] .admin-panel-header p,
+[data-dashboard-theme="light"] .admin-metric-card p,
+[data-dashboard-theme="light"] .admin-metric-card span,
+[data-dashboard-theme="light"] .admin-list-row span,
+[data-dashboard-theme="light"] .admin-list-row em,
+[data-dashboard-theme="light"] .admin-breadcrumb span,
+[data-dashboard-theme="light"] .admin-sidebar small,
+[data-dashboard-theme="light"] [class*="drawer"] span,
+[data-dashboard-theme="light"] [class*="palette"] small {
   color: #5f6f85 !important;
   text-shadow: none !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-kicker,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .section-label,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-status,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card > small {
+[data-dashboard-theme="light"] .admin-kicker,
+[data-dashboard-theme="light"] .section-label,
+[data-dashboard-theme="light"] .admin-status,
+[data-dashboard-theme="light"] .admin-metric-card > small {
   color: #6d28d9 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-search,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .enterprise-grid-search,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-form-grid input,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-form-grid select,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-form-grid textarea,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-login-card input,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="searchRow"] {
+[data-dashboard-theme="light"] .admin-search,
+[data-dashboard-theme="light"] .enterprise-grid-search,
+[data-dashboard-theme="light"] .admin-form-grid input,
+[data-dashboard-theme="light"] .admin-form-grid select,
+[data-dashboard-theme="light"] .admin-form-grid textarea,
+[data-dashboard-theme="light"] .admin-login-card input,
+[data-dashboard-theme="light"] [class*="searchRow"] {
   background: #ffffff !important;
   border-color: rgba(15, 23, 42, 0.14) !important;
   color: #111827 !important;
   box-shadow: none !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) input,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) textarea,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) select,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="searchRow"] input {
+[data-dashboard-theme="light"] input,
+[data-dashboard-theme="light"] textarea,
+[data-dashboard-theme="light"] select,
+[data-dashboard-theme="light"] [class*="searchRow"] input {
   color: #111827 !important;
   -webkit-text-fill-color: #111827 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) input::placeholder,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) textarea::placeholder {
+[data-dashboard-theme="light"] input::placeholder,
+[data-dashboard-theme="light"] textarea::placeholder {
   color: #7c8798 !important;
   -webkit-text-fill-color: #7c8798 !important;
   opacity: 1 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-icon-button,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-text-button,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-outline-link,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-nav a,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-period,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) button[class*="commandButton"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) button[class*="activityButton"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="trigger"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="addOrganization"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="close"] {
+[data-dashboard-theme="light"] .admin-icon-button,
+[data-dashboard-theme="light"] .admin-text-button,
+[data-dashboard-theme="light"] .admin-outline-link,
+[data-dashboard-theme="light"] .admin-nav a,
+[data-dashboard-theme="light"] .admin-period,
+[data-dashboard-theme="light"] button[class*="commandButton"],
+[data-dashboard-theme="light"] button[class*="activityButton"],
+[data-dashboard-theme="light"] [class*="trigger"],
+[data-dashboard-theme="light"] [class*="addOrganization"],
+[data-dashboard-theme="light"] [class*="close"] {
   background: #ffffff !important;
   border-color: rgba(15, 23, 42, 0.13) !important;
   color: #334155 !important;
   box-shadow: 0 5px 16px rgba(15, 23, 42, 0.05) !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-nav a:hover,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-nav a[aria-current="page"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-text-button:hover,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="trigger"][aria-expanded="true"] {
+[data-dashboard-theme="light"] .admin-nav a:hover,
+[data-dashboard-theme="light"] .admin-nav a[aria-current="page"],
+[data-dashboard-theme="light"] .admin-text-button:hover,
+[data-dashboard-theme="light"] [class*="trigger"][aria-expanded="true"] {
   background: #f3ecff !important;
   border-color: rgba(109, 40, 217, 0.24) !important;
   color: #5b21b6 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-list-row,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-checklist span,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-table td,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-table th,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="activityList"] article,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="commandList"] > button {
+[data-dashboard-theme="light"] .admin-list-row,
+[data-dashboard-theme="light"] .admin-checklist span,
+[data-dashboard-theme="light"] .admin-table td,
+[data-dashboard-theme="light"] .admin-table th,
+[data-dashboard-theme="light"] [class*="activityList"] article,
+[data-dashboard-theme="light"] [class*="commandList"] > button {
   background: #ffffff !important;
   border-color: rgba(15, 23, 42, 0.10) !important;
   color: #334155 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-table th {
+[data-dashboard-theme="light"] .admin-table th {
   background: #f8fafc !important;
   color: #475569 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-table tbody tr:hover,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="commandList"] > button:hover {
+[data-dashboard-theme="light"] .admin-table tbody tr:hover,
+[data-dashboard-theme="light"] [class*="commandList"] > button:hover {
   background: #faf7ff !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-health-ring,
-html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-launch-score {
+[data-dashboard-theme="light"] .admin-health-ring,
+[data-dashboard-theme="light"] .admin-launch-score {
   background-color: #ffffff !important;
   color: #111827 !important;
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="backdrop"],
-html[data-theme="light"] body:has(.fluxknight-platform-shell) [class*="overlay"] {
+[data-dashboard-theme="light"] [class*="backdrop"],
+[data-dashboard-theme="light"] [class*="overlay"] {
   background: rgba(15, 23, 42, 0.34) !important;
 }
 
 @media (max-width: 820px) {
-  html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-shell,
-  html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-main {
+  [data-dashboard-theme="light"] .admin-shell,
+  [data-dashboard-theme="light"] .admin-main {
     background: #f3f6fb !important;
   }
 
-  html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-topbar {
+  [data-dashboard-theme="light"] .admin-topbar {
     background: #ffffff !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 
-  html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-hero-panel,
-  html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-panel,
-  html[data-theme="light"] body:has(.fluxknight-platform-shell) .admin-metric-card {
+  [data-dashboard-theme="light"] .admin-hero-panel,
+  [data-dashboard-theme="light"] .admin-panel,
+  [data-dashboard-theme="light"] .admin-metric-card {
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
   }
 }
