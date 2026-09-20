@@ -24,7 +24,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
 
   return (
     <div className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
-      <MobileNavigationProvider>
+      <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />\n      <MobileNavigationProvider>
         <LeoConversationProvider>
           <MobileAdminHeader />
           <div className="admin-shell fluxknight-platform-shell">
