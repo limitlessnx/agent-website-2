@@ -90,14 +90,24 @@ html[data-theme="light"] body:has(.portal-shell) {
   --admin-shadow: 0 18px 55px rgba(53, 31, 86, 0.12);
 }
 
-body:has(.fluxknight-platform-shell),\nbody:has(.client-dashboard),\nbody:has(.portal-shell) {\n  background: var(--flux-bg);\n  color: var(--flux-text);\n}
+body:has(.fluxknight-platform-shell),
+body:has(.client-dashboard),
+body:has(.portal-shell) {
+  background: var(--flux-bg);
+  color: var(--flux-text);
+}
 
-body:has(.fluxknight-platform-shell),\nbody:has(.client-dashboard),\nbody:has(.portal-shell) {\n  background-image:
+body:has(.fluxknight-platform-shell),
+body:has(.client-dashboard),
+body:has(.portal-shell) {
+  background-image:
     radial-gradient(circle at 50% -15%, rgba(126, 57, 255, 0.14), transparent 34rem),
     linear-gradient(var(--flux-bg), var(--flux-bg));
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell),\nhtml[data-theme="light"] body:has(.client-dashboard),\nhtml[data-theme="light"] body:has(.portal-shell) {
+html[data-theme="light"] body:has(.fluxknight-platform-shell),
+html[data-theme="light"] body:has(.client-dashboard),
+html[data-theme="light"] body:has(.portal-shell) {
   background-image:
     radial-gradient(circle at 50% -15%, rgba(139, 92, 246, 0.08), transparent 34rem),
     linear-gradient(var(--flux-bg), var(--flux-bg));
