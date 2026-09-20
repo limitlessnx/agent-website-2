@@ -34,7 +34,7 @@ export default async function AutomationHealthPage() {
       : "Healthy";
 
   return (
-    <main className="admin-page">
+    <main className="admin-page dashboard-v2-page">
       <header className="admin-page-header">
         <div>
           <p className="admin-kicker">Fluxknight Operations</p>
