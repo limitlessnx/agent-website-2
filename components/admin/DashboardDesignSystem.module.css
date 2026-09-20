@@ -468,3 +468,59 @@
   .designSystem :global(.admin-topbar){display:none!important}
   .designSystem :global(.admin-sidebar){border-right:1px solid var(--fk-border)!important}
 }
+
+
+/* Dashboard V3 Phase 5: command center home */
+.designSystem :global(.dashboard-v3-home){
+  max-width:1500px!important;
+  margin:0 auto!important;
+}
+.designSystem :global(.dashboard-v3-home-intro){
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  padding:10px 2px 4px;
+  background:transparent!important;
+  border:0!important;
+}
+.designSystem :global(.dashboard-v3-home-intro h1){
+  margin:6px 0 7px;
+  color:var(--fk-text);
+  font-size:clamp(28px,3vw,40px);
+  line-height:1.04;
+  letter-spacing:-.04em;
+}
+.designSystem :global(.dashboard-v3-home-intro p){
+  max-width:680px;
+  margin:0;
+  color:var(--fk-text-muted);
+  font-size:var(--fk-type-body);
+  line-height:1.55;
+}
+.designSystem :global(.dashboard-v3-health){
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:34px;
+  padding:0 12px;
+  border:1px solid var(--fk-border);
+  border-radius:999px;
+  background:var(--fk-surface);
+  color:var(--fk-text-secondary);
+  font-size:var(--fk-type-label);
+  font-weight:var(--fk-weight-semibold);
+  white-space:nowrap;
+}
+.designSystem :global(.dashboard-v3-health span){
+  width:7px;height:7px;border-radius:50%;background:var(--fk-warning);box-shadow:0 0 0 4px color-mix(in srgb,var(--fk-warning) 14%,transparent);
+}
+.designSystem :global(.dashboard-v3-health-operational span){background:var(--fk-success);box-shadow:0 0 0 4px color-mix(in srgb,var(--fk-success) 14%,transparent)}
+.designSystem :global(.dashboard-v3-health-critical span){background:var(--fk-danger);box-shadow:0 0 0 4px color-mix(in srgb,var(--fk-danger) 14%,transparent)}
+.designSystem :global(.dashboard-v3-home section){
+  scroll-margin-top:88px;
+}
+@media(max-width:700px){
+  .designSystem :global(.dashboard-v3-home-intro){align-items:flex-start;flex-direction:column;gap:14px;padding-top:2px}
+  .designSystem :global(.dashboard-v3-home-intro h1){font-size:30px}
+}
