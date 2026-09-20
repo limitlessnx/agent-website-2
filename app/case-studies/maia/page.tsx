@@ -135,6 +135,16 @@ export default function MaiaCaseStudyPage() {
 
       <section className={styles.chapterSectionAlt}>
         <div className={styles.shell}>
+          <div className={styles.understandHeaderVisual}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/c694061d-0a96-41bc-928b-331e3f5f8ed0.jpg"
+              alt="Maia turning a real-estate conversation into structured sales intelligence and CRM-ready customer context."
+              className={styles.understandHeaderImage}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <ChapterHeading
             number="02"
             eyebrow="Understand"
@@ -236,6 +246,16 @@ export default function MaiaCaseStudyPage() {
 
       <section className={styles.revealSection}>
         <div className={styles.shell}>
+          <div className={styles.completeSystemHeaderVisual}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/5fe528b4-3213-4ccd-ab57-41993e1668ac.jpg"
+              alt="Maia at the center of a connected operating system that remembers context, continues workflows, and drives results."
+              className={styles.completeSystemHeaderImage}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <div className={styles.revealHeading}>
             <span className={styles.eyebrow}>The complete system</span>
             <h2>This is why Maia is more than a chatbot.</h2>
