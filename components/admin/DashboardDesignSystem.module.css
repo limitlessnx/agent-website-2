@@ -178,3 +178,37 @@
 @keyframes fkPageIn{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:none}}
 @keyframes fkReveal{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.designSystem :global(.dashboard-v2-page),.designSystem :global([data-state="open"]){animation:none!important}}
+
+
+/* Dashboard V2 Phase 6: responsive + accessibility hardening */
+.designSystem :global(a),.designSystem :global(button),.designSystem :global([role="button"]),.designSystem :global([role="tab"]){touch-action:manipulation}
+.designSystem :global(.admin-page){width:min(100%,var(--fk-content-max));margin-inline:auto}
+.designSystem :global(.admin-page img),.designSystem :global(.admin-page video),.designSystem :global(.admin-page canvas){max-width:100%;height:auto}
+.designSystem :global(.admin-panel),.designSystem :global(.admin-metric-card),.designSystem :global(.admin-list-row>div){min-width:0}
+.designSystem :global(.admin-list-row strong),.designSystem :global(.admin-list-row span),.designSystem :global(.admin-panel p){overflow-wrap:anywhere}
+.designSystem :global(.admin-button),.designSystem :global(.primary-button),.designSystem :global(.secondary-button),.designSystem :global([role="tab"]){min-width:0}
+.designSystem :global(.admin-button svg),.designSystem :global(.primary-button svg),.designSystem :global(.secondary-button svg){width:16px;height:16px;flex:0 0 auto}
+.designSystem :global(input),.designSystem :global(select),.designSystem :global(textarea){min-height:40px}
+.designSystem :global(textarea){min-height:96px;resize:vertical}
+.designSystem :global(.admin-table-wrap),.designSystem :global(.table-scroll){max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.designSystem :global(.admin-table){min-width:620px}
+.designSystem :global(.admin-status){max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.designSystem :global([aria-disabled="true"]){cursor:not-allowed;opacity:.48}
+@media(max-width:900px){
+ .designSystem :global(.admin-page){padding-inline:16px!important;padding-bottom:96px!important}
+ .designSystem :global(.admin-page-header){padding-top:8px!important}
+ .designSystem :global(.admin-panel-header){gap:12px!important}
+}
+@media(max-width:640px){
+ .designSystem :global(.admin-page){padding-inline:12px!important}
+ .designSystem :global(.admin-page-header h1){font-size:25px!important}
+ .designSystem :global(.admin-page-header p){font-size:13px!important}
+ .designSystem :global(.admin-panel-header){flex-direction:column!important}
+ .designSystem :global(.admin-panel-header>.admin-status){align-self:flex-start}
+ .designSystem :global(.admin-list-row){align-items:flex-start!important}
+ .designSystem :global(.admin-list-row>.admin-button){min-height:40px}
+}
+@media(max-width:420px){
+ .designSystem :global(.admin-page){padding-inline:10px!important}
+ .designSystem :global(.admin-page-header h1){font-size:23px!important}
+}
