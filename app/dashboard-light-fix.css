@@ -19,11 +19,11 @@
   --text-muted: #748198;
 }
 
-[data-dashboard-theme="light"] body,
-[data-dashboard-theme="light"] main,
+[data-dashboard-theme="light"],
 [data-dashboard-theme="light"] .fluxknight-platform-shell,
 [data-dashboard-theme="light"] .admin-shell,
-[data-dashboard-theme="light"] .admin-main {
+[data-dashboard-theme="light"] .admin-main,
+[data-dashboard-theme="light"] .admin-page {
   background: #f3f6fb !important;
   color: #111827 !important;
 }
