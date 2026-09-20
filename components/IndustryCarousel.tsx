@@ -184,9 +184,10 @@ export default function IndustryCarousel() {
             {loopItems.map(({ id, title, icon: Icon, image, eyebrow, text }, renderedIndex) => {
               const logicalIndex = (renderedIndex - CLONES + industries.length) % industries.length;
               const isActive = logicalIndex === active;
+              const prioritizeImage = renderedIndex >= CLONES - 1 && renderedIndex <= CLONES + 2;
               return (
                 <article key={`${id}-${renderedIndex}`} className={`${styles.card} ${isActive ? styles.active : ""}`} tabIndex={renderedIndex >= CLONES && renderedIndex < CLONES + industries.length ? 0 : -1} aria-current={isActive ? "true" : undefined}>
-                  <img className={styles.cardImage} src={image} alt="" aria-hidden="true" loading="lazy" decoding="async" fetchPriority="low" />
+                  <img className={styles.cardImage} src={image} alt="" aria-hidden="true" loading={prioritizeImage ? "eager" : "lazy"} decoding="async" fetchPriority={renderedIndex === CLONES ? "high" : "auto"} />
                   <div className={styles.cardShade} aria-hidden="true" />
                   <div className={styles.cardTopline}><span className={styles.cardIcon}><Icon size={20} /></span><span className={styles.counter}>{String(logicalIndex + 1).padStart(2, "0")}</span></div>
                   <div className={styles.cardContent}>

@@ -65,7 +65,7 @@ export default function Navbar() {
         </div>
         <div className={styles.desktopActions}>
           <Link className={styles.loginLink} href="/account/login">Login</Link>
-          <Link className={`${styles.demoLink} flux-contact`} href="/evaluation">Book a Demo <span>↗</span></Link>
+          <Link className={`${styles.demoLink} flux-contact`} href="/account/signup?trial=basic&next=%2Fportal">Start Free Trial <span>↗</span></Link>
         </div>
         <button className={styles.mobileToggle} type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={22} /></button>
       </nav>
@@ -84,7 +84,7 @@ export default function Navbar() {
             </nav>
             <div className={`${styles.mobileActions} flux-mobile-actions`}>
               <Link href="/account/login" onClick={closeMenu}>Login</Link>
-              <Link className={`${styles.primary} primary`} href="/evaluation" onClick={closeMenu}>Book a Demo</Link>
+              <Link className={`${styles.primary} primary`} href="/account/signup?trial=basic&next=%2Fportal" onClick={closeMenu}>Start Free Trial</Link>
             </div>
           </aside>
         </div>

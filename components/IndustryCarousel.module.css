@@ -1,8 +1,6 @@
 .section {
   position: relative;
   overflow: hidden;
-  content-visibility: auto;
-  contain-intrinsic-size: 820px;
   padding: 104px 0 112px;
   background: radial-gradient(circle at 50% 48%, rgba(124,58,237,.13), transparent 34%), #050507;
 }
