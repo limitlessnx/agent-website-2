@@ -17,14 +17,31 @@ import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import desktop from "@/components/admin/SuperAdminDesktop.module.css";
 import mobilePolish from "@/components/admin/MobileAdminPolish.module.css";
 
+const themeBootScript = `
+(function(){
+  try {
+    var root = document.getElementById("dashboard-theme-root");
+    if (!root) return;
+    var key = "limitless-dashboard-theme";
+    var saved = localStorage.getItem(key);
+    var theme = saved === "light" || saved === "dark"
+      ? saved
+      : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    root.dataset.dashboardTheme = theme;
+    root.style.colorScheme = theme;
+  } catch (_) {}
+})();
+`;
+
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard");
   const tenants = await listClientOnboardingProfiles(100).catch(() => []);
 
   return (
-    <div className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
-      <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />\n      <MobileNavigationProvider>
+    <div id="dashboard-theme-root" data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
+      <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      <MobileNavigationProvider>
         <LeoConversationProvider>
           <MobileAdminHeader />
           <div className="admin-shell fluxknight-platform-shell">
