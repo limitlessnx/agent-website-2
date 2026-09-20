@@ -220,3 +220,9 @@
   .leakDetailGrid{padding:12px}
   .campaignContextFrame{border-radius:13px}
 }
+
+/* Render X: high-resolution property recommendation artwork */
+.propertyImage{position:relative;overflow:hidden;background:#090611}
+.propertyImage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;image-rendering:auto;filter:contrast(1.02) saturate(1.02)}
+.propertyImage:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,4,14,.02),rgba(7,4,14,.16));pointer-events:none}
+.propertyImage span{position:relative;z-index:2}
