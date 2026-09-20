@@ -115,3 +115,22 @@
   .desktopChrome :global(.admin-panel),.desktopChrome :global(.admin-card){padding:16px!important}
   .desktopChrome :global(.admin-metric-card){padding:14px!important}
 }
+
+
+/* Dashboard V2 Phase 2: shell hierarchy */
+.desktopChrome :global(.admin-topbar){height:68px!important;grid-template-columns:190px minmax(300px,520px) 1fr!important;gap:20px!important;padding:0 24px!important;background:rgba(8,9,13,.94)!important;border-bottom-color:#202630!important}
+.desktopChrome :global(.admin-breadcrumb strong){font-size:12px!important;font-weight:750!important;color:#f0f2f5!important}
+.desktopChrome :global(.admin-breadcrumb span){font-size:10px!important;color:#747d89!important}
+.desktopChrome :global(.admin-search){height:38px!important;border-color:#272e38!important;background:#0d1117!important}
+.desktopChrome :global(.admin-search:focus-within){border-color:#594681!important;box-shadow:0 0 0 3px rgba(139,92,246,.07)!important}
+.desktopChrome :global(.admin-topbar-actions .admin-period){min-height:34px!important;border-color:#252b35!important;background:#0d1117!important;color:#929aa5!important}
+.desktopChrome :global(.workspace-rail){min-height:46px!important;padding:0 24px!important;background:#0a0d12!important;border-bottom-color:#1d232c!important}
+.desktopChrome :global(.workspace-rail .items a){min-height:34px!important;font-size:11px!important}
+.desktopChrome :global(.admin-page){padding:28px 24px 48px!important}
+.desktopChrome :global(.admin-page-header){margin-bottom:24px!important;padding:0!important;border:0!important;background:transparent!important}
+.desktopChrome :global(.admin-page-header h1){margin:0!important;font-size:30px!important;font-weight:720!important;line-height:1.12!important;letter-spacing:-.035em!important}
+.desktopChrome :global(.admin-page-header p){max-width:720px!important;margin-top:8px!important;color:#858e9a!important;font-size:13px!important;line-height:1.55!important}
+@media(max-width:900px){
+ .desktopChrome :global(.admin-page-header){padding:0!important;background:transparent!important}
+ .desktopChrome :global(.admin-page-header h1){font-size:26px!important}
+}
