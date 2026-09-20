@@ -43,9 +43,9 @@
   --admin-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell),
-html[data-theme="light"] body:has(.client-dashboard),
-html[data-theme="light"] body:has(.portal-shell) {
+[data-dashboard-theme="light"],
+[data-dashboard-theme="light"],
+[data-dashboard-theme="light"] {
   --flux-bg: #f7f5ff;
   --flux-bg-soft: #f1edff;
   --flux-surface: #ffffff;
@@ -105,9 +105,9 @@ body:has(.portal-shell) {
     linear-gradient(var(--flux-bg), var(--flux-bg));
 }
 
-html[data-theme="light"] body:has(.fluxknight-platform-shell),
-html[data-theme="light"] body:has(.client-dashboard),
-html[data-theme="light"] body:has(.portal-shell) {
+[data-dashboard-theme="light"],
+[data-dashboard-theme="light"],
+[data-dashboard-theme="light"] {
   background-image:
     radial-gradient(circle at 50% -15%, rgba(139, 92, 246, 0.08), transparent 34rem),
     linear-gradient(var(--flux-bg), var(--flux-bg));
@@ -189,9 +189,9 @@ textarea {
   border-color: var(--flux-border) !important;
 }
 
-html[data-theme="light"] input,
-html[data-theme="light"] select,
-html[data-theme="light"] textarea {
+[data-dashboard-theme="light"] input,
+[data-dashboard-theme="light"] select,
+[data-dashboard-theme="light"] textarea {
   background: #ffffff !important;
 }
 
@@ -258,7 +258,7 @@ a:hover,
   background-clip: text !important;
 }
 
-html[data-theme="light"] .gradient-text {
+[data-dashboard-theme="light"] .gradient-text {
   background: linear-gradient(135deg, #171020 0%, var(--flux-primary-bright) 58%, var(--flux-primary) 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
@@ -310,7 +310,7 @@ small {
   background: var(--flux-primary-soft) !important;
 }
 
-html[data-theme="light"] .admin-status.live {
+[data-dashboard-theme="light"] .admin-status.live {
   color: #5b21b6 !important;
 }
 
