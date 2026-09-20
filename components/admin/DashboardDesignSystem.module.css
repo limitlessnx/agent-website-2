@@ -61,7 +61,7 @@
   color:var(--fk-text);
   background:var(--fk-canvas);
 }
-:global(html[data-theme="light"]) .designSystem{
+.designSystem:global([data-dashboard-theme="light"]){
   --fk-canvas:#f7f5ff;
   --fk-canvas-accent:#f0ecff;
   --fk-surface:#ffffff;
@@ -317,7 +317,7 @@
   --fk-surface-border:color-mix(in srgb,var(--fk-border) 82%,transparent);
   --fk-surface-shadow:0 14px 38px rgba(2,0,15,.16);
 }
-:global(html[data-theme="light"]) .designSystem{
+.designSystem:global([data-dashboard-theme="light"]){
   --fk-surface-shadow:0 12px 32px rgba(49,36,86,.07);
 }
 .designSystem :global(.admin-main){
