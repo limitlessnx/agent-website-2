@@ -165,3 +165,16 @@
 @media(max-width:420px){
  .designSystem :global(.admin-metric-grid),.designSystem :global(.admin-grid.four){grid-template-columns:1fr!important}
 }
+
+
+/* Dashboard V2 Phase 5: restrained interaction system */
+.designSystem :global(.dashboard-v2-page){animation:fkPageIn 220ms var(--fk-ease) both}
+.designSystem :global(.admin-panel),.designSystem :global(.admin-metric-card){transition:border-color var(--fk-motion-fast) var(--fk-ease),background var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-metric-card:hover){border-color:#303844!important;background:#0f131a!important}
+.designSystem :global(.admin-list-row:is(a,button)){transition:background var(--fk-motion-fast) var(--fk-ease),color var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-list-row:is(a,button):hover){background:rgba(255,255,255,.018)!important}
+.designSystem :global([aria-expanded="true"] svg){transition:transform var(--fk-motion-base) var(--fk-ease)}
+.designSystem :global([data-state="open"]){animation:fkReveal 180ms var(--fk-ease) both}
+@keyframes fkPageIn{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:none}}
+@keyframes fkReveal{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.designSystem :global(.dashboard-v2-page),.designSystem :global([data-state="open"]){animation:none!important}}
