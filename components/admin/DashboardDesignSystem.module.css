@@ -55,3 +55,63 @@
 .designSystem :global(.admin-button:active){transform:translateY(1px)}
 @media(max-width:900px){.designSystem{--fk-font-page:26px;--fk-font-section:18px}}
 @media(prefers-reduced-motion:reduce){.designSystem :global(*),.designSystem :global(*::before),.designSystem :global(*::after){scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Dashboard V2 Phase 3: shared component grammar */
+.designSystem :global(.admin-panel),
+.designSystem :global(.admin-card),
+.designSystem :global(.dashboard-card),
+.designSystem :global(.admin-metric-card){
+  border:1px solid var(--fk-border)!important;
+  background:var(--fk-surface)!important;
+  box-shadow:none!important;
+}
+.designSystem :global(.admin-panel),
+.designSystem :global(.admin-card),
+.designSystem :global(.dashboard-card){border-radius:var(--fk-radius-md)!important;padding:var(--fk-space-5)!important}
+.designSystem :global(.admin-metric-card){min-height:112px;border-radius:var(--fk-radius-md)!important;padding:var(--fk-space-4)!important}
+.designSystem :global(.admin-metric-card p),
+.designSystem :global(.admin-metric-card span){color:var(--fk-text-muted)!important;font-size:var(--fk-font-xs)!important;line-height:1.4!important}
+.designSystem :global(.admin-metric-card strong){color:var(--fk-text)!important;font-size:28px!important;font-weight:720!important;line-height:1.08!important;letter-spacing:-.035em!important}
+.designSystem :global(.admin-button),
+.designSystem :global(.primary-button),
+.designSystem :global(.secondary-button){
+  min-height:var(--fk-control-md);display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 14px;border:1px solid var(--fk-border-strong)!important;border-radius:var(--fk-radius-sm)!important;
+  color:var(--fk-text-secondary)!important;background:var(--fk-surface-raised)!important;
+  font-size:var(--fk-font-sm)!important;font-weight:700!important;text-decoration:none;cursor:pointer;
+}
+.designSystem :global(.admin-button:hover),
+.designSystem :global(.secondary-button:hover){color:var(--fk-text)!important;background:var(--fk-surface-hover)!important;border-color:#3a4350!important}
+.designSystem :global(.primary-button){color:white!important;border-color:#7352c7!important;background:#6f4bc8!important}
+.designSystem :global(.primary-button:hover){background:#7d59d4!important;border-color:#8664d7!important}
+.designSystem :global(button:disabled),
+.designSystem :global(.admin-button:disabled){opacity:.45!important;cursor:not-allowed!important;transform:none!important}
+.designSystem :global(input),
+.designSystem :global(select),
+.designSystem :global(textarea){
+  border:1px solid var(--fk-border-strong)!important;border-radius:var(--fk-radius-sm)!important;
+  color:var(--fk-text)!important;background:#0c1016!important;
+  transition:border-color var(--fk-motion-fast) var(--fk-ease),box-shadow var(--fk-motion-fast) var(--fk-ease)!important
+}
+.designSystem :global(input:focus),
+.designSystem :global(select:focus),
+.designSystem :global(textarea:focus){outline:0!important;border-color:#624d91!important;box-shadow:0 0 0 3px rgba(139,92,246,.08)!important}
+.designSystem :global(.admin-table){width:100%;border-collapse:collapse!important}
+.designSystem :global(.admin-table th){height:42px;padding:0 14px!important;color:var(--fk-text-muted)!important;background:#0b0f14!important;border-bottom:1px solid var(--fk-border)!important;font-size:var(--fk-font-xs)!important;font-weight:750!important;text-align:left!important}
+.designSystem :global(.admin-table td){padding:13px 14px!important;color:#d7dbe1!important;border-bottom:1px solid rgba(32,38,48,.72)!important;font-size:var(--fk-font-sm)!important;line-height:1.45!important}
+.designSystem :global(.admin-table tbody tr){transition:background var(--fk-motion-fast) var(--fk-ease)}
+.designSystem :global(.admin-table tbody tr:hover){background:rgba(255,255,255,.018)!important}
+.designSystem :global(.admin-badge),
+.designSystem :global(.status-badge){min-height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:1px solid var(--fk-border);border-radius:999px;color:var(--fk-text-secondary);background:var(--fk-surface-raised);font-size:10px;font-weight:750;line-height:1}
+.designSystem :global([role="tablist"]){gap:4px}
+.designSystem :global([role="tab"]){min-height:36px;padding:0 11px;border:1px solid transparent;border-radius:var(--fk-radius-sm);color:var(--fk-text-muted);background:transparent;font-size:var(--fk-font-sm);font-weight:700;cursor:pointer}
+.designSystem :global([role="tab"]:hover){color:var(--fk-text);background:var(--fk-surface-raised)}
+.designSystem :global([role="tab"][aria-selected="true"]){color:#eee9fb;border-color:#342b49;background:var(--fk-accent-soft)}
+.designSystem :global(.admin-empty-state),
+.designSystem :global(.empty-state){display:grid;place-items:center;min-height:180px;padding:var(--fk-space-5);border:1px dashed var(--fk-border-strong);border-radius:var(--fk-radius-md);color:var(--fk-text-muted);text-align:center;background:rgba(255,255,255,.01)}
+@media(max-width:640px){
+ .designSystem :global(.admin-panel),.designSystem :global(.admin-card),.designSystem :global(.dashboard-card){padding:16px!important}
+ .designSystem :global(.admin-metric-card){min-height:96px;padding:14px!important}
+ .designSystem :global(.admin-table th),.designSystem :global(.admin-table td){padding-left:11px!important;padding-right:11px!important}
+}
