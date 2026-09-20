@@ -273,3 +273,38 @@
  .designSystem :global(#agent-configuration .admin-list-row>div){min-width:0!important}
  .designSystem :global(#agent-configuration .admin-button){max-width:100%!important;white-space:normal!important}
 }
+
+
+/* Dashboard V3 Phase 2: typography, spacing and primitive hierarchy */
+.designSystem{
+  --fk-type-caption:11px;
+  --fk-type-label:12px;
+  --fk-type-body:14px;
+  --fk-type-subtitle:16px;
+  --fk-type-section:20px;
+  --fk-type-title:32px;
+  --fk-weight-regular:450;
+  --fk-weight-medium:600;
+  --fk-weight-semibold:680;
+  --fk-weight-bold:760;
+  --fk-page-gap:28px;
+  --fk-section-gap:20px;
+  --fk-panel-padding:22px;
+}
+.designSystem :global(.admin-page-header h1){font-size:var(--fk-type-title)!important;font-weight:var(--fk-weight-semibold)!important;line-height:1.12!important;letter-spacing:-.035em!important}
+.designSystem :global(.admin-page-header p){max-width:760px;color:var(--fk-text-muted)!important;font-size:var(--fk-type-body)!important;line-height:1.55!important}
+.designSystem :global(.admin-panel-header h2){font-size:var(--fk-type-section)!important;font-weight:var(--fk-weight-semibold)!important;letter-spacing:-.018em!important}
+.designSystem :global(.admin-panel-header p){font-size:var(--fk-type-label)!important;line-height:1.55!important}
+.designSystem :global(.admin-kicker){color:var(--fk-brand-hover)!important;font-size:10px!important;font-weight:var(--fk-weight-bold)!important;letter-spacing:.12em!important}
+.designSystem :global(.admin-page){gap:var(--fk-page-gap)!important}
+.designSystem :global(.admin-panel),.designSystem :global(.admin-card),.designSystem :global(.dashboard-card){padding:var(--fk-panel-padding)!important}
+.designSystem :global(.admin-grid){gap:var(--fk-section-gap)!important}
+.designSystem :global(.admin-button),.designSystem :global(.primary-button),.designSystem :global(.secondary-button){font-size:var(--fk-type-label)!important;font-weight:var(--fk-weight-semibold)!important}
+.designSystem :global(.primary-button){background:var(--fk-brand-gradient)!important;border-color:color-mix(in srgb,var(--fk-brand) 72%,var(--fk-border-strong))!important;box-shadow:0 8px 24px var(--fk-brand-glow)!important}
+.designSystem :global(.primary-button:hover){background:var(--fk-brand-hover)!important;border-color:var(--fk-brand-hover)!important}
+.designSystem :global(input),.designSystem :global(select),.designSystem :global(textarea){color:var(--fk-text)!important;background:var(--fk-input)!important;border-color:var(--fk-border-strong)!important}
+.designSystem :global(input::placeholder),.designSystem :global(textarea::placeholder){color:var(--fk-text-muted)!important}
+.designSystem :global(.admin-status),.designSystem :global(.admin-badge),.designSystem :global(.status-badge){font-size:var(--fk-type-caption)!important}
+@media(max-width:700px){
+ .designSystem{--fk-type-title:27px;--fk-type-section:18px;--fk-page-gap:20px;--fk-section-gap:14px;--fk-panel-padding:16px}
+}
