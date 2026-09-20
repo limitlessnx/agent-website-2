@@ -57,6 +57,6 @@ export default async function ClientsPage() {
           {!profiles.length && !error ? <p className="admin-empty">No client workspaces exist yet. Use Client Onboarding → New Client.</p> : null}
         </div>
       </section>
-    </div>
+    </main>
   );
 }
