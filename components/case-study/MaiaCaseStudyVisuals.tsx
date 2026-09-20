@@ -127,8 +127,18 @@ export function LeadProfileVisual({ compact = false }: { compact?: boolean }) {
 
 export function PropertyMatchVisual() {
   const properties = [
-    { name: "Harbour Residences", meta: "2 bed · Investment-ready", status: "Available" },
-    { name: "Parkside Collection", meta: "2 bed · Payment plan", status: "Match" },
+    {
+      name: "Harbour Residences",
+      meta: "2 bed · Investment-ready",
+      status: "Available",
+      image: "https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/17983d49-fe49-4069-96c8-b1982356eb77.png",
+    },
+    {
+      name: "Parkside Collection",
+      meta: "2 bed · Payment plan",
+      status: "Match",
+      image: "https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/c8d25f1a-4349-4692-a962-f1edcdd67957.png",
+    },
   ];
   return (
     <div className={styles.propertyMatch}>
@@ -142,7 +152,10 @@ export function PropertyMatchVisual() {
         <div className={styles.propertyCards}>
           {properties.map((property) => (
             <article key={property.name}>
-              <div className={styles.propertyImage}><span>{property.status}</span></div>
+              <div className={styles.propertyImage}>
+                <img src={property.image} alt="" aria-hidden="true" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                <span>{property.status}</span>
+              </div>
               <div><strong>{property.name}</strong><p>{property.meta}</p></div>
               <span className={styles.visualAction}>View details</span>
             </article>

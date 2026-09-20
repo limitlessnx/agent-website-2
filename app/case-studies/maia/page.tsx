@@ -189,6 +189,16 @@ export default function MaiaCaseStudyPage() {
 
       <section className={styles.chapterSectionAlt}>
         <div className={styles.shell}>
+          <div className={styles.convertHeaderVisual}>
+            <img
+              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/248cb0e6-ab3f-43b2-9f2c-c1a2f4d9d77a.png"
+              alt="Qualified real-estate enquiry routed by Maia to the right agent with viewing details organized."
+              className={styles.convertHeaderImage}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <ChapterHeading
             number="04"
             eyebrow="Convert & operate"
