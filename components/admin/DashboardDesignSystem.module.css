@@ -212,3 +212,17 @@
  .designSystem :global(.admin-page){padding-inline:10px!important}
  .designSystem :global(.admin-page-header h1){font-size:23px!important}
 }
+
+
+/* Hotfix: client workspace mobile configuration layout */
+@media(max-width:700px){
+ .designSystem :global(#agent-configuration .admin-list-row[style*="display: grid"]){display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important}
+ .designSystem :global(#agent-configuration .admin-list-row[style*="display: grid"]>*){min-width:0!important;width:100%!important}
+ .designSystem :global(#agent-configuration .admin-form-grid){display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important}
+ .designSystem :global(#agent-configuration select),
+ .designSystem :global(#agent-configuration textarea),
+ .designSystem :global(#agent-configuration .admin-input){width:100%!important;max-width:100%!important;min-width:0!important}
+ .designSystem :global(#agent-configuration .admin-list-row){min-width:0!important}
+ .designSystem :global(#agent-configuration .admin-list-row>div){min-width:0!important}
+ .designSystem :global(#agent-configuration .admin-button){max-width:100%!important;white-space:normal!important}
+}
