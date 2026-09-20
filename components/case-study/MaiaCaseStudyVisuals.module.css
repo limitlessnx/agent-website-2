@@ -220,10 +220,3 @@
   .leakDetailGrid{padding:12px}
   .campaignContextFrame{border-radius:13px}
 }
-
-/* Property launch campaign image */
-.launchCampaignImageFrame{overflow:hidden;border:1px solid rgba(180,139,255,.16);border-radius:26px;background:#07040d;box-shadow:0 30px 90px rgba(0,0,0,.3)}
-.launchCampaignImage{display:block;width:100%;height:auto;object-fit:cover}
-@media(max-width:760px){
-  .launchCampaignImageFrame{border-radius:20px}
-}
