@@ -161,3 +161,10 @@ test("Public Leo realtime route is public-only and contains no operational task 
   assert.doesNotMatch(realtime, /preflightChargeableFluxAi/);
   assert.doesNotMatch(realtime, /recordChargeableFluxAiUsage/);
 });
+
+
+test("Public Leo client does not mark a staged email as a captured lead", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /data\.leadCaptured === true/);
+  assert.doesNotMatch(consultant, /response\.ok && payload\.tool_key === "leo\.public\.lead\.capture"/);
+});
