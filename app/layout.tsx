@@ -44,12 +44,12 @@ export const metadata: Metadata = {
     "AI automation company", "AI automation agency", "AI automation services", "AI agents for business", "AI agents for small business", "custom AI agents for business", "AI sales agent", "AI customer service agent", "AI customer support", "WhatsApp automation for business", "WhatsApp AI agent", "WhatsApp AI assistant", "AI voice agent", "AI phone agent", "AI receptionist", "AI lead generation agent", "lead generation automation", "AI email automation", "AI appointment setting agent", "CRM automation", "AI workflow automation", "business process automation", "multi-agent AI system", "AI employees for business", "business automation", "real estate AI automation",
   ],
   authors: [{ name: "Fluxknight" }], creator: "Fluxknight", publisher: "Fluxknight",
-  metadataBase: new URL("https://www.fluxknight.space"), alternates: { canonical: "/" }, category: "technology",
+  metadataBase: new URL("https://fluxknight.space"), alternates: { canonical: "/" }, category: "technology",
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: "/icon.svg", apple: "/apple-icon.svg" },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://www.fluxknight.space",
+    url: "https://fluxknight.space",
     siteName: "Fluxknight",
     title: "Grow Your Organization Without Growing the Workload | Fluxknight",
     description: "Respond faster, convert more opportunities, reduce repetitive work, and keep customer operations moving with connected AI automation.",
@@ -64,12 +64,44 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Fluxknight",
+  url: "https://fluxknight.space",
+  logo: "https://fluxknight.space/icon.svg",
+  description:
+    "Fluxknight builds AI systems for customer conversations, follow-up, scheduling, CRM updates, voice, WhatsApp, and workflow automation.",
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Fluxknight",
+  url: "https://fluxknight.space",
+  publisher: {
+    "@type": "Organization",
+    name: "Fluxknight",
+    url: "https://fluxknight.space",
+  },
+};
+
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body><GlobalLoadingProvider><SiteShell>{children}</SiteShell></GlobalLoadingProvider></body>
+      <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+        <GlobalLoadingProvider><SiteShell>{children}</SiteShell></GlobalLoadingProvider>
+      </body>
     </html>
   );
 }
