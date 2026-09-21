@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateLeoReasoning, type LeoChatMessage } from "@/lib/ai/leo-model";
 import { buildLeoReasoningContext } from "@/lib/leo-context";
 import { publicLeoSalesDirective } from "@/lib/leo-public-policy";
-import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
+import { executePublicLeoTool } from "@/lib/leo-public-tools";
 import { buildLeoPolicySnapshot, sanitizeLeoPageContext, type LeoIdentity } from "@/lib/leo-core";
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, storeLeoMessage, storeLeoToolProposals, updateLeoPublicLeadState } from "@/lib/leo-session-store";
 
@@ -61,29 +61,36 @@ export async function POST(request: NextRequest) {
   }
 
   let toolCalls: Array<(typeof result.toolCalls)[number] & { status: "proposed" | "executed" | "failed"; result?: unknown }> = result.toolCalls.map((call) => ({ ...call, status: "proposed" }));
-  if (!session.leadCaptured) {
-    const capture = toolCalls.find((call) => call.toolKey === "leo.public.lead.capture");
-    if (capture) {
-      const captureResult = await capturePublicLeoLead(capture.arguments);
-      if (captureResult.ok) {
-        session = await updateLeoPublicLeadState({
-          identity: PUBLIC_IDENTITY,
-          session,
-          leadProfile: {
-            name: String(capture.arguments.name || ""),
-            email: String(capture.arguments.email || ""),
-            phone: String(capture.arguments.phone || ""),
-            organization: String(capture.arguments.organization || capture.arguments.business_name || ""),
-            business_type: String(capture.arguments.business_type || ""),
-            main_goal: String(capture.arguments.main_goal || ""),
-          },
-          captured: true,
-          leadId: captureResult.leadId,
-        });
-        toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "executed" as const, result: captureResult } : call);
-      } else {
-        toolCalls = toolCalls.map((call) => call === capture ? { ...call, status: "failed" as const, result: captureResult } : call);
-      }
+  for (const call of toolCalls) {
+    if (!call.toolKey.startsWith("leo.public.")) continue;
+    if (call.toolKey === "leo.public.lead.capture" && session.leadCaptured) {
+      call.status = "executed";
+      call.result = { ok: true, status: "already_captured", leadId: session.leadId || null };
+      continue;
+    }
+    const toolResult = await executePublicLeoTool({ toolKey: call.toolKey, args: call.arguments, sessionId: session.id }).catch((error) => ({
+      ok: false,
+      status: "local_execution_failed",
+      error: error instanceof Error ? error.message : "Public Leo tool failed.",
+    }));
+    call.status = toolResult.ok ? "executed" : "failed";
+    call.result = toolResult;
+
+    if (toolResult.ok && call.toolKey === "leo.public.lead.capture") {
+      session = await updateLeoPublicLeadState({
+        identity: PUBLIC_IDENTITY,
+        session,
+        leadProfile: {
+          name: String(call.arguments.name || ""),
+          email: String(call.arguments.email || ""),
+          phone: String(call.arguments.phone || ""),
+          organization: String(call.arguments.organization || call.arguments.business_name || ""),
+          business_type: String(call.arguments.industry || call.arguments.business_type || ""),
+          main_goal: String(call.arguments.main_goal || ""),
+        },
+        captured: true,
+        leadId: "leadId" in toolResult ? String(toolResult.leadId || "") : null,
+      });
     }
   }
 
