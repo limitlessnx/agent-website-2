@@ -3,9 +3,6 @@ import { LEO_PUBLIC_KNOWLEDGE } from "@/lib/leo-public-knowledge";
 import { getPublicCatalog } from "@/lib/payments/catalog";
 import { upsertLeoPublicLead } from "@/lib/leo-public-leads";
 
-function object(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
 function text(value: unknown, max = 1200) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -28,7 +25,13 @@ function publicPlan(planDef: PlanDefinition) {
   };
 }
 
-export function recommendPublicPlan(args: Record<string, unknown>) {
+export type PublicLeoToolResult = {
+  ok: boolean;
+  status: string;
+  [key: string]: unknown;
+};
+
+export function recommendPublicPlan(args: Record<string, unknown>): PublicLeoToolResult {
   const haystack = allText(args);
   const wantsCustom = /custom integration|bespoke|multiple departments|multi-department|multiple branches|multi-branch|custom system|custom dashboard|erp|bespoke logic/.test(haystack);
   const wantsDatabase = /database|service history|customer history|lifecycle|birthday|anniversary|renewal history|vehicle history|property database|structured records|segmentation/.test(haystack);
@@ -74,7 +77,7 @@ export async function executePublicLeoTool(input: {
   toolKey: string;
   args: Record<string, unknown>;
   sessionId?: string;
-}) {
+}): Promise<PublicLeoToolResult> {
   const { toolKey, args } = input;
 
   if (toolKey === "leo.public.services.read") {
@@ -91,7 +94,8 @@ export async function executePublicLeoTool(input: {
       status: "read",
       region,
       plans: planDefinitions.map((definition) => {
-        const priced = pricing.find((item) => String(item.metadata.plan_code || "").replace("_", "-") === definition.key || item.name === definition.name);
+        const billingCode = definition.key === "starter" ? "plus" : definition.key === "business-plus" ? "business_plus" : definition.key;
+        const priced = pricing.find((item) => String(item.metadata.plan_code || "") === billingCode || item.name === definition.name);
         return { ...publicPlan(definition), pricing: priced ? { currency: priced.currency, installationFee: priced.installationFee, recurringFee: priced.recurringFee, billingInterval: priced.billingInterval } : null };
       }),
       trial: LEO_PUBLIC_KNOWLEDGE.trial,
@@ -122,12 +126,12 @@ export async function executePublicLeoTool(input: {
       plan_reason: text(args.plan_reason, 1000),
       trial_discussed: args.trial_discussed === true,
     };
-    const recommendation = args.recommended_plan ? recommendPublicPlan({ ...args, requested: args.requested_capabilities }) : null;
+    const recommendation = recommendPublicPlan({ ...args, requested: args.requested_capabilities });
     const lead = await upsertLeoPublicLead({
       sessionId,
       companyName: args.business_name,
       industry: args.industry,
-      recommendedPlan: text(args.recommended_plan, 80) || recommendation?.plan?.name,
+      recommendedPlan: text(args.recommended_plan, 80) || (typeof recommendation.plan === "object" && recommendation.plan && "name" in recommendation.plan ? String((recommendation.plan as { name?: unknown }).name || "") : ""),
       qualification,
       notes: text(args.conversation_summary || args.summary, 2000),
       status: "evaluated",
