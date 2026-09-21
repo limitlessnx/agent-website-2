@@ -127,3 +127,20 @@ test("Public Leo never exposes raw internal tool status to the voice model", asy
   assert.doesNotMatch(output, /diagnosticId/);
   assert.doesNotMatch(output, /error:/);
 });
+
+
+test("Public Leo cannot persist a voice email before a later explicit confirmation turn", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  const toolRoute = await readFile(new URL("../app/api/leo/public/tool/route.ts", import.meta.url), "utf8");
+  const sessionStore = await readFile(new URL("../lib/leo-session-store.ts", import.meta.url), "utf8");
+  const policy = await readFile(new URL("../lib/leo-public-policy.ts", import.meta.url), "utf8");
+  assert.match(consultant, /voiceTurnId: voiceEpochRef\.current\.turnId/);
+  assert.match(consultant, /invalidateVoiceGeneration\(true\)/);
+  assert.match(toolRoute, /args\.email_confirmed === true/);
+  assert.match(toolRoute, /voiceTurnId > session\.pendingEmailTurnId/);
+  assert.match(toolRoute, /email_confirmation_required/);
+  assert.match(sessionStore, /public_leo_pending_email/);
+  assert.match(sessionStore, /public_leo_pending_email_turn_id/);
+  assert.match(policy, /VOICE EMAIL SAFETY/);
+  assert.match(policy, /wait for the visitor's next spoken turn/i);
+});
