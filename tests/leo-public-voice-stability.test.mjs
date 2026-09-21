@@ -110,3 +110,20 @@ test("Public Leo tolerates transient bad networks without exposing internals", a
   assert.match(consultant, /Tap Talk to Leo to reconnect/);
   assert.match(consultant, /cleanupNetworkMonitoring/);
 });
+
+
+test("Public Leo never exposes raw internal tool status to the voice model", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  const policy = await readFile(new URL("../lib/leo-public-policy.ts", import.meta.url), "utf8");
+  const output = await readFile(new URL("../lib/leo-public-voice-output.ts", import.meta.url), "utf8");
+  assert.match(consultant, /publicLeoVoiceToolOutput/);
+  assert.doesNotMatch(consultant, /output: JSON\.stringify\(data\)/);
+  assert.match(policy, /INTERNAL STATUS FIREWALL/);
+  assert.match(policy, /never mention or narrate tools/i);
+  assert.match(policy, /Never say hold on/i);
+  assert.doesNotMatch(output, /toolKey:/);
+  assert.doesNotMatch(output, /localExecution/);
+  assert.doesNotMatch(output, /leadId/);
+  assert.doesNotMatch(output, /diagnosticId/);
+  assert.doesNotMatch(output, /error:/);
+});
