@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Bot, Building2, Home, Menu } from "@/components/admin/ServerIcons";
+import { Activity, Bot, Home, Menu, MessageSquareText } from "@/components/admin/ServerIcons";
 import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import styles from "./MobileBottomNav.module.css";
 
 const items = [
   { href: "/dashboard", label: "Home", icon: Home, exact: true },
-  { href: "/dashboard/clients", label: "Workspaces", icon: Building2 },
   { href: "/dashboard/agents", label: "Agents", icon: Bot },
+  { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquareText },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
 ];
 
