@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
-import { createPublicLeoVoiceEpoch, isCurrentPublicLeoEpoch, nextPublicLeoVoiceState, type PublicLeoVoiceEpoch, type PublicLeoVoiceState } from "@/lib/leo-public-voice-state";
+import { adaptPublicLeoSilenceMs, createPublicLeoVoiceEpoch, isCurrentPublicLeoEpoch, nextPublicLeoVoiceState, PUBLIC_LEO_SILENCE_DEFAULT_MS, type PublicLeoVoiceEpoch, type PublicLeoVoiceState } from "@/lib/leo-public-voice-state";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 type LeadProfile = { name: string; email: string; phone?: string; organization?: string; leadId?: string };
@@ -82,6 +82,10 @@ export default function PublicLeoConsultant() {
   const toolContinuationIssuedRef = useRef(false);
   const activeResponseIdRef = useRef<string | null>(null);
   const assistantAudioActiveRef = useRef(false);
+  const responseHadAudioRef = useRef(false);
+  const adaptiveSilenceMsRef = useRef(PUBLIC_LEO_SILENCE_DEFAULT_MS);
+  const lastSpeechStoppedAtRef = useRef(0);
+  const cleanEndpointTurnsRef = useRef(0);
 
   function transitionVoice(to: PublicLeoVoiceState) {
     voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
@@ -122,6 +126,32 @@ export default function PublicLeoConsultant() {
     voiceEpochRef.current = { ...current, generationId: current.generationId + 1 };
     if (voiceStateRef.current === "tool_pending") transitionVoice("generating");
     sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
+  }
+
+  function updateAdaptiveEndpoint(signal: "premature_endpoint" | "clean_turn") {
+    const next = adaptPublicLeoSilenceMs(adaptiveSilenceMsRef.current, signal);
+    if (next === adaptiveSilenceMsRef.current) return;
+    adaptiveSilenceMsRef.current = next;
+    try {
+      sendRealtimeEvent({
+        type: "session.update",
+        session: {
+          type: "realtime",
+          audio: {
+            input: {
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: next,
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+          },
+        },
+      });
+    } catch {}
   }
 
   useEffect(() => {
@@ -262,6 +292,16 @@ export default function PublicLeoConsultant() {
     let event: RealtimeEvent;
     try { event = JSON.parse(raw) as RealtimeEvent; } catch { return; }
     if (event.type === "input_audio_buffer.speech_started") {
+      const priorVoiceState = voiceStateRef.current;
+      const sinceLastStop = lastSpeechStoppedAtRef.current ? Date.now() - lastSpeechStoppedAtRef.current : Number.POSITIVE_INFINITY;
+      if (
+        (priorVoiceState === "endpointing" || priorVoiceState === "generating") &&
+        sinceLastStop < 1200 &&
+        !assistantAudioActiveRef.current
+      ) {
+        cleanEndpointTurnsRef.current = 0;
+        updateAdaptiveEndpoint("premature_endpoint");
+      }
       if (assistantAudioActiveRef.current || voiceStateRef.current === "assistant_speaking") {
         try { sendRealtimeEvent({ type: "output_audio_buffer.clear" }); } catch {}
       }
@@ -278,10 +318,12 @@ export default function PublicLeoConsultant() {
       return;
     }
     if (event.type === "input_audio_buffer.speech_stopped") {
+      lastSpeechStoppedAtRef.current = Date.now();
       if (voiceStateRef.current === "user_speaking") transitionVoice("endpointing");
       return;
     }
     if (event.type === "response.created") {
+      responseHadAudioRef.current = false;
       activeResponseIdRef.current = event.response?.id || null;
       if (voiceStateRef.current === "listening" || voiceStateRef.current === "endpointing") {
         transitionVoice("generating");
@@ -289,6 +331,7 @@ export default function PublicLeoConsultant() {
       return;
     }
     if (event.type === "response.output_audio.delta") {
+      responseHadAudioRef.current = true;
       assistantAudioActiveRef.current = true;
       if (voiceStateRef.current === "generating") transitionVoice("assistant_speaking");
       return;
@@ -298,8 +341,16 @@ export default function PublicLeoConsultant() {
       return;
     }
     if (event.type === "response.done") {
+      if (responseHadAudioRef.current && event.response?.status === "completed") {
+        cleanEndpointTurnsRef.current += 1;
+        if (cleanEndpointTurnsRef.current >= 3) {
+          cleanEndpointTurnsRef.current = 0;
+          updateAdaptiveEndpoint("clean_turn");
+        }
+      }
       activeResponseIdRef.current = null;
       assistantAudioActiveRef.current = false;
+      responseHadAudioRef.current = false;
       if (awaitingToolContinuationRef.current) {
         toolResponseDoneRef.current = true;
         maybeContinueAfterVoiceTools();
@@ -332,6 +383,10 @@ export default function PublicLeoConsultant() {
       resetVoiceToolContinuation();
       activeResponseIdRef.current = null;
       assistantAudioActiveRef.current = false;
+      responseHadAudioRef.current = false;
+      adaptiveSilenceMsRef.current = PUBLIC_LEO_SILENCE_DEFAULT_MS;
+      lastSpeechStoppedAtRef.current = 0;
+      cleanEndpointTurnsRef.current = 0;
       voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
       voiceStateRef.current = "idle";
       transitionVoice("connecting");
@@ -398,6 +453,10 @@ export default function PublicLeoConsultant() {
     resetVoiceToolContinuation();
     activeResponseIdRef.current = null;
     assistantAudioActiveRef.current = false;
+    responseHadAudioRef.current = false;
+    adaptiveSilenceMsRef.current = PUBLIC_LEO_SILENCE_DEFAULT_MS;
+    lastSpeechStoppedAtRef.current = 0;
+    cleanEndpointTurnsRef.current = 0;
     voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
     if (voiceStateRef.current !== "idle") {
       try {
