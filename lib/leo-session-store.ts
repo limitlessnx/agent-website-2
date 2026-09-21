@@ -54,7 +54,7 @@ export async function getOrCreateLeoSession(input: { identity: LeoIdentity; sess
   const id = randomUUID();
   const organizationId = input.identity.scope === "tenant" ? enforceLeoOrganizationScope(input.identity) : null;
   const created = await supabaseServerRequest<LeoSessionRow[]>("leo_sessions", { method: "POST", body: JSON.stringify({ id, scope: input.identity.scope, organization_id: organizationId || null, user_id: input.identity.userId || null, membership_id: input.identity.membershipId || null, role: input.identity.role, channel: input.identity.channel, visibility, status: "active", page_context: sanitizeLeoPageContext(input.pageContext) || {}, metadata: { global_scope: input.identity.globalScope } }) }).catch(() => []);
-  const restored = await withOperationalMemory(input.identity, { leadCaptured: false, leadProfile: undefined, leadId: null, voiceWorkingContext: undefined });
+  const restored = await withOperationalMemory(input.identity, { leadCaptured: false, leadProfile: undefined, leadId: null, voiceWorkingContext: undefined, pendingEmailCandidate: null, pendingEmailTurnId: null });
   return { id: created[0]?.id || id, persisted: Boolean(created[0]?.id), visibility, ...restored };
 }
 
