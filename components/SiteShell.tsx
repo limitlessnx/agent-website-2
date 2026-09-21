@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import LeoSupportDock from "@/components/LeoSupportDock";
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,6 +21,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main>{children}</main>
       <Footer />
+      <LeoSupportDock />
     </>
   );
 }

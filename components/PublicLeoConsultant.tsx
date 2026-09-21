@@ -5,7 +5,7 @@ import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/compo
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
-type LeadProfile = { name: string; email: string; phone: string; organization: string; leadId?: string };
+type LeadProfile = { name: string; email: string; phone?: string; organization?: string; leadId?: string };
 type RealtimeEvent = {
   type?: string;
   name?: string;
@@ -16,7 +16,7 @@ type RealtimeEvent = {
 
 const firstMessage: ChatMessage = {
   role: "assistant",
-  content: "Hi, I’m Leo, Fluxknight’s support and business evaluation assistant. Tell me a little about your business or what you’d like to improve, and I’ll help you work out where Fluxknight can help.",
+  content: "Hi, I’m Leo, Fluxknight’s support and business evaluation assistant. I’ll get a few basic details first so I can assist you properly. What’s your full name?",
 };
 
 function localLeoReply(input: string, count: number) {
@@ -49,9 +49,9 @@ function asLeadProfile(value: unknown, leadId?: unknown): LeadProfile | null {
   const row = value as Record<string, unknown>;
   const name = String(row.name || "").trim();
   const email = String(row.email || "").trim();
-  const phone = String(row.phone || "").trim();
-  const organization = String(row.organization || row.business_name || "").trim();
-  if (!name || !email || !phone || !organization) return null;
+  const phone = String(row.phone || "").trim() || undefined;
+  const organization = String(row.organization || row.business_name || "").trim() || undefined;
+  if (!name || !email) return null;
   return { name, email, phone, organization, leadId: String(leadId || row.leadId || "").trim() || undefined };
 }
 
@@ -105,7 +105,7 @@ export default function PublicLeoConsultant() {
     const nextMessages = [...messages, { role: "user" as const, content }];
     setIsThinking(true);
     try {
-      const response = await fetch("/api/leo", {
+      const response = await fetch("/api/leo/public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,7 +115,7 @@ export default function PublicLeoConsultant() {
           history: nextMessages.slice(-12),
           visibility: "private",
           leadProfile: lead || undefined,
-          pageContext: { pathname: window.location.pathname, section: "public-homepage", resourceType: "public_leo_evaluation", leadCaptured: Boolean(lead) },
+          pageContext: { pathname: window.location.pathname, section: "public-site", resourceType: "public_leo_evaluation", leadCaptured: Boolean(lead) },
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -158,7 +158,7 @@ export default function PublicLeoConsultant() {
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
 
     try {
-      const response = await fetch("/api/leo/tool", {
+      const response = await fetch("/api/leo/public/tool", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -235,7 +235,7 @@ export default function PublicLeoConsultant() {
             type: "response.create",
             response: {
               output_modalities: ["audio"],
-              instructions: "You are Leo, Fluxknight's own support and business evaluation assistant. Open naturally and help first. Ask the visitor what their business does or what they want to improve. Explain Fluxknight in plain English using practical examples such as replying to customers, follow-up, reminders, bookings, simple orders, answering common questions, and handing over to staff. Do not begin by asking for contact details. Collect name, email, phone or business details softly later only when useful for a proposal, demo, evaluation, setup or follow-up. Ask one question at a time. Avoid technical words like workflows, CRM architecture, orchestration, nodes, pipelines or webhooks unless the visitor asks for technical detail. If the user clearly asks to end the call, briefly acknowledge and use leo_end_call. Keep replies short, clear and natural.",
+              instructions: "You are Leo, Fluxknight's own support and business evaluation assistant. Introduce yourself clearly. Then collect only the visitor's full name and email address, one at a time. Do not ask for phone, WhatsApp, organization, or business name as part of the opening. After name and email are collected, ask how you can help and begin understanding their business problem. Explain Fluxknight in plain English using practical examples such as replying to customers, follow-up, reminders, bookings, simple orders, answering common questions, and handing over to staff. Avoid technical words like workflows, CRM architecture, orchestration, nodes, pipelines or webhooks unless the visitor asks for technical detail. If the user clearly asks to end the call, briefly acknowledge and use leo_end_call. Keep replies short, clear and natural.",
             },
           });
         } catch {
@@ -247,8 +247,8 @@ export default function PublicLeoConsultant() {
       await peer.setLocalDescription(offer);
       const headers: Record<string, string> = { "Content-Type": "application/sdp" };
       if (sessionId) headers["x-leo-session-id"] = sessionId;
-      headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify({ pathname: window.location.pathname, section: "public-homepage", resourceType: "public_leo_evaluation", leadCaptured: Boolean(lead) }));
-      const response = await fetch("/api/leo/realtime/call", {
+      headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify({ pathname: window.location.pathname, section: "public-site", resourceType: "public_leo_evaluation", leadCaptured: Boolean(lead) }));
+      const response = await fetch("/api/leo/public/realtime", {
         method: "POST",
         headers,
         body: offer.sdp || "",
