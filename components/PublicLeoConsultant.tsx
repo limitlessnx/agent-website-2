@@ -166,11 +166,11 @@ export default function PublicLeoConsultant() {
     }, 3000);
   }
 
-  function invalidateVoiceGeneration() {
+  function invalidateVoiceGeneration(newUserTurn = false) {
     const current = voiceEpochRef.current;
     voiceEpochRef.current = {
       callEpoch: current.callEpoch,
-      turnId: current.turnId + 1,
+      turnId: current.turnId + (newUserTurn ? 1 : 0),
       generationId: current.generationId + 1,
     };
     abortPendingVoiceTools();
@@ -335,6 +335,7 @@ export default function PublicLeoConsultant() {
           toolKey: payload.tool_key,
           arguments: payload.arguments || {},
           confirmed: payload.confirmed === true,
+          voiceTurnId: voiceEpochRef.current.turnId,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -378,7 +379,7 @@ export default function PublicLeoConsultant() {
       if (assistantAudioActiveRef.current || voiceStateRef.current === "assistant_speaking") {
         try { sendRealtimeEvent({ type: "output_audio_buffer.clear" }); } catch {}
       }
-      invalidateVoiceGeneration();
+      invalidateVoiceGeneration(true);
       assistantAudioActiveRef.current = false;
       activeResponseIdRef.current = null;
       const current = voiceStateRef.current;
@@ -493,7 +494,7 @@ export default function PublicLeoConsultant() {
             type: "response.create",
             response: {
               output_modalities: ["audio"],
-              instructions: "Introduce yourself as Leo, Fluxknight's support and business evaluation assistant. Ask for the visitor's full name, then email, one question at a time. After that, guide a natural business evaluation even when the visitor does not know what they need. Diagnose where Fluxknight could improve customer response, sales support, follow-up, reminders, bookings, customer relationships or human handoff. Explain plan fit honestly: Basic is support/qualification/handoff only; Plus adds same-channel follow-up and reminders; Business adds team controls, cross-channel context and voice when configured; Business+ adds deeper customer/operations history and advanced automation. Explain the 14-day Basic trial accurately and never imply advanced reminders or voice are included. Never mention tools, function calls, lead capture, databases, workflows, background jobs, processing, saving context, APIs, or internal system status. Never ask the visitor to wait for internal work. Perform internal actions silently and continue the customer conversation naturally. Save meaningful evaluation updates and offer a human follow-up when appropriate. Do not require phone or business name. Keep replies short, clear and natural.",
+              instructions: "Introduce yourself as Leo, Fluxknight's support and business evaluation assistant. Ask for the visitor's full name, then email, one question at a time. For voice email collection, never assume transcription is correct: stage the email candidate first, read the exact normalized email back to the visitor, ask whether it is correct, wait for their next spoken turn, and only mark email_confirmed=true after an explicit yes or equivalent confirmation. If they correct it, replace the candidate and confirm again. After that, guide a natural business evaluation even when the visitor does not know what they need. Diagnose where Fluxknight could improve customer response, sales support, follow-up, reminders, bookings, customer relationships or human handoff. Explain plan fit honestly: Basic is support/qualification/handoff only; Plus adds same-channel follow-up and reminders; Business adds team controls, cross-channel context and voice when configured; Business+ adds deeper customer/operations history and advanced automation. Explain the 14-day Basic trial accurately and never imply advanced reminders or voice are included. Never mention tools, function calls, lead capture, databases, workflows, background jobs, processing, saving context, APIs, or internal system status. Never ask the visitor to wait for internal work. Perform internal actions silently and continue the customer conversation naturally. Save meaningful evaluation updates and offer a human follow-up when appropriate. Do not require phone or business name. Keep replies short, clear and natural.",
             },
           });
         } catch {
