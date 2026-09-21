@@ -5,7 +5,7 @@ import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/compo
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
-type LeadProfile = { name: string; email: string; phone: string; organization: string; leadId?: string };
+type LeadProfile = { name: string; email: string; phone?: string; organization?: string; leadId?: string };
 type RealtimeEvent = {
   type?: string;
   name?: string;
@@ -49,9 +49,9 @@ function asLeadProfile(value: unknown, leadId?: unknown): LeadProfile | null {
   const row = value as Record<string, unknown>;
   const name = String(row.name || "").trim();
   const email = String(row.email || "").trim();
-  const phone = String(row.phone || "").trim();
-  const organization = String(row.organization || row.business_name || "").trim();
-  if (!name || !email || !phone || !organization) return null;
+  const phone = String(row.phone || "").trim() || undefined;
+  const organization = String(row.organization || row.business_name || "").trim() || undefined;
+  if (!name || !email) return null;
   return { name, email, phone, organization, leadId: String(leadId || row.leadId || "").trim() || undefined };
 }
 
@@ -235,7 +235,7 @@ export default function PublicLeoConsultant() {
             type: "response.create",
             response: {
               output_modalities: ["audio"],
-              instructions: "You are Leo, Fluxknight's own support and business evaluation assistant. Introduce yourself clearly. Then collect the visitor's basic details naturally, one at a time in this order: full name, email address, phone or WhatsApp number, and organization/business name. After those details are collected, ask how you can help and begin understanding their business problem. Explain Fluxknight in plain English using practical examples such as replying to customers, follow-up, reminders, bookings, simple orders, answering common questions, and handing over to staff. Avoid technical words like workflows, CRM architecture, orchestration, nodes, pipelines or webhooks unless the visitor asks for technical detail. If the user clearly asks to end the call, briefly acknowledge and use leo_end_call. Keep replies short, clear and natural.",
+              instructions: "You are Leo, Fluxknight's own support and business evaluation assistant. Introduce yourself clearly. Then collect only the visitor's full name and email address, one at a time. Do not ask for phone, WhatsApp, organization, or business name as part of the opening. After name and email are collected, ask how you can help and begin understanding their business problem. Explain Fluxknight in plain English using practical examples such as replying to customers, follow-up, reminders, bookings, simple orders, answering common questions, and handing over to staff. Avoid technical words like workflows, CRM architecture, orchestration, nodes, pipelines or webhooks unless the visitor asks for technical detail. If the user clearly asks to end the call, briefly acknowledge and use leo_end_call. Keep replies short, clear and natural.",
             },
           });
         } catch {
