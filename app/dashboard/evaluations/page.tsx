@@ -38,7 +38,7 @@ export default async function EvaluationsPage() {
         <div className="admin-panel-header">
           <div>
             <h2>Leo Website Leads</h2>
-            <p>Summaries captured by the public Leo support and onboarding assistant on the Fluxknight homepage.</p>
+            <p>Evaluations captured by Public Leo across the Fluxknight website, including needs, plan fit and human follow-up requests.</p>
           </div>
           <span className="admin-status live">{leoLeads.length} captured</span>
         </div>
@@ -50,11 +50,11 @@ export default async function EvaluationsPage() {
               <article key={lead.id} className="admin-list-row">
                 <div>
                   <strong>{lead.full_name || "Website visitor"}</strong>
-                  <span>{lead.company_name || "No business name"} · {lead.industry || "Industry pending"} · {lead.recommended_plan || "Package pending"}</span>
-                  <span>{need || "No summary saved yet."}</span>
+                  <span>{lead.industry || "Business type still being evaluated"} · {lead.recommended_plan || "Plan not decided yet"} · {lead.handoff_requested ? "Human follow-up requested" : "Leo evaluation"}</span>
+                  <span>{need || "Evaluation summary is still developing."}</span>
                 </div>
                 <div>
-                  <em>{lead.phone || "No WhatsApp"}</em>
+                  <em>{lead.preferred_contact_method ? `Preferred: ${lead.preferred_contact_method}` : "Email follow-up available"}</em>
                   <em>{lead.email || "No email"}</em>
                   <em>{new Date(lead.created_at).toLocaleString("en-NG")}</em>
                 </div>
