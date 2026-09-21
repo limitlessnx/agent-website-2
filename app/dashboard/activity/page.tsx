@@ -52,7 +52,7 @@ export default async function UnifiedActivityPage() {
       href: "/dashboard/limitless/campaigns",
       title: campaign.campaign_topic,
       meta: `${campaign.accepted} sent · ${campaign.failed} failed · ${campaign.skipped} skipped`,
-      label: campaign.attempted,
+      label: String(campaign.attempted),
       tone: campaignRisk(campaign) ? "warning" : "automation",
     })),
     ...n8n.workflows.slice(0, 4).map((workflow) => ({
@@ -96,7 +96,6 @@ export default async function UnifiedActivityPage() {
         <div className="admin-list activity-feed">
           {feed.map((item) => (
             <a href={item.href} className={`admin-list-row compact activity-feed-row ${item.tone}`} key={item.id}>
-              <span className="activity-feed-icon">{item.tone === "conversation" ? <MessageSquareText size={15} /> : item.tone === "warning" ? <AlertTriangle size={15} /> : item.tone === "automation" ? <Workflow size={15} /> : <Clock3 size={15} />}</span>
               <div><strong>{item.title}</strong><span>{item.meta}</span></div>
               <em>{item.label}</em>
             </a>
@@ -110,7 +109,7 @@ export default async function UnifiedActivityPage() {
           <div className="admin-panel-header"><div><h2>Needs Review</h2><p>Delivery failures and catalog records that need cleanup.</p></div><AlertTriangle size={18} /></div>
           <div className="admin-list">
             {riskyCampaigns.map((campaign) => (
-              <a href="/dashboard/limitless/campaigns" className="admin-list-row compact" key={campaign.id}>
+              <a href="/dashboard/limitless/campaigns" className="admin-list-row compact attention-warning" key={campaign.id}>
                 <div><strong>{campaign.campaign_topic}</strong><span>{campaign.accepted} sent · {campaign.failed} failed · {campaign.skipped} skipped</span></div>
                 <em>campaign</em>
               </a>
