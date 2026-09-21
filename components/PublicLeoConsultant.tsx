@@ -340,7 +340,7 @@ export default function PublicLeoConsultant() {
       });
       const data = await response.json().catch(() => ({}));
       if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
-      if (response.ok && payload.tool_key === "leo.public.lead.capture") {
+      if (response.ok && data.leadCaptured === true && payload.tool_key === "leo.public.lead.capture") {
         const captured = asLeadProfile(payload.arguments, data.leadId);
         if (captured) setLead(captured);
       }
