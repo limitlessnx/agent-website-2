@@ -182,3 +182,14 @@ test("Public Leo interruption clears stale tool continuation before old async wo
     "aborting stale fetches must happen before clearing continuation state",
   );
 });
+
+
+test("Public Leo chat fallback preserves name then email before business diagnosis", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /userTurns === 1/);
+  assert.match(consultant, /best email address to use for this conversation/i);
+  assert.match(consultant, /userTurns === 2/);
+  assert.match(consultant, /email doesn’t look quite right/i);
+  assert.match(consultant, /How can I help with your business today/i);
+  assert.match(consultant, /nextMessages\.filter\(\(message\) => message\.role === "user"\)\.length/);
+});
