@@ -50,3 +50,15 @@ test("Public Leo executes each realtime function call id at most once", async ()
   assert.match(consultant, /add\(callId\)/);
   assert.match(consultant, /processedToolCallIdsRef\.current\.clear\(\)/);
 });
+
+
+test("Public Leo has one continuation owner after all tool calls settle", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /pendingVoiceToolCountRef/);
+  assert.match(consultant, /toolResponseDoneRef/);
+  assert.match(consultant, /toolContinuationIssuedRef/);
+  assert.match(consultant, /maybeContinueAfterVoiceTools/);
+  assert.match(consultant, /event\.type === "response\.done"/);
+  const responseCreates = consultant.match(/type: "response\.create"/g) || [];
+  assert.equal(responseCreates.length, 2, "only the opening and centralized tool continuation may create responses");
+});
