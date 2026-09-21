@@ -23,8 +23,18 @@ const firstMessage: ChatMessage = {
   content: "Hi, I’m Leo, Fluxknight’s support and business evaluation assistant. I’ll get a few basic details first so I can assist you properly. What’s your full name?",
 };
 
-function localLeoReply(input: string, count: number) {
+function localLeoReply(input: string, count: number, userTurns: number) {
   const lower = input.toLowerCase();
+  if (userTurns === 1) {
+    return "Thanks. What’s the best email address to use for this conversation?";
+  }
+  if (userTurns === 2) {
+    const normalizedEmail = input.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return "That email doesn’t look quite right. Please type it again so I don’t use the wrong address.";
+    }
+    return "Thanks. How can I help with your business today?";
+  }
   if (/restaurant|food|hotel|hospitality/.test(lower)) {
     return "Fluxknight can help answer common customer questions, handle booking or simple order requests, send reminders, follow up when a customer goes quiet, and bring in a staff member when needed. What part of dealing with customers takes the most time for your team?";
   }
@@ -286,7 +296,8 @@ export default function PublicLeoConsultant() {
       setMessages((current) => [...current, { role: "assistant", content: reply }]);
     } catch {
       messageCount.current += 1;
-      setMessages((current) => [...current, { role: "assistant", content: localLeoReply(content, messageCount.current) }]);
+      const userTurns = nextMessages.filter((message) => message.role === "user").length;
+      setMessages((current) => [...current, { role: "assistant", content: localLeoReply(content, messageCount.current, userTurns) }]);
     } finally {
       setIsThinking(false);
     }
