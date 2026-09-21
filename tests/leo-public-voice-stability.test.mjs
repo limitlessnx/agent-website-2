@@ -168,3 +168,17 @@ test("Public Leo client does not mark a staged email as a captured lead", async 
   assert.match(consultant, /data\.leadCaptured === true/);
   assert.doesNotMatch(consultant, /response\.ok && payload\.tool_key === "leo\.public\.lead\.capture"/);
 });
+
+
+test("Public Leo interruption clears stale tool continuation before old async work settles", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  const invalidateStart = consultant.indexOf("function invalidateVoiceGeneration");
+  const invalidateEnd = consultant.indexOf("\n  function resetVoiceToolContinuation", invalidateStart);
+  const invalidateBlock = consultant.slice(invalidateStart, invalidateEnd);
+  assert.match(invalidateBlock, /abortPendingVoiceTools\(\)/);
+  assert.match(invalidateBlock, /resetVoiceToolContinuation\(\)/);
+  assert.ok(
+    invalidateBlock.indexOf("abortPendingVoiceTools()") < invalidateBlock.indexOf("resetVoiceToolContinuation()"),
+    "aborting stale fetches must happen before clearing continuation state",
+  );
+});
