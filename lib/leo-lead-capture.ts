@@ -3,8 +3,8 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 export type PublicLeoLeadProfile = {
   name: string;
   email: string;
-  phone: string;
-  organization: string;
+  phone?: string;
+  organization?: string;
   business_type?: string;
   main_goal?: string;
   current_tools?: string;
@@ -22,14 +22,14 @@ export async function capturePublicLeoLead(args: Record<string, unknown>) {
   const email = clean(args.email, 240).toLowerCase();
   const phone = clean(args.phone, 80);
   const organization = clean(args.organization || args.business_name);
-  if (!name || !email || !phone || !organization) return { ok: false, status: "missing_details", error: "Name, email, phone and organization are required before capturing the lead." } as const;
+  if (!name || !email) return { ok: false, status: "missing_details", error: "Name and email are required before capturing the lead." } as const;
   if (!validEmail(email)) return { ok: false, status: "invalid_email", error: "The email address is not valid." } as const;
 
   const now = new Date().toISOString();
   const rows = await supabaseServerRequest<Array<{ id: string }>>("evaluation_leads", {
     method: "POST",
     body: JSON.stringify({
-      name, email, phone, business_name: organization,
+      name, email, phone: phone || "", business_name: organization || "",
       business_type: clean(args.business_type) || "Not specified",
       agent_types: Array.isArray(args.agent_types) ? args.agent_types : [],
       main_goal: clean(args.main_goal, 500) || "Public Leo consultation",
