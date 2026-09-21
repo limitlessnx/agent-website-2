@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
+import { createPublicLeoVoiceEpoch, isCurrentPublicLeoEpoch, nextPublicLeoVoiceState, type PublicLeoVoiceEpoch, type PublicLeoVoiceState } from "@/lib/leo-public-voice-state";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 type LeadProfile = { name: string; email: string; phone?: string; organization?: string; leadId?: string };
@@ -69,9 +70,32 @@ export default function PublicLeoConsultant() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const messageCount = useRef(0);
+  const voiceStateRef = useRef<PublicLeoVoiceState>("idle");
+  const voiceEpochRef = useRef<PublicLeoVoiceEpoch>(createPublicLeoVoiceEpoch());
+  const toolAbortControllersRef = useRef(new Set<AbortController>());
+
+  function transitionVoice(to: PublicLeoVoiceState) {
+    voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
+  }
+
+  function abortPendingVoiceTools() {
+    for (const controller of toolAbortControllersRef.current) controller.abort();
+    toolAbortControllersRef.current.clear();
+  }
+
+  function invalidateVoiceGeneration() {
+    const current = voiceEpochRef.current;
+    voiceEpochRef.current = {
+      callEpoch: current.callEpoch,
+      turnId: current.turnId + 1,
+      generationId: current.generationId + 1,
+    };
+    abortPendingVoiceTools();
+  }
 
   useEffect(() => {
     return () => {
+      abortPendingVoiceTools();
       dataChannelRef.current?.close();
       peerRef.current?.close();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -157,10 +181,15 @@ export default function PublicLeoConsultant() {
     let payload: { tool_key?: string; arguments?: Record<string, unknown>; confirmed?: boolean } = {};
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
 
+    const epoch = { ...voiceEpochRef.current };
+    const controller = new AbortController();
+    toolAbortControllersRef.current.add(controller);
+
     try {
       const response = await fetch("/api/leo/public/tool", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           channel: "voice",
           sessionId: sessionId || undefined,
@@ -170,6 +199,7 @@ export default function PublicLeoConsultant() {
         }),
       });
       const data = await response.json().catch(() => ({}));
+      if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
       if (response.ok && payload.tool_key === "leo.public.lead.capture") {
         const captured = asLeadProfile(payload.arguments, data.leadId);
         if (captured) setLead(captured);
@@ -177,6 +207,7 @@ export default function PublicLeoConsultant() {
       sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(data) } });
       sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
     } catch (error) {
+      if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
       const output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
       try {
         sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) } });
@@ -184,12 +215,25 @@ export default function PublicLeoConsultant() {
       } catch {
         setCallError(output.error);
       }
+    } finally {
+      toolAbortControllersRef.current.delete(controller);
     }
   }
 
   function handleRealtimeMessage(raw: string) {
     let event: RealtimeEvent;
     try { event = JSON.parse(raw) as RealtimeEvent; } catch { return; }
+    if (event.type === "input_audio_buffer.speech_started") {
+      invalidateVoiceGeneration();
+      const current = voiceStateRef.current;
+      if (current === "assistant_speaking" || current === "generating" || current === "tool_pending") {
+        transitionVoice("interrupting");
+        transitionVoice("user_speaking");
+      } else if (current === "listening" || current === "endpointing") {
+        transitionVoice("user_speaking");
+      }
+      return;
+    }
     if (event.type === "response.function_call_arguments.done" || (event.type === "response.output_item.done" && event.item?.type === "function_call")) {
       void executeVoiceTool(event);
       return;
@@ -209,6 +253,10 @@ export default function PublicLeoConsultant() {
     }
 
     try {
+      abortPendingVoiceTools();
+      voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
+      voiceStateRef.current = "idle";
+      transitionVoice("connecting");
       setIsCalling(true);
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
@@ -231,6 +279,8 @@ export default function PublicLeoConsultant() {
       dataChannel.addEventListener("error", () => setCallError("Leo's voice connection encountered an error."));
       dataChannel.addEventListener("open", () => {
         try {
+          transitionVoice("listening");
+          transitionVoice("generating");
           sendRealtimeEvent({
             type: "response.create",
             response: {
@@ -265,6 +315,15 @@ export default function PublicLeoConsultant() {
   }
 
   function stopCall() {
+    abortPendingVoiceTools();
+    voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
+    if (voiceStateRef.current !== "idle") {
+      try {
+        transitionVoice("ending");
+      } catch {
+        voiceStateRef.current = "ending";
+      }
+    }
     dataChannelRef.current?.close();
     dataChannelRef.current = null;
     peerRef.current?.close();
@@ -272,6 +331,7 @@ export default function PublicLeoConsultant() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (audioRef.current) audioRef.current.srcObject = null;
+    voiceStateRef.current = "idle";
     setIsCalling(false);
   }
 
