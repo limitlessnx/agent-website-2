@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
   let toolCalls: Array<(typeof result.toolCalls)[number] & { status: "proposed" | "executed" | "failed"; result?: unknown }> = result.toolCalls.map((call) => ({ ...call, status: "proposed" }));
   for (const call of toolCalls) {
     if (!call.toolKey.startsWith("leo.public.")) continue;
+    if (call.approval !== "none") continue;
     if (call.toolKey === "leo.public.lead.capture" && session.leadCaptured) {
       call.status = "executed";
       call.result = { ok: true, status: "already_captured", leadId: session.leadId || null };
