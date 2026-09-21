@@ -74,6 +74,10 @@ export default function PublicLeoConsultant() {
   const voiceEpochRef = useRef<PublicLeoVoiceEpoch>(createPublicLeoVoiceEpoch());
   const toolAbortControllersRef = useRef(new Set<AbortController>());
   const processedToolCallIdsRef = useRef(new Set<string>());
+  const pendingVoiceToolCountRef = useRef(0);
+  const awaitingToolContinuationRef = useRef(false);
+  const toolResponseDoneRef = useRef(false);
+  const toolContinuationIssuedRef = useRef(false);
 
   function transitionVoice(to: PublicLeoVoiceState) {
     voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
@@ -92,6 +96,28 @@ export default function PublicLeoConsultant() {
       generationId: current.generationId + 1,
     };
     abortPendingVoiceTools();
+  }
+
+  function resetVoiceToolContinuation() {
+    pendingVoiceToolCountRef.current = 0;
+    awaitingToolContinuationRef.current = false;
+    toolResponseDoneRef.current = false;
+    toolContinuationIssuedRef.current = false;
+  }
+
+  function maybeContinueAfterVoiceTools() {
+    if (!awaitingToolContinuationRef.current) return;
+    if (!toolResponseDoneRef.current) return;
+    if (pendingVoiceToolCountRef.current !== 0) return;
+    if (toolContinuationIssuedRef.current) return;
+
+    toolContinuationIssuedRef.current = true;
+    awaitingToolContinuationRef.current = false;
+    toolResponseDoneRef.current = false;
+    const current = voiceEpochRef.current;
+    voiceEpochRef.current = { ...current, generationId: current.generationId + 1 };
+    if (voiceStateRef.current === "tool_pending") transitionVoice("generating");
+    sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
   }
 
   useEffect(() => {
@@ -181,6 +207,11 @@ export default function PublicLeoConsultant() {
 
     if (toolName !== "leo_execute_tool") return;
 
+    awaitingToolContinuationRef.current = true;
+    toolContinuationIssuedRef.current = false;
+    pendingVoiceToolCountRef.current += 1;
+    if (voiceStateRef.current === "generating") transitionVoice("tool_pending");
+
     let payload: { tool_key?: string; arguments?: Record<string, unknown>; confirmed?: boolean } = {};
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
 
@@ -208,18 +239,18 @@ export default function PublicLeoConsultant() {
         if (captured) setLead(captured);
       }
       sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(data) } });
-      sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
     } catch (error) {
       if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
       const output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
       try {
         sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) } });
-        sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
       } catch {
         setCallError(output.error);
       }
     } finally {
       toolAbortControllersRef.current.delete(controller);
+      pendingVoiceToolCountRef.current = Math.max(0, pendingVoiceToolCountRef.current - 1);
+      maybeContinueAfterVoiceTools();
     }
   }
 
@@ -234,6 +265,13 @@ export default function PublicLeoConsultant() {
         transitionVoice("user_speaking");
       } else if (current === "listening" || current === "endpointing") {
         transitionVoice("user_speaking");
+      }
+      return;
+    }
+    if (event.type === "response.done") {
+      if (awaitingToolContinuationRef.current) {
+        toolResponseDoneRef.current = true;
+        maybeContinueAfterVoiceTools();
       }
       return;
     }
@@ -258,6 +296,7 @@ export default function PublicLeoConsultant() {
     try {
       abortPendingVoiceTools();
       processedToolCallIdsRef.current.clear();
+      resetVoiceToolContinuation();
       voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
       voiceStateRef.current = "idle";
       transitionVoice("connecting");
@@ -321,6 +360,7 @@ export default function PublicLeoConsultant() {
   function stopCall() {
     abortPendingVoiceTools();
     processedToolCallIdsRef.current.clear();
+    resetVoiceToolContinuation();
     voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
     if (voiceStateRef.current !== "idle") {
       try {
