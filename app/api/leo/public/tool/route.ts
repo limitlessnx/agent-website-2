@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertLeoToolAllowed, leoApprovalFor, type LeoIdentity } from "@/lib/leo-core";
 import { executePublicLeoTool } from "@/lib/leo-public-tools";
-import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState } from "@/lib/leo-session-store";
+import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicEmailCandidate, updateLeoPublicLeadState } from "@/lib/leo-session-store";
 
 const PUBLIC_IDENTITY: LeoIdentity = {
   scope: "public",
@@ -43,14 +43,38 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const session = sessionId ? await getOrCreateLeoSession({ identity, sessionId }) : null;
+    let session = sessionId ? await getOrCreateLeoSession({ identity, sessionId }) : null;
     if (tool.key === "leo.public.lead.capture" && session?.leadCaptured) {
       return NextResponse.json({ ok: true, status: "already_captured", toolKey: tool.key, leadCaptured: true, leadId: session.leadId || null });
+    }
+
+    if (identity.channel === "voice" && tool.key === "leo.public.lead.capture") {
+      const candidateEmail = String(args.email || "").trim().toLowerCase();
+      const voiceTurnId = Number(body.voiceTurnId);
+      const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail);
+      if (!session || !validEmail || !Number.isFinite(voiceTurnId)) {
+        return NextResponse.json({ ok: false, status: "email_confirmation_required", email: candidateEmail || null }, { status: 400 });
+      }
+
+      const explicitlyConfirmed = args.email_confirmed === true;
+      const sameCandidate = session.pendingEmailCandidate === candidateEmail;
+      const laterUserTurn = typeof session.pendingEmailTurnId === "number" && voiceTurnId > session.pendingEmailTurnId;
+
+      if (!explicitlyConfirmed || !sameCandidate || !laterUserTurn) {
+        session = await updateLeoPublicEmailCandidate({ identity, session, email: candidateEmail, turnId: voiceTurnId });
+        return NextResponse.json({
+          ok: true,
+          status: "email_confirmation_required",
+          email: candidateEmail,
+          emailConfirmed: false,
+        });
+      }
     }
 
     const result = await executePublicLeoTool({ toolKey: tool.key, args, sessionId });
     let updated = session;
     if (result.ok && tool.key === "leo.public.lead.capture" && session) {
+      session = await updateLeoPublicEmailCandidate({ identity, session, email: null, turnId: null });
       updated = await updateLeoPublicLeadState({
         identity,
         session,
