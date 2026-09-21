@@ -1,4 +1,4 @@
-import { AlertTriangle, Bot, Clock3, MessageSquareText, PhoneCall, Send, UserCheck } from "@/components/admin/ServerIcons";
+import { AlertTriangle, Bot, Clock3, MessageSquareText, PhoneCall, UserCheck } from "@/components/admin/ServerIcons";
 import { getCampaignReports, getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-data";
 
 export const dynamic = "force-dynamic";
@@ -69,23 +69,21 @@ export default async function ConversationsPage() {
           </div>
           <AlertTriangle size={18} />
         </div>
-        <div className="admin-list conversation-attention-list">
+        <div className="admin-list">
           {attentionLeads.map((lead, index) => (
-            <a href="/dashboard/limitless/leads" className="admin-list-row compact conversation-attention-row" key={lead.id}>
-              <span className="conversation-alert-dot">{index + 1}</span>
-              <div><strong>{leadLabel(lead)}</strong><span>{leadMeta(lead)}</span></div>
+            <a href="/dashboard/limitless/leads" className="admin-list-row compact attention-danger" key={lead.id}>
+              <div><strong>{index + 1}. {leadLabel(lead)}</strong><span>{leadMeta(lead)}</span></div>
               <em>{lead.score || leadStatus(lead)}</em>
             </a>
           ))}
           {failedCampaigns.map((campaign) => (
-            <a href="/dashboard/limitless/campaigns" className="admin-list-row compact conversation-attention-row" key={campaign.id}>
-              <span className="conversation-alert-dot delivery"><Send size={13} /></span>
+            <a href="/dashboard/limitless/campaigns" className="admin-list-row compact attention-warning" key={campaign.id}>
               <div><strong>{campaign.campaign_topic}</strong><span>{campaign.failed} failed · {campaign.accepted} sent · {campaign.skipped} skipped</span></div>
               <em>delivery</em>
             </a>
           ))}
           {!attentionLeads.length && !failedCampaigns.length ? (
-            <div className="admin-list-row compact conversation-attention-row calm"><span className="conversation-alert-dot ok"><UserCheck size={13} /></span><div><strong>No urgent conversation issues</strong><span>The visible inbox does not show handoff or delivery problems.</span></div><em>clear</em></div>
+            <div className="admin-list-row compact"><div><strong>No urgent conversation issues</strong><span>The visible inbox does not show handoff or delivery problems.</span></div><UserCheck size={17} /></div>
           ) : null}
         </div>
       </section>
