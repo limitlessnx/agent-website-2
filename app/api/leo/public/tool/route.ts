@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertLeoToolAllowed, leoApprovalFor, type LeoIdentity } from "@/lib/leo-core";
-import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
-import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
-import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
+import { executePublicLeoTool } from "@/lib/leo-public-tools";
 import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState } from "@/lib/leo-session-store";
 
 const PUBLIC_IDENTITY: LeoIdentity = {
@@ -45,44 +43,42 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (tool.key === "leo.public.lead.capture") {
-      const session = sessionId ? await getOrCreateLeoSession({ identity, sessionId }) : null;
-      if (session?.leadCaptured) {
-        return NextResponse.json({ ok: true, status: "already_captured", toolKey: tool.key, leadCaptured: true, leadId: session.leadId || null });
-      }
-      const result = await capturePublicLeoLead(args);
-      let updated = session;
-      if (result.ok && session) {
-        updated = await updateLeoPublicLeadState({
-          identity,
-          session,
-          leadProfile: {
-            name: String(args.name || ""),
-            email: String(args.email || ""),
-            phone: String(args.phone || ""),
-            organization: String(args.organization || args.business_name || ""),
-            business_type: String(args.business_type || ""),
-            main_goal: String(args.main_goal || ""),
-          },
-          captured: true,
-          leadId: result.leadId,
-        });
-      }
-      await auditLeoEvent({ identity, session: updated || undefined, eventType: result.ok ? "public_tool_completed" : "public_tool_failed", toolKey: tool.key, details: { status: result.status } });
-      return NextResponse.json({ ...result, toolKey: tool.key, scope: "public", leadCaptured: Boolean(updated?.leadCaptured) || result.ok, leadId: updated?.leadId || (result.ok ? result.leadId : null) }, { status: result.ok ? 200 : 400 });
+    const session = sessionId ? await getOrCreateLeoSession({ identity, sessionId }) : null;
+    if (tool.key === "leo.public.lead.capture" && session?.leadCaptured) {
+      return NextResponse.json({ ok: true, status: "already_captured", toolKey: tool.key, leadCaptured: true, leadId: session.leadId || null });
     }
 
-    const requestId = String(body.requestId || body.request_id || randomUUID()).trim();
-    const envelope = createLeoExecutionEnvelope({
-      requestId,
-      sessionId: sessionId || null,
+    const result = await executePublicLeoTool({ toolKey: tool.key, args, sessionId });
+    let updated = session;
+    if (result.ok && tool.key === "leo.public.lead.capture" && session) {
+      updated = await updateLeoPublicLeadState({
+        identity,
+        session,
+        leadProfile: {
+          name: String(args.name || ""),
+          email: String(args.email || ""),
+          phone: String(args.phone || ""),
+          organization: String(args.organization || args.business_name || ""),
+          business_type: String(args.industry || args.business_type || ""),
+          main_goal: String(args.main_goal || ""),
+        },
+        captured: true,
+        leadId: "leadId" in result ? String(result.leadId || "") : null,
+      });
+    }
+
+    await auditLeoEvent({
       identity,
+      session: updated || undefined,
+      eventType: result.ok ? "public_tool_completed" : "public_tool_failed",
       toolKey: tool.key,
-      arguments: args,
-      approvalGranted: approval === "none" || confirmed,
+      details: { status: String(result.status || "unknown"), local: true },
     });
-    const result = await executeLeoEnvelopeViaN8n(envelope);
-    return NextResponse.json({ ...result, approval, channel: identity.channel, scope: "public" }, { status: result.ok ? 200 : 502 });
+
+    return NextResponse.json(
+      { ...result, toolKey: tool.key, scope: "public", localExecution: true },
+      { status: result.ok ? 200 : 400 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Public Leo could not execute this action.";
     console.error("[leo/public/tool] execution failed", { diagnosticId, message, stack: error instanceof Error ? error.stack : undefined });
