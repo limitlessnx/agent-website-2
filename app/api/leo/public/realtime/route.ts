@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { listLeoToolsForIdentity, resolveLeoIdentity } from "@/lib/leo-core";
+import { listLeoToolsForIdentity, resolveLeoIdentity, type LeoIdentity } from "@/lib/leo-core";
 import { publicLeoVoiceInstructions } from "@/lib/leo-public-policy";
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { loadActiveLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
@@ -51,7 +51,7 @@ function buildRealtimeMultipart(sdp: string, session: object) { const boundary =
 function pageContextFromHeader(request: NextRequest) { const encoded = request.headers.get("x-leo-page-context") || ""; if (!encoded) return undefined; try { return JSON.parse(decodeURIComponent(encoded)); } catch { return undefined; } }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim(); if (!apiKey) return new Response("OpenAI Realtime is not configured.", { status: 503 }); const identity = { scope: "public", role: "visitor", channel: "voice", globalScope: false } as const; const sdp = await request.text(); if (!sdp.trim()) return new Response("SDP offer is required.", { status: 400 });
+  const apiKey = process.env.OPENAI_API_KEY?.trim(); if (!apiKey) return new Response("OpenAI Realtime is not configured.", { status: 503 }); const identity: LeoIdentity = { scope: "public", role: "visitor", channel: "voice", globalScope: false }; const sdp = await request.text(); if (!sdp.trim()) return new Response("SDP offer is required.", { status: 400 });
   if (identity.scope === "tenant" && identity.organizationId) {
     try {
       await preflightChargeableFluxAi({ organizationId: identity.organizationId, feature: "leo_voice", action: "leo_voice_minute" });
