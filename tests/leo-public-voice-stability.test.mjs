@@ -121,7 +121,7 @@ test("Public Leo never exposes raw internal tool status to the voice model", asy
   assert.match(policy, /INTERNAL STATUS FIREWALL/);
   assert.match(policy, /never mention or narrate tools/i);
   assert.match(policy, /Never say hold on/i);
-  assert.doesNotMatch(output, /toolKey:/);
+  assert.doesNotMatch(output, /tool_key\s*:/);
   assert.doesNotMatch(output, /localExecution/);
   assert.doesNotMatch(output, /leadId/);
   assert.doesNotMatch(output, /diagnosticId/);
