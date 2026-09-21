@@ -144,3 +144,20 @@ test("Public Leo cannot persist a voice email before a later explicit confirmati
   assert.match(policy, /VOICE EMAIL SAFETY/);
   assert.match(policy, /wait for the visitor's next spoken turn/i);
 });
+
+
+test("Public Leo realtime route is public-only and contains no operational task machinery", async () => {
+  const realtime = await readFile(new URL("../app/api/leo/public/realtime/route.ts", import.meta.url), "utf8");
+  assert.match(realtime, /const PUBLIC_IDENTITY/);
+  assert.match(realtime, /publicLeoVoiceInstructions/);
+  assert.match(realtime, /publicContinuityContext/);
+  assert.match(realtime, /type: "server_vad"/);
+  assert.doesNotMatch(realtime, /ACTIVE OPERATIONAL TASK/);
+  assert.doesNotMatch(realtime, /VOICE WORKING CONTEXT/);
+  assert.doesNotMatch(realtime, /leo_manage_task/);
+  assert.doesNotMatch(realtime, /superAdminVoiceRules/);
+  assert.doesNotMatch(realtime, /resolveLeoIdentity/);
+  assert.doesNotMatch(realtime, /loadActiveLeoOperationalTask/);
+  assert.doesNotMatch(realtime, /preflightChargeableFluxAi/);
+  assert.doesNotMatch(realtime, /recordChargeableFluxAiUsage/);
+});
