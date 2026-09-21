@@ -134,3 +134,169 @@
  .desktopChrome :global(.admin-page-header){padding:0!important;background:transparent!important}
  .desktopChrome :global(.admin-page-header h1){font-size:26px!important}
 }
+
+
+/* Dashboard V3 desktop alignment pass. Desktop only, mobile behavior remains unchanged. */
+@media (min-width:901px){
+  .desktopChrome :global(.admin-shell){
+    grid-template-columns:264px minmax(0,1fr)!important;
+    align-items:start!important;
+  }
+
+  .desktopChrome :global(.admin-sidebar){
+    position:sticky!important;
+    top:0!important;
+    align-self:start!important;
+    width:264px!important;
+    height:100dvh!important;
+    min-height:100dvh!important;
+    padding:18px 14px 14px!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+  }
+
+  .desktopChrome :global(.admin-brand){
+    min-height:46px!important;
+    margin:0 8px 16px!important;
+    padding:0 4px!important;
+  }
+
+  .desktopChrome :global(.admin-sidebar .workspaceSwitcher){
+    margin:0 4px 18px!important;
+  }
+
+  .desktopChrome :global(.admin-nav){
+    gap:12px!important;
+    padding:0 2px!important;
+  }
+
+  .desktopChrome :global(.admin-nav .trigger),
+  .desktopChrome :global(.admin-nav .sectionTrigger){
+    padding-left:12px!important;
+    padding-right:12px!important;
+    text-align:left!important;
+  }
+
+  .desktopChrome :global(.admin-nav .items a){
+    min-height:38px!important;
+    padding:0 12px!important;
+    gap:11px!important;
+    line-height:1.2!important;
+  }
+
+  .desktopChrome :global(.admin-nav .items a span){
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  .desktopChrome :global(.admin-sidebar-footer){
+    margin-top:20px!important;
+    padding:16px 6px 0!important;
+  }
+
+  .desktopChrome :global(.admin-main){
+    width:100%!important;
+    min-width:0!important;
+    overflow-x:clip!important;
+  }
+
+  .desktopChrome :global(.admin-topbar){
+    grid-template-columns:180px minmax(320px,680px) minmax(260px,1fr)!important;
+    gap:20px!important;
+    height:68px!important;
+    padding:0 32px!important;
+  }
+
+  .desktopChrome :global(.admin-breadcrumb){
+    align-self:center!important;
+    justify-self:start!important;
+  }
+
+  .desktopChrome :global(.admin-search){
+    justify-self:start!important;
+    max-width:680px!important;
+  }
+
+  .desktopChrome :global(.admin-topbar-actions){
+    justify-self:end!important;
+    width:auto!important;
+  }
+
+  .desktopChrome :global(.workspace-rail){
+    min-height:46px!important;
+    padding:0 32px!important;
+  }
+
+  .desktopChrome :global(.admin-page){
+    width:100%!important;
+    max-width:1520px!important;
+    margin:0 auto!important;
+    padding:32px 32px 56px!important;
+  }
+
+  .desktopChrome :global(.admin-page-header){
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    gap:28px!important;
+    margin:0 0 24px!important;
+    padding:0!important;
+  }
+
+  .desktopChrome :global(.admin-page-header > div:first-child){
+    min-width:0!important;
+    max-width:820px!important;
+  }
+
+  .desktopChrome :global(.admin-page-header .admin-kicker){
+    margin:0 0 8px!important;
+  }
+
+  .desktopChrome :global(.admin-page-header h1){
+    margin:0!important;
+    font-size:32px!important;
+    line-height:1.08!important;
+  }
+
+  .desktopChrome :global(.admin-page-header h1 + p){
+    max-width:760px!important;
+    margin:9px 0 0!important;
+    line-height:1.55!important;
+  }
+
+  .desktopChrome :global(.admin-page-header > .admin-status){
+    margin-top:2px!important;
+    align-self:flex-start!important;
+  }
+
+  .desktopChrome :global(.admin-metric-grid),
+  .desktopChrome :global(.admin-grid){
+    align-items:stretch!important;
+  }
+
+  .desktopChrome :global(.admin-panel-header){
+    align-items:flex-start!important;
+  }
+
+  .desktopChrome :global(.admin-panel-header > div){
+    min-width:0!important;
+  }
+
+  .desktopChrome :global(.admin-panel-header h2),
+  .desktopChrome :global(.admin-panel-header p){
+    text-align:left!important;
+  }
+
+  .desktopChrome :global(.admin-list-row){
+    align-items:center!important;
+  }
+}
+
+@media (min-width:901px) and (max-width:1180px){
+  .desktopChrome :global(.admin-shell){grid-template-columns:232px minmax(0,1fr)!important}
+  .desktopChrome :global(.admin-sidebar){width:232px!important;padding-left:11px!important;padding-right:11px!important}
+  .desktopChrome :global(.admin-topbar){grid-template-columns:150px minmax(240px,1fr) auto!important;padding-left:24px!important;padding-right:24px!important;gap:14px!important}
+  .desktopChrome :global(.workspace-rail){padding-left:24px!important;padding-right:24px!important}
+  .desktopChrome :global(.admin-page){padding-left:24px!important;padding-right:24px!important}
+}
