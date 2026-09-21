@@ -6,6 +6,48 @@ export const LEO_PUBLIC_KNOWLEDGE = {
     positioning: "A persistent AI customer and business support layer built around how a business actually operates.",
     promise: "Help businesses respond faster, support customers, qualify and close more opportunities, remember follow-ups and service moments, reduce repetitive staff work, and hand the right conversations to humans with context.",
   },
+  services: [
+    {
+      key: "persistent-customer-support",
+      name: "Persistent Customer Support",
+      summary: "Answer approved customer questions and enquiries consistently, including outside normal staff availability, then bring in a human when needed.",
+    },
+    {
+      key: "sales-assistance",
+      name: "Sales Assistance",
+      summary: "Understand buying intent, answer approved sales questions, qualify opportunities, support buying decisions and hand sales-ready customers to the right person with context.",
+    },
+    {
+      key: "follow-up-reminders",
+      name: "Follow-up and Reminders",
+      summary: "On Plus and above, follow up with customers and send configured booking, quote, inspection, service or other reminders instead of relying on staff memory.",
+    },
+    {
+      key: "bookings-orders",
+      name: "Bookings and Order Intake",
+      summary: "Collect configured booking, reservation, inspection, service, quote or simple order requests and route them into the business process.",
+    },
+    {
+      key: "customer-lifecycle",
+      name: "Customer Lifecycle Support",
+      summary: "On suitable higher plans with the required data, keep customer context for service history, renewals, requested callbacks, post-service check-ins, birthdays or other permitted relationship moments.",
+    },
+    {
+      key: "human-handoff",
+      name: "Human Handoff",
+      summary: "Recognize when a person should take over and pass the conversation, customer details and useful context to the appropriate staff member.",
+    },
+    {
+      key: "voice-automation",
+      name: "Voice Automation",
+      summary: "Voice capability can be scoped into a suitable paid implementation. It is not currently offered as a free or instant self-serve calling trial.",
+    },
+    {
+      key: "custom-business-systems",
+      name: "Custom Business Systems",
+      summary: "Build deeper customer, operational, dashboard and integration systems when the standard plans do not cover the business requirement.",
+    },
+  ],
   operatingModel: [
     "Fluxknight is not only a chatbot. It can be configured as an always-available customer support, sales-assistance and customer-relationship layer.",
     "It can answer approved business questions, qualify enquiries, collect customer details, support buying decisions, take configured booking or order requests, follow up later, send reminders and hand conversations to human staff.",
