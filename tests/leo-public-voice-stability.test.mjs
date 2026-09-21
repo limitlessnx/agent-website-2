@@ -96,3 +96,17 @@ test("Public Leo endpointing uses bounded adaptive server VAD", async () => {
   assert.match(realtime, /silence_duration_ms: 850/);
   assert.doesNotMatch(realtime, /semantic_vad/);
 });
+
+
+test("Public Leo tolerates transient bad networks without exposing internals", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /connectionstatechange/);
+  assert.match(consultant, /iceconnectionstatechange/);
+  assert.match(consultant, /getStats\(\)/);
+  assert.match(consultant, /currentRoundTripTime/);
+  assert.match(consultant, /report\.jitter/);
+  assert.match(consultant, /7000/);
+  assert.match(consultant, /Connection interrupted\. Trying to recover/);
+  assert.match(consultant, /Tap Talk to Leo to reconnect/);
+  assert.match(consultant, /cleanupNetworkMonitoring/);
+});
