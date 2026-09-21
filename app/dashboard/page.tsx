@@ -39,8 +39,8 @@ export default async function DashboardPage() {
     : "Leo does not have enough connected evidence to produce a complete operating brief.";
 
   return (
-    <main className="admin-page">
-      <BusinessCommandCenterPanel snapshot={commandCenter} />
+    <main className="admin-page dashboard-v3-home">
+      <header className="dashboard-v3-home-intro">\n        <div><span className="admin-kicker">COMMAND CENTER</span><h1>Operations at a glance</h1><p>Current business signals, AI workforce status, and the items that actually need attention.</p></div>\n        <div className={`dashboard-v3-health dashboard-v3-health-${systemHealth.toLowerCase()}`}><span />{systemHealth}</div>\n      </header>\n      <BusinessCommandCenterPanel snapshot={commandCenter} />
       <CommandCenterExpansion
         pulse={{
           leads: leads.length,

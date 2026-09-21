@@ -1,55 +1,186 @@
-/* Shared compact purple analytics console for admin and tenant dashboards. */
-:root{
-  --console-bg:#08050c;
-  --console-panel:#100917;
-  --console-panel-strong:#170d22;
-  --console-line:rgba(172,108,255,.34);
-  --console-line-soft:rgba(172,108,255,.15);
-  --console-purple:#8b3dff;
-  --console-purple-bright:#b06cff;
-  --console-lilac:#d9b8ff;
-  --console-white:#f6f1ff;
-  --console-muted:#9b8da9;
+/* Shared compact purple analytics console for admin and tenant dashboards. Scoped so it cannot repaint the public site. */
+[data-dashboard-theme],
+.portal-shell,
+.client-dashboard{
+  --console-bg:var(--fk-canvas,#08050c);
+  --console-panel:var(--fk-surface,#100917);
+  --console-panel-strong:var(--fk-surface-raised,#170d22);
+  --console-line:var(--fk-border-strong,rgba(172,108,255,.34));
+  --console-line-soft:var(--fk-border,rgba(172,108,255,.15));
+  --console-purple:var(--fk-brand,#8b3dff);
+  --console-purple-bright:var(--fk-brand-hover,#b06cff);
+  --console-lilac:var(--fk-text-secondary,#d9b8ff);
+  --console-white:var(--fk-text,#f6f1ff);
+  --console-muted:var(--fk-text-muted,#9b8da9);
   --console-grid:rgba(190,137,255,.06);
-  --console-shadow:0 16px 42px rgba(0,0,0,.30);
+  --console-shadow:var(--fk-surface-shadow,0 16px 42px rgba(0,0,0,.30));
 }
-.admin-shell,.portal-shell,.dashboard-shell,.client-dashboard,.admin-main,.portal-main{
-  background:linear-gradient(var(--console-grid) 1px,transparent 1px),linear-gradient(90deg,var(--console-grid) 1px,transparent 1px),radial-gradient(circle at 50% -10%,rgba(106,44,170,.16),transparent 35%),var(--console-bg)!important;
+
+[data-dashboard-theme="light"]{
+  --console-bg:var(--fk-canvas,#f7f5ff);
+  --console-panel:var(--fk-surface,#ffffff);
+  --console-panel-strong:var(--fk-surface-raised,#f4f1ff);
+  --console-line:var(--fk-border-strong,#cfc6e7);
+  --console-line-soft:var(--fk-border,#e3def2);
+  --console-purple:var(--fk-brand,#7c3aed);
+  --console-purple-bright:var(--fk-brand-hover,#6d28d9);
+  --console-lilac:var(--fk-text-secondary,#514b69);
+  --console-white:var(--fk-text,#18132f);
+  --console-muted:var(--fk-text-muted,#756f8b);
+  --console-grid:rgba(124,58,237,.035);
+  --console-shadow:0 12px 32px rgba(49,36,86,.07);
+}
+
+[data-dashboard-theme] .admin-shell,
+[data-dashboard-theme] .dashboard-shell,
+[data-dashboard-theme] .admin-main,
+.portal-shell,
+.portal-main,
+.client-dashboard{
+  background:linear-gradient(var(--console-grid) 1px,transparent 1px),linear-gradient(90deg,var(--console-grid) 1px,transparent 1px),radial-gradient(circle at 50% -10%,rgba(106,44,170,.12),transparent 35%),var(--console-bg)!important;
   background-size:42px 42px,42px 42px,auto,auto!important;
 }
-.admin-sidebar,.portal-sidebar{background:rgba(8,5,12,.98)!important;border-color:var(--console-line-soft)!important}
-.admin-page,.portal-page{gap:12px!important}
-.admin-page-header,.portal-page-header,.admin-hero-panel,.portal-hero,.admin-panel,.portal-card,.portal-panel,.admin-metric-card,.portal-stat,.dashboard-card,.campaign-panel,.leads-crm-summary>div{
+
+[data-dashboard-theme="light"] .admin-shell,
+[data-dashboard-theme="light"] .admin-main{
+  background:linear-gradient(var(--console-grid) 1px,transparent 1px),linear-gradient(90deg,var(--console-grid) 1px,transparent 1px),radial-gradient(circle at 50% -10%,rgba(124,58,237,.08),transparent 35%),var(--console-bg)!important;
+}
+
+[data-dashboard-theme] .admin-sidebar,
+.portal-sidebar{background:var(--admin-sidebar-bg,var(--console-panel))!important;border-color:var(--console-line-soft)!important}
+[data-dashboard-theme] .admin-page,.portal-page{gap:12px!important}
+
+[data-dashboard-theme] .admin-page-header,
+.portal-page-header,
+[data-dashboard-theme] .admin-hero-panel,
+.portal-hero,
+[data-dashboard-theme] .admin-panel,
+.portal-card,
+.portal-panel,
+[data-dashboard-theme] .admin-metric-card,
+.portal-stat,
+[data-dashboard-theme] .dashboard-card,
+[data-dashboard-theme] .campaign-panel,
+[data-dashboard-theme] .leads-crm-summary>div{
   border:1px solid var(--console-line)!important;
-  border-radius:3px!important;
-  background:linear-gradient(180deg,rgba(139,61,255,.035),transparent 34%),var(--console-panel)!important;
+  border-radius:var(--fk-radius-panel,14px)!important;
+  background:linear-gradient(180deg,var(--fk-brand-soft,rgba(139,61,255,.035)),transparent 34%),var(--console-panel)!important;
   box-shadow:var(--console-shadow)!important;
   position:relative;
   overflow:hidden;
 }
-.admin-page-header:before,.portal-page-header:before,.admin-hero-panel:before,.portal-hero:before,.admin-panel:before,.portal-card:before,.portal-panel:before,.admin-metric-card:before,.dashboard-card:before{
+
+[data-dashboard-theme] .admin-page-header:before,
+.portal-page-header:before,
+[data-dashboard-theme] .admin-hero-panel:before,
+.portal-hero:before,
+[data-dashboard-theme] .admin-panel:before,
+.portal-card:before,
+.portal-panel:before,
+[data-dashboard-theme] .admin-metric-card:before,
+[data-dashboard-theme] .dashboard-card:before{
   content:"";position:absolute;left:0;top:0;width:46%;height:2px;background:linear-gradient(90deg,var(--console-purple-bright),transparent);pointer-events:none
 }
-.admin-page-header h1,.portal-page-header h1,.admin-hero-panel h1,.portal-hero h1,.admin-panel-header h2,.portal-panel h2,.portal-card h2,.admin-metric-card strong,.portal-stat strong,.dashboard-card strong{color:var(--console-white)!important}
-.admin-kicker,.section-label,.portal-eyebrow,.portal-kicker{color:var(--console-purple-bright)!important;letter-spacing:.16em!important}
-.admin-muted,.portal-muted,.admin-panel p,.portal-panel p,.portal-card p,.admin-metric-card p,.admin-metric-card span{color:var(--console-muted)!important}
-.admin-metric-grid,.admin-grid.four,.portal-metric-grid,.portal-stats-grid,.dashboard-grid{gap:8px!important}
-.admin-metric-card,.portal-stat,.dashboard-card{min-height:104px;padding:14px!important}
-.admin-metric-card strong,.portal-stat strong,.dashboard-card strong{font-family:"Arial Narrow","Roboto Condensed",Inter,sans-serif;font-size:1.9rem!important;letter-spacing:.02em}
-.admin-nav a,.portal-sidebar nav a,.portal-nav-drawer button{border-radius:2px!important}
-.admin-nav a:hover,.admin-nav a.active,.portal-sidebar nav a:hover,.portal-sidebar nav a.active,.portal-nav-drawer.active>button{color:var(--console-white)!important;border-color:var(--console-line)!important;background:linear-gradient(90deg,rgba(139,61,255,.22),rgba(139,61,255,.03))!important}
-.admin-table,.portal-table{border-collapse:separate!important;border-spacing:0!important}
-.admin-table th,.admin-table td,.portal-table th,.portal-table td{border-color:var(--console-line-soft)!important;padding:9px 10px!important}
-.admin-table th,.portal-table th{color:var(--console-lilac)!important;background:rgba(139,61,255,.08)!important;font-size:.68rem!important;letter-spacing:.1em}
-.admin-list-row,.portal-list-row,.campaign-recipient-row{border-radius:2px!important;border-color:var(--console-line-soft)!important;background:rgba(255,255,255,.012)!important}
-.admin-status,.portal-status,.status-pill,.campaign-status{border-radius:2px!important;color:var(--console-lilac)!important;border:1px solid var(--console-line)!important;background:rgba(139,61,255,.12)!important}
-.admin-login-card input,.admin-form-grid input,.admin-form-grid select,.admin-form-grid textarea,.portal-form input,.portal-form select,.portal-form textarea,.campaign-panel input,.campaign-panel select,.campaign-panel textarea{border-radius:2px!important;border-color:var(--console-line)!important;background:#08040c!important;color:var(--console-white)!important}
-button,.admin-login-card button,.admin-form-grid button,.portal-button,.primary-button,.campaign-action{border-radius:2px!important}
-.admin-login-card button,.admin-form-grid button,.portal-button.primary,.primary-button,.campaign-action.primary{color:#fff!important;background:linear-gradient(180deg,#9f50ff,#6f24d8)!important;border:1px solid #bd82ff!important}
-.admin-health-ring,.portal-health-ring,.progress-ring,.donut-chart{border:1px solid rgba(185,125,255,.55)!important;box-shadow:inset 0 0 0 5px rgba(139,61,255,.07),0 0 28px rgba(139,61,255,.18)!important;background:radial-gradient(circle,#100817 52%,transparent 53%),repeating-conic-gradient(from -10deg,rgba(255,255,255,.88) 0 3deg,transparent 3deg 8deg),conic-gradient(var(--console-purple-bright),#6a1fc9 72%,rgba(139,61,255,.14) 72%)!important}
-.console-chart-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.console-chart-panel{min-height:210px;padding:13px;border:1px solid var(--console-line);background:var(--console-panel);position:relative}
-.console-chart-title{display:inline-flex;min-width:125px;margin:-13px 0 13px -13px;padding:5px 13px;color:var(--console-white);background:rgba(77,35,108,.84);clip-path:polygon(0 0,90% 0,100% 100%,0 100%);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
-@media(max-width:980px){.console-chart-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.admin-main,.portal-main{padding:14px!important}.admin-page,.portal-page{gap:10px!important}.admin-page-header,.portal-page-header,.admin-hero-panel,.portal-hero{padding:17px!important}.admin-page-header h1,.portal-page-header h1,.admin-hero-panel h1,.portal-hero h1{font-size:clamp(1.9rem,10vw,3rem)!important;line-height:.96!important}.admin-metric-grid,.admin-grid.four,.portal-metric-grid,.portal-stats-grid,.dashboard-grid,.console-chart-grid{grid-template-columns:1fr 1fr!important}.admin-panel,.portal-card,.portal-panel,.campaign-panel{padding:14px!important}}
-@media(max-width:480px){.admin-metric-grid,.admin-grid.four,.portal-metric-grid,.portal-stats-grid,.dashboard-grid,.console-chart-grid{grid-template-columns:1fr!important}}
+
+[data-dashboard-theme] .admin-page-header h1,
+.portal-page-header h1,
+[data-dashboard-theme] .admin-hero-panel h1,
+.portal-hero h1,
+[data-dashboard-theme] .admin-panel-header h2,
+.portal-panel h2,
+.portal-card h2,
+[data-dashboard-theme] .admin-metric-card strong,
+.portal-stat strong,
+[data-dashboard-theme] .dashboard-card strong{color:var(--console-white)!important}
+
+[data-dashboard-theme] .admin-kicker,
+[data-dashboard-theme] .section-label,
+.portal-eyebrow,
+.portal-kicker{color:var(--console-purple-bright)!important;letter-spacing:.16em!important}
+
+[data-dashboard-theme] .admin-muted,
+.portal-muted,
+[data-dashboard-theme] .admin-panel p,
+.portal-panel p,
+.portal-card p,
+[data-dashboard-theme] .admin-metric-card p,
+[data-dashboard-theme] .admin-metric-card span{color:var(--console-muted)!important}
+
+[data-dashboard-theme] .admin-metric-grid,
+[data-dashboard-theme] .admin-grid.four,
+.portal-metric-grid,
+.portal-stats-grid,
+[data-dashboard-theme] .dashboard-grid{gap:8px!important}
+
+[data-dashboard-theme] .admin-metric-card,
+.portal-stat,
+[data-dashboard-theme] .dashboard-card{min-height:104px;padding:14px!important}
+
+[data-dashboard-theme] .admin-metric-card strong,
+.portal-stat strong,
+[data-dashboard-theme] .dashboard-card strong{font-family:"Arial Narrow","Roboto Condensed",Inter,sans-serif;font-size:1.9rem!important;letter-spacing:.02em}
+
+[data-dashboard-theme] .admin-nav a,
+.portal-sidebar nav a,
+.portal-nav-drawer button{border-radius:var(--fk-radius-control,10px)!important}
+
+[data-dashboard-theme] .admin-nav a:hover,
+[data-dashboard-theme] .admin-nav a.active,
+.portal-sidebar nav a:hover,
+.portal-sidebar nav a.active,
+.portal-nav-drawer.active>button{color:var(--console-white)!important;border-color:var(--console-line)!important;background:linear-gradient(90deg,var(--fk-brand-soft,rgba(139,61,255,.22)),transparent)!important}
+
+[data-dashboard-theme] .admin-table,
+.portal-table{border-collapse:separate!important;border-spacing:0!important}
+[data-dashboard-theme] .admin-table th,
+[data-dashboard-theme] .admin-table td,
+.portal-table th,
+.portal-table td{border-color:var(--console-line-soft)!important;padding:9px 10px!important}
+[data-dashboard-theme] .admin-table th,
+.portal-table th{color:var(--console-lilac)!important;background:var(--fk-table-head,rgba(139,61,255,.08))!important;font-size:.68rem!important;letter-spacing:.1em}
+
+[data-dashboard-theme] .admin-list-row,
+.portal-list-row,
+[data-dashboard-theme] .campaign-recipient-row{border-radius:var(--fk-radius-control,10px)!important;border-color:var(--console-line-soft)!important;background:var(--fk-row-hover,rgba(255,255,255,.012))!important}
+
+[data-dashboard-theme] .admin-status,
+.portal-status,
+[data-dashboard-theme] .status-pill,
+[data-dashboard-theme] .campaign-status{border-radius:999px!important;color:var(--console-lilac)!important;border:1px solid var(--console-line)!important;background:var(--fk-brand-soft,rgba(139,61,255,.12))!important}
+
+[data-dashboard-theme] .admin-login-card input,
+[data-dashboard-theme] .admin-form-grid input,
+[data-dashboard-theme] .admin-form-grid select,
+[data-dashboard-theme] .admin-form-grid textarea,
+.portal-form input,
+.portal-form select,
+.portal-form textarea,
+[data-dashboard-theme] .campaign-panel input,
+[data-dashboard-theme] .campaign-panel select,
+[data-dashboard-theme] .campaign-panel textarea{border-radius:var(--fk-radius-control,10px)!important;border-color:var(--console-line)!important;background:var(--fk-input,var(--console-bg))!important;color:var(--console-white)!important}
+
+[data-dashboard-theme] button,
+[data-dashboard-theme] .admin-login-card button,
+[data-dashboard-theme] .admin-form-grid button,
+.portal-button,
+[data-dashboard-theme] .primary-button,
+[data-dashboard-theme] .campaign-action{border-radius:var(--fk-radius-control,10px)!important}
+
+[data-dashboard-theme] .admin-login-card button,
+[data-dashboard-theme] .admin-form-grid button,
+.portal-button.primary,
+[data-dashboard-theme] .primary-button,
+[data-dashboard-theme] .campaign-action.primary{color:#fff!important;background:var(--fk-brand-gradient,linear-gradient(180deg,#9f50ff,#6f24d8))!important;border:1px solid var(--console-purple-bright)!important}
+
+[data-dashboard-theme] .admin-health-ring,
+.portal-health-ring,
+[data-dashboard-theme] .progress-ring,
+[data-dashboard-theme] .donut-chart{border:1px solid var(--console-line)!important;box-shadow:inset 0 0 0 5px var(--fk-brand-soft,rgba(139,61,255,.07)),0 0 28px var(--fk-brand-glow,rgba(139,61,255,.18))!important;background:radial-gradient(circle,var(--console-panel) 52%,transparent 53%),repeating-conic-gradient(from -10deg,color-mix(in srgb,var(--console-white) 88%,transparent) 0 3deg,transparent 3deg 8deg),conic-gradient(var(--console-purple-bright),var(--console-purple) 72%,var(--fk-brand-soft,rgba(139,61,255,.14)) 72%)!important}
+
+[data-dashboard-theme] .console-chart-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+[data-dashboard-theme] .console-chart-panel{min-height:210px;padding:13px;border:1px solid var(--console-line);background:var(--console-panel);position:relative}
+[data-dashboard-theme] .console-chart-title{display:inline-flex;min-width:125px;margin:-13px 0 13px -13px;padding:5px 13px;color:var(--console-white);background:var(--console-panel-strong);clip-path:polygon(0 0,90% 0,100% 100%,0 100%);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
+
+@media(max-width:980px){[data-dashboard-theme] .console-chart-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){[data-dashboard-theme] .admin-main,.portal-main{padding:14px!important}[data-dashboard-theme] .admin-page,.portal-page{gap:10px!important}[data-dashboard-theme] .admin-page-header,.portal-page-header,[data-dashboard-theme] .admin-hero-panel,.portal-hero{padding:17px!important}[data-dashboard-theme] .admin-page-header h1,.portal-page-header h1,[data-dashboard-theme] .admin-hero-panel h1,.portal-hero h1{font-size:clamp(1.9rem,10vw,3rem)!important;line-height:.96!important}[data-dashboard-theme] .admin-metric-grid,[data-dashboard-theme] .admin-grid.four,.portal-metric-grid,.portal-stats-grid,[data-dashboard-theme] .dashboard-grid,[data-dashboard-theme] .console-chart-grid{grid-template-columns:1fr 1fr!important}[data-dashboard-theme] .admin-panel,.portal-card,.portal-panel,[data-dashboard-theme] .campaign-panel{padding:14px!important}}
+@media(max-width:480px){[data-dashboard-theme] .admin-metric-grid,[data-dashboard-theme] .admin-grid.four,.portal-metric-grid,.portal-stats-grid,[data-dashboard-theme] .dashboard-grid,[data-dashboard-theme] .console-chart-grid{grid-template-columns:1fr!important}}
