@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "@/components/admin/ServerIcons";
-import LeoSupportDock from "@/components/LeoSupportDock";
 import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
@@ -13,7 +12,6 @@ import styles from "./HomepageHeaderRestore.module.css";
 export default function HomePage() {
   return (
     <main className={`quantix-home ${styles.home}`}>
-      <LeoSupportDock />
       <ReferenceFluxHeroPhase1 />
       <MaiaCaseStudyTeaser />
       <AutomationJourney />
