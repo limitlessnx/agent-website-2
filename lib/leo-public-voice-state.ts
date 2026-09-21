@@ -64,3 +64,25 @@ export function isCurrentPublicLeoEpoch(
 export function createPublicLeoVoiceEpoch(callEpoch = 0): PublicLeoVoiceEpoch {
   return { callEpoch, turnId: 0, generationId: 0 };
 }
+
+
+export const PUBLIC_LEO_SILENCE_DEFAULT_MS = 850;
+export const PUBLIC_LEO_SILENCE_MIN_MS = 600;
+export const PUBLIC_LEO_SILENCE_MAX_MS = 1450;
+
+export type PublicLeoEndpointSignal = "premature_endpoint" | "clean_turn";
+
+export function adaptPublicLeoSilenceMs(
+  current: number,
+  signal: PublicLeoEndpointSignal,
+) {
+  const bounded = Math.max(
+    PUBLIC_LEO_SILENCE_MIN_MS,
+    Math.min(PUBLIC_LEO_SILENCE_MAX_MS, Math.round(current)),
+  );
+  const next = signal === "premature_endpoint" ? bounded + 150 : bounded - 50;
+  return Math.max(
+    PUBLIC_LEO_SILENCE_MIN_MS,
+    Math.min(PUBLIC_LEO_SILENCE_MAX_MS, next),
+  );
+}
