@@ -30,3 +30,14 @@ test("Public Leo voice epochs bind async work to call turn and generation", () =
   assert.match(source, /generationId/);
   assert.match(source, /isCurrentPublicLeoEpoch/);
 });
+
+
+test("Public Leo aborts stale async tool work and rejects old epochs", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /AbortController/);
+  assert.match(consultant, /toolAbortControllersRef/);
+  assert.match(consultant, /signal: controller\.signal/);
+  assert.match(consultant, /isCurrentPublicLeoEpoch\(epoch, voiceEpochRef\.current\)/);
+  assert.match(consultant, /input_audio_buffer\.speech_started/);
+  assert.match(consultant, /invalidateVoiceGeneration/);
+});
