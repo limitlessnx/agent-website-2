@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Activity, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Gauge, Globe2, Home, LifeBuoy, LineChart, Megaphone,
-  Plus, Search, Settings, ShieldCheck, Target, Users, X,
+  MessageSquareText, Plus, Search, Settings, ShieldCheck, Target, Users, X,
 } from "@/components/admin/ServerIcons";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
@@ -40,6 +40,7 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard/retention": ShieldCheck,
   "/dashboard/evaluations": ClipboardList,
   "/dashboard/agents": Bot,
+  "/dashboard/conversations": MessageSquareText,
   "/dashboard/social": Megaphone,
   "/dashboard/activity": Activity,
   "/dashboard/limitless/leads": Building2,
