@@ -41,3 +41,12 @@ test("Public Leo aborts stale async tool work and rejects old epochs", async () 
   assert.match(consultant, /input_audio_buffer\.speech_started/);
   assert.match(consultant, /invalidateVoiceGeneration/);
 });
+
+
+test("Public Leo executes each realtime function call id at most once", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /processedToolCallIdsRef/);
+  assert.match(consultant, /has\(callId\)/);
+  assert.match(consultant, /add\(callId\)/);
+  assert.match(consultant, /processedToolCallIdsRef\.current\.clear\(\)/);
+});
