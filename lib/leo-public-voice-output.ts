@@ -12,6 +12,14 @@ export function publicLeoVoiceToolOutput(
   const data = asObject(value);
   const ok = transportOk && data.ok !== false;
 
+  if (data.status === "email_confirmation_required") {
+    return {
+      ok: true,
+      email_confirmation_required: true,
+      email: typeof data.email === "string" ? data.email : null,
+    };
+  }
+
   if (!ok) {
     return {
       ok: false,
