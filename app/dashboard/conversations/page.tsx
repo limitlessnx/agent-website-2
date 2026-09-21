@@ -69,23 +69,23 @@ export default async function ConversationsPage() {
           </div>
           <AlertTriangle size={18} />
         </div>
-        <div className="conversation-attention-list">
+        <div className="admin-list conversation-attention-list">
           {attentionLeads.map((lead, index) => (
-            <a href="/dashboard/limitless/leads" className="conversation-attention-row" key={lead.id}>
+            <a href="/dashboard/limitless/leads" className="admin-list-row compact conversation-attention-row" key={lead.id}>
               <span className="conversation-alert-dot">{index + 1}</span>
-              <span><strong>{leadLabel(lead)}</strong><small>{leadMeta(lead)}</small></span>
+              <div><strong>{leadLabel(lead)}</strong><span>{leadMeta(lead)}</span></div>
               <em>{lead.score || leadStatus(lead)}</em>
             </a>
           ))}
           {failedCampaigns.map((campaign) => (
-            <a href="/dashboard/limitless/campaigns" className="conversation-attention-row" key={campaign.id}>
+            <a href="/dashboard/limitless/campaigns" className="admin-list-row compact conversation-attention-row" key={campaign.id}>
               <span className="conversation-alert-dot delivery"><Send size={13} /></span>
-              <span><strong>{campaign.campaign_topic}</strong><small>{campaign.failed} failed · {campaign.accepted} sent · {campaign.skipped} skipped</small></span>
+              <div><strong>{campaign.campaign_topic}</strong><span>{campaign.failed} failed · {campaign.accepted} sent · {campaign.skipped} skipped</span></div>
               <em>delivery</em>
             </a>
           ))}
           {!attentionLeads.length && !failedCampaigns.length ? (
-            <div className="conversation-attention-row calm"><span className="conversation-alert-dot ok"><UserCheck size={13} /></span><span><strong>No urgent conversation issues</strong><small>The visible inbox does not show handoff or delivery problems.</small></span><em>clear</em></div>
+            <div className="admin-list-row compact conversation-attention-row calm"><span className="conversation-alert-dot ok"><UserCheck size={13} /></span><div><strong>No urgent conversation issues</strong><span>The visible inbox does not show handoff or delivery problems.</span></div><em>clear</em></div>
           ) : null}
         </div>
       </section>
@@ -109,10 +109,10 @@ export default async function ConversationsPage() {
 
         <section className="admin-panel">
           <div className="admin-panel-header"><div><h2>AI + Human Handoff</h2><p>Where AI should continue, and where a human should step in.</p></div><PhoneCall size={18} /></div>
-          <div className="conversation-handoff-grid">
-            <article><Bot size={18} /><strong>{Math.max(activeLeads.length - attentionLeads.length, 0)}</strong><span>AI can continue</span></article>
-            <article><UserCheck size={18} /><strong>{attentionLeads.length}</strong><span>Human review suggested</span></article>
-            <article><Clock3 size={18} /><strong>{failedCampaigns.length}</strong><span>Delivery checks</span></article>
+          <div className="admin-grid three conversation-handoff-grid">
+            <article className="admin-panel compact"><Bot size={18} /><strong>{Math.max(activeLeads.length - attentionLeads.length, 0)}</strong><span>AI can continue</span></article>
+            <article className="admin-panel compact"><UserCheck size={18} /><strong>{attentionLeads.length}</strong><span>Human review suggested</span></article>
+            <article className="admin-panel compact"><Clock3 size={18} /><strong>{failedCampaigns.length}</strong><span>Delivery checks</span></article>
           </div>
           <div className="admin-list">
             {recentCampaigns.map((campaign) => (
@@ -125,10 +125,6 @@ export default async function ConversationsPage() {
           </div>
         </section>
       </div>
-
-      <style jsx>{`
-        .conversations-page{max-width:1500px;margin:0 auto}.conversations-hero-panel{background:linear-gradient(135deg,var(--fk-brand-soft),transparent 48%),var(--fk-surface)!important}.conversation-attention-list{display:grid;gap:10px}.conversation-attention-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border:1px solid var(--fk-border);border-radius:14px;background:var(--fk-surface-raised);color:var(--fk-text);text-decoration:none}.conversation-attention-row:hover{border-color:var(--fk-border-strong);background:var(--fk-surface-hover)}.conversation-attention-row strong,.conversation-attention-row small{display:block}.conversation-attention-row small{margin-top:4px;color:var(--fk-text-muted);font-size:12px}.conversation-attention-row em{color:var(--fk-text-secondary);font-size:11px;font-style:normal;font-weight:800;text-transform:uppercase}.conversation-alert-dot{width:30px;height:30px;display:grid;place-items:center;border-radius:10px;background:color-mix(in srgb,var(--fk-danger) 18%,var(--fk-surface));color:var(--fk-danger);font-size:12px;font-weight:900}.conversation-alert-dot.delivery{background:color-mix(in srgb,var(--fk-warning) 18%,var(--fk-surface));color:var(--fk-warning)}.conversation-alert-dot.ok{background:color-mix(in srgb,var(--fk-success) 18%,var(--fk-surface));color:var(--fk-success)}.conversation-attention-row.calm{border-style:dashed}.conversation-grid{align-items:start}.conversation-row{border-radius:12px!important;padding-left:12px!important;padding-right:12px!important}.conversation-handoff-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}.conversation-handoff-grid article{border:1px solid var(--fk-border);border-radius:14px;background:var(--fk-surface-raised);padding:13px}.conversation-handoff-grid svg{color:var(--fk-brand-hover)}.conversation-handoff-grid strong{display:block;margin-top:10px;color:var(--fk-text);font-size:24px;line-height:1}.conversation-handoff-grid span{display:block;margin-top:5px;color:var(--fk-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}@media(max-width:760px){.conversation-handoff-grid{grid-template-columns:1fr}.conversation-attention-row{grid-template-columns:auto minmax(0,1fr)}.conversation-attention-row em{grid-column:2}}
-      `}</style>
     </main>
   );
 }
