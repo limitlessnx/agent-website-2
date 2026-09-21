@@ -25,7 +25,7 @@ const description = "See how Maia connects real-estate marketing, customer conve
 
 
 export const metadata: Metadata = {
-  title: "Maia Real Estate Operating System | Fluxknight",
+  title: "Maia Real Estate Operating System",
   description,
   alternates: { canonical: "/case-studies/maia" },
 };
