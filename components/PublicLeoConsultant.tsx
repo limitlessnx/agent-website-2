@@ -12,6 +12,8 @@ type RealtimeEvent = {
   name?: string;
   call_id?: string;
   arguments?: string;
+  delta?: string;
+  response?: { id?: string; status?: string };
   item?: { type?: string; call_id?: string; name?: string; arguments?: string };
 };
 
@@ -78,6 +80,8 @@ export default function PublicLeoConsultant() {
   const awaitingToolContinuationRef = useRef(false);
   const toolResponseDoneRef = useRef(false);
   const toolContinuationIssuedRef = useRef(false);
+  const activeResponseIdRef = useRef<string | null>(null);
+  const assistantAudioActiveRef = useRef(false);
 
   function transitionVoice(to: PublicLeoVoiceState) {
     voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
@@ -258,7 +262,12 @@ export default function PublicLeoConsultant() {
     let event: RealtimeEvent;
     try { event = JSON.parse(raw) as RealtimeEvent; } catch { return; }
     if (event.type === "input_audio_buffer.speech_started") {
+      if (assistantAudioActiveRef.current || voiceStateRef.current === "assistant_speaking") {
+        try { sendRealtimeEvent({ type: "output_audio_buffer.clear" }); } catch {}
+      }
       invalidateVoiceGeneration();
+      assistantAudioActiveRef.current = false;
+      activeResponseIdRef.current = null;
       const current = voiceStateRef.current;
       if (current === "assistant_speaking" || current === "generating" || current === "tool_pending") {
         transitionVoice("interrupting");
@@ -268,10 +277,34 @@ export default function PublicLeoConsultant() {
       }
       return;
     }
+    if (event.type === "input_audio_buffer.speech_stopped") {
+      if (voiceStateRef.current === "user_speaking") transitionVoice("endpointing");
+      return;
+    }
+    if (event.type === "response.created") {
+      activeResponseIdRef.current = event.response?.id || null;
+      if (voiceStateRef.current === "listening" || voiceStateRef.current === "endpointing") {
+        transitionVoice("generating");
+      }
+      return;
+    }
+    if (event.type === "response.output_audio.delta") {
+      assistantAudioActiveRef.current = true;
+      if (voiceStateRef.current === "generating") transitionVoice("assistant_speaking");
+      return;
+    }
+    if (event.type === "response.output_audio.done") {
+      assistantAudioActiveRef.current = false;
+      return;
+    }
     if (event.type === "response.done") {
+      activeResponseIdRef.current = null;
+      assistantAudioActiveRef.current = false;
       if (awaitingToolContinuationRef.current) {
         toolResponseDoneRef.current = true;
         maybeContinueAfterVoiceTools();
+      } else if (voiceStateRef.current === "assistant_speaking" || voiceStateRef.current === "generating") {
+        transitionVoice("listening");
       }
       return;
     }
@@ -297,6 +330,8 @@ export default function PublicLeoConsultant() {
       abortPendingVoiceTools();
       processedToolCallIdsRef.current.clear();
       resetVoiceToolContinuation();
+      activeResponseIdRef.current = null;
+      assistantAudioActiveRef.current = false;
       voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
       voiceStateRef.current = "idle";
       transitionVoice("connecting");
@@ -361,6 +396,8 @@ export default function PublicLeoConsultant() {
     abortPendingVoiceTools();
     processedToolCallIdsRef.current.clear();
     resetVoiceToolContinuation();
+    activeResponseIdRef.current = null;
+    assistantAudioActiveRef.current = false;
     voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
     if (voiceStateRef.current !== "idle") {
       try {
