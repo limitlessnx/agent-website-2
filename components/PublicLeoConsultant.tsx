@@ -174,6 +174,7 @@ export default function PublicLeoConsultant() {
       generationId: current.generationId + 1,
     };
     abortPendingVoiceTools();
+    resetVoiceToolContinuation();
   }
 
   function resetVoiceToolContinuation() {
