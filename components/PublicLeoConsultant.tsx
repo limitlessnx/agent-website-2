@@ -105,7 +105,7 @@ export default function PublicLeoConsultant() {
     const nextMessages = [...messages, { role: "user" as const, content }];
     setIsThinking(true);
     try {
-      const response = await fetch("/api/leo", {
+      const response = await fetch("/api/leo/public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -158,7 +158,7 @@ export default function PublicLeoConsultant() {
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
 
     try {
-      const response = await fetch("/api/leo/tool", {
+      const response = await fetch("/api/leo/public/tool", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -248,7 +248,7 @@ export default function PublicLeoConsultant() {
       const headers: Record<string, string> = { "Content-Type": "application/sdp" };
       if (sessionId) headers["x-leo-session-id"] = sessionId;
       headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify({ pathname: window.location.pathname, section: "public-homepage", resourceType: "public_leo_evaluation", leadCaptured: Boolean(lead) }));
-      const response = await fetch("/api/leo/realtime/call", {
+      const response = await fetch("/api/leo/public/realtime", {
         method: "POST",
         headers,
         body: offer.sdp || "",
