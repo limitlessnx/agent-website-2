@@ -43,6 +43,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { href: "/dashboard/lifecycle", label: "Customer Lifecycle" },
         { href: "/dashboard/workflows", label: "Automations" },
         { href: "/dashboard/agents", label: "Agents" },
+        { href: "/dashboard/conversations", label: "Conversations" },
         { href: "/dashboard/social", label: "Social" },
         { href: "/dashboard/activity", label: "Activity" },
       ],
