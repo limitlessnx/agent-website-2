@@ -62,3 +62,17 @@ test("Public Leo has one continuation owner after all tool calls settle", async 
   const responseCreates = consultant.match(/type: "response\.create"/g) || [];
   assert.equal(responseCreates.length, 2, "only the opening and centralized tool continuation may create responses");
 });
+
+
+test("Public Leo WebRTC barge-in clears buffered speech and invalidates stale generation", async () => {
+  const consultant = await readFile(new URL("../components/PublicLeoConsultant.tsx", import.meta.url), "utf8");
+  assert.match(consultant, /activeResponseIdRef/);
+  assert.match(consultant, /assistantAudioActiveRef/);
+  assert.match(consultant, /input_audio_buffer\.speech_started/);
+  assert.match(consultant, /input_audio_buffer\.speech_stopped/);
+  assert.match(consultant, /output_audio_buffer\.clear/);
+  assert.match(consultant, /response\.output_audio\.delta/);
+  assert.match(consultant, /response\.output_audio\.done/);
+  assert.match(consultant, /invalidateVoiceGeneration/);
+  assert.doesNotMatch(consultant, /conversation\.item\.truncate/);
+});
