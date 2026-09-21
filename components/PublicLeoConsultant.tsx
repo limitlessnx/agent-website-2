@@ -67,6 +67,7 @@ export default function PublicLeoConsultant() {
   const [isThinking, setIsThinking] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [callError, setCallError] = useState("");
+  const [networkHealth, setNetworkHealth] = useState<"stable" | "unstable" | "recovering">("stable");
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -86,6 +87,8 @@ export default function PublicLeoConsultant() {
   const adaptiveSilenceMsRef = useRef(PUBLIC_LEO_SILENCE_DEFAULT_MS);
   const lastSpeechStoppedAtRef = useRef(0);
   const cleanEndpointTurnsRef = useRef(0);
+  const connectionGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const networkStatsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function transitionVoice(to: PublicLeoVoiceState) {
     voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
@@ -94,6 +97,72 @@ export default function PublicLeoConsultant() {
   function abortPendingVoiceTools() {
     for (const controller of toolAbortControllersRef.current) controller.abort();
     toolAbortControllersRef.current.clear();
+  }
+
+  function cleanupNetworkMonitoring() {
+    if (connectionGraceTimerRef.current) clearTimeout(connectionGraceTimerRef.current);
+    if (networkStatsTimerRef.current) clearInterval(networkStatsTimerRef.current);
+    connectionGraceTimerRef.current = null;
+    networkStatsTimerRef.current = null;
+  }
+
+  function enterConnectionDegraded() {
+    const current = voiceStateRef.current;
+    if (current !== "idle" && current !== "ending" && current !== "degraded") {
+      try { transitionVoice("degraded"); } catch { voiceStateRef.current = "degraded"; }
+    }
+  }
+
+  function monitorPeerConnection(peer: RTCPeerConnection) {
+    cleanupNetworkMonitoring();
+
+    const handleConnectionChange = () => {
+      if (peerRef.current !== peer) return;
+      const state = peer.connectionState;
+      if (state === "connected") {
+        if (connectionGraceTimerRef.current) clearTimeout(connectionGraceTimerRef.current);
+        connectionGraceTimerRef.current = null;
+        setNetworkHealth("stable");
+        if (voiceStateRef.current === "degraded" || voiceStateRef.current === "reconnecting") {
+          try { transitionVoice("listening"); } catch { voiceStateRef.current = "listening"; }
+        }
+        return;
+      }
+      if (state === "disconnected" || state === "failed") {
+        setNetworkHealth("recovering");
+        enterConnectionDegraded();
+        invalidateVoiceGeneration();
+        if (!connectionGraceTimerRef.current) {
+          connectionGraceTimerRef.current = setTimeout(() => {
+            if (peerRef.current !== peer) return;
+            if (peer.connectionState === "connected") return;
+            setCallError("The connection dropped. Tap Talk to Leo to reconnect.");
+            stopCall();
+          }, 7000);
+        }
+      }
+    };
+
+    peer.addEventListener("connectionstatechange", handleConnectionChange);
+    peer.addEventListener("iceconnectionstatechange", handleConnectionChange);
+
+    networkStatsTimerRef.current = setInterval(() => {
+      if (peerRef.current !== peer || peer.connectionState !== "connected") return;
+      void peer.getStats().then((reports) => {
+        if (peerRef.current !== peer) return;
+        let rtt = 0;
+        let jitter = 0;
+        reports.forEach((report) => {
+          if (report.type === "candidate-pair" && report.state === "succeeded" && typeof report.currentRoundTripTime === "number") {
+            rtt = Math.max(rtt, report.currentRoundTripTime);
+          }
+          if (report.type === "inbound-rtp" && report.kind === "audio" && typeof report.jitter === "number") {
+            jitter = Math.max(jitter, report.jitter);
+          }
+        });
+        setNetworkHealth(rtt > 0.6 || jitter > 0.08 ? "unstable" : "stable");
+      }).catch(() => {});
+    }, 3000);
   }
 
   function invalidateVoiceGeneration() {
@@ -157,6 +226,7 @@ export default function PublicLeoConsultant() {
   useEffect(() => {
     return () => {
       abortPendingVoiceTools();
+      cleanupNetworkMonitoring();
       dataChannelRef.current?.close();
       peerRef.current?.close();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -391,8 +461,10 @@ export default function PublicLeoConsultant() {
       voiceStateRef.current = "idle";
       transitionVoice("connecting");
       setIsCalling(true);
+      setNetworkHealth("stable");
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
+      monitorPeerConnection(peer);
       const audio = new Audio();
       audio.autoplay = true;
       audio.setAttribute("aria-label", "Leo voice response");
@@ -449,6 +521,7 @@ export default function PublicLeoConsultant() {
 
   function stopCall() {
     abortPendingVoiceTools();
+    cleanupNetworkMonitoring();
     processedToolCallIdsRef.current.clear();
     resetVoiceToolContinuation();
     activeResponseIdRef.current = null;
@@ -494,7 +567,7 @@ export default function PublicLeoConsultant() {
               </div>
             ))}
             {isThinking ? <div className="public-leo-message assistant thinking"><span><Bot size={14} /></span><p className="public-leo-dots"><i /><i /><i /></p></div> : null}
-            {isCalling ? <div className="public-leo-call-status"><span className="public-leo-live-dot" /> Leo is listening. Speak naturally.</div> : null}
+            {isCalling ? <div className="public-leo-call-status"><span className="public-leo-live-dot" /> {networkHealth === "stable" ? "Leo is listening. Speak naturally." : networkHealth === "recovering" ? "Connection interrupted. Trying to recover…" : "Connection is unstable."}</div> : null}
             {callError ? <div className="public-leo-call-error">{callError}</div> : null}
           </div>
 
