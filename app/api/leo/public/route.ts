@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Leo could not complete this response.", reason: result.reason, sessionId: session.id }, { status: result.reason === "timeout" ? 504 : 502 });
   }
 
-  let toolCalls = result.toolCalls.map((call) => ({ ...call, status: "proposed" as const }));
+  let toolCalls: Array<(typeof result.toolCalls)[number] & { status: "proposed" | "executed" | "failed"; result?: unknown }> = result.toolCalls.map((call) => ({ ...call, status: "proposed" }));
   if (!session.leadCaptured) {
     const capture = toolCalls.find((call) => call.toolKey === "leo.public.lead.capture");
     if (capture) {
