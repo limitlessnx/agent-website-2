@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Bot, Building2, CheckCircle2, Clock3, Database, Megaphone, MessageSquareText, Workflow } from "@/components/admin/ServerIcons";
+import { Activity, AlertTriangle, Bot, CheckCircle2, Clock3, Database, Megaphone, MessageSquareText, Workflow } from "@/components/admin/ServerIcons";
 import { getCampaignReports, getLeads, getN8nStatus, getProperties, getSupabaseReadiness } from "@/lib/limitless-data";
 
 export const dynamic = "force-dynamic";
@@ -93,11 +93,11 @@ export default async function UnifiedActivityPage() {
           </div>
           <Activity size={18} />
         </div>
-        <div className="activity-feed">
+        <div className="admin-list activity-feed">
           {feed.map((item) => (
-            <a href={item.href} className={`activity-feed-row ${item.tone}`} key={item.id}>
+            <a href={item.href} className={`admin-list-row compact activity-feed-row ${item.tone}`} key={item.id}>
               <span className="activity-feed-icon">{item.tone === "conversation" ? <MessageSquareText size={15} /> : item.tone === "warning" ? <AlertTriangle size={15} /> : item.tone === "automation" ? <Workflow size={15} /> : <Clock3 size={15} />}</span>
-              <span><strong>{item.title}</strong><small>{item.meta}</small></span>
+              <div><strong>{item.title}</strong><span>{item.meta}</span></div>
               <em>{item.label}</em>
             </a>
           ))}
@@ -129,11 +129,11 @@ export default async function UnifiedActivityPage() {
 
         <section className="admin-panel">
           <div className="admin-panel-header"><div><h2>System Activity</h2><p>Workflow and data-service operating state.</p></div><Database size={18} /></div>
-          <div className="activity-system-grid">
-            <article><Workflow size={18} /><strong>{n8n.activeWorkflows}</strong><span>active workflows</span></article>
-            <article><Database size={18} /><strong>{supabase.ready ? "Ready" : "Check"}</strong><span>database state</span></article>
-            <article><Bot size={18} /><strong>{activeLeads.length}</strong><span>crm signals</span></article>
-            <article><Megaphone size={18} /><strong>{recentCampaigns.length}</strong><span>campaign logs</span></article>
+          <div className="admin-grid four activity-system-grid">
+            <article className="admin-panel compact"><Workflow size={18} /><strong>{n8n.activeWorkflows}</strong><span>active workflows</span></article>
+            <article className="admin-panel compact"><Database size={18} /><strong>{supabase.ready ? "Ready" : "Check"}</strong><span>database state</span></article>
+            <article className="admin-panel compact"><Bot size={18} /><strong>{activeLeads.length}</strong><span>crm signals</span></article>
+            <article className="admin-panel compact"><Megaphone size={18} /><strong>{recentCampaigns.length}</strong><span>campaign logs</span></article>
           </div>
           <div className="admin-list">
             {n8n.workflows.slice(0, 8).map((workflow) => (
@@ -146,10 +146,6 @@ export default async function UnifiedActivityPage() {
           </div>
         </section>
       </div>
-
-      <style jsx>{`
-        .activity-page{max-width:1500px;margin:0 auto}.activity-command-panel{background:linear-gradient(135deg,var(--fk-brand-soft),transparent 52%),var(--fk-surface)!important}.activity-feed{display:grid;gap:10px}.activity-feed-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border:1px solid var(--fk-border);border-radius:14px;background:var(--fk-surface-raised);color:var(--fk-text);text-decoration:none}.activity-feed-row:hover{border-color:var(--fk-border-strong);background:var(--fk-surface-hover)}.activity-feed-row strong,.activity-feed-row small{display:block}.activity-feed-row small{margin-top:4px;color:var(--fk-text-muted);font-size:12px}.activity-feed-row em{color:var(--fk-text-secondary);font-size:11px;font-style:normal;font-weight:800;text-transform:uppercase}.activity-feed-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:var(--fk-brand-soft);color:var(--fk-brand-hover)}.activity-feed-row.warning .activity-feed-icon{background:color-mix(in srgb,var(--fk-warning) 18%,var(--fk-surface));color:var(--fk-warning)}.activity-feed-row.conversation .activity-feed-icon{background:color-mix(in srgb,var(--fk-info) 15%,var(--fk-surface));color:var(--fk-info)}.activity-system-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.activity-system-grid article{border:1px solid var(--fk-border);border-radius:14px;background:var(--fk-surface-raised);padding:13px}.activity-system-grid svg{color:var(--fk-brand-hover)}.activity-system-grid strong{display:block;margin-top:10px;color:var(--fk-text);font-size:22px;line-height:1}.activity-system-grid span{display:block;margin-top:5px;color:var(--fk-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}@media(max-width:760px){.activity-system-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.activity-feed-row{grid-template-columns:auto minmax(0,1fr)}.activity-feed-row em{grid-column:2}}
-      `}</style>
     </main>
   );
 }
