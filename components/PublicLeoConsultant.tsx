@@ -73,6 +73,7 @@ export default function PublicLeoConsultant() {
   const voiceStateRef = useRef<PublicLeoVoiceState>("idle");
   const voiceEpochRef = useRef<PublicLeoVoiceEpoch>(createPublicLeoVoiceEpoch());
   const toolAbortControllersRef = useRef(new Set<AbortController>());
+  const processedToolCallIdsRef = useRef(new Set<string>());
 
   function transitionVoice(to: PublicLeoVoiceState) {
     voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
@@ -170,6 +171,8 @@ export default function PublicLeoConsultant() {
     const toolName = event.name || event.item?.name;
     const rawArguments = event.arguments || event.item?.arguments || "{}";
     if (!callId) return;
+    if (processedToolCallIdsRef.current.has(callId)) return;
+    processedToolCallIdsRef.current.add(callId);
 
     if (toolName === "leo_end_call") {
       stopCall();
@@ -254,6 +257,7 @@ export default function PublicLeoConsultant() {
 
     try {
       abortPendingVoiceTools();
+      processedToolCallIdsRef.current.clear();
       voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
       voiceStateRef.current = "idle";
       transitionVoice("connecting");
@@ -316,6 +320,7 @@ export default function PublicLeoConsultant() {
 
   function stopCall() {
     abortPendingVoiceTools();
+    processedToolCallIdsRef.current.clear();
     voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
     if (voiceStateRef.current !== "idle") {
       try {
