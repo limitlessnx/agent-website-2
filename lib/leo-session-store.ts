@@ -7,7 +7,7 @@ import { listLeoOperationalMemories } from "@/lib/leo-operational-memory";
 
 type LeoSessionRow = { id: string; scope: string; organization_id?: string | null; user_id?: string | null; membership_id?: string | null; role: string; channel: string; visibility: string; status: string; metadata?: Record<string, unknown> | null };
 export type LeoVoiceWorkingContext = { workspace?: string; action?: string; leadId?: string; leadName?: string; property?: string; audience?: Record<string, unknown>; message?: string; pendingToolKey?: string; pendingArguments?: Record<string, unknown>; pendingSince?: string; lastResult?: Record<string, unknown>; operationalMemory?: Array<{ id: string; kind: string; title: string; summary: string; workspace?: string; confidence: number }> };
-export type LeoSessionState = { id: string; persisted: boolean; visibility: LeoConversationVisibility; leadProfile?: PublicLeoLeadProfile; leadCaptured: boolean; leadId?: string | null; voiceWorkingContext?: LeoVoiceWorkingContext };
+export type LeoSessionState = { id: string; persisted: boolean; visibility: LeoConversationVisibility; leadProfile?: PublicLeoLeadProfile; leadCaptured: boolean; leadId?: string | null; voiceWorkingContext?: LeoVoiceWorkingContext; pendingEmailCandidate?: string | null; pendingEmailTurnId?: number | null };
 
 function visibilityFor(identity: LeoIdentity, requested?: unknown): LeoConversationVisibility {
   if (identity.scope === "public" || identity.scope === "super_admin") return "private";
@@ -18,7 +18,9 @@ function sessionState(row?: LeoSessionRow) {
   const metadata = row?.metadata && typeof row.metadata === "object" ? row.metadata : {};
   const profile = metadata.public_leo_lead_profile;
   const voice = metadata.leo_voice_working_context;
-  return { leadProfile: profile && typeof profile === "object" && !Array.isArray(profile) ? profile as PublicLeoLeadProfile : undefined, leadCaptured: metadata.public_leo_lead_captured === true, leadId: typeof metadata.public_leo_lead_id === "string" ? metadata.public_leo_lead_id : null, voiceWorkingContext: voice && typeof voice === "object" && !Array.isArray(voice) ? voice as LeoVoiceWorkingContext : undefined };
+  const pendingEmailCandidate = typeof metadata.public_leo_pending_email === "string" ? metadata.public_leo_pending_email : null;
+  const pendingEmailTurnId = typeof metadata.public_leo_pending_email_turn_id === "number" ? metadata.public_leo_pending_email_turn_id : null;
+  return { leadProfile: profile && typeof profile === "object" && !Array.isArray(profile) ? profile as PublicLeoLeadProfile : undefined, leadCaptured: metadata.public_leo_lead_captured === true, leadId: typeof metadata.public_leo_lead_id === "string" ? metadata.public_leo_lead_id : null, voiceWorkingContext: voice && typeof voice === "object" && !Array.isArray(voice) ? voice as LeoVoiceWorkingContext : undefined, pendingEmailCandidate, pendingEmailTurnId };
 }
 async function withOperationalMemory(identity: LeoIdentity, state: ReturnType<typeof sessionState>) {
   if (identity.scope !== "super_admin") return state;
@@ -68,6 +70,17 @@ export async function updateLeoVoiceWorkingContext(input: { identity: LeoIdentit
   if (!input.session.persisted || input.identity.scope !== "super_admin") return { ...input.session, voiceWorkingContext: input.context || undefined };
   await mergeSessionMetadata(input.identity, input.session, { leo_voice_working_context: input.context || null });
   return { ...input.session, voiceWorkingContext: input.context || undefined };
+}
+
+export async function updateLeoPublicEmailCandidate(input: { identity: LeoIdentity; session: LeoSessionState; email?: string | null; turnId?: number | null }) {
+  if (!input.session.persisted || input.identity.scope !== "public") return { ...input.session, pendingEmailCandidate: input.email || null, pendingEmailTurnId: input.turnId ?? null };
+  const pendingEmailCandidate = String(input.email || "").trim().toLowerCase() || null;
+  const pendingEmailTurnId = Number.isFinite(input.turnId) ? Number(input.turnId) : null;
+  await mergeSessionMetadata(input.identity, input.session, {
+    public_leo_pending_email: pendingEmailCandidate,
+    public_leo_pending_email_turn_id: pendingEmailTurnId,
+  }).catch(() => null);
+  return { ...input.session, pendingEmailCandidate, pendingEmailTurnId };
 }
 
 export async function updateLeoPublicLeadState(input: { identity: LeoIdentity; session: LeoSessionState; leadProfile: PublicLeoLeadProfile; captured?: boolean; leadId?: string | null }) {
