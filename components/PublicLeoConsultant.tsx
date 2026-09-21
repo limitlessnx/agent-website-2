@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 import { adaptPublicLeoSilenceMs, createPublicLeoVoiceEpoch, isCurrentPublicLeoEpoch, nextPublicLeoVoiceState, PUBLIC_LEO_SILENCE_DEFAULT_MS, type PublicLeoVoiceEpoch, type PublicLeoVoiceState } from "@/lib/leo-public-voice-state";
+import { publicLeoVoiceToolOutput } from "@/lib/leo-public-voice-output";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 type LeadProfile = { name: string; email: string; phone?: string; organization?: string; leadId?: string };
@@ -342,12 +343,14 @@ export default function PublicLeoConsultant() {
         const captured = asLeadProfile(payload.arguments, data.leadId);
         if (captured) setLead(captured);
       }
-      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(data) } });
+      const modelOutput = publicLeoVoiceToolOutput(String(payload.tool_key || ""), data, response.ok);
+      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(modelOutput) } });
     } catch (error) {
       if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
       const output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
       try {
-        sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) } });
+        const modelOutput = publicLeoVoiceToolOutput(String(payload.tool_key || ""), output, false);
+        sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(modelOutput) } });
       } catch {
         setCallError(output.error);
       }
@@ -490,7 +493,7 @@ export default function PublicLeoConsultant() {
             type: "response.create",
             response: {
               output_modalities: ["audio"],
-              instructions: "Introduce yourself as Leo, Fluxknight's support and business evaluation assistant. Ask for the visitor's full name, then email, one question at a time. After that, guide a natural business evaluation even when the visitor does not know what they need. Diagnose where Fluxknight could improve customer response, sales support, follow-up, reminders, bookings, customer relationships or human handoff. Explain plan fit honestly: Basic is support/qualification/handoff only; Plus adds same-channel follow-up and reminders; Business adds team controls, cross-channel context and voice when configured; Business+ adds deeper customer/operations history and advanced automation. Explain the 14-day Basic trial accurately and never imply advanced reminders or voice are included. Save meaningful evaluation updates and offer a human follow-up when appropriate. Do not require phone or business name. Keep replies short, clear and natural.",
+              instructions: "Introduce yourself as Leo, Fluxknight's support and business evaluation assistant. Ask for the visitor's full name, then email, one question at a time. After that, guide a natural business evaluation even when the visitor does not know what they need. Diagnose where Fluxknight could improve customer response, sales support, follow-up, reminders, bookings, customer relationships or human handoff. Explain plan fit honestly: Basic is support/qualification/handoff only; Plus adds same-channel follow-up and reminders; Business adds team controls, cross-channel context and voice when configured; Business+ adds deeper customer/operations history and advanced automation. Explain the 14-day Basic trial accurately and never imply advanced reminders or voice are included. Never mention tools, function calls, lead capture, databases, workflows, background jobs, processing, saving context, APIs, or internal system status. Never ask the visitor to wait for internal work. Perform internal actions silently and continue the customer conversation naturally. Save meaningful evaluation updates and offer a human follow-up when appropriate. Do not require phone or business name. Keep replies short, clear and natural.",
             },
           });
         } catch {
