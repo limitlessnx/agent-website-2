@@ -49,12 +49,24 @@ test("phase 1-5 fidelity layer contains phone tablet and desktop composition rul
   assert.match(css, /settings-layout/);
 });
 
-test("dashboard command overview uses live inputs and does not hard-code fake KPI values", () => {
+test("dashboard home uses live operating inputs and does not hard-code fake KPI values", () => {
   const page = read("app/dashboard/page.tsx");
-  const overview = read("components/admin/DashboardReferenceOverview.tsx");
-  assert.match(page, /totalLeads=\{leads\.length\}/);
-  assert.match(page, /liveClients=\{liveClients\.length\}/);
-  assert.match(page, /notifications=\{notifications\}/);
-  assert.match(page, /agents=\{overviewAgents\}/);
-  assert.doesNotMatch(overview, /94%|138 conversations|42 new leads|31 follow-ups/i);
+  const home = read("components/admin/DashboardHomeExperience.tsx");
+  assert.match(page, /value: newLeads\.length/);
+  assert.match(page, /value: engagedLeads\.length/);
+  assert.match(page, /value: followUpLeads\.length/);
+  assert.match(page, /value: qualifiedLeads\.length/);
+  assert.match(page, /notices=\{notifications\}/);
+  assert.match(page, /name: "Maia"/);
+  assert.match(page, /name: "Leo"/);
+  assert.match(home, /Your AI Team/);
+  assert.doesNotMatch(home, /94%|138 conversations|42 new leads|31 follow-ups/i);
+});
+
+test("mobile header preserves reference bell and account actions", () => {
+  const header = read("components/admin/MobileAdminHeader.tsx");
+  assert.match(header, /Bell/);
+  assert.match(header, /\/dashboard\/notifications/);
+  assert.match(header, /\/dashboard\/settings/);
+  assert.match(header, /Open account settings/);
 });
