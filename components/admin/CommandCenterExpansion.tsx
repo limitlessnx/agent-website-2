@@ -16,6 +16,7 @@ type Props = {
   };
   workforce: Array<{ name: string; role: string; state: AgentState; note?: string }>;
   health: Array<{ name: string; state: HealthState; note?: string }>;
+  compact?: boolean;
   leo: {
     summary: string;
     recommendation: string;
@@ -27,7 +28,7 @@ function show(value: PulseValue) {
   return value === null || value === undefined || value === "" ? "Unavailable" : value;
 }
 
-export default function CommandCenterExpansion({ pulse, workforce, health, leo }: Props) {
+export default function CommandCenterExpansion({ pulse, workforce, health, leo, compact = false }: Props) {
   const pulseItems = [
     ["Leads", pulse.leads],
     ["Conversations", pulse.conversations],
@@ -39,7 +40,7 @@ export default function CommandCenterExpansion({ pulse, workforce, health, leo }
   ] as const;
 
   return (
-    <section className={styles.wrap} aria-label="Command center expansion">
+    <section className={`${styles.wrap} ${compact ? styles.compact : ""}`} aria-label="Command center expansion">
       <div className={styles.sectionHead}>
         <div><span>BUSINESS PULSE</span><h2>What the business is doing</h2></div>
         <small>Only connected evidence is shown. Missing sources stay unavailable.</small>
