@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/dashboard/", "/api/", "/login", "/register"],
       },
     ],
-    sitemap: "https://fluxknight.ai/sitemap.xml",
-    host: "https://fluxknight.ai",
+    sitemap: "https://fluxknight.space/sitemap.xml",
+    host: "https://fluxknight.space",
   };
 }
