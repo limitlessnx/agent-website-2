@@ -98,11 +98,6 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   useDialogFocusTrap(mobileOpen, sidebarRef, closeMenu);
 
   useEffect(() => {
-    if (!activeGroupId) return;
-    setOpenGroups((current) => current.includes(activeGroupId) ? current : [...current, activeGroupId]);
-  }, [activeGroupId]);
-
-  useEffect(() => {
     const media = window.matchMedia("(max-width: 900px)");
     const syncInert = () => {
       if (!sidebarRef.current) return;
@@ -118,10 +113,10 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     try {
       const saved = localStorage.getItem("fluxknight-dashboard-sidebar");
       const next = saved === "collapsed";
-      setCollapsed(next);
+      requestAnimationFrame(() => setCollapsed(next));
       const root = document.getElementById("dashboard-theme-root");
       if (root) root.dataset.sidebarCollapsed = String(next);
-    } catch (_) {}
+    } catch {}
   }, []);
 
   function toggleCollapsed() {
@@ -131,7 +126,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
         localStorage.setItem("fluxknight-dashboard-sidebar", next ? "collapsed" : "expanded");
         const root = document.getElementById("dashboard-theme-root");
         if (root) root.dataset.sidebarCollapsed = String(next);
-      } catch (_) {}
+      } catch {}
       return next;
     });
   }
@@ -207,7 +202,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
       <nav className={`admin-nav ${styles.nav}`} aria-label="Dashboard navigation">
         {platformGroups.map((group) => {
           const hasActiveItem = groupItems(group).some((item) => isAdminNavItemActive(pathname, item.href, item.exact));
-          const isOpen = openGroups.includes(group.id);
+          const isOpen = openGroups.includes(group.id) || group.id === activeGroupId;
           return <section key={group.id} data-nav-group={group.id} className={`${styles.group} ${hasActiveItem ? styles.groupActive : ""}`}>
             <button type="button" className={styles.trigger} onClick={() => toggleGroup(group.id)} aria-expanded={isOpen}>
               <span className={styles.triggerLabel}>{group.label}</span>
