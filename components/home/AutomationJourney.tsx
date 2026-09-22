@@ -11,12 +11,12 @@ import {
 import styles from "./AutomationJourney.module.css";
 
 const steps = [
-  { number: "01", title: "Captures Enquiries", text: "Automatically collects leads from your website, Facebook, Instagram, WhatsApp, email and more.", icon: MessageSquareText, tone: "cyan" },
-  { number: "02", title: "Engages & Qualifies", text: "Chat and voice agents answer questions, qualify leads and guide them to the next step.", icon: UserRound, tone: "violet" },
-  { number: "03", title: "Books Appointments", text: "Schedules calls, viewings or meetings directly to your calendar — no back and forth.", icon: CalendarDays, tone: "blue" },
-  { number: "04", title: "Handles Operations", text: "Syncs with your CRM, updates records, sends reminders and keeps your pipeline organised.", icon: Settings2, tone: "pink" },
-  { number: "05", title: "Runs Marketing", text: "Sends follow-ups, broadcasts and personalised messages to nurture leads and clients.", icon: Megaphone, tone: "green" },
-  { number: "06", title: "Tracks Results", text: "Monitors performance, provides insights and helps you make better decisions.", icon: BarChart2, tone: "gold" },
+  { number: "01", title: "Replies to Enquiries", text: "Answers common questions from your website, WhatsApp, social media, email and other customer channels.", icon: MessageSquareText, tone: "cyan" },
+  { number: "02", title: "Helps With Sales & Orders", text: "Collects the details your team needs, helps customers move forward and keeps sales or order requests organised.", icon: UserRound, tone: "violet" },
+  { number: "03", title: "Follows Up Automatically", text: "Checks back with leads and customers so good opportunities do not go cold because someone forgot to follow up.", icon: Megaphone, tone: "green" },
+  { number: "04", title: "Handles Bookings & Reminders", text: "Books calls, appointments, inspections or meetings and sends reminders without the usual back and forth.", icon: CalendarDays, tone: "blue" },
+  { number: "05", title: "Keeps Records Updated", text: "Saves customer details, updates records and keeps important information organised for your team.", icon: Settings2, tone: "pink" },
+  { number: "06", title: "Hands Important Work to Your Team", text: "Passes serious, urgent or unusual requests to the right person with the conversation details already attached.", icon: BarChart2, tone: "gold" },
 ] as const;
 
 function ActionLink({ className = "" }: { className?: string }) {
@@ -24,8 +24,8 @@ function ActionLink({ className = "" }: { className?: string }) {
     <Link className={`${styles.actionLink} ${className}`} href="/case-studies/maia" data-cta="automation-maia-case-study">
       <span className={styles.playMark} aria-hidden="true"><span /></span>
       <span className={styles.actionCopy}>
-        <strong>See Fluxknight in action</strong>
-        <small>Watch the Maia case study</small>
+        <strong>See a real example</strong>
+        <small>See how Maia works in real estate</small>
       </span>
       <ArrowRight className={styles.actionArrow} size={24} />
     </Link>
@@ -37,9 +37,9 @@ export default function AutomationJourney() {
     <section className={styles.section} id="services" aria-labelledby="automation-journey-title">
       <div className={styles.frame}>
         <div className={styles.copy}>
-          <span className={styles.eyebrow}>What Fluxknight automates</span>
-          <h2 id="automation-journey-title">From enquiries<br />to revenue,<br />on <span>autopilot.</span></h2>
-          <p>Fluxknight automates the repetitive work across your sales, support, operations and marketing — so you can focus on growth.</p>
+          <span className={styles.eyebrow}>What Fluxknight can handle</span>
+          <h2 id="automation-journey-title">Here are some of the things<br />Fluxknight can handle<br />for <span>your business.</span></h2>
+          <p>Customer enquiries, sales, orders, follow-up, bookings, reminders and record updates can all take time. Fluxknight helps handle the repetitive parts so your team can focus on the work that needs a person.</p>
           <ActionLink className={styles.desktopAction} />
         </div>
 

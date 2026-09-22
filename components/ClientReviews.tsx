@@ -82,9 +82,9 @@ export default function ClientReviews() {
   return (
     <section className="testimonial-section" aria-labelledby="testimonial-title">
       <div className="testimonial-heading">
-        <div className="testimonial-kicker"><span />TESTIMONIALS<span /></div>
-        <h2 id="testimonial-title">What Clients Are <em>Saying</em></h2>
-        <p>Real businesses. Real results. Real partnerships.</p>
+        <div className="testimonial-kicker"><span />CLIENT STORIES<span /></div>
+        <h2 id="testimonial-title">What businesses say about <em>working with Fluxknight</em></h2>
+        <p>A few words from teams using Fluxknight to handle repetitive customer and business tasks.</p>
       </div>
 
       <div className="testimonial-window">
