@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Activity, X } from "@/components/admin/ServerIcons";
 import styles from "@/components/admin/PlatformChrome.module.css";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 
 export default function PlatformChrome() {
   const [activityOpen, setActivityOpen] = useState(false);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setActivityOpen(false);
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  const drawerRef = useRef<HTMLElement>(null);
+  const closeActivity = useCallback(() => setActivityOpen(false), []);
+  useDialogFocusTrap(activityOpen, drawerRef, closeActivity);
 
   return (
     <>
@@ -34,17 +29,19 @@ export default function PlatformChrome() {
             type="button"
             className={styles.drawerBackdrop}
             aria-label="Close activity center"
-            onClick={() => setActivityOpen(false)}
+            onClick={closeActivity}
+            tabIndex={-1}
+            aria-hidden="true"
           />
-          <aside className={styles.drawer} aria-label="Unified activity center">
+          <aside ref={drawerRef} className={styles.drawer} role="dialog" aria-modal="true" aria-labelledby="activity-center-title" tabIndex={-1} data-state="open">
             <header>
               <div>
-                <strong>Activity Center</strong>
+                <strong id="activity-center-title">Activity Center</strong>
                 <span>Cross-organization operations</span>
               </div>
               <button
                 type="button"
-                onClick={() => setActivityOpen(false)}
+                onClick={closeActivity}
                 aria-label="Close activity center"
               >
                 <X size={18} />
