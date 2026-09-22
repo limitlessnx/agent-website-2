@@ -16,6 +16,7 @@ import design from "@/components/admin/DashboardDesignSystem.module.css";
 import enterprise from "@/components/admin/EnterprisePlatform.module.css";
 import desktop from "@/components/admin/SuperAdminDesktop.module.css";
 import mobilePolish from "@/components/admin/MobileAdminPolish.module.css";
+import referenceFidelity from "@/components/admin/DashboardReferenceFidelity.module.css";
 
 const themeBootScript = `
 (function(){
@@ -39,7 +40,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   const tenants = await listClientOnboardingProfiles(100).catch(() => []);
 
   return (
-    <div id="dashboard-theme-root" data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish}`}>
+    <div id="dashboard-theme-root" data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish} ${referenceFidelity.referenceFidelity}`}>
       <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       <MobileNavigationProvider>
         <LeoConversationProvider>
