@@ -64,8 +64,8 @@ export default async function DashboardPage() {
         notifications={notifications}
         agents={overviewAgents}
       />
-      <BusinessCommandCenterPanel snapshot={commandCenter} />
-      <CommandCenterExpansion
+      <BusinessCommandCenterPanel snapshot={commandCenter} variant="dashboard" />
+      <CommandCenterExpansion compact
         pulse={{
           leads: leads.length,
           conversations: null,
