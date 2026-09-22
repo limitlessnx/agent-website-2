@@ -231,3 +231,70 @@
     background: rgba(2,3,10,.88);
   }
 }
+
+
+/* Dashboard V3 phases 6-7: state motion, theme parity and accessible drawer chrome. */
+.activityButton{
+  min-width:40px;
+  min-height:40px;
+  border-color:var(--fk-border)!important;
+  color:var(--fk-text-secondary)!important;
+  background:var(--fk-surface)!important;
+  transition:color 140ms var(--fk-ease),background 140ms var(--fk-ease),border-color 140ms var(--fk-ease),transform 140ms var(--fk-ease);
+}
+.activityButton:hover{color:var(--fk-text)!important;background:var(--fk-surface-hover)!important;border-color:var(--fk-border-strong)!important}
+.activityButton:active{transform:translateY(1px)}
+.activityButton i{background:var(--fk-success)!important;box-shadow:0 0 0 3px var(--fk-surface)!important}
+.drawerBackdrop{
+  background:color-mix(in srgb,var(--fk-canvas) 76%,transparent)!important;
+  animation:fkBackdropIn 180ms var(--fk-ease) both;
+}
+.drawer{
+  border-left-color:var(--fk-border-strong)!important;
+  color:var(--fk-text)!important;
+  background:var(--fk-surface-overlay)!important;
+  box-shadow:var(--fk-shadow-float)!important;
+  animation:fkDrawerIn 240ms var(--fk-ease) both;
+  outline:none;
+}
+.drawer header{border-bottom-color:var(--fk-border)!important;background:transparent!important}
+.drawer header span{color:var(--fk-text-muted)!important}
+.drawer header button{
+  min-width:40px;
+  min-height:40px;
+  border-color:var(--fk-border)!important;
+  color:var(--fk-text-secondary)!important;
+  background:var(--fk-surface-raised)!important;
+}
+.drawer header button:hover{color:var(--fk-text)!important;background:var(--fk-surface-hover)!important}
+.activityList{background:transparent!important}
+.activityList article{
+  border-color:var(--fk-border)!important;
+  background:var(--fk-surface-raised)!important;
+  transition:background 140ms var(--fk-ease),border-color 140ms var(--fk-ease),transform 140ms var(--fk-ease);
+}
+.activityList article:hover{border-color:var(--fk-border-strong)!important;background:var(--fk-surface-hover)!important;transform:translateY(-1px)}
+.activityList strong{color:var(--fk-text)!important}
+.activityList span{color:var(--fk-text-muted)!important}
+.drawer>a{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-color:color-mix(in srgb,var(--fk-brand) 42%,var(--fk-border))!important;
+  border-radius:var(--fk-radius-control)!important;
+  background:linear-gradient(135deg,var(--fk-brand-strong),var(--fk-brand))!important;
+}
+@keyframes fkDrawerIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes fkBackdropIn{from{opacity:0}to{opacity:1}}
+@media(max-width:760px){
+  .drawer{
+    border-color:var(--fk-border-strong)!important;
+    background:var(--fk-surface-overlay)!important;
+    animation-name:fkSheetIn;
+  }
+}
+@keyframes fkSheetIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .drawer,.drawerBackdrop,.activityList article{animation:none!important;transition:none!important}
+}
