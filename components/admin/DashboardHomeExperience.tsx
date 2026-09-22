@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowUpRight,
   Bot,
   CheckCircle2,
   ChevronRight,
@@ -73,7 +72,7 @@ export default function DashboardHomeExperience({
         <div>
           <span className={styles.eyebrow}>COMMAND CENTER</span>
           <h1>Good afternoon, {name}</h1>
-          <p>Your AI workforce, customer activity, and the items that need your attention.</p>
+          <p>{healthy ? "Your AI workforce is operating smoothly." : "Your AI workforce is active, with a few items that need your attention."}</p>
         </div>
         <div className={[styles.health, healthy ? styles.healthy : health === "Critical" ? styles.criticalHealth : styles.attentionHealth].join(" ")}>
           <span />
@@ -88,7 +87,6 @@ export default function DashboardHomeExperience({
             <article key={metric.label} className={styles.metricCard}>
               <div className={styles.metricTop}>
                 <span className={styles.metricIcon}><Icon size={18} /></span>
-                <ArrowUpRight size={14} aria-hidden="true" />
               </div>
               <strong>{metric.value}</strong>
               <span>{metric.label}</span>
