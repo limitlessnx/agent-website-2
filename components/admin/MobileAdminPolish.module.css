@@ -1,28 +1,118 @@
 .mobilePolish{min-height:100dvh}
 
 @media (max-width:900px){
-  .mobilePolish{min-height:100dvh;background:#08050c;color:#f6f1ff;overflow-x:hidden}
-  .mobilePolish :global(.admin-shell){display:block!important;position:relative!important;min-height:100dvh!important;width:100%!important;background:#08050c!important;overflow-x:hidden!important}
-  .mobilePolish :global(.admin-main){display:block!important;width:100%!important;min-width:0!important;min-height:100dvh!important;padding:68px 12px calc(86px + env(safe-area-inset-bottom,0px))!important;background:#08050c!important;overflow-x:hidden!important;filter:none!important}
+  .mobilePolish{
+    min-height:100dvh;
+    background:var(--fk-canvas);
+    color:var(--fk-text);
+    overflow-x:hidden;
+  }
+  .mobilePolish :global(.admin-shell){
+    display:block!important;
+    position:relative!important;
+    min-height:100dvh!important;
+    width:100%!important;
+    background:var(--fk-canvas)!important;
+    overflow-x:hidden!important;
+  }
+  .mobilePolish :global(.admin-main){
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:100dvh!important;
+    padding:72px 12px calc(92px + env(safe-area-inset-bottom,0px))!important;
+    background:var(--fk-canvas)!important;
+    overflow-x:hidden!important;
+    filter:none!important;
+  }
   .mobilePolish :global(.admin-topbar){display:none!important}
-  .mobilePolish :global(.admin-page){width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;gap:0!important;filter:none!important}
-  .mobilePolish :global(.admin-page-header){margin:0 0 10px!important;padding:14px!important;border-radius:12px!important}
-  .mobilePolish :global(.admin-page-header h1){font-size:clamp(1.55rem,8vw,2rem)!important;line-height:1.04!important}
-  .mobilePolish :global(.admin-page-header p){font-size:.76rem!important;line-height:1.45!important}
-  .mobilePolish :global(.admin-panel),.mobilePolish :global(.admin-metric-card){border-radius:12px!important}
+  .mobilePolish :global(.admin-page){
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    gap:14px!important;
+    filter:none!important;
+  }
+  .mobilePolish :global(.admin-page-header){
+    margin:0!important;
+    padding:14px!important;
+    border:1px solid var(--fk-border)!important;
+    border-radius:14px!important;
+    background:var(--fk-surface)!important;
+    box-shadow:none!important;
+  }
+  .mobilePolish :global(.admin-page-header h1){
+    font-size:clamp(1.65rem,8vw,2rem)!important;
+    font-weight:600!important;
+    line-height:1.05!important;
+    letter-spacing:-.035em!important;
+  }
+  .mobilePolish :global(.admin-page-header p){
+    font-size:.82rem!important;
+    line-height:1.55!important;
+  }
+  .mobilePolish :global(.admin-panel),
+  .mobilePolish :global(.admin-metric-card){
+    border-color:var(--fk-border)!important;
+    border-radius:14px!important;
+    background:var(--fk-surface)!important;
+    box-shadow:none!important;
+  }
   .mobilePolish :global(.workspace-rail){display:none!important}
   /* Mobile drawer positioning/animation is owned exclusively by AdminSidebar.module.css. */
-  .mobilePolish :global(.admin-sidebar .mobileHeader){position:relative!important;top:auto!important;display:flex!important;margin:0 0 10px!important;padding:0!important;border:0!important;background:transparent!important;backdrop-filter:none!important}
-  .mobilePolish :global(nav[aria-label="Mobile navigation"]){left:10px!important;right:10px!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;height:60px!important}
-  .mobilePolish :global(nav[aria-label="Mobile navigation"] a),.mobilePolish :global(nav[aria-label="Mobile navigation"] button){min-height:40px!important}
-  .mobilePolish :global(.fluxknight-platform-shell){background:#08050c!important}
-  .mobilePolish :global(.fluxknight-platform-shell),.mobilePolish :global(.admin-main){background-image:none!important}
+  .mobilePolish :global(.admin-sidebar .mobileHeader){
+    position:relative!important;
+    top:auto!important;
+    display:flex!important;
+    margin:0 0 10px!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+    backdrop-filter:none!important;
+  }
+  .mobilePolish :global(nav[aria-label="Mobile primary navigation"]){
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+    height:60px!important;
+  }
+  .mobilePolish :global(nav[aria-label="Mobile primary navigation"] a),
+  .mobilePolish :global(nav[aria-label="Mobile primary navigation"] button){
+    min-height:48px!important;
+  }
+  .mobilePolish :global(.fluxknight-platform-shell){background:var(--fk-canvas)!important}
+  .mobilePolish :global(.fluxknight-platform-shell),
+  .mobilePolish :global(.admin-main){background-image:none!important}
   .mobilePolish :global(.admin-main > .admin-page){background:transparent!important}
-  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"]){right:14px!important;bottom:calc(76px + env(safe-area-inset-bottom,0px))!important;z-index:120!important;min-width:0!important;width:auto!important;height:42px!important;padding:0 13px!important;border-radius:12px!important;border-color:rgba(172,108,255,.45)!important;background:#0d0916!important;box-shadow:0 10px 30px rgba(0,0,0,.35)!important}
-  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"] + aside){right:12px!important;bottom:calc(136px + env(safe-area-inset-bottom,0px))!important;width:calc(100vw - 24px)!important;max-height:calc(100dvh - 196px)!important;height:min(520px,calc(100dvh - 196px))!important}
+  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"]){
+    right:14px!important;
+    bottom:calc(80px + env(safe-area-inset-bottom,0px))!important;
+    z-index:120!important;
+    min-width:0!important;
+    width:auto!important;
+    height:44px!important;
+    padding:0 13px!important;
+    border-radius:12px!important;
+    border-color:color-mix(in srgb,var(--fk-brand) 38%,var(--fk-border))!important;
+    background:var(--fk-surface-raised)!important;
+    color:var(--fk-text)!important;
+    box-shadow:0 10px 30px rgba(0,0,0,.24)!important;
+  }
+  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"] + aside){
+    right:12px!important;
+    bottom:calc(140px + env(safe-area-inset-bottom,0px))!important;
+    width:calc(100vw - 24px)!important;
+    max-height:calc(100dvh - 204px)!important;
+    height:min(520px,calc(100dvh - 204px))!important;
+  }
 }
 
 @media (max-width:620px){
-  .mobilePolish :global(.admin-main){padding-left:10px!important;padding-right:10px!important;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))!important}
-  .mobilePolish :global(.admin-page-header){padding:12px!important}
+  .mobilePolish :global(.admin-main){
+    padding-left:10px!important;
+    padding-right:10px!important;
+    padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .mobilePolish :global(.admin-page-header){padding:13px!important}
 }
