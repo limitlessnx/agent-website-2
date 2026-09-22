@@ -5,16 +5,19 @@ import { buildLeoBusinessCommandCenter, compactLeoBusinessCommandCenter } from "
 import LeoOverview from "@/components/admin/LeoOverview";
 import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
 import CommandCenterExpansion from "@/components/admin/CommandCenterExpansion";
+import DashboardReferenceOverview from "@/components/admin/DashboardReferenceOverview";
+import { getAgentManagementSummary } from "@/lib/agent-management";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [leads, clients, automationStatus, supabase, identity] = await Promise.all([
+  const [leads, clients, automationStatus, supabase, identity, agentSummary] = await Promise.all([
     getLeads(500).catch(() => []),
     listClientOnboardingProfiles(100).catch(() => []),
     getN8nStatus().catch(() => ({ error: "Unavailable" })),
     getSupabaseReadiness().catch(() => ({ ready: false })),
     resolveLeoIdentity({ channel: "chat", allowPublic: false }).catch(() => null),
+    getAgentManagementSummary().catch(() => ({ configured: false, agents: [], projects: [], workflows: [], links: [] })),
   ]);
 
   const commandCenter = identity?.scope === "super_admin"
@@ -38,9 +41,30 @@ export default async function DashboardPage() {
       : `${commandCenter.priorityRisks.length} operating signal${commandCenter.priorityRisks.length === 1 ? "" : "s"} currently need attention.`
     : "Leo does not have enough connected evidence to produce a complete operating brief.";
 
+  const overviewAgents = agentSummary.agents.slice(0, 6).map((agent) => {
+    const project = agentSummary.projects.find((item) => item.id === agent.project_id);
+    const workflowCount = agentSummary.links.filter((link) => link.agent_id === agent.id).length;
+    return {
+      id: agent.id,
+      name: agent.name,
+      role: agent.description || agent.agent_type || "AI agent",
+      status: agent.status || "draft",
+      note: `${project?.name || "Workspace"} · ${workflowCount} workflow${workflowCount === 1 ? "" : "s"}`,
+    };
+  });
+
   return (
     <main className="admin-page dashboard-v3-home">
-      <header className="dashboard-v3-home-intro">\n        <div><span className="admin-kicker">COMMAND CENTER</span><h1>Operations at a glance</h1><p>Current business signals, AI workforce status, and the items that actually need attention.</p></div>\n        <div className={`dashboard-v3-health dashboard-v3-health-${systemHealth.toLowerCase()}`}><span />{systemHealth}</div>\n      </header>\n      <BusinessCommandCenterPanel snapshot={commandCenter} />
+      <DashboardReferenceOverview
+        totalLeads={leads.length}
+        newLeads={newLeads.length}
+        liveClients={liveClients.length}
+        attentionCount={commandCenter ? commandCenter.priorityRisks.length : notifications.length}
+        systemHealth={systemHealth}
+        notifications={notifications}
+        agents={overviewAgents}
+      />
+      <BusinessCommandCenterPanel snapshot={commandCenter} />
       <CommandCenterExpansion
         pulse={{
           leads: leads.length,
