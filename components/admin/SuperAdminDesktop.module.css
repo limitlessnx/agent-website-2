@@ -310,3 +310,20 @@
   .desktopChrome:global([data-sidebar-collapsed="true"]) :global(.admin-sidebar-footer){padding-left:0!important;padding-right:0!important}
 }
 
+
+
+/* Dashboard V3 phase 6: shell motion communicates navigation state only. */
+@media(min-width:901px){
+  .desktopChrome :global(.admin-shell){
+    transition:grid-template-columns 200ms cubic-bezier(.2,.8,.2,1);
+  }
+  .desktopChrome :global(.admin-sidebar){
+    transition:width 200ms cubic-bezier(.2,.8,.2,1),padding 200ms cubic-bezier(.2,.8,.2,1);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .desktopChrome :global(.admin-shell),
+  .desktopChrome :global(.admin-sidebar){
+    transition:none!important;
+  }
+}
