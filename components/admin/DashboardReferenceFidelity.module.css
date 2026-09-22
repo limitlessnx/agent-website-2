@@ -352,3 +352,102 @@
   .referenceFidelity :global(.settings-nav .admin-kicker){display:none}
   .referenceFidelity :global(.settings-nav a){flex:0 0 auto;min-height:42px}
 }
+
+
+/* Dashboard V3 phases 6-7: restrained motion and accessibility authority. */
+.referenceFidelity :global(.admin-page){
+  animation:fkReferencePageIn 220ms var(--fk-ease) both;
+}
+.referenceFidelity :global(.admin-panel),
+.referenceFidelity :global(.admin-card),
+.referenceFidelity :global(.admin-metric-card),
+.referenceFidelity :global(.integration-card){
+  transition:
+    border-color 150ms var(--fk-ease),
+    background 150ms var(--fk-ease),
+    box-shadow 180ms var(--fk-ease),
+    transform 150ms var(--fk-ease);
+}
+.referenceFidelity :global(a.admin-panel:hover),
+.referenceFidelity :global(.integration-card:hover){
+  border-color:var(--fk-border-strong)!important;
+  background:var(--fk-surface-raised)!important;
+  transform:translateY(-1px);
+}
+.referenceFidelity :global(button),
+.referenceFidelity :global(a),
+.referenceFidelity :global(input),
+.referenceFidelity :global(select),
+.referenceFidelity :global(textarea){
+  outline-color:transparent;
+}
+.referenceFidelity :global(:focus-visible){
+  outline:2px solid var(--fk-focus)!important;
+  outline-offset:3px!important;
+}
+.referenceFidelity :global(input:focus-visible),
+.referenceFidelity :global(select:focus-visible),
+.referenceFidelity :global(textarea:focus-visible){
+  outline:0!important;
+  border-color:color-mix(in srgb,var(--fk-brand) 70%,var(--fk-border-strong))!important;
+  box-shadow:0 0 0 3px var(--fk-brand-soft)!important;
+}
+.referenceFidelity :global([aria-busy="true"]){
+  cursor:progress;
+}
+.referenceFidelity :global([aria-disabled="true"]),
+.referenceFidelity :global(:disabled){
+  opacity:.48!important;
+  cursor:not-allowed!important;
+}
+.referenceFidelity :global(.admin-empty-state){
+  min-height:160px;
+}
+.referenceFidelity :global(.settings-content section[id]){
+  scroll-margin-top:148px;
+}
+.referenceFidelity :global(.conversation-row),
+.referenceFidelity :global(.settings-nav a){
+  transition:background 140ms var(--fk-ease),color 140ms var(--fk-ease),border-color 140ms var(--fk-ease);
+}
+.referenceFidelity :global(.admin-status.live){
+  position:relative;
+}
+.referenceFidelity :global(.admin-status.live::before){
+  content:"";
+  width:6px;
+  height:6px;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 0 4px color-mix(in srgb,currentColor 8%,transparent);
+}
+@keyframes fkReferencePageIn{
+  from{opacity:.72;transform:translateY(4px)}
+  to{opacity:1;transform:none}
+}
+@media(max-width:900px){
+  .referenceFidelity :global(button),
+  .referenceFidelity :global(a[role="button"]),
+  .referenceFidelity :global(.admin-button),
+  .referenceFidelity :global(.primary-button),
+  .referenceFidelity :global(.secondary-button),
+  .referenceFidelity :global(input),
+  .referenceFidelity :global(select){
+    min-height:44px;
+  }
+  .referenceFidelity :global(.settings-content section[id]){scroll-margin-top:74px}
+}
+@media(prefers-reduced-motion:reduce){
+  .referenceFidelity :global(.admin-page),
+  .referenceFidelity :global(.admin-panel),
+  .referenceFidelity :global(.admin-card),
+  .referenceFidelity :global(.admin-metric-card),
+  .referenceFidelity :global(.integration-card),
+  .referenceFidelity :global(.conversation-row),
+  .referenceFidelity :global(.settings-nav a){
+    animation:none!important;
+    transition:none!important;
+    transform:none!important;
+  }
+}
