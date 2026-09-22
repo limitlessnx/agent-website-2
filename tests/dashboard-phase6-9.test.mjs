@@ -82,3 +82,20 @@ test("command center mobile surface remains theme-token driven", () => {
   assert.match(css, /background:var\(--fk-surface,#0c1016\)/);
   assert.doesNotMatch(css, /@media\(max-width:560px\)\{\.shell\{[^}]*background:#0c1016/);
 });
+
+
+test("canonical Fluxknight palette and compact dashboard composition are locked", () => {
+  const fidelity = read("components/admin/DashboardReferenceFidelity.module.css");
+  const dashboard = read("app/dashboard/page.tsx");
+  const preview = read("app/dashboard-preview/page.tsx");
+
+  assert.match(fidelity, /--fk-canvas:#0B0F24/);
+  assert.match(fidelity, /--fk-surface:#12193A/);
+  assert.match(fidelity, /--fk-surface-raised:#1A2454/);
+  assert.match(fidelity, /--fk-brand:#7c3aed/i);
+  assert.match(fidelity, /--fk-canvas:#F6F7FF/);
+  assert.match(dashboard, /BusinessCommandCenterPanel snapshot=\{commandCenter\} variant="dashboard"/);
+  assert.match(dashboard, /CommandCenterExpansion compact/);
+  assert.match(preview, /BusinessCommandCenterPanel snapshot=\{snapshot\} variant="dashboard"/);
+  assert.match(preview, /CommandCenterExpansion compact/);
+});
