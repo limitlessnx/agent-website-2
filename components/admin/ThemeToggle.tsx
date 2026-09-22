@@ -13,8 +13,10 @@ function resolveTheme(): Theme {
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme;
+  const root = document.getElementById("dashboard-theme-root");
+  if (!root) return;
+  root.dataset.dashboardTheme = theme;
+  root.style.colorScheme = theme;
 }
 
 export default function ThemeToggle() {
