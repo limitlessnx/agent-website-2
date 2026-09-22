@@ -1,53 +1,32 @@
 .header{display:none}
 @media(max-width:900px){
   .header{
-    position:fixed;
-    top:0;
-    left:0;
-    right:0;
-    z-index:1101;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    width:100%;
-    height:56px;
-    min-height:56px;
-    margin:0;
-    padding:8px 14px;
+    position:fixed;top:0;left:0;right:0;z-index:1101;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    width:100%;height:56px;min-height:56px;margin:0;padding:8px 14px;
     border-bottom:1px solid var(--fk-border);
     background:color-mix(in srgb,var(--fk-canvas) 94%,transparent);
     box-shadow:0 8px 24px rgba(0,0,0,.12);
-    backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
-    pointer-events:auto;
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);pointer-events:auto
   }
-  .menu{
-    position:relative;
-    z-index:1102;
-    width:40px;
-    height:40px;
-    display:grid;
-    place-items:center;
-    flex:0 0 auto;
-    border:1px solid var(--fk-border-strong);
-    border-radius:11px;
-    color:var(--fk-text);
-    background:var(--fk-surface-raised);
-    cursor:pointer;
-    pointer-events:auto;
-    touch-action:manipulation;
+  .logo{width:112px;height:22px;flex:0 0 auto;color:var(--fk-text)}
+  .actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .iconButton,.avatar{
+    display:grid;place-items:center;width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--fk-border);border-radius:12px;
+    color:var(--fk-text-secondary);background:var(--fk-surface-raised);text-decoration:none;
+    touch-action:manipulation
   }
-  .menu svg{display:block!important;width:19px!important;height:19px!important;color:currentColor!important;stroke:currentColor!important;opacity:1!important;visibility:visible!important}
-  .menu:active{background:var(--fk-surface-hover);transform:scale(.97)}
-  .logo{width:104px;height:21px;flex:0 0 auto;color:var(--fk-text)}
-  .scope{display:grid;gap:3px;min-width:0;margin-left:auto;text-align:right;line-height:1.05}
-  .scope span{color:var(--fk-text-muted);font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
-  .scope strong{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fk-text);font-size:11px;font-weight:600}
+  .iconButton:active,.avatar:active{background:var(--fk-surface-hover);transform:scale(.97)}
+  .avatar{
+    border-radius:999px;color:white;background:var(--fk-brand-gradient);
+    border-color:color-mix(in srgb,var(--fk-brand) 45%,var(--fk-border));
+    box-shadow:0 6px 16px var(--fk-brand-glow)
+  }
+  .avatar span{font-size:12px;font-weight:700;line-height:1}
 }
 @media(max-width:520px){
   .header{height:54px;min-height:54px;padding:7px 12px}
-  .menu{width:40px;height:40px}
-  .logo{width:98px;height:20px}
-  .scope span{font-size:8px}
-  .scope strong{max-width:104px;font-size:10px}
+  .logo{width:104px;height:21px}
+  .iconButton,.avatar{width:40px;height:40px}
 }
