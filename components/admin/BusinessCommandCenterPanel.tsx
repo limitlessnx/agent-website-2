@@ -22,7 +22,7 @@ type Snapshot = {
 function label(value: string) { return value.replaceAll("_", " ").replaceAll(".", " "); }
 function time(value: string) { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString() : value; }
 
-export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Snapshot | null }) {
+export default function BusinessCommandCenterPanel({ snapshot, variant = "full" }: { snapshot: Snapshot | null; variant?: "full" | "dashboard" }) {
   if (!snapshot) return null;
   const attention = snapshot.priorityRisks.length;
   const highRiskEvents = snapshot.metrics.risks.criticalEvents + snapshot.metrics.risks.highEvents;
@@ -33,7 +33,7 @@ export default function BusinessCommandCenterPanel({ snapshot }: { snapshot: Sna
       : "Some operating signals need attention.";
 
   return (
-    <section className={styles.shell} aria-label="Business command center">
+    <section className={`${styles.shell} ${variant === "dashboard" ? styles.dashboardVariant : ""}`} aria-label="Business command center">
       <header className={styles.header}>
         <div className={styles.heading}>
           <span className={styles.eyebrow}>OPERATIONS OVERVIEW</span>
