@@ -1,0 +1,301 @@
+.referenceFidelity{
+  --fk-canvas:#090716;
+  --fk-canvas-accent:#100b2a;
+  --fk-surface:#100d20;
+  --fk-surface-raised:#15112a;
+  --fk-surface-hover:#1b1636;
+  --fk-surface-overlay:#1f183e;
+  --fk-border:rgba(172,160,214,.14);
+  --fk-border-strong:rgba(181,166,232,.24);
+  --fk-text:#f8f7ff;
+  --fk-text-secondary:#b8b3cb;
+  --fk-text-muted:#7f7a94;
+  --fk-brand:#7c3aed;
+  --fk-brand-hover:#a78bfa;
+  --fk-brand-strong:#6d28d9;
+  --fk-brand-soft:rgba(124,58,237,.12);
+  --fk-brand-glow:rgba(124,58,237,.18);
+  --fk-shadow-soft:0 18px 50px rgba(2,0,15,.18);
+  --fk-shadow-float:0 26px 70px rgba(2,0,15,.28);
+  --fk-radius-card:14px;
+  --fk-radius-panel:16px;
+  --fk-radius-control:10px;
+  --fk-page-gutter:32px;
+  --fk-section-gap:18px;
+  --fk-type-display:34px;
+  --fk-type-title:30px;
+  --fk-type-section:16px;
+  --fk-type-body:13px;
+  --fk-type-label:11px;
+  --fk-touch:44px;
+  color:var(--fk-text);
+  background:
+    radial-gradient(circle at 72% -8%,rgba(124,58,237,.08),transparent 30rem),
+    var(--fk-canvas);
+}
+
+.referenceFidelity:global([data-dashboard-theme="light"]){
+  --fk-canvas:#f7f6fd;
+  --fk-canvas-accent:#f0edfb;
+  --fk-surface:#ffffff;
+  --fk-surface-raised:#f3f1fb;
+  --fk-surface-hover:#ece8f9;
+  --fk-surface-overlay:#ffffff;
+  --fk-border:rgba(66,51,102,.10);
+  --fk-border-strong:rgba(74,55,118,.18);
+  --fk-text:#19152b;
+  --fk-text-secondary:#585168;
+  --fk-text-muted:#7d758d;
+  --fk-brand:#7c3aed;
+  --fk-brand-hover:#6d28d9;
+  --fk-brand-strong:#6d28d9;
+  --fk-brand-soft:rgba(124,58,237,.085);
+  --fk-brand-glow:rgba(124,58,237,.10);
+  --fk-shadow-soft:0 18px 44px rgba(45,34,74,.08);
+  --fk-shadow-float:0 24px 60px rgba(45,34,74,.12);
+  background:linear-gradient(180deg,#f9f8fe 0%,#f5f3fb 100%);
+}
+
+.referenceFidelity :global(.admin-main){
+  background:
+    radial-gradient(circle at 86% 0%,var(--fk-brand-soft),transparent 24rem),
+    var(--fk-canvas)!important;
+}
+.referenceFidelity :global(.admin-page){
+  gap:var(--fk-section-gap)!important;
+  max-width:1600px!important;
+}
+.referenceFidelity :global(.admin-page-header){
+  min-height:72px;
+  align-items:flex-start!important;
+}
+.referenceFidelity :global(.admin-page-header h1){
+  font-size:var(--fk-type-title)!important;
+  font-weight:650!important;
+  letter-spacing:-.045em!important;
+}
+.referenceFidelity :global(.admin-page-header p){
+  max-width:740px!important;
+  color:var(--fk-text-muted)!important;
+  font-size:var(--fk-type-body)!important;
+}
+.referenceFidelity :global(.admin-kicker){
+  color:var(--fk-brand-hover)!important;
+  letter-spacing:.13em!important;
+}
+
+.referenceFidelity :global(.admin-panel),
+.referenceFidelity :global(.admin-card),
+.referenceFidelity :global(.dashboard-card),
+.referenceFidelity :global(.admin-metric-card){
+  border-color:var(--fk-border)!important;
+  background:var(--fk-surface)!important;
+  box-shadow:none!important;
+}
+.referenceFidelity :global(.admin-panel),
+.referenceFidelity :global(.admin-card),
+.referenceFidelity :global(.dashboard-card){
+  border-radius:var(--fk-radius-panel)!important;
+}
+.referenceFidelity :global(.admin-metric-card){
+  min-height:118px!important;
+  border-radius:var(--fk-radius-card)!important;
+  padding:16px!important;
+}
+.referenceFidelity :global(.admin-metric-card strong),
+.referenceFidelity :global(.admin-panel.compact>strong){
+  font-size:30px!important;
+  font-weight:620!important;
+  letter-spacing:-.04em!important;
+  font-variant-numeric:tabular-nums;
+}
+.referenceFidelity :global(.admin-panel-header h2){
+  font-size:var(--fk-type-section)!important;
+  font-weight:650!important;
+  letter-spacing:-.02em!important;
+}
+.referenceFidelity :global(.admin-list-row){
+  min-height:54px;
+}
+.referenceFidelity :global(.admin-list-row strong){
+  font-size:12px!important;
+  font-weight:650!important;
+}
+.referenceFidelity :global(.admin-list-row span){
+  color:var(--fk-text-muted)!important;
+}
+.referenceFidelity :global(.admin-status){
+  min-height:28px!important;
+  padding-inline:10px!important;
+  border-color:var(--fk-border)!important;
+  background:var(--fk-surface-raised)!important;
+}
+.referenceFidelity :global(.admin-button),
+.referenceFidelity :global(.primary-button),
+.referenceFidelity :global(.secondary-button){
+  min-height:40px!important;
+  border-radius:var(--fk-radius-control)!important;
+}
+.referenceFidelity :global(.primary-button){
+  border-color:color-mix(in srgb,var(--fk-brand) 62%,var(--fk-border-strong))!important;
+  background:linear-gradient(135deg,var(--fk-brand-strong),var(--fk-brand))!important;
+  box-shadow:0 8px 22px rgba(124,58,237,.16)!important;
+}
+.referenceFidelity :global(input),
+.referenceFidelity :global(select),
+.referenceFidelity :global(textarea){
+  border-color:var(--fk-border-strong)!important;
+  border-radius:var(--fk-radius-control)!important;
+  background:var(--fk-surface-raised)!important;
+}
+.referenceFidelity :global(input:focus),
+.referenceFidelity :global(select:focus),
+.referenceFidelity :global(textarea:focus){
+  border-color:color-mix(in srgb,var(--fk-brand) 66%,var(--fk-border-strong))!important;
+  box-shadow:0 0 0 3px var(--fk-brand-soft)!important;
+}
+
+/* Dashboard home: reference-like mixed density rather than identical card wallpaper. */
+.referenceFidelity :global(.dashboard-v3-home){
+  grid-template-columns:minmax(0,1fr);
+}
+.referenceFidelity :global(.dashboard-v3-home-intro){
+  padding:4px 0 2px!important;
+}
+.referenceFidelity :global(.dashboard-v3-home-intro h1){
+  font-size:var(--fk-type-display)!important;
+}
+.referenceFidelity :global(.dashboard-v3-home .admin-metric-grid){
+  gap:12px!important;
+}
+
+/* Conversation workspace: desktop three-pane, mobile progressive disclosure. */
+.referenceFidelity :global(.conversation-workspace){
+  display:grid;
+  grid-template-columns:minmax(250px,.78fr) minmax(340px,1.2fr) minmax(250px,.78fr);
+  min-height:560px;
+  overflow:hidden;
+  padding:0!important;
+}
+.referenceFidelity :global(.conversation-pane){
+  min-width:0;
+  padding:18px;
+}
+.referenceFidelity :global(.conversation-pane + .conversation-pane){
+  border-left:1px solid var(--fk-border);
+}
+.referenceFidelity :global(.conversation-pane-head){
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.referenceFidelity :global(.conversation-pane-head h2){
+  margin:0;
+  font-size:15px;
+}
+.referenceFidelity :global(.conversation-pane-head p){
+  margin:4px 0 0;
+  color:var(--fk-text-muted);
+  font-size:11px;
+  line-height:1.45;
+}
+.referenceFidelity :global(.conversation-thread){
+  display:grid;
+  align-content:end;
+  gap:10px;
+  min-height:360px;
+  padding:14px;
+  border:1px solid var(--fk-border);
+  border-radius:14px;
+  background:var(--fk-surface-raised);
+}
+.referenceFidelity :global(.conversation-bubble){
+  max-width:82%;
+  padding:10px 12px;
+  border-radius:12px;
+  color:var(--fk-text-secondary);
+  background:var(--fk-surface);
+  font-size:12px;
+  line-height:1.5;
+}
+.referenceFidelity :global(.conversation-bubble.ai){
+  margin-left:auto;
+  color:var(--fk-text);
+  border:1px solid color-mix(in srgb,var(--fk-brand) 20%,var(--fk-border));
+  background:var(--fk-brand-soft);
+}
+.referenceFidelity :global(.conversation-context-card){
+  display:grid;
+  gap:10px;
+  padding:12px 0;
+  border-bottom:1px solid var(--fk-border);
+}
+.referenceFidelity :global(.conversation-context-card:last-child){border-bottom:0}
+
+/* CRM and integrations use denser enterprise surfaces on desktop. */
+.referenceFidelity :global(.crm-split){
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:16px;
+}
+.referenceFidelity :global(.integration-marketplace){
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.referenceFidelity :global(.integration-card){
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:12px;
+  align-items:start;
+  min-height:150px;
+  padding:16px;
+  border:1px solid var(--fk-border);
+  border-radius:14px;
+  background:var(--fk-surface);
+}
+.referenceFidelity :global(.integration-card-icon){
+  width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+  color:var(--fk-brand-hover);background:var(--fk-brand-soft);
+}
+.referenceFidelity :global(.integration-card h3){margin:0;font-size:14px}
+.referenceFidelity :global(.integration-card p){margin:5px 0 12px;color:var(--fk-text-muted);font-size:11px;line-height:1.45}
+
+/* Tablet deliberately re-composes instead of squeezing desktop. */
+@media(max-width:1180px) and (min-width:901px){
+  .referenceFidelity{--fk-page-gutter:24px}
+  .referenceFidelity :global(.conversation-workspace){grid-template-columns:minmax(230px,.85fr) minmax(0,1.4fr)}
+  .referenceFidelity :global(.conversation-workspace .conversation-pane:last-child){grid-column:1/-1;border-left:0;border-top:1px solid var(--fk-border)}
+  .referenceFidelity :global(.integration-marketplace){grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  .referenceFidelity{--fk-type-display:30px;--fk-type-title:27px;--fk-section-gap:14px}
+  .referenceFidelity :global(.admin-main){padding-top:70px!important}
+  .referenceFidelity :global(.admin-page-header){min-height:0;padding:16px!important}
+  .referenceFidelity :global(.admin-metric-grid){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .referenceFidelity :global(.conversation-workspace){grid-template-columns:1fr;min-height:0}
+  .referenceFidelity :global(.conversation-pane + .conversation-pane){border-left:0;border-top:1px solid var(--fk-border)}
+  .referenceFidelity :global(.conversation-thread){min-height:280px}
+  .referenceFidelity :global(.crm-split){grid-template-columns:1fr}
+  .referenceFidelity :global(.integration-marketplace){grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .referenceFidelity{--fk-type-display:28px;--fk-type-title:25px}
+  .referenceFidelity :global(.admin-metric-grid){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .referenceFidelity :global(.admin-metric-card){min-height:104px!important;padding:13px!important}
+  .referenceFidelity :global(.admin-metric-card strong),
+  .referenceFidelity :global(.admin-panel.compact>strong){font-size:24px!important}
+  .referenceFidelity :global(.integration-marketplace){grid-template-columns:1fr}
+  .referenceFidelity :global(.conversation-pane){padding:14px}
+  .referenceFidelity :global(.conversation-bubble){max-width:92%}
+}
+@media(max-width:340px){
+  .referenceFidelity :global(.admin-metric-grid){grid-template-columns:1fr!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .referenceFidelity :global(*),
+  .referenceFidelity :global(*::before),
+  .referenceFidelity :global(*::after){animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
