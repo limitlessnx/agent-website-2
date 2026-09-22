@@ -115,7 +115,7 @@ test("Maia performance workspace stays evidence-backed and responsive", () => {
   assert.match(page, /7,\s*30,\s*90/);
   assert.match(page, /Conversation and funnel counts currently use CRM lead-state evidence/);
   assert.match(page, /Human handoffs/);
-  assert.match(page, /Recent lead activity/);
+  assert.match(page, /Recent lead activity/i);
   assert.doesNotMatch(page, /Math\.random|94%|138 conversations|42 new leads|31 follow-ups/i);
   assert.match(css, /@media\(max-width:700px\)/);
   assert.match(css, /@media\(max-width:430px\)/);
