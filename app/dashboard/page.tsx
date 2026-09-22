@@ -2,110 +2,122 @@ import { getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-da
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
 import { resolveLeoIdentity } from "@/lib/leo-core";
 import { buildLeoBusinessCommandCenter, compactLeoBusinessCommandCenter } from "@/lib/leo-business-command-center";
-import LeoOverview from "@/components/admin/LeoOverview";
-import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
-import CommandCenterExpansion from "@/components/admin/CommandCenterExpansion";
-import DashboardReferenceOverview from "@/components/admin/DashboardReferenceOverview";
-import { getAgentManagementSummary } from "@/lib/agent-management";
+import DashboardHomeExperience from "@/components/admin/DashboardHomeExperience";
 
 export const dynamic = "force-dynamic";
 
+function normalized(value?: string) {
+  return String(value || "").trim().toLowerCase();
+}
+
 export default async function DashboardPage() {
-  const [leads, clients, automationStatus, supabase, identity, agentSummary] = await Promise.all([
+  const [leads, clients, automationStatus, supabase, identity] = await Promise.all([
     getLeads(500).catch(() => []),
     listClientOnboardingProfiles(100).catch(() => []),
     getN8nStatus().catch(() => ({ error: "Unavailable" })),
     getSupabaseReadiness().catch(() => ({ ready: false })),
     resolveLeoIdentity({ channel: "chat", allowPublic: false }).catch(() => null),
-    getAgentManagementSummary().catch(() => ({ configured: false, agents: [], projects: [], workflows: [], links: [] })),
   ]);
 
   const commandCenter = identity?.scope === "super_admin"
     ? await buildLeoBusinessCommandCenter({ identity }).then(compactLeoBusinessCommandCenter).catch(() => null)
     : null;
-  const newLeads = leads.filter((lead) => String(lead.status || "").toLowerCase() === "new");
+
+  const newLeads = leads.filter((lead) => normalized(lead.status) === "new");
+  const engagedLeads = leads.filter((lead) =>
+    Boolean(lead.last_contacted_at) ||
+    ["in_conversation", "contacted", "engaged", "qualified", "follow_up", "follow-up"].includes(normalized(lead.status))
+  );
+  const qualifiedLeads = leads.filter((lead) => {
+    const score = normalized(lead.score);
+    const status = normalized(lead.status);
+    return ["hot", "high", "qualified", "ready"].includes(score) || status.includes("qualified");
+  });
+  const followUpLeads = leads.filter((lead) =>
+    Boolean(lead.last_follow_up_at) ||
+    Number(lead.follow_up_stage || 0) > 0 ||
+    normalized(lead.status).includes("follow")
+  );
+  const inspectionLeads = leads.filter((lead) => {
+    const status = normalized(lead.status);
+    return status.includes("inspection") || status.includes("viewing") || status.includes("scheduled");
+  });
+  const handoffLeads = leads.filter((lead) => {
+    const status = normalized(lead.status);
+    return status.includes("handoff") || status.includes("human") || status.includes("escalat");
+  });
+
   const pendingClients = clients.filter((client) => !["live", "paused"].includes(client.status));
   const liveClients = clients.filter((client) => client.status === "live");
-  const systemHealth = commandCenter ? (commandCenter.status === "healthy" ? "Operational" : commandCenter.status === "critical" ? "Critical" : "Attention") : supabase.ready && !automationStatus.error ? "Operational" : "Attention";
-  const operationalNotices = (commandCenter?.priorityRisks || []).slice(0, 4).map((risk) => ({ title: risk.title, detail: risk.detail, href: "/dashboard/activity", type: risk.severity }));
+  const systemHealth = commandCenter
+    ? (commandCenter.status === "healthy" ? "Operational" : commandCenter.status === "critical" ? "Critical" : "Attention")
+    : supabase.ready && !automationStatus.error ? "Operational" : "Attention";
+
+  const operationalNotices = (commandCenter?.priorityRisks || []).slice(0, 4).map((risk) => ({
+    title: risk.title,
+    detail: risk.detail,
+    href: "/dashboard/activity",
+    type: risk.severity,
+  }));
+
   const notifications = [
     ...operationalNotices,
-    ...newLeads.slice(0, 3).map((lead) => ({ title: "New Limitless Realty lead", detail: lead.name || lead.phone || "A new lead entered the CRM", href: "/dashboard/limitless/leads", type: "organization" })),
-    ...pendingClients.slice(0, 3).map((client) => ({ title: "Client workspace needs attention", detail: client.business_name || client.business_email || "Client organization requires review", href: "/dashboard/clients", type: "platform" })),
-  ].slice(0, 6);
-
-  const topRecommendation = commandCenter?.recommendations?.[0];
-  const leoSummary = commandCenter
-    ? commandCenter.status === "healthy"
-      ? "Leo sees no critical operating issue in the current evidence."
-      : `${commandCenter.priorityRisks.length} operating signal${commandCenter.priorityRisks.length === 1 ? "" : "s"} currently need attention.`
-    : "Leo does not have enough connected evidence to produce a complete operating brief.";
-
-  const overviewAgents = agentSummary.agents.slice(0, 6).map((agent) => {
-    const project = agentSummary.projects.find((item) => item.id === agent.project_id);
-    const workflowCount = agentSummary.links.filter((link) => link.agent_id === agent.id).length;
-    return {
-      id: agent.id,
-      name: agent.name,
-      role: agent.description || agent.agent_type || "AI agent",
-      status: agent.status || "draft",
-      note: `${project?.name || "Workspace"} · ${workflowCount} workflow${workflowCount === 1 ? "" : "s"}`,
-    };
-  });
+    ...newLeads.slice(0, 2).map((lead) => ({
+      title: "New Limitless Realty lead",
+      detail: lead.name || lead.phone || "A new lead entered the CRM",
+      href: "/dashboard/limitless/leads",
+      type: "organization",
+    })),
+    ...pendingClients.slice(0, 2).map((client) => ({
+      title: "Client workspace needs attention",
+      detail: client.business_name || client.business_email || "Client organization requires review",
+      href: "/dashboard/clients",
+      type: "attention",
+    })),
+  ].slice(0, 5);
 
   return (
     <main className="admin-page dashboard-v3-home">
-      <DashboardReferenceOverview
-        totalLeads={leads.length}
-        newLeads={newLeads.length}
-        liveClients={liveClients.length}
-        attentionCount={commandCenter ? commandCenter.priorityRisks.length : notifications.length}
-        systemHealth={systemHealth}
-        notifications={notifications}
-        agents={overviewAgents}
-      />
-      <BusinessCommandCenterPanel snapshot={commandCenter} variant="dashboard" />
-      <CommandCenterExpansion compact
-        pulse={{
-          leads: leads.length,
-          conversations: null,
-          conversions: null,
-          activeClients: liveClients.length,
-          aiResolutions: null,
-          valueGenerated: null,
-          creditsUsed: null,
-        }}
-        workforce={[
+      <DashboardHomeExperience
+        name="Limitless"
+        health={systemHealth}
+        metrics={[
+          { label: "New leads", value: newLeads.length, detail: "Entered the CRM", icon: "leads" },
+          { label: "Conversations", value: engagedLeads.length, detail: "Leads currently engaged", icon: "conversations" },
+          { label: "Follow-ups", value: followUpLeads.length, detail: "Leads in follow-up", icon: "followups" },
+          { label: "Qualified leads", value: qualifiedLeads.length, detail: "Ready for the next sales step", icon: "qualified" },
+        ]}
+        notices={notifications}
+        agents={[
+          {
+            name: "Maia",
+            role: "WhatsApp Sales Agent",
+            channel: "WhatsApp · Limitless Realty",
+            status: automationStatus.error ? "attention" : "live",
+            href: "/dashboard/agents",
+            note: handoffLeads.length + " human handoff" + (handoffLeads.length === 1 ? "" : "s") + " recorded in the current lead state.",
+            metrics: [
+              { label: "Conversations", value: engagedLeads.length },
+              { label: "Qualified", value: qualifiedLeads.length },
+              { label: "Follow-ups", value: followUpLeads.length },
+              { label: "Inspections", value: inspectionLeads.length },
+            ],
+          },
           {
             name: "Leo",
-            role: "Operations intelligence",
-            state: systemHealth === "Critical" || systemHealth === "Attention" ? "attention" : "active",
-            note: identity ? "context connected" : "limited context",
+            role: "Operations Intelligence",
+            channel: "Platform operations",
+            status: systemHealth === "Operational" ? "live" : "attention",
+            href: "/dashboard/activity",
+            note: commandCenter?.headline || "Monitoring connected operational evidence.",
+            metrics: [
+              { label: "Signals", value: commandCenter?.priorityRisks.length || 0 },
+              { label: "Recommendations", value: commandCenter?.recommendations.length || 0 },
+              { label: "Live clients", value: liveClients.length },
+              { label: "Pending", value: pendingClients.length },
+            ],
           },
         ]}
-        health={[
-          { name: "Supabase", state: supabase.ready ? "operational" : "attention", note: supabase.ready ? "connected" : "readiness issue" },
-          { name: "n8n", state: automationStatus.error ? "attention" : "operational", note: automationStatus.error ? "status unavailable" : "connected" },
-          { name: "WhatsApp", state: "unknown", note: "not summarized on this view" },
-          { name: "Email", state: "unknown", note: "not summarized on this view" },
-          { name: "Voice", state: "unknown", note: "not summarized on this view" },
-          { name: "Trigger.dev", state: "unknown", note: "not summarized on this view" },
-          { name: "Payments", state: "unknown", note: "not summarized on this view" },
-        ]}
-        leo={{
-          summary: leoSummary,
-          recommendation: topRecommendation?.title || "Review the operating signals before taking action.",
-          requiresApproval: topRecommendation?.requiresApproval ?? false,
-        }}
-      />
-      <LeoOverview
-        newLeads={newLeads.length}
-        clients={clients.map((client) => ({ id: client.id, business_name: client.business_name, business_email: client.business_email, status: client.status }))}
-        liveClients={liveClients.length}
-        pendingClients={pendingClients.length}
-        attentionCount={commandCenter ? commandCenter.priorityRisks.length : notifications.length}
-        systemHealth={systemHealth}
-        notifications={notifications}
       />
     </main>
   );
