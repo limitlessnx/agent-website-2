@@ -95,12 +95,11 @@ export default async function DashboardPage() {
             channel: "WhatsApp · Limitless Realty",
             status: automationStatus.error ? ("attention" as const) : ("live" as const),
             href: "/dashboard/agents",
-            note: handoffLeads.length + " human handoff" + (handoffLeads.length === 1 ? "" : "s") + " recorded in the current lead state.",
+            note: qualifiedLeads.length + " qualified · " + inspectionLeads.length + " inspections · " + handoffLeads.length + " human handoffs",
             metrics: [
+              { label: "Leads", value: newLeads.length },
               { label: "Conversations", value: engagedLeads.length },
-              { label: "Qualified", value: qualifiedLeads.length },
               { label: "Follow-ups", value: followUpLeads.length },
-              { label: "Inspections", value: inspectionLeads.length },
             ],
           },
           {
@@ -114,7 +113,6 @@ export default async function DashboardPage() {
               { label: "Signals", value: commandCenter?.priorityRisks.length || 0 },
               { label: "Recommendations", value: commandCenter?.recommendations.length || 0 },
               { label: "Live clients", value: liveClients.length },
-              { label: "Pending", value: pendingClients.length },
             ],
           },
         ]}
