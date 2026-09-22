@@ -49,7 +49,7 @@ export default async function DashboardPage() {
 
   const pendingClients = clients.filter((client) => !["live", "paused"].includes(client.status));
   const liveClients = clients.filter((client) => client.status === "live");
-  const systemHealth = commandCenter
+  const systemHealth: "Operational" | "Attention" | "Critical" = commandCenter
     ? (commandCenter.status === "healthy" ? "Operational" : commandCenter.status === "critical" ? "Critical" : "Attention")
     : supabase.ready && !automationStatus.error ? "Operational" : "Attention";
 
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
             name: "Maia",
             role: "WhatsApp Sales Agent",
             channel: "WhatsApp · Limitless Realty",
-            status: automationStatus.error ? "attention" : "live",
+            status: automationStatus.error ? ("attention" as const) : ("live" as const),
             href: "/dashboard/agents",
             note: handoffLeads.length + " human handoff" + (handoffLeads.length === 1 ? "" : "s") + " recorded in the current lead state.",
             metrics: [
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
             name: "Leo",
             role: "Operations Intelligence",
             channel: "Platform operations",
-            status: systemHealth === "Operational" ? "live" : "attention",
+            status: systemHealth === "Operational" ? ("live" as const) : ("attention" as const),
             href: "/dashboard/activity",
             note: commandCenter?.headline || "Monitoring connected operational evidence.",
             metrics: [
