@@ -118,7 +118,7 @@
 
 [data-dashboard-theme] .admin-metric-card strong,
 .portal-stat strong,
-[data-dashboard-theme] .dashboard-card strong{font-family:"Arial Narrow","Roboto Condensed",Inter,sans-serif;font-size:1.9rem!important;letter-spacing:.02em}
+[data-dashboard-theme] .dashboard-card strong{font-family:var(--fk-font-ui,ui-sans-serif,system-ui,sans-serif);font-size:1.9rem!important;font-weight:600!important;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
 
 [data-dashboard-theme] .admin-nav a,
 .portal-sidebar nav a,
