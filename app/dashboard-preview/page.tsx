@@ -43,9 +43,11 @@ const navGroups = [
   { label: "Platform", items: ["Billing & Credits", "Knowledge", "AI Models", "Memory", "Settings"] },
 ];
 
-export default function DashboardPreviewPage() {
+export default async function DashboardPreviewPage({ searchParams }: { searchParams: Promise<{ theme?: string }> }) {
+  const { theme } = await searchParams;
+  const light = theme === "light";
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${light ? styles.light : ""}`} data-preview-theme={light ? "light" : "dark"}>
       <header className={styles.topbar}>
         <div className={styles.brand}>
           <div className={styles.mark}>FX</div>
