@@ -84,9 +84,10 @@ test("command center mobile surface remains theme-token driven", () => {
 });
 
 
-test("canonical Fluxknight palette and compact dashboard composition are locked", () => {
+test("canonical Fluxknight palette and dashboard home composition are locked", () => {
   const fidelity = read("components/admin/DashboardReferenceFidelity.module.css");
   const dashboard = read("app/dashboard/page.tsx");
+  const home = read("components/admin/DashboardHomeExperience.tsx");
   const preview = read("app/dashboard-preview/page.tsx");
 
   assert.match(fidelity, /--fk-canvas:#0B0F24/);
@@ -94,8 +95,11 @@ test("canonical Fluxknight palette and compact dashboard composition are locked"
   assert.match(fidelity, /--fk-surface-raised:#1A2454/);
   assert.match(fidelity, /--fk-brand:#7c3aed/i);
   assert.match(fidelity, /--fk-canvas:#F6F7FF/);
-  assert.match(dashboard, /BusinessCommandCenterPanel snapshot=\{commandCenter\} variant="dashboard"/);
-  assert.match(dashboard, /CommandCenterExpansion compact/);
+  assert.match(dashboard, /DashboardHomeExperience/);
+  assert.match(dashboard, /name="Limitless"/);
+  assert.match(home, /Needs your attention/);
+  assert.match(home, /Your AI Team/);
+  assert.match(home, /Business metrics/);
   assert.match(preview, /BusinessCommandCenterPanel snapshot=\{snapshot\} variant="dashboard"/);
   assert.match(preview, /CommandCenterExpansion compact/);
 });
