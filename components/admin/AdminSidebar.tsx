@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/ServerIcons";
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
+import FluxknightMark from "@/components/admin/FluxknightMark";
 import ThemeToggle from "@/components/admin/ThemeToggle";
 import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import {
@@ -158,6 +159,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
       <div className={styles.brandRow}>
         <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}>
           <FluxknightLogo className={extras.wordmark} />
+          <FluxknightMark className={styles.compactLogo} />
           <small>Serve Better. Operate Smarter.</small>
         </Link>
         <button
