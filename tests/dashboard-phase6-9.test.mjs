@@ -75,3 +75,10 @@ test("phase 9 visual contract preserves reference compositions and viewport fami
   assert.match(overview, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(overview, /mainGrid/);
 });
+
+
+test("command center mobile surface remains theme-token driven", () => {
+  const css = read("components/admin/BusinessCommandCenterPanel.module.css");
+  assert.match(css, /background:var\(--fk-surface,#0c1016\)/);
+  assert.doesNotMatch(css, /@media\(max-width:560px\)\{\.shell\{[^}]*background:#0c1016/);
+});
