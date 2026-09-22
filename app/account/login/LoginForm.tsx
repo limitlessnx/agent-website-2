@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn } from "@/components/admin/ServerIcons";
 
 export default function ClientLoginForm({ txRef = "", nextPath = "/portal" }: { txRef?: string; nextPath?: string }) {
   const router = useRouter();
@@ -52,18 +51,16 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal" }: { 
 
   return (
     <form onSubmit={submit} className="admin-login-card">
-      <div className="admin-login-icon"><LogIn size={22} /></div>
       <div>
-        <p className="admin-kicker">Fluxknight Client Portal</p>
         <h1>Welcome back</h1>
-        <p className="admin-muted">Sign in to your Fluxknight workspace.</p>
+        <p className="admin-muted">Sign in to your Fluxknight account to continue.</p>
       </div>
       {txRef ? <p className="admin-form-message">Your payment is verified. Sign in to continue to onboarding.</p> : null}
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <label>Password<input name="password" type="password" required autoComplete="current-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
       <button type="submit" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</button>
-      <p className="admin-muted">New to Fluxknight? <Link href={signupHref}>Create workspace</Link></p>
+      <p className="admin-muted">New to Fluxknight? <Link href={signupHref}>Create an account</Link></p>
     </form>
   );
 }
