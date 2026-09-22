@@ -118,15 +118,15 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
           <button type="button" onClick={() => setForm(blank(summary.projects[0]?.id))}>New agent</button>
         </div>
 
-        <div className="agent-status-tabs" aria-label="Filter agents by status">
-          <button type="button" className={statusFilter === "all" ? "active" : ""} onClick={() => setStatusFilter("all")}>All</button>
-          <button type="button" className={statusFilter === "live" ? "active" : ""} onClick={() => setStatusFilter("live")}>Live</button>
-          <button type="button" className={statusFilter === "draft" ? "active" : ""} onClick={() => setStatusFilter("draft")}>Drafts</button>
+        <div className="agent-status-tabs" role="group" aria-label="Filter agents by status">
+          <button type="button" className={statusFilter === "all" ? "active" : ""} aria-pressed={statusFilter === "all"} onClick={() => setStatusFilter("all")}>All</button>
+          <button type="button" className={statusFilter === "live" ? "active" : ""} aria-pressed={statusFilter === "live"} onClick={() => setStatusFilter("live")}>Live</button>
+          <button type="button" className={statusFilter === "draft" ? "active" : ""} aria-pressed={statusFilter === "draft"} onClick={() => setStatusFilter("draft")}>Drafts</button>
         </div>
 
         <div className="agent-toolbar">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agents, roles or workspaces..." />
-          <select value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)}>
+          <input aria-label="Search agents, roles or workspaces" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agents, roles or workspaces..." />
+          <select aria-label="Filter agents by workspace" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)}>
             <option value="all">All workspaces</option>
             {summary.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
           </select>
@@ -138,7 +138,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
             const channels = lines(agent.communication_channels);
             const tone = statusTone(agent.status);
             return (
-              <button key={agent.id} type="button" className={`agent-card status-${tone} ${form.id === agent.id ? "selected" : ""}`} onClick={() => setForm(fromAgent(agent, connected))}>
+              <button key={agent.id} type="button" aria-pressed={form.id === agent.id} className={`agent-card status-${tone} ${form.id === agent.id ? "selected" : ""}`} onClick={() => setForm(fromAgent(agent, connected))}>
                 <span className="agent-card-head">
                   <span>
                     <strong>{agent.name}</strong>
@@ -210,7 +210,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
           <fieldset className="wide"><legend>Connected workflows</legend><div className="workflow-check-grid">{summary.workflows.map((workflow) => <label key={workflow.id}><input type="checkbox" checked={form.workflow_ids.includes(workflow.id)} onChange={(e) => set("workflow_ids", e.target.checked ? [...form.workflow_ids, workflow.id] : form.workflow_ids.filter((id) => id !== workflow.id))} /><span><strong>{workflow.name}</strong><small>{workflow.status}</small></span></label>)}</div></fieldset>
         </div>
 
-        <div className="agent-save-row"><p>{result}</p><button type="button" disabled={isPending || !form.name || !form.project_id} onClick={save}>{isPending ? "Saving..." : form.status === "active" ? "Save active agent" : "Save draft"}</button></div>
+        <div className="agent-save-row"><p role="status" aria-live="polite">{result}</p><button type="button" disabled={isPending || !form.name || !form.project_id} onClick={save}>{isPending ? "Saving..." : form.status === "active" ? "Save active agent" : "Save draft"}</button></div>
       </section>
 
       <style jsx>{`
