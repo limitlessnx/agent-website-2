@@ -524,3 +524,67 @@
   .designSystem :global(.dashboard-v3-home-intro){align-items:flex-start;flex-direction:column;gap:14px;padding-top:2px}
   .designSystem :global(.dashboard-v3-home-intro h1){font-size:30px}
 }
+
+
+/* Dashboard V3 typography authority. Dashboard-scoped to prevent public-site leakage. */
+.designSystem{
+  --fk-font-ui:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --fk-font-mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --fk-weight-regular:400;
+  --fk-weight-medium:500;
+  --fk-weight-semibold:600;
+  --fk-weight-bold:700;
+  font-family:var(--fk-font-ui);
+  font-size:var(--fk-type-body);
+  line-height:1.5;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+.designSystem :global(.admin-page-header h1){
+  font-size:var(--fk-type-title)!important;
+  font-weight:var(--fk-weight-semibold)!important;
+  line-height:1.08!important;
+  letter-spacing:-.04em!important;
+  text-wrap:balance;
+}
+.designSystem :global(.admin-page-header p){
+  max-width:720px!important;
+  font-size:var(--fk-type-body)!important;
+  line-height:1.6!important;
+}
+.designSystem :global(.admin-panel-header h2){
+  font-size:var(--fk-type-section)!important;
+  font-weight:var(--fk-weight-semibold)!important;
+  line-height:1.25!important;
+  letter-spacing:-.02em!important;
+}
+.designSystem :global(.admin-panel-header p){
+  font-size:var(--fk-type-label)!important;
+  line-height:1.55!important;
+}
+.designSystem :global(.admin-nav a),
+.designSystem :global(.admin-button),
+.designSystem :global(.primary-button),
+.designSystem :global(.secondary-button),
+.designSystem :global(input),
+.designSystem :global(select),
+.designSystem :global(textarea){
+  font-family:var(--fk-font-ui)!important;
+}
+.designSystem :global(.admin-metric-card strong),
+.designSystem :global(.admin-panel.compact>strong){
+  font-family:var(--fk-font-ui)!important;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+}
+.designSystem :global(.admin-table td),
+.designSystem :global(.admin-table th),
+.designSystem :global(.admin-list-row em),
+.designSystem :global(.admin-status){
+  font-variant-numeric:tabular-nums;
+}
+.designSystem :global(code),
+.designSystem :global(pre),
+.designSystem :global(.admin-mono){
+  font-family:var(--fk-font-mono)!important;
+}
