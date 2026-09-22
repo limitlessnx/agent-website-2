@@ -25,7 +25,7 @@ export default function ThemeToggle() {
   useEffect(() => {
     const initial = resolveTheme();
     applyTheme(initial);
-    setTheme(initial);
+    requestAnimationFrame(() => setTheme(initial));
 
     const media = window.matchMedia("(prefers-color-scheme: light)");
     const onSystemThemeChange = () => {
