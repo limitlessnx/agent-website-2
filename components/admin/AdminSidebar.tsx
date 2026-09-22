@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
-  Activity, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
+  Activity, ArrowLeft, ArrowRight, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Gauge, Globe2, Home, LifeBuoy, LineChart, Megaphone,
   MessageSquareText, Plus, Search, Settings, ShieldCheck, Target, Users, X,
 } from "@/components/admin/ServerIcons";
@@ -90,12 +90,35 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const [openSections, setOpenSections] = useState<string[]>([]);
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const { open: mobileOpen, closeMenu } = useMobileNavigation();
 
   useEffect(() => {
     if (!activeGroupId) return;
     setOpenGroups((current) => current.includes(activeGroupId) ? current : [...current, activeGroupId]);
   }, [activeGroupId]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("fluxknight-dashboard-sidebar");
+      const next = saved === "collapsed";
+      setCollapsed(next);
+      const root = document.getElementById("dashboard-theme-root");
+      if (root) root.dataset.sidebarCollapsed = String(next);
+    } catch (_) {}
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem("fluxknight-dashboard-sidebar", next ? "collapsed" : "expanded");
+        const root = document.getElementById("dashboard-theme-root");
+        if (root) root.dataset.sidebarCollapsed = String(next);
+      } catch (_) {}
+      return next;
+    });
+  }
 
   function toggleGroup(id: string) {
     setOpenGroups((current) => current.includes(id) ? current.filter((groupId) => groupId !== id) : [...current, id]);
@@ -132,10 +155,21 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
         <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
       </div>
 
-      <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}>
-        <FluxknightLogo className={extras.wordmark} />
-        <small>Serve Better. Operate Smarter.</small>
-      </Link>
+      <div className={styles.brandRow}>
+        <Link href="/dashboard" onClick={closeMenu} className={`admin-brand ${styles.brand} ${extras.brandLockup}`}>
+          <FluxknightLogo className={extras.wordmark} />
+          <small>Serve Better. Operate Smarter.</small>
+        </Link>
+        <button
+          type="button"
+          className={styles.collapseToggle}
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand dashboard navigation" : "Collapse dashboard navigation"}
+          title={collapsed ? "Expand navigation" : "Collapse navigation"}
+        >
+          {collapsed ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
+        </button>
+      </div>
 
       <div className={extras.workspaceWrap}>
         <button type="button" className={extras.workspaceSwitcher} onClick={() => setWorkspaceOpen((current) => !current)} aria-expanded={workspaceOpen}>
