@@ -300,3 +300,13 @@
   .desktopChrome :global(.workspace-rail){padding-left:24px!important;padding-right:24px!important}
   .desktopChrome :global(.admin-page){padding-left:24px!important;padding-right:24px!important}
 }
+
+
+/* Dashboard V3 reference-fidelity: desktop rail width follows persisted collapse state. */
+@media(min-width:901px){
+  .desktopChrome:global([data-sidebar-collapsed="true"]) :global(.admin-shell){grid-template-columns:80px minmax(0,1fr)!important}
+  .desktopChrome:global([data-sidebar-collapsed="true"]) :global(.admin-sidebar){width:80px!important}
+  .desktopChrome:global([data-sidebar-collapsed="true"]) :global(.admin-sidebar-footer .userCard){display:none!important}
+  .desktopChrome:global([data-sidebar-collapsed="true"]) :global(.admin-sidebar-footer){padding-left:0!important;padding-right:0!important}
+}
+
