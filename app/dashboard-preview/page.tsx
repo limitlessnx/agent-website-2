@@ -3,7 +3,7 @@ import CommandCenterExpansion from "@/components/admin/CommandCenterExpansion";
 import DashboardReferenceOverview from "@/components/admin/DashboardReferenceOverview";
 import styles from "./preview.module.css";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 const snapshot = {
   generatedAt: new Date().toISOString(),
