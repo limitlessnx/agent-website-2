@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KeyRound, PlugZap, ShieldCheck } from "@/components/admin/ServerIcons";
+import { Calendar, KeyRound, Mail, Mic2, PlugZap, ShieldCheck } from "@/components/admin/ServerIcons";
 import { getPlatformEngineSummary, humanize } from "@/lib/platform-engine";
 import IntegrationCredentialControl from "./IntegrationCredentialControl";
 
@@ -17,6 +17,13 @@ type IntegrationsPageProps = {
   searchParams: Promise<{ organizationId?: string }>;
 };
 
+function ProviderIcon({ provider }: { provider: string }) {
+  if (provider === "email") return <Mail size={19} />;
+  if (provider === "elevenlabs") return <Mic2 size={19} />;
+  if (provider === "google_calendar") return <Calendar size={19} />;
+  return <PlugZap size={19} />;
+}
+
 export default async function IntegrationsPage({ searchParams }: IntegrationsPageProps) {
   const { organizationId } = await searchParams;
   const { integrations, errors } = await getPlatformEngineSummary();
@@ -33,59 +40,63 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
   const tenantName = organizationId ? visibleIntegrations[0]?.organization_name || "Selected organization" : null;
 
   return (
-    <main className="admin-page">
+    <main className="admin-page dashboard-v2-page integrations-page">
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Tenant connections</p>
+          <p className="admin-kicker">Connections</p>
           <h1>{tenantName ? `${tenantName} Integrations` : "Integration Center"}</h1>
-          <p>Configure only tenant-owned external channels and services. Fluxknight infrastructure such as Supabase, n8n and platform AI-provider credentials is managed centrally and is not repeated for each client.</p>
+          <p>Connect the customer-facing services each workspace owns. Fluxknight infrastructure remains centrally managed and is not duplicated per client.</p>
         </div>
-        {organizationId ? <Link className="admin-button secondary" href={`/dashboard/clients/${organizationId}/setup`}>Back to client setup</Link> : null}
+        {organizationId ? <Link className="admin-button secondary-button" href={`/dashboard/clients/${organizationId}/setup`}>Back to client setup</Link> : null}
       </header>
 
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><PlugZap size={15} /> Required</p><strong>{visibleIntegrations.length}</strong><span>Tenant-owned provider records</span></article>
+        <article className="admin-metric-card"><p><PlugZap size={15} /> Available</p><strong>{visibleIntegrations.length}</strong><span>Tenant-owned provider records</span></article>
         <article className="admin-metric-card"><p><KeyRound size={15} /> Configured</p><strong>{configured}</strong><span>Credentials stored securely</span></article>
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Connected</p><strong>{connected}</strong><span>Verified tenant connections</span></article>
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Attention</p><strong>{attention}</strong><span>Authentication or provider errors</span></article>
+        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Connected</p><strong>{connected}</strong><span>Verified provider connections</span></article>
+        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Attention</p><strong>{attention}</strong><span>Authentication or provider issues</span></article>
       </div>
 
       <section className="admin-panel">
         <div className="admin-panel-header">
-          <div><h2>Tenant-owned integrations</h2><p>Only configure credentials that belong to the client's channels or external services.</p></div>
+          <div><h2>Connected Apps</h2><p>Configure workspace-owned channels without exposing unrelated platform infrastructure.</p></div>
           <PlugZap size={18} />
         </div>
-        <div className="admin-list">
+
+        <div className="integration-marketplace">
           {visibleIntegrations.map((item) => {
             const healthMessage = typeof item.health?.message === "string" ? item.health.message : "No health check has run yet.";
+            const unhealthy = ["error", "authentication_failed"].includes(item.status);
             return (
-              <div className="admin-list-row" key={item.id} style={{ alignItems: "start", gap: 18 }}>
-                <div style={{ flex: 1 }}>
-                  <strong>{item.display_name}</strong>
-                  <span>{item.organization_name} · {humanize(item.provider)}</span>
-                  <span>Status: {humanize(item.status)} · {healthMessage}</span>
-                  <span>
-                    Last checked {item.last_checked_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.last_checked_at)) : "not yet"}
-                    {item.last_rotated_at ? ` · Credentials rotated ${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(item.last_rotated_at))}` : ""}
-                  </span>
+              <article className="integration-card" key={item.id}>
+                <span className="integration-card-icon"><ProviderIcon provider={item.provider} /></span>
+                <div>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                    <div>
+                      <h3>{item.display_name}</h3>
+                      <p>{item.organization_name} · {humanize(item.provider)}</p>
+                    </div>
+                    <span className={unhealthy ? "admin-status warning" : item.status === "connected" ? "admin-status live" : "admin-status"}>{humanize(item.status)}</span>
+                  </div>
+                  <p>{healthMessage}</p>
+                  <IntegrationCredentialControl integration={{
+                    id: item.id,
+                    provider: item.provider,
+                    status: item.status,
+                    has_credentials: item.has_credentials,
+                    secret_keys: item.secret_keys || [],
+                  }} />
                 </div>
-                <IntegrationCredentialControl integration={{
-                  id: item.id,
-                  provider: item.provider,
-                  status: item.status,
-                  has_credentials: item.has_credentials,
-                  secret_keys: item.secret_keys || [],
-                }} />
-              </div>
+              </article>
             );
           })}
-          {!visibleIntegrations.length ? <p className="admin-empty">No tenant-owned connection is required yet. Relevant providers appear here when an assigned agent or channel needs them.</p> : null}
+          {!visibleIntegrations.length ? <div className="admin-empty-state"><div><PlugZap size={20} /><p>No tenant-owned connection is required yet. Relevant providers appear when an assigned agent or channel needs them.</p></div></div> : null}
         </div>
       </section>
 
       {errors.length ? (
         <section className="admin-panel">
-          <div className="admin-list-row compact"><div><strong>Connection setup attention</strong><span>{errors.join(" · ")}</span></div><ShieldCheck size={16} /></div>
+          <div className="admin-list-row compact attention-danger"><div><strong>Connection setup attention</strong><span>{errors.join(" · ")}</span></div><ShieldCheck size={16} /></div>
         </section>
       ) : null}
     </main>
