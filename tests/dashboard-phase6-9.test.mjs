@@ -122,3 +122,22 @@ test("Maia performance workspace stays evidence-backed and responsive", () => {
   assert.match(css, /var\(--fk-surface\)/);
   assert.match(css, /var\(--fk-text\)/);
 });
+
+
+test("phase 9 CRM remains tenant-scoped and responsive", () => {
+  const page = read("app/dashboard/crm/page.tsx");
+  const css = read("app/dashboard/crm/page.module.css");
+
+  assert.match(page, /requireTenant\(\)/);
+  assert.match(page, /\.eq\("organization_id", organizationId\)/);
+  assert.match(page, /crm_customers/);
+  assert.match(page, /crm_leads/);
+  assert.match(page, /conversionRate/);
+  assert.match(page, /\/dashboard\/limitless\/leads/);
+  assert.match(css, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media\(max-width:1120px\)/);
+  assert.match(css, /@media\(max-width:700px\)/);
+  assert.match(css, /@media\(max-width:430px\)/);
+  assert.match(css, /var\(--fk-surface\)/);
+  assert.match(css, /var\(--fk-text\)/);
+});
