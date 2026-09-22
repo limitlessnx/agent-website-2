@@ -103,3 +103,22 @@ test("canonical Fluxknight palette and dashboard home composition are locked", (
   assert.match(preview, /BusinessCommandCenterPanel snapshot=\{snapshot\} variant="dashboard"/);
   assert.match(preview, /CommandCenterExpansion compact/);
 });
+
+
+test("Maia performance workspace stays evidence-backed and responsive", () => {
+  const page = read("app/dashboard/agents/maia/page.tsx");
+  const css = read("app/dashboard/agents/maia/page.module.css");
+  const dashboard = read("app/dashboard/page.tsx");
+
+  assert.match(dashboard, /href: "\/dashboard\/agents\/maia"/);
+  assert.match(page, /getLeads\(500\)/);
+  assert.match(page, /7,\s*30,\s*90/);
+  assert.match(page, /Conversation and funnel counts currently use CRM lead-state evidence/);
+  assert.match(page, /Human handoffs/);
+  assert.match(page, /Recent lead activity/);
+  assert.doesNotMatch(page, /Math\.random|94%|138 conversations|42 new leads|31 follow-ups/i);
+  assert.match(css, /@media\(max-width:700px\)/);
+  assert.match(css, /@media\(max-width:430px\)/);
+  assert.match(css, /var\(--fk-surface\)/);
+  assert.match(css, /var\(--fk-text\)/);
+});
