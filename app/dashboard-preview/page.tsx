@@ -94,8 +94,8 @@ export default async function DashboardPreviewPage({ searchParams }: { searchPar
             ]}
           />
 
-          <BusinessCommandCenterPanel snapshot={snapshot} />
-          <CommandCenterExpansion
+          <BusinessCommandCenterPanel snapshot={snapshot} variant="dashboard" />
+          <CommandCenterExpansion compact
             pulse={{ leads: 48, conversations: 126, conversions: 11, activeClients: 6, aiResolutions: 84, valueGenerated: "₦4.8m", creditsUsed: "62%" }}
             workforce={[
               { name: "Leo", role: "Operations intelligence", state: "attention", note: "2 signals need review" },
