@@ -1,5 +1,6 @@
 import BusinessCommandCenterPanel from "@/components/admin/BusinessCommandCenterPanel";
 import CommandCenterExpansion from "@/components/admin/CommandCenterExpansion";
+import DashboardReferenceOverview from "@/components/admin/DashboardReferenceOverview";
 import styles from "./preview.module.css";
 
 export const dynamic = "force-static";
@@ -73,14 +74,23 @@ export default function DashboardPreviewPage() {
         </aside>
 
         <section className={styles.content}>
-          <div className={styles.hero}>
-            <div className={styles.heroCopy}>
-              <span>Fluxknight workspace</span>
-              <h1>Command Center</h1>
-              <p>See what is happening, what needs attention, what changed, and what should happen next across your businesses and client workspaces.</p>
-            </div>
-            <div className={styles.state}><i /> Needs attention</div>
-          </div>
+          <DashboardReferenceOverview
+            totalLeads={48}
+            newLeads={7}
+            liveClients={6}
+            attentionCount={2}
+            systemHealth="Attention"
+            notifications={[
+              { title: "Lead response delay", detail: "Two new enquiries are waiting beyond the target response window.", href: "#attention", type: "high" },
+              { title: "WhatsApp delivery drift", detail: "Delivery reliability is below the recent baseline.", href: "#attention", type: "medium" },
+              { title: "Inspection confirmation", detail: "One inspection requires confirmation before the next follow-up.", href: "#attention", type: "attention" },
+            ]}
+            agents={[
+              { id: "maia", name: "Maia", role: "WhatsApp Sales Agent", status: "active", note: "handling lead follow-up" },
+              { id: "leo", name: "Leo", role: "Operations Intelligence", status: "attention", note: "2 signals need review" },
+              { id: "followup", name: "Follow-up AI", role: "Lead Nurturing Agent", status: "active", note: "queue running" },
+            ]}
+          />
 
           <BusinessCommandCenterPanel snapshot={snapshot} />
           <CommandCenterExpansion
@@ -109,7 +119,7 @@ export default function DashboardPreviewPage() {
       </div>
 
       <nav className={styles.mobileNav} aria-label="Preview mobile navigation">
-        <span className={styles.active}>Home</span><span>Workspaces</span><span>Agents</span><span>Activity</span><span>Menu</span>
+        <span className={styles.active}>Home</span><span>Agents</span><span>Conversations</span><span>Activity</span><span>Menu</span>
       </nav>
     </main>
   );
