@@ -42,3 +42,43 @@
  .items a{min-height:44px;font-size:13px}
  .sectionTrigger{min-height:40px;font-size:12px}
 }
+
+
+/* Dashboard V3 reference-fidelity: persistent collapsed desktop rail */
+.brandRow{position:relative;display:flex;align-items:flex-start;gap:8px}
+.collapseToggle{display:none}
+.compactLogo{display:none}
+@media(min-width:901px){
+  .brandRow{min-height:52px}
+  .collapseToggle{
+    position:absolute;top:6px;right:2px;z-index:2;display:grid;width:30px;height:30px;place-items:center;
+    border:1px solid var(--fk-border);border-radius:9px;color:var(--fk-text-muted);background:var(--fk-surface);
+    cursor:pointer;transition:color var(--fk-motion-fast) var(--fk-ease),background var(--fk-motion-fast) var(--fk-ease),border-color var(--fk-motion-fast) var(--fk-ease)
+  }
+  .collapseToggle:hover{color:var(--fk-text);background:var(--fk-surface-hover);border-color:var(--fk-border-strong)}
+  :global([data-sidebar-collapsed="true"]) .sidebar{padding-left:10px!important;padding-right:10px!important}
+  :global([data-sidebar-collapsed="true"]) .brandRow{justify-content:center}
+  :global([data-sidebar-collapsed="true"]) .brand{width:48px!important;min-width:48px!important;margin:0 auto 14px!important;padding:0!important;justify-content:center!important;overflow:hidden}
+  :global([data-sidebar-collapsed="true"]) .brand :global(svg:not(.__never__)){max-width:none}
+  :global([data-sidebar-collapsed="true"]) .brand :global(svg){display:none!important}
+  :global([data-sidebar-collapsed="true"]) .brand .compactLogo{display:block!important;width:34px!important;height:34px!important}
+  :global([data-sidebar-collapsed="true"]) .brand small{display:none!important}
+  :global([data-sidebar-collapsed="true"]) .collapseToggle{top:46px;right:8px;width:28px;height:28px}
+  :global([data-sidebar-collapsed="true"]) :global(.workspaceSwitcher){grid-template-columns:1fr!important;width:44px!important;height:44px!important;margin:38px auto 14px!important;padding:0!important;place-items:center!important}
+  :global([data-sidebar-collapsed="true"]) :global(.workspaceSwitcher)>span:not(:first-child),
+  :global([data-sidebar-collapsed="true"]) :global(.workspaceSwitcher)>svg{display:none!important}
+  :global([data-sidebar-collapsed="true"]) :global(.workspaceSwitcher)>span:first-child{width:32px!important;height:32px!important}
+  :global([data-sidebar-collapsed="true"]) .trigger{display:none!important}
+  :global([data-sidebar-collapsed="true"]) .items{display:grid!important;gap:4px!important}
+  :global([data-sidebar-collapsed="true"]) .section+.section{margin-top:4px!important;padding-top:4px!important}
+  :global([data-sidebar-collapsed="true"]) .sectionTrigger{display:none!important}
+  :global([data-sidebar-collapsed="true"]) .sectionItems{display:grid!important;gap:4px!important}
+  :global([data-sidebar-collapsed="true"]) .items a{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;margin:0 auto!important;padding:0!important;justify-content:center!important}
+  :global([data-sidebar-collapsed="true"]) .items a span,
+  :global([data-sidebar-collapsed="true"]) .items a small{display:none!important}
+  :global([data-sidebar-collapsed="true"]) .items a svg{width:18px!important;height:18px!important}
+  :global([data-sidebar-collapsed="true"]) .footer{padding-left:0!important;padding-right:0!important}
+  :global([data-sidebar-collapsed="true"]) .footer :global(button){width:44px!important;min-width:44px!important;margin-inline:auto!important;overflow:hidden!important}
+}
+@media(max-width:900px){.collapseToggle{display:none!important}.compactLogo{display:none!important}}
+
