@@ -299,3 +299,56 @@
   .referenceFidelity :global(*::before),
   .referenceFidelity :global(*::after){animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* Settings follows the quieter reference hierarchy: narrow section rail + focused content. */
+.referenceFidelity :global(.settings-layout){
+  display:grid;
+  grid-template-columns:220px minmax(0,1fr);
+  gap:18px;
+  align-items:start;
+}
+.referenceFidelity :global(.settings-nav){
+  position:sticky;
+  top:132px;
+  display:grid;
+  gap:4px;
+  padding:12px!important;
+}
+.referenceFidelity :global(.settings-nav .admin-kicker){padding:7px 9px 4px}
+.referenceFidelity :global(.settings-nav a){
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:0 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  color:var(--fk-text-muted);
+  text-decoration:none;
+  font-size:12px;
+  font-weight:650;
+}
+.referenceFidelity :global(.settings-nav a:hover){
+  color:var(--fk-text);
+  border-color:var(--fk-border);
+  background:var(--fk-surface-raised);
+}
+.referenceFidelity :global(.settings-content){display:grid;gap:16px}
+.referenceFidelity :global(.conversation-row.is-selected){
+  border-radius:10px;
+  background:var(--fk-brand-soft)!important;
+  box-shadow:inset 2px 0 var(--fk-brand);
+}
+@media(max-width:900px){
+  .referenceFidelity :global(.settings-layout){grid-template-columns:1fr}
+  .referenceFidelity :global(.settings-nav){
+    position:static;
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding:8px!important;
+  }
+  .referenceFidelity :global(.settings-nav .admin-kicker){display:none}
+  .referenceFidelity :global(.settings-nav a){flex:0 0 auto;min-height:42px}
+}
