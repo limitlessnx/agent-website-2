@@ -94,7 +94,7 @@ export default async function DashboardPage() {
             role: "WhatsApp Sales Agent",
             channel: "WhatsApp · Limitless Realty",
             status: automationStatus.error ? ("attention" as const) : ("live" as const),
-            href: "/dashboard/agents",
+            href: "/dashboard/agents/maia",
             note: qualifiedLeads.length + " qualified · " + inspectionLeads.length + " inspections · " + handoffLeads.length + " human handoffs",
             metrics: [
               { label: "Leads", value: newLeads.length },
