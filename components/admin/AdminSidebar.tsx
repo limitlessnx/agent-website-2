@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, Bot, BrainCircuit, Building2, ChevronDown, ClipboardList,
   CreditCard, Database, ExternalLink, Gauge, Globe2, Home, LifeBuoy, LineChart, Megaphone,
@@ -24,6 +24,7 @@ import {
 } from "@/components/admin/navigationConfig";
 import styles from "@/components/admin/AdminSidebar.module.css";
 import extras from "@/components/admin/AdminSidebarExtras.module.css";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 
 type NavItem = AdminNavItem & { icon: ComponentType<{ size?: number }> };
 type NavSection = Omit<AdminNavSection, "items"> & { items: NavItem[] };
@@ -93,11 +94,25 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const { open: mobileOpen, closeMenu } = useMobileNavigation();
+  const sidebarRef = useRef<HTMLElement>(null);
+  useDialogFocusTrap(mobileOpen, sidebarRef, closeMenu);
 
   useEffect(() => {
     if (!activeGroupId) return;
     setOpenGroups((current) => current.includes(activeGroupId) ? current : [...current, activeGroupId]);
   }, [activeGroupId]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const syncInert = () => {
+      if (!sidebarRef.current) return;
+      if (media.matches && !mobileOpen) sidebarRef.current.setAttribute("inert", "");
+      else sidebarRef.current.removeAttribute("inert");
+    };
+    syncInert();
+    media.addEventListener("change", syncInert);
+    return () => media.removeEventListener("change", syncInert);
+  }, [mobileOpen]);
 
   useEffect(() => {
     try {
@@ -150,9 +165,9 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
 
   return <>
     <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMenu} />
-    <aside id="admin-mobile-navigation" className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation">
+    <aside ref={sidebarRef} id="admin-mobile-navigation" className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation" aria-modal={mobileOpen ? true : undefined} role={mobileOpen ? "dialog" : undefined} tabIndex={mobileOpen ? -1 : undefined}>
       <div className={styles.mobileHeader}>
-        <span className={styles.mobileMenuTitle}>Navigation</span>
+        <span id="admin-navigation-title" className={styles.mobileMenuTitle}>Navigation</span>
         <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
       </div>
 
