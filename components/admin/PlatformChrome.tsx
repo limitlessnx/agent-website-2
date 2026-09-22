@@ -17,6 +17,8 @@ export default function PlatformChrome() {
         type="button"
         className={styles.activityButton}
         aria-label="Open activity center"
+        aria-expanded={activityOpen}
+        aria-controls="dashboard-activity-drawer"
         onClick={() => setActivityOpen(true)}
       >
         <Activity size={17} />
@@ -33,7 +35,7 @@ export default function PlatformChrome() {
             tabIndex={-1}
             aria-hidden="true"
           />
-          <aside ref={drawerRef} className={styles.drawer} role="dialog" aria-modal="true" aria-labelledby="activity-center-title" tabIndex={-1} data-state="open">
+          <aside id="dashboard-activity-drawer" ref={drawerRef} className={styles.drawer} role="dialog" aria-modal="true" aria-labelledby="activity-center-title" tabIndex={-1} data-state="open">
             <header>
               <div>
                 <strong id="activity-center-title">Activity Center</strong>
