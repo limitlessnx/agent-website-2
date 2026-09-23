@@ -11,12 +11,18 @@
   }
   .logo{width:112px;height:22px;flex:0 0 auto;color:var(--fk-text)}
   .actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .themeControl :global(.admin-icon-button),
   .iconButton,.avatar{
     display:grid;place-items:center;width:40px;height:40px;flex:0 0 auto;
     border:1px solid var(--fk-border);border-radius:12px;
     color:var(--fk-text-secondary);background:var(--fk-surface-raised);text-decoration:none;
     touch-action:manipulation
   }
+  .themeControl :global(.admin-icon-button){
+    border-radius:999px!important;
+    background:var(--fk-surface)!important;
+  }
+  .themeControl :global(.admin-icon-button:active),
   .iconButton:active,.avatar:active{background:var(--fk-surface-hover);transform:scale(.97)}
   .avatar{
     border-radius:999px;color:white;background:var(--fk-brand-gradient);
@@ -28,5 +34,10 @@
 @media(max-width:520px){
   .header{height:54px;min-height:54px;padding:7px 12px}
   .logo{width:104px;height:21px}
-  .iconButton,.avatar{width:40px;height:40px}
+  .themeControl :global(.admin-icon-button),.iconButton,.avatar{width:40px;height:40px}
+}
+@media(max-width:370px){
+  .actions{gap:6px}
+  .logo{width:98px}
+  .themeControl :global(.admin-icon-button),.iconButton,.avatar{width:38px;height:38px}
 }

@@ -66,7 +66,21 @@ test("dashboard home uses live operating inputs and does not hard-code fake KPI 
 test("mobile header preserves reference bell and account actions", () => {
   const header = read("components/admin/MobileAdminHeader.tsx");
   assert.match(header, /Bell/);
+  assert.match(header, /ThemeToggle/);
+  assert.match(header, /Dashboard color mode/);
   assert.match(header, /\/dashboard\/notifications/);
   assert.match(header, /\/dashboard\/settings/);
   assert.match(header, /Open account settings/);
+});
+
+test("mobile dashboard drawer remains theme-token driven", () => {
+  const sidebar = read("components/admin/AdminSidebar.module.css");
+  const extras = read("components/admin/AdminSidebarExtras.module.css");
+  assert.match(sidebar, /top:54px/);
+  assert.match(sidebar, /background:var\(--fk-canvas\)/);
+  assert.match(sidebar, /border-right:1px solid var\(--fk-border\)/);
+  assert.match(sidebar, /width:min\(calc\(100vw - 58px\),330px\)/);
+  assert.match(extras, /background:var\(--fk-surface\)/);
+  assert.match(extras, /background:var\(--fk-surface-overlay\)/);
+  assert.doesNotMatch(sidebar, /@media\(max-width:900px\)[\s\S]*background:#08080f/);
 });

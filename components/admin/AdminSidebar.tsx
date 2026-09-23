@@ -11,7 +11,6 @@ import {
 import LogoutButton from "@/components/admin/LogoutButton";
 import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import FluxknightMark from "@/components/admin/FluxknightMark";
-import ThemeToggle from "@/components/admin/ThemeToggle";
 import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import {
   ADMIN_NAV_GROUPS,
@@ -163,7 +162,7 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     <aside ref={sidebarRef} id="admin-mobile-navigation" className={`admin-sidebar ${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation" aria-modal={mobileOpen ? true : undefined} role={mobileOpen ? "dialog" : undefined} tabIndex={mobileOpen ? -1 : undefined}>
       <div className={styles.mobileHeader}>
         <span id="admin-navigation-title" className={styles.mobileMenuTitle}>Navigation</span>
-        <div><ThemeToggle /><button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button></div>
+        <button type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={20} /></button>
       </div>
 
       <div className={styles.brandRow}>
