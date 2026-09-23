@@ -301,18 +301,27 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
           <label><Star size={15} /><select aria-label="Filter leads by score" value={score} onChange={(event) => setScore(event.target.value as typeof score)}>{scores.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         </div>
 
-        {message ? <p className="lead-feedback success">{message}</p> : null}
-        {error ? <p className="lead-feedback error">{error}</p> : null}
+        {message ? <p className="lead-feedback success" role="status" aria-live="polite">{message}</p> : null}
+        {error ? <p className="lead-feedback error" role="alert">{error}</p> : null}
 
         <div className="lead-compact-list">
           {filteredLeads.map((lead) => {
             const isEditing = editingId === String(lead.id) && draft;
+            const whatsapp = whatsappHref(lead.phone);
+            const selectedLead = selectedSet.has(String(lead.id));
             return (
-              <details key={lead.id} className="lead-compact-card admin-record-disclosure">
+              <div key={lead.id} className="lead-record-shell">
+                <button
+                  type="button"
+                  className="lead-check"
+                  aria-label={selectedLead ? `Deselect ${lead.name || lead.phone || "lead"}` : `Select ${lead.name || lead.phone || "lead"}`}
+                  aria-pressed={selectedLead}
+                  onClick={() => toggleLead(String(lead.id))}
+                >
+                  {selectedLead ? <CheckSquare size={18} /> : <Square size={18} />}
+                </button>
+                <details className="lead-compact-card admin-record-disclosure">
                 <summary className="admin-record-summary">
-                  <button type="button" className="lead-check" onClick={(event) => { event.preventDefault(); toggleLead(String(lead.id)); }}>
-                    {selectedSet.has(String(lead.id)) ? <CheckSquare size={18} /> : <Square size={18} />}
-                  </button>
                   <div className="admin-record-summary-main">
                     <strong>{lead.name || "Unknown lead"}</strong>
                     <span>{lead.phone || "No phone saved"}</span>
@@ -363,14 +372,19 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
                     ) : (
                       <>
                         <button type="button" onClick={() => startEdit(lead)}><Edit3 size={15} />Edit</button>
-                        <a href={whatsappHref(lead.phone)} target="_blank" rel="noreferrer"><MessageCircle size={15} />WhatsApp</a>
+                        {whatsapp !== "#" ? (
+                          <a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15} />WhatsApp</a>
+                        ) : (
+                          <span className="lead-disabled-action" aria-disabled="true"><MessageCircle size={15} />WhatsApp unavailable</span>
+                        )}
                         <a href={`/dashboard/limitless/campaigns?lead=${encodeURIComponent(lead.phone || lead.id)}`}><Send size={15} />Campaign</a>
                         <button type="button" className="danger" disabled={isPending} onClick={() => deleteLead(lead)}><Trash2 size={15} />Delete</button>
                       </>
                     )}
                   </div>
                 </div>
-              </details>
+                </details>
+              </div>
             );
           })}
         </div>
@@ -385,8 +399,8 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
         </div>
         <div className="campaign-group-builder">
           <div className="group-type-toggle wide">
-            <button type="button" className={groupType === "manual" ? "active" : ""} onClick={() => setGroupType("manual")}><UsersRound size={15} />Manual group</button>
-            <button type="button" className={groupType === "smart" ? "active" : ""} onClick={() => setGroupType("smart")}><SlidersHorizontal size={15} />Smart group</button>
+            <button type="button" aria-pressed={groupType === "manual"} className={groupType === "manual" ? "active" : ""} onClick={() => setGroupType("manual")}><UsersRound size={15} />Manual group</button>
+            <button type="button" aria-pressed={groupType === "smart"} className={groupType === "smart" ? "active" : ""} onClick={() => setGroupType("smart")}><SlidersHorizontal size={15} />Smart group</button>
           </div>
           <label>Group name<input value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder="Benin investors, Hot buyers, Test list..." /></label>
           <label>Description<input value={groupDescription} onChange={(event) => setGroupDescription(event.target.value)} placeholder="Optional internal note" /></label>
@@ -427,9 +441,9 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
                 {group.description ? <small>{group.description}</small> : null}
               </div>
               <div>
-                <button type="button" disabled={isPending} onClick={() => editGroup(group)}><Edit3 size={14} /></button>
+                <button type="button" aria-label={`Edit ${group.name}`} disabled={isPending} onClick={() => editGroup(group)}><Edit3 size={14} /></button>
                 <a href={`/dashboard/limitless/campaigns?group=${encodeURIComponent(group.id)}`}>Use group</a>
-                <button type="button" disabled={isPending} onClick={() => deleteGroup(group.id)}><Trash2 size={14} /></button>
+                <button type="button" aria-label={`Delete ${group.name}`} disabled={isPending} onClick={() => deleteGroup(group.id)}><Trash2 size={14} /></button>
               </div>
             </article>
           );})}
@@ -456,8 +470,10 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
         .lead-filter-bar>label{display:flex;align-items:center;gap:7px;min-width:0;min-height:40px;padding:0 10px;border:1px solid var(--fk-border);border-radius:10px;background:var(--fk-surface-raised);color:var(--fk-text-muted)}
         .lead-filter-bar input,.lead-filter-bar select{min-width:0;width:100%;height:38px;border:0!important;outline:0!important;background:transparent!important;color:var(--fk-text)!important;box-shadow:none!important;font:inherit;font-size:11px}
         .lead-filter-bar select{cursor:pointer}
-        .lead-filter-bar select option{color:#111827}
+        .lead-filter-bar select option{background:var(--fk-surface-overlay);color:var(--fk-text)}
         .lead-compact-list{display:grid;gap:8px;margin-top:14px}
+        .lead-record-shell{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start}
+        .lead-record-shell>.lead-check{margin-top:12px}
         .lead-compact-card{overflow:hidden;border:1px solid var(--fk-border);border-radius:13px;background:var(--fk-surface-raised);transition:border-color 150ms var(--fk-ease),background 150ms var(--fk-ease)}
         .lead-compact-card[open]{border-color:var(--fk-border-strong);background:var(--fk-surface-hover)}
         .lead-compact-card summary{list-style:none}
@@ -477,11 +493,12 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
         .lead-card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
         .lead-card-actions a{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 12px;border:1px solid var(--fk-border-strong);border-radius:10px;background:var(--fk-surface-raised);color:var(--fk-text-secondary);font-size:11px;font-weight:600;text-decoration:none}
         .lead-card-actions a:hover{background:var(--fk-surface-hover);color:var(--fk-text)}
+        .lead-disabled-action{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 12px;border:1px solid var(--fk-border);border-radius:10px;background:var(--fk-surface-raised);color:var(--fk-text-muted);font-size:11px;font-weight:600;opacity:.65}
         .lead-edit-grid,.campaign-group-builder{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
         .lead-edit-grid label,.campaign-group-builder label{color:var(--fk-text-muted);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
         .lead-edit-grid input,.lead-edit-grid select,.lead-edit-grid textarea,.campaign-group-builder input,.campaign-group-builder select,.campaign-group-builder textarea{margin-top:7px;width:100%;box-sizing:border-box;border:1px solid var(--fk-border-strong)!important;border-radius:10px;background:var(--fk-surface-raised)!important;color:var(--fk-text)!important;padding:10px 11px;font:inherit;font-size:11px;text-transform:none;letter-spacing:0}
         .lead-edit-grid textarea,.campaign-group-builder textarea{resize:vertical}
-        .campaign-group-builder select option{color:#111827}
+        .campaign-group-builder select option{background:var(--fk-surface-overlay);color:var(--fk-text)}
         .wide{grid-column:1/-1}
         .lead-toggle{display:flex;align-items:center;gap:9px;text-transform:none!important;letter-spacing:0!important}
         .lead-toggle input{width:auto;margin:0}
