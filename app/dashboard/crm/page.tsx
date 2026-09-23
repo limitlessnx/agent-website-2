@@ -55,15 +55,17 @@ export default async function CrmPage() {
   const customerRows = customers || [];
   const leadRows = leads || [];
   const activeLeads = leadRows.filter((lead) => {
-    const current = state(lead.stage || lead.status);
-    return !["closed", "lost", "converted", "won", "customer"].some((item) => current.includes(item));
+    const lifecycle = [state(lead.stage), state(lead.status)].join(" ");
+    return !["closed", "lost", "converted", "won", "customer"].some((item) => lifecycle.includes(item));
   });
-  const qualified = leadRows.filter((lead) =>
-    ["qualified", "hot", "inspection", "proposal"].some((item) => state(lead.stage || lead.status).includes(item)),
-  );
+  const qualified = leadRows.filter((lead) => {
+    const lifecycle = [state(lead.stage), state(lead.status)].join(" ");
+    const terminal = ["lost", "cold"].some((item) => lifecycle.includes(item));
+    return !terminal && ["qualified", "hot", "inspection", "proposal"].some((item) => lifecycle.includes(item));
+  });
   const converted = leadRows.filter((lead) => {
-    const current = state(lead.stage || lead.status);
-    return ["converted", "won", "customer"].some((item) => current.includes(item));
+    const lifecycle = [state(lead.stage), state(lead.status)].join(" ");
+    return ["converted", "won", "customer"].some((item) => lifecycle.includes(item));
   });
   const conversionRate = leadRows.length ? Math.round((converted.length / leadRows.length) * 100) : 0;
 
@@ -133,6 +135,7 @@ export default async function CrmPage() {
           <div className={styles.list}>
             {leadRows.map((lead) => {
               const current = lead.stage || lead.status || "new";
+              const toneState = [lead.stage, lead.status].filter(Boolean).join(" ");
               return (
                 <div key={lead.id} className={styles.row}>
                   <div className={styles.rowAvatar}>{clean(lead.title).charAt(0).toUpperCase() || "L"}</div>
@@ -140,7 +143,7 @@ export default async function CrmPage() {
                     <strong>{lead.title || "Untitled lead"}</strong>
                     <span>{lead.source || "Unknown source"} · {formatDate(lead.created_at)}</span>
                   </div>
-                  <span className={[styles.status, stageTone(current)].join(" ")}>{clean(current).replaceAll("_", " ") || "new"}</span>
+                  <span className={[styles.status, stageTone(toneState)].join(" ")}>{clean(current).replaceAll("_", " ") || "new"}</span>
                 </div>
               );
             })}
