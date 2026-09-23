@@ -33,18 +33,18 @@ export default function ReferenceFluxHeroPhase1() {
       <div className="relative z-10 mx-auto grid min-h-[85vh] max-w-7xl grid-cols-1 items-center gap-12 px-6 pb-32 pt-24 lg:grid-cols-12 lg:gap-8 lg:pb-40 lg:pt-32">
         <div className="z-20 flex flex-col gap-6 lg:col-span-5 lg:gap-8">
           <motion.div initial={reduceMotion ? false : {opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{duration:.35,ease:"easeOut"}} className="flex items-start">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 backdrop-blur-md"><Sparkles className="h-4 w-4 text-purple-400" strokeWidth={1.5}/><span className="text-xs font-medium uppercase tracking-wide text-purple-300">AI-powered business operations</span></div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 backdrop-blur-md"><Sparkles className="h-4 w-4 text-purple-400" strokeWidth={1.5}/><span className="text-xs font-medium uppercase tracking-wide text-purple-300">AI automation for everyday business work</span></div>
           </motion.div>
 
           <h1 className="text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl lg:text-7xl">
-            {["Grow your organization", "without growing", "the workload."].map((line,index)=><div key={line} className="overflow-hidden pb-1"><motion.span className={index===2?"block bg-gradient-to-r from-orange-300 via-pink-400 to-purple-400 bg-clip-text text-transparent":"block"} initial={reduceMotion?false:{y:"110%"}} animate={{y:0}} transition={{duration:.62,delay:reduceMotion?0:.04+index*.07,ease:[.22,1,.36,1]}}>{line}</motion.span></div>)}
+            {["We automate", "the repetitive work", "in your business."].map((line,index)=><div key={line} className="overflow-hidden pb-1"><motion.span className={index===2?"block bg-gradient-to-r from-orange-300 via-pink-400 to-purple-400 bg-clip-text text-transparent":"block"} initial={reduceMotion?false:{y:"110%"}} animate={{y:0}} transition={{duration:.62,delay:reduceMotion?0:.04+index*.07,ease:[.22,1,.36,1]}}>{line}</motion.span></div>)}
           </h1>
 
-          <motion.p initial={reduceMotion?false:{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.45,delay:reduceMotion?0:.14,ease:"easeOut"}} className="max-w-md text-lg font-normal leading-relaxed text-neutral-400">Fluxknight builds AI systems that handle customer conversations and the work that follows, from enquiry and support to follow-up, scheduling, CRM updates, and human handoff.</motion.p>
+          <motion.p initial={reduceMotion?false:{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.45,delay:reduceMotion?0:.14,ease:"easeOut"}} className="max-w-md text-lg font-normal leading-relaxed text-neutral-400">From customer enquiries and sales to orders, follow-up, bookings, support and record updates, Fluxknight helps your team spend less time doing things manually.</motion.p>
 
           <motion.div initial={reduceMotion?false:{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.45,delay:reduceMotion?0:.2,ease:"easeOut"}} className="flex flex-col items-center gap-4 pt-2 sm:flex-row">
             <Link href="/evaluation" className="group flex w-full items-center justify-center gap-2 rounded-full bg-neutral-100 px-6 py-3 text-sm font-medium text-neutral-950 transition-all duration-300 hover:scale-[1.02] hover:bg-white hover:shadow-[0_4px_20px_rgba(255,255,255,.15)] sm:w-auto">Evaluate My Business <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></Link>
-            <Link href="#services" className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white backdrop-blur-md transition-all duration-300 hover:bg-white/10 sm:w-auto">See how it works <PlayCircle className="h-[18px] w-[18px] text-neutral-300"/></Link>
+            <Link href="#services" className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white backdrop-blur-md transition-all duration-300 hover:bg-white/10 sm:w-auto">See what we can automate <PlayCircle className="h-[18px] w-[18px] text-neutral-300"/></Link>
           </motion.div>
         </div>
 

@@ -55,5 +55,38 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
 
   if (!industry) notFound();
 
-  return <IndustryDetailPage industry={industry} />;
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://fluxknight.space",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Industries",
+        item: "https://fluxknight.space/industries",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: industry.name,
+        item: `https://fluxknight.space/industries/${industry.slug}`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <IndustryDetailPage industry={industry} />
+    </>
+  );
 }

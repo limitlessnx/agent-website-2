@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import FluxLogo from "@/components/FluxLogo";
 import styles from "./AuthExperience.module.css";
 
 type AuthExperienceProps = {
@@ -15,18 +16,25 @@ export default function AuthExperience({ mode, children }: AuthExperienceProps) 
       <div className={styles.ambient} aria-hidden="true">
         <span className={styles.glowTop} />
         <span className={styles.glowSide} />
+        <span className={styles.glowWarm} />
+        <span className={styles.grid} />
       </div>
 
-      <section className={`${styles.card} ${isSignup ? styles.signupCard : ""}`} aria-label={isSignup ? "Create Fluxknight workspace" : "Fluxknight sign in"}>
+      <div className={styles.shell}>
         <Link href="/" className={styles.brand} aria-label="Fluxknight home">
-          <span className={styles.mark} aria-hidden="true"><i /><i /><i /></span>
-          <span>FLUXKNIGHT</span>
+          <FluxLogo />
         </Link>
 
-        <div className={styles.formWrap}>{children}</div>
-      </section>
+        <section
+          className={`${styles.card} ${isSignup ? styles.signupCard : ""}`}
+          aria-label={isSignup ? "Create Fluxknight account" : "Fluxknight sign in"}
+        >
+          <div className={styles.cardAccent} aria-hidden="true" />
+          <div className={styles.formWrap}>{children}</div>
+        </section>
 
-      <p className={styles.status}><span /> Secure client workspace</p>
+        <p className={styles.status}><span /> Secure Fluxknight workspace</p>
+      </div>
     </main>
   );
 }

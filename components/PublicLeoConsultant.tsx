@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
+import { adaptPublicLeoSilenceMs, createPublicLeoVoiceEpoch, isCurrentPublicLeoEpoch, nextPublicLeoVoiceState, PUBLIC_LEO_SILENCE_DEFAULT_MS, type PublicLeoVoiceEpoch, type PublicLeoVoiceState } from "@/lib/leo-public-voice-state";
+import { publicLeoVoiceToolOutput } from "@/lib/leo-public-voice-output";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 type LeadProfile = { name: string; email: string; phone?: string; organization?: string; leadId?: string };
@@ -11,6 +13,8 @@ type RealtimeEvent = {
   name?: string;
   call_id?: string;
   arguments?: string;
+  delta?: string;
+  response?: { id?: string; status?: string };
   item?: { type?: string; call_id?: string; name?: string; arguments?: string };
 };
 
@@ -19,8 +23,18 @@ const firstMessage: ChatMessage = {
   content: "Hi, I’m Leo, Fluxknight’s support and business evaluation assistant. I’ll get a few basic details first so I can assist you properly. What’s your full name?",
 };
 
-function localLeoReply(input: string, count: number) {
+function localLeoReply(input: string, count: number, userTurns: number) {
   const lower = input.toLowerCase();
+  if (userTurns === 1) {
+    return "Thanks. What’s the best email address to use for this conversation?";
+  }
+  if (userTurns === 2) {
+    const normalizedEmail = input.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return "That email doesn’t look quite right. Please type it again so I don’t use the wrong address.";
+    }
+    return "Thanks. How can I help with your business today?";
+  }
   if (/restaurant|food|hotel|hospitality/.test(lower)) {
     return "Fluxknight can help answer common customer questions, handle booking or simple order requests, send reminders, follow up when a customer goes quiet, and bring in a staff member when needed. What part of dealing with customers takes the most time for your team?";
   }
@@ -64,14 +78,167 @@ export default function PublicLeoConsultant() {
   const [isThinking, setIsThinking] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [callError, setCallError] = useState("");
+  const [networkHealth, setNetworkHealth] = useState<"stable" | "unstable" | "recovering">("stable");
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const messageCount = useRef(0);
+  const voiceStateRef = useRef<PublicLeoVoiceState>("idle");
+  const voiceEpochRef = useRef<PublicLeoVoiceEpoch>(createPublicLeoVoiceEpoch());
+  const toolAbortControllersRef = useRef(new Set<AbortController>());
+  const processedToolCallIdsRef = useRef(new Set<string>());
+  const pendingVoiceToolCountRef = useRef(0);
+  const awaitingToolContinuationRef = useRef(false);
+  const toolResponseDoneRef = useRef(false);
+  const toolContinuationIssuedRef = useRef(false);
+  const activeResponseIdRef = useRef<string | null>(null);
+  const assistantAudioActiveRef = useRef(false);
+  const responseHadAudioRef = useRef(false);
+  const adaptiveSilenceMsRef = useRef(PUBLIC_LEO_SILENCE_DEFAULT_MS);
+  const lastSpeechStoppedAtRef = useRef(0);
+  const cleanEndpointTurnsRef = useRef(0);
+  const connectionGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const networkStatsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function transitionVoice(to: PublicLeoVoiceState) {
+    voiceStateRef.current = nextPublicLeoVoiceState(voiceStateRef.current, to);
+  }
+
+  function abortPendingVoiceTools() {
+    for (const controller of toolAbortControllersRef.current) controller.abort();
+    toolAbortControllersRef.current.clear();
+  }
+
+  function cleanupNetworkMonitoring() {
+    if (connectionGraceTimerRef.current) clearTimeout(connectionGraceTimerRef.current);
+    if (networkStatsTimerRef.current) clearInterval(networkStatsTimerRef.current);
+    connectionGraceTimerRef.current = null;
+    networkStatsTimerRef.current = null;
+  }
+
+  function enterConnectionDegraded() {
+    const current = voiceStateRef.current;
+    if (current !== "idle" && current !== "ending" && current !== "degraded") {
+      try { transitionVoice("degraded"); } catch { voiceStateRef.current = "degraded"; }
+    }
+  }
+
+  function monitorPeerConnection(peer: RTCPeerConnection) {
+    cleanupNetworkMonitoring();
+
+    const handleConnectionChange = () => {
+      if (peerRef.current !== peer) return;
+      const state = peer.connectionState;
+      if (state === "connected") {
+        if (connectionGraceTimerRef.current) clearTimeout(connectionGraceTimerRef.current);
+        connectionGraceTimerRef.current = null;
+        setNetworkHealth("stable");
+        if (voiceStateRef.current === "degraded" || voiceStateRef.current === "reconnecting") {
+          try { transitionVoice("listening"); } catch { voiceStateRef.current = "listening"; }
+        }
+        return;
+      }
+      if (state === "disconnected" || state === "failed") {
+        setNetworkHealth("recovering");
+        enterConnectionDegraded();
+        invalidateVoiceGeneration();
+        if (!connectionGraceTimerRef.current) {
+          connectionGraceTimerRef.current = setTimeout(() => {
+            if (peerRef.current !== peer) return;
+            if (peer.connectionState === "connected") return;
+            setCallError("The connection dropped. Tap Talk to Leo to reconnect.");
+            stopCall();
+          }, 7000);
+        }
+      }
+    };
+
+    peer.addEventListener("connectionstatechange", handleConnectionChange);
+    peer.addEventListener("iceconnectionstatechange", handleConnectionChange);
+
+    networkStatsTimerRef.current = setInterval(() => {
+      if (peerRef.current !== peer || peer.connectionState !== "connected") return;
+      void peer.getStats().then((reports) => {
+        if (peerRef.current !== peer) return;
+        let rtt = 0;
+        let jitter = 0;
+        reports.forEach((report) => {
+          if (report.type === "candidate-pair" && report.state === "succeeded" && typeof report.currentRoundTripTime === "number") {
+            rtt = Math.max(rtt, report.currentRoundTripTime);
+          }
+          if (report.type === "inbound-rtp" && report.kind === "audio" && typeof report.jitter === "number") {
+            jitter = Math.max(jitter, report.jitter);
+          }
+        });
+        setNetworkHealth(rtt > 0.6 || jitter > 0.08 ? "unstable" : "stable");
+      }).catch(() => {});
+    }, 3000);
+  }
+
+  function invalidateVoiceGeneration(newUserTurn = false) {
+    const current = voiceEpochRef.current;
+    voiceEpochRef.current = {
+      callEpoch: current.callEpoch,
+      turnId: current.turnId + (newUserTurn ? 1 : 0),
+      generationId: current.generationId + 1,
+    };
+    abortPendingVoiceTools();
+    resetVoiceToolContinuation();
+  }
+
+  function resetVoiceToolContinuation() {
+    pendingVoiceToolCountRef.current = 0;
+    awaitingToolContinuationRef.current = false;
+    toolResponseDoneRef.current = false;
+    toolContinuationIssuedRef.current = false;
+  }
+
+  function maybeContinueAfterVoiceTools() {
+    if (!awaitingToolContinuationRef.current) return;
+    if (!toolResponseDoneRef.current) return;
+    if (pendingVoiceToolCountRef.current !== 0) return;
+    if (toolContinuationIssuedRef.current) return;
+
+    toolContinuationIssuedRef.current = true;
+    awaitingToolContinuationRef.current = false;
+    toolResponseDoneRef.current = false;
+    const current = voiceEpochRef.current;
+    voiceEpochRef.current = { ...current, generationId: current.generationId + 1 };
+    if (voiceStateRef.current === "tool_pending") transitionVoice("generating");
+    sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
+  }
+
+  function updateAdaptiveEndpoint(signal: "premature_endpoint" | "clean_turn") {
+    const next = adaptPublicLeoSilenceMs(adaptiveSilenceMsRef.current, signal);
+    if (next === adaptiveSilenceMsRef.current) return;
+    adaptiveSilenceMsRef.current = next;
+    try {
+      sendRealtimeEvent({
+        type: "session.update",
+        session: {
+          type: "realtime",
+          audio: {
+            input: {
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: next,
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+          },
+        },
+      });
+    } catch {}
+  }
 
   useEffect(() => {
     return () => {
+      abortPendingVoiceTools();
+      cleanupNetworkMonitoring();
       dataChannelRef.current?.close();
       peerRef.current?.close();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -129,7 +296,8 @@ export default function PublicLeoConsultant() {
       setMessages((current) => [...current, { role: "assistant", content: reply }]);
     } catch {
       messageCount.current += 1;
-      setMessages((current) => [...current, { role: "assistant", content: localLeoReply(content, messageCount.current) }]);
+      const userTurns = nextMessages.filter((message) => message.role === "user").length;
+      setMessages((current) => [...current, { role: "assistant", content: localLeoReply(content, messageCount.current, userTurns) }]);
     } finally {
       setIsThinking(false);
     }
@@ -146,6 +314,8 @@ export default function PublicLeoConsultant() {
     const toolName = event.name || event.item?.name;
     const rawArguments = event.arguments || event.item?.arguments || "{}";
     if (!callId) return;
+    if (processedToolCallIdsRef.current.has(callId)) return;
+    processedToolCallIdsRef.current.add(callId);
 
     if (toolName === "leo_end_call") {
       stopCall();
@@ -154,42 +324,127 @@ export default function PublicLeoConsultant() {
 
     if (toolName !== "leo_execute_tool") return;
 
+    awaitingToolContinuationRef.current = true;
+    toolContinuationIssuedRef.current = false;
+    pendingVoiceToolCountRef.current += 1;
+    if (voiceStateRef.current === "generating") transitionVoice("tool_pending");
+
     let payload: { tool_key?: string; arguments?: Record<string, unknown>; confirmed?: boolean } = {};
     try { payload = JSON.parse(rawArguments); } catch { payload = {}; }
+
+    const epoch = { ...voiceEpochRef.current };
+    const controller = new AbortController();
+    toolAbortControllersRef.current.add(controller);
 
     try {
       const response = await fetch("/api/leo/public/tool", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           channel: "voice",
           sessionId: sessionId || undefined,
           toolKey: payload.tool_key,
           arguments: payload.arguments || {},
           confirmed: payload.confirmed === true,
+          voiceTurnId: voiceEpochRef.current.turnId,
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (response.ok && payload.tool_key === "leo.public.lead.capture") {
+      if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
+      if (response.ok && data.leadCaptured === true && payload.tool_key === "leo.public.lead.capture") {
         const captured = asLeadProfile(payload.arguments, data.leadId);
         if (captured) setLead(captured);
       }
-      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(data) } });
-      sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
+      const modelOutput = publicLeoVoiceToolOutput(String(payload.tool_key || ""), data, response.ok);
+      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(modelOutput) } });
     } catch (error) {
+      if (controller.signal.aborted || !isCurrentPublicLeoEpoch(epoch, voiceEpochRef.current)) return;
       const output = { ok: false, error: error instanceof Error ? error.message : "Tool execution failed." };
       try {
-        sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(output) } });
-        sendRealtimeEvent({ type: "response.create", response: { output_modalities: ["audio"] } });
+        const modelOutput = publicLeoVoiceToolOutput(String(payload.tool_key || ""), output, false);
+        sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify(modelOutput) } });
       } catch {
         setCallError(output.error);
       }
+    } finally {
+      toolAbortControllersRef.current.delete(controller);
+      pendingVoiceToolCountRef.current = Math.max(0, pendingVoiceToolCountRef.current - 1);
+      maybeContinueAfterVoiceTools();
     }
   }
 
   function handleRealtimeMessage(raw: string) {
     let event: RealtimeEvent;
     try { event = JSON.parse(raw) as RealtimeEvent; } catch { return; }
+    if (event.type === "input_audio_buffer.speech_started") {
+      const priorVoiceState = voiceStateRef.current;
+      const sinceLastStop = lastSpeechStoppedAtRef.current ? Date.now() - lastSpeechStoppedAtRef.current : Number.POSITIVE_INFINITY;
+      if (
+        (priorVoiceState === "endpointing" || priorVoiceState === "generating") &&
+        sinceLastStop < 1200 &&
+        !assistantAudioActiveRef.current
+      ) {
+        cleanEndpointTurnsRef.current = 0;
+        updateAdaptiveEndpoint("premature_endpoint");
+      }
+      if (assistantAudioActiveRef.current || voiceStateRef.current === "assistant_speaking") {
+        try { sendRealtimeEvent({ type: "output_audio_buffer.clear" }); } catch {}
+      }
+      invalidateVoiceGeneration(true);
+      assistantAudioActiveRef.current = false;
+      activeResponseIdRef.current = null;
+      const current = voiceStateRef.current;
+      if (current === "assistant_speaking" || current === "generating" || current === "tool_pending") {
+        transitionVoice("interrupting");
+        transitionVoice("user_speaking");
+      } else if (current === "listening" || current === "endpointing") {
+        transitionVoice("user_speaking");
+      }
+      return;
+    }
+    if (event.type === "input_audio_buffer.speech_stopped") {
+      lastSpeechStoppedAtRef.current = Date.now();
+      if (voiceStateRef.current === "user_speaking") transitionVoice("endpointing");
+      return;
+    }
+    if (event.type === "response.created") {
+      responseHadAudioRef.current = false;
+      activeResponseIdRef.current = event.response?.id || null;
+      if (voiceStateRef.current === "listening" || voiceStateRef.current === "endpointing") {
+        transitionVoice("generating");
+      }
+      return;
+    }
+    if (event.type === "response.output_audio.delta") {
+      responseHadAudioRef.current = true;
+      assistantAudioActiveRef.current = true;
+      if (voiceStateRef.current === "generating") transitionVoice("assistant_speaking");
+      return;
+    }
+    if (event.type === "response.output_audio.done") {
+      assistantAudioActiveRef.current = false;
+      return;
+    }
+    if (event.type === "response.done") {
+      if (responseHadAudioRef.current && event.response?.status === "completed") {
+        cleanEndpointTurnsRef.current += 1;
+        if (cleanEndpointTurnsRef.current >= 3) {
+          cleanEndpointTurnsRef.current = 0;
+          updateAdaptiveEndpoint("clean_turn");
+        }
+      }
+      activeResponseIdRef.current = null;
+      assistantAudioActiveRef.current = false;
+      responseHadAudioRef.current = false;
+      if (awaitingToolContinuationRef.current) {
+        toolResponseDoneRef.current = true;
+        maybeContinueAfterVoiceTools();
+      } else if (voiceStateRef.current === "assistant_speaking" || voiceStateRef.current === "generating") {
+        transitionVoice("listening");
+      }
+      return;
+    }
     if (event.type === "response.function_call_arguments.done" || (event.type === "response.output_item.done" && event.item?.type === "function_call")) {
       void executeVoiceTool(event);
       return;
@@ -209,9 +464,23 @@ export default function PublicLeoConsultant() {
     }
 
     try {
+      abortPendingVoiceTools();
+      processedToolCallIdsRef.current.clear();
+      resetVoiceToolContinuation();
+      activeResponseIdRef.current = null;
+      assistantAudioActiveRef.current = false;
+      responseHadAudioRef.current = false;
+      adaptiveSilenceMsRef.current = PUBLIC_LEO_SILENCE_DEFAULT_MS;
+      lastSpeechStoppedAtRef.current = 0;
+      cleanEndpointTurnsRef.current = 0;
+      voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
+      voiceStateRef.current = "idle";
+      transitionVoice("connecting");
       setIsCalling(true);
+      setNetworkHealth("stable");
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
+      monitorPeerConnection(peer);
       const audio = new Audio();
       audio.autoplay = true;
       audio.setAttribute("aria-label", "Leo voice response");
@@ -231,11 +500,13 @@ export default function PublicLeoConsultant() {
       dataChannel.addEventListener("error", () => setCallError("Leo's voice connection encountered an error."));
       dataChannel.addEventListener("open", () => {
         try {
+          transitionVoice("listening");
+          transitionVoice("generating");
           sendRealtimeEvent({
             type: "response.create",
             response: {
               output_modalities: ["audio"],
-              instructions: "You are Leo, Fluxknight's own support and business evaluation assistant. Introduce yourself clearly. Then collect only the visitor's full name and email address, one at a time. Do not ask for phone, WhatsApp, organization, or business name as part of the opening. After name and email are collected, ask how you can help and begin understanding their business problem. Explain Fluxknight in plain English using practical examples such as replying to customers, follow-up, reminders, bookings, simple orders, answering common questions, and handing over to staff. Avoid technical words like workflows, CRM architecture, orchestration, nodes, pipelines or webhooks unless the visitor asks for technical detail. If the user clearly asks to end the call, briefly acknowledge and use leo_end_call. Keep replies short, clear and natural.",
+              instructions: "Introduce yourself as Leo, Fluxknight's support and business evaluation assistant. Ask for the visitor's full name, then email, one question at a time. For voice email collection, never assume transcription is correct: stage the email candidate first, read the exact normalized email back to the visitor, ask whether it is correct, wait for their next spoken turn, and only mark email_confirmed=true after an explicit yes or equivalent confirmation. If they correct it, replace the candidate and confirm again. After that, guide a natural business evaluation even when the visitor does not know what they need. Diagnose where Fluxknight could improve customer response, sales support, follow-up, reminders, bookings, customer relationships or human handoff. Explain plan fit honestly: Basic is support/qualification/handoff only; Plus adds same-channel follow-up and reminders; Business adds team controls, cross-channel context and voice when configured; Business+ adds deeper customer/operations history and advanced automation. Explain the 14-day Basic trial accurately and never imply advanced reminders or voice are included. Never mention tools, function calls, lead capture, databases, workflows, background jobs, processing, saving context, APIs, or internal system status. Never ask the visitor to wait for internal work. Perform internal actions silently and continue the customer conversation naturally. Save meaningful evaluation updates and offer a human follow-up when appropriate. Do not require phone or business name. Keep replies short, clear and natural.",
             },
           });
         } catch {
@@ -265,6 +536,24 @@ export default function PublicLeoConsultant() {
   }
 
   function stopCall() {
+    abortPendingVoiceTools();
+    cleanupNetworkMonitoring();
+    processedToolCallIdsRef.current.clear();
+    resetVoiceToolContinuation();
+    activeResponseIdRef.current = null;
+    assistantAudioActiveRef.current = false;
+    responseHadAudioRef.current = false;
+    adaptiveSilenceMsRef.current = PUBLIC_LEO_SILENCE_DEFAULT_MS;
+    lastSpeechStoppedAtRef.current = 0;
+    cleanEndpointTurnsRef.current = 0;
+    voiceEpochRef.current = createPublicLeoVoiceEpoch(voiceEpochRef.current.callEpoch + 1);
+    if (voiceStateRef.current !== "idle") {
+      try {
+        transitionVoice("ending");
+      } catch {
+        voiceStateRef.current = "ending";
+      }
+    }
     dataChannelRef.current?.close();
     dataChannelRef.current = null;
     peerRef.current?.close();
@@ -272,6 +561,7 @@ export default function PublicLeoConsultant() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (audioRef.current) audioRef.current.srcObject = null;
+    voiceStateRef.current = "idle";
     setIsCalling(false);
   }
 
@@ -293,7 +583,7 @@ export default function PublicLeoConsultant() {
               </div>
             ))}
             {isThinking ? <div className="public-leo-message assistant thinking"><span><Bot size={14} /></span><p className="public-leo-dots"><i /><i /><i /></p></div> : null}
-            {isCalling ? <div className="public-leo-call-status"><span className="public-leo-live-dot" /> Leo is listening. Speak naturally.</div> : null}
+            {isCalling ? <div className="public-leo-call-status"><span className="public-leo-live-dot" /> {networkHealth === "stable" ? "Leo is listening. Speak naturally." : networkHealth === "recovering" ? "Connection interrupted. Trying to recover…" : "Connection is unstable."}</div> : null}
             {callError ? <div className="public-leo-call-error">{callError}</div> : null}
           </div>
 

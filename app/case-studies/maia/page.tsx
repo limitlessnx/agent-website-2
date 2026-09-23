@@ -25,9 +25,34 @@ const description = "See how Maia connects real-estate marketing, customer conve
 
 
 export const metadata: Metadata = {
-  title: "Maia Real Estate Operating System | Fluxknight",
+  title: "Maia Real Estate Operating System",
   description,
   alternates: { canonical: "/case-studies/maia" },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: "https://fluxknight.space",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Case Studies",
+      item: "https://fluxknight.space/case-studies",
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: "Maia for Real Estate",
+      item: "https://fluxknight.space/case-studies/maia",
+    },
+  ],
 };
 
 
@@ -57,6 +82,10 @@ function ChapterHeading({
 export default function MaiaCaseStudyPage() {
   return (
     <main className={styles.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <section className={styles.hero}>
         <div className={styles.heroGlow} />
         <div className={styles.shell}>

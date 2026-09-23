@@ -9,9 +9,9 @@ import {
 import styles from "./MaiaCaseStudyTeaser.module.css";
 
 const outcomes = [
-  { icon: MessageSquareText, label: "24/7 replies" },
-  { icon: CheckCircle2, label: "Faster follow-up" },
-  { icon: CalendarCheck2, label: "Booked inspections" },
+  { icon: MessageSquareText, label: "Replies day and night" },
+  { icon: CheckCircle2, label: "Follows up with buyers" },
+  { icon: CalendarCheck2, label: "Books inspections" },
 ];
 
 function WhatsAppMark() {
@@ -35,9 +35,9 @@ export default function MaiaCaseStudyTeaser() {
         </div>
 
         <div className={styles.content}>
-          <span className={styles.eyebrow}>Real estate · AI sales</span>
-          <h2 id="maia-case-study-title">From enquiry to <span>booked inspection</span></h2>
-          <p>How Maia helped automate lead capture, follow-up, qualification and inspection booking for Limitless Realty.</p>
+          <span className={styles.eyebrow}>A real example · Real estate</span>
+          <h2 id="maia-case-study-title">See how Fluxknight works in <span>a real business.</span></h2>
+          <p>Maia helps Limitless Realty reply to property enquiries, collect buyer details, follow up with interested buyers and book inspections.</p>
 
           <div className={styles.outcomes} aria-label="Maia case study outcomes">
             {outcomes.map(({ icon: Icon, label }) => (
@@ -51,7 +51,7 @@ export default function MaiaCaseStudyTeaser() {
           <div className={styles.attribution}>Limitless Realty <span>×</span> Fluxknight</div>
 
           <Link className={styles.primary} href="/case-studies/maia" data-cta="maia-case-study-home">
-            View case study <ArrowRight size={19} />
+            See the Maia example <ArrowRight size={19} />
           </Link>
         </div>
       </article>
