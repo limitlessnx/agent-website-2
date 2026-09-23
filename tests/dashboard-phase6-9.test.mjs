@@ -141,3 +141,21 @@ test("phase 9 CRM remains tenant-scoped and responsive", () => {
   assert.match(css, /var\(--fk-surface\)/);
   assert.match(css, /var\(--fk-text\)/);
 });
+
+
+test("phase 9 Lead CRM uses semantic theme tokens and responsive controls", () => {
+  const leads = read("components/admin/LeadsCrm.tsx");
+
+  assert.match(leads, /aria-label="Search leads"/);
+  assert.match(leads, /aria-label="Filter leads by status"/);
+  assert.match(leads, /aria-label="Filter leads by score"/);
+  assert.match(leads, /var\(--fk-surface\)/);
+  assert.match(leads, /var\(--fk-surface-raised\)/);
+  assert.match(leads, /var\(--fk-text\)/);
+  assert.match(leads, /var\(--fk-brand-soft\)/);
+  assert.match(leads, /@media\(max-width:1080px\)/);
+  assert.match(leads, /@media\(max-width:780px\)/);
+  assert.match(leads, /@media\(max-width:430px\)/);
+  assert.match(leads, /prefers-reduced-motion:reduce/);
+  assert.doesNotMatch(leads, /background:#08050e|color:#e9ddff|rgba\(173,137,236/);
+});
