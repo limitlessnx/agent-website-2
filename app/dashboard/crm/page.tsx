@@ -29,9 +29,9 @@ function formatDate(value: unknown) {
 
 function stageTone(value: unknown) {
   const current = state(value);
-  if (["converted", "closed", "active"].some((item) => current.includes(item))) return styles.good;
-  if (["qualified", "hot", "inspection", "proposal"].some((item) => current.includes(item))) return styles.priority;
   if (["lost", "cold", "inactive"].some((item) => current.includes(item))) return styles.muted;
+  if (["converted", "won", "customer", "closed", "active"].some((item) => current.includes(item))) return styles.good;
+  if (["qualified", "hot", "inspection", "proposal"].some((item) => current.includes(item))) return styles.priority;
   return styles.neutral;
 }
 
@@ -54,7 +54,10 @@ export default async function CrmPage() {
 
   const customerRows = customers || [];
   const leadRows = leads || [];
-  const activeLeads = leadRows.filter((lead) => !["closed", "lost", "converted"].includes(state(lead.status)));
+  const activeLeads = leadRows.filter((lead) => {
+    const current = state(lead.stage || lead.status);
+    return !["closed", "lost", "converted", "won", "customer"].some((item) => current.includes(item));
+  });
   const qualified = leadRows.filter((lead) =>
     ["qualified", "hot", "inspection", "proposal"].some((item) => state(lead.stage || lead.status).includes(item)),
   );
