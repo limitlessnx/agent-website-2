@@ -174,6 +174,10 @@ test("phase 9 Lead CRM preserves actions and accessible interaction semantics", 
   assert.match(leads, /role="status" aria-live="polite"/);
   assert.match(leads, /role="alert"/);
   assert.match(leads, /aria-pressed=\{selectedLead\}/);
+  assert.match(page, /aria-label="Lead name"/);
+  assert.match(page, /aria-label="WhatsApp phone"/);
+  assert.match(page, /aria-label="Lead status"/);
+  assert.match(page, /aria-label="Lead score"/);
   assert.match(leads, /aria-pressed=\{groupType === "manual"\}/);
   assert.match(leads, /aria-label=\{\`Edit \$\{group\.name\}\`\}/);
   assert.match(leads, /aria-label=\{\`Delete \$\{group\.name\}\`\}/);
@@ -184,5 +188,6 @@ test("phase 9 Lead CRM preserves actions and accessible interaction semantics", 
   assert.match(pageCss, /@media\(max-width:900px\)/);
   assert.match(pageCss, /@media\(max-width:430px\)/);
   assert.match(crm, /\["converted", "won", "customer"\]/);
+  assert.match(crm, /\["closed", "lost", "converted", "won", "customer"\]/);
   assert.doesNotMatch(crm, /\["converted", "closed"\]/);
 });
