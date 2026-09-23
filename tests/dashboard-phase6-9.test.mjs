@@ -159,3 +159,30 @@ test("phase 9 Lead CRM uses semantic theme tokens and responsive controls", () =
   assert.match(leads, /prefers-reduced-motion:reduce/);
   assert.doesNotMatch(leads, /background:#08050e|color:#e9ddff|rgba\(173,137,236/);
 });
+
+
+test("phase 9 Lead CRM preserves actions and accessible interaction semantics", () => {
+  const leads = read("components/admin/LeadsCrm.tsx");
+  const page = read("app/dashboard/limitless/leads/page.tsx");
+  const pageCss = read("app/dashboard/limitless/leads/page.module.css");
+  const crm = read("app/dashboard/crm/page.tsx");
+
+  assert.match(leads, /fetch\(\`\/api\/limitless\/leads\/\$\{encodeURIComponent\(id\)\}\`/);
+  assert.match(leads, /method: "PATCH"/);
+  assert.match(leads, /method: "DELETE"/);
+  assert.match(leads, /fetch\("\/api\/limitless\/campaign-groups"/);
+  assert.match(leads, /role="status" aria-live="polite"/);
+  assert.match(leads, /role="alert"/);
+  assert.match(leads, /aria-pressed=\{selectedLead\}/);
+  assert.match(leads, /aria-pressed=\{groupType === "manual"\}/);
+  assert.match(leads, /aria-label=\{\`Edit \$\{group\.name\}\`\}/);
+  assert.match(leads, /aria-label=\{\`Delete \$\{group\.name\}\`\}/);
+  assert.match(leads, /lead-record-shell/);
+  assert.doesNotMatch(leads, /<summary[^>]*>[\s\S]{0,220}<button[^>]*className="lead-check"/);
+  assert.match(page, /aria-label="Lead CRM shortcuts"/);
+  assert.match(pageCss, /var\(--fk-surface\)/);
+  assert.match(pageCss, /@media\(max-width:900px\)/);
+  assert.match(pageCss, /@media\(max-width:430px\)/);
+  assert.match(crm, /\["converted", "won", "customer"\]/);
+  assert.doesNotMatch(crm, /\["converted", "closed"\]/);
+});
