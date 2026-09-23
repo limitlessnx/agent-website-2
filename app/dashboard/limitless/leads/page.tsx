@@ -19,7 +19,11 @@ export default async function LeadsPage({
     getCampaignAudienceLeads(1000),
     getCampaignGroups(100),
   ]);
-  const hotLeads = leads.filter((lead) => ["hot", "qualified"].includes(String(lead.score || lead.status).toLowerCase())).length;
+  const hotLeads = leads.filter((lead) => {
+    const score = String(lead.score || "").toLowerCase();
+    const status = String(lead.status || "").toLowerCase();
+    return score === "hot" || status === "hot" || status === "qualified";
+  }).length;
   const undocumented = leads.filter((lead) => lead.profile_status === "undocumented").length;
   const imported = Number(params.imported || 0);
   const skipped = Number(params.skipped || 0);
@@ -46,7 +50,7 @@ export default async function LeadsPage({
       </nav>
 
       {saved ? (
-        <section className="admin-panel import-result-panel">
+        <section className="admin-panel import-result-panel" role="status" aria-live="polite">
           <div className="admin-panel-header">
             <div><h2>Lead Saved</h2><p>The contact is ready for campaigns and follow-up.</p></div>
             <span className="admin-status live">Saved</span>
@@ -55,7 +59,7 @@ export default async function LeadsPage({
       ) : null}
 
       {imported || skipped || errors ? (
-        <section className="admin-panel import-result-panel">
+        <section className="admin-panel import-result-panel" role={errors ? "alert" : "status"} aria-live={errors ? "assertive" : "polite"}>
           <div className="admin-panel-header">
             <div><h2>Import Result</h2><p>{imported} saved or updated, {skipped} skipped, {errors} error(s).</p></div>
             <span className={errors ? "admin-status warning" : "admin-status live"}>{errors ? "Review file" : "Saved"}</span>
@@ -72,22 +76,22 @@ export default async function LeadsPage({
           <summary>Add a contact <span className="admin-status warning">{undocumented} undocumented</span></summary>
           <div className={styles.toolBody}>
             <form action={createProgressiveLeadAction} className="admin-form-grid">
-              <input name="name" placeholder="Name" required />
-              <input name="phone" placeholder="WhatsApp phone e.g. +234..." required />
-              <input name="email" type="email" placeholder="Email (optional)" />
-              <input name="budget" placeholder="Budget (optional)" />
-              <input name="location_preference" placeholder="State or location (optional)" />
-              <input name="property_type" placeholder="Property type (optional)" />
-              <input name="property_interest" placeholder="Interested property (optional)" />
-              <input name="purpose" placeholder="Interest or purpose (optional)" />
-              <select name="status" defaultValue="new">
+              <input aria-label="Lead name" name="name" placeholder="Name" required />
+              <input aria-label="WhatsApp phone" name="phone" placeholder="WhatsApp phone e.g. +234..." required />
+              <input aria-label="Email" name="email" type="email" placeholder="Email (optional)" />
+              <input aria-label="Budget" name="budget" placeholder="Budget (optional)" />
+              <input aria-label="State or location" name="location_preference" placeholder="State or location (optional)" />
+              <input aria-label="Property type" name="property_type" placeholder="Property type (optional)" />
+              <input aria-label="Interested property" name="property_interest" placeholder="Interested property (optional)" />
+              <input aria-label="Interest or purpose" name="purpose" placeholder="Interest or purpose (optional)" />
+              <select aria-label="Lead status" name="status" defaultValue="new">
                 <option value="new">new</option>
                 <option value="in_conversation">in conversation</option>
                 <option value="qualified">qualified</option>
                 <option value="cold">cold</option>
                 <option value="opted_out">opted out</option>
               </select>
-              <select name="score" defaultValue="">
+              <select aria-label="Lead score" name="score" defaultValue="">
                 <option value="">unscored</option>
                 <option value="cold">cold</option>
                 <option value="warm">warm</option>
