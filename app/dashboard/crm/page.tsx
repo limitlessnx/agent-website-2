@@ -58,7 +58,10 @@ export default async function CrmPage() {
   const qualified = leadRows.filter((lead) =>
     ["qualified", "hot", "inspection", "proposal"].some((item) => state(lead.stage || lead.status).includes(item)),
   );
-  const converted = leadRows.filter((lead) => ["converted", "closed"].some((item) => state(lead.status).includes(item)));
+  const converted = leadRows.filter((lead) => {
+    const current = state(lead.stage || lead.status);
+    return ["converted", "won", "customer"].some((item) => current.includes(item));
+  });
   const conversionRate = leadRows.length ? Math.round((converted.length / leadRows.length) * 100) : 0;
 
   return (
