@@ -228,6 +228,10 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
   const saveGroup = () => {
     setError("");
     setMessage("");
+    if (!groupName.trim()) {
+      setError("Group name is required.");
+      return;
+    }
     startTransition(async () => {
       try {
         const response = await fetch("/api/limitless/campaign-groups", {
@@ -256,6 +260,8 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
   };
 
   const deleteGroup = (id: string) => {
+    const group = localGroups.find((item) => item.id === id);
+    if (!window.confirm(`Delete ${group?.name || "this"} campaign group?`)) return;
     setError("");
     setMessage("");
     startTransition(async () => {
