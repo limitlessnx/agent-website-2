@@ -3,6 +3,7 @@ import {
   importProgressiveLeadsAction,
 } from "@/app/dashboard/progressive-lead-actions";
 import LeadsCrm from "@/components/admin/LeadsCrm";
+import styles from "./page.module.css";
 import { getCampaignGroups } from "@/lib/campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 
@@ -27,21 +28,22 @@ export default async function LeadsPage({
 
   return (
     <div className="admin-page">
-      <section className="admin-hero-panel leads-hero-panel">
+      <header className={styles.hero}>
         <div>
-          <p className="admin-kicker">Limitless Realty</p>
+          <span className={styles.kicker}>Limitless Realty</span>
           <h1>Lead CRM</h1>
-          <p>Review names and lead status first. Expand a record only when you need the full profile or actions.</p>
-          <div className="admin-hero-actions">
-            <a href="#lead-control">Review pipeline</a>
-            <a href="#lead-tools">Add or import contacts</a>
-          </div>
+          <p>Review lead movement, follow-up state, customer intent and campaign readiness from one operating view.</p>
         </div>
-        <div className="admin-launch-score">
-          <span>{hotLeads}</span>
-          <p>Hot leads</p>
+        <div className={styles.heroAside}>
+          <div><strong>{hotLeads}</strong><span>Hot / qualified</span></div>
+          <div><strong>{undocumented}</strong><span>Undocumented</span></div>
         </div>
-      </section>
+      </header>
+
+      <nav className={styles.pageActions} aria-label="Lead CRM shortcuts">
+        <a href="#lead-control">Review pipeline</a>
+        <a href="#lead-tools">Add or import contacts</a>
+      </nav>
 
       {saved ? (
         <section className="admin-panel import-result-panel">
@@ -65,10 +67,10 @@ export default async function LeadsPage({
         <LeadsCrm leads={leads} groups={groups} />
       </div>
 
-      <section id="lead-tools" className="admin-grid two">
-        <details className="admin-form-disclosure">
+      <section id="lead-tools" className={styles.toolsGrid}>
+        <details className={styles.toolPanel}>
           <summary>Add a contact <span className="admin-status warning">{undocumented} undocumented</span></summary>
-          <div className="admin-form-disclosure-body">
+          <div className={styles.toolBody}>
             <form action={createProgressiveLeadAction} className="admin-form-grid">
               <input name="name" placeholder="Name" required />
               <input name="phone" placeholder="WhatsApp phone e.g. +234..." required />
@@ -96,9 +98,9 @@ export default async function LeadsPage({
           </div>
         </details>
 
-        <details className="admin-form-disclosure">
+        <details className={styles.toolPanel}>
           <summary>Import contacts from a file or phone</summary>
-          <div className="admin-form-disclosure-body">
+          <div className={styles.toolBody}>
             <form action={importProgressiveLeadsAction} className="admin-import-form">
               <label className="admin-file-field">
                 <span>CSV, Excel, or phone contacts (.vcf), up to 1,000 contacts</span>
