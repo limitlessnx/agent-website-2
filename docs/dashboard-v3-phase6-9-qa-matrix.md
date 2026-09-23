@@ -101,3 +101,24 @@ Reference fidelity is evaluated on:
 - mobile information priority
 
 Code inspection, successful build, or CSS media-query presence does not count as a screenshot PASS.
+
+
+## Phase 9 execution record
+
+Current source-level Phase 9 CRM/Leads checks executed on the dashboard-v3 phase branch:
+
+- PASS: tenant-scoped CRM queries still use requireTenant() and organization_id filters.
+- PASS: CRM conversion metric counts explicit converted/won/customer states, not generic closed records.
+- PASS: Lead CRM edit/delete/campaign-group actions remain wired to the existing API routes.
+- PASS: lead selection control is separated from the disclosure summary to avoid nested interactive controls.
+- PASS: search/status/score filters and lead-intake controls expose accessible labels.
+- PASS: save/error feedback exposes live-region semantics.
+- PASS: manual/smart group controls expose selected state; icon-only group actions expose labels.
+- PASS: missing WhatsApp numbers no longer create a dead "#" navigation.
+- PASS: CRM and Lead CRM Phase 9 surfaces use semantic Fluxknight theme tokens; the audited Phase 9 files contain no hard-coded hex/rgb surface colors.
+- PASS: phone/tablet/desktop recomposition rules are present for the CRM and Lead CRM surfaces.
+- PASS: reduced-motion handling is present for Lead CRM interaction transitions.
+- PENDING: authenticated screenshot comparison in dark and light modes at 390, 820, 1440 and 1920px. This cannot be marked PASS from source or build evidence alone.
+- PENDING: authenticated manual runtime interaction pass for edit/delete/import/group actions when a browser runner with a valid dashboard session is available.
+
+Phase 9 is source/build-complete only after the latest branch head passes the repository prebuild gate (support/runtime tests + dashboard contracts + TypeScript no-emit) and Next production build. Visual certification remains a separate gate.
