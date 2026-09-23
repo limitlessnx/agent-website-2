@@ -13,8 +13,8 @@ export default function HomePage() {
   return (
     <main className={`quantix-home ${styles.home}`}>
       <ReferenceFluxHeroPhase1 />
-      <MaiaCaseStudyTeaser />
       <AutomationJourney />
+      <MaiaCaseStudyTeaser />
       <IndustryCarousel />
       <ClientReviews />
       <HomePricingSection />
