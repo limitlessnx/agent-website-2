@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 function verifySignature(rawBody: string, signature: string | null) {
   const appSecret = process.env.WHATSAPP_APP_SECRET || process.env.META_WHATSAPP_APP_SECRET || process.env.META_APP_SECRET || "";
-  if (!appSecret || !signature) return true;
+  if (!appSecret || !signature) return false;
   if (!signature.startsWith("sha256=")) return false;
   const expected = createHmac("sha256", appSecret).update(rawBody).digest("hex");
   const supplied = signature.slice("sha256=".length);
