@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - feat/maia-whatsapp-live-gate-phase-5
+      - feat/maia-live-cutover-phase-6
     paths:
       - "app/api/integrations/whatsapp/**"
       - "app/api/whatsapp/**"
+      - "app/api/maia/cutover/**"
+      - "lib/maia-cutover-readiness.ts"
       - "lib/whatsapp-*.ts"
       - "src/trigger/maia-runtime.ts"
       - "tests/maia-trigger-runtime.test.mjs"
