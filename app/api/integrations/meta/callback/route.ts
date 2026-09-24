@@ -219,6 +219,23 @@ export async function GET(request: Request) {
     const longToken = await metaJson(longTokenUrl);
     const userAccessToken = String(longToken.access_token || shortAccessToken);
 
+    const permissionsUrl = new URL(
+      `https://graph.facebook.com/${apiVersion}/me/permissions`,
+    );
+    permissionsUrl.searchParams.set("access_token", userAccessToken);
+    const permissionsBody = await metaJson(permissionsUrl);
+    const grantedPermissions = (
+      Array.isArray(permissionsBody.data) ? permissionsBody.data : []
+    )
+      .filter(
+        (permission) =>
+          permission &&
+          typeof permission === "object" &&
+          String((permission as Json).status || "").toLowerCase() === "granted",
+      )
+      .map((permission) => String((permission as Json).permission || ""))
+      .filter(Boolean);
+
     const pagesUrl = new URL(`https://graph.facebook.com/${apiVersion}/me/accounts`);
     pagesUrl.searchParams.set(
       "fields",
@@ -311,6 +328,7 @@ export async function GET(request: Request) {
       preferred_page_id: preferredPageId || resolvedPage.id,
       preferred_instagram_account: preferredInstagramAccount || null,
       authorized_pages: authorizedPages,
+      granted_permissions: grantedPermissions,
       api_version: apiVersion,
       oauth_connected_at: new Date().toISOString(),
       identity_refreshed_at: new Date().toISOString(),
