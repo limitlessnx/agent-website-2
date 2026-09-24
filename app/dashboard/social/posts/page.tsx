@@ -117,17 +117,36 @@ export default async function SocialPostsPage() {
                   </div>
 
                   {post.status === "approved" ? (
-                    <form action={scheduleSocialPostAction} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12, alignItems: "center" }}>
+                    <form action={scheduleSocialPostAction} style={{ display: "grid", gap: 10, marginTop: 12 }}>
                       <input type="hidden" name="post_id" value={post.id} />
-                      <input style={inputStyle} type="datetime-local" name="scheduled_for" required />
-                      <select style={inputStyle} name="timezone" defaultValue="Africa/Lagos">
-                        <option value="Africa/Lagos">West Africa Time</option>
-                        <option value="UTC">UTC</option>
-                        <option value="Europe/London">London</option>
-                        <option value="America/New_York">New York</option>
-                        <option value="Asia/Dubai">Dubai</option>
-                      </select>
-                      <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Schedule</button>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+                        {post.platforms.includes("facebook") ? (
+                          <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                            <input type="checkbox" name="publish_platforms" value="facebook" defaultChecked />
+                            <span>Facebook</span>
+                          </label>
+                        ) : null}
+                        {post.platforms.includes("instagram") ? (
+                          <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                            <input type="checkbox" name="publish_platforms" value="instagram" defaultChecked />
+                            <span>Instagram</span>
+                          </label>
+                        ) : null}
+                        {post.platforms.includes("linkedin") ? (
+                          <span className="admin-status">LinkedIn publishing not connected yet</span>
+                        ) : null}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                        <input style={inputStyle} type="datetime-local" name="scheduled_for" required />
+                        <select style={inputStyle} name="timezone" defaultValue="Africa/Lagos">
+                          <option value="Africa/Lagos">West Africa Time</option>
+                          <option value="UTC">UTC</option>
+                          <option value="Europe/London">London</option>
+                          <option value="America/New_York">New York</option>
+                          <option value="Asia/Dubai">Dubai</option>
+                        </select>
+                        <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Schedule Meta publish</button>
+                      </div>
                     </form>
                   ) : null}
                 </div>
