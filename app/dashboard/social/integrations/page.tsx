@@ -37,6 +37,7 @@ export default async function SocialIntegrationsPage({
       "",
   );
   const configured = Boolean(appId && credentials?.app_secret);
+  const status = integration?.status || "disconnected";
   const grantedPermissions = Array.isArray(config.granted_permissions)
     ? config.granted_permissions.filter((item): item is string => typeof item === "string")
     : [];
@@ -49,7 +50,6 @@ export default async function SocialIntegrationsPage({
     Boolean(config.page_id) &&
     Boolean(config.instagram_business_account_id) &&
     missingPublishingPermissions.length === 0;
-  const status = integration?.status || "disconnected";
   const success =
     params.meta === "configured" ||
     params.meta === "connected" ||
