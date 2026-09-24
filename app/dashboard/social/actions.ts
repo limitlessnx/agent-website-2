@@ -204,6 +204,13 @@ export async function scheduleSocialPostAction(formData: FormData) {
   const postId = String(formData.get("post_id") || "");
   const scheduledForLocal = String(formData.get("scheduled_for") || "");
   const timezone = String(formData.get("timezone") || "Africa/Lagos");
+  const publishPlatforms = formData
+    .getAll("publish_platforms")
+    .map(String)
+    .filter(
+      (platform): platform is SocialPlatform =>
+        SOCIAL_PLATFORMS.includes(platform as SocialPlatform),
+    );
   if (!postId) throw new Error("Post ID is missing.");
 
   let scheduledFor: string;
@@ -213,7 +220,12 @@ export async function scheduleSocialPostAction(formData: FormData) {
     throw new Error("The selected publication time or timezone is invalid.");
   }
 
-  await scheduleSocialPost({ postId, scheduledFor, timezone });
+  await scheduleSocialPost({
+    postId,
+    scheduledFor,
+    timezone,
+    platforms: publishPlatforms,
+  });
   revalidatePath("/dashboard/social");
   revalidatePath("/dashboard/social/posts");
   revalidatePath("/dashboard/social/calendar");
