@@ -60,6 +60,8 @@ export async function syncFluxknightMetaAnalytics() {
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard/social/integrations");
 
+  let destination = "/dashboard/social/integrations?error=Unable%20to%20sync%20Meta%20analytics";
+
   try {
     const organization = await getFluxknightOrganization();
     const admin = createAdminClient();
@@ -82,18 +84,18 @@ export async function syncFluxknightMetaAnalytics() {
 
     revalidatePath("/dashboard/social/integrations");
     revalidatePath("/dashboard/social");
-    redirect(
+    destination =
       `/dashboard/social/integrations?meta=sync-complete&sync_status=${encodeURIComponent(
         result.ingestion.status,
-      )}&account_samples=${result.collected.accountSamples}&post_samples=${result.collected.postSamples}`,
-    );
+      )}&account_samples=${result.collected.accountSamples}&post_samples=${result.collected.postSamples}`;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to sync Meta analytics.";
-    redirect(
+    destination =
       `/dashboard/social/integrations?error=${encodeURIComponent(
         message.slice(0, 220),
-      )}`,
-    );
+      )}`;
   }
+
+  redirect(destination);
 }
