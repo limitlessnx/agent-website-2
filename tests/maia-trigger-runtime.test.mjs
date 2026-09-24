@@ -11,6 +11,8 @@ const whatsappDelivery = await readFile(new URL("../lib/whatsapp-delivery.ts", i
 const whatsappIntegration = await readFile(new URL("../lib/whatsapp-integration.ts", import.meta.url), "utf8");
 const whatsappReadinessRoute = await readFile(new URL("../app/api/integrations/whatsapp/readiness/route.ts", import.meta.url), "utf8");
 const whatsappConfigureRoute = await readFile(new URL("../app/api/integrations/whatsapp/configure/route.ts", import.meta.url), "utf8");
+const maiaCutoverReadiness = await readFile(new URL("../lib/maia-cutover-readiness.ts", import.meta.url), "utf8");
+const maiaCutoverRoute = await readFile(new URL("../app/api/maia/cutover/readiness/route.ts", import.meta.url), "utf8");
 
 test("Maia Trigger runtime validates tenant context before execution", () => {
   assert.match(triggerTask, /validateMaiaTenantContext\(payload\)/);
@@ -85,4 +87,21 @@ test("Phase 5 verifies the configured Meta phone number before cutover", () => {
   assert.match(whatsappIntegration, /Meta accepted the configured phone number credentials/);
   assert.match(whatsappIntegration, /legacy_env/);
   assert.match(whatsappIntegration, /tenant_vault/);
+});
+
+
+test("Phase 6 exposes a hard live-traffic cutover gate", () => {
+  assert.match(maiaCutoverRoute, /checkMaiaLiveCutoverReadiness/);
+  assert.match(maiaCutoverRoute, /cutoverMode/);
+  assert.match(maiaCutoverReadiness, /readyForLiveTraffic/);
+  assert.match(maiaCutoverReadiness, /hardGateKeys/);
+});
+
+test("Phase 6 verifies Maia operating dependencies before live traffic", () => {
+  assert.match(maiaCutoverReadiness, /knowledge_collections/);
+  assert.match(maiaCutoverReadiness, /knowledge_sources/);
+  assert.match(maiaCutoverReadiness, /organization_follow_up_policies/);
+  assert.match(maiaCutoverReadiness, /payment_plans/);
+  assert.match(maiaCutoverReadiness, /reminder_templates/);
+  assert.match(maiaCutoverReadiness, /whatsapp_meta_phone/);
 });
