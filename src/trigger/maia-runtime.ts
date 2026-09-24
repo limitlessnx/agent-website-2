@@ -1,5 +1,6 @@
 import { logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
   type MaiaInboundPayload,
   claimMaiaConversationLock,
@@ -76,6 +77,17 @@ export const maiaProcessInboundMessage = task({
         autonomous: true,
       });
 
+      let delivery: unknown = null;
+      if (payload.channel === "whatsapp" && payload.customerPhone) {
+        delivery = await sendWhatsAppMessage({
+          organizationId: payload.organizationId,
+          to: payload.customerPhone,
+          text: result.reply,
+          deliveryMode: "direct",
+          lastCustomerMessageAt: new Date().toISOString(),
+        });
+      }
+
       await markMaiaInboundCompleted(eventId);
       await recordMaiaRuntimeEvent({
         organizationId: payload.organizationId,
@@ -88,6 +100,7 @@ export const maiaProcessInboundMessage = task({
           steps: result.steps,
           model: result.model,
           toolResults: result.toolResults,
+          delivery,
         },
       });
 
@@ -109,6 +122,7 @@ export const maiaProcessInboundMessage = task({
         steps: result.steps,
         model: result.model,
         toolResults: result.toolResults,
+        delivery,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Maia Trigger execution failed.";
