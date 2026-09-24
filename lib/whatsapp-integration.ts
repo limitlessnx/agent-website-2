@@ -147,12 +147,16 @@ export async function checkWhatsAppReadiness(organizationId: string): Promise<Wh
   };
 
   if (integration?.id) {
-    await admin.from("organization_integrations").update({
-      health,
-      last_checked_at: new Date().toISOString(),
-      status: readyForCutover ? "connected" : integration.status,
-      ...(readyForCutover ? { last_connected_at: new Date().toISOString() } : {}),
-    }).eq("id", integration.id).catch(() => undefined);
+    try {
+      await admin.from("organization_integrations").update({
+        health,
+        last_checked_at: new Date().toISOString(),
+        status: readyForCutover ? "connected" : integration.status,
+        ...(readyForCutover ? { last_connected_at: new Date().toISOString() } : {}),
+      }).eq("id", integration.id);
+    } catch {
+      // Readiness reporting must not fail merely because health persistence failed.
+    }
   }
 
   return {
