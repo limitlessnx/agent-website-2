@@ -36,11 +36,18 @@ function back(request: Request, key: "meta" | "error", value: string) {
 }
 
 async function metaJson(url: URL) {
-  const response = await fetch(url, { headers: { accept: "application/json" }, cache: "no-store" });
+  const response = await fetch(url, {
+    headers: { accept: "application/json" },
+    cache: "no-store",
+  });
   const body = (await response.json().catch(() => ({}))) as Json;
   if (!response.ok) {
     const error = body.error as Json | undefined;
-    throw new Error(typeof error?.message === "string" ? error.message : `Meta request failed (${response.status}).`);
+    throw new Error(
+      typeof error?.message === "string"
+        ? error.message
+        : `Meta request failed (${response.status}).`,
+    );
   }
   return body;
 }
@@ -60,17 +67,55 @@ function selectPage(pages: MetaPage[], preferences: Json) {
   const preferredInstagram = normalize(preferences.preferred_instagram_account);
 
   if (preferredPageId) {
-    return pages.find((page) => normalize(page.id) === preferredPageId);
+    const byPage = pages.find((page) => normalize(page.id) === preferredPageId);
+    if (byPage) return byPage;
   }
 
   if (preferredInstagram) {
-    return pages.find((page) => {
+    const byInstagram = pages.find((page) => {
       const instagram = page.instagram_business_account;
-      return normalize(instagram?.id) === preferredInstagram || normalize(instagram?.username) === preferredInstagram;
+      return (
+        normalize(instagram?.id) === preferredInstagram ||
+        normalize(instagram?.username) === preferredInstagram
+      );
     });
+    if (byInstagram) return byInstagram;
   }
 
   return pages.find((page) => page.instagram_business_account?.id) || pages[0];
+}
+
+async function fetchPreferredPageDirectly(input: {
+  apiVersion: string;
+  pageId: string;
+  userAccessToken: string;
+}) {
+  if (!input.pageId) return null;
+
+  const pageUrl = new URL(`https://graph.facebook.com/${input.apiVersion}/${input.pageId}`);
+  pageUrl.searchParams.set(
+    "fields",
+    "id,name,access_token,instagram_business_account{id,username,name}",
+  );
+  pageUrl.searchParams.set("access_token", input.userAccessToken);
+
+  try {
+    const body = await metaJson(pageUrl);
+    if (!body.id) return null;
+    return {
+      id: String(body.id),
+      name: typeof body.name === "string" ? body.name : undefined,
+      access_token:
+        typeof body.access_token === "string" ? body.access_token : undefined,
+      instagram_business_account:
+        body.instagram_business_account &&
+        typeof body.instagram_business_account === "object"
+          ? (body.instagram_business_account as MetaInstagramAccount)
+          : undefined,
+    } satisfies MetaPage;
+  } catch {
+    return null;
+  }
 }
 
 async function refreshSelectedPageIdentity(input: {
@@ -79,7 +124,10 @@ async function refreshSelectedPageIdentity(input: {
   pageToken: string;
 }) {
   const pageUrl = new URL(`https://graph.facebook.com/${input.apiVersion}/${input.page.id}`);
-  pageUrl.searchParams.set("fields", "id,name,instagram_business_account{id,username,name}");
+  pageUrl.searchParams.set(
+    "fields",
+    "id,name,instagram_business_account{id,username,name}",
+  );
   pageUrl.searchParams.set("access_token", input.pageToken);
 
   const body = await metaJson(pageUrl);
@@ -88,7 +136,8 @@ async function refreshSelectedPageIdentity(input: {
     name: typeof body.name === "string" ? body.name : input.page.name,
     access_token: input.page.access_token,
     instagram_business_account:
-      body.instagram_business_account && typeof body.instagram_business_account === "object"
+      body.instagram_business_account &&
+      typeof body.instagram_business_account === "object"
         ? (body.instagram_business_account as MetaInstagramAccount)
         : input.page.instagram_business_account,
   } satisfies MetaPage;
@@ -102,7 +151,9 @@ export async function GET(request: Request) {
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get("code");
     const returnedState = requestUrl.searchParams.get("state");
-    const metaError = requestUrl.searchParams.get("error_description") || requestUrl.searchParams.get("error_message");
+    const metaError =
+      requestUrl.searchParams.get("error_description") ||
+      requestUrl.searchParams.get("error_message");
 
     const cookieStore = await cookies();
     const expectedState = cookieStore.get(COOKIE)?.value;
@@ -110,7 +161,11 @@ export async function GET(request: Request) {
 
     if (metaError) return back(request, "error", metaError);
     if (!code || !returnedState || !expectedState || returnedState !== expectedState) {
-      return back(request, "error", "Meta authorization state was invalid or expired");
+      return back(
+        request,
+        "error",
+        "Meta authorization state was invalid or expired",
+      );
     }
 
     const organization = await getFluxknightOrganization();
@@ -124,9 +179,13 @@ export async function GET(request: Request) {
       ...(storedCredentials || {}),
     };
 
-    const appId = String(storedCredentials?.app_id || existingConfiguration.app_id || "");
+    const appId = String(
+      storedCredentials?.app_id || existingConfiguration.app_id || "",
+    );
     const appSecret = String(storedCredentials?.app_secret || "");
-    if (!appId || !appSecret) return back(request, "error", "Meta app credentials are not configured");
+    if (!appId || !appSecret) {
+      return back(request, "error", "Meta app credentials are not configured");
+    }
 
     const apiVersion = String(
       storedCredentials?.api_version ||
@@ -134,9 +193,14 @@ export async function GET(request: Request) {
         process.env.META_GRAPH_API_VERSION ||
         "v24.0",
     );
-    const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
+    const redirectUri = new URL(
+      "/api/integrations/meta/callback",
+      oauthOrigin(request),
+    ).toString();
 
-    const shortTokenUrl = new URL(`https://graph.facebook.com/${apiVersion}/oauth/access_token`);
+    const shortTokenUrl = new URL(
+      `https://graph.facebook.com/${apiVersion}/oauth/access_token`,
+    );
     shortTokenUrl.searchParams.set("client_id", appId);
     shortTokenUrl.searchParams.set("client_secret", appSecret);
     shortTokenUrl.searchParams.set("redirect_uri", redirectUri);
@@ -145,7 +209,9 @@ export async function GET(request: Request) {
     const shortAccessToken = String(shortToken.access_token || "");
     if (!shortAccessToken) throw new Error("Meta did not return an access token.");
 
-    const longTokenUrl = new URL(`https://graph.facebook.com/${apiVersion}/oauth/access_token`);
+    const longTokenUrl = new URL(
+      `https://graph.facebook.com/${apiVersion}/oauth/access_token`,
+    );
     longTokenUrl.searchParams.set("grant_type", "fb_exchange_token");
     longTokenUrl.searchParams.set("client_id", appId);
     longTokenUrl.searchParams.set("client_secret", appSecret);
@@ -154,16 +220,45 @@ export async function GET(request: Request) {
     const userAccessToken = String(longToken.access_token || shortAccessToken);
 
     const pagesUrl = new URL(`https://graph.facebook.com/${apiVersion}/me/accounts`);
-    pagesUrl.searchParams.set("fields", "id,name,access_token,instagram_business_account{id,username,name}");
+    pagesUrl.searchParams.set(
+      "fields",
+      "id,name,access_token,instagram_business_account{id,username,name}",
+    );
     pagesUrl.searchParams.set("limit", "100");
     pagesUrl.searchParams.set("access_token", userAccessToken);
     const pagesBody = await metaJson(pagesUrl);
     const pages = (Array.isArray(pagesBody.data) ? pagesBody.data : []) as MetaPage[];
-    const selected = selectPage(pages, preferences);
+
+    const preferredPageId = String(preferences.preferred_page_id || "").trim();
+    let selected = selectPage(pages, preferences);
+
+    if (
+      preferredPageId &&
+      normalize(selected?.id) !== normalize(preferredPageId)
+    ) {
+      const directPage = await fetchPreferredPageDirectly({
+        apiVersion,
+        pageId: preferredPageId,
+        userAccessToken,
+      });
+      if (directPage) selected = directPage;
+    }
 
     if (!selected?.id) {
       const available = pages.map(pageLabel).join("; ") || "none";
-      throw new Error(`No authorized Facebook Page matched the configured target. Available pages: ${available}`);
+      throw new Error(
+        `No authorized Facebook Page matched the configured target. Available pages: ${available}`,
+      );
+    }
+
+    if (
+      preferredPageId &&
+      normalize(selected.id) !== normalize(preferredPageId)
+    ) {
+      const available = pages.map(pageLabel).join("; ") || "none";
+      throw new Error(
+        `Preferred Facebook Page ${preferredPageId} was not authorized. Available pages: ${available}`,
+      );
     }
 
     const pageToken = selected.access_token || userAccessToken;
@@ -173,7 +268,6 @@ export async function GET(request: Request) {
       pageToken,
     });
 
-    const preferredPageId = String(preferences.preferred_page_id || resolvedPage.id || "");
     const preferredInstagramAccount = String(
       preferences.preferred_instagram_account ||
         resolvedPage.instagram_business_account?.id ||
@@ -181,40 +275,65 @@ export async function GET(request: Request) {
         "",
     );
 
+    const pageAccessTokens = Object.fromEntries(
+      pages
+        .filter((page) => page.id && page.access_token)
+        .map((page) => [page.id, page.access_token as string]),
+    );
+
+    const authorizedPages = pages.map((page) => ({
+      id: page.id,
+      name: page.name || null,
+      instagram_business_account_id:
+        page.instagram_business_account?.id || null,
+      instagram_username:
+        page.instagram_business_account?.username || null,
+    }));
+
     const configuration = {
       ...existingConfiguration,
       app_id: appId,
       page_id: resolvedPage.id,
       page_name: resolvedPage.name || null,
-      instagram_business_account_id: resolvedPage.instagram_business_account?.id || null,
-      instagram_username: resolvedPage.instagram_business_account?.username || null,
-      preferred_page_id: preferredPageId || null,
+      instagram_business_account_id:
+        resolvedPage.instagram_business_account?.id || null,
+      instagram_username:
+        resolvedPage.instagram_business_account?.username || null,
+      preferred_page_id: preferredPageId || resolvedPage.id,
       preferred_instagram_account: preferredInstagramAccount || null,
+      authorized_pages: authorizedPages,
       api_version: apiVersion,
       oauth_connected_at: new Date().toISOString(),
       identity_refreshed_at: new Date().toISOString(),
     };
 
     const admin = createAdminClient() as any;
-    const { error: storeError } = await admin.rpc("store_organization_integration_credentials", {
-      p_organization_id: organization.id,
-      p_provider: "meta",
-      p_display_name: "Meta",
-      p_credentials: {
-        ...(storedCredentials || {}),
-        app_id: appId,
-        app_secret: appSecret,
-        access_token: pageToken,
-        preferred_page_id: preferredPageId || null,
-        preferred_instagram_account: preferredInstagramAccount || null,
+    const { error: storeError } = await admin.rpc(
+      "store_organization_integration_credentials",
+      {
+        p_organization_id: organization.id,
+        p_provider: "meta",
+        p_display_name: "Meta",
+        p_credentials: {
+          ...(storedCredentials || {}),
+          app_id: appId,
+          app_secret: appSecret,
+          user_access_token: userAccessToken,
+          access_token: pageToken,
+          page_access_tokens: pageAccessTokens,
+          preferred_page_id: preferredPageId || resolvedPage.id,
+          preferred_instagram_account: preferredInstagramAccount || null,
+        },
+        p_configuration: configuration,
       },
-      p_configuration: configuration,
-    });
+    );
     if (storeError) throw storeError;
 
     return back(request, "meta", "connected");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to connect Meta.";
+    const message =
+      error instanceof Error ? error.message : "Unable to connect Meta.";
+    console.error("Meta OAuth callback failed", { message });
     return back(request, "error", message.slice(0, 240));
   }
 }
