@@ -8,6 +8,9 @@ const maiaRuntime = await readFile(new URL("../lib/ai/maia-runtime.ts", import.m
 const limitlessRuntime = await readFile(new URL("../lib/ai/limitless-realty-maia.ts", import.meta.url), "utf8");
 const whatsappWebhook = await readFile(new URL("../app/api/whatsapp/webhook/route.ts", import.meta.url), "utf8");
 const whatsappDelivery = await readFile(new URL("../lib/whatsapp-delivery.ts", import.meta.url), "utf8");
+const whatsappIntegration = await readFile(new URL("../lib/whatsapp-integration.ts", import.meta.url), "utf8");
+const whatsappReadinessRoute = await readFile(new URL("../app/api/integrations/whatsapp/readiness/route.ts", import.meta.url), "utf8");
+const whatsappConfigureRoute = await readFile(new URL("../app/api/integrations/whatsapp/configure/route.ts", import.meta.url), "utf8");
 
 test("Maia Trigger runtime validates tenant context before execution", () => {
   assert.match(triggerTask, /validateMaiaTenantContext\(payload\)/);
@@ -57,4 +60,29 @@ test("WhatsApp delivery resolves credentials per tenant and scopes property medi
   assert.match(whatsappDelivery, /organizationId/);
   assert.match(whatsappDelivery, /properties\?organization_id=eq/);
   assert.match(whatsappDelivery, /tenant_vault/);
+});
+
+
+test("Phase 5 exposes a tenant-aware WhatsApp live-cutover gate", () => {
+  assert.match(whatsappReadinessRoute, /checkWhatsAppReadiness/);
+  assert.match(whatsappReadinessRoute, /getClientSession/);
+  assert.match(whatsappIntegration, /readyForCutover/);
+  assert.match(whatsappIntegration, /webhook_signature/);
+  assert.match(whatsappIntegration, /verify_token/);
+  assert.match(whatsappIntegration, /trigger_runtime/);
+});
+
+test("Phase 5 stores WhatsApp credentials per organization without returning secrets", () => {
+  assert.match(whatsappConfigureRoute, /saveWhatsAppCredentials/);
+  assert.match(whatsappConfigureRoute, /Owner access is required/);
+  assert.match(whatsappIntegration, /store_organization_integration_credentials/);
+  assert.match(whatsappIntegration, /p_organization_id: input\.organizationId/);
+  assert.doesNotMatch(whatsappConfigureRoute, /accessToken:\s*accessToken/);
+});
+
+test("Phase 5 verifies the configured Meta phone number before cutover", () => {
+  assert.match(whatsappIntegration, /display_phone_number,verified_name,quality_rating,status/);
+  assert.match(whatsappIntegration, /Meta accepted the configured phone number credentials/);
+  assert.match(whatsappIntegration, /legacy_env/);
+  assert.match(whatsappIntegration, /tenant_vault/);
 });
