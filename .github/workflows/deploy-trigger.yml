@@ -6,9 +6,14 @@ on:
       - main
       - feat/flux-social-phase-3-8
       - feat/flux-social-phase-3-9
+      - feat/maia-whatsapp-trigger-phase-4
     paths:
       - "src/trigger/**"
       - "lib/social-learning.ts"
+      - "lib/ai/maia-runtime.ts"
+      - "lib/ai/maia-trigger-runtime.ts"
+      - "lib/ai/limitless-realty-maia.ts"
+      - "lib/whatsapp-delivery.ts"
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
