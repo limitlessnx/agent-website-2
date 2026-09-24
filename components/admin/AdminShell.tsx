@@ -5,7 +5,6 @@ import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import WorkspaceRail from "@/components/admin/WorkspaceRail";
 import LeoFloatingButton from "@/components/admin/LeoFloatingButton";
-import ThemeToggle from "@/components/admin/ThemeToggle";
 import PlatformChrome from "@/components/admin/PlatformChrome";
 import EnterpriseTableEnhancer from "@/components/admin/EnterpriseTableEnhancer";
 import MobileAdminHeader from "@/components/admin/MobileAdminHeader";
@@ -18,21 +17,6 @@ import desktop from "@/components/admin/SuperAdminDesktop.module.css";
 import mobilePolish from "@/components/admin/MobileAdminPolish.module.css";
 import referenceFidelity from "@/components/admin/DashboardReferenceFidelity.module.css";
 
-const themeBootScript = `
-(function(){
-  try {
-    var root = document.getElementById("dashboard-theme-root");
-    if (!root) return;
-    var key = "limitless-dashboard-theme";
-    var saved = localStorage.getItem(key);
-    var theme = saved === "light" || saved === "dark"
-      ? saved
-      : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    root.dataset.dashboardTheme = theme;
-    root.style.colorScheme = theme;
-  } catch (_) {}
-})();
-`;
 
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
@@ -41,7 +25,6 @@ export default async function AdminShell({ children }: { children: React.ReactNo
 
   return (
     <div id="dashboard-theme-root" data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish} ${referenceFidelity.referenceFidelity}`}>
-      <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       <MobileNavigationProvider>
         <LeoConversationProvider>
           <MobileAdminHeader />
@@ -61,7 +44,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
                 <AdminSearch />
                 <div className="admin-topbar-actions">
                   <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
-                  <PlatformChrome /><ThemeToggle /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
+                  <PlatformChrome /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
                 </div>
               </header>
               <WorkspaceRail />
