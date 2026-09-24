@@ -1,9 +1,6 @@
-type TemplateConfig = {
-  template_name: string;
-  language_code: string;
-  variable_keys?: string[];
-};
+import { createAdminClient } from "@/lib/supabase/admin";
 
+type TemplateConfig = { template_name: string; language_code: string; variable_keys?: string[] };
 type SendInput = {
   organizationId: string;
   to: string;
@@ -16,18 +13,14 @@ type SendInput = {
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
 };
-
-type MetaResponse = {
-  messages?: Array<{ id?: string }>;
-  error?: { code?: number; message?: string; error_data?: { details?: string } };
-};
+type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
+type WhatsAppCredentials = { phoneNumberId: string; accessToken: string; graphVersion: string; source: "tenant_vault" | "legacy_env" };
 
 function supabaseConfig() {
   const url = (process.env.LIMITLESS_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
   const key = process.env.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
   return { url, key };
 }
-
 async function supabaseRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const { url, key } = supabaseConfig();
   if (!url || !key) throw new Error("Supabase delivery storage is not configured.");
@@ -40,125 +33,130 @@ async function supabaseRequest<T>(path: string, init?: RequestInit): Promise<T> 
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
-
-function normalizePhone(value: string) { return value.replace(/[^0-9]/g, ""); }
+const normalizePhone = (value: string) => value.replace(/[^0-9]/g, "");
 function outsideCustomerWindow(lastCustomerMessageAt?: string | null) {
   if (!lastCustomerMessageAt) return true;
   const timestamp = new Date(lastCustomerMessageAt).getTime();
-  if (!Number.isFinite(timestamp)) return true;
-  return Date.now() - timestamp >= 24 * 60 * 60 * 1000;
+  return !Number.isFinite(timestamp) || Date.now() - timestamp >= 24 * 60 * 60 * 1000;
 }
+async function resolveWhatsAppCredentials(organizationId: string): Promise<WhatsAppCredentials> {
+  const admin = createAdminClient();
+  const providers = ["whatsapp", "meta_whatsapp"];
+  for (const provider of providers) {
+    const { data: integration } = await admin
+      .from("organization_integrations")
+      .select("id,status,configuration")
+      .eq("organization_id", organizationId)
+      .eq("provider", provider)
+      .in("status", ["configured", "connected", "degraded"])
+      .limit(1)
+      .maybeSingle();
+    if (!integration) continue;
+    const { data: credentials, error } = await admin.rpc("get_organization_integration_credentials", {
+      p_organization_id: organizationId,
+      p_provider: provider,
+    });
+    if (!error && credentials && typeof credentials === "object") {
+      const raw = credentials as Record<string, unknown>;
+      const config = (integration.configuration || {}) as Record<string, unknown>;
+      const phoneNumberId = String(raw.phone_number_id || raw.phoneNumberId || config.phone_number_id || "");
+      const accessToken = String(raw.access_token || raw.accessToken || "");
+      const graphVersion = String(raw.graph_version || config.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v23.0");
+      if (phoneNumberId && accessToken) return { phoneNumberId, accessToken, graphVersion, source: "tenant_vault" };
+    }
+  }
 
+  const { data: org } = await admin.from("organizations").select("slug").eq("id", organizationId).maybeSingle();
+  if (org?.slug === "limitless-realty") {
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN || "";
+    const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+    if (phoneNumberId && accessToken) return { phoneNumberId, accessToken, graphVersion, source: "legacy_env" };
+  }
+
+  throw new Error("WhatsApp Cloud API credentials are not configured for this organization.");
+}
 async function getTemplateConfig(organizationId: string, purpose: string): Promise<TemplateConfig | null> {
   const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active&select=template_name,language_code,variable_keys,status&limit=1`);
   return rows[0] || null;
 }
-
 async function recordAttempt(payload: Record<string, unknown>) {
   return supabaseRequest<Array<{ id: string }>>("whatsapp_delivery_attempts", { method: "POST", body: JSON.stringify(payload) }).catch(() => []);
 }
-
 function isDirectPublicImageUrl(value: unknown): value is string {
-  if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return false;
-  if (/google\.(com|[a-z.]+)\/|images\.google\.|googleusercontent\.com\/url\?/i.test(value)) return false;
-  if (/drive\.google\.com/i.test(value)) return false;
-  return /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value);
+  return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com/i.test(value) && /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value);
 }
-
 function isDirectPublicVideoUrl(value: unknown): value is string {
-  if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return false;
-  if (/google\.(com|[a-z.]+)\/|drive\.google\.com|youtube\.com|youtu\.be/i.test(value)) return false;
-  return /\.(?:mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(value);
+  return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com|youtube\.com|youtu\.be/i.test(value) && /\.(?:mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(value);
 }
-
 function publicStorageUrl(bucket: unknown, path: unknown): string | null {
   const { url } = supabaseConfig();
   if (!url || typeof bucket !== "string" || typeof path !== "string" || !bucket || !path) return null;
   return `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
 }
-
-async function resolvePropertyMediaFromText(text: string): Promise<{ videos: string[]; images: string[] }> {
-  if (!text?.trim()) return { videos: [], images: [] };
+async function resolvePropertyMediaFromText(organizationId: string, text: string) {
+  if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
   try {
-    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>("properties?select=id,title,cover_image_url,image_urls&limit=500");
+    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls&limit=500`);
     const lower = text.toLowerCase();
     for (const row of rows) {
       const title = String(row.title || "").trim();
       if (title.length < 5 || !lower.includes(title.toLowerCase()) || !row.id) continue;
-      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null; created_at?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type,created_at&order=created_at.desc&limit=20`);
-      const videos = assets.map((asset) => publicStorageUrl(asset.storage_bucket, asset.storage_path)).filter((url): url is string => Boolean(url) && /video\//i.test(String(assets.find((a) => publicStorageUrl(a.storage_bucket, a.storage_path) === url)?.mime_type || "")) && isDirectPublicVideoUrl(url)).slice(0, 3);
+      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=20`);
+      const videos = assets.filter((a) => /video\//i.test(String(a.mime_type || ""))).map((a) => publicStorageUrl(a.storage_bucket, a.storage_path)).filter((u): u is string => Boolean(u) && isDirectPublicVideoUrl(u)).slice(0, 3);
       if (videos.length) return { videos, images: [] };
-      const candidates: unknown[] = [row.cover_image_url];
-      if (Array.isArray(row.image_urls)) candidates.push(...row.image_urls);
-      else if (typeof row.image_urls === "string") {
-        try { const parsed = JSON.parse(row.image_urls); if (Array.isArray(parsed)) candidates.push(...parsed); } catch {}
-      }
-      const images = candidates.filter(isDirectPublicImageUrl).slice(0, 3);
-      return { videos: [], images };
+      const candidates: unknown[] = [row.cover_image_url, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
+      return { videos: [], images: candidates.filter(isDirectPublicImageUrl).slice(0, 3) };
     }
   } catch {}
-  return { videos: [], images: [] };
+  return { videos: [] as string[], images: [] as string[] };
 }
-
-async function sendWhatsAppImage(to: string, imageUrl: string, phoneNumberId: string, accessToken: string, graphVersion: string) {
-  const payload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "image", image: { link: imageUrl } };
-  const response = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}/messages`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
+async function sendMedia(args: { organizationId: string; to: string; type: "image" | "video"; url: string; credentials: WhatsAppCredentials }) {
+  const { organizationId, to, type, url, credentials } = args;
+  const payload = { messaging_product: "whatsapp", recipient_type: "individual", to, type, [type]: { link: url } };
+  const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
+    method: "POST", headers: { Authorization: `Bearer ${credentials.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store",
+  });
   const result = await response.json().catch(() => ({})) as MetaResponse;
   const providerMessageId = result.messages?.[0]?.id || null;
-  await recordAttempt({ organization_id: "limitless-realty", recipient: to, message_type: "image", template_name: null, provider_message_id: providerMessageId, status: response.ok ? "accepted" : "failed", error_code: result.error?.code ? String(result.error.code) : null, error_message: result.error?.error_data?.details || result.error?.message || null, request_payload: payload, response_payload: result });
-  if (!response.ok) return { ok: false, providerMessageId, error: result.error?.error_data?.details || result.error?.message || `WhatsApp image send failed (${response.status}).` };
-  return { ok: true, providerMessageId };
-}
-
-async function sendWhatsAppVideo(to: string, videoUrl: string, phoneNumberId: string, accessToken: string, graphVersion: string) {
-  const payload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "video", video: { link: videoUrl } };
-  const response = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}/messages`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
-  const result = await response.json().catch(() => ({})) as MetaResponse;
-  const providerMessageId = result.messages?.[0]?.id || null;
-  await recordAttempt({ organization_id: "limitless-realty", recipient: to, message_type: "video", template_name: null, provider_message_id: providerMessageId, status: response.ok ? "accepted" : "failed", error_code: result.error?.code ? String(result.error.code) : null, error_message: result.error?.error_data?.details || result.error?.message || null, request_payload: payload, response_payload: result });
-  if (!response.ok) return { ok: false, providerMessageId, error: result.error?.error_data?.details || result.error?.message || `WhatsApp video send failed (${response.status}).` };
+  await recordAttempt({ organization_id: organizationId, recipient: to, message_type: type, template_name: null, provider_message_id: providerMessageId, status: response.ok ? "accepted" : "failed", error_code: result.error?.code ? String(result.error.code) : null, error_message: result.error?.error_data?.details || result.error?.message || null, request_payload: payload, response_payload: result });
+  if (!response.ok) throw new Error(result.error?.error_data?.details || result.error?.message || `WhatsApp ${type} send failed (${response.status}).`);
   return { ok: true, providerMessageId };
 }
 
 export async function sendWhatsAppMessage(input: SendInput) {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN || "";
-  const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
-  if (!phoneNumberId || !accessToken) throw new Error("WhatsApp Cloud API credentials are not configured.");
+  const credentials = await resolveWhatsAppCredentials(input.organizationId);
   const to = normalizePhone(input.to);
   if (!to) throw new Error("A valid WhatsApp recipient is required.");
-  const isOutsideWindow = outsideCustomerWindow(input.lastCustomerMessageAt);
+  const outsideWindow = outsideCustomerWindow(input.lastCustomerMessageAt);
   const requestedMode = input.deliveryMode || "auto";
-  const useTemplate = Boolean(input.forceTemplate) || requestedMode === "template" || (requestedMode === "auto" && isOutsideWindow);
-  if (requestedMode === "direct" && isOutsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open. Choose the appropriate approved campaign template instead.");
+  const useTemplate = Boolean(input.forceTemplate) || requestedMode === "template" || (requestedMode === "auto" && outsideWindow);
+  if (requestedMode === "direct" && outsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open.");
 
   let requestPayload: Record<string, unknown>;
   let templateName: string | null = null;
   if (useTemplate) {
-    const purpose = input.templatePurpose || "follow_up_outside_24h";
-    const config = await getTemplateConfig(input.organizationId, purpose);
-    if (!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId} and purpose ${purpose}.`);
+    const config = await getTemplateConfig(input.organizationId, input.templatePurpose || "follow_up_outside_24h");
+    if (!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
     templateName = config.template_name;
-    const variableKeys = Array.isArray(config.variable_keys) ? config.variable_keys : [];
-    const parameters = variableKeys.map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
+    const parameters = (Array.isArray(config.variable_keys) ? config.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config.template_name, language: { code: config.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
   } else {
     if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };
   }
 
-  if (!useTemplate && input.organizationId === "limitless-realty") {
+  if (!useTemplate) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
     const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
-    const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.text || "");
-    if (media.videos.length) {
-      for (const videoUrl of media.videos) await sendWhatsAppVideo(to, videoUrl, phoneNumberId, accessToken, graphVersion);
-    } else {
-      for (const imageUrl of media.images) await sendWhatsAppImage(to, imageUrl, phoneNumberId, accessToken, graphVersion);
-    }
+    const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, input.text || "");
+    if (media.videos.length) for (const url of media.videos) await sendMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
+    else for (const url of media.images) await sendMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
   }
 
-  const response = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}/messages`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestPayload), cache: "no-store" });
+  const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
+    method: "POST", headers: { Authorization: `Bearer ${credentials.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(requestPayload), cache: "no-store",
+  });
   const result = await response.json().catch(() => ({})) as MetaResponse;
   const providerMessageId = result.messages?.[0]?.id || null;
   const errorCode = result.error?.code ? String(result.error.code) : null;
@@ -169,5 +167,5 @@ export async function sendWhatsAppMessage(input: SendInput) {
     Object.assign(error, { status: response.status, code: errorCode, response: result });
     throw error;
   }
-  return { ok: true, messageType: useTemplate ? "template" : "text", templateName, providerMessageId, response: result };
+  return { ok: true, messageType: useTemplate ? "template" : "text", templateName, providerMessageId, credentialSource: credentials.source, response: result };
 }
