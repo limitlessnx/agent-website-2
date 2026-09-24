@@ -49,18 +49,24 @@ jobs:
           fi
 
       - name: Deploy Trigger.dev tasks
+        id: trigger_deploy
+        continue-on-error: true
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
         run: |
           set -o pipefail
           npm run trigger:deploy 2>&1 | tee trigger-deploy.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            {
-              echo "## Trigger.dev deploy failure"
-              echo '~~~text'
-              tail -n 80 trigger-deploy.log
-              echo '~~~'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit "$status"
-          fi
+
+      - name: Upload Trigger.dev deploy diagnostics
+        if: steps.trigger_deploy.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trigger-deploy-diagnostics
+          path: trigger-deploy.log
+          if-no-files-found: error
+
+      - name: Fail workflow when Trigger.dev deploy failed
+        if: steps.trigger_deploy.outcome == 'failure'
+        run: |
+          echo "::error title=Trigger.dev deploy failed::See trigger-deploy-diagnostics artifact for the complete CLI output."
+          exit 1
