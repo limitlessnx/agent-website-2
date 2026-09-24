@@ -13,6 +13,9 @@ const whatsappReadinessRoute = await readFile(new URL("../app/api/integrations/w
 const whatsappConfigureRoute = await readFile(new URL("../app/api/integrations/whatsapp/configure/route.ts", import.meta.url), "utf8");
 const maiaCutoverReadiness = await readFile(new URL("../lib/maia-cutover-readiness.ts", import.meta.url), "utf8");
 const maiaCutoverRoute = await readFile(new URL("../app/api/maia/cutover/readiness/route.ts", import.meta.url), "utf8");
+const whatsappActivationRoute = await readFile(new URL("../app/api/integrations/whatsapp/activate/route.ts", import.meta.url), "utf8");
+const limitlessConnectionsPage = await readFile(new URL("../app/dashboard/limitless/integrations/page.tsx", import.meta.url), "utf8");
+const whatsappIntegrationPanel = await readFile(new URL("../components/integrations/WhatsAppIntegrationPanel.tsx", import.meta.url), "utf8");
 
 test("Maia Trigger runtime validates tenant context before execution", () => {
   assert.match(triggerTask, /validateMaiaTenantContext\(payload\)/);
@@ -104,4 +107,28 @@ test("Phase 6 verifies Maia operating dependencies before live traffic", () => {
   assert.match(maiaCutoverReadiness, /payment_plans/);
   assert.match(maiaCutoverReadiness, /reminder_templates/);
   assert.match(maiaCutoverReadiness, /whatsapp_meta_phone/);
+});
+
+
+test("Phase 6 exposes WhatsApp credential setup inside the Limitless Realty dashboard", () => {
+  assert.match(limitlessConnectionsPage, /Limitless Realty · Maia/);
+  assert.match(limitlessConnectionsPage, /WhatsAppIntegrationPanel/);
+  assert.match(whatsappIntegrationPanel, /WhatsApp Phone Number ID/);
+  assert.match(whatsappIntegrationPanel, /Permanent Access Token/);
+  assert.match(whatsappIntegrationPanel, /WhatsApp Business Account ID/);
+  assert.match(whatsappIntegrationPanel, /Save & verify/);
+});
+
+test("Phase 6 activation is gated by readiness and tenant-scoped", () => {
+  assert.match(whatsappActivationRoute, /checkMaiaLiveCutoverReadiness/);
+  assert.match(whatsappActivationRoute, /readyForLiveTraffic/);
+  assert.match(whatsappActivationRoute, /maia_active: true/);
+  assert.match(whatsappActivationRoute, /Owner access is required/);
+  assert.match(whatsappWebhook, /config\.maia_active === true/);
+});
+
+test("Tenant WhatsApp UI never renders stored access tokens", () => {
+  assert.doesNotMatch(limitlessConnectionsPage, /access_token/);
+  assert.doesNotMatch(whatsappIntegrationPanel, /defaultValue=.*accessToken/);
+  assert.match(whatsappIntegrationPanel, /type="password"/);
 });
