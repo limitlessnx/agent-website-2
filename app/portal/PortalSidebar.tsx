@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   Bot,
-  Boxes,
   LayoutDashboard,
   LifeBuoy,
   Menu,
