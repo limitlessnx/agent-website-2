@@ -275,13 +275,22 @@ export async function GET(request: Request) {
         "",
     );
 
+    const authorizedPageMap = new Map(
+      pages.map((page) => [page.id, page] as const),
+    );
+    authorizedPageMap.set(resolvedPage.id, {
+      ...resolvedPage,
+      access_token: pageToken,
+    });
+    const authorizedPageList = Array.from(authorizedPageMap.values());
+
     const pageAccessTokens = Object.fromEntries(
-      pages
+      authorizedPageList
         .filter((page) => page.id && page.access_token)
         .map((page) => [page.id, page.access_token as string]),
     );
 
-    const authorizedPages = pages.map((page) => ({
+    const authorizedPages = authorizedPageList.map((page) => ({
       id: page.id,
       name: page.name || null,
       instagram_business_account_id:
