@@ -2,17 +2,27 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
+import {
+  getFluxknightOrganization,
+  getMetaCredentials,
+  getMetaIntegration,
+} from "@/lib/meta-integration";
 
 const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
 type Json = Record<string, unknown>;
 
+type MetaInstagramAccount = {
+  id: string;
+  username?: string;
+  name?: string;
+};
+
 type MetaPage = {
   id: string;
   name?: string;
   access_token?: string;
-  instagram_business_account?: { id: string; username?: string; name?: string };
+  instagram_business_account?: MetaInstagramAccount;
 };
 
 function oauthOrigin(request: Request) {
@@ -45,9 +55,9 @@ function pageLabel(page: MetaPage) {
   return `${page.name || "Unnamed Page"} (${page.id}) -> ${instagramLabel}`;
 }
 
-function selectPage(pages: MetaPage[], credentials: Json | null) {
-  const preferredPageId = normalize(credentials?.preferred_page_id);
-  const preferredInstagram = normalize(credentials?.preferred_instagram_account);
+function selectPage(pages: MetaPage[], preferences: Json) {
+  const preferredPageId = normalize(preferences.preferred_page_id);
+  const preferredInstagram = normalize(preferences.preferred_instagram_account);
 
   if (preferredPageId) {
     return pages.find((page) => normalize(page.id) === preferredPageId);
@@ -61,6 +71,27 @@ function selectPage(pages: MetaPage[], credentials: Json | null) {
   }
 
   return pages.find((page) => page.instagram_business_account?.id) || pages[0];
+}
+
+async function refreshSelectedPageIdentity(input: {
+  apiVersion: string;
+  page: MetaPage;
+  pageToken: string;
+}) {
+  const pageUrl = new URL(`https://graph.facebook.com/${input.apiVersion}/${input.page.id}`);
+  pageUrl.searchParams.set("fields", "id,name,instagram_business_account{id,username,name}");
+  pageUrl.searchParams.set("access_token", input.pageToken);
+
+  const body = await metaJson(pageUrl);
+  return {
+    id: String(body.id || input.page.id),
+    name: typeof body.name === "string" ? body.name : input.page.name,
+    access_token: input.page.access_token,
+    instagram_business_account:
+      body.instagram_business_account && typeof body.instagram_business_account === "object"
+        ? (body.instagram_business_account as MetaInstagramAccount)
+        : input.page.instagram_business_account,
+  } satisfies MetaPage;
 }
 
 export async function GET(request: Request) {
@@ -83,12 +114,26 @@ export async function GET(request: Request) {
     }
 
     const organization = await getFluxknightOrganization();
-    const storedCredentials = await getMetaCredentials(organization.id);
-    const appId = String(storedCredentials?.app_id || "");
+    const [storedCredentials, existingIntegration] = await Promise.all([
+      getMetaCredentials(organization.id),
+      getMetaIntegration(organization.id),
+    ]);
+    const existingConfiguration = (existingIntegration?.configuration || {}) as Json;
+    const preferences: Json = {
+      ...existingConfiguration,
+      ...(storedCredentials || {}),
+    };
+
+    const appId = String(storedCredentials?.app_id || existingConfiguration.app_id || "");
     const appSecret = String(storedCredentials?.app_secret || "");
     if (!appId || !appSecret) return back(request, "error", "Meta app credentials are not configured");
 
-    const apiVersion = String(storedCredentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
+    const apiVersion = String(
+      storedCredentials?.api_version ||
+        existingConfiguration.api_version ||
+        process.env.META_GRAPH_API_VERSION ||
+        "v24.0",
+    );
     const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
 
     const shortTokenUrl = new URL(`https://graph.facebook.com/${apiVersion}/oauth/access_token`);
@@ -114,21 +159,40 @@ export async function GET(request: Request) {
     pagesUrl.searchParams.set("access_token", userAccessToken);
     const pagesBody = await metaJson(pagesUrl);
     const pages = (Array.isArray(pagesBody.data) ? pagesBody.data : []) as MetaPage[];
-    const selected = selectPage(pages, storedCredentials);
+    const selected = selectPage(pages, preferences);
+
     if (!selected?.id) {
       const available = pages.map(pageLabel).join("; ") || "none";
       throw new Error(`No authorized Facebook Page matched the configured target. Available pages: ${available}`);
     }
 
     const pageToken = selected.access_token || userAccessToken;
+    const resolvedPage = await refreshSelectedPageIdentity({
+      apiVersion,
+      page: selected,
+      pageToken,
+    });
+
+    const preferredPageId = String(preferences.preferred_page_id || resolvedPage.id || "");
+    const preferredInstagramAccount = String(
+      preferences.preferred_instagram_account ||
+        resolvedPage.instagram_business_account?.id ||
+        resolvedPage.instagram_business_account?.username ||
+        "",
+    );
+
     const configuration = {
+      ...existingConfiguration,
       app_id: appId,
-      page_id: selected.id,
-      page_name: selected.name || null,
-      instagram_business_account_id: selected.instagram_business_account?.id || null,
-      instagram_username: selected.instagram_business_account?.username || null,
+      page_id: resolvedPage.id,
+      page_name: resolvedPage.name || null,
+      instagram_business_account_id: resolvedPage.instagram_business_account?.id || null,
+      instagram_username: resolvedPage.instagram_business_account?.username || null,
+      preferred_page_id: preferredPageId || null,
+      preferred_instagram_account: preferredInstagramAccount || null,
       api_version: apiVersion,
       oauth_connected_at: new Date().toISOString(),
+      identity_refreshed_at: new Date().toISOString(),
     };
 
     const admin = createAdminClient() as any;
@@ -141,6 +205,8 @@ export async function GET(request: Request) {
         app_id: appId,
         app_secret: appSecret,
         access_token: pageToken,
+        preferred_page_id: preferredPageId || null,
+        preferred_instagram_account: preferredInstagramAccount || null,
       },
       p_configuration: configuration,
     });
