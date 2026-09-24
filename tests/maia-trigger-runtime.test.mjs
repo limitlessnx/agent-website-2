@@ -6,6 +6,8 @@ const triggerTask = await readFile(new URL("../src/trigger/maia-runtime.ts", imp
 const runtimeStore = await readFile(new URL("../lib/ai/maia-trigger-runtime.ts", import.meta.url), "utf8");
 const maiaRuntime = await readFile(new URL("../lib/ai/maia-runtime.ts", import.meta.url), "utf8");
 const limitlessRuntime = await readFile(new URL("../lib/ai/limitless-realty-maia.ts", import.meta.url), "utf8");
+const whatsappWebhook = await readFile(new URL("../app/api/whatsapp/webhook/route.ts", import.meta.url), "utf8");
+const whatsappDelivery = await readFile(new URL("../lib/whatsapp-delivery.ts", import.meta.url), "utf8");
 
 test("Maia Trigger runtime validates tenant context before execution", () => {
   assert.match(triggerTask, /validateMaiaTenantContext\(payload\)/);
@@ -34,4 +36,25 @@ test("Legacy Limitless Maia lead access remains tenant-scoped", () => {
 
 test("Phase 3 does not send WhatsApp directly from the Trigger task", () => {
   assert.doesNotMatch(triggerTask, /graph\.facebook\.com|whatsapp.*send|N8N|n8n/i);
+});
+
+
+test("Phase 4 routes inbound Meta WhatsApp events into Trigger.dev", () => {
+  assert.match(whatsappWebhook, /maia-process-inbound-message/);
+  assert.match(whatsappWebhook, /externalEventId: messageId/);
+  assert.match(whatsappWebhook, /organization_agent_selections/);
+  assert.match(whatsappWebhook, /phone_number_id/);
+});
+
+test("Phase 4 sends WhatsApp replies from Trigger instead of n8n", () => {
+  assert.match(triggerTask, /sendWhatsAppMessage/);
+  assert.match(limitlessRuntime, /trigger-dev-meta-cloud-api/);
+  assert.doesNotMatch(limitlessRuntime, /N8N|n8n/);
+});
+
+test("WhatsApp delivery resolves credentials per tenant and scopes property media", () => {
+  assert.match(whatsappDelivery, /get_organization_integration_credentials/);
+  assert.match(whatsappDelivery, /organizationId/);
+  assert.match(whatsappDelivery, /properties\?organization_id=eq/);
+  assert.match(whatsappDelivery, /tenant_vault/);
 });
