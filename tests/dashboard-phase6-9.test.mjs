@@ -94,7 +94,8 @@ test("canonical Fluxknight palette and dashboard home composition are locked", (
   assert.match(fidelity, /--fk-surface:#12193A/);
   assert.match(fidelity, /--fk-surface-raised:#1A2454/);
   assert.match(fidelity, /--fk-brand:#7c3aed/i);
-  assert.match(fidelity, /--fk-canvas:#F6F7FF/);
+  assert.doesNotMatch(fidelity, /data-dashboard-theme="light"/);
+  assert.doesNotMatch(fidelity, /--fk-canvas:#F6F7FF/);
   assert.match(dashboard, /DashboardHomeExperience/);
   assert.match(dashboard, /name="Limitless"/);
   assert.match(home, /Needs your attention/);
