@@ -14,21 +14,31 @@ function oauthOrigin(request: Request) {
 }
 
 function metaOauthScope() {
-  const configuredScopes = String(process.env.META_OAUTH_SCOPES || "").split(",").map((scope) => scope.trim()).filter(Boolean);
+  const configuredScopes = String(process.env.META_OAUTH_SCOPES || "")
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter(Boolean);
   const scopes = configuredScopes.filter((scope) => ALLOWED_SCOPES.has(scope));
   return (scopes.length ? scopes : DEFAULT_SCOPES).join(",");
 }
 
 export async function GET(request: Request) {
   const session = await getAdminSession();
-  if (!session) return NextResponse.redirect(new URL("/login?next=/dashboard/social/integrations", request.url));
+  if (!session) {
+    return NextResponse.redirect(new URL("/login?next=/dashboard/social/integrations", request.url));
+  }
 
   const organization = await getFluxknightOrganization();
   const credentials = await getMetaCredentials(organization.id);
   const appId = String(credentials?.app_id || "");
   const appSecret = String(credentials?.app_secret || "");
   if (!appId || !appSecret) {
-    return NextResponse.redirect(new URL("/dashboard/social/integrations?error=Meta%20app%20credentials%20are%20not%20configured", request.url));
+    return NextResponse.redirect(
+      new URL(
+        "/dashboard/social/integrations?error=Meta%20app%20credentials%20are%20not%20configured",
+        request.url,
+      ),
+    );
   }
 
   const state = randomBytes(32).toString("hex");
@@ -42,19 +52,22 @@ export async function GET(request: Request) {
   });
 
   const apiVersion = String(credentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
-  const loginConfigurationId = String(credentials?.login_configuration_id || credentials?.config_id || "").trim();
+  const loginConfigurationId = String(
+    credentials?.login_configuration_id || credentials?.config_id || "",
+  ).trim();
   const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
-  const scope = metaOauthScope();
-  const useLoginConfiguration = process.env.META_USE_LOGIN_CONFIGURATION === "true";
   const authorization = new URL(`https://www.facebook.com/${apiVersion}/dialog/oauth`);
+
   authorization.searchParams.set("client_id", appId);
   authorization.searchParams.set("redirect_uri", redirectUri);
   authorization.searchParams.set("state", state);
   authorization.searchParams.set("response_type", "code");
-  if (loginConfigurationId && useLoginConfiguration) {
+  authorization.searchParams.set("auth_type", "rerequest");
+
+  if (loginConfigurationId) {
     authorization.searchParams.set("config_id", loginConfigurationId);
   } else {
-    authorization.searchParams.set("scope", scope);
+    authorization.searchParams.set("scope", metaOauthScope());
   }
 
   return NextResponse.redirect(authorization);
