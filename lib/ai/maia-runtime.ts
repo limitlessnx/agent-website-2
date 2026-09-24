@@ -90,7 +90,25 @@ async function createSession(input: MaiaRuntimeInput) {
     const { data } = await admin.from("agent_runtime_sessions").select("id,organization_id,agent_id,channel,step_count,status").eq("id", input.sessionId).eq("organization_id", input.organizationId).eq("agent_id", input.agentId).maybeSingle();
     if (data) return data;
   }
-  const { data, error } = await admin.from("agent_runtime_sessions").insert({ organization_id: input.organizationId, agent_id: input.agentId, channel: input.channel || "web", external_conversation_id: input.externalConversationId || null }).select("id,organization_id,agent_id,channel,step_count,status").single();
+
+  const channel = input.channel || "web";
+  if (input.externalConversationId) {
+    const { data: existing, error: existingError } = await admin
+      .from("agent_runtime_sessions")
+      .select("id,organization_id,agent_id,channel,step_count,status")
+      .eq("organization_id", input.organizationId)
+      .eq("agent_id", input.agentId)
+      .eq("channel", channel)
+      .eq("external_conversation_id", input.externalConversationId)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingError) throw existingError;
+    if (existing) return existing;
+  }
+
+  const { data, error } = await admin.from("agent_runtime_sessions").insert({ organization_id: input.organizationId, agent_id: input.agentId, channel, external_conversation_id: input.externalConversationId || null }).select("id,organization_id,agent_id,channel,step_count,status").single();
   if (error) throw error;
   return data;
 }
