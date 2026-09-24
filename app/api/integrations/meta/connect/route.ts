@@ -6,9 +6,17 @@ import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integr
 
 const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
+const DEFAULT_SCOPES = ["pages_show_list", "pages_read_engagement", "instagram_basic"];
+const ALLOWED_SCOPES = new Set(DEFAULT_SCOPES);
 
 function oauthOrigin(request: Request) {
   return process.env.NODE_ENV === "production" ? PRODUCTION_ORIGIN : new URL(request.url).origin;
+}
+
+function metaOauthScope() {
+  const configuredScopes = String(process.env.META_OAUTH_SCOPES || "").split(",").map((scope) => scope.trim()).filter(Boolean);
+  const scopes = configuredScopes.filter((scope) => ALLOWED_SCOPES.has(scope));
+  return (scopes.length ? scopes : DEFAULT_SCOPES).join(",");
 }
 
 export async function GET(request: Request) {
@@ -36,13 +44,14 @@ export async function GET(request: Request) {
   const apiVersion = String(credentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
   const loginConfigurationId = String(credentials?.login_configuration_id || credentials?.config_id || "").trim();
   const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
-  const scope = process.env.META_OAUTH_SCOPES || "pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights";
+  const scope = metaOauthScope();
+  const useLoginConfiguration = process.env.META_USE_LOGIN_CONFIGURATION === "true";
   const authorization = new URL(`https://www.facebook.com/${apiVersion}/dialog/oauth`);
   authorization.searchParams.set("client_id", appId);
   authorization.searchParams.set("redirect_uri", redirectUri);
   authorization.searchParams.set("state", state);
   authorization.searchParams.set("response_type", "code");
-  if (loginConfigurationId) {
+  if (loginConfigurationId && useLoginConfiguration) {
     authorization.searchParams.set("config_id", loginConfigurationId);
   } else {
     authorization.searchParams.set("scope", scope);

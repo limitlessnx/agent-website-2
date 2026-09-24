@@ -35,6 +35,34 @@ async function metaJson(url: URL) {
   return body;
 }
 
+function normalize(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function pageLabel(page: MetaPage) {
+  const instagram = page.instagram_business_account;
+  const instagramLabel = instagram?.username || instagram?.id || "no Instagram Business account";
+  return `${page.name || "Unnamed Page"} (${page.id}) -> ${instagramLabel}`;
+}
+
+function selectPage(pages: MetaPage[], credentials: Json | null) {
+  const preferredPageId = normalize(credentials?.preferred_page_id);
+  const preferredInstagram = normalize(credentials?.preferred_instagram_account);
+
+  if (preferredPageId) {
+    return pages.find((page) => normalize(page.id) === preferredPageId);
+  }
+
+  if (preferredInstagram) {
+    return pages.find((page) => {
+      const instagram = page.instagram_business_account;
+      return normalize(instagram?.id) === preferredInstagram || normalize(instagram?.username) === preferredInstagram;
+    });
+  }
+
+  return pages.find((page) => page.instagram_business_account?.id) || pages[0];
+}
+
 export async function GET(request: Request) {
   try {
     const session = await getAdminSession();
@@ -86,8 +114,11 @@ export async function GET(request: Request) {
     pagesUrl.searchParams.set("access_token", userAccessToken);
     const pagesBody = await metaJson(pagesUrl);
     const pages = (Array.isArray(pagesBody.data) ? pagesBody.data : []) as MetaPage[];
-    const selected = pages.find((page) => page.instagram_business_account?.id) || pages[0];
-    if (!selected?.id) throw new Error("No Facebook Page is available to this Meta account.");
+    const selected = selectPage(pages, storedCredentials);
+    if (!selected?.id) {
+      const available = pages.map(pageLabel).join("; ") || "none";
+      throw new Error(`No authorized Facebook Page matched the configured target. Available pages: ${available}`);
+    }
 
     const pageToken = selected.access_token || userAccessToken;
     const configuration = {
