@@ -4,11 +4,13 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("dashboard theme stays isolated to the dashboard root", () => {
-  const source = read("components/admin/ThemeToggle.tsx");
-  assert.match(source, /getElementById\("dashboard-theme-root"\)/);
-  assert.match(source, /dataset\.dashboardTheme/);
-  assert.doesNotMatch(source, /document\.documentElement\.dataset\.theme/);
+test("dashboard stays locked to the primary Fluxknight theme", () => {
+  const shell = read("components/admin/AdminShell.tsx");
+  const fidelity = read("components/admin/DashboardReferenceFidelity.module.css");
+  assert.match(shell, /data-dashboard-theme="dark"/);
+  assert.doesNotMatch(shell, /ThemeToggle|themeBootScript|localStorage|prefers-color-scheme/);
+  assert.doesNotMatch(fidelity, /data-dashboard-theme="light"/);
+  assert.doesNotMatch(fidelity, /--fk-canvas:#F6F7FF/);
 });
 
 test("dashboard shell keeps reference-fidelity and responsive layers active", () => {
@@ -66,8 +68,7 @@ test("dashboard home uses live operating inputs and does not hard-code fake KPI 
 test("mobile header preserves reference bell and account actions", () => {
   const header = read("components/admin/MobileAdminHeader.tsx");
   assert.match(header, /Bell/);
-  assert.match(header, /ThemeToggle/);
-  assert.match(header, /Dashboard color mode/);
+  assert.doesNotMatch(header, /ThemeToggle|Dashboard color mode/);
   assert.match(header, /\/dashboard\/notifications/);
   assert.match(header, /\/dashboard\/settings/);
   assert.match(header, /Open account settings/);
