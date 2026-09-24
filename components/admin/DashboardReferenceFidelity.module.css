@@ -34,27 +34,6 @@
     var(--fk-canvas);
 }
 
-.referenceFidelity:global([data-dashboard-theme="light"]){
-  --fk-canvas:#F6F7FF;
-  --fk-canvas-accent:#EEF1FF;
-  --fk-surface:#ffffff;
-  --fk-surface-raised:#EEF1FF;
-  --fk-surface-hover:#E6EAFF;
-  --fk-surface-overlay:#ffffff;
-  --fk-border:rgba(66,51,102,.10);
-  --fk-border-strong:rgba(74,55,118,.18);
-  --fk-text:#1A1B3D;
-  --fk-text-secondary:#6B7280;
-  --fk-text-muted:#7B8197;
-  --fk-brand:#7c3aed;
-  --fk-brand-hover:#6d28d9;
-  --fk-brand-strong:#6d28d9;
-  --fk-brand-soft:rgba(124,58,237,.085);
-  --fk-brand-glow:rgba(124,58,237,.10);
-  --fk-shadow-soft:0 18px 44px rgba(45,34,74,.08);
-  --fk-shadow-float:0 24px 60px rgba(45,34,74,.12);
-  background:linear-gradient(180deg,#F8F9FF 0%,#F6F7FF 100%);
-}
 
 .referenceFidelity :global(.admin-main){
   background:
