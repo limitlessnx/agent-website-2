@@ -1,0 +1,33 @@
+name: Maia Phase 5 QA
+
+on:
+  push:
+    branches:
+      - feat/maia-whatsapp-live-gate-phase-5
+    paths:
+      - "app/api/integrations/whatsapp/**"
+      - "app/api/whatsapp/**"
+      - "lib/whatsapp-*.ts"
+      - "src/trigger/maia-runtime.ts"
+      - "tests/maia-trigger-runtime.test.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/maia-phase5-qa.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run contract tests and TypeScript validation
+        run: npm run prebuild
+      - name: Run production build
+        run: npm run build
