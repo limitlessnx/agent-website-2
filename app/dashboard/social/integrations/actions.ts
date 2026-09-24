@@ -11,14 +11,15 @@ export async function saveMetaAppCredentials(formData: FormData) {
 
   const appId = String(formData.get("appId") || "").trim();
   const appSecret = String(formData.get("appSecret") || "").trim();
+  const loginConfigurationId = String(formData.get("loginConfigurationId") || "").trim();
 
-  if (!appId || !appSecret) {
-    redirect("/dashboard/social/integrations?error=Meta%20App%20ID%20and%20App%20Secret%20are%20required");
+  if (!appId) {
+    redirect("/dashboard/social/integrations?error=Meta%20App%20ID%20is%20required");
   }
 
   try {
     const organization = await getFluxknightOrganization();
-    await saveMetaCredentials({ organizationId: organization.id, appId, appSecret });
+    await saveMetaCredentials({ organizationId: organization.id, appId, appSecret, loginConfigurationId });
     revalidatePath("/dashboard/social/integrations");
     redirect("/dashboard/social/integrations?meta=configured");
   } catch (error) {

@@ -16,6 +16,7 @@ export default async function SocialIntegrationsPage({
   const config = (integration?.configuration || {}) as Record<string, unknown>;
   const health = (integration?.health || {}) as Record<string, unknown>;
   const appId = String(credentials?.app_id || config.app_id || "");
+  const loginConfigurationId = String(credentials?.login_configuration_id || config.login_configuration_id || "");
   const configured = Boolean(appId && credentials?.app_secret);
   const status = integration?.status || "disconnected";
   const success = params.meta === "configured" || params.meta === "connected";
@@ -80,8 +81,18 @@ export default async function SocialIntegrationsPage({
                 name="appSecret"
                 type="password"
                 autoComplete="new-password"
-                required
                 placeholder={configured ? "Enter a new secret to replace the stored one" : "Your Meta App Secret"}
+              />
+            </label>
+            <label>
+              <span>Login Configuration ID</span>
+              <input
+                name="loginConfigurationId"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                defaultValue={loginConfigurationId}
+                placeholder="Optional Facebook Login for Business config_id"
               />
             </label>
             <div>
@@ -105,6 +116,7 @@ export default async function SocialIntegrationsPage({
           <div className="admin-list" style={{ marginBottom: 20 }}>
             <div className="admin-list-row"><div><strong>Facebook Page</strong><span>{String(config.page_name || "Not connected")}</span></div><em>{config.page_id ? "linked" : "pending"}</em></div>
             <div className="admin-list-row"><div><strong>Instagram Business</strong><span>{String(config.instagram_username || config.instagram_business_account_id || "Not connected")}</span></div><em>{config.instagram_business_account_id ? "linked" : "pending"}</em></div>
+            <div className="admin-list-row"><div><strong>Login Configuration</strong><span>{loginConfigurationId ? "Configured" : "Not configured"}</span></div><em>{loginConfigurationId ? "config_id" : "optional"}</em></div>
             <div className="admin-list-row"><div><strong>Connection health</strong><span>{String(health.message || "No connection test yet.")}</span></div><em>{String(health.state || "pending")}</em></div>
             <div className="admin-list-row"><div><strong>Last connected</strong><span>{integration?.last_connected_at ? new Date(integration.last_connected_at).toLocaleString() : "Never"}</span></div><em>{integration?.last_checked_at ? "checked" : "not checked"}</em></div>
           </div>
@@ -128,6 +140,7 @@ export default async function SocialIntegrationsPage({
         </div>
         <div className="admin-list">
           <div className="admin-list-row"><div><strong>App ID</strong><span>Visible configuration used to start Meta OAuth.</span></div><em>dashboard</em></div>
+          <div className="admin-list-row"><div><strong>Login Configuration ID</strong><span>Optional Meta Login for Business config_id added to OAuth when configured.</span></div><em>dashboard</em></div>
           <div className="admin-list-row"><div><strong>App Secret</strong><span>Encrypted in Supabase Vault and never rendered back to the browser.</span></div><em>vault</em></div>
           <div className="admin-list-row"><div><strong>Access token</strong><span>Created after OAuth and stored in the same protected credential record.</span></div><em>vault</em></div>
           <div className="admin-list-row"><div><strong>Analytics</strong><span>Normalized into Flux Social metrics and learning snapshots.</span></div><em>automatic</em></div>

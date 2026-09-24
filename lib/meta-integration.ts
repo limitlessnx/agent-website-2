@@ -39,12 +39,18 @@ export async function getMetaIntegration(organizationId: string) {
 export async function saveMetaCredentials(input: {
   organizationId: string;
   appId: string;
-  appSecret: string;
+  appSecret?: string;
+  loginConfigurationId?: string;
 }) {
   const admin = createAdminClient() as any;
   const existingIntegration = await getMetaIntegration(input.organizationId);
   const existingCredentials = await getMetaCredentials(input.organizationId);
   const configuration = (existingIntegration?.configuration || {}) as Json;
+  const existingAppSecret = String(existingCredentials?.app_secret || "");
+  const appSecret = input.appSecret || existingAppSecret;
+  const loginConfigurationId = input.loginConfigurationId || null;
+
+  if (!appSecret) throw new Error("Meta App Secret is required for first-time setup.");
 
   const { error } = await admin.rpc("store_organization_integration_credentials", {
     p_organization_id: input.organizationId,
@@ -53,11 +59,13 @@ export async function saveMetaCredentials(input: {
     p_credentials: {
       ...(existingCredentials || {}),
       app_id: input.appId,
-      app_secret: input.appSecret,
+      app_secret: appSecret,
+      login_configuration_id: loginConfigurationId,
     },
     p_configuration: {
       ...configuration,
       app_id: input.appId,
+      login_configuration_id: loginConfigurationId,
       credentials_updated_at: new Date().toISOString(),
     },
   });
