@@ -1,0 +1,55 @@
+.reviewPage{width:100%;max-width:100%;min-width:0;overflow:hidden}
+.reviewQueue{min-width:0}
+.reviewCard{margin-bottom:18px;min-width:0;overflow:hidden}
+.reviewHeader{min-width:0}
+.reviewHeader>div{min-width:0}
+.reviewHeader h2{overflow-wrap:anywhere}
+.reviewLayout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:22px;min-width:0;align-items:start}
+.editorColumn,.previewColumn{min-width:0}
+.editorForm{display:grid;gap:12px;min-width:0}
+.field{display:grid;gap:7px;min-width:0}
+.field>span{display:block;font-size:.78rem;font-weight:700;color:var(--fk-text-muted,#9ca3af)}
+.input,.textarea{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--admin-border,#2d2d35);background:transparent;color:inherit;font:inherit;line-height:1.45}
+.textarea{min-height:110px;resize:vertical}
+.caption{min-height:180px}
+.generationActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;min-width:0}
+.reviewActions{margin-top:18px;display:grid;gap:10px;min-width:0}
+.rejectForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;min-width:0}
+.rejectButton{white-space:nowrap}
+.previewTitle{display:block;margin-bottom:10px}
+.previewMedia{display:block;width:100%;max-width:100%;height:auto;border-radius:14px;border:1px solid var(--admin-border,#2d2d35);object-fit:contain}
+.carouselGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
+.carouselItem{min-width:0}
+.carouselItem img{display:block;width:100%;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--admin-border,#2d2d35)}
+.carouselItem span{display:block;margin-top:5px;font-size:.72rem;color:var(--fk-text-muted,#9ca3af)}
+.video{display:block;width:100%;max-width:100%;max-height:640px;border-radius:14px;background:#050507}
+@media(max-width:900px){
+  .reviewCard{padding:16px!important;border-radius:16px!important}
+  .reviewHeader{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;align-items:start!important}
+  .reviewHeader h2{font-size:clamp(1.15rem,5.3vw,1.45rem)!important;line-height:1.15!important;letter-spacing:-.025em!important;margin:0 0 6px!important}
+  .reviewHeader p{font-size:.78rem!important;line-height:1.4!important;overflow-wrap:anywhere}
+  .reviewHeader :global(.admin-status){justify-self:start!important;max-width:100%!important;white-space:normal!important}
+  .reviewLayout{grid-template-columns:minmax(0,1fr);gap:20px}
+  .previewColumn{order:-1}
+  .previewTitle{font-size:.78rem;color:var(--fk-text-muted,#9ca3af);margin-bottom:8px}
+  .previewMedia,.video{border-radius:12px}
+  .carouselGrid{grid-template-columns:1fr;gap:12px}
+  .editorForm{gap:14px}
+  .field>span{font-size:.75rem}
+  .input,.textarea{font-size:16px!important;border-radius:12px;line-height:1.45;padding:12px!important}
+  .textarea{min-height:124px}
+  .caption{min-height:190px}
+  .generationActions{display:grid;grid-template-columns:minmax(0,1fr);gap:9px}
+  .generationActions form,.generationActions button{width:100%}
+  .generationActions :global(.admin-status){justify-content:center!important;white-space:normal!important}
+  .reviewActions{gap:12px}
+  .reviewActions form:first-child :global(.admin-status){width:100%;justify-content:center!important;min-height:44px}
+  .rejectForm{grid-template-columns:minmax(0,1fr);gap:10px}
+  .rejectButton{width:100%;white-space:normal;justify-content:center!important;min-height:44px}
+}
+@media(max-width:480px){
+  .reviewCard{padding:14px!important}
+  .reviewLayout{gap:18px}
+  .previewMedia,.video{width:100%;max-width:100%}
+  .carouselGrid{grid-template-columns:1fr}
+}
