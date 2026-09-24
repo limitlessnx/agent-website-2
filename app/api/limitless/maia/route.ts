@@ -52,7 +52,7 @@ async function resolveSessionId(organizationId: string, agentId: string, custome
 async function cancelPendingFollowupsForInbound(organizationId: string, customerPhone: string) {
   if (!customerPhone) return 0;
   const admin = createAdminClient();
-  const { data: lead } = await admin.from("leads").select("id").eq("phone", customerPhone).maybeSingle();
+  const { data: lead } = await admin.from("leads").select("id").eq("organization_id", organizationId).eq("phone", customerPhone).maybeSingle();
   if (!lead?.id) return 0;
   const { data } = await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", organizationId).eq("lead_id", lead.id).eq("status", "pending").select("id");
   return data?.length || 0;
