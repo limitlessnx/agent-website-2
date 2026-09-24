@@ -31,13 +31,19 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
     .in("status", ["configured", "connected", "degraded"]);
 
   let organizationId = "";
+  let matchedIntegration = false;
   for (const row of integrations || []) {
     const config = (row.configuration || {}) as Record<string, unknown>;
     if (String(config.phone_number_id || config.phoneNumberId || "") === phoneNumberId) {
-      organizationId = String(row.organization_id || "");
+      matchedIntegration = true;
+      if (config.maia_active === true) {
+        organizationId = String(row.organization_id || "");
+      }
       break;
     }
   }
+
+  if (matchedIntegration && !organizationId) return null;
 
   if (!organizationId) {
     const legacyPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
