@@ -5,7 +5,7 @@ import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessH
 
 export const dynamic = "force-dynamic";
 const CANONICAL_CHANNEL = "whatsapp";
-const CANONICAL_TRANSPORT = "existing-limitless-realty-maia-n8n";
+const CANONICAL_TRANSPORT = "trigger-dev-meta-cloud-api";
 const LIMITLESS_REALTY_CHANNEL_URL = "https://whatsapp.com/channel/0029Vas58FFInlqLq2KyeI2F";
 
 function extractPhone(body: Record<string, unknown>) {
@@ -52,7 +52,7 @@ async function resolveSessionId(organizationId: string, agentId: string, custome
 async function cancelPendingFollowupsForInbound(organizationId: string, customerPhone: string) {
   if (!customerPhone) return 0;
   const admin = createAdminClient();
-  const { data: lead } = await admin.from("leads").select("id").eq("phone", customerPhone).maybeSingle();
+  const { data: lead } = await admin.from("leads").select("id").eq("organization_id", organizationId).eq("phone", customerPhone).maybeSingle();
   if (!lead?.id) return 0;
   const { data } = await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", organizationId).eq("lead_id", lead.id).eq("status", "pending").select("id");
   return data?.length || 0;
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:",
       JSON.stringify(propertyContext),
       "",
-      "OPERATING MODE: You are the existing Limitless Realty Maia WhatsApp agent. This request is being processed by Maia's agentic runtime behind the existing production WhatsApp/n8n transport. Do not create or reference another Maia, WhatsApp number, transport or tenant.",
+      "OPERATING MODE: You are the existing Limitless Realty Maia WhatsApp agent. This request is being processed by Maia's tenant-aware Trigger.dev runtime behind the Meta WhatsApp Cloud API transport. Do not create or reference another Maia, WhatsApp number, transport or tenant.",
       `CANONICAL TRANSPORT: ${CANONICAL_TRANSPORT}`,
       "PROPERTY MATCHING RULE: when a client states a budget, prioritize verified properties at or below that budget. You may recommend relevant alternatives up to 20% above the stated budget, but label them clearly as above-budget alternatives. Never invent availability or pricing.",
       "CONVERSATION RULE: answer naturally and intelligently using the conversation context, the assigned agent configuration, approved Limitless Realty knowledge, and verified property results. Do not expose internal tools, model selection, database details or workflow mechanics to the client.",

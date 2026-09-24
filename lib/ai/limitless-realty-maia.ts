@@ -1,9 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProperties, type PropertyRecord } from "@/lib/limitless-data";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export const LIMITLESS_REALTY_HUMAN_WHATSAPP = "2348127753308";
 export const LIMITLESS_REALTY_MAIA_AGENT_SLUG = "maia";
-export const LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE = "existing-limitless-realty-maia-n8n";
+export const LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE = "trigger-dev-meta-cloud-api";
 
 const money = (value: string) => {
   const normalized = value.toLowerCase().replace(/[₦,\s]/g, "");
@@ -60,21 +61,23 @@ export async function getLimitlessMaiaContext() {
   return { organization, agent: agents[0], canonicalWhatsAppRoute: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE };
 }
 
-function getCanonicalWhatsAppWebhook() {
-  return process.env.LIMITLESS_REALTY_MAIA_N8N_WEBHOOK_URL?.trim() || process.env.LIMITLESS_REALTY_N8N_WEBHOOK_URL?.trim() || process.env.N8N_LIMITLESS_REALTY_MAIA_WEBHOOK_URL?.trim() || "";
-}
-
-async function sendViaCanonicalMaiaWhatsApp(payload: Record<string, unknown>) {
-  const webhook = getCanonicalWhatsAppWebhook();
-  if (!webhook) return { delivered: false, provider: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, reason: "The existing Limitless Realty Maia n8n webhook is not configured in this deployment." };
-  const response = await fetch(webhook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, tenant: "limitless-realty", agent: LIMITLESS_REALTY_MAIA_AGENT_SLUG, route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE }), cache: "no-store" });
-  if (!response.ok) throw new Error(`Canonical Maia WhatsApp workflow failed (${response.status}).`);
-  return { delivered: true, provider: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE };
+async function sendViaCanonicalMaiaWhatsApp(organizationId: string, payload: Record<string, unknown>) {
+  const to = String(payload.to || "");
+  const message = String(payload.message || "");
+  if (!to || !message) return { delivered: false, provider: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, reason: "Recipient and message are required." };
+  const delivery = await sendWhatsAppMessage({
+    organizationId,
+    to,
+    text: message,
+    deliveryMode: "direct",
+    lastCustomerMessageAt: new Date().toISOString(),
+  });
+  return { delivered: true, provider: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, delivery };
 }
 
 export async function handoffToLimitlessHuman(args: { organizationId: string; agentId: string; sessionId: string; customerName?: string; customerPhone?: string; reason: string; summary: string }) {
   const admin = createAdminClient();
-  const delivery = await sendViaCanonicalMaiaWhatsApp({ channel: "whatsapp", to: LIMITLESS_REALTY_HUMAN_WHATSAPP, message: args.summary, source: "maia_human_handoff" });
+  const delivery = await sendViaCanonicalMaiaWhatsApp(args.organizationId, { channel: "whatsapp", to: LIMITLESS_REALTY_HUMAN_WHATSAPP, message: args.summary, source: "maia_human_handoff" });
   if (!delivery.delivered) return { handedOff: false, pending: true, reason: delivery.reason, destination: LIMITLESS_REALTY_HUMAN_WHATSAPP };
 
   const { data: conversation } = await admin.from("agent_conversations").upsert({ organization_id: args.organizationId, agent_id: args.agentId, channel: "whatsapp", external_thread_key: args.customerPhone || args.sessionId, status: "handoff", ai_paused: true, last_message_at: new Date().toISOString(), metadata: { human_handoff_destination: LIMITLESS_REALTY_HUMAN_WHATSAPP, canonical_route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, customer_name: args.customerName || null, customer_phone: args.customerPhone || null } }, { onConflict: "organization_id,agent_id,external_thread_key" }).select("id").single();
@@ -91,10 +94,10 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
   let leadId = args.leadId || null;
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!leadId && phone) {
-    const { data: existing } = await admin.from("leads").select("id,opted_out").eq("phone", phone).maybeSingle();
+    const { data: existing } = await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
     if (existing?.id) leadId = existing.id;
     else {
-      const { data: created, error: createError } = await admin.from("leads").insert({ name: args.customerName || "Limitless Realty prospect", phone, status: "follow_up_pending", source: "maia", opted_out: false, agent_notified: false, conversation_log: [] }).select("id").single();
+      const { data: created, error: createError } = await admin.from("leads").insert({ organization_id: args.organizationId, name: args.customerName || "Limitless Realty prospect", phone, status: "follow_up_pending", source: "maia", opted_out: false, agent_notified: false, conversation_log: [] }).select("id").single();
       if (createError) throw createError;
       leadId = created.id;
     }
@@ -102,7 +105,7 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
   if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling a follow-up.");
   const { data: followup, error } = await admin.from("follow_ups").insert({ organization_id: args.organizationId, lead_id: leadId, stage: args.stage || 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id,organization_id,stage").single();
   if (error) throw error;
-  const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || phone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${phone}. Send through the canonical Limitless Realty Maia WhatsApp workflow only. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: phone, delivery_route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE } }).select("id,status,next_run_at").single();
+  const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || phone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${phone}. Send through the tenant-scoped Meta WhatsApp Cloud API via Trigger.dev only. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: phone, delivery_route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE } }).select("id,status,next_run_at").single();
   if (goalError) throw goalError;
   return { followup, autonomousGoal: goal };
 }
@@ -111,7 +114,7 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
   const admin = createAdminClient();
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
-  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("phone", phone).maybeSingle();
+  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
   if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
   const leadId = existingLead?.id || args.leadId || undefined;
   if (leadId) await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");

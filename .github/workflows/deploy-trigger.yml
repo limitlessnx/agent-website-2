@@ -6,9 +6,14 @@ on:
       - main
       - feat/flux-social-phase-3-8
       - feat/flux-social-phase-3-9
+      - feat/maia-whatsapp-trigger-phase-4
     paths:
       - "src/trigger/**"
       - "lib/social-learning.ts"
+      - "lib/ai/maia-runtime.ts"
+      - "lib/ai/maia-trigger-runtime.ts"
+      - "lib/ai/limitless-realty-maia.ts"
+      - "lib/whatsapp-delivery.ts"
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
@@ -44,6 +49,24 @@ jobs:
           fi
 
       - name: Deploy Trigger.dev tasks
+        id: trigger_deploy
+        continue-on-error: true
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
-        run: npm run trigger:deploy
+        run: |
+          set -o pipefail
+          npm run trigger:deploy 2>&1 | tee trigger-deploy.log
+
+      - name: Upload Trigger.dev deploy diagnostics
+        if: steps.trigger_deploy.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trigger-deploy-diagnostics
+          path: trigger-deploy.log
+          if-no-files-found: error
+
+      - name: Fail workflow when Trigger.dev deploy failed
+        if: steps.trigger_deploy.outcome == 'failure'
+        run: |
+          echo "::error title=Trigger.dev deploy failed::See trigger-deploy-diagnostics artifact for the complete CLI output."
+          exit 1

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Activity, ChevronDown, MessageCircle, ShieldCheck, Target, Zap } from "@/components/admin/ServerIcons";
+import { Activity, ChevronDown, MessageCircle, PlugZap, ShieldCheck, Target, Zap } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
 import styles from "./MaiaAgentic.module.css";
 
@@ -51,6 +51,7 @@ export default async function LimitlessAgenticPage() {
       </div>
       <div className={styles.heroStatus}>
         <span>MAIA STATUS</span><strong><i className={styles.dot}/>Online</strong><small>Last runtime: {lastRun}</small>
+        <Link href="/dashboard/limitless/integrations" className={styles.view}><PlugZap size={13}/> Connections</Link>
       </div>
     </section>
 
