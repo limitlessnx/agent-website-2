@@ -10,6 +10,7 @@ import { generateReelPlanAction, renderReelAction } from "@/app/dashboard/social
 import { createSocialAssetSignedUrl, listSocialAssets } from "@/lib/social-assets";
 import { getSocialReviewReadiness } from "@/lib/social-review";
 import { listSocialPosts } from "@/lib/social";
+import styles from "./review.module.css";
 
 const inputStyle = {
   width: "100%",
@@ -53,7 +54,7 @@ export default async function SocialReviewPage() {
   );
 
   return (
-    <main className="admin-page">
+    <main className={`admin-page ${styles.reviewPage}`}>
       <header className="admin-page-header">
         <div>
           <p className="admin-kicker">Fluxknight Social · Phase 3.6</p>
@@ -64,7 +65,7 @@ export default async function SocialReviewPage() {
       </header>
 
       <section className="admin-panel">
-        <div className="admin-list">
+        <div className={`admin-list ${styles.reviewQueue}`}>
           {posts.map((post) => {
             const readiness = getSocialReviewReadiness(post);
             const postAssets = assetsByPost.get(post.id) || [];
@@ -80,8 +81,8 @@ export default async function SocialReviewPage() {
             const renderStatus = String(post.metadata?.reel_render_status || "");
 
             return (
-              <article key={post.id} className="admin-panel" style={{ marginBottom: 18 }}>
-                <div className="admin-panel-header">
+              <article key={post.id} className={`admin-panel ${styles.reviewCard}`}>
+                <div className={`admin-panel-header ${styles.reviewHeader}`}>
                   <div>
                     <h2>{post.title || "Untitled post"}</h2>
                     <p>{post.format} · {post.platforms.join(", ")} · {post.status}</p>
@@ -98,18 +99,18 @@ export default async function SocialReviewPage() {
                   </div>
                 ) : null}
 
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.1fr) minmax(320px, .9fr)", gap: 22 }}>
-                  <div>
-                    <form action={updateSocialPostReviewAction} style={{ display: "grid", gap: 12 }}>
+                <div className={styles.reviewLayout}>
+                  <div className={styles.editorColumn}>
+                    <form action={updateSocialPostReviewAction} className={styles.editorForm}>
                       <input type="hidden" name="post_id" value={post.id} />
-                      <label><span>Title</span><input style={inputStyle} name="title" defaultValue={post.title} /></label>
-                      <label><span>Hook</span><textarea style={textareaStyle} name="hook" defaultValue={hook} /></label>
-                      <label><span>Caption</span><textarea style={{ ...textareaStyle, minHeight: 180 }} name="caption" defaultValue={post.caption} /></label>
-                      <label><span>CTA</span><input style={inputStyle} name="cta" defaultValue={cta} /></label>
+                      <label className={styles.field}><span>Title</span><input className={styles.input} style={inputStyle} name="title" defaultValue={post.title} /></label>
+                      <label className={styles.field}><span>Hook</span><textarea className={styles.textarea} style={textareaStyle} name="hook" defaultValue={hook} /></label>
+                      <label className={styles.field}><span>Caption</span><textarea className={`${styles.textarea} ${styles.caption}`} style={{ ...textareaStyle, minHeight: 180 }} name="caption" defaultValue={post.caption} /></label>
+                      <label className={styles.field}><span>CTA</span><input className={styles.input} style={inputStyle} name="cta" defaultValue={cta} /></label>
                       <button type="submit" className="admin-status" style={{ cursor: "pointer", justifySelf: "start" }}>Save edits</button>
                     </form>
 
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+                    <div className={styles.generationActions}>
                       {post.format === "image" ? (
                         <form action={generateStaticGraphicAction}>
                           <input type="hidden" name="post_id" value={post.id} />
@@ -138,7 +139,7 @@ export default async function SocialReviewPage() {
                       ) : null}
                     </div>
 
-                    <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
+                    <div className={styles.reviewActions}>
                       {post.status === "review" ? (
                         <form action={approveSocialPostReviewAction}>
                           <input type="hidden" name="post_id" value={post.id} />
@@ -147,31 +148,31 @@ export default async function SocialReviewPage() {
                         </form>
                       ) : <span className="admin-status live">Approved</span>}
 
-                      <form action={rejectSocialPostReviewAction} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <form action={rejectSocialPostReviewAction} className={styles.rejectForm}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <textarea style={{ ...textareaStyle, minHeight: 76 }} name="reason" placeholder="What should change before approval?" required />
-                        <button type="submit" className="admin-status warning" style={{ cursor: "pointer", whiteSpace: "nowrap" }}>Reject to draft</button>
+                        <button type="submit" className={`admin-status warning ${styles.rejectButton}`} style={{ cursor: "pointer" }}>Reject to draft</button>
                       </form>
                     </div>
                   </div>
 
-                  <div>
-                    <strong style={{ display: "block", marginBottom: 10 }}>Creative preview</strong>
+                  <div className={styles.previewColumn}>
+                    <strong className={styles.previewTitle}>Creative preview</strong>
                     {imageAsset && signedUrls.get(imageAsset.id) ? (
-                      <img src={signedUrls.get(imageAsset.id)} alt={post.title} style={{ width: "100%", borderRadius: 14, border: "1px solid var(--admin-border, #2d2d35)" }} />
+                      <img src={signedUrls.get(imageAsset.id)} alt={post.title} className={styles.previewMedia} />
                     ) : null}
                     {carouselAssets.length ? (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+                      <div className={styles.carouselGrid}>
                         {carouselAssets.map((asset, index) => signedUrls.get(asset.id) ? (
-                          <div key={asset.id}>
-                            <img src={signedUrls.get(asset.id)} alt={`${post.title} slide ${index + 1}`} style={{ width: "100%", borderRadius: 10, border: "1px solid var(--admin-border, #2d2d35)" }} />
+                          <div key={asset.id} className={styles.carouselItem}>
+                            <img src={signedUrls.get(asset.id)} alt={`${post.title} slide ${index + 1}`}  />
                             <span>Slide {index + 1}</span>
                           </div>
                         ) : null)}
                       </div>
                     ) : null}
                     {videoAsset && signedUrls.get(videoAsset.id) ? (
-                      <video controls preload="metadata" style={{ width: "100%", maxHeight: 640, borderRadius: 14, background: "#050507" }} src={signedUrls.get(videoAsset.id)} />
+                      <video controls preload="metadata" className={styles.video} src={signedUrls.get(videoAsset.id)} />
                     ) : null}
                     {!imageAsset && !carouselAssets.length && !videoAsset ? (
                       <div className="admin-list-row"><div><strong>No final media yet</strong><span>Generate the creative before approval.</span></div><em>waiting</em></div>
