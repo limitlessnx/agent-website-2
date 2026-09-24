@@ -54,6 +54,7 @@ export type SocialSchedule = {
   completed_at: string | null;
   last_error: string | null;
   created_at: string;
+  metadata: Record<string, unknown>;
   updated_at: string;
 };
 
@@ -208,6 +209,7 @@ export async function scheduleSocialPost(input: {
   postId: string;
   scheduledFor: string;
   timezone: string;
+  platforms?: SocialPlatform[];
 }) {
   const { supabase, organizationId } = await requireTenant();
   const scheduledAt = new Date(input.scheduledFor);
@@ -224,7 +226,26 @@ export async function scheduleSocialPost(input: {
   if (!(["approved", "scheduled"] as string[]).includes(post.status)) {
     throw new Error("Only approved posts can be scheduled.");
   }
-  if (!asStringArray(post.platforms).length) throw new Error("Choose at least one publishing platform.");
+  const postPlatforms = asStringArray(post.platforms);
+  if (!postPlatforms.length) throw new Error("Choose at least one publishing platform.");
+
+  const requestedPlatforms = (input.platforms || []).filter(
+    (platform) => postPlatforms.includes(platform),
+  );
+  const publishPlatforms = requestedPlatforms.length
+    ? requestedPlatforms
+    : (postPlatforms as SocialPlatform[]);
+
+  if (!publishPlatforms.length) throw new Error("Choose at least one publishing platform.");
+
+  const unsupported = publishPlatforms.filter(
+    (platform) => !["facebook", "instagram"].includes(platform),
+  );
+  if (unsupported.length) {
+    throw new Error(
+      `Live publishing is currently enabled for Facebook and Instagram only. Remove: ${unsupported.join(", ")}.`,
+    );
+  }
 
   const { error: scheduleError } = await supabase
     .from("social_schedules")
@@ -237,6 +258,7 @@ export async function scheduleSocialPost(input: {
       claimed_at: null,
       completed_at: null,
       last_error: null,
+      metadata: { publish_platforms: publishPlatforms },
     }, { onConflict: "organization_id,post_id" });
 
   if (scheduleError) throw scheduleError;
