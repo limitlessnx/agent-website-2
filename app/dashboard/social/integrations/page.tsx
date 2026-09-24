@@ -38,6 +38,18 @@ export default async function SocialIntegrationsPage({
   );
   const configured = Boolean(appId && credentials?.app_secret);
   const status = integration?.status || "disconnected";
+  const grantedPermissions = Array.isArray(config.granted_permissions)
+    ? config.granted_permissions.filter((item): item is string => typeof item === "string")
+    : [];
+  const requiredPublishingPermissions = ["pages_manage_posts", "instagram_content_publish"];
+  const missingPublishingPermissions = requiredPublishingPermissions.filter(
+    (permission) => !grantedPermissions.includes(permission),
+  );
+  const publishingReady =
+    status === "connected" &&
+    Boolean(config.page_id) &&
+    Boolean(config.instagram_business_account_id) &&
+    missingPublishingPermissions.length === 0;
   const success =
     params.meta === "configured" ||
     params.meta === "connected" ||
@@ -255,6 +267,19 @@ export default async function SocialIntegrationsPage({
                 </span>
               </div>
               <em>{loginConfigurationId ? "config_id" : "optional"}</em>
+            </div>
+            <div className="admin-list-row">
+              <div>
+                <strong>Publishing permissions</strong>
+                <span>
+                  {publishingReady
+                    ? "Facebook Page and Instagram publishing permissions are granted."
+                    : missingPublishingPermissions.length
+                      ? `Reconnect after enabling: ${missingPublishingPermissions.join(", ")}`
+                      : "Reconnect Meta to verify publishing permissions."}
+                </span>
+              </div>
+              <em>{publishingReady ? "ready" : "attention"}</em>
             </div>
             <div className="admin-list-row">
               <div>

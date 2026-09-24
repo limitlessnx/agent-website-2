@@ -6,7 +6,7 @@ import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integr
 
 const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
-const DEFAULT_SCOPES = ["pages_show_list", "pages_read_engagement", "instagram_basic"];
+const DEFAULT_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "instagram_basic", "instagram_content_publish"];
 const ALLOWED_SCOPES = new Set(DEFAULT_SCOPES);
 
 function oauthOrigin(request: Request) {
