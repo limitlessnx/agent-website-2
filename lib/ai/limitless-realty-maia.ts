@@ -91,10 +91,10 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
   let leadId = args.leadId || null;
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!leadId && phone) {
-    const { data: existing } = await admin.from("leads").select("id,opted_out").eq("phone", phone).maybeSingle();
+    const { data: existing } = await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
     if (existing?.id) leadId = existing.id;
     else {
-      const { data: created, error: createError } = await admin.from("leads").insert({ name: args.customerName || "Limitless Realty prospect", phone, status: "follow_up_pending", source: "maia", opted_out: false, agent_notified: false, conversation_log: [] }).select("id").single();
+      const { data: created, error: createError } = await admin.from("leads").insert({ organization_id: args.organizationId, name: args.customerName || "Limitless Realty prospect", phone, status: "follow_up_pending", source: "maia", opted_out: false, agent_notified: false, conversation_log: [] }).select("id").single();
       if (createError) throw createError;
       leadId = created.id;
     }
@@ -111,7 +111,7 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
   const admin = createAdminClient();
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
-  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("phone", phone).maybeSingle();
+  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
   if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
   const leadId = existingLead?.id || args.leadId || undefined;
   if (leadId) await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
