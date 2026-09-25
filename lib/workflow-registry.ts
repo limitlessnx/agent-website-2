@@ -1,5 +1,6 @@
 import { resolveTenantContext } from "@/lib/platform-repository";
 import { isServerSupabaseConfigured, supabaseRest } from "@/lib/supabase-server-rest";
+import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 export type WorkflowStatus = "draft" | "active" | "paused" | "disabled" | "error";
 export type WorkflowRunStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled" | "timed_out";
@@ -113,8 +114,29 @@ export async function updateWorkflowRun(id: string, payload: Partial<WorkflowRun
 
 export async function updateWorkflowHeartbeat(workflowId: string, fields: Partial<Pick<WorkflowRecord, "last_run_at" | "last_success_at" | "last_error_at" | "status">>) { return updateWorkflow(workflowId, fields); }
 
-export async function getWorkflowRegistrySummary() {
-  const [workflows, runs] = await Promise.all([getWorkflows(), getWorkflowRuns(250)]);
+function workflowMatchesScope(workflow: WorkflowRecord, scope: AdminOrganizationScope) {
+  if (scope.kind === "tenant") return workflow.organization_uuid === scope.organizationId;
+  if (scope.systemId === "limitless-realty" || scope.systemId === "gencouv") {
+    return workflow.organization_uuid === scope.organizationId || scope.workflowLegacyIds.includes(workflow.organization_id);
+  }
+  if (scope.systemId === "fluxknight") {
+    const ownedSystemLegacyIds = new Set(["limitless-realty", "gencouv"]);
+    return workflow.organization_uuid === scope.organizationId && !ownedSystemLegacyIds.has(workflow.organization_id);
+  }
+  return workflow.organization_uuid === scope.organizationId;
+}
+
+export async function getWorkflowRegistrySummary(scope?: AdminOrganizationScope) {
+  const [allWorkflows, allRuns] = await Promise.all([getWorkflows(), getWorkflowRuns(250)]);
+  const workflows = scope ? allWorkflows.filter((workflow) => workflowMatchesScope(workflow, scope)) : allWorkflows;
+  const workflowIds = new Set(workflows.map((workflow) => workflow.id));
+  const runs = scope
+    ? allRuns.filter((run) => workflowIds.has(run.workflow_id) || (
+        scope.kind === "tenant"
+          ? run.organization_uuid === scope.organizationId
+          : scope.workflowLegacyIds.includes(run.organization_id) || run.organization_uuid === scope.organizationId
+      ))
+    : allRuns;
   const succeeded = runs.filter((run) => run.status === "succeeded").length;
   const failed = runs.filter((run) => ["failed", "timed_out"].includes(run.status)).length;
   const completed = succeeded + failed;
