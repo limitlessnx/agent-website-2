@@ -53,7 +53,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             />
             <section className="admin-main">
               <header className="admin-topbar">
-                <div className="admin-breadcrumb"><strong>Fluxknight</strong><span>Workspace Operations</span></div>
+                <div className="admin-breadcrumb"><strong>{activeOrganization.name}</strong><span>{activeOrganization.kind === "system" ? "System Organization" : "Tenant Organization"}</span></div>
                 <AdminSearch />
                 <div className="admin-topbar-actions">
                   <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
