@@ -352,6 +352,15 @@ export async function GET(request: Request) {
     );
     if (storeError) throw storeError;
 
+    console.info("Meta OAuth callback completed", {
+      organizationId: organization.id,
+      pageId: resolvedPage.id,
+      instagramBusinessAccountId:
+        resolvedPage.instagram_business_account?.id || null,
+      grantedPermissions,
+      apiVersion,
+    });
+
     return back(request, "meta", "connected");
   } catch (error) {
     const message =
