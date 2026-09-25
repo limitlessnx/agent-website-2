@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Clock3, PauseCircle, Play, Settings2, Workflow, Zap } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import { getWorkflowRegistrySummary, type WorkflowRecord, type WorkflowRun } from "@/lib/workflow-registry";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 function formatDate(value?: string | null) {
   if (!value) return "Not recorded";
@@ -29,9 +30,10 @@ function runTone(status: WorkflowRun["status"]) {
 
 export default async function AutomationsPage() {
   let summary;
+  const scope = await resolveAdminOrganizationScope();
 
   try {
-    summary = await getWorkflowRegistrySummary();
+    summary = await getWorkflowRegistrySummary(scope);
   } catch (error) {
     summary = {
       configured: false,
