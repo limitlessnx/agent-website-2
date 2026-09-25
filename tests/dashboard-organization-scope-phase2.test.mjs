@@ -78,3 +78,12 @@ test("cross-system workflow runs remain isolated", () => {
   assert.match(workflows, /workflowRunMatchesScope/);
   assert.match(workflows, /ownedSystemLegacyIds\.has\(run\.organization_id\)/);
 });
+
+
+test("Fluxknight legacy workflow records remain visible without leaking other system organizations", () => {
+  const workflows = read("lib/workflow-registry.ts");
+  assert.match(workflows, /ownedSystemLegacyIds\.has\(workflow\.organization_id\)\) return false/);
+  assert.match(workflows, /scope\.workflowLegacyIds\.includes\(workflow\.organization_id\)/);
+  assert.match(workflows, /ownedSystemLegacyIds\.has\(run\.organization_id\)\) return false/);
+  assert.match(workflows, /scope\.workflowLegacyIds\.includes\(run\.organization_id\)/);
+});
