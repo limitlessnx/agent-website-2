@@ -69,7 +69,7 @@ export default function DashboardHomeExperience({
   const healthy = health === "Operational";
 
   return (
-    <section className={styles.home} aria-label="Fluxknight dashboard overview">
+    <section className={styles.home} aria-label={`${workspaceName || "Organization"} dashboard overview`}>
       <header className={styles.hero}>
         <div>
           <span className={styles.eyebrow}>{workspaceName ? `${workspaceName.toUpperCase()} · COMMAND CENTER` : "COMMAND CENTER"}</span>
