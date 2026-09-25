@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { createClient } from "@/lib/supabase/server";
 
 export async function requireTenant() {
@@ -9,32 +10,20 @@ export async function requireTenant() {
 
   if (adminSession) {
     const admin = createAdminClient();
-    const preferredSlug = process.env.ADMIN_ORGANIZATION_SLUG || process.env.LIMITLESS_ADMIN_ORGANIZATION_SLUG || "fluxknight";
-    const preferred = await admin
-      .from("organizations")
-      .select("id,name,slug,status")
-      .eq("slug", preferredSlug)
-      .maybeSingle();
-    const fallback = preferred.data ? null : await admin
-      .from("organizations")
-      .select("id,name,slug,status")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const scope = await resolveAdminOrganizationScope().catch(() => null);
 
-    const organization = preferred.data || fallback?.data;
-    if (!organization) redirect("/login?error=no-organization");
+    if (!scope) redirect("/login?error=no-organization");
 
     return {
       supabase: admin,
       user: { id: adminSession.email, email: adminSession.email },
-      organizationId: organization.id as string,
+      organizationId: scope.organizationId,
       branchId: null,
-      organization: organization as {
-        id: string;
-        name: string;
-        slug: string;
-        status: string;
+      organization: {
+        id: scope.organizationId,
+        name: scope.name,
+        slug: scope.slug,
+        status: scope.status,
       },
     };
   }
