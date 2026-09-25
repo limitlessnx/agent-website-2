@@ -21,6 +21,7 @@ const fluxknight: Item[] = [
 ];
 
 const limitless: Item[] = [
+  { href: "/dashboard", label: "Home", Icon: Home },
   { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
   { href: "/dashboard/limitless/agentic", label: "Agentic", Icon: BrainCircuit },
@@ -29,13 +30,22 @@ const limitless: Item[] = [
 ];
 
 const gencouv: Item[] = [
-  { href: "/dashboard/gencouv", label: "Overview", Icon: Home },
+  { href: "/dashboard", label: "Home", Icon: Home },
+  { href: "/dashboard/gencouv", label: "Operations", Icon: Home },
   { href: "/dashboard/gencouv#email-control", label: "Email", Icon: MessageCircle },
   { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", Icon: MessageCircle },
   { href: "/dashboard/gencouv#lead-board", label: "Leads", Icon: Users },
   { href: "/dashboard/gencouv#sequence-status", label: "Sequences", Icon: Activity },
   { href: "/dashboard/gencouv#acquisition", label: "Acquisition", Icon: BarChart2 },
   { href: "/dashboard/gencouv#operations", label: "Operations", Icon: Zap },
+];
+
+const tenant: Item[] = [
+  { href: "/dashboard", label: "Home", Icon: Home },
+  { href: "/dashboard/crm", label: "CRM", Icon: Users },
+  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
 ];
 
 function active(pathname: string, href: string) {
@@ -60,14 +70,19 @@ export default function WorkspaceRail({ activeOrganization }: { activeOrganizati
 
   if (!desktop) return null;
 
-  if (activeOrganization.kind !== "system") return null;
-  const isLimitless = activeOrganization.id === "limitless-realty";
-  const isGencouv = activeOrganization.id === "gencouv";
-  const isFluxknight = activeOrganization.id === "fluxknight";
-  if (!isLimitless && !isGencouv && !isFluxknight) return null;
-
   const name = activeOrganization.name;
-  const items = isLimitless ? limitless : isGencouv ? gencouv : fluxknight;
+  const isLimitless = activeOrganization.kind === "system" && activeOrganization.id === "limitless-realty";
+  const isGencouv = activeOrganization.kind === "system" && activeOrganization.id === "gencouv";
+  const isFluxknight = activeOrganization.kind === "system" && activeOrganization.id === "fluxknight";
+  const items = activeOrganization.kind === "tenant"
+    ? tenant
+    : isLimitless
+      ? limitless
+      : isGencouv
+        ? gencouv
+        : isFluxknight
+          ? fluxknight
+          : tenant;
 
   return (
     <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} quick navigation`}>
