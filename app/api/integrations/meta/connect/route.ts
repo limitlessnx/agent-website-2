@@ -48,6 +48,13 @@ export async function GET(request: Request) {
   const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
   const authorization = new URL(`https://www.facebook.com/${apiVersion}/dialog/oauth`);
 
+  console.info("Meta OAuth connect started", {
+    requestOrigin: new URL(request.url).origin,
+    redirectOrigin: oauthOrigin(request),
+    usesBusinessLoginConfig: Boolean(loginConfigurationId),
+    apiVersion,
+  });
+
   authorization.searchParams.set("client_id", appId);
   authorization.searchParams.set("redirect_uri", redirectUri);
   authorization.searchParams.set("state", state);
