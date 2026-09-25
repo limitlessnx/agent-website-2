@@ -126,16 +126,25 @@ function workflowMatchesScope(workflow: WorkflowRecord, scope: AdminOrganization
   return workflow.organization_uuid === scope.organizationId;
 }
 
+function workflowRunMatchesScope(run: WorkflowRun, scope: AdminOrganizationScope, workflowIds: Set<string>) {
+  if (workflowIds.has(run.workflow_id)) return true;
+  if (scope.kind === "tenant") return run.organization_uuid === scope.organizationId;
+  if (scope.systemId === "limitless-realty" || scope.systemId === "gencouv") {
+    return run.organization_uuid === scope.organizationId || scope.workflowLegacyIds.includes(run.organization_id);
+  }
+  if (scope.systemId === "fluxknight") {
+    const ownedSystemLegacyIds = new Set(["limitless-realty", "gencouv"]);
+    return run.organization_uuid === scope.organizationId && !ownedSystemLegacyIds.has(run.organization_id);
+  }
+  return run.organization_uuid === scope.organizationId;
+}
+
 export async function getWorkflowRegistrySummary(scope?: AdminOrganizationScope) {
   const [allWorkflows, allRuns] = await Promise.all([getWorkflows(), getWorkflowRuns(250)]);
   const workflows = scope ? allWorkflows.filter((workflow) => workflowMatchesScope(workflow, scope)) : allWorkflows;
   const workflowIds = new Set(workflows.map((workflow) => workflow.id));
   const runs = scope
-    ? allRuns.filter((run) => workflowIds.has(run.workflow_id) || (
-        scope.kind === "tenant"
-          ? run.organization_uuid === scope.organizationId
-          : scope.workflowLegacyIds.includes(run.organization_id) || run.organization_uuid === scope.organizationId
-      ))
+    ? allRuns.filter((run) => workflowRunMatchesScope(run, scope, workflowIds))
     : allRuns;
   const succeeded = runs.filter((run) => run.status === "succeeded").length;
   const failed = runs.filter((run) => ["failed", "timed_out"].includes(run.status)).length;
