@@ -9,7 +9,7 @@ test("phase 4 preserves tenant onboarding and setup routes", () => {
   assert.match(registry, /\/dashboard\/clients\/\$\{encodeURIComponent\(profile\.organization_id\)\}\/setup/);
   assert.match(registry, /\/dashboard\/switch\/tenant\/\$\{encodeURIComponent\(profile\.organization_id\)\}/);
   assert.match(registry, /Open workspace/);
-  assert.match(registry, />Setup</);
+  assert.match(registry, /Settings2 size=\{15\} \/> Setup/);
 });
 
 test("phase 4 tenant navigation exposes only tenant-operating modules", () => {
