@@ -17,12 +17,15 @@ const fluxknight: Item[] = [
   { href: "/dashboard", label: "Home", Icon: Home },
   { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
   { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
   { href: "/dashboard/social", label: "Socials", Icon: Megaphone },
 ];
 
 const limitless: Item[] = [
   { href: "/dashboard", label: "Home", Icon: Home },
   { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
+  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
   { href: "/dashboard/limitless/agentic", label: "Agentic", Icon: BrainCircuit },
   { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
@@ -35,6 +38,9 @@ const gencouv: Item[] = [
   { href: "/dashboard/gencouv#email-control", label: "Email", Icon: MessageCircle },
   { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", Icon: MessageCircle },
   { href: "/dashboard/gencouv#lead-board", label: "Leads", Icon: Users },
+  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
   { href: "/dashboard/gencouv#sequence-status", label: "Sequences", Icon: Activity },
   { href: "/dashboard/gencouv#acquisition", label: "Acquisition", Icon: BarChart2 },
   { href: "/dashboard/gencouv#operations", label: "Operations", Icon: Zap },
