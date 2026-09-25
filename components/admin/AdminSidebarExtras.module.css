@@ -82,7 +82,8 @@
   box-shadow: 0 16px 36px rgba(0,0,0,.34);
 }
 
-.workspaceMenu a {
+.workspaceMenu a,
+.workspaceMenu button {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -93,8 +94,9 @@
   text-decoration: none;
 }
 
-.workspaceMenu a:hover { background: rgba(124,58,237,.09); }
-.workspaceMenu a > span { min-width: 0; }
+.workspaceMenu a:hover,.workspaceMenu button:hover,.workspaceMenu button[data-active="true"] { background: rgba(124,58,237,.09); }
+.workspaceMenu button{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit}
+.workspaceMenu a > span,.workspaceMenu button > span { min-width: 0; }
 .workspaceMenu strong,
 .workspaceMenu small { display: block; }
 .workspaceMenu strong { overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -176,3 +178,6 @@
     background:var(--fk-surface);
   }
 }
+
+.workspaceSectionLabel{padding:8px 10px 4px;color:var(--fk-text-muted);font-size:9px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.workspaceEmpty{display:block;padding:9px 10px;color:var(--fk-text-muted);font-size:11px}
