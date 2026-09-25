@@ -109,7 +109,7 @@ test("canonical Fluxknight palette and dashboard home composition are locked", (
 test("Maia performance workspace stays evidence-backed and responsive", () => {
   const page = read("app/dashboard/agents/maia/page.tsx");
   const css = read("app/dashboard/agents/maia/page.module.css");
-  const dashboard = read("app/dashboard/page.tsx");
+  const dashboard = read("lib/admin-organization-data.ts");
 
   assert.match(dashboard, /href: "\/dashboard\/agents\/maia"/);
   assert.match(page, /getLeads\(500\)/);
