@@ -112,8 +112,21 @@ export async function GET(request: NextRequest) {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
   const expected = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.META_WHATSAPP_VERIFY_TOKEN || "";
+  const verified = mode === "subscribe" && Boolean(token) && Boolean(challenge) && Boolean(expected) && token === expected;
 
-  if (mode === "subscribe" && token && challenge && expected && token === expected) {
+  console.info("[whatsapp-webhook] verification", {
+    host: url.host,
+    pathname: url.pathname,
+    modePresent: Boolean(mode),
+    modeIsSubscribe: mode === "subscribe",
+    challengePresent: Boolean(challenge),
+    tokenPresent: Boolean(token),
+    expectedTokenPresent: Boolean(expected),
+    tokenMatches: Boolean(token && expected && token === expected),
+    verified,
+  });
+
+  if (verified) {
     return new Response(challenge, { status: 200 });
   }
   return NextResponse.json({ error: "Webhook verification failed." }, { status: 403 });
