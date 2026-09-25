@@ -121,7 +121,8 @@ function workflowMatchesScope(workflow: WorkflowRecord, scope: AdminOrganization
   }
   if (scope.systemId === "fluxknight") {
     const ownedSystemLegacyIds = new Set(["limitless-realty", "gencouv"]);
-    return workflow.organization_uuid === scope.organizationId && !ownedSystemLegacyIds.has(workflow.organization_id);
+    if (ownedSystemLegacyIds.has(workflow.organization_id)) return false;
+    return workflow.organization_uuid === scope.organizationId || scope.workflowLegacyIds.includes(workflow.organization_id);
   }
   return workflow.organization_uuid === scope.organizationId;
 }
@@ -134,7 +135,8 @@ function workflowRunMatchesScope(run: WorkflowRun, scope: AdminOrganizationScope
   }
   if (scope.systemId === "fluxknight") {
     const ownedSystemLegacyIds = new Set(["limitless-realty", "gencouv"]);
-    return run.organization_uuid === scope.organizationId && !ownedSystemLegacyIds.has(run.organization_id);
+    if (ownedSystemLegacyIds.has(run.organization_id)) return false;
+    return run.organization_uuid === scope.organizationId || scope.workflowLegacyIds.includes(run.organization_id);
   }
   return run.organization_uuid === scope.organizationId;
 }
