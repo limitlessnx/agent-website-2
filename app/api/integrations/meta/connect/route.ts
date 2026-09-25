@@ -3,23 +3,13 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
+import { buildMetaAuthorizationUrl } from "@/lib/meta-oauth";
 
 const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
-const DEFAULT_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "instagram_basic", "instagram_content_publish"];
-const ALLOWED_SCOPES = new Set(DEFAULT_SCOPES);
 
 function oauthOrigin(request: Request) {
   return process.env.NODE_ENV === "production" ? PRODUCTION_ORIGIN : new URL(request.url).origin;
-}
-
-function metaOauthScope() {
-  const configuredScopes = String(process.env.META_OAUTH_SCOPES || "")
-    .split(",")
-    .map((scope) => scope.trim())
-    .filter(Boolean);
-  const scopes = configuredScopes.filter((scope) => ALLOWED_SCOPES.has(scope));
-  return (scopes.length ? scopes : DEFAULT_SCOPES).join(",");
 }
 
 export async function GET(request: Request) {
@@ -56,19 +46,20 @@ export async function GET(request: Request) {
     credentials?.login_configuration_id || credentials?.config_id || "",
   ).trim();
   const redirectUri = new URL("/api/integrations/meta/callback", oauthOrigin(request)).toString();
-  const authorization = new URL(`https://www.facebook.com/${apiVersion}/dialog/oauth`);
+  const authorization = buildMetaAuthorizationUrl({
+    apiVersion,
+    appId,
+    redirectUri,
+    state,
+    loginConfigurationId,
+  });
 
-  authorization.searchParams.set("client_id", appId);
-  authorization.searchParams.set("redirect_uri", redirectUri);
-  authorization.searchParams.set("state", state);
-  authorization.searchParams.set("response_type", "code");
-  authorization.searchParams.set("auth_type", "rerequest");
-
-  if (loginConfigurationId) {
-    authorization.searchParams.set("config_id", loginConfigurationId);
-  } else {
-    authorization.searchParams.set("scope", metaOauthScope());
-  }
+  console.info("Meta OAuth connect started", {
+    organizationId: organization.id,
+    apiVersion,
+    hasLoginConfigurationId: Boolean(loginConfigurationId),
+    redirectUri,
+  });
 
   return NextResponse.redirect(authorization);
 }
