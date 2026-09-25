@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, BrainCircuit, Home, MessageCircle, Users, Zap } from "lucide-react";
+import { Activity, BarChart2, BrainCircuit, Home, Megaphone, MessageCircle, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "@/components/admin/WorkspaceRail.module.css";
 
@@ -13,6 +13,13 @@ type Item = { href: string; label: string; Icon: typeof Activity };
  * AdminSidebar owns the complete primary navigation inventory.
  * WorkspaceRail is a contextual quick-access strip only.
  */
+const fluxknight: Item[] = [
+  { href: "/dashboard", label: "Home", Icon: Home },
+  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/social", label: "Socials", Icon: Megaphone },
+];
+
 const limitless: Item[] = [
   { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
@@ -37,7 +44,9 @@ function active(pathname: string, href: string) {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
-export default function WorkspaceRail() {
+type ActiveOrganization = { kind: "system" | "tenant"; id: string; name: string };
+
+export default function WorkspaceRail({ activeOrganization }: { activeOrganization: ActiveOrganization }) {
   const pathname = usePathname();
   const [desktop, setDesktop] = useState(false);
 
@@ -51,12 +60,14 @@ export default function WorkspaceRail() {
 
   if (!desktop) return null;
 
-  const isLimitless = pathname.startsWith("/dashboard/limitless");
-  const isGencouv = pathname.startsWith("/dashboard/gencouv");
-  if (!isLimitless && !isGencouv) return null;
+  if (activeOrganization.kind !== "system") return null;
+  const isLimitless = activeOrganization.id === "limitless-realty";
+  const isGencouv = activeOrganization.id === "gencouv";
+  const isFluxknight = activeOrganization.id === "fluxknight";
+  if (!isLimitless && !isGencouv && !isFluxknight) return null;
 
-  const name = isLimitless ? "Limitless Realty" : "Gencouv";
-  const items = isLimitless ? limitless : gencouv;
+  const name = activeOrganization.name;
+  const items = isLimitless ? limitless : isGencouv ? gencouv : fluxknight;
 
   return (
     <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} quick navigation`}>

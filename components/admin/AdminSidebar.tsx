@@ -83,7 +83,9 @@ function sectionId(groupId: string, section: AdminNavSection, sectionIndex: numb
     : `${groupId}:${sectionIndex}`;
 }
 
-export default function AdminSidebar({ email, tenants }: { email: string; tenants: TenantNavItem[] }) {
+type ActiveOrganization = { kind: "system" | "tenant"; id: string; name: string };
+
+export default function AdminSidebar({ email, tenants, activeOrganization }: { email: string; tenants: TenantNavItem[]; activeOrganization: ActiveOrganization }) {
   const pathname = usePathname();
   const platformGroups = useMemo<NavGroup[]>(() => ADMIN_NAV_GROUPS.map((group) => withIcons(group)), []);
   const activeGroupId = getActiveAdminNavGroup(pathname);
@@ -138,24 +140,27 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
     setOpenSections((current) => current.includes(id) ? current.filter((section) => section !== id) : [...current, id]);
   }
 
-  const workspaceName = pathname.startsWith("/dashboard/gencouv")
-    ? "Gencouv"
-    : pathname.startsWith("/dashboard/limitless")
-      ? "Limitless Realty"
-      : pathname.startsWith("/dashboard/clients") || pathname.startsWith("/dashboard/onboarding")
-        ? "Client Workspaces"
-        : "Fluxknight";
+  const workspaceName = activeOrganization.name;
 
-  const workspaceLinks = [
-    { href: "/dashboard", label: "Fluxknight", meta: "Platform" },
-    { href: "/dashboard/limitless/leads", label: "Limitless Realty", meta: "Internal workspace" },
-    { href: "/dashboard/gencouv", label: "Gencouv", meta: "Internal workspace" },
-    ...tenants.slice(0, 6).map((tenant) => ({
-      href: `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`,
-      label: tenant.name,
-      meta: tenant.status.replaceAll("_", " "),
-    })),
+  const systemOrganizations = [
+    { href: "/dashboard", label: "Fluxknight", meta: "System organization" },
+    { href: "/dashboard/limitless/leads", label: "Limitless Realty", meta: "System organization" },
+    { href: "/dashboard/gencouv", label: "Gencouv", meta: "System organization" },
   ];
+
+  async function switchOrganization(kind: "system" | "tenant", id: string, href: string) {
+    try {
+      const response = await fetch("/api/admin/organization-context", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind, id }),
+      });
+      if (!response.ok) return;
+      setWorkspaceOpen(false);
+      closeMenu();
+      window.location.assign(href);
+    } catch {}
+  }
 
   return <>
     <button className={`${styles.backdrop} ${mobileOpen ? styles.backdropOpen : ""}`} type="button" aria-label="Close navigation menu" aria-hidden={!mobileOpen} tabIndex={mobileOpen ? 0 : -1} onClick={closeMenu} />
@@ -189,11 +194,19 @@ export default function AdminSidebar({ email, tenants }: { email: string; tenant
           <ChevronDown size={15} className={workspaceOpen ? extras.workspaceChevronOpen : extras.workspaceChevron} />
         </button>
         {workspaceOpen ? <div className={extras.workspaceMenu}>
-          {workspaceLinks.map((workspace) => <Link key={workspace.href} href={workspace.href} onClick={() => { setWorkspaceOpen(false); closeMenu(); }}>
+          <div className={extras.workspaceSectionLabel}>System Organizations</div>
+          {systemOrganizations.map((workspace) => <button key={workspace.href} type="button" onClick={() => void switchOrganization("system", workspace.label === "Fluxknight" ? "fluxknight" : workspace.label === "Limitless Realty" ? "limitless-realty" : "gencouv", workspace.href)} data-active={activeOrganization.kind === "system" && activeOrganization.name === workspace.label}>
             <span><strong>{workspace.label}</strong><small>{workspace.meta}</small></span>
-          </Link>)}
+          </button>)}
+          <div className={extras.workspaceSectionLabel}>Tenant Organizations</div>
+          {tenants.length ? tenants.slice(0, 6).map((tenant) => {
+            const href = `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`;
+            return <button key={tenant.organizationId} type="button" onClick={() => void switchOrganization("tenant", tenant.organizationId, href)} data-active={activeOrganization.kind === "tenant" && activeOrganization.id === tenant.organizationId}>
+              <span><strong>{tenant.name}</strong><small>{tenant.status.replaceAll("_", " ")}</small></span>
+            </button>;
+          }) : <span className={extras.workspaceEmpty}>No tenant organizations yet</span>}
           <Link href="/dashboard/clients" onClick={() => { setWorkspaceOpen(false); closeMenu(); }} className={extras.manageWorkspaces}>
-            <Search size={14} /><span>Browse all workspaces</span>
+            <Search size={14} /><span>Browse tenant organizations</span>
           </Link>
         </div> : null}
       </div>
