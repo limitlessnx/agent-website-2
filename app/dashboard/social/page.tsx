@@ -20,7 +20,7 @@ export default async function SocialOverviewPage() {
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Social AI Control Center</h1>
-          <p>Plan, review, approve, measure, schedule and publish branded content through one tenant-safe pipeline.</p>
+          <p>Plan, review, approve, measure, schedule and publish Fluxknight branded content through its dedicated agentic social media system.</p>
         </div>
         <span className={failedJobs ? "admin-status warning" : "admin-status live"}>
           {failedJobs ? `${failedJobs} publish issue${failedJobs === 1 ? "" : "s"}` : "Publishing healthy"}
