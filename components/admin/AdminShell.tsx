@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
+import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import WorkspaceRail from "@/components/admin/WorkspaceRail";
@@ -21,7 +22,18 @@ import referenceFidelity from "@/components/admin/DashboardReferenceFidelity.mod
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard");
-  const tenants = await listClientOnboardingProfiles(100).catch(() => []);
+  const [tenants, organizationContext] = await Promise.all([
+    listClientOnboardingProfiles(100).catch(() => []),
+    getAdminOrganizationContext(),
+  ]);
+  const selectedTenant = organizationContext.kind === "tenant"
+    ? tenants.find((tenant) => tenant.organization_id === organizationContext.id)
+    : null;
+  const activeOrganization: { kind: "system" | "tenant"; id: string; name: string } = {
+    kind: organizationContext.kind,
+    id: organizationContext.id,
+    name: selectedTenant?.business_name || selectedTenant?.business_email || (organizationContext.kind === "system" ? organizationContext.name : undefined) || "Tenant organization",
+  };
 
   return (
     <div id="dashboard-theme-root" data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish} ${referenceFidelity.referenceFidelity}`}>
@@ -31,6 +43,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
           <div className="admin-shell fluxknight-platform-shell">
             <AdminSidebar
               email={session.email}
+              activeOrganization={activeOrganization}
               tenants={tenants.map((tenant) => ({
                 id: tenant.id,
                 organizationId: tenant.organization_id,
@@ -47,7 +60,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
                   <PlatformChrome /><div className="admin-period"><span aria-hidden="true">Live</span><span>Live Ops</span></div>
                 </div>
               </header>
-              <WorkspaceRail />
+              <WorkspaceRail activeOrganization={activeOrganization} />
               {children}
               <EnterpriseTableEnhancer />
             </section>
