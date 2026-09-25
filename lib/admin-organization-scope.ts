@@ -63,7 +63,7 @@ export async function resolveAdminOrganizationScope(): Promise<AdminOrganization
       contextId: systemId,
       systemId,
       organizationId: String(data.id),
-      name: String(data.name || context.kind === "system" ? context.name : "Fluxknight"),
+      name: String(data.name || (context.kind === "system" ? context.name : "Fluxknight")),
       slug: String(data.slug || slug),
       status: String(data.status || "active"),
       workflowLegacyIds: workflowLegacyIds(systemId),
