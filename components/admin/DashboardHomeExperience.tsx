@@ -53,12 +53,14 @@ function noticeTone(type: string) {
 
 export default function DashboardHomeExperience({
   name,
+  workspaceName,
   health,
   metrics,
   notices,
   agents,
 }: {
   name: string;
+  workspaceName?: string;
   health: "Operational" | "Attention" | "Critical";
   metrics: Metric[];
   notices: Notice[];
@@ -70,7 +72,7 @@ export default function DashboardHomeExperience({
     <section className={styles.home} aria-label="Fluxknight dashboard overview">
       <header className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>COMMAND CENTER</span>
+          <span className={styles.eyebrow}>{workspaceName ? `${workspaceName.toUpperCase()} · COMMAND CENTER` : "COMMAND CENTER"}</span>
           <h1>Good afternoon, {name}</h1>
           <p>{healthy ? "Your AI workforce is operating smoothly." : "Your AI workforce is active, with a few items that need your attention."}</p>
         </div>

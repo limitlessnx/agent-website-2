@@ -51,16 +51,17 @@ test("phase 1-5 fidelity layer contains phone tablet and desktop composition rul
   assert.match(css, /settings-layout/);
 });
 
-test("dashboard home uses live operating inputs and does not hard-code fake KPI values", () => {
+test("dashboard home uses organization-scoped live operating inputs and does not hard-code fake KPI values", () => {
   const page = read("app/dashboard/page.tsx");
+  const data = read("lib/admin-organization-data.ts");
   const home = read("components/admin/DashboardHomeExperience.tsx");
-  assert.match(page, /value: newLeads\.length/);
-  assert.match(page, /value: engagedLeads\.length/);
-  assert.match(page, /value: followUpLeads\.length/);
-  assert.match(page, /value: qualifiedLeads\.length/);
-  assert.match(page, /notices=\{notifications\}/);
-  assert.match(page, /name: "Maia"/);
-  assert.match(page, /name: "Leo"/);
+  assert.match(page, /resolveAdminOrganizationScope/);
+  assert.match(page, /getOrganizationOperationalSnapshot\(scope\)/);
+  assert.match(page, /metrics=\{snapshot\.metrics\}/);
+  assert.match(page, /notices=\{snapshot\.notices\}/);
+  assert.match(page, /agents=\{snapshot\.agents\}/);
+  assert.match(data, /name: "Maia"/);
+  assert.match(data, /name: "Leo"/);
   assert.match(home, /Your AI Team/);
   assert.doesNotMatch(home, /94%|138 conversations|42 new leads|31 follow-ups/i);
 });

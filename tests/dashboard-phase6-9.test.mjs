@@ -57,8 +57,9 @@ test("functional regression anchors remain connected to existing business logic"
   assert.match(integrations, /IntegrationCredentialControl/);
   assert.match(settings, /getWorkflowRegistrySummary/);
   assert.match(settings, /WorkflowRegistryClient/);
-  assert.match(conversations, /getLeads\(200\)/);
-  assert.match(conversations, /getCampaignReports\(30\)/);
+  assert.match(conversations, /resolveAdminOrganizationScope/);
+  assert.match(conversations, /getOrganizationOperationalSnapshot\(scope\)/);
+  assert.match(conversations, /getWorkflowRegistrySummary\(scope\)/);
 });
 
 test("phase 9 visual contract preserves reference compositions and viewport families", () => {
@@ -109,7 +110,7 @@ test("canonical Fluxknight palette and dashboard home composition are locked", (
 test("Maia performance workspace stays evidence-backed and responsive", () => {
   const page = read("app/dashboard/agents/maia/page.tsx");
   const css = read("app/dashboard/agents/maia/page.module.css");
-  const dashboard = read("app/dashboard/page.tsx");
+  const dashboard = read("lib/admin-organization-data.ts");
 
   assert.match(dashboard, /href: "\/dashboard\/agents\/maia"/);
   assert.match(page, /getLeads\(500\)/);

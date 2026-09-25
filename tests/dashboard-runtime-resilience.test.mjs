@@ -21,18 +21,17 @@ test("Leo proactive monitor degrades without a 500 response", () => {
 });
 
 
-test("Conversations and Activity remain renderable when live dependencies fail", () => {
+test("Dashboard Home Conversations and Activity remain renderable when organization data fails", () => {
+  const home = read("app/dashboard/page.tsx");
   const conversations = read("app/dashboard/conversations/page.tsx");
   const activity = read("app/dashboard/activity/page.tsx");
+  const data = read("lib/admin-organization-data.ts");
 
-  assert.match(conversations, /getLeads\(200\)\.catch\(\(\) => \[\]\)/);
-  assert.match(conversations, /getCampaignReports\(30\)\.catch\(\(\) => \[\]\)/);
-  assert.match(conversations, /getN8nStatus\(\)\.catch/);
-  assert.match(conversations, /getSupabaseReadiness\(\)\.catch/);
-
-  assert.match(activity, /getLeads\(200\)\.catch\(\(\) => \[\]\)/);
-  assert.match(activity, /getProperties\(200\)\.catch\(\(\) => \[\]\)/);
-  assert.match(activity, /getCampaignReports\(50\)\.catch\(\(\) => \[\]\)/);
-  assert.match(activity, /getN8nStatus\(\)\.catch/);
-  assert.match(activity, /getSupabaseReadiness\(\)\.catch/);
+  assert.match(data, /emptyOrganizationOperationalSnapshot/);
+  assert.match(home, /getOrganizationOperationalSnapshot\(scope\)\.catch/);
+  assert.match(conversations, /getOrganizationOperationalSnapshot\(scope\)\.catch/);
+  assert.match(conversations, /getWorkflowRegistrySummary\(scope\)\.catch/);
+  assert.match(activity, /getOrganizationOperationalSnapshot\(scope\)\.catch/);
+  assert.match(activity, /getWorkflowRegistrySummary\(scope\)\.catch/);
+  assert.match(data, /Live data temporarily unavailable/);
 });

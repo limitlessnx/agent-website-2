@@ -1,171 +1,98 @@
-import { AlertTriangle, Bot, CheckCircle2, Clock3, MessageSquareText, PhoneCall, UserCheck } from "@/components/admin/ServerIcons";
-import { getCampaignReports, getLeads, getN8nStatus, getSupabaseReadiness } from "@/lib/limitless-data";
+import { AlertTriangle, CheckCircle2, MessageSquareText, PhoneCall, UserCheck } from "@/components/admin/ServerIcons";
+import { resolveAdminOrganizationScope, organizationHomeHref } from "@/lib/admin-organization-scope";
+import { emptyOrganizationOperationalSnapshot, getOrganizationOperationalSnapshot } from "@/lib/admin-organization-data";
+import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 
 export const dynamic = "force-dynamic";
 
-type LeadRecord = Awaited<ReturnType<typeof getLeads>>[number];
-
-function text(value: unknown, fallback = "") {
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
-}
-
-function leadLabel(lead: LeadRecord) {
-  return text(lead.name, "Unnamed lead");
-}
-
-function leadMeta(lead: LeadRecord) {
-  return [lead.phone, lead.location_preference, lead.budget].map((item) => text(item)).filter(Boolean).join(" · ") || "No contact context saved";
-}
-
-function leadStatus(lead: LeadRecord) {
-  return text(lead.status, "active").toLowerCase();
-}
-
-function isAttentionLead(lead: LeadRecord) {
-  const status = leadStatus(lead);
-  const score = Number(lead.score || 0);
-  return ["new", "hot", "qualified", "follow_up", "inspection", "pending"].some((item) => status.includes(item)) || score >= 70;
-}
-
 export default async function ConversationsPage() {
-  const [leads, campaigns, n8n, supabase] = await Promise.all([
-    getLeads(200).catch(() => []),
-    getCampaignReports(30).catch(() => []),
-    getN8nStatus().catch(() => ({ configured: false, activeWorkflows: 0, workflows: [], error: "Automation engine is temporarily unavailable" })),
-    getSupabaseReadiness().catch(() => ({ configured: false, ready: false, tables: [] })),
+  const scope = await resolveAdminOrganizationScope();
+  const [snapshot, workflowSummary] = await Promise.all([
+    getOrganizationOperationalSnapshot(scope).catch(() => emptyOrganizationOperationalSnapshot(scope.name)),
+    getWorkflowRegistrySummary(scope).catch(() => ({ configured: false, workflows: [], runs: [], active: 0, paused: 0, failures: 0, successRate: 0 })),
   ]);
 
-  const activeLeads = leads.filter((lead) => !["closed", "converted", "cold"].includes(leadStatus(lead)));
-  const attentionLeads = activeLeads.filter(isAttentionLead).slice(0, 5);
-  const inboxLeads = activeLeads.slice(0, 12);
-  const selectedLead = inboxLeads[0] || null;
-  const recentCampaigns = campaigns.slice(0, 5);
-  const failedCampaigns = campaigns.filter((campaign) => Number(campaign.failed || 0) > 0).slice(0, 5);
-  const platformHealthy = supabase.ready && !n8n.error;
-  const handoffCount = attentionLeads.length + failedCampaigns.length;
+  const conversations = snapshot.conversations.slice(0, 12);
+  const selected = conversations[0] || null;
+  const automationHealthy = workflowSummary.configured ? workflowSummary.failures === 0 : true;
+  const workspaceHref = organizationHomeHref(scope);
 
   return (
     <main className="admin-page dashboard-v2-page conversations-page">
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Conversations</p>
+          <p className="admin-kicker">{scope.name}</p>
           <h1>Conversation Center</h1>
-          <p>Monitor AI-led conversations, follow-up pressure, delivery issues and human handoff from one operating workspace.</p>
+          <p>Conversation evidence, follow-up pressure and handoff signals are restricted to the active organization workspace.</p>
         </div>
-        <span className={handoffCount ? "admin-status warning" : "admin-status live"}>{handoffCount ? `${handoffCount} need attention` : "Inbox stable"}</span>
+        <span className={snapshot.attentionCount ? "admin-status warning" : "admin-status live"}>
+          {snapshot.attentionCount ? `${snapshot.attentionCount} need attention` : "Inbox stable"}
+        </span>
       </header>
 
       <div className="admin-metric-grid">
-        <section className="admin-panel compact"><p>Active conversations</p><strong>{activeLeads.length}</strong><span className="admin-muted">CRM records still open</span></section>
-        <section className="admin-panel compact"><p>Need attention</p><strong>{attentionLeads.length}</strong><span className="admin-muted">Follow-up or handoff signals</span></section>
-        <section className="admin-panel compact"><p>Recent outbound</p><strong>{recentCampaigns.length}</strong><span className="admin-muted">Campaign conversation pushes</span></section>
-        <section className="admin-panel compact"><p>Automation state</p><strong>{platformHealthy ? "Live" : "Check"}</strong><span className="admin-muted">Supabase + workflow health</span></section>
+        <section className="admin-panel compact"><p>Visible conversations</p><strong>{conversations.length}</strong><span className="admin-muted">{scope.name} only</span></section>
+        <section className="admin-panel compact"><p>Need attention</p><strong>{snapshot.attentionCount}</strong><span className="admin-muted">Follow-up or handoff signals</span></section>
+        <section className="admin-panel compact"><p>Active automations</p><strong>{workflowSummary.active}</strong><span className="admin-muted">Scoped workflow registry</span></section>
+        <section className="admin-panel compact"><p>Automation state</p><strong>{automationHealthy ? "Live" : "Check"}</strong><span className="admin-muted">Fails soft if providers are unavailable</span></section>
       </div>
 
       <section className="admin-panel conversation-workspace" aria-label="Conversation workspace">
         <aside className="conversation-pane">
           <div className="conversation-pane-head">
-            <div><h2>Inbox</h2><p>Open conversations ordered by current CRM activity.</p></div>
+            <div><h2>Inbox</h2><p>Recent {scope.name} conversation and lead activity.</p></div>
             <MessageSquareText size={17} />
           </div>
           <div className="admin-list conversation-list">
-            {inboxLeads.map((lead, index) => (
-              <a href="/dashboard/limitless/leads" className={`admin-list-row compact conversation-row ${index === 0 ? "is-selected" : ""}`} key={lead.id}>
-                <div><strong>{leadLabel(lead)}</strong><span>{leadMeta(lead)}</span></div>
-                <em className={isAttentionLead(lead) ? "bad" : "muted"}>{lead.score || leadStatus(lead)}</em>
+            {conversations.map((item, index) => (
+              <a href={item.href} className={`admin-list-row compact conversation-row ${index === 0 ? "is-selected" : ""}`} key={item.id}>
+                <div><strong>{item.title}</strong><span>{item.meta}</span></div>
+                <em className={item.tone === "warning" ? "bad" : "muted"}>{item.label}</em>
               </a>
             ))}
-            {!inboxLeads.length ? <p className="admin-empty">No active conversations are visible yet.</p> : null}
+            {!conversations.length ? <p className="admin-empty">No conversation evidence is stored for {scope.name} yet.</p> : null}
           </div>
         </aside>
 
         <section className="conversation-pane">
           <div className="conversation-pane-head">
-            <div>
-              <h2>{selectedLead ? leadLabel(selectedLead) : "Conversation"}</h2>
-              <p>{selectedLead ? leadMeta(selectedLead) : "Select an active conversation to inspect its context."}</p>
-            </div>
-            {selectedLead ? <span className={isAttentionLead(selectedLead) ? "admin-status warning" : "admin-status live"}>{leadStatus(selectedLead)}</span> : null}
+            <div><h2>{selected?.title || "Conversation"}</h2><p>{selected?.meta || "No active conversation is available in this organization."}</p></div>
+            {selected ? <span className={selected.tone === "warning" ? "admin-status warning" : "admin-status live"}>{selected.label}</span> : null}
           </div>
-
-          {selectedLead ? (
+          {selected ? (
             <>
               <div className="conversation-thread" aria-label="Conversation summary">
-                <div className="conversation-bubble">
-                  Current CRM context is available for this lead. Open the lead record for the complete message history and actions.
-                </div>
-                <div className="conversation-bubble ai">
-                  AI workflow state is {platformHealthy ? "available" : "partially unavailable"}. Handoff and follow-up remain governed by the existing CRM workflow.
-                </div>
+                <div className="conversation-bubble">This view only uses evidence attached to {scope.name}.</div>
+                <div className="conversation-bubble ai">If a live dependency is unavailable, the page remains usable and shows the last persisted organization evidence instead of failing the entire workspace.</div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <a className="admin-button primary-button" href="/dashboard/limitless/leads"><UserCheck size={14} /> Open lead record</a>
-                <a className="admin-button secondary-button" href="/dashboard/limitless/followups"><Clock3 size={14} /> Follow-ups</a>
+                <a className="admin-button primary-button" href={selected.href}><UserCheck size={14} /> Open record</a>
+                <a className="admin-button secondary-button" href={workspaceHref}>Open {scope.name}</a>
               </div>
             </>
-          ) : (
-            <div className="admin-empty-state"><div><MessageSquareText size={20} /><p>No active conversation selected.</p></div></div>
-          )}
+          ) : <div className="admin-empty-state"><div><MessageSquareText size={20} /><p>No conversation selected.</p></div></div>}
         </section>
 
         <aside className="conversation-pane">
           <div className="conversation-pane-head">
-            <div><h2>Context</h2><p>Handoff pressure, delivery state and next operating signal.</p></div>
+            <div><h2>Context</h2><p>Organization scope and operating state.</p></div>
             <PhoneCall size={17} />
           </div>
-
-          <div className="conversation-context-card">
-            <span className="admin-kicker">AI / HUMAN</span>
-            <strong>{selectedLead && isAttentionLead(selectedLead) ? "Human review suggested" : "AI can continue"}</strong>
-            <span className="admin-muted">{selectedLead ? `Status: ${leadStatus(selectedLead)} · Score: ${selectedLead.score || "unavailable"}` : "No selected lead"}</span>
-          </div>
-          <div className="conversation-context-card">
-            <span className="admin-kicker">DELIVERY</span>
-            <strong>{failedCampaigns.length ? `${failedCampaigns.length} outbound issue${failedCampaigns.length === 1 ? "" : "s"}` : "No recent delivery failure"}</strong>
-            <span className="admin-muted">{recentCampaigns.length} recent outbound campaign{recentCampaigns.length === 1 ? "" : "s"} visible.</span>
-          </div>
-          <div className="conversation-context-card">
-            <span className="admin-kicker">SYSTEM</span>
-            <strong>{platformHealthy ? "Connected" : "Needs review"}</strong>
-            <span className="admin-muted">Supabase and workflow health are used as the current operational signal.</span>
-          </div>
+          <div className="conversation-context-card"><span className="admin-kicker">ORGANIZATION</span><strong>{scope.name}</strong><span className="admin-muted">{scope.kind === "system" ? "System organization" : "Tenant organization"}</span></div>
+          <div className="conversation-context-card"><span className="admin-kicker">AUTOMATIONS</span><strong>{workflowSummary.active} active</strong><span className="admin-muted">{workflowSummary.workflows.length} scoped workflows visible.</span></div>
+          <div className="conversation-context-card"><span className="admin-kicker">SYSTEM</span><strong>{automationHealthy ? "Available" : "Needs review"}</strong><span className="admin-muted">Dependency outages no longer replace this page with an error screen.</span></div>
         </aside>
       </section>
 
-      <section className="admin-panel conversations-hero-panel">
-        <div className="admin-panel-header">
-          <div><h2>Needs your attention</h2><p>Conversation and delivery signals that should be reviewed before they become missed opportunities.</p></div>
-          <AlertTriangle size={18} />
-        </div>
-        <div className="admin-list">
-          {attentionLeads.map((lead) => (
-            <a href="/dashboard/limitless/leads" className="admin-list-row compact attention-danger" key={lead.id}>
-              <div><strong>{leadLabel(lead)}</strong><span>{leadMeta(lead)}</span></div>
-              <em>{lead.score || leadStatus(lead)}</em>
-            </a>
-          ))}
-          {failedCampaigns.map((campaign) => (
-            <a href="/dashboard/limitless/campaigns" className="admin-list-row compact attention-warning" key={campaign.id}>
-              <div><strong>{campaign.campaign_topic}</strong><span>{campaign.failed} failed · {campaign.accepted} sent · {campaign.skipped} skipped</span></div>
-              <em>delivery</em>
-            </a>
-          ))}
-          {!attentionLeads.length && !failedCampaigns.length ? (
-            <div className="admin-list-row compact"><div><strong>No urgent conversation issues</strong><span>The visible inbox does not show handoff or delivery problems.</span></div><CheckCircle2 size={17} /></div>
-          ) : null}
-        </div>
-      </section>
-
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Recent outbound activity</h2><p>Latest campaign pushes connected to the conversation layer.</p></div><Bot size={18} /></div>
+        <div className="admin-panel-header"><div><h2>Needs your attention</h2><p>Signals from {scope.name} only.</p></div><AlertTriangle size={18} /></div>
         <div className="admin-list">
-          {recentCampaigns.map((campaign) => (
-            <a href="/dashboard/limitless/campaigns" className="admin-list-row compact" key={campaign.id}>
-              <div><strong>{campaign.campaign_topic}</strong><span>{campaign.accepted} sent · {campaign.failed} failed · {campaign.skipped} skipped</span></div>
-              <em>{campaign.attempted}</em>
+          {snapshot.notices.map((notice, index) => (
+            <a href={notice.href} className="admin-list-row compact attention-warning" key={notice.title + index}>
+              <div><strong>{notice.title}</strong><span>{notice.detail}</span></div><em>{notice.type}</em>
             </a>
           ))}
-          {!recentCampaigns.length ? <p className="admin-empty">No recent outbound activity returned yet.</p> : null}
+          {!snapshot.notices.length ? <div className="admin-list-row compact"><div><strong>No urgent conversation issues</strong><span>No stored signals currently require review.</span></div><CheckCircle2 size={17} /></div> : null}
         </div>
       </section>
     </main>
