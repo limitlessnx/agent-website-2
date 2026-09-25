@@ -9,9 +9,9 @@ test("super admin separates system and tenant organizations", () => {
   const sidebar = read("components/admin/AdminSidebar.tsx");
   assert.match(nav, /label: "System Organizations"/);
   assert.match(nav, /label: "Tenant Organizations"/);
-  assert.match(nav, /href: "\/dashboard", label: "Fluxknight"/);
-  assert.match(nav, /href: "\/dashboard\/limitless\/leads", label: "Limitless Realty"/);
-  assert.match(nav, /href: "\/dashboard\/gencouv", label: "Gencouv"/);
+  assert.match(nav, /href: "\/dashboard\/switch\/system\/fluxknight", label: "Fluxknight"/);
+  assert.match(nav, /href: "\/dashboard\/switch\/system\/limitless-realty", label: "Limitless Realty"/);
+  assert.match(nav, /href: "\/dashboard\/switch\/system\/gencouv", label: "Gencouv"/);
   assert.match(nav, /href: "\/dashboard\/clients", label: "Tenant Registry"/);
   assert.match(sidebar, /System Organizations/);
   assert.match(sidebar, /Tenant Organizations/);
