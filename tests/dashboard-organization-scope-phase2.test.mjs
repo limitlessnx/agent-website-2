@@ -71,3 +71,10 @@ test("direct organization links persist context before returning home", () => {
   assert.match(nav, /dashboard\/switch\/system\/limitless-realty/);
   assert.match(nav, /dashboard\/switch\/system\/gencouv/);
 });
+
+
+test("cross-system workflow runs remain isolated", () => {
+  const workflows = read("lib/workflow-registry.ts");
+  assert.match(workflows, /workflowRunMatchesScope/);
+  assert.match(workflows, /ownedSystemLegacyIds\.has\(run\.organization_id\)/);
+});
