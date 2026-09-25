@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, MessageSquareText, PhoneCall, UserCheck } from "@/components/admin/ServerIcons";
 import { resolveAdminOrganizationScope, organizationHomeHref } from "@/lib/admin-organization-scope";
-import { getOrganizationOperationalSnapshot } from "@/lib/admin-organization-data";
+import { emptyOrganizationOperationalSnapshot, getOrganizationOperationalSnapshot } from "@/lib/admin-organization-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function ConversationsPage() {
   const scope = await resolveAdminOrganizationScope();
   const [snapshot, workflowSummary] = await Promise.all([
-    getOrganizationOperationalSnapshot(scope),
+    getOrganizationOperationalSnapshot(scope).catch(() => emptyOrganizationOperationalSnapshot(scope.name)),
     getWorkflowRegistrySummary(scope).catch(() => ({ configured: false, workflows: [], runs: [], active: 0, paused: 0, failures: 0, successRate: 0 })),
   ]);
 
