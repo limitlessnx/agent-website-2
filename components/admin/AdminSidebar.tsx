@@ -143,9 +143,9 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
   const workspaceName = activeOrganization.name;
 
   const systemOrganizations = [
-    { href: "/dashboard", label: "Fluxknight", meta: "System organization" },
-    { href: "/dashboard/limitless/leads", label: "Limitless Realty", meta: "System organization" },
-    { href: "/dashboard/gencouv", label: "Gencouv", meta: "System organization" },
+    { id: "fluxknight", href: "/dashboard", label: "Fluxknight", meta: "System organization" },
+    { id: "limitless-realty", href: "/dashboard", label: "Limitless Realty", meta: "System organization" },
+    { id: "gencouv", href: "/dashboard", label: "Gencouv", meta: "System organization" },
   ];
 
   async function switchOrganization(kind: "system" | "tenant", id: string, href: string) {
@@ -195,12 +195,12 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
         </button>
         {workspaceOpen ? <div className={extras.workspaceMenu}>
           <div className={extras.workspaceSectionLabel}>System Organizations</div>
-          {systemOrganizations.map((workspace) => <button key={workspace.href} type="button" onClick={() => void switchOrganization("system", workspace.label === "Fluxknight" ? "fluxknight" : workspace.label === "Limitless Realty" ? "limitless-realty" : "gencouv", workspace.href)} data-active={activeOrganization.kind === "system" && activeOrganization.name === workspace.label}>
+          {systemOrganizations.map((workspace) => <button key={workspace.id} type="button" onClick={() => void switchOrganization("system", workspace.id, workspace.href)} data-active={activeOrganization.kind === "system" && activeOrganization.id === workspace.id}>
             <span><strong>{workspace.label}</strong><small>{workspace.meta}</small></span>
           </button>)}
           <div className={extras.workspaceSectionLabel}>Tenant Organizations</div>
           {tenants.length ? tenants.slice(0, 6).map((tenant) => {
-            const href = `/dashboard/clients?organizationId=${encodeURIComponent(tenant.organizationId)}`;
+            const href = "/dashboard";
             return <button key={tenant.organizationId} type="button" onClick={() => void switchOrganization("tenant", tenant.organizationId, href)} data-active={activeOrganization.kind === "tenant" && activeOrganization.id === tenant.organizationId}>
               <span><strong>{tenant.name}</strong><small>{tenant.status.replaceAll("_", " ")}</small></span>
             </button>;
