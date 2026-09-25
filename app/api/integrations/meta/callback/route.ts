@@ -161,6 +161,12 @@ export async function GET(request: Request) {
 
     if (metaError) return back(request, "error", metaError);
     if (!code || !returnedState || !expectedState || returnedState !== expectedState) {
+      console.warn("Meta OAuth callback rejected", {
+        hasCode: Boolean(code),
+        hasReturnedState: Boolean(returnedState),
+        hasExpectedState: Boolean(expectedState),
+        stateMatched: Boolean(returnedState && expectedState && returnedState === expectedState),
+      });
       return back(
         request,
         "error",
@@ -197,6 +203,13 @@ export async function GET(request: Request) {
       "/api/integrations/meta/callback",
       oauthOrigin(request),
     ).toString();
+
+    console.info("Meta OAuth callback accepted", {
+      organizationId: organization.id,
+      apiVersion,
+      hasExistingIntegration: Boolean(existingIntegration?.id),
+      redirectUri,
+    });
 
     const shortTokenUrl = new URL(
       `https://graph.facebook.com/${apiVersion}/oauth/access_token`,
@@ -235,6 +248,10 @@ export async function GET(request: Request) {
       )
       .map((permission) => String((permission as Json).permission || ""))
       .filter(Boolean);
+    const missingPublishingPermissions = [
+      "pages_manage_posts",
+      "instagram_content_publish",
+    ].filter((permission) => !grantedPermissions.includes(permission));
 
     const pagesUrl = new URL(`https://graph.facebook.com/${apiVersion}/me/accounts`);
     pagesUrl.searchParams.set(
@@ -355,6 +372,16 @@ export async function GET(request: Request) {
       },
     );
     if (storeError) throw storeError;
+
+    console.info("Meta OAuth callback stored", {
+      organizationId: organization.id,
+      pageId: resolvedPage.id,
+      hasInstagramBusinessAccount: Boolean(
+        resolvedPage.instagram_business_account?.id,
+      ),
+      grantedPermissionCount: grantedPermissions.length,
+      missingPublishingPermissions,
+    });
 
     return back(request, "meta", "connected");
   } catch (error) {
