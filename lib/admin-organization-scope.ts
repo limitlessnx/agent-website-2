@@ -27,7 +27,24 @@ function workflowLegacyIds(systemId?: SystemOrganizationId) {
 
 export async function resolveAdminOrganizationScope(): Promise<AdminOrganizationScope> {
   const context = await getAdminOrganizationContext();
-  const admin = createAdminClient();
+  const unavailable = (name: string, slug: string, systemId?: SystemOrganizationId): AdminOrganizationScope => ({
+    kind: context.kind,
+    contextId: context.id,
+    systemId,
+    organizationId: `unavailable:${context.kind}:${context.id}`,
+    name,
+    slug,
+    status: "unavailable",
+    workflowLegacyIds: workflowLegacyIds(systemId),
+  });
+
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch {
+    const systemId = context.kind === "system" ? context.id : undefined;
+    return unavailable(context.kind === "system" ? context.name : "Tenant organization", systemId ? SYSTEM_SLUGS[systemId] : context.id, systemId);
+  }
 
   if (context.kind === "tenant") {
     const { data, error } = await admin
@@ -89,7 +106,12 @@ export async function resolveAdminOrganizationScope(): Promise<AdminOrganization
     };
   }
 
-  throw new Error("No organization is available for the active admin workspace.");
+  const requestedSystemId = context.kind === "system" ? context.id : undefined;
+  return unavailable(
+    context.kind === "system" ? context.name : "Tenant organization",
+    requestedSystemId ? SYSTEM_SLUGS[requestedSystemId] : context.id,
+    requestedSystemId,
+  );
 }
 
 export function organizationHomeHref(scope: Pick<AdminOrganizationScope, "kind" | "systemId">) {
