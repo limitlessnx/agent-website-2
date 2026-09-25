@@ -1,10 +1,8 @@
-import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
+import { createMetaOAuthState } from "@/lib/meta-oauth-state";
 
-const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
 const DEFAULT_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "instagram_basic", "instagram_content_publish"];
 const ALLOWED_SCOPES = new Set(DEFAULT_SCOPES);
@@ -41,15 +39,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const state = randomBytes(32).toString("hex");
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE, state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 10 * 60,
-  });
+  const state = createMetaOAuthState(organization.id);
 
   const apiVersion = String(credentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
   const loginConfigurationId = String(
