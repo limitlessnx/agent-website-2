@@ -396,6 +396,35 @@ async function tenantSnapshot(scope: AdminOrganizationScope): Promise<Organizati
   };
 }
 
+export function emptyOrganizationOperationalSnapshot(organizationName: string): OrganizationOperationalSnapshot {
+  return {
+    organizationName,
+    metrics: [
+      { label: "Leads", value: 0, detail: "Live data temporarily unavailable", icon: "leads" },
+      { label: "Conversations", value: 0, detail: "Live data temporarily unavailable", icon: "conversations" },
+      { label: "Follow-ups", value: 0, detail: "Live data temporarily unavailable", icon: "followups" },
+      { label: "Qualified leads", value: 0, detail: "Live data temporarily unavailable", icon: "qualified" },
+    ],
+    notices: [],
+    agents: [{
+      name: "AI workforce",
+      role: "Organization agents",
+      channel: organizationName,
+      status: "limited",
+      href: "/dashboard/agents",
+      note: "Live operating data is temporarily unavailable. The workspace remains accessible.",
+      metrics: [
+        { label: "Leads", value: "—" },
+        { label: "Conversations", value: "—" },
+        { label: "Follow-ups", value: "—" },
+      ],
+    }],
+    conversations: [],
+    activity: [],
+    attentionCount: 0,
+  };
+}
+
 export async function getOrganizationOperationalSnapshot(scope: AdminOrganizationScope) {
   if (scope.kind === "system" && scope.systemId === "limitless-realty") return limitlessSnapshot(scope);
   if (scope.kind === "system" && scope.systemId === "gencouv") return gencouvSnapshot(scope);
