@@ -49,6 +49,8 @@ test("workflow registry summary filters by organization scope", () => {
   assert.match(workflows, /scope\.kind === "tenant"/);
   assert.match(workflows, /scope\.workflowLegacyIds/);
   assert.match(workflows, /getWorkflowRegistrySummary\(scope\?: AdminOrganizationScope\)/);
+  assert.match(workflows, /workflowRunMatchesScope/);
+  assert.match(workflows, /ownedSystemLegacyIds/);
 });
 
 test("CRM uses the deployed schema and organization scope", () => {
