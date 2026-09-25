@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
+import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 
 type MetricIcon = "leads" | "conversations" | "followups" | "qualified";
 
@@ -143,11 +144,12 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
 
 async function fluxknightSnapshot(scope: AdminOrganizationScope): Promise<OrganizationOperationalSnapshot> {
   const admin = createAdminClient();
-  const [{ data: leads }, { data: conversations }, { data: socialPosts }, notices] = await Promise.all([
+  const [{ data: leads }, { data: conversations }, { data: socialPosts }, notices, workflowSummary] = await Promise.all([
     admin.from("leo_public_leads").select("id,session_id,full_name,email,phone,company_name,status,handoff_requested,qualification,created_at,updated_at").order("updated_at", { ascending: false }).limit(250),
     admin.from("support_conversations").select("id,title,status,priority,summary,created_at,updated_at").order("updated_at", { ascending: false }).limit(250),
     admin.from("social_posts").select("id,title,status,platforms,created_at,updated_at").eq("organization_id", scope.organizationId).order("updated_at", { ascending: false }).limit(100),
     notificationNotices(scope.organizationId),
+    getWorkflowRegistrySummary(scope).catch(() => ({ configured: false, workflows: [], runs: [], active: 0, paused: 0, failures: 0, successRate: 0 })),
   ]);
 
   const leadRows = leads || [];
@@ -159,6 +161,15 @@ async function fluxknightSnapshot(scope: AdminOrganizationScope): Promise<Organi
     return ["qualified", "hot", "ready"].some((state) => lower(lead.status).includes(state)) || lower(qualification.status).includes("qualified") || Number(qualification.score || 0) >= 70;
   });
   const reviewPosts = posts.filter((post) => ["review", "approved"].includes(lower(post.status)));
+  const emailWorkflows = workflowSummary.workflows.filter((workflow) => {
+    const haystack = `${workflow.name} ${workflow.workflow_key} ${workflow.description || ""} ${workflow.provider}`.toLowerCase();
+    return ["email", "resend", "outbound"].some((term) => haystack.includes(term));
+  });
+  const emailRuns = workflowSummary.runs.filter((run) => {
+    const haystack = `${run.workflow_key} ${run.project_id || ""}`.toLowerCase();
+    return ["email", "resend", "outbound"].some((term) => haystack.includes(term));
+  });
+  const emailFailures = emailRuns.filter((run) => ["failed", "timed_out"].includes(run.status)).length;
 
   const conversationItems: OrganizationOperationalItem[] = [
     ...leadRows.map((lead) => ({
@@ -226,6 +237,21 @@ async function fluxknightSnapshot(scope: AdminOrganizationScope): Promise<Organi
           { label: "Leads", value: leadRows.length },
           { label: "Conversations", value: conversationRows.length },
           { label: "Follow-ups", value: followUps.length },
+        ],
+      },
+      {
+        name: "Email Automation",
+        role: "Outbound Lead Nurture",
+        channel: "Fluxknight · Email",
+        status: emailFailures ? "attention" : emailWorkflows.length ? "live" : "limited",
+        href: "/dashboard/workflows",
+        note: emailWorkflows.length
+          ? `${emailWorkflows.length} email workflow${emailWorkflows.length === 1 ? "" : "s"} · ${emailRuns.length} recent runs · ${emailFailures} failures`
+          : "No Fluxknight email workflow is registered in the current organization scope.",
+        metrics: [
+          { label: "Workflows", value: emailWorkflows.length },
+          { label: "Runs", value: emailRuns.length },
+          { label: "Failures", value: emailFailures },
         ],
       },
       {
