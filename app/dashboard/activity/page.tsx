@@ -24,11 +24,11 @@ function campaignRisk(campaign: CampaignRecord) {
 
 export default async function UnifiedActivityPage() {
   const [leads, properties, campaigns, n8n, supabase] = await Promise.all([
-    getLeads(200),
-    getProperties(200),
-    getCampaignReports(50),
-    getN8nStatus(),
-    getSupabaseReadiness(),
+    getLeads(200).catch(() => []),
+    getProperties(200).catch(() => []),
+    getCampaignReports(50).catch(() => []),
+    getN8nStatus().catch(() => ({ configured: false, activeWorkflows: 0, workflows: [], error: "Automation engine is temporarily unavailable" })),
+    getSupabaseReadiness().catch(() => ({ configured: false, ready: false, tables: [] })),
   ]);
 
   const recentCampaigns = campaigns.slice(0, 8);
