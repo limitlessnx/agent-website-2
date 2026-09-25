@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, BrainCircuit, Home, Megaphone, MessageCircle, Users, Zap } from "lucide-react";
+import { Activity, BarChart2, BrainCircuit, Home, Megaphone, MessageCircle, Settings, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "@/components/admin/WorkspaceRail.module.css";
 
@@ -46,13 +46,18 @@ const gencouv: Item[] = [
   { href: "/dashboard/gencouv#operations", label: "Operations", Icon: Zap },
 ];
 
-const tenant: Item[] = [
-  { href: "/dashboard", label: "Home", Icon: Home },
-  { href: "/dashboard/crm", label: "CRM", Icon: Users },
-  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
-  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
-  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
-];
+function tenantItems(organizationId: string): Item[] {
+  return [
+    { href: "/dashboard", label: "Home", Icon: Home },
+    { href: "/dashboard/crm", label: "Leads", Icon: Users },
+    { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+    { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+    { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
+    { href: "/dashboard/agents", label: "Agents", Icon: BrainCircuit },
+    { href: "/dashboard/tenant/analytics", label: "Analytics", Icon: BarChart2 },
+    { href: `/dashboard/clients/${encodeURIComponent(organizationId)}/setup`, label: "Settings", Icon: Settings },
+  ];
+}
 
 function active(pathname: string, href: string) {
   const route = href.split("#")[0];
@@ -81,7 +86,7 @@ export default function WorkspaceRail({ activeOrganization }: { activeOrganizati
   const isGencouv = activeOrganization.kind === "system" && activeOrganization.id === "gencouv";
   const isFluxknight = activeOrganization.kind === "system" && activeOrganization.id === "fluxknight";
   const items = activeOrganization.kind === "tenant"
-    ? tenant
+    ? tenantItems(activeOrganization.id)
     : isLimitless
       ? limitless
       : isGencouv
