@@ -93,7 +93,7 @@ export default function WorkspaceRail({ activeOrganization }: { activeOrganizati
         ? gencouv
         : isFluxknight
           ? fluxknight
-          : tenant;
+          : fluxknight;
 
   return (
     <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} quick navigation`}>
