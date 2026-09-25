@@ -87,3 +87,14 @@ test("Fluxknight legacy workflow records remain visible without leaking other sy
   assert.match(workflows, /ownedSystemLegacyIds\.has\(run\.organization_id\)\) return false/);
   assert.match(workflows, /scope\.workflowLegacyIds\.includes\(run\.organization_id\)/);
 });
+
+
+test("Fluxknight home includes scoped email automation evidence", () => {
+  const data = read("lib/admin-organization-data.ts");
+  assert.match(data, /getWorkflowRegistrySummary\(scope\)/);
+  assert.match(data, /name: "Email Automation"/);
+  assert.match(data, /Outbound Lead Nurture/);
+  assert.match(data, /emailWorkflows/);
+  assert.match(data, /emailRuns/);
+  assert.match(data, /emailFailures/);
+});
