@@ -57,8 +57,9 @@ test("functional regression anchors remain connected to existing business logic"
   assert.match(integrations, /IntegrationCredentialControl/);
   assert.match(settings, /getWorkflowRegistrySummary/);
   assert.match(settings, /WorkflowRegistryClient/);
-  assert.match(conversations, /getLeads\(200\)/);
-  assert.match(conversations, /getCampaignReports\(30\)/);
+  assert.match(conversations, /resolveAdminOrganizationScope/);
+  assert.match(conversations, /getOrganizationOperationalSnapshot\(scope\)/);
+  assert.match(conversations, /getWorkflowRegistrySummary\(scope\)/);
 });
 
 test("phase 9 visual contract preserves reference compositions and viewport families", () => {
