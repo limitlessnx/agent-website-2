@@ -108,15 +108,23 @@ function inboundText(message: Record<string, any>) {
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
+  const nextUrl = request.nextUrl;
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
   const expected = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.META_WHATSAPP_VERIFY_TOKEN || "";
   const verified = mode === "subscribe" && Boolean(token) && Boolean(challenge) && Boolean(expected) && token === expected;
 
+  const queryKeys = Array.from(url.searchParams.keys()).sort();
+  const nextUrlQueryKeys = Array.from(nextUrl.searchParams.keys()).sort();
+
   console.info("[whatsapp-webhook] verification", {
     host: url.host,
     pathname: url.pathname,
+    queryKeys,
+    nextUrlQueryKeys,
+    rawSearchPresent: Boolean(url.search),
+    rawSearchLength: url.search.length,
     modePresent: Boolean(mode),
     modeIsSubscribe: mode === "subscribe",
     challengePresent: Boolean(challenge),
@@ -124,12 +132,39 @@ export async function GET(request: NextRequest) {
     expectedTokenPresent: Boolean(expected),
     tokenMatches: Boolean(token && expected && token === expected),
     verified,
+    userAgent: request.headers.get("user-agent") || "",
+    refererPresent: Boolean(request.headers.get("referer")),
+    forwardedHost: request.headers.get("x-forwarded-host") || "",
+    forwardedProto: request.headers.get("x-forwarded-proto") || "",
+    vercelIdPresent: Boolean(request.headers.get("x-vercel-id")),
   });
 
   if (verified) {
-    return new Response(challenge, { status: 200 });
+    return new Response(challenge, {
+      status: 200,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
   }
-  return NextResponse.json({ error: "Webhook verification failed." }, { status: 403 });
+
+  return NextResponse.json(
+    {
+      error: "Webhook verification failed.",
+      diagnostics: {
+        queryKeys,
+        modePresent: Boolean(mode),
+        challengePresent: Boolean(challenge),
+        tokenPresent: Boolean(token),
+        expectedTokenPresent: Boolean(expected),
+      },
+    },
+    {
+      status: 403,
+      headers: { "cache-control": "no-store" },
+    },
+  );
 }
 
 export async function POST(request: NextRequest) {
