@@ -71,4 +71,74 @@ export async function deleteLead(leadId:string){if(!isSupabaseConfigured())throw
 export async function deleteProperty(propertyId:string){if(!isSupabaseConfigured())throw new Error("Supabase is not configured.");if(!propertyId)throw new Error("Property ID is missing.");const org=encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID);return supabaseFetch<PropertyRecord>("properties",`?id=eq.${encodeURIComponent(propertyId)}&organization_id=eq.${org}`,{method:"DELETE",headers:{Prefer:"return=minimal"}});}
 export async function updatePropertyImageLink(propertyId:string,drivePhotosLink:string){if(!isSupabaseConfigured())throw new Error("Supabase is not configured.");if(!propertyId)throw new Error("Property ID is missing.");const org=encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID);return supabasePatch<PropertyRecord>("properties",`?id=eq.${encodeURIComponent(propertyId)}&organization_id=eq.${org}`,{drive_photos_link:drivePhotosLink});}
 
-export async function getN8nStatus(){const baseUrl=(process.env.N8N_BASE_URL||"").replace(/\/$/,"");const email=process.env.N8N_EMAIL||"";const password=process.env.N8N_PASSWORD||"";if(!baseUrl||!email||!password)return{configured:false,activeWorkflows:0,workflows:[] as {id:string;name:string;active:boolean}[]};const jar=new Map<string,string>();const remember=(response:Response)=>{const cookie=response.headers.get("set-cookie");if(!cookie)return;const first=cookie.split(";")[0];const eq=first.indexOf("=");if(eq>0)jar.set(first.slice(0,eq),first.slice(eq+1));};const cookieHeader=()=>[...jar.entries()].map(([key,value])=>`${key}=${value}`).join("; ");const login=await fetch(`${baseUrl}/rest/login`,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({emailOrLdapLoginId:email,password}),cache:"no-store"});remember(login);if(!login.ok)return{configured:true,activeWorkflows:0,workflows:[],error:"n8n login failed"};const response=await fetch(`${baseUrl}/rest/workflows?limit=100`,{headers:{Accept:"application/json",Cookie:cookieHeader()},cache:"no-store"});if(!response.ok)return{configured:true,activeWorkflows:0,workflows:[],error:"n8n workflow fetch failed"};const data=await response.json();const rows=data.data||data.results||data||[];const workflows=Array.isArray(rows)?rows.map((row)=>({id:String(row.id),name:String(row.name),active:Boolean(row.active)})):[];return{configured:true,activeWorkflows:workflows.filter(workflow=>workflow.active).length,workflows};}
+export type N8nStatus = {
+  configured: boolean;
+  activeWorkflows: number;
+  workflows: { id: string; name: string; active: boolean }[];
+  error?: string;
+};
+
+export async function getN8nStatus(): Promise<N8nStatus>{
+  const baseUrl=(process.env.N8N_BASE_URL||"").replace(/\/$/,"");
+  const email=process.env.N8N_EMAIL||"";
+  const password=process.env.N8N_PASSWORD||"";
+  const workflows: {id:string;name:string;active:boolean}[]=[];
+  if(!baseUrl||!email||!password)return{configured:false,activeWorkflows:0,workflows};
+
+  try{
+    const jar=new Map<string,string>();
+    const remember=(response:Response)=>{
+      const cookie=response.headers.get("set-cookie");
+      if(!cookie)return;
+      const first=cookie.split(";")[0];
+      const eq=first.indexOf("=");
+      if(eq>0)jar.set(first.slice(0,eq),first.slice(eq+1));
+    };
+    const cookieHeader=()=>[...jar.entries()].map(([key,value])=>`${key}=${value}`).join("; ");
+
+    const login=await fetch(`${baseUrl}/rest/login`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json",Accept:"application/json"},
+      body:JSON.stringify({emailOrLdapLoginId:email,password}),
+      cache:"no-store",
+    });
+    remember(login);
+    if(!login.ok)return{configured:true,activeWorkflows:0,workflows,error:"n8n login failed"};
+
+    const response=await fetch(`${baseUrl}/rest/workflows?limit=100`,{
+      headers:{Accept:"application/json",Cookie:cookieHeader()},
+      cache:"no-store",
+    });
+    if(!response.ok)return{configured:true,activeWorkflows:0,workflows,error:"n8n workflow fetch failed"};
+
+    const raw=await response.text();
+    if(!raw.trim())return{configured:true,activeWorkflows:0,workflows,error:"n8n workflow response was empty"};
+
+    let parsed: unknown;
+    try{
+      parsed=JSON.parse(raw);
+    }catch{
+      return{configured:true,activeWorkflows:0,workflows,error:"n8n workflow response was invalid"};
+    }
+
+    const container=parsed && typeof parsed==="object" ? parsed as Record<string,unknown> : {};
+    const rows=Array.isArray(container.data)
+      ? container.data
+      : Array.isArray(container.results)
+        ? container.results
+        : Array.isArray(parsed)
+          ? parsed
+          : [];
+
+    const normalized=rows.map((row)=>{
+      const item=row && typeof row==="object" ? row as Record<string,unknown> : {};
+      return{id:String(item.id||""),name:String(item.name||"Unnamed workflow"),active:Boolean(item.active)};
+    });
+
+    return{configured:true,activeWorkflows:normalized.filter((workflow)=>workflow.active).length,workflows:normalized};
+  }catch(error){
+    console.error("n8n status unavailable",error);
+    return{configured:true,activeWorkflows:0,workflows,error:"Automation engine is temporarily unavailable"};
+  }
+}
+
