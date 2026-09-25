@@ -44,7 +44,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { href: "/dashboard/workflows", label: "Automations" },
         { href: "/dashboard/agents", label: "Agents" },
         { href: "/dashboard/conversations", label: "Conversations" },
-        { href: "/dashboard/social", label: "Social" },
         { href: "/dashboard/activity", label: "Activity" },
       ],
     }],
@@ -63,14 +62,23 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     }],
   },
   {
-    id: "workspaces",
-    label: "Workspaces",
+    id: "system-organizations",
+    label: "System Organizations",
     sections: [{
       items: [
+        { href: "/dashboard", label: "Fluxknight", exact: true },
         { href: "/dashboard/limitless/leads", label: "Limitless Realty" },
         { href: "/dashboard/gencouv", label: "Gencouv", exact: true },
-        { href: "/dashboard/clients", label: "Client Workspaces", exact: true },
-        { href: "/dashboard/onboarding#new-client", label: "Add Workspace" },
+      ],
+    }],
+  },
+  {
+    id: "tenant-organizations",
+    label: "Tenant Organizations",
+    sections: [{
+      items: [
+        { href: "/dashboard/clients", label: "Tenant Registry", exact: true },
+        { href: "/dashboard/onboarding#new-client", label: "Add Tenant" },
       ],
     }],
   },
