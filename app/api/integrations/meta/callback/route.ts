@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getFluxknightOrganization,
   getMetaCredentials,
   getMetaIntegration,
 } from "@/lib/meta-integration";
+import { verifyMetaOAuthState } from "@/lib/meta-oauth-state";
 
-const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
 type Json = Record<string, unknown>;
 
@@ -145,9 +143,6 @@ async function refreshSelectedPageIdentity(input: {
 
 export async function GET(request: Request) {
   try {
-    const session = await getAdminSession();
-    if (!session) return back(request, "error", "Admin session required");
-
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get("code");
     const returnedState = requestUrl.searchParams.get("state");
@@ -155,12 +150,10 @@ export async function GET(request: Request) {
       requestUrl.searchParams.get("error_description") ||
       requestUrl.searchParams.get("error_message");
 
-    const cookieStore = await cookies();
-    const expectedState = cookieStore.get(COOKIE)?.value;
-    cookieStore.delete(COOKIE);
-
     if (metaError) return back(request, "error", metaError);
-    if (!code || !returnedState || !expectedState || returnedState !== expectedState) {
+
+    const state = verifyMetaOAuthState(returnedState);
+    if (!code || !state) {
       return back(
         request,
         "error",
@@ -169,6 +162,9 @@ export async function GET(request: Request) {
     }
 
     const organization = await getFluxknightOrganization();
+    if (state.organizationId !== organization.id) {
+      return back(request, "error", "Meta authorization organization did not match");
+    }
     const [storedCredentials, existingIntegration] = await Promise.all([
       getMetaCredentials(organization.id),
       getMetaIntegration(organization.id),
@@ -355,6 +351,15 @@ export async function GET(request: Request) {
       },
     );
     if (storeError) throw storeError;
+
+    console.info("Meta OAuth callback completed", {
+      organizationId: organization.id,
+      pageId: resolvedPage.id,
+      instagramBusinessAccountId:
+        resolvedPage.instagram_business_account?.id || null,
+      grantedPermissions,
+      apiVersion,
+    });
 
     return back(request, "meta", "connected");
   } catch (error) {
