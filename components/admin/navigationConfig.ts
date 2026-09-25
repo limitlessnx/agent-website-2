@@ -66,9 +66,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "System Organizations",
     sections: [{
       items: [
-        { href: "/dashboard", label: "Fluxknight", exact: true },
-        { href: "/dashboard/limitless/leads", label: "Limitless Realty" },
-        { href: "/dashboard/gencouv", label: "Gencouv", exact: true },
+        { href: "/dashboard/switch/system/fluxknight", label: "Fluxknight" },
+        { href: "/dashboard/switch/system/limitless-realty", label: "Limitless Realty" },
+        { href: "/dashboard/switch/system/gencouv", label: "Gencouv" },
       ],
     }],
   },
