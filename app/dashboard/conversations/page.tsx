@@ -29,10 +29,10 @@ function isAttentionLead(lead: LeadRecord) {
 
 export default async function ConversationsPage() {
   const [leads, campaigns, n8n, supabase] = await Promise.all([
-    getLeads(200),
-    getCampaignReports(30),
-    getN8nStatus(),
-    getSupabaseReadiness(),
+    getLeads(200).catch(() => []),
+    getCampaignReports(30).catch(() => []),
+    getN8nStatus().catch(() => ({ configured: false, activeWorkflows: 0, workflows: [], error: "Automation engine is temporarily unavailable" })),
+    getSupabaseReadiness().catch(() => ({ configured: false, ready: false, tables: [] })),
   ]);
 
   const activeLeads = leads.filter((lead) => !["closed", "converted", "cold"].includes(leadStatus(lead)));
