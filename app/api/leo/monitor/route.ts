@@ -26,18 +26,29 @@ function enrichSignals(signals: Awaited<ReturnType<typeof reconcileLeoProactiveS
 export async function GET(request: Request) {
   const identity = await requireSuperAdmin();
   if (!identity) return NextResponse.json({ error: "Super Leo proactive monitoring requires super-admin access." }, { status: 403 });
-  const url = new URL(request.url);
-  const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit")) || 50, 100));
-  const snapshot = await scanLeoProactiveSignals({ limit });
-  const persisted = await reconcileLeoProactiveSignals(snapshot, actorFor(identity));
-  const allPersisted = await listPersistedLeoSignals(500);
-  const [notificationSync] = await Promise.all([
-    syncLeoProactiveLifecycleDashboardNotifications(allPersisted),
-    syncLifecycleDashboardNotifications(),
-  ]);
-  const signals = enrichSignals(persisted);
-  const alerts = sortDeliverableSignals(persisted.filter((item) => alertPolicyForLeoSignal(item).deliver)).slice(0, 8).map((item) => ({ ...item, alertPolicy: alertPolicyForLeoSignal(item), analysis: recommendationForLeoSignal(item), actionAvailable: Boolean(actionBlueprintForLeoSignal(item)) }));
-  return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), notificationSync, policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length }, monitoringAudit: auditLeoProactiveMonitoring(allPersisted) }, { headers: { "cache-control": "no-store" } });
+  try {
+    const url = new URL(request.url);
+    const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit")) || 50, 100));
+    const snapshot = await scanLeoProactiveSignals({ limit });
+    const persisted = await reconcileLeoProactiveSignals(snapshot, actorFor(identity));
+    const allPersisted = await listPersistedLeoSignals(500);
+    const [notificationSync] = await Promise.all([
+      syncLeoProactiveLifecycleDashboardNotifications(allPersisted),
+      syncLifecycleDashboardNotifications(),
+    ]);
+    const signals = enrichSignals(persisted);
+    const alerts = sortDeliverableSignals(persisted.filter((item) => alertPolicyForLeoSignal(item).deliver)).slice(0, 8).map((item) => ({ ...item, alertPolicy: alertPolicyForLeoSignal(item), analysis: recommendationForLeoSignal(item), actionAvailable: Boolean(actionBlueprintForLeoSignal(item)) }));
+    return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), notificationSync, policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length }, monitoringAudit: auditLeoProactiveMonitoring(allPersisted) }, { headers: { "cache-control": "no-store" } });
+  } catch (error) {
+    console.error("Leo proactive monitor degraded", error);
+    return NextResponse.json({
+      ok: false,
+      degraded: true,
+      alerts: [],
+      signals: [],
+      error: "Leo monitoring is temporarily unavailable.",
+    }, { status: 200, headers: { "cache-control": "no-store" } });
+  }
 }
 
 export async function POST(request: Request) {
