@@ -23,7 +23,9 @@ test("B4 system activation synchronizes event routes",()=>{
   const activation=service.slice(start);
   assert.match(activation,/sync_organization_system_event_routes/);
   assert.match(activation,/route_sync/);
-  const request=service.slice(service.indexOf("export async function requestTenantSystem"),start);
+  const requestStart=service.indexOf("export async function requestTenantSystem");
+  const requestEnd=service.indexOf("async function getInstallation",requestStart);
+  const request=service.slice(requestStart,requestEnd);
   assert.doesNotMatch(request,/installation\.organization_id/);
 });
 
