@@ -173,7 +173,7 @@ export async function recoverFailedSystemEvents(limit = 50) {
           organizationId: event.organization_id,
           eventId: event.id,
           actor: "trigger:orchestration-recovery",
-          reason: `Automatic retry for transient ${classification.category} failure`,
+          reason: "Automatic retry for transient orchestration failure",
         });
         await admin
           .from("domain_events")
