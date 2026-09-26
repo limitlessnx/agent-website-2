@@ -16,6 +16,7 @@ on:
       - "lib/ai/limitless-realty-maia.ts"
       - "lib/whatsapp-delivery.ts"
       - "lib/system-orchestrator.ts"
+      - "lib/system-event-adapters.ts"
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
