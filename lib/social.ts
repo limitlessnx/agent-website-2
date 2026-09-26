@@ -239,11 +239,11 @@ export async function scheduleSocialPost(input: {
   if (!publishPlatforms.length) throw new Error("Choose at least one publishing platform.");
 
   const unsupported = publishPlatforms.filter(
-    (platform) => !["facebook", "instagram"].includes(platform),
+    (platform) => platform !== "instagram",
   );
   if (unsupported.length) {
     throw new Error(
-      `Live publishing is currently enabled for Facebook and Instagram only. Remove: ${unsupported.join(", ")}.`,
+      `Live publishing is currently Instagram-first. Remove: ${unsupported.join(", ")}.`,
     );
   }
 
