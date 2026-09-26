@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
   calendarSlotAvailable,
   cancelCalendarEvent,
@@ -632,6 +633,100 @@ async function createTask(input: SystemWorkflowAdapterInput, values: {
 
 async function followUpAdapter(input: SystemWorkflowAdapterInput) {
   const payload = record(input.event.payload);
+
+  if (input.event.eventType === "appointment.cancelled") {
+    const appointmentId = text(payload.appointmentId || payload.appointment_id);
+    if (!appointmentId) return { adapter: "follow_up", action: "cancel_reminder", cancelled: 0 };
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("crm_tasks")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("organization_id", input.event.organizationId)
+      .eq("task_type", "appointment_reminder")
+      .in("status", ["pending", "scheduled"])
+      .contains("metadata", { appointment_id: appointmentId })
+      .select("id");
+    if (error) throw error;
+    return { adapter: "follow_up", action: "cancel_reminder", cancelled: data?.length || 0 };
+  }
+
+  if (input.event.eventType === "appointment.booked" || input.event.eventType === "appointment.rescheduled") {
+    const appointmentId = text(payload.appointmentId || payload.appointment_id);
+    const startAt = safeIso(payload.startAt || payload.start_at);
+    if (!appointmentId || !startAt) throw new Error("Appointment reminder requires appointmentId and startAt.");
+
+    const reminderMinutesBefore = Math.max(0, Math.min(10080, Number(payload.reminderMinutesBefore || payload.reminder_minutes_before || 60)));
+    const dueAt = new Date(new Date(startAt).getTime() - reminderMinutesBefore * 60_000).toISOString();
+    const existing = await createAdminClient()
+      .from("crm_tasks")
+      .select("id,status,due_at,metadata")
+      .eq("organization_id", input.event.organizationId)
+      .eq("task_type", "appointment_reminder")
+      .contains("metadata", { appointment_id: appointmentId })
+      .in("status", ["pending", "scheduled"])
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+
+    if (existing.data) {
+      const { data, error } = await createAdminClient()
+        .from("crm_tasks")
+        .update({
+          due_at: dueAt,
+          status: "scheduled",
+          description: `Reminder for appointment at ${startAt}`,
+          metadata: {
+            ...record(existing.data.metadata),
+            appointment_id: appointmentId,
+            start_at: startAt,
+            end_at: safeIso(payload.endAt || payload.end_at),
+            timezone: text(payload.timezone) || null,
+            customer_email: validEmail(payload.customerEmail || payload.customer_email) || null,
+            source_system_id: input.targetSystemId,
+            correlation_id: input.event.correlationId,
+            reminder_minutes_before: reminderMinutesBefore,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("organization_id", input.event.organizationId)
+        .eq("id", existing.data.id)
+        .select("id,status,due_at")
+        .single();
+      if (error) throw error;
+      return { adapter: "appointment_reminder", action: "reschedule", task_id: data.id, task_status: data.status, due_at: data.due_at };
+    }
+
+    const { data, error } = await createAdminClient()
+      .from("crm_tasks")
+      .insert({
+        organization_id: input.event.organizationId,
+        customer_id: input.event.customerId || null,
+        assigned_agent_id: null,
+        task_type: "appointment_reminder",
+        title: "Appointment reminder",
+        description: `Reminder for appointment at ${startAt}`,
+        status: "scheduled",
+        due_at: dueAt,
+        metadata: {
+          appointment_id: appointmentId,
+          start_at: startAt,
+          end_at: safeIso(payload.endAt || payload.end_at),
+          timezone: text(payload.timezone) || null,
+          customer_email: validEmail(payload.customerEmail || payload.customer_email) || null,
+          source_system_id: input.targetSystemId,
+          correlation_id: input.event.correlationId,
+          reminder_minutes_before: reminderMinutesBefore,
+          system_event_id: input.event.id,
+          system_event_route_id: input.routeId,
+        },
+      })
+      .select("id,status,due_at")
+      .single();
+    if (error) throw error;
+    return { adapter: "appointment_reminder", action: "schedule", task_id: data.id, task_status: data.status, due_at: data.due_at };
+  }
+
   const dueAt =
     safeIso(payload.next_follow_up_at)
     || safeIso(payload.follow_up_at)
@@ -639,7 +734,7 @@ async function followUpAdapter(input: SystemWorkflowAdapterInput) {
 
   return createTask(input, {
     taskType: "sales_follow_up",
-    title: text(payload.title) || (input.event.eventType === "appointment.booked" ? "Appointment follow-up" : "Customer follow-up"),
+    title: text(payload.title) || "Customer follow-up",
     description: text(payload.reason) || text(payload.message_context) || "Follow-up requested by another installed Fluxknight system.",
     dueAt,
     metadata: {
@@ -650,9 +745,173 @@ async function followUpAdapter(input: SystemWorkflowAdapterInput) {
   });
 }
 
+async function targetSystemSlug(input: SystemWorkflowAdapterInput) {
+  const admin = createAdminClient();
+  const { data: installation, error } = await admin
+    .from("organization_systems")
+    .select("system_id")
+    .eq("organization_id", input.event.organizationId)
+    .eq("id", input.targetSystemId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!installation) throw new Error("Target channel system is not active in organization.");
+
+  const { data: catalog, error: catalogError } = await admin
+    .from("system_catalog")
+    .select("slug")
+    .eq("id", installation.system_id)
+    .maybeSingle();
+  if (catalogError) throw catalogError;
+  return text(catalog?.slug);
+}
+
+async function temporaryB6TestOrganization(organizationId: string) {
+  const { data, error } = await createAdminClient()
+    .from("organizations")
+    .select("metadata")
+    .eq("id", organizationId)
+    .maybeSingle();
+  if (error) throw error;
+  return record(data?.metadata).temporary_b6_test === true;
+}
+
+function appointmentChannelMessage(event: SystemEventEnvelope) {
+  const payload = record(event.payload);
+  const startAt = safeIso(payload.startAt || payload.start_at || payload.requestedStart || payload.requested_start_at);
+  const when = startAt ? new Date(startAt).toISOString() : "";
+  if (event.eventType === "appointment.booked") return `Your appointment is confirmed${when ? ` for ${when}` : ""}.`;
+  if (event.eventType === "appointment.rescheduled") return `Your appointment has been rescheduled${when ? ` to ${when}` : ""}.`;
+  if (event.eventType === "appointment.cancelled") return "Your appointment has been cancelled.";
+  if (event.eventType === "appointment.email_required") return "Please send the email address you want us to use for your calendar invitation.";
+  if (event.eventType === "appointment.slot_unavailable") return "That appointment time is unavailable. Please choose another time.";
+  if (event.eventType === "reminder.scheduled") return `Reminder: you have an appointment${when ? ` at ${when}` : ""}.`;
+  return text(payload.message) || "There is an update to your appointment.";
+}
+
+async function channelReplyAdapter(input: SystemWorkflowAdapterInput) {
+  const slug = await targetSystemSlug(input);
+  if (slug !== "whatsapp-agent") {
+    throw new Error(`Deterministic channel reply adapter is not implemented for ${slug || "unknown target"}.`);
+  }
+  if (!input.event.customerId) throw new Error("Channel delivery requires customerId.");
+
+  const { data: customer, error } = await createAdminClient()
+    .from("crm_customers")
+    .select("id,phone,email,full_name")
+    .eq("organization_id", input.event.organizationId)
+    .eq("id", input.event.customerId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!customer?.phone) throw new Error("Customer has no WhatsApp phone number.");
+
+  const message = appointmentChannelMessage(input.event);
+  if (await temporaryB6TestOrganization(input.event.organizationId)) {
+    return {
+      adapter: "channel_reply",
+      channel: "whatsapp",
+      simulated: true,
+      recipient: customer.phone,
+      message,
+    };
+  }
+
+  const result = await sendWhatsAppMessage({
+    organizationId: input.event.organizationId,
+    to: customer.phone,
+    text: message,
+    deliveryMode: "auto",
+    templatePurpose: input.event.eventType === "reminder.scheduled" ? "appointment_reminder" : "appointment_update",
+    variables: {
+      customer_name: customer.full_name || "",
+      appointment_time: text(input.event.payload.startAt || input.event.payload.start_at || ""),
+    },
+  });
+
+  return {
+    adapter: "channel_reply",
+    channel: "whatsapp",
+    simulated: false,
+    provider_message_id: result.providerMessageId || null,
+    message_type: result.messageType,
+  };
+}
+
+export async function processDueAppointmentReminders(limit = 100) {
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+  const { data: tasks, error } = await admin
+    .from("crm_tasks")
+    .select("id,organization_id,customer_id,due_at,metadata")
+    .eq("task_type", "appointment_reminder")
+    .eq("status", "scheduled")
+    .lte("due_at", now)
+    .order("due_at", { ascending: true })
+    .limit(Math.max(1, Math.min(250, limit)));
+  if (error) throw error;
+
+  const results = [];
+  for (const task of tasks || []) {
+    const metadata = record(task.metadata);
+    const sourceSystemId = text(metadata.source_system_id);
+    const appointmentId = text(metadata.appointment_id);
+    if (!sourceSystemId || !appointmentId || !task.customer_id) {
+      await admin.from("crm_tasks").update({
+        status: "failed",
+        metadata: { ...metadata, reminder_error: "missing_required_context" },
+        updated_at: new Date().toISOString(),
+      }).eq("organization_id", task.organization_id).eq("id", task.id);
+      results.push({ taskId: task.id, status: "failed", reason: "missing_required_context" });
+      continue;
+    }
+
+    try {
+      const { data: eventId, error: publishError } = await (admin as any).rpc("publish_system_event", {
+        p_organization_id: task.organization_id,
+        p_source_system_id: sourceSystemId,
+        p_event_type: "reminder.scheduled",
+        p_payload: {
+          appointmentId,
+          startAt: text(metadata.start_at),
+          endAt: text(metadata.end_at) || null,
+          timezone: text(metadata.timezone) || null,
+          reminderTaskId: task.id,
+        },
+        p_target_system_id: null,
+        p_customer_id: task.customer_id,
+        p_conversation_id: null,
+        p_correlation_id: text(metadata.correlation_id) || null,
+        p_causation_id: null,
+        p_idempotency_key: `appointment-reminder:${task.id}`,
+        p_source: "follow-up-system",
+      });
+      if (publishError) throw publishError;
+
+      await admin.from("crm_tasks").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        metadata: { ...metadata, reminder_event_id: String(eventId), reminder_emitted_at: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      }).eq("organization_id", task.organization_id).eq("id", task.id);
+
+      results.push({ taskId: task.id, status: "completed", eventId: String(eventId) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Reminder emission failed.";
+      await admin.from("crm_tasks").update({
+        status: "failed",
+        metadata: { ...metadata, reminder_error: message.slice(0, 1000) },
+        updated_at: new Date().toISOString(),
+      }).eq("organization_id", task.organization_id).eq("id", task.id);
+      results.push({ taskId: task.id, status: "failed", reason: message });
+    }
+  }
+
+  return { checked: tasks?.length || 0, results };
+}
+
 export async function executeSystemWorkflowAdapter(input: SystemWorkflowAdapterInput) {
   const adapter = text(input.configuration?.adapter);
   if (adapter === "appointment") return appointmentAdapter(input);
   if (adapter === "follow_up") return followUpAdapter(input);
+  if (adapter === "channel_reply") return channelReplyAdapter(input);
   throw new Error(`Unsupported system workflow adapter: ${adapter || "missing"}`);
 }
