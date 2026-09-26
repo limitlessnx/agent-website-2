@@ -1,7 +1,5 @@
-import RuntimeWorkspace from "./RuntimeWorkspace";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default function RuntimePage() {
-  return <RuntimeWorkspace />;
+export default function LegacyPortalRedirect(){
+  redirect("/portal/systems");
 }
