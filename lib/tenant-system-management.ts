@@ -47,7 +47,9 @@ export async function requestTenantSystem(input: {
     p_actor_user_id: null,
   });
   if (error) throw error;
-  return data;
+  const { data: routeSync, error: routeError } = await admin.rpc("sync_organization_system_event_routes", { p_organization_id: installation.organization_id });
+  if (routeError) throw routeError;
+  return { activation: data, route_sync: routeSync };
 }
 
 async function getInstallation(installationId: string) {
@@ -133,6 +135,7 @@ export async function activateTenantSystem(installationId: string) {
   const admin = createAdminClient();
   const installation = await getInstallation(installationId);
   if (installation.status === "active") {
+    await admin.rpc("sync_organization_system_event_routes", { p_organization_id: installation.organization_id });
     return { ok: true, idempotent: true, organization_system_id: installationId, status: "active" };
   }
   if (installation.status !== "testing" || installation.metadata?.test_passed !== true) {
