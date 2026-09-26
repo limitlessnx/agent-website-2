@@ -24,8 +24,8 @@ export default async function ClientsPage() {
       <div className="admin-page-header">
         <div>
           <p className="admin-kicker">Client operations</p>
-          <h1>Client Registry</h1>
-          <p>Open an existing client workspace for setup or review. New clients are created only through the Client Onboarding menu.</p>
+          <h1>Tenant Organizations</h1>
+          <p>Switch into a tenant workspace for day-to-day operations, or open setup when you need to change its configuration.</p>
         </div>
       </div>
 
@@ -49,9 +49,14 @@ export default async function ClientsPage() {
                 <span><Mail size={13} /> {profile.business_email || "No business email"} · {profile.industry || "Industry not selected"}</span>
                 <span>Status: {profile.status.replaceAll("_", " ")} · Created {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(profile.created_at))}</span>
               </div>
-              <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/setup`}>
-                <Settings2 size={15} /> Open client
-              </Link>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <Link className="admin-button primary-button" href={`/dashboard/switch/tenant/${encodeURIComponent(profile.organization_id)}`}>
+                  <Building2 size={15} /> Open workspace
+                </Link>
+                <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/setup`}>
+                  <Settings2 size={15} /> Setup
+                </Link>
+              </div>
             </div>
           ))}
           {!profiles.length && !error ? <p className="admin-empty">No client workspaces exist yet. Use Client Onboarding → New Client.</p> : null}

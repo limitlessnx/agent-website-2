@@ -2,6 +2,7 @@ import { Bot, Network, ShieldCheck, Workflow } from "@/components/admin/ServerIc
 import AgentManagementCenter from "@/components/admin/AgentManagementCenter";
 import MetricCard from "@/components/admin/MetricCard";
 import { getAgentManagementSummary } from "@/lib/agent-management";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,10 @@ function channelsFor(value: unknown) {
 export default async function AgentManagementPage() {
   let summary;
   let error = "";
+  const scope = await resolveAdminOrganizationScope();
 
   try {
-    summary = await getAgentManagementSummary();
+    summary = await getAgentManagementSummary(scope);
   } catch (caught) {
     summary = { configured: true, agents: [], projects: [], workflows: [], links: [] };
     error = caught instanceof Error ? caught.message : "Agent management could not load.";
@@ -48,9 +50,9 @@ export default async function AgentManagementPage() {
     <main className="admin-page dashboard-v2-page">
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">AI Workforce</p>
+          <p className="admin-kicker">{scope.name} · AI Workforce</p>
           <h1>Agents</h1>
-          <p>Manage your AI staff like working team members: role, channel, handoff, workflow access and readiness in one place.</p>
+          <p>Manage AI staff belonging to {scope.name}: role, channel, handoff, workflow access and readiness in one place.</p>
         </div>
         <span className={attention ? "admin-status warning" : "admin-status live"}>
           {attention ? `${attention} need review` : "Workforce stable"}

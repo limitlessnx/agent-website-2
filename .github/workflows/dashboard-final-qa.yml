@@ -1,0 +1,37 @@
+name: Dashboard Final QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/dashboard/**"
+      - "app/portal/**"
+      - "components/admin/**"
+      - "components/portal/**"
+      - "lib/admin-organization-*.ts"
+      - "lib/agent-management.ts"
+      - "lib/client-*.ts"
+      - "lib/workflow-registry.ts"
+      - "tests/dashboard-*.test.mjs"
+      - "tests/portal-*.test.mjs"
+      - "package.json"
+      - ".github/workflows/dashboard-final-qa.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Dashboard regression contracts
+        run: npm run test:support
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build

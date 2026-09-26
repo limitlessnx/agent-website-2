@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, BrainCircuit, Home, Megaphone, MessageCircle, Users, Zap } from "lucide-react";
+import { Activity, BarChart2, BrainCircuit, Home, Megaphone, MessageCircle, Settings, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "@/components/admin/WorkspaceRail.module.css";
 
@@ -17,12 +17,15 @@ const fluxknight: Item[] = [
   { href: "/dashboard", label: "Home", Icon: Home },
   { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
   { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
   { href: "/dashboard/social", label: "Socials", Icon: Megaphone },
 ];
 
 const limitless: Item[] = [
   { href: "/dashboard", label: "Home", Icon: Home },
   { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
+  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
   { href: "/dashboard/limitless/agentic", label: "Agentic", Icon: BrainCircuit },
   { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
@@ -35,18 +38,26 @@ const gencouv: Item[] = [
   { href: "/dashboard/gencouv#email-control", label: "Email", Icon: MessageCircle },
   { href: "/dashboard/gencouv#gencouv-inbox", label: "Inbox", Icon: MessageCircle },
   { href: "/dashboard/gencouv#lead-board", label: "Leads", Icon: Users },
+  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
   { href: "/dashboard/gencouv#sequence-status", label: "Sequences", Icon: Activity },
   { href: "/dashboard/gencouv#acquisition", label: "Acquisition", Icon: BarChart2 },
   { href: "/dashboard/gencouv#operations", label: "Operations", Icon: Zap },
 ];
 
-const tenant: Item[] = [
-  { href: "/dashboard", label: "Home", Icon: Home },
-  { href: "/dashboard/crm", label: "CRM", Icon: Users },
-  { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
-  { href: "/dashboard/activity", label: "Activity", Icon: Activity },
-  { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
-];
+function tenantItems(organizationId: string): Item[] {
+  return [
+    { href: "/dashboard", label: "Home", Icon: Home },
+    { href: "/dashboard/crm", label: "Leads", Icon: Users },
+    { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
+    { href: "/dashboard/activity", label: "Activity", Icon: Activity },
+    { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
+    { href: "/dashboard/agents", label: "Agents", Icon: BrainCircuit },
+    { href: "/dashboard/tenant/analytics", label: "Analytics", Icon: BarChart2 },
+    { href: `/dashboard/clients/${encodeURIComponent(organizationId)}/setup`, label: "Settings", Icon: Settings },
+  ];
+}
 
 function active(pathname: string, href: string) {
   const route = href.split("#")[0];
@@ -75,14 +86,14 @@ export default function WorkspaceRail({ activeOrganization }: { activeOrganizati
   const isGencouv = activeOrganization.kind === "system" && activeOrganization.id === "gencouv";
   const isFluxknight = activeOrganization.kind === "system" && activeOrganization.id === "fluxknight";
   const items = activeOrganization.kind === "tenant"
-    ? tenant
+    ? tenantItems(activeOrganization.id)
     : isLimitless
       ? limitless
       : isGencouv
         ? gencouv
         : isFluxknight
           ? fluxknight
-          : tenant;
+          : fluxknight;
 
   return (
     <nav className={`${styles.rail} workspace-rail`} aria-label={`${name} quick navigation`}>

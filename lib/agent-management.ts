@@ -1,6 +1,7 @@
 import { isServerSupabaseConfigured, supabaseRest } from "@/lib/supabase-server-rest";
 import { resolveOrganizationAiModel } from "@/lib/organization-security";
 import type { WorkflowRecord } from "@/lib/workflow-registry";
+import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 export type AgentStatus = "draft" | "active" | "paused" | "disabled" | "error";
 
@@ -78,7 +79,12 @@ function normalizeAgent(agent: ManagedAgent): ManagedAgent {
   };
 }
 
-export async function getAgentManagementSummary(): Promise<AgentManagementSummary> {
+function belongsToScope(value: string | null | undefined, scope: AdminOrganizationScope) {
+  const normalized = String(value || "");
+  return normalized === scope.organizationId || normalized === scope.contextId || scope.workflowLegacyIds.includes(normalized);
+}
+
+export async function getAgentManagementSummary(scope?: AdminOrganizationScope): Promise<AgentManagementSummary> {
   if (!isServerSupabaseConfigured()) return { configured: false, agents: [], projects: [], workflows: [], links: [] };
 
   const [agents, projects, workflows, links] = await Promise.all([
@@ -88,7 +94,19 @@ export async function getAgentManagementSummary(): Promise<AgentManagementSummar
     supabaseRest<AgentWorkflowLink[]>("agent_workflow_links?select=id,agent_id,workflow_id,role&limit=1000").catch(() => []),
   ]);
 
-  return { configured: true, agents: agents.map(normalizeAgent), projects, workflows, links };
+  const normalizedAgents = agents.map(normalizeAgent);
+  if (!scope) return { configured: true, agents: normalizedAgents, projects, workflows, links };
+
+  const scopedAgents = normalizedAgents.filter((agent) => belongsToScope(agent.organization_id, scope));
+  const scopedProjects = projects.filter((project) => belongsToScope(project.organization_id, scope));
+  const scopedWorkflows = workflows.filter((workflow) =>
+    workflow.organization_uuid === scope.organizationId || belongsToScope(workflow.organization_id, scope)
+  );
+  const agentIds = new Set(scopedAgents.map((agent) => agent.id));
+  const workflowIds = new Set(scopedWorkflows.map((workflow) => workflow.id));
+  const scopedLinks = links.filter((link) => agentIds.has(link.agent_id) && workflowIds.has(link.workflow_id));
+
+  return { configured: true, agents: scopedAgents, projects: scopedProjects, workflows: scopedWorkflows, links: scopedLinks };
 }
 
 function clean(value: unknown) {
