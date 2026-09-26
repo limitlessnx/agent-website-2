@@ -87,7 +87,7 @@ async function instagramGraph(
   if (!token) throw new Error("Instagram publishing access token is missing.");
 
   const url = new URL(
-    `https://${host}/${config.apiVersion}/${path.replace(/^\\//, "")}`,
+    `https://${host}/${config.apiVersion}/${path.replace(/^\//, "")}`,
   );
   for (const [key, value] of Object.entries(init?.params || {})) {
     url.searchParams.set(key, value);
