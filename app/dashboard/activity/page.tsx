@@ -2,14 +2,18 @@ import { Activity, AlertTriangle, CheckCircle2, Workflow } from "@/components/ad
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { emptyOrganizationOperationalSnapshot, getOrganizationOperationalSnapshot } from "@/lib/admin-organization-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
+import { getOrchestrationOperationsSnapshot } from "@/lib/orchestration-observability";
 
 export const dynamic = "force-dynamic";
 
 export default async function UnifiedActivityPage() {
   const scope = await resolveAdminOrganizationScope();
-  const [snapshot, workflowSummary] = await Promise.all([
+  const [snapshot, workflowSummary, orchestration] = await Promise.all([
     getOrganizationOperationalSnapshot(scope).catch(() => emptyOrganizationOperationalSnapshot(scope.name)),
     getWorkflowRegistrySummary(scope).catch(() => ({ configured: false, workflows: [], runs: [], active: 0, paused: 0, failures: 0, successRate: 0 })),
+    scope.organizationId.startsWith("unavailable:")
+      ? Promise.resolve({ failures: [], summary: { failedEvents: 0, retryable: 0, escalated: 0, retried: 0 } })
+      : getOrchestrationOperationsSnapshot(scope.organizationId).catch(() => ({ failures: [], summary: { failedEvents: 0, retryable: 0, escalated: 0, retried: 0 } })),
   ]);
 
   const feed = [
@@ -24,7 +28,7 @@ export default async function UnifiedActivityPage() {
     })),
   ].slice(0, 14);
 
-  const attentionCount = snapshot.attentionCount + workflowSummary.failures;
+  const attentionCount = snapshot.attentionCount + workflowSummary.failures + orchestration.summary.failedEvents;
 
   return (
     <main className="admin-page activity-page">
@@ -52,6 +56,29 @@ export default async function UnifiedActivityPage() {
             </a>
           ))}
           {!feed.length ? <p className="admin-empty">No activity has been stored for {scope.name} yet.</p> : null}
+        </div>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header"><div><h2>Orchestration Failures</h2><p>Failed system-to-system hops for {scope.name}, with retry and escalation evidence.</p></div><AlertTriangle size={18} /></div>
+        <div className="admin-metric-grid">
+          <article className="admin-metric-card"><p>Failed events</p><strong>{orchestration.summary.failedEvents}</strong><span>Current failed orchestration events</span></article>
+          <article className="admin-metric-card"><p>Retryable</p><strong>{orchestration.summary.retryable}</strong><span>Transient failures eligible for controlled retry</span></article>
+          <article className="admin-metric-card"><p>Escalated</p><strong>{orchestration.summary.escalated}</strong><span>Failures with support escalation</span></article>
+          <article className="admin-metric-card"><p>Retried</p><strong>{orchestration.summary.retried}</strong><span>Failures with recorded retry attempts</span></article>
+        </div>
+        <div className="admin-list">
+          {orchestration.failures.slice(0, 20).map((item) => (
+            <div className="admin-list-row" key={item.eventId}>
+              <div>
+                <strong>{item.eventType} · {item.failedHop || item.targetSystem || "unresolved target"}</strong>
+                <span>{item.failureCategory} · retry {item.retryCount} · correlation {item.correlationId}</span>
+                <span>{item.error || "No safe error detail was recorded."}</span>
+              </div>
+              <em className={item.retryable ? "warning" : "bad"}>{item.supportConversationId ? "escalated" : item.retryable ? "retryable" : "review"}</em>
+            </div>
+          ))}
+          {!orchestration.failures.length ? <p className="admin-empty">No failed system orchestration events are recorded for {scope.name}.</p> : null}
         </div>
       </section>
 
