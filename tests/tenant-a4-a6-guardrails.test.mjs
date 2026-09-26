@@ -37,6 +37,9 @@ test("provisioning stops at testing and does not activate n8n", () => {
   assert.match(code, /assert_organization_system_provisionable/);
   assert.match(code, /finalStatus = failed\.length \? "needs_attention" : "testing"/);
   assert.match(code, /status: "paused"/);
+  assert.match(code, /ensureIncludedAgentSelections/);
+  assert.match(code, /provision_selected_agent_allocations/);
+  assert.match(code, /system_bindings/);
   assert.doesNotMatch(code, /activateN8nWorkflow/);
 });
 
