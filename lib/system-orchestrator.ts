@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { executeSystemWorkflowAdapter } from "@/lib/system-event-adapters";
 
 export type SystemEventEnvelope = {
   id: string;
@@ -39,6 +40,7 @@ type RouteRow = {
   event_type: string;
   target_system_id: string;
   priority: number;
+  dispatch_mode: "auto" | "agent_runtime" | "workflow_adapter";
   configuration: Record<string, unknown> | null;
 };
 
@@ -106,7 +108,7 @@ async function resolveRoutes(event: SystemEventEnvelope) {
   const supabase = createAdminClient();
   let query = supabase
     .from("system_event_routes")
-    .select("id,organization_id,source_system_id,event_type,target_system_id,priority,configuration")
+    .select("id,organization_id,source_system_id,event_type,target_system_id,priority,dispatch_mode,configuration")
     .eq("organization_id", event.organizationId)
     .eq("source_system_id", event.sourceSystemId)
     .eq("event_type", event.eventType)
@@ -240,8 +242,24 @@ async function dispatchRoute(event: SystemEventEnvelope, route: RouteRow) {
 
   try {
     const target = await validateTargetSystem(event.organizationId, route.target_system_id);
-    const agentId = await resolveTargetAgent(event.organizationId, target.system_id);
 
+    if (route.dispatch_mode === "workflow_adapter") {
+      const result = await executeSystemWorkflowAdapter({
+        event,
+        routeId: route.id,
+        targetSystemId: route.target_system_id,
+        configuration: route.configuration,
+      });
+      await finishDelivery({
+        organizationId: event.organizationId,
+        deliveryId: delivery.id,
+        status: "delivered",
+        result,
+      });
+      return { routeId: route.id, status: "delivered", result };
+    }
+
+    const agentId = await resolveTargetAgent(event.organizationId, target.system_id);
     if (!agentId) {
       const result = { adapter_required: true, reason: "No provisioned target agent is bound to this system yet." };
       await finishDelivery({
