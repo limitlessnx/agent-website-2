@@ -31,6 +31,9 @@ export async function saveMetaAppCredentials(formData: FormData) {
   const instagramAppSecret = String(
     formData.get("instagramAppSecret") || "",
   ).trim();
+  const instagramWebhookVerifyToken = String(
+    formData.get("instagramWebhookVerifyToken") || "",
+  ).trim();
 
   if (!appId) {
     redirect(
@@ -49,6 +52,7 @@ export async function saveMetaAppCredentials(formData: FormData) {
       preferredInstagramAccount,
       instagramAppId,
       instagramAppSecret,
+      instagramWebhookVerifyToken,
     });
     revalidatePath("/dashboard/social/integrations");
   } catch (error) {
