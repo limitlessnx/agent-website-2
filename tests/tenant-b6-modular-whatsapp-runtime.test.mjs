@@ -50,3 +50,34 @@ test("B6 WhatsApp webhook keeps Maia and modular tenants on separate Trigger pat
   assert.match(webhook,/sourceSystemId/);
   assert.doesNotMatch(webhook,/channels\.includes\("whatsapp"\)/);
 });
+
+
+test("B6 appointment reminders have an independent scheduled Follow-Up path",()=>{
+  const adapters=read("lib/system-event-adapters.ts");
+  const trigger=read("src/trigger/system-orchestrator.ts");
+  assert.match(adapters,/appointment_reminder/);
+  assert.match(adapters,/processDueAppointmentReminders/);
+  assert.match(adapters,/reminder\.scheduled/);
+  assert.match(adapters,/appointment-reminder:/);
+  assert.match(trigger,/id: "appointment-reminder-drain"/);
+  assert.match(trigger,/processDueAppointmentReminders/);
+});
+
+test("B6 deterministic WhatsApp appointment updates use tenant delivery gateway",()=>{
+  const adapters=read("lib/system-event-adapters.ts");
+  const migration=read("supabase/migrations/20260926223931_b6_appointment_reminders_and_whatsapp_delivery.sql");
+  assert.match(adapters,/channelReplyAdapter/);
+  assert.match(adapters,/sendWhatsAppMessage/);
+  assert.match(adapters,/temporary_b6_test/);
+  assert.match(migration,/dst\.slug='whatsapp-agent'/);
+  assert.match(migration,/dispatch_mode='workflow_adapter'/);
+  assert.match(migration,/appointment\.booked/);
+  assert.match(migration,/reminder\.scheduled/);
+});
+
+test("B6 test calendar cannot be used by normal tenant organizations",()=>{
+  const provider=read("lib/calendar-provider.ts");
+  assert.match(provider,/fluxknight_test_calendar/);
+  assert.match(provider,/temporary_b6_test/);
+  assert.match(provider,/restricted to temporary B6 test organizations/);
+});
