@@ -300,6 +300,22 @@ export const LEO_TOOLS: LeoToolDefinition[] = [
     legacyAliases: ["request_admin_repair"],
   },
   {
+    key: "flux.system.appointment.request",
+    title: "Request appointment handling",
+    description: "Emit an appointment.requested event from the current installed source system to an authorized installed Appointment System. This requests handling; it does not claim a booking exists.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
+    key: "flux.system.followup.request",
+    title: "Request follow-up handling",
+    description: "Emit a follow_up.requested event from the current installed source system to an authorized installed Follow-up System. This requests handling; it does not send a message by itself.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
     key: "leo.limitless.leads.read",
     title: "Search Limitless Realty leads",
     description: "Search the owned Limitless Realty CRM by lead ID, name, phone or email. Use this for requests such as pull up or find a Limitless Realty lead.",
