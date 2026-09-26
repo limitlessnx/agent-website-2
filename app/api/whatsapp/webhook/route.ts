@@ -24,56 +24,42 @@ async function updateAttempt(providerMessageId: string, patch: Record<string, un
 
 async function resolveWhatsAppTenant(phoneNumberId: string) {
   const admin = createAdminClient();
-  const { data: integrations } = await admin
+  const { data: integrations, error: integrationsError } = await admin
     .from("organization_integrations")
     .select("organization_id,provider,status,configuration")
     .in("provider", ["whatsapp", "meta_whatsapp"])
     .in("status", ["configured", "connected", "degraded"]);
+  if (integrationsError) throw integrationsError;
 
   let organizationId = "";
+  let maiaActive = false;
   let matchedIntegration = false;
+
   for (const row of integrations || []) {
     const config = (row.configuration || {}) as Record<string, unknown>;
-    if (String(config.phone_number_id || config.phoneNumberId || "") === phoneNumberId) {
-      matchedIntegration = true;
-      if (config.maia_active === true) {
-        organizationId = String(row.organization_id || "");
-      }
-      break;
-    }
+    if (String(config.phone_number_id || config.phoneNumberId || "") !== phoneNumberId) continue;
+    matchedIntegration = true;
+    organizationId = String(row.organization_id || "");
+    maiaActive = config.maia_active === true;
+    break;
   }
 
-  if (matchedIntegration && !organizationId) return null;
-
-  if (!organizationId) {
+  if (!organizationId && !matchedIntegration) {
     const legacyPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
     if (legacyPhoneNumberId && legacyPhoneNumberId === phoneNumberId) {
-      const { data: organization } = await admin.from("organizations").select("id").eq("slug", "limitless-realty").maybeSingle();
+      const { data: organization } = await admin
+        .from("organizations")
+        .select("id")
+        .eq("slug", "limitless-realty")
+        .maybeSingle();
       organizationId = String(organization?.id || "");
+      maiaActive = Boolean(organizationId);
     }
   }
 
   if (!organizationId) return null;
 
-  const { data: selections } = await admin
-    .from("organization_agent_selections")
-    .select("configuration,status")
-    .eq("organization_id", organizationId);
-
-  const activeSelection = (selections || []).find((row) => {
-    const status = String(row.status || "").toLowerCase();
-    const configuration = (row.configuration || {}) as Record<string, unknown>;
-    const channels = Array.isArray(configuration.channels) ? configuration.channels.map(String) : [];
-    return ["active", "selected", "paid", "provisioning"].includes(status)
-      && channels.includes("whatsapp")
-      && Boolean(configuration.provisioned_agent_id);
-  });
-
-  let agentId = activeSelection
-    ? String(((activeSelection.configuration || {}) as Record<string, unknown>).provisioned_agent_id || "")
-    : "";
-
-  if (!agentId) {
+  if (maiaActive) {
     const { data: agent } = await admin
       .from("agents")
       .select("id")
@@ -82,10 +68,43 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
       .in("status", ["published", "active"])
       .limit(1)
       .maybeSingle();
-    agentId = String(agent?.id || "");
+    return agent?.id ? { organizationId, agentId: String(agent.id), mode: "maia" as const, sourceSystemId: null } : null;
   }
 
-  return agentId ? { organizationId, agentId } : null;
+  const { data: catalog } = await admin
+    .from("system_catalog")
+    .select("id")
+    .eq("slug", "whatsapp-agent")
+    .eq("status", "available")
+    .maybeSingle();
+  if (!catalog?.id) return null;
+
+  const { data: installation } = await admin
+    .from("organization_systems")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("system_id", catalog.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!installation?.id) return null;
+
+  const { data: selections } = await admin
+    .from("organization_agent_selections")
+    .select("configuration,status")
+    .eq("organization_id", organizationId)
+    .eq("system_catalog_id", catalog.id)
+    .in("status", ["active", "selected", "paid", "provisioning"]);
+
+  const activeSelection = (selections || []).find((row) =>
+    Boolean(((row.configuration || {}) as Record<string, unknown>).provisioned_agent_id),
+  );
+  const agentId = activeSelection
+    ? String(((activeSelection.configuration || {}) as Record<string, unknown>).provisioned_agent_id || "")
+    : "";
+
+  return agentId
+    ? { organizationId, agentId, mode: "modular" as const, sourceSystemId: String(installation.id) }
+    : null;
 }
 
 function inboundText(message: Record<string, any>) {
@@ -219,10 +238,10 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        await tasks.trigger("maia-process-inbound-message", {
+        const inboundPayload = {
           organizationId: tenant.organizationId,
           agentId: tenant.agentId,
-          channel: "whatsapp",
+          channel: "whatsapp" as const,
           provider: "meta_whatsapp",
           externalEventId: messageId,
           externalConversationId: from,
@@ -235,7 +254,16 @@ export async function POST(request: NextRequest) {
             messageType: String(message?.type || "unknown"),
             timestamp: String(message?.timestamp || ""),
           },
-        });
+        };
+
+        if (tenant.mode === "maia") {
+          await tasks.trigger("maia-process-inbound-message", inboundPayload);
+        } else {
+          await tasks.trigger("tenant-whatsapp-process-inbound-message", {
+            ...inboundPayload,
+            sourceSystemId: tenant.sourceSystemId,
+          });
+        }
         inboundQueued += 1;
       }
     }
