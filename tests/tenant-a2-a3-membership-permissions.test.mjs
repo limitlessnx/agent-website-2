@@ -14,6 +14,13 @@ test("A2/A3 migration establishes invitation and role foundations", () => {
   assert.doesNotMatch(sql, /invitation_token\s+text/);
 });
 
+test("A2/A3 future tenant memberships seed all canonical roles", () => {
+  const sql = read("supabase/migrations/20260926185453_a2_a3_seed_future_tenant_roles.sql");
+  assert.match(sql, /organization_membership_seed_role_presets/);
+  assert.match(sql, /after insert on public\.organization_memberships/i);
+  assert.match(sql, /ensure_organization_role_presets\(new\.organization_id\)/);
+});
+
 test("A2/A3 privileged membership RPCs remain service-role only", () => {
   const sql = read("supabase/migrations/20260926184807_a2_a3_tenant_membership_permissions.sql");
   for (const fn of [
@@ -36,6 +43,14 @@ test("A2/A3 member management revalidates live database permissions", () => {
   assert.match(access, /members\.roles\.manage/);
   assert.match(access, /members\.suspend/);
   assert.match(access, /members\.invite/);
+});
+
+test("A2/A3 client sessions revalidate live membership state", () => {
+  const auth = read("lib/client-auth.ts");
+  assert.match(auth, /organization_memberships\?id=eq\./);
+  assert.match(auth, /status=eq\.active/);
+  assert.match(auth, /membershipId/);
+  assert.doesNotMatch(auth, /invitation_token:onboarding\?\.invitationToken/);
 });
 
 test("A2/A3 invitation signup joins an organization instead of provisioning a new one", () => {
