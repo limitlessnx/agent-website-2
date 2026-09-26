@@ -313,7 +313,10 @@ export async function POST(request: NextRequest) {
     preservedMetadata.scope = "tenant";
     preservedMetadata.role = leoIdentity.role;
     preservedMetadata.ai = aiMetadata;
-    const nextMetadata = needsHumanReview
+    const escalationRequired = needsHumanReview || createdActions.some((action) =>
+      action.action_key === "request_admin_repair" || action.action_key === "leo.support.request_admin_repair"
+    );
+    const nextMetadata = escalationRequired
       ? mergeSupportLifecycleMetadata(preservedMetadata, {
           escalation_required: true,
           escalation_reason: "Agent Leo requested human review",
@@ -326,11 +329,11 @@ export async function POST(request: NextRequest) {
       {
         method: "PATCH",
         body: JSON.stringify({
-          status: createdActions.length || needsHumanReview ? "waiting_approval" : "open",
-          priority: needsHumanReview ? "high" : "normal",
-          assigned_agent: needsHumanReview ? "super-admin-support" : "agent-leo",
+          status: createdActions.length || escalationRequired ? "waiting_approval" : "open",
+          priority: escalationRequired ? "high" : "normal",
+          assigned_agent: escalationRequired ? "super-admin-support" : "agent-leo",
           updated_at: new Date().toISOString(),
-          metadata: needsHumanReview ? {
+          metadata: escalationRequired ? {
             ...nextMetadata,
             escalated_to: "super-admin-support",
             escalated_by: "tenant-super-leo",
