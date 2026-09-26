@@ -16,6 +16,21 @@ function voiceContextFor(toolKey: string, args: Record<string, unknown>, previou
 async function voiceSession(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>, body: Record<string, unknown>) { const id = String(body.sessionId || body.session_id || "").trim(); return identity.scope === "super_admin" && identity.channel === "voice" && id ? getOrCreateLeoSession({ identity, sessionId: id }) : null; }
 async function setVoicePending(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>, session: LeoSessionState | null, toolKey: string, args: Record<string, unknown>) { if (!session) return; const base = voiceContextFor(toolKey, args, session.voiceWorkingContext); await updateLeoVoiceWorkingContext({ identity, session, context: { ...base, pendingToolKey: toolKey, pendingArguments: args, pendingSince: new Date().toISOString() } }); }
 async function setVoiceResult(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>, session: LeoSessionState | null, toolKey: string, args: Record<string, unknown>, result: Record<string, unknown>) { if (!session) return; const base = voiceContextFor(toolKey, args, session.voiceWorkingContext); await updateLeoVoiceWorkingContext({ identity, session, context: { ...base, pendingToolKey: undefined, pendingArguments: undefined, pendingSince: undefined, lastResult: { toolKey, status: String(result.status || "completed"), at: new Date().toISOString(), result } } }); }
+async function requireSuperAdminOrganizationTarget(
+  toolKey: string,
+  args: Record<string, unknown>,
+) {
+  const organizationId = String(args.organization_id || args.organizationId || "").trim();
+  if (!organizationId) {
+    throw new Error(`Super Admin Leo requires an explicit organization_id before executing ${toolKey}.`);
+  }
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("organizations").select("id,name,status").eq("id", organizationId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Super Admin Leo target organization was not found.");
+  return { ...args, organization_id: organizationId };
+}
+
 async function globalSystemSnapshot() { const supabase = createAdminClient(); const [organizations, agents, integrations, workflows, runs] = await Promise.all([supabase.from("organizations").select("id,name,slug,status").order("name").limit(100), supabase.from("agents").select("id,organization_id,name,status,agent_type,updated_at").order("updated_at", { ascending: false }).limit(150), supabase.from("organization_integrations").select("id,organization_id,provider,display_name,status,last_checked_at").order("provider").limit(150), supabase.from("workflow_registry").select("id,organization_uuid,name,workflow_key,status,provider,last_run_at,last_error_at").order("last_error_at", { ascending: false, nullsFirst: false }).limit(150), supabase.from("workflow_runs").select("id,organization_uuid,workflow_key,status,error_message,created_at").order("created_at", { ascending: false }).limit(75)]); for (const item of [organizations, agents, integrations, workflows, runs]) if (item.error) throw item.error; const orgs = organizations.data || [], agentRows = agents.data || [], integrationRows = integrations.data || [], workflowRows = workflows.data || [], runRows = runs.data || []; const failedRuns = runRows.filter((row) => ["failed", "timed_out", "error"].includes(String(row.status || "").toLowerCase())); const unhealthyIntegrations = integrationRows.filter((row) => !["connected", "active", "healthy", "ok"].includes(String(row.status || "").toLowerCase())); const inactiveAgents = agentRows.filter((row) => !["active", "running", "online"].includes(String(row.status || "").toLowerCase())); const unhealthyWorkflows = workflowRows.filter((row) => ["failed", "error", "disabled", "inactive"].includes(String(row.status || "").toLowerCase()) || row.last_error_at); return { scope: "global", summary: { organizations: orgs.length, agents: agentRows.length, inactive_agents: inactiveAgents.length, integrations: integrationRows.length, unhealthy_integrations: unhealthyIntegrations.length, workflows: workflowRows.length, unhealthy_workflows: unhealthyWorkflows.length, recent_runs: runRows.length, failed_recent_runs: failedRuns.length, overall_status: failedRuns.length || unhealthyWorkflows.length || unhealthyIntegrations.length ? "attention_required" : "healthy" }, organizations: orgs, agents: agentRows, integrations: integrationRows, workflows: workflowRows, recentRuns: runRows }; }
 
 export async function POST(request: NextRequest) {
@@ -29,6 +44,22 @@ export async function POST(request: NextRequest) {
   diagnosticToolKey = String(body.toolKey || body.tool_key || "").trim();
   diagnosticSessionId = String(body.sessionId || body.session_id || "").trim();
   const identity = await resolveLeoIdentity({ channel: diagnosticChannel, allowPublic: true }); if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved.", diagnosticId }, { status: 401 }); const toolKey = diagnosticToolKey; if (!toolKey) return NextResponse.json({ error: "toolKey is required.", diagnosticId }, { status: 400 }); const tool = assertLeoToolAllowed(identity, toolKey); const approval = leoApprovalFor(identity, tool.key); const confirmed = body.confirmed === true; let args = object(body.arguments); const activeVoiceSession = await voiceSession(identity, body);
+  if (
+    identity.scope === "super_admin"
+    && !tool.readOnly
+    && !tool.key.startsWith("leo.public.")
+    && !tool.key.startsWith("leo.limitless.")
+    && !limitlessWorkspace(args)
+  ) {
+    args = await requireSuperAdminOrganizationTarget(tool.key, args);
+    await auditLeoEvent({
+      identity,
+      session: activeVoiceSession || undefined,
+      eventType: "super_admin_target_context_resolved",
+      toolKey: tool.key,
+      details: { organization_id: String(args.organization_id), channel: identity.channel },
+    });
+  }
   if (approval === "confirm" && !confirmed) { await setVoicePending(identity, activeVoiceSession, tool.key, args); return NextResponse.json({ ok: true, status: "confirmation_required", toolKey: tool.key, title: tool.title, message: `Confirm ${tool.title.toLowerCase()} before Leo executes it.` }); }
   if (approval === "confirm" && confirmed && activeVoiceSession) { const pending = activeVoiceSession.voiceWorkingContext; if (!pending?.pendingToolKey || pending.pendingToolKey !== tool.key || !sameAction(pending.pendingArguments, args)) return NextResponse.json({ error: "The pending voice action changed or is no longer current. Leo must prepare the exact action again before confirmation." }, { status: 409 }); args = pending.pendingArguments || args; }
   if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.") && /\.send$/.test(tool.key)) { const sessionId = String(body.sessionId || body.session_id || activeVoiceSession?.id || ""); args = { ...args, request_id: ensureLimitlessExecutionId(args, sessionId, tool.key) }; }
