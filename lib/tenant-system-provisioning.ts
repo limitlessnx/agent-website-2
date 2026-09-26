@@ -16,7 +16,8 @@ type OrganizationSystem = {
   configuration?: Record<string, unknown> | null;
   metadata?: Record<string, unknown> | null;
 };
-type SystemCatalog = { id: string; name: string; slug: string; included_agents?: unknown[] | null };\ntype AgentSelectionLite = { id: string; system_catalog_id?: string | null; configuration?: Record<string, unknown> | null };
+type SystemCatalog = { id: string; name: string; slug: string; included_agents?: unknown[] | null };
+type AgentSelectionLite = { id: string; system_catalog_id?: string | null; configuration?: Record<string, unknown> | null };
 type SystemTemplateMap = {
   automation_template_id: string;
   required: boolean;
