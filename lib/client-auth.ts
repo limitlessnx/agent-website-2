@@ -40,10 +40,24 @@ function membershipSnapshot(membership:MembershipRow){const organization=normali
 export async function getMembershipForOrganization(userId:string,organizationId:string){const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);return rows[0]?membershipSnapshot(rows[0]):null}
 export async function getPrimaryMembership(userId:string){const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&order=created_at.asc&limit=1`);return rows[0]?membershipSnapshot(rows[0]):null}
 export function createClientSessionToken(session:ClientSession){return createSignedToken(session)}
-export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId)return null;return session}
+export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId||!session.membershipId)return null;return session}
 export async function setClientSession(session:ClientSession){const store=await cookies();store.set(CLIENT_COOKIE,createClientSessionToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
 export async function setPendingClientSetupSession(session:PendingClientSetupSession){const store=await cookies();store.set(CLIENT_SETUP_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SETUP_TTL,path:"/"})}
 export async function getPendingClientSetupSession(){const store=await cookies();const session=readSignedToken<PendingClientSetupSession>(store.get(CLIENT_SETUP_COOKIE)?.value,CLIENT_SETUP_TTL);if(!session?.userId||!session.email)return null;return session}
 export async function clearPendingClientSetupSession(){const store=await cookies();store.delete(CLIENT_SETUP_COOKIE)}
-export async function getClientSession(){const store=await cookies();return verifyClientSessionToken(store.get(CLIENT_COOKIE)?.value)}
+export async function getClientSession(){
+ const store=await cookies();
+ const signed=verifyClientSessionToken(store.get(CLIENT_COOKIE)?.value);
+ if(!signed)return null;
+ const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?id=eq.${encodeURIComponent(signed.membershipId)}&user_id=eq.${encodeURIComponent(signed.userId)}&organization_id=eq.${encodeURIComponent(signed.organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);
+ const live=rows[0]?membershipSnapshot(rows[0]):null;
+ if(!live)return null;
+ return {
+   ...signed,
+   organizationId:live.organizationId,
+   organizationSlug:live.organizationSlug,
+   membershipId:live.membershipId,
+   role:live.role,
+ };
+}
 export async function clearClientSession(){const store=await cookies();store.delete(CLIENT_COOKIE)}
