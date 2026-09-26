@@ -29,14 +29,50 @@ test("B4 system activation synchronizes event routes",()=>{
   assert.doesNotMatch(request,/installation\.organization_id/);
 });
 
-test("B5 workflow-only systems have deterministic adapters",()=>{
+test("B5 Appointment System has deterministic calendar adapters",()=>{
   const adapters=read("lib/system-event-adapters.ts");
-  assert.match(adapters,/appointment_request/);
-  assert.match(adapters,/sales_follow_up/);
-  assert.match(adapters,/system_event_id/);
-  assert.match(adapters,/system_event_route_id/);
+  assert.match(adapters,/requestAppointment/);
+  assert.match(adapters,/rescheduleAppointment/);
+  assert.match(adapters,/cancelAppointment/);
+  assert.match(adapters,/appointment\.email_required/);
+  assert.match(adapters,/appointment\.calendar_required/);
+  assert.match(adapters,/appointment\.slot_unavailable/);
+  assert.match(adapters,/appointment\.booked/);
+  assert.match(adapters,/source_event_id/);
   assert.match(adapters,/correlation_id/);
-  assert.match(adapters,/Unsupported system workflow adapter/);
+  assert.match(adapters,/sales_follow_up/);
+});
+
+test("B5 calendar provider resolves tenant Vault credentials and invites the customer",()=>{
+  const provider=read("lib/calendar-provider.ts");
+  assert.match(provider,/get_organization_integration_credentials/);
+  assert.match(provider,/oauth2\.googleapis\.com\/token/);
+  assert.match(provider,/calendar\/v3\/freeBusy/);
+  assert.match(provider,/sendUpdates/);
+  assert.match(provider,/attendees/);
+  assert.match(provider,/fluxknightAppointmentId/);
+  assert.doesNotMatch(provider,/NEXT_PUBLIC_/);
+});
+
+test("B4 B5 migrations define contracts, calendar resources, and tenant appointment FKs",()=>{
+  const foundation=read("supabase/migrations/20260926221603_b4_b5_appointment_calendar_foundation.sql");
+  const dispatch=read("supabase/migrations/20260926221837_b4_b5_channel_dispatch_alignment.sql");
+  const contracts=read("supabase/migrations/20260926221916_b4_enforce_system_event_contracts.sql");
+  assert.match(foundation,/system_event_contracts/);
+  assert.match(foundation,/appointment_calendar_resources/);
+  assert.match(foundation,/create table if not exists public\.appointments/);
+  assert.match(foundation,/foreign key \(organization_id,customer_id\)/i);
+  assert.match(foundation,/organization_system_sync_event_routes/);
+  assert.match(dispatch,/dispatch_mode='agent_runtime'/);
+  assert.match(contracts,/Unregistered or inactive system event contract/);
+  assert.match(contracts,/missing required payload key/);
+});
+
+test("B5 tenant Appointments page uses the generic appointment model",()=>{
+  const page=read("app/portal/appointments/page.tsx");
+  assert.match(page,/appointments\?organization_id/);
+  assert.doesNotMatch(page,/viewings\?organization_id/);
+  assert.match(page,/Calendar linked/);
 });
 
 test("B5 orchestrator respects route dispatch mode",()=>{
