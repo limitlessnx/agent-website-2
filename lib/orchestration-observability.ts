@@ -39,7 +39,7 @@ export async function getRecentOrchestrationFailures(
   const [deliveriesResult, installationsResult] = await Promise.all([
     admin
       .from("system_event_deliveries")
-      .select("event_id,target_system_id,status,retry_count,error_message,updated_at")
+      .select("event_id,target_system_id,status,retry_count,error_message,created_at")
       .eq("organization_id", organizationId)
       .in("event_id", eventIds)
       .eq("status", "failed"),
