@@ -108,6 +108,21 @@ async function googleFetch(
   return response;
 }
 
+async function assertTestCalendarAllowed(organizationId: string, provider: string) {
+  if (provider !== "fluxknight_test_calendar") return false;
+  const { data, error } = await createAdminClient()
+    .from("organizations")
+    .select("metadata")
+    .eq("id", organizationId)
+    .maybeSingle();
+  if (error) throw error;
+  const metadata = (data?.metadata || {}) as Json;
+  if (metadata.temporary_b6_test !== true) {
+    throw new Error("Fluxknight test calendar is restricted to temporary B6 test organizations.");
+  }
+  return true;
+}
+
 function assertGoogleProvider(provider: string) {
   if (!["google_calendar", "google-calendar", "google"].includes(provider)) {
     throw new Error(`Unsupported calendar provider: ${provider}.`);
@@ -120,6 +135,7 @@ export async function calendarSlotAvailable(input: {
   startAt: string;
   endAt: string;
 }) {
+  if (await assertTestCalendarAllowed(input.organizationId, input.resource.provider)) return true;
   assertGoogleProvider(input.resource.provider);
   const response = await googleFetch(
     input.organizationId,
@@ -153,6 +169,14 @@ export async function createCalendarEvent(
   provider: string,
   input: CalendarEventInput,
 ): Promise<CalendarEventResult> {
+  if (await assertTestCalendarAllowed(organizationId, provider)) {
+    return {
+      provider,
+      calendarId: input.calendarId,
+      eventId: `test-event-${input.appointmentId}`,
+      htmlLink: null,
+    };
+  }
   assertGoogleProvider(provider);
   const url = new URL(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events`,
@@ -202,6 +226,9 @@ export async function rescheduleCalendarEvent(input: {
   startAt: string;
   endAt: string;
 }) {
+  if (await assertTestCalendarAllowed(input.organizationId, input.resource.provider)) {
+    return { eventId: input.eventId, htmlLink: null };
+  }
   assertGoogleProvider(input.resource.provider);
   const url = new URL(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.resource.external_calendar_id)}/events/${encodeURIComponent(input.eventId)}`,
@@ -228,6 +255,7 @@ export async function cancelCalendarEvent(input: {
   resource: CalendarResource;
   eventId: string;
 }) {
+  if (await assertTestCalendarAllowed(input.organizationId, input.resource.provider)) return;
   assertGoogleProvider(input.resource.provider);
   const url = new URL(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.resource.external_calendar_id)}/events/${encodeURIComponent(input.eventId)}`,
