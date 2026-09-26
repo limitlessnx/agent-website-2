@@ -47,6 +47,10 @@ export default async function SocialIntegrationsPage({
     config.instagram_login_connected_at &&
       (config.instagram_login_user_id || credentials?.instagram_login_user_id),
   );
+  const instagramWebhookConfigured = Boolean(
+    credentials?.instagram_webhook_verify_token ||
+      config.instagram_webhook_configured,
+  );
   const status = integration?.status || "disconnected";
   const grantedPermissions = Array.isArray(config.granted_permissions)
     ? config.granted_permissions.filter((item): item is string => typeof item === "string")
@@ -197,6 +201,19 @@ export default async function SocialIntegrationsPage({
               />
             </label>
             <label>
+              <span>Instagram Webhook Verify Token</span>
+              <input
+                name="instagramWebhookVerifyToken"
+                type="password"
+                autoComplete="new-password"
+                placeholder={
+                  instagramWebhookConfigured
+                    ? "Enter a new token to replace the stored one"
+                    : "Create a private verification token"
+                }
+              />
+            </label>
+            <label>
               <span>Login Configuration ID</span>
               <input
                 name="loginConfigurationId"
@@ -323,6 +340,17 @@ export default async function SocialIntegrationsPage({
             </div>
             <div className="admin-list-row">
               <div>
+                <strong>Instagram webhook</strong>
+                <span>
+                  {instagramWebhookConfigured
+                    ? "Verification token stored. Use the Fluxknight webhook callback URL in Meta."
+                    : "Add a webhook verify token in Step 1 before validating the Instagram webhook."}
+                </span>
+              </div>
+              <em>{instagramWebhookConfigured ? "configured" : "attention"}</em>
+            </div>
+            <div className="admin-list-row">
+              <div>
                 <strong>Connection health</strong>
                 <span>
                   {String(health.message || health.status || "No connection test yet.")}
@@ -427,6 +455,15 @@ export default async function SocialIntegrationsPage({
               </span>
             </div>
             <em>vault</em>
+          </div>
+          <div className="admin-list-row">
+            <div>
+              <strong>Instagram webhook URL</strong>
+              <span>
+                https://fluxknight.space/api/integrations/meta/instagram/webhook
+              </span>
+            </div>
+            <em>callback</em>
           </div>
           <div className="admin-list-row">
             <div>
