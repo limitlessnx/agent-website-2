@@ -7,7 +7,7 @@ import {
 } from "@/lib/social-meta-publisher";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
-const META_PLATFORMS = new Set(["instagram", "facebook"]);
+const META_PLATFORMS = new Set(["instagram"]);
 
 type ScheduledPost = {
   id: string;
@@ -185,10 +185,10 @@ export const fluxSocialPublishPost = task({
         .from("social_schedules")
         .update({
           status: "failed",
-          last_error: "No Facebook or Instagram publishing target selected.",
+          last_error: "No Instagram publishing target selected.",
         })
         .eq("id", schedule.id);
-      throw new Error("No Facebook or Instagram publishing target selected.");
+      throw new Error("No Instagram publishing target selected.");
     }
 
     const { data: rawAssets, error: assetError } = await supabase
