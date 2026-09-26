@@ -471,9 +471,9 @@ export function isLeoToolAllowed(identity: LeoIdentity, keyOrAlias: string) {
   if (!tool) return false;
   if (!tool.scopes.includes(identity.scope)) return false;
   if (identity.scope === "tenant") {
-    if (tool.minimumTenantRole && !tenantRoleAtLeast(identity.role, tool.minimumTenantRole)) return false;
     const requiredPermissions = TENANT_TOOL_PERMISSIONS[tool.key];
-    if (requiredPermissions && !tenantHasAnyPermission(identity, requiredPermissions)) return false;
+    if (requiredPermissions) return tenantHasAnyPermission(identity, requiredPermissions);
+    if (tool.minimumTenantRole) return tenantRoleAtLeast(identity.role, tool.minimumTenantRole);
   }
   return true;
 }
