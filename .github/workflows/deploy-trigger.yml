@@ -17,6 +17,8 @@ on:
       - "lib/whatsapp-delivery.ts"
       - "lib/system-orchestrator.ts"
       - "lib/system-event-adapters.ts"
+      - "lib/ai-runtime/production-executors.ts"
+      - "lib/leo-core.ts"
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
