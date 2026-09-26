@@ -20,6 +20,7 @@ test("B8 recovery policy only auto retries transient infrastructure failures",()
   assert.match(ops,/category: "permission", retryable: false/);
   assert.match(ops,/category: "configuration", retryable: false/);
   assert.match(ops,/autoRetryCount < 2/);
+  assert.match(ops,/Automatic retry for transient orchestration failure/);
   assert.match(ops,/ensureFailureSupportCase/);
 });
 
@@ -61,5 +62,6 @@ test("B9 observability reader reports safe failure and escalation metadata",()=>
   assert.match(observer,/system_catalog/);
   assert.match(observer,/failureCategory/);
   assert.match(observer,/supportConversationId/);
+  assert.match(observer,/created_at/);
   assert.doesNotMatch(observer,/access_token|refresh_token|client_secret/i);
 });
