@@ -62,14 +62,15 @@ test("CRM uses the deployed schema and organization scope", () => {
   assert.doesNotMatch(crm, /title,status,stage/);
 });
 
-test("direct organization links persist context before returning home", () => {
+test("organization switching persists context before returning to the selected workspace", () => {
   const route = read("app/dashboard/switch/[kind]/[id]/route.ts");
-  const nav = read("components/admin/navigationConfig.ts");
+  const sidebar = read("components/admin/AdminSidebar.tsx");
   assert.match(route, /ADMIN_ORGANIZATION_COOKIE/);
   assert.match(route, /NextResponse\.redirect\(new URL\("\/dashboard"/);
-  assert.match(nav, /dashboard\/switch\/system\/fluxknight/);
-  assert.match(nav, /dashboard\/switch\/system\/limitless-realty/);
-  assert.match(nav, /dashboard\/switch\/system\/gencouv/);
+  assert.match(sidebar, /fetch\("\/api\/admin\/organization-context"/);
+  assert.match(sidebar, /switchOrganization\("system"/);
+  assert.match(sidebar, /switchOrganization\("tenant"/);
+  assert.match(sidebar, /window\.location\.assign\(href\)/);
 });
 
 
