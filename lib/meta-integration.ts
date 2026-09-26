@@ -45,6 +45,7 @@ export async function saveMetaCredentials(input: {
   preferredInstagramAccount?: string;
   instagramAppId?: string;
   instagramAppSecret?: string;
+  instagramWebhookVerifyToken?: string;
 }) {
   const admin = createAdminClient() as any;
   const existingIntegration = await getMetaIntegration(input.organizationId);
@@ -64,6 +65,13 @@ export async function saveMetaCredentials(input: {
     null;
   const instagramAppSecret =
     input.instagramAppSecret || existingInstagramAppSecret || null;
+  const existingInstagramWebhookVerifyToken = String(
+    existingCredentials?.instagram_webhook_verify_token || "",
+  );
+  const instagramWebhookVerifyToken =
+    input.instagramWebhookVerifyToken ||
+    existingInstagramWebhookVerifyToken ||
+    null;
 
   if (!appSecret) throw new Error("Meta App Secret is required for first-time setup.");
 
@@ -80,6 +88,7 @@ export async function saveMetaCredentials(input: {
       preferred_instagram_account: preferredInstagramAccount,
       instagram_app_id: instagramAppId,
       instagram_app_secret: instagramAppSecret,
+      instagram_webhook_verify_token: instagramWebhookVerifyToken,
     },
     p_configuration: {
       ...configuration,
@@ -91,6 +100,7 @@ export async function saveMetaCredentials(input: {
       instagram_login_configured: Boolean(
         instagramAppId && instagramAppSecret,
       ),
+      instagram_webhook_configured: Boolean(instagramWebhookVerifyToken),
       credentials_updated_at: new Date().toISOString(),
     },
   });
