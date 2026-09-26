@@ -5,6 +5,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { legacySupportActionPolicy, tenantLeoIdentityFromSession } from "@/lib/leo-support-policy";
 import type { LeoIdentity } from "@/lib/leo-core";
 import { mergeSupportLifecycleMetadata } from "@/lib/support-lifecycle";
+import { getRecentOrchestrationFailures } from "@/lib/orchestration-observability";
 import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 import {
   buildSupportReply,
@@ -19,7 +20,7 @@ import {
 const allowedActionKeys = new Set<string>(SUPPORT_ACTION_KEYS);
 
 async function loadTenantSupportContext(organizationId: string, permissions: string[] = []) {
-  const [diagnostics, subscriptions, billingPlans, readiness] = await Promise.all([
+  const [diagnostics, subscriptions, billingPlans, readiness, orchestrationFailures] = await Promise.all([
     collectSupportDiagnostics("tenant", organizationId),
     supabaseServerRequest<Record<string, unknown>[]>(
       `organization_subscriptions?select=id,organization_id,plan_id,status,current_period_end&organization_id=eq.${encodeURIComponent(organizationId)}&order=updated_at.desc&limit=1`,
@@ -28,6 +29,7 @@ async function loadTenantSupportContext(organizationId: string, permissions: str
     supabaseServerRequest<Record<string, unknown>[]>(
       `agent_runtime_readiness?select=organization_id,agent_id,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready,readiness_score,refreshed_at&organization_id=eq.${encodeURIComponent(organizationId)}&order=refreshed_at.desc&limit=50`,
     ).catch(() => []),
+    getRecentOrchestrationFailures(organizationId, 20).catch(() => []),
   ]);
 
   const allowed = new Set(permissions);
@@ -42,6 +44,7 @@ async function loadTenantSupportContext(organizationId: string, permissions: str
     workflows: canWorkflows ? diagnostics.workflows : [],
     workflowRuns: canWorkflows ? diagnostics.workflowRuns : [],
     runtimeExecutions: canWorkflows ? diagnostics.runtimeExecutions : [],
+    orchestrationFailures: canWorkflows ? orchestrationFailures : [],
     subscriptions: canBilling ? subscriptions : [],
     billingPlans: canBilling ? billingPlans : [],
     readiness: canAgents ? readiness : [],
