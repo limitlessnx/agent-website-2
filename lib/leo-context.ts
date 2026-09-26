@@ -17,15 +17,17 @@ import { evaluateLeoBusinessRules } from "@/lib/leo-business-rules";
 import { buildLeoOperationalCalendarSnapshot } from "@/lib/leo-operational-calendar";
 import { buildLeoWorkspaceBusinessModelSnapshot } from "@/lib/leo-workspace-business-models";
 import type { LeoReasoningContext } from "@/lib/ai/leo-model";
+import { getRecentOrchestrationFailures } from "@/lib/orchestration-observability";
 
 async function tenantContext(identity: LeoIdentity) {
   const organizationId = enforceLeoOrganizationScope(identity);
   if (!organizationId) throw new Error("Tenant Leo context requires an organization.");
-  const [diagnostics, subscriptions, billingPlans, readiness] = await Promise.all([
+  const [diagnostics, subscriptions, billingPlans, readiness, orchestrationFailures] = await Promise.all([
     collectSupportDiagnostics("tenant", organizationId),
     supabaseServerRequest<Record<string, unknown>[]>(`organization_subscriptions?select=id,organization_id,plan_id,status,current_period_end&organization_id=eq.${encodeURIComponent(organizationId)}&order=updated_at.desc&limit=1`).catch(() => []),
     supabaseServerRequest<Record<string, unknown>[]>("billing_plans?select=id,name,status&order=created_at.asc").catch(() => []),
     supabaseServerRequest<Record<string, unknown>[]>(`agent_runtime_readiness?select=organization_id,agent_id,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready,readiness_score,refreshed_at&organization_id=eq.${encodeURIComponent(organizationId)}&order=refreshed_at.desc&limit=50`).catch(() => []),
+    getRecentOrchestrationFailures(organizationId, 20).catch(() => []),
   ]);
   const permissions = new Set(identity.permissions || []);
   const canAgents = permissions.has("agents.view") || permissions.has("agents.read") || permissions.has("agents.manage");
@@ -39,6 +41,7 @@ async function tenantContext(identity: LeoIdentity) {
     workflows: canWorkflows ? diagnostics.workflows : [],
     workflowRuns: canWorkflows ? diagnostics.workflowRuns : [],
     runtimeExecutions: canWorkflows ? diagnostics.runtimeExecutions : [],
+    orchestrationFailures: canWorkflows ? orchestrationFailures : [],
     subscriptions: canBilling ? subscriptions : [],
     billingPlans: canBilling ? billingPlans : [],
     readiness: canAgents ? readiness : [],
