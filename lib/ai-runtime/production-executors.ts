@@ -1,4 +1,5 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+import { publishSystemEvent } from "@/lib/system-orchestrator";
 import type { RuntimeToolRegistry, RuntimeToolExecutor } from "@/lib/ai-runtime/tool-registry";
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
@@ -25,6 +26,50 @@ function requestedOrganization(args: Record<string, unknown>, context: { organiz
 
 function register(registry: RuntimeToolRegistry, key: string, executor: RuntimeToolExecutor) {
   registry.registerExecutor(key, executor);
+}
+
+async function sourceSystemForAgent(organizationId: string, agentId: string) {
+  const agents = await supabaseServerRequest<Array<{ configuration?: Record<string, unknown> | null }>>(
+    `agents?select=configuration&id=eq.${encodeURIComponent(agentId)}&organization_id=eq.${encodeURIComponent(organizationId)}&limit=1`,
+  );
+  if (!agents[0]) throw new Error("Executing agent was not found in organization.");
+
+  const selections = await supabaseServerRequest<Array<{ system_catalog_id?: string | null; configuration?: Record<string, unknown> | null }>>(
+    `organization_agent_selections?select=system_catalog_id,configuration&organization_id=eq.${encodeURIComponent(organizationId)}&status=in.(selected,paid,provisioning,active)&limit=100`,
+  );
+  const selection = selections.find((item) => String(item.configuration?.provisioned_agent_id || "") === agentId);
+  const systemCatalogId = String(selection?.system_catalog_id || "");
+  if (!systemCatalogId) throw new Error("Executing agent is not bound to an installed system.");
+
+  const installations = await supabaseServerRequest<Array<{ id: string }>>(
+    `organization_systems?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&system_id=eq.${encodeURIComponent(systemCatalogId)}&status=eq.active&limit=1`,
+  );
+  if (!installations[0]) throw new Error("Executing agent system is not active.");
+  return installations[0].id;
+}
+
+async function emitAgentSystemEvent(input: {
+  eventType: string;
+  args: Record<string, unknown>;
+  context: { organizationId?: string; agentId?: string; executionId: string };
+}) {
+  const organizationId = requireOrganization(input.context);
+  const agentId = text(input.context.agentId);
+  if (!agentId) throw new Error("System event emission requires an executing agent.");
+  const sourceSystemId = await sourceSystemForAgent(organizationId, agentId);
+  const eventId = await publishSystemEvent({
+    organizationId,
+    sourceSystemId,
+    eventType: input.eventType,
+    payload: input.args,
+    customerId: text(input.args.customer_id || input.args.customerId) || null,
+    conversationId: text(input.args.conversation_id || input.args.conversationId) || null,
+    correlationId: text(input.args.correlation_id || input.args.correlationId) || null,
+    causationId: text(input.args.causation_id || input.args.causationId) || null,
+    idempotencyKey: text(input.args.idempotency_key || input.args.idempotencyKey) || `runtime:${input.context.executionId}:${input.eventType}`,
+    source: `agent:${agentId}`,
+  });
+  return { event_id: eventId, event_type: input.eventType, source_system_id: sourceSystemId };
 }
 
 export function registerProductionRuntimeExecutors(registry: RuntimeToolRegistry) {
@@ -174,6 +219,11 @@ export function registerProductionRuntimeExecutors(registry: RuntimeToolRegistry
   };
   register(registry, "leo.platform.workflow.activate", workflowStatusExecutor("active"));
   register(registry, "leo.platform.workflow.deactivate", workflowStatusExecutor("disabled"));
+
+  register(registry, "flux.system.appointment.request", async (args, context) =>
+    emitAgentSystemEvent({ eventType: "appointment.requested", args, context }));
+  register(registry, "flux.system.followup.request", async (args, context) =>
+    emitAgentSystemEvent({ eventType: "follow_up.requested", args, context }));
 
   return registry;
 }
