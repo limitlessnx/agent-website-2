@@ -18,7 +18,7 @@ import {
 
 const allowedActionKeys = new Set<string>(SUPPORT_ACTION_KEYS);
 
-async function loadTenantSupportContext(organizationId: string) {
+async function loadTenantSupportContext(organizationId: string, permissions: string[] = []) {
   const [diagnostics, subscriptions, billingPlans, readiness] = await Promise.all([
     collectSupportDiagnostics("tenant", organizationId),
     supabaseServerRequest<Record<string, unknown>[]>(
@@ -30,7 +30,23 @@ async function loadTenantSupportContext(organizationId: string) {
     ).catch(() => []),
   ]);
 
-  return { ...diagnostics, subscriptions, billingPlans, readiness };
+  const allowed = new Set(permissions);
+  const canAgents = allowed.has("agents.view") || allowed.has("agents.read") || allowed.has("agents.manage");
+  const canIntegrations = allowed.has("integrations.view") || allowed.has("integrations.manage");
+  const canWorkflows = allowed.has("workflows.read") || allowed.has("systems.view") || allowed.has("systems.manage");
+  const canBilling = allowed.has("billing.view") || allowed.has("billing.manage");
+  return {
+    ...diagnostics,
+    agents: canAgents ? diagnostics.agents : [],
+    integrations: canIntegrations ? diagnostics.integrations : [],
+    workflows: canWorkflows ? diagnostics.workflows : [],
+    workflowRuns: canWorkflows ? diagnostics.workflowRuns : [],
+    runtimeExecutions: canWorkflows ? diagnostics.runtimeExecutions : [],
+    subscriptions: canBilling ? subscriptions : [],
+    billingPlans: canBilling ? billingPlans : [],
+    readiness: canAgents ? readiness : [],
+    permissionScope: permissions,
+  };
 }
 
 async function recordUsage(input: {
@@ -122,7 +138,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-  const leoIdentity = tenantLeoIdentityFromSession(session);
+  const leoIdentity = await tenantLeoIdentityFromSession(session);
 
   const requestStarted = Date.now();
   console.info("Agent Leo tenant support request started", {
@@ -174,7 +190,7 @@ export async function POST(request: NextRequest) {
     const history = await supabaseServerRequest<SupportMessage[]>(
       `support_messages?select=*&conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`,
     ).catch(() => []);
-    const diagnosticContext = await loadTenantSupportContext(session.organizationId);
+    const diagnosticContext = await loadTenantSupportContext(session.organizationId, leoIdentity.permissions || []);
 
     const aiResult = await generateSupportAgentReply({
       message,
@@ -311,8 +327,15 @@ export async function POST(request: NextRequest) {
         method: "PATCH",
         body: JSON.stringify({
           status: createdActions.length || needsHumanReview ? "waiting_approval" : "open",
+          priority: needsHumanReview ? "high" : "normal",
+          assigned_agent: needsHumanReview ? "super-admin-support" : "agent-leo",
           updated_at: new Date().toISOString(),
-          metadata: nextMetadata,
+          metadata: needsHumanReview ? {
+            ...nextMetadata,
+            escalated_to: "super-admin-support",
+            escalated_by: "tenant-super-leo",
+            escalated_at: new Date().toISOString(),
+          } : nextMetadata,
         }),
       },
     );
