@@ -1,5 +1,6 @@
 import { getAdminSession } from "@/lib/admin-auth";
 import { getClientSession, type ClientSession } from "@/lib/client-auth";
+import { getOrganizationAccessContext } from "@/lib/organization-membership";
 
 export type LeoScope = "public" | "tenant" | "super_admin" | "internal_service";
 export type LeoConversationVisibility = "private" | "team" | "organization";
@@ -25,6 +26,7 @@ export type LeoIdentity = {
   organizationId?: string;
   organizationSlug?: string;
   membershipId?: string;
+  permissions?: string[];
   channel: LeoChannel;
   globalScope: boolean;
 };
@@ -42,15 +44,32 @@ export type LeoToolDefinition = {
 };
 
 const TENANT_ROLE_ORDER: LeoRole[] = [
-  "visitor",
-  "viewer",
-  "member",
-  "staff",
-  "manager",
-  "owner",
-  "tenant_admin",
-  "super_admin",
+  "visitor","viewer","member","staff","manager","owner","tenant_admin","super_admin",
 ];
+
+const TENANT_TOOL_PERMISSIONS: Record<string,string[]> = {
+  "leo.agent.inspect": ["agents.view","agents.read"],
+  "leo.workflow.inspect": ["workflows.read","systems.view"],
+  "leo.workflow.inspect_failures": ["workflows.read","systems.view"],
+  "leo.integration.inspect": ["integrations.view"],
+  "leo.billing.inspect": ["billing.view"],
+  "leo.crm.leads.read": ["customers.view","customers.manage"],
+  "leo.crm.leads.update": ["customers.manage"],
+  "leo.crm.followup.prepare": ["customers.manage","conversations.reply"],
+  "leo.crm.followup.send": ["customers.manage","conversations.reply"],
+  "leo.campaign.prepare": ["customers.manage"],
+  "leo.campaign.send": ["customers.manage"],
+  "leo.appointment.read": ["appointments.view","appointments.manage"],
+  "leo.appointment.manage": ["appointments.manage"],
+  "leo.agent.pause": ["agents.manage"],
+  "leo.agent.resume": ["agents.manage"],
+  "leo.support.request_admin_repair": ["support.escalate"],
+};
+
+function tenantHasAnyPermission(identity: LeoIdentity, keys: string[]) {
+  const permissions = new Set(identity.permissions || []);
+  return keys.some((key) => permissions.has(key));
+}
 
 export const LEO_TOOLS: LeoToolDefinition[] = [
   {
@@ -395,7 +414,8 @@ function tenantRoleAtLeast(actual: LeoRole, minimum: LeoRole) {
   return TENANT_ROLE_ORDER.indexOf(actual) >= TENANT_ROLE_ORDER.indexOf(minimum);
 }
 
-function identityFromClient(session: ClientSession, channel: LeoChannel): LeoIdentity {
+async function identityFromClient(session: ClientSession, channel: LeoChannel): Promise<LeoIdentity> {
+  const access = await getOrganizationAccessContext(session.organizationId, session.userId);
   return {
     scope: "tenant",
     role: normalizeTenantRole(session.role),
@@ -404,6 +424,7 @@ function identityFromClient(session: ClientSession, channel: LeoChannel): LeoIde
     organizationId: session.organizationId,
     organizationSlug: session.organizationSlug,
     membershipId: session.membershipId,
+    permissions: [...access.permissions],
     channel,
     globalScope: false,
   };
@@ -449,8 +470,10 @@ export function isLeoToolAllowed(identity: LeoIdentity, keyOrAlias: string) {
   const tool = resolveLeoTool(keyOrAlias);
   if (!tool) return false;
   if (!tool.scopes.includes(identity.scope)) return false;
-  if (identity.scope === "tenant" && tool.minimumTenantRole) {
-    return tenantRoleAtLeast(identity.role, tool.minimumTenantRole);
+  if (identity.scope === "tenant") {
+    if (tool.minimumTenantRole && !tenantRoleAtLeast(identity.role, tool.minimumTenantRole)) return false;
+    const requiredPermissions = TENANT_TOOL_PERMISSIONS[tool.key];
+    if (requiredPermissions && !tenantHasAnyPermission(identity, requiredPermissions)) return false;
   }
   return true;
 }
@@ -508,6 +531,7 @@ export function buildLeoPolicySnapshot(identity: LeoIdentity) {
     organizationId: identity.scope === "tenant" ? identity.organizationId || null : null,
     globalScope: identity.globalScope,
     channel: identity.channel,
+    permissions: identity.scope === "tenant" ? identity.permissions || [] : undefined,
     toolCount: tools.length,
     tools: tools.map((tool) => ({
       key: tool.key,
