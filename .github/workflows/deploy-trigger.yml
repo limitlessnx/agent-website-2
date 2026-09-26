@@ -44,6 +44,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run tenant and runtime regression contracts
+        run: npm run test:support
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
       - name: Validate Trigger.dev CI token
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
