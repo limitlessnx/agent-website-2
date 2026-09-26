@@ -82,3 +82,10 @@ test("B5 orchestrator respects route dispatch mode",()=>{
   assert.match(service,/executeSystemWorkflowAdapter/);
   assert.match(service,/enqueue_agent_execution/);
 });
+
+
+test("B4 route sync trigger tolerates organization cascade deletion",()=>{
+  const migration=read("supabase/migrations/20260926222444_b4_route_sync_safe_org_delete.sql");
+  assert.match(migration,/if exists\(select 1 from public\.organizations/);
+  assert.match(migration,/sync_organization_system_event_routes/);
+});
