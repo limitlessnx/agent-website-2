@@ -22,7 +22,7 @@ on:
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
-      - "tests/tenant-*.test.mjs"
+      - "tests/**/*.test.mjs"
       - ".github/workflows/deploy-trigger.yml"
   workflow_dispatch:
 
