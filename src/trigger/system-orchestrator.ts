@@ -1,5 +1,6 @@
 import { logger, schedules, task } from "@trigger.dev/sdk";
 import { processSystemEvent } from "@/lib/system-orchestrator";
+import { processDueAppointmentReminders } from "@/lib/system-event-adapters";
 
 export const systemEventDispatch = task({
   id: "system-event-dispatch",
@@ -32,5 +33,17 @@ export const systemEventDrain = schedules.task({
     }
     logger.info("System event drain completed", { processed: results.length });
     return { processed: results.length, results };
+  },
+});
+
+
+export const appointmentReminderDrain = schedules.task({
+  id: "appointment-reminder-drain",
+  cron: "* * * * *",
+  maxDuration: 300,
+  run: async () => {
+    const result = await processDueAppointmentReminders(100);
+    logger.info("Appointment reminder drain completed", result);
+    return result;
   },
 });
