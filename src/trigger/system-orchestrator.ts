@@ -1,6 +1,7 @@
 import { logger, schedules, task } from "@trigger.dev/sdk";
 import { processSystemEvent } from "@/lib/system-orchestrator";
 import { processDueAppointmentReminders } from "@/lib/system-event-adapters";
+import { recoverFailedSystemEvents } from "@/lib/orchestration-operations";
 
 export const systemEventDispatch = task({
   id: "system-event-dispatch",
@@ -44,6 +45,18 @@ export const appointmentReminderDrain = schedules.task({
   run: async () => {
     const result = await processDueAppointmentReminders(100);
     logger.info("Appointment reminder drain completed", result);
+    return result;
+  },
+});
+
+
+export const orchestrationRecoverySweep = schedules.task({
+  id: "orchestration-recovery-sweep",
+  cron: "*/5 * * * *",
+  maxDuration: 300,
+  run: async () => {
+    const result = await recoverFailedSystemEvents(50);
+    logger.info("Orchestration recovery sweep completed", result);
     return result;
   },
 });
