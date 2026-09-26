@@ -351,12 +351,15 @@ export async function processSystemEvent(eventId?: string | null) {
     return { status: finalStatus, eventId: event.id, correlationId: event.correlationId, deliveries };
   } catch (error) {
     const message = error instanceof Error ? error.message : "System event processing failed.";
-    await supabase
-      .from("domain_events")
-      .update({ status: "failed", last_error: message.slice(0, 2000), updated_at: new Date().toISOString() })
-      .eq("organization_id", event.organizationId)
-      .eq("id", event.id)
-      .catch(() => undefined);
+    try {
+      await supabase
+        .from("domain_events")
+        .update({ status: "failed", last_error: message.slice(0, 2000), updated_at: new Date().toISOString() })
+        .eq("organization_id", event.organizationId)
+        .eq("id", event.id);
+    } catch {
+      // Preserve the original orchestration failure.
+    }
     throw error;
   }
 }
