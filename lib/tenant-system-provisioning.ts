@@ -16,7 +16,7 @@ type OrganizationSystem = {
   configuration?: Record<string, unknown> | null;
   metadata?: Record<string, unknown> | null;
 };
-type SystemCatalog = { id: string; name: string; slug: string };
+type SystemCatalog = { id: string; name: string; slug: string; included_agents?: unknown[] | null };\ntype AgentSelectionLite = { id: string; system_catalog_id?: string | null; configuration?: Record<string, unknown> | null };
 type SystemTemplateMap = {
   automation_template_id: string;
   required: boolean;
@@ -82,6 +82,75 @@ async function assertProvisionable(installationId: string) {
     { method: "POST", body: JSON.stringify({ p_installation_id: installationId }) },
   );
   return rows[0] || null;
+}
+
+function agentKeyFromName(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+async function ensureIncludedAgentSelections(organization: Organization, system: SystemCatalog) {
+  const includedAgents = Array.isArray(system.included_agents)
+    ? system.included_agents.map((value) => String(value).trim()).filter(Boolean)
+    : [];
+  if (!includedAgents.length) return { included_agents: [], provisioning: null };
+
+  for (const displayName of includedAgents) {
+    const agentKey = agentKeyFromName(displayName);
+    if (!agentKey) continue;
+
+    const existing = await one<AgentSelectionLite>(
+      `organization_agent_selections?organization_id=eq.${encodeURIComponent(organization.id)}&agent_key=eq.${encodeURIComponent(agentKey)}&select=id,system_catalog_id,configuration&limit=1`,
+    );
+
+    if (existing) {
+      const bindings = new Set(
+        Array.isArray(existing.configuration?.system_bindings)
+          ? (existing.configuration?.system_bindings as unknown[]).map(String)
+          : [],
+      );
+      bindings.add(system.id);
+      await patch("organization_agent_selections", existing.id, {
+        configuration: {
+          ...(existing.configuration || {}),
+          system_bindings: [...bindings],
+          last_bound_system_slug: system.slug,
+        },
+      });
+      continue;
+    }
+
+    await supabaseServerRequest<AgentSelectionLite[]>("organization_agent_selections", {
+      method: "POST",
+      body: JSON.stringify({
+        organization_id: organization.id,
+        system_catalog_id: system.id,
+        agent_key: agentKey,
+        display_name: displayName,
+        status: "selected",
+        setup_price: 0,
+        monthly_price: 0,
+        currency: "NGN",
+        configuration: {
+          allocation_source: "system_provisioning",
+          system_bindings: [system.id],
+          system_slug: system.slug,
+        },
+      }),
+    });
+  }
+
+  const provisioning = await supabaseServerRequest<Record<string, unknown>>(
+    "rpc/provision_selected_agent_allocations",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_organization_id: organization.id,
+        p_actor_user_id: null,
+      }),
+    },
+  );
+
+  return { included_agents: includedAgents, provisioning };
 }
 
 async function ensureOrganizationAutomation(input: {
@@ -162,9 +231,11 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
 
   const [organization, system] = await Promise.all([
     one<Organization>(`organizations?id=eq.${encodeURIComponent(installation.organization_id)}&select=id,name,slug&limit=1`),
-    one<SystemCatalog>(`system_catalog?id=eq.${encodeURIComponent(installation.system_id)}&select=id,name,slug&limit=1`),
+    one<SystemCatalog>(`system_catalog?id=eq.${encodeURIComponent(installation.system_id)}&select=id,name,slug,included_agents&limit=1`),
   ]);
   if (!organization || !system) throw new Error("Tenant organization or marketplace system is missing.");
+
+  const agentProvisioning = await ensureIncludedAgentSelections(organization, system);
 
   const mappings = await supabaseServerRequest<SystemTemplateMap[]>(
     `system_automation_templates?system_id=eq.${encodeURIComponent(system.id)}&select=*&order=display_order.asc`,
@@ -320,6 +391,7 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
       ...(installation.metadata || {}),
       n8n_project_id: project.id,
       provisioning_results: results,
+      agent_provisioning: agentProvisioning,
       test_passed: false,
       provisioning_completed_at: new Date().toISOString(),
     },
@@ -330,6 +402,8 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     organization: organization.name,
     system: system.name,
     status: finalStatus,
+    included_agents: agentProvisioning.included_agents,
+    agent_provisioning: agentProvisioning.provisioning,
     automations: results,
   };
 }
