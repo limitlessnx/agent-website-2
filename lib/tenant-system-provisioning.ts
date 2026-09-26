@@ -1,6 +1,5 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import {
-  activateN8nWorkflow,
   createN8nProject,
   createN8nWorkflow,
   findN8nProjectByName,
@@ -15,6 +14,7 @@ type OrganizationSystem = {
   system_id: string;
   status: string;
   configuration?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 };
 type SystemCatalog = { id: string; name: string; slug: string };
 type SystemTemplateMap = {
@@ -28,7 +28,6 @@ type AutomationTemplate = {
   name: string;
   slug: string;
   latest_approved_version: number;
-  configuration_schema?: Record<string, unknown> | null;
 };
 type AutomationVersion = {
   id: string;
@@ -77,6 +76,14 @@ async function patch<T>(table: string, id: string, payload: Record<string, unkno
   return rows[0] || null;
 }
 
+async function assertProvisionable(installationId: string) {
+  const rows = await supabaseServerRequest<Record<string, unknown>[]>(
+    "rpc/assert_organization_system_provisionable",
+    { method: "POST", body: JSON.stringify({ p_installation_id: installationId }) },
+  );
+  return rows[0] || null;
+}
+
 async function ensureOrganizationAutomation(input: {
   organizationId: string;
   template: AutomationTemplate;
@@ -96,6 +103,7 @@ async function ensureOrganizationAutomation(input: {
         status: "provisioning",
         client_configuration: input.configuration,
         provisioned_version: input.version.version,
+        activated_at: null,
         last_error: null,
       }),
     },
@@ -141,6 +149,16 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     `organization_systems?id=eq.${encodeURIComponent(installationId)}&select=*&limit=1`,
   );
   if (!installation) throw new Error("Organization system installation was not found.");
+  if (installation.status === "active") {
+    return {
+      organization_system_id: installation.id,
+      status: "active",
+      idempotent: true,
+      automations: [],
+    };
+  }
+
+  await assertProvisionable(installationId);
 
   const [organization, system] = await Promise.all([
     one<Organization>(`organizations?id=eq.${encodeURIComponent(installation.organization_id)}&select=id,name,slug&limit=1`),
@@ -162,7 +180,13 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
   await patch("organization_systems", installation.id, {
     status: "provisioning",
     approved_at: new Date().toISOString(),
+    activated_at: null,
     last_error: null,
+    metadata: {
+      ...(installation.metadata || {}),
+      test_passed: false,
+      provisioning_started_at: new Date().toISOString(),
+    },
   });
 
   const projectName = `Fluxknight Tenant - ${organization.name}`;
@@ -206,6 +230,11 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     if (!organizationAutomation) throw new Error(`Unable to create ${template.name} installation.`);
 
     if (organizationAutomation.backend_workflow_id) {
+      await patch("organization_automations", organizationAutomation.id, {
+        status: "paused",
+        activated_at: null,
+        last_error: null,
+      });
       results.push({
         automation: template.slug,
         status: "already_provisioned",
@@ -245,20 +274,14 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
       const connections = replaceTenantPlaceholders(source.connections || {}, replacements) as Record<string, unknown>;
       const settings = replaceTenantPlaceholders(source.settings || {}, replacements) as Record<string, unknown>;
 
-      const clone = await createN8nWorkflow({
-        name: workflowName,
-        nodes,
-        connections,
-        settings,
-      });
+      const clone = await createN8nWorkflow({ name: workflowName, nodes, connections, settings });
       if (project.id) await transferN8nWorkflow(clone.id, project.id);
-      await activateN8nWorkflow(clone.id);
 
       await patch("organization_automations", organizationAutomation.id, {
-        status: "active",
+        status: "paused",
         backend_workflow_id: clone.id,
         backend_workflow_name: workflowName,
-        activated_at: new Date().toISOString(),
+        activated_at: null,
         last_error: null,
         last_provisioning_job_id: job.id,
       });
@@ -268,7 +291,7 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
         completed_at: new Date().toISOString(),
         last_error: null,
       });
-      results.push({ automation: template.slug, status: "active", workflow_id: clone.id });
+      results.push({ automation: template.slug, status: "provisioned", workflow_id: clone.id });
     } catch (error) {
       const message = error instanceof Error ? error.message : `Unable to provision ${template.name}.`;
       await Promise.all([
@@ -288,12 +311,18 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
   }
 
   const failed = results.filter((item) => item.status === "failed");
-  const finalStatus = failed.length ? "needs_attention" : "active";
+  const finalStatus = failed.length ? "needs_attention" : "testing";
   await patch("organization_systems", installation.id, {
     status: finalStatus,
-    activated_at: finalStatus === "active" ? new Date().toISOString() : null,
+    activated_at: null,
     last_error: failed.length ? "One or more optional automations require attention." : null,
-    metadata: { n8n_project_id: project.id, provisioning_results: results },
+    metadata: {
+      ...(installation.metadata || {}),
+      n8n_project_id: project.id,
+      provisioning_results: results,
+      test_passed: false,
+      provisioning_completed_at: new Date().toISOString(),
+    },
   });
 
   return {
