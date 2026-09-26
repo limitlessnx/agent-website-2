@@ -25,6 +25,12 @@ export async function saveMetaAppCredentials(formData: FormData) {
   const preferredInstagramAccount = String(
     formData.get("preferredInstagramAccount") || "",
   ).trim();
+  const instagramAppId = String(
+    formData.get("instagramAppId") || "",
+  ).trim();
+  const instagramAppSecret = String(
+    formData.get("instagramAppSecret") || "",
+  ).trim();
 
   if (!appId) {
     redirect(
@@ -41,6 +47,8 @@ export async function saveMetaAppCredentials(formData: FormData) {
       loginConfigurationId,
       preferredPageId,
       preferredInstagramAccount,
+      instagramAppId,
+      instagramAppSecret,
     });
     revalidatePath("/dashboard/social/integrations");
   } catch (error) {

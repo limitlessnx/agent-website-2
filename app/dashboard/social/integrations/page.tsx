@@ -37,6 +37,16 @@ export default async function SocialIntegrationsPage({
       "",
   );
   const configured = Boolean(appId && credentials?.app_secret);
+  const instagramAppId = String(
+    credentials?.instagram_app_id || config.instagram_app_id || "",
+  );
+  const instagramLoginConfigured = Boolean(
+    instagramAppId && credentials?.instagram_app_secret,
+  );
+  const instagramLoginConnected = Boolean(
+    config.instagram_login_connected_at &&
+      (config.instagram_login_user_id || credentials?.instagram_login_user_id),
+  );
   const status = integration?.status || "disconnected";
   const grantedPermissions = Array.isArray(config.granted_permissions)
     ? config.granted_permissions.filter((item): item is string => typeof item === "string")
@@ -45,11 +55,13 @@ export default async function SocialIntegrationsPage({
   const missingPublishingPermissions = requiredPublishingPermissions.filter(
     (permission) => !grantedPermissions.includes(permission),
   );
-  const publishingReady =
+  const legacyPublishingReady =
     status === "connected" &&
     Boolean(config.page_id) &&
     Boolean(config.instagram_business_account_id) &&
     missingPublishingPermissions.length === 0;
+  const publishingReady =
+    instagramLoginConnected || legacyPublishingReady;
   const success =
     params.meta === "configured" ||
     params.meta === "connected" ||
@@ -157,6 +169,30 @@ export default async function SocialIntegrationsPage({
                   configured
                     ? "Enter a new secret to replace the stored one"
                     : "Your Meta App Secret"
+                }
+              />
+            </label>
+            <label>
+              <span>Instagram App ID</span>
+              <input
+                name="instagramAppId"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                defaultValue={instagramAppId}
+                placeholder="Instagram App ID from API setup with Instagram Login"
+              />
+            </label>
+            <label>
+              <span>Instagram App Secret</span>
+              <input
+                name="instagramAppSecret"
+                type="password"
+                autoComplete="new-password"
+                placeholder={
+                  instagramLoginConfigured
+                    ? "Enter a new secret to replace the stored one"
+                    : "Instagram App Secret"
                 }
               />
             </label>
@@ -270,16 +306,20 @@ export default async function SocialIntegrationsPage({
             </div>
             <div className="admin-list-row">
               <div>
-                <strong>Publishing permissions</strong>
+                <strong>Instagram publishing</strong>
                 <span>
-                  {publishingReady
-                    ? "Facebook Page and Instagram publishing permissions are granted."
-                    : missingPublishingPermissions.length
-                      ? `Reconnect after enabling: ${missingPublishingPermissions.join(", ")}`
-                      : "Reconnect Meta to verify publishing permissions."}
+                  {instagramLoginConnected
+                    ? `Connected via Instagram Login as @${String(
+                        config.instagram_login_username ||
+                          config.instagram_username ||
+                          "connected account",
+                      )}.`
+                    : instagramLoginConfigured
+                      ? "Authorize Instagram publishing to enable direct scheduled uploads."
+                      : "Add the Instagram App ID and App Secret from API setup with Instagram Login."}
                 </span>
               </div>
-              <em>{publishingReady ? "ready" : "attention"}</em>
+              <em>{instagramLoginConnected ? "ready" : "attention"}</em>
             </div>
             <div className="admin-list-row">
               <div>
@@ -313,6 +353,17 @@ export default async function SocialIntegrationsPage({
                 Save the Meta App ID and App Secret first.
               </p>
             )}
+
+            {instagramLoginConfigured ? (
+              <Link
+                href="/api/integrations/meta/instagram/connect"
+                className="admin-btn primary"
+              >
+                {instagramLoginConnected
+                  ? "Reconnect Instagram Publishing"
+                  : "Connect Instagram Publishing"}
+              </Link>
+            ) : null}
 
             {status === "connected" ? (
               <form action={syncFluxknightMetaAnalytics}>

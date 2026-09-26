@@ -7,6 +7,8 @@ export type MetaPublisherConfig = {
   apiVersion: string;
   pageId: string;
   instagramBusinessAccountId?: string;
+  instagramAccessToken?: string;
+  instagramGraphHost?: string;
 };
 
 export type MetaPublishAsset = {
@@ -72,6 +74,43 @@ async function graph(
   return body;
 }
 
+async function instagramGraph(
+  config: MetaPublisherConfig,
+  path: string,
+  init?: {
+    method?: "GET" | "POST";
+    params?: Record<string, string>;
+  },
+) {
+  const host = config.instagramGraphHost || "graph.instagram.com";
+  const token = config.instagramAccessToken || config.accessToken;
+  if (!token) throw new Error("Instagram publishing access token is missing.");
+
+  const url = new URL(
+    `https://${host}/${config.apiVersion}/${path.replace(/^\//, "")}`,
+  );
+  for (const [key, value] of Object.entries(init?.params || {})) {
+    url.searchParams.set(key, value);
+  }
+  url.searchParams.set("access_token", token);
+
+  const response = await fetch(url, {
+    method: init?.method || "GET",
+    headers: { accept: "application/json" },
+    cache: "no-store",
+  });
+  const body = (await response.json().catch(() => ({}))) as Json;
+  if (!response.ok) {
+    const error = body.error as Json | undefined;
+    const message =
+      typeof error?.message === "string"
+        ? error.message
+        : `Instagram Graph API request failed (${response.status}).`;
+    throw new Error(message);
+  }
+  return body;
+}
+
 async function createSignedAssetUrl(
   supabase: SupabaseClient,
   asset: MetaPublishAsset,
@@ -122,7 +161,7 @@ async function getInstagramPermalink(
   externalPostId: string,
 ) {
   try {
-    const media = await graph(config, externalPostId, {
+    const media = await instagramGraph(config, externalPostId, {
       params: { fields: "permalink" },
     });
     return typeof media.permalink === "string" ? media.permalink : null;
@@ -138,7 +177,7 @@ async function waitForInstagramContainer(
   const maxAttempts = 24;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const state = await graph(config, containerId, {
+    const state = await instagramGraph(config, containerId, {
       params: { fields: "status_code,status" },
     });
 
@@ -301,7 +340,7 @@ async function publishInstagramImage(input: {
   if (!instagramId) throw new Error("No Instagram Business account is connected.");
 
   const imageUrl = await createSignedAssetUrl(input.supabase, input.asset);
-  const container = await graph(input.config, `${instagramId}/media`, {
+  const container = await instagramGraph(input.config, `${instagramId}/media`, {
     method: "POST",
     params: {
       image_url: imageUrl,
@@ -312,7 +351,7 @@ async function publishInstagramImage(input: {
   const containerId = String(container.id || "");
   if (!containerId) throw new Error("Instagram did not return a media container ID.");
 
-  const published = await graph(input.config, `${instagramId}/media_publish`, {
+  const published = await instagramGraph(input.config, `${instagramId}/media_publish`, {
     method: "POST",
     params: { creation_id: containerId },
   });
@@ -357,7 +396,7 @@ async function createInstagramCarouselChild(input: {
     params.image_url = mediaUrl;
   }
 
-  const child = await graph(input.config, `${input.instagramId}/media`, {
+  const child = await instagramGraph(input.config, `${input.instagramId}/media`, {
     method: "POST",
     params,
   });
@@ -393,7 +432,7 @@ async function publishInstagramCarousel(input: {
     );
   }
 
-  const container = await graph(input.config, `${instagramId}/media`, {
+  const container = await instagramGraph(input.config, `${instagramId}/media`, {
     method: "POST",
     params: {
       media_type: "CAROUSEL",
@@ -407,7 +446,7 @@ async function publishInstagramCarousel(input: {
 
   await waitForInstagramContainer(input.config, containerId);
 
-  const published = await graph(input.config, `${instagramId}/media_publish`, {
+  const published = await instagramGraph(input.config, `${instagramId}/media_publish`, {
     method: "POST",
     params: { creation_id: containerId },
   });
@@ -440,7 +479,7 @@ async function publishInstagramReel(input: {
   if (!instagramId) throw new Error("No Instagram Business account is connected.");
 
   const videoUrl = await createSignedAssetUrl(input.supabase, input.asset);
-  const container = await graph(input.config, `${instagramId}/media`, {
+  const container = await instagramGraph(input.config, `${instagramId}/media`, {
     method: "POST",
     params: {
       media_type: "REELS",
@@ -455,7 +494,7 @@ async function publishInstagramReel(input: {
 
   await waitForInstagramContainer(input.config, containerId);
 
-  const published = await graph(input.config, `${instagramId}/media_publish`, {
+  const published = await instagramGraph(input.config, `${instagramId}/media_publish`, {
     method: "POST",
     params: { creation_id: containerId },
   });
@@ -607,6 +646,10 @@ export async function metaPublisherConfigFromIntegration(
   const config = (integration.configuration || {}) as Json;
   const accessToken =
     typeof secret.access_token === "string" ? secret.access_token : "";
+  const instagramAccessToken =
+    typeof secret.instagram_user_access_token === "string"
+      ? secret.instagram_user_access_token
+      : "";
   const pageId = typeof config.page_id === "string" ? config.page_id : "";
 
   if (!accessToken || !pageId) {
@@ -619,8 +662,16 @@ export async function metaPublisherConfigFromIntegration(
       typeof config.api_version === "string" ? config.api_version : "v24.0",
     pageId,
     instagramBusinessAccountId:
-      typeof config.instagram_business_account_id === "string"
-        ? config.instagram_business_account_id
-        : undefined,
+      typeof secret.instagram_login_user_id === "string"
+        ? secret.instagram_login_user_id
+        : typeof config.instagram_login_user_id === "string"
+          ? config.instagram_login_user_id
+          : typeof config.instagram_business_account_id === "string"
+            ? config.instagram_business_account_id
+            : undefined,
+    instagramAccessToken: instagramAccessToken || undefined,
+    instagramGraphHost: instagramAccessToken
+      ? "graph.instagram.com"
+      : "graph.facebook.com",
   };
 }
