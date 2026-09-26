@@ -43,6 +43,8 @@ export async function saveMetaCredentials(input: {
   loginConfigurationId?: string;
   preferredPageId?: string;
   preferredInstagramAccount?: string;
+  instagramAppId?: string;
+  instagramAppSecret?: string;
 }) {
   const admin = createAdminClient() as any;
   const existingIntegration = await getMetaIntegration(input.organizationId);
@@ -53,6 +55,15 @@ export async function saveMetaCredentials(input: {
   const loginConfigurationId = input.loginConfigurationId || null;
   const preferredPageId = input.preferredPageId || null;
   const preferredInstagramAccount = input.preferredInstagramAccount || null;
+  const existingInstagramAppSecret = String(
+    existingCredentials?.instagram_app_secret || "",
+  );
+  const instagramAppId =
+    input.instagramAppId ||
+    String(existingCredentials?.instagram_app_id || "") ||
+    null;
+  const instagramAppSecret =
+    input.instagramAppSecret || existingInstagramAppSecret || null;
 
   if (!appSecret) throw new Error("Meta App Secret is required for first-time setup.");
 
@@ -67,6 +78,8 @@ export async function saveMetaCredentials(input: {
       login_configuration_id: loginConfigurationId,
       preferred_page_id: preferredPageId,
       preferred_instagram_account: preferredInstagramAccount,
+      instagram_app_id: instagramAppId,
+      instagram_app_secret: instagramAppSecret,
     },
     p_configuration: {
       ...configuration,
@@ -74,6 +87,10 @@ export async function saveMetaCredentials(input: {
       login_configuration_id: loginConfigurationId,
       preferred_page_id: preferredPageId,
       preferred_instagram_account: preferredInstagramAccount,
+      instagram_app_id: instagramAppId,
+      instagram_login_configured: Boolean(
+        instagramAppId && instagramAppSecret,
+      ),
       credentials_updated_at: new Date().toISOString(),
     },
   });
