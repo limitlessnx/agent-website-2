@@ -1,4 +1,5 @@
 import type { ClientSession } from "@/lib/client-auth";
+import { getOrganizationAccessContext } from "@/lib/organization-membership";
 import {
   canonicalLeoToolKey,
   isLeoToolAllowed,
@@ -17,7 +18,8 @@ function normalizeLegacyTenantRole(role: string): LeoRole {
   return "member";
 }
 
-export function tenantLeoIdentityFromSession(session: ClientSession): LeoIdentity {
+export async function tenantLeoIdentityFromSession(session: ClientSession): Promise<LeoIdentity> {
+  const access = await getOrganizationAccessContext(session.organizationId, session.userId);
   return {
     scope: "tenant",
     role: normalizeLegacyTenantRole(session.role),
@@ -26,6 +28,7 @@ export function tenantLeoIdentityFromSession(session: ClientSession): LeoIdentit
     organizationId: session.organizationId,
     organizationSlug: session.organizationSlug,
     membershipId: session.membershipId,
+    permissions: [...access.permissions],
     channel: "chat",
     globalScope: false,
   };
