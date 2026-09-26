@@ -121,10 +121,9 @@ export default async function SocialPostsPage() {
                       <input type="hidden" name="post_id" value={post.id} />
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
                         {post.platforms.includes("facebook") ? (
-                          <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                            <input type="checkbox" name="publish_platforms" value="facebook" defaultChecked />
-                            <span>Facebook</span>
-                          </label>
+                          <span className="admin-status">
+                            Facebook handled by Instagram auto-share
+                          </span>
                         ) : null}
                         {post.platforms.includes("instagram") ? (
                           <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
@@ -145,7 +144,7 @@ export default async function SocialPostsPage() {
                           <option value="America/New_York">New York</option>
                           <option value="Asia/Dubai">Dubai</option>
                         </select>
-                        <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Schedule Meta publish</button>
+                        <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Schedule Instagram publish</button>
                       </div>
                     </form>
                   ) : null}
