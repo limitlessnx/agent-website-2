@@ -9,31 +9,34 @@ test("phase 5 preserves client authentication onboarding and tenant isolation", 
   const data = read("lib/client-portal-data.ts");
   assert.match(layout, /getClientSession\(\)/);
   assert.match(layout, /redirect\("\/account\/login"\)/);
-  assert.match(layout, /profile\.status === "in_progress"/);
+  assert.match(layout, /profile\.status\s*===\s*"in_progress"/);
   assert.match(layout, /redirect\("\/onboarding"\)/);
   assert.match(data, /getClientPortalSummary\(organizationId: string\)/);
   assert.match(data, /organization_id=eq\.\$\{encodeURIComponent\(organizationId\)\}/);
   assert.match(data, /organization_uuid=eq\.\$\{encodeURIComponent\(organizationId\)\}/);
 });
 
-test("phase 5 keeps existing client routes reachable while simplifying navigation", () => {
+test("phase 5 client shell remains compatible with the A7 canonical tenant navigation", () => {
   const sidebar = read("app/portal/PortalSidebar.tsx");
   for (const route of [
     "/portal",
     "/portal/notifications",
-    "/portal/agents",
-    "/portal/agents/setup",
+    "/portal/customers",
+    "/portal/conversations",
     "/portal/systems",
-    "/portal/integrations",
-    "/portal/billing",
-    "/portal/marketplace",
+    "/portal/appointments",
+    "/portal/analytics",
+    "/portal/team",
     "/portal/support",
     "/portal/settings",
   ]) assert.match(sidebar, new RegExp(route.replaceAll("/", "\\/")));
+  for (const legacy of ["/portal/agents", "/portal/agents/setup", "/portal/marketplace", "/portal/runtime", "/portal/execution"]) {
+    assert.doesNotMatch(sidebar, new RegExp(legacy.replaceAll("/", "\\/")));
+  }
   assert.match(sidebar, /Needs Attention/);
-  assert.match(sidebar, /AI Team/);
-  assert.match(sidebar, /Business Setup/);
-  assert.match(sidebar, /Plan & Usage/);
+  assert.match(sidebar, /Customers/);
+  assert.match(sidebar, /Conversations/);
+  assert.match(sidebar, /Systems/);
 });
 
 test("phase 5 command center uses only tenant-scoped real evidence", () => {
