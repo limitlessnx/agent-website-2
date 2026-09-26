@@ -1,11 +1,9 @@
-import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
 import { buildMetaAuthorizationUrl } from "@/lib/meta-oauth";
+import { createMetaOAuthState } from "@/lib/meta-oauth-state";
 
-const COOKIE = "__Host-flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
 
 function oauthOrigin(request: Request) {
@@ -31,15 +29,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const state = randomBytes(32).toString("hex");
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE, state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 10 * 60,
-  });
+  const state = createMetaOAuthState(organization.id);
 
   const apiVersion = String(credentials?.api_version || process.env.META_GRAPH_API_VERSION || "v24.0");
   const loginConfigurationId = String(
@@ -58,6 +48,8 @@ export async function GET(request: Request) {
     organizationId: organization.id,
     apiVersion,
     hasLoginConfigurationId: Boolean(loginConfigurationId),
+    requestOrigin: new URL(request.url).origin,
+    redirectOrigin: oauthOrigin(request),
     redirectUri,
   });
 
