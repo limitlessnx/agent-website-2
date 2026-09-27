@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runPhase12StructuredAgent } from "@/lib/ai-runtime/migration";
+import { assertFluxFeatureAccess } from "@/lib/flux-credits";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -66,6 +68,24 @@ export async function POST(request: NextRequest) {
       .eq("status", "active")
       .maybeSingle();
 
+    const purposeKey = purpose.toLowerCase();
+    const isEmailPurpose = purposeKey.includes("email");
+    const isFollowUpPurpose = isEmailPurpose && (purposeKey.includes("follow") || purposeKey.includes("sequence"));
+    const isVoicePurpose = purposeKey.includes("voice") || purposeKey.includes("reception");
+
+    if (isEmailPurpose) {
+      await assertFluxFeatureAccess(organizationId, "cross_channel");
+      await preflightChargeableFluxAi({
+        organizationId,
+        feature:isFollowUpPurpose ? "follow_ups" : "cross_channel",
+        action:isFollowUpPurpose ? "email_follow_up" : "ai_email",
+      });
+    } else if (isVoicePurpose) {
+      await preflightChargeableFluxAi({ organizationId, feature:"leo_voice", action:"leo_voice_minute", quantity:1 });
+    } else {
+      await preflightChargeableFluxAi({ organizationId, feature:"core_ai_support", action:"web_ai" });
+    }
+
     const runtimeInput = record(body.input);
     const outputSchema = record(body.output_schema);
     const systemPrompt = [
@@ -86,6 +106,17 @@ export async function POST(request: NextRequest) {
     });
 
     const latencyMs = Date.now() - startedAt;
+    if (!isEmailPurpose && !isVoicePurpose) {
+      await recordChargeableFluxAiUsage({
+        organizationId,
+        action:"web_ai",
+        source:"phase12_provider_runtime",
+        provider:result.provider,
+        model:result.modelKey,
+        providerUsage:result.usage||{},
+        metadata:{agent_id:agentId,execution_id:executionId,purpose},
+      });
+    }
     const usage = result.usage || {};
     const responsePayload = {
       id: result.responseId || null,
