@@ -76,11 +76,11 @@ test("E6 anomaly notifications are tenant scoped and do not send admins to porta
   assert.doesNotMatch(patch,/'both','analytics_anomaly'/);
 });
 
-test("E6 Trigger scan runs hourly and deploy watches anomaly logic",()=>{
+test("E6 maintenance scan stays available on demand while automatic schedules are paused",()=>{
   const trigger=read("src/trigger/system-orchestrator.ts");
   const workflow=read(".github/workflows/deploy-trigger.yml");
   assert.match(trigger,/id: "platform-hourly-maintenance-sweep"/);
-  assert.match(trigger,/cron: "15 \* \* \* \*"/);
+  assert.doesNotMatch(trigger,/schedules\.task/);
   assert.match(trigger,/scanAnalyticsAnomalies/);
   assert.match(trigger,/syncDueFluxSubscriptionWallets/);
   assert.match(workflow,/lib\/analytics-phase-e\.ts/);
