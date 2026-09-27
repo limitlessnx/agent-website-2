@@ -7,6 +7,12 @@ function rec(value:unknown):Record<string,unknown>{
 }
 function str(value:unknown){return typeof value==="string"?value.trim():"";}
 
+async function temporaryD4TestOrganization(organizationId:string){
+  const {data,error}=await createAdminClient().from("organizations").select("metadata").eq("id",organizationId).maybeSingle();
+  if(error) throw error;
+  return rec(data?.metadata).temporary_d4_test===true;
+}
+
 export async function processDueHandoffFollowups(limit=100){
   const admin=createAdminClient();
   const now=new Date().toISOString();
@@ -48,18 +54,25 @@ export async function processDueHandoffFollowups(limit=100){
 
       const customerName=String(customer.full_name||customer.company_name||"there");
       const text="Hi "+customerName+", just checking in after our team member assisted you. Was everything resolved, or do you still need help?";
-      const delivery=await sendWhatsAppMessage({
-        organizationId:task.organization_id,
-        to:customer.phone,
-        text,
-        lastCustomerMessageAt:lastInbound?.created_at||null,
-        deliveryMode:"auto",
-        templatePurpose:"handoff_follow_up",
-        variables:{
-          customer_name:customerName,
-          handoff_id:handoffId,
-        },
-      });
+      const delivery=await temporaryD4TestOrganization(task.organization_id)
+        ? {
+            ok:true,
+            messageType:"text" as const,
+            templateName:null,
+            providerMessageId:"test-handoff-followup:"+task.id,
+          }
+        : await sendWhatsAppMessage({
+            organizationId:task.organization_id,
+            to:customer.phone,
+            text,
+            lastCustomerMessageAt:lastInbound?.created_at||null,
+            deliveryMode:"auto",
+            templatePurpose:"handoff_follow_up",
+            variables:{
+              customer_name:customerName,
+              handoff_id:handoffId,
+            },
+          });
 
       await addCanonicalCrmMessage({
         organizationId:task.organization_id,
