@@ -6,6 +6,9 @@ import { useState } from "react";
 type Handoff={
   id:string;reason:string;category:string;priority:string;status:string;
   assigned_membership_id?:string|null;claimed_by_membership_id?:string|null;sla_due_at?:string|null;created_at:string;
+  conversation_summary?:string|null;stage_name?:string|null;next_action?:string|null;outcome?:string|null;
+  follow_up_required?:boolean;follow_up_due_at?:string|null;follow_up_status?:string|null;assigned_to_email?:string|null;
+  customer_name?:string|null;
 };
 type Approval={
   id:string;approval_type:string;title:string;description?:string|null;risk_level:string;status:string;
@@ -47,9 +50,16 @@ export default function HumanOperationsPanel({
     <div className="portal-list">
       {handoffs.map((item)=><div className="portal-list-row" key={item.id}>
         <div>
-          <strong>{item.priority.toUpperCase()} · {item.category.replaceAll("_"," ")}</strong>
-          <span>{item.reason} · {item.status.replaceAll("_"," ")}</span>
-          {item.sla_due_at?<small>SLA due {new Date(item.sla_due_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"})}</small>:null}
+          <strong>{item.customer_name||"Customer"} · {item.priority.toUpperCase()}</strong>
+          <span>{item.stage_name||"Stage not set"} · {item.category.replaceAll("_"," ")} · {item.status.replaceAll("_"," ")}</span>
+          <span><strong>Reason:</strong> {item.reason}</span>
+          {item.conversation_summary?<span><strong>Summary:</strong> {item.conversation_summary}</span>:null}
+          {item.next_action?<span><strong>Next action:</strong> {item.next_action}</span>:null}
+          {item.assigned_to_email?<span><strong>Assigned to:</strong> {item.assigned_to_email}</span>:null}
+          <small>
+            {item.sla_due_at?"SLA due "+new Date(item.sla_due_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):"No SLA"}
+            {item.follow_up_status?" · follow-up "+item.follow_up_status.replaceAll("_"," "):""}
+          </small>
         </div>
         <div className="portal-action-list" style={{minWidth:240}}>
           {!item.claimed_by_membership_id?
@@ -62,11 +72,25 @@ export default function HumanOperationsPanel({
             <option value="">Assign to...</option>
             {members.filter((m)=>m.status==="active").map((m)=><option key={m.id} value={m.id}>{m.email||m.id} · {m.role}</option>)}
           </select>:null}
-          {(item.claimed_by_membership_id===membershipId||item.assigned_membership_id===membershipId||canManageHandoffs)?
+          {(item.claimed_by_membership_id===membershipId||item.assigned_membership_id===membershipId||canManageHandoffs)?<>
             <button type="button" disabled={busy===item.id+":resolve"} onClick={()=>{
               const resolution=window.prompt("Resolution summary")||"Resolved by human";
-              void post(`/api/portal/handoffs/${item.id}`,{action:"resolve",resolution,resumeAi:true},item.id+":resolve");
-            }}>Resolve & resume AI</button>:null}
+              const outcome=window.prompt("Outcome for this customer")||resolution;
+              const nextAction=window.prompt("Next action, if any")||"";
+              const followUp=window.confirm("Should Fluxknight check in with this customer after the handoff?");
+              void post("/api/portal/handoffs/"+item.id,{
+                action:"resolve",resolution,outcome,nextAction,resumeAi:true,
+                followUpRequired:followUp,followUpMinutes:720,
+              },item.id+":resolve");
+            }}>Resolve & resume AI</button>
+            <button type="button" disabled={busy===item.id+":stop"} onClick={()=>{
+              const resolution=window.prompt("Resolution summary")||"Resolved by human";
+              const outcome=window.prompt("Outcome for this customer")||resolution;
+              void post("/api/portal/handoffs/"+item.id,{
+                action:"resolve",resolution,outcome,resumeAi:false,followUpRequired:false,
+              },item.id+":stop");
+            }}>Resolve & keep AI off</button>
+          </>:null}
         </div>
       </div>)}
       {!handoffs.length?<p className="portal-empty">No active human handoffs.</p>:null}
