@@ -97,10 +97,14 @@ export async function processDueHandoffFollowups(limit=100){
         status:"failed",updated_at:new Date().toISOString(),
         metadata:{...metadata,follow_up_error:message.slice(0,2000)},
       }).eq("organization_id",task.organization_id).eq("id",task.id);
-      await admin.from("human_handoffs").update({
-        follow_up_status:"failed",
-        updated_at:new Date().toISOString(),
-      }).eq("organization_id",task.organization_id).eq("id",handoffId).catch(()=>undefined);
+      try {
+        await admin.from("human_handoffs").update({
+          follow_up_status:"failed",
+          updated_at:new Date().toISOString(),
+        }).eq("organization_id",task.organization_id).eq("id",handoffId);
+      } catch {
+        // Preserve the original follow-up failure.
+      }
       results.push({taskId:task.id,status:"failed",handoffId,reason:message});
     }
   }
