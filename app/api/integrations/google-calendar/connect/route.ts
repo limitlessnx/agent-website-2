@@ -36,14 +36,22 @@ export async function GET(request:NextRequest){
     organizationId:session.organizationId,
     userId:session.userId,
   });
-  const target=googleCalendarAuthorizationUrl({origin:request.nextUrl.origin,state,loginHint:session.email});
-  const response=NextResponse.redirect(target);
-  response.cookies.set("flux_google_calendar_oauth_state",state,{
-    httpOnly:true,
-    sameSite:"lax",
-    secure:process.env.NODE_ENV==="production",
-    maxAge:15*60,
-    path:"/",
-  });
-  return response;
+  try{
+    const target=googleCalendarAuthorizationUrl({origin:request.nextUrl.origin,state,loginHint:session.email});
+    const response=NextResponse.redirect(target);
+    response.cookies.set("flux_google_calendar_oauth_state",state,{
+      httpOnly:true,
+      sameSite:"lax",
+      secure:process.env.NODE_ENV==="production",
+      maxAge:15*60,
+      path:"/",
+    });
+    return response;
+  }catch(error){
+    console.error("Google Calendar OAuth start failed",{
+      organizationId:session.organizationId,
+      error:error instanceof Error?error.message:String(error),
+    });
+    return NextResponse.redirect(new URL("/portal/integrations?google_calendar=not_configured",request.url));
+  }
 }
