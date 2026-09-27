@@ -16,19 +16,27 @@ test("C1 canonical customer identity uses tenant-scoped identifiers and conflict
 
 test("C2 canonical conversations use CRM conversation and message tables",()=>{
   const migration=read("supabase/migrations/20260927000230_c1_c5_unified_customer_conversation_timeline.sql");
+  const hardening=read("supabase/migrations/20260927000829_c1_c2_identity_backfill_and_message_idempotency.sql");
   const helper=read("lib/canonical-customer.ts");
   assert.match(migration,/get_or_create_crm_conversation/);
+  assert.match(hardening,/crm_conversations_org_channel_external_uidx/);
+  assert.match(hardening,/crm_messages_org_external_message_uidx/);
+  assert.match(hardening,/phase_c_backfill/);
   assert.match(helper,/crm_messages/);
   assert.match(helper,/externalThreadId/);
   assert.match(helper,/externalMessageId/);
+  assert.match(helper,/createdAt/);
 });
 
 test("C3 timeline receives messages appointments and tasks",()=>{
   const base=read("supabase/migrations/20260927000230_c1_c5_unified_customer_conversation_timeline.sql");
   const tasks=read("supabase/migrations/20260927000632_c3_c5_customer_task_timeline_identity_review.sql");
+  const business=read("supabase/migrations/20260927000904_c3_lead_and_system_event_customer_timeline.sql");
   assert.match(base,/crm_message_customer_timeline/);
   assert.match(base,/appointment_customer_timeline/);
   assert.match(tasks,/crm_task_customer_timeline/);
+  assert.match(business,/crm_lead_customer_timeline/);
+  assert.match(business,/domain_event_customer_timeline/);
   assert.match(base,/customer_timeline_events/);
 });
 
@@ -46,6 +54,7 @@ test("C4 Public Leo lead capture links to canonical CRM and backfills history",(
   assert.match(leads,/canonicalizePublicLeoLead/);
   assert.match(helper,/backfillPublicLeoConversation/);
   assert.match(helper,/public-leo-message:/);
+  assert.match(helper,/lead\.public_leo_captured/);
   assert.match(route,/syncPublicLeoMessage/);
 });
 
@@ -53,6 +62,7 @@ test("C4 website evaluation uses service client and canonical CRM",()=>{
   const route=read("app/api/evaluation/route.ts");
   assert.match(route,/createAdminClient/);
   assert.match(route,/canonicalizeEvaluationLead/);
+  assert.match(read("lib/canonical-customer.ts"),/lead\.evaluation_submitted/);
   assert.doesNotMatch(route,/SUPABASE_ANON_KEY/);
   assert.doesNotMatch(route,/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
 });
