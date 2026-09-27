@@ -22,6 +22,16 @@ type CalendarResource={
   status:string;
   is_default:boolean;
   availability_configuration?:Record<string,unknown>|null;
+  service_keys?:string[]|null;
+  branch_key?:string|null;
+  department_key?:string|null;
+  routing_priority?:number|null;
+};
+
+type RoutingSettings={
+  strategy:string;
+  fallback_to_default:boolean;
+  lookahead_days:number;
 };
 
 type Member={
@@ -59,6 +69,65 @@ function ResourceEditor({
   const [duration,setDuration]=useState(String(resource.default_duration_minutes||60));
   const [isDefault,setIsDefault]=useState(resource.is_default);
   const [status,setStatus]=useState(resource.status);
+  const availability=(resource.availability_configuration||{}) as Record<string,unknown>;
+  const configuredWorking=(availability.workingHours||{}) as Record<string,unknown>;
+  const [enforceWorkingHours,setEnforceWorkingHours]=useState(Object.keys(configuredWorking).length>0);
+  const [workingDays,setWorkingDays]=useState<string[]>(
+    Object.keys(configuredWorking).length?Object.keys(configuredWorking):["mon","tue","wed","thu","fri"]
+  );
+  const firstWorking=(Object.values(configuredWorking)[0] as Array<{start?:string;end?:string}>|undefined)?.[0];
+  const [workStart,setWorkStart]=useState(firstWorking?.start||"09:00");
+  const [workEnd,setWorkEnd]=useState(firstWorking?.end||"17:00");
+  const configuredBreaks=(availability.breaks||{}) as Record<string,unknown>;
+  const firstBreak=(Object.values(configuredBreaks)[0] as Array<{start?:string;end?:string}>|undefined)?.[0];
+  const [breakStart,setBreakStart]=useState(firstBreak?.start||"");
+  const [breakEnd,setBreakEnd]=useState(firstBreak?.end||"");
+  const [minimumNotice,setMinimumNotice]=useState(String(availability.minimumNoticeMinutes??0));
+  const [maximumAdvance,setMaximumAdvance]=useState(String(availability.maximumAdvanceDays??30));
+  const [bufferBefore,setBufferBefore]=useState(String(availability.bufferBeforeMinutes??0));
+  const [bufferAfter,setBufferAfter]=useState(String(availability.bufferAfterMinutes??0));
+  const [blockedDates,setBlockedDates]=useState(
+    Array.isArray(availability.blockedDates)?(availability.blockedDates as string[]).join(", "):""
+  );
+  const serviceDurations=(availability.serviceDurations||{}) as Record<string,unknown>;
+  const [serviceDurationText,setServiceDurationText]=useState(
+    Object.entries(serviceDurations).map(([key,value])=>`${key}=${value}`).join(", ")
+  );
+  const [serviceKeys,setServiceKeys]=useState((resource.service_keys||[]).join(", "));
+  const [branchKey,setBranchKey]=useState(resource.branch_key||"");
+  const [departmentKey,setDepartmentKey]=useState(resource.department_key||"");
+  const [routingPriority,setRoutingPriority]=useState(String(resource.routing_priority??100));
+
+  function toggleDay(day:string){
+    setWorkingDays((current)=>current.includes(day)?current.filter((item)=>item!==day):[...current,day]);
+  }
+
+  function buildAvailability(){
+    const workingHours:Record<string,Array<{start:string;end:string}>>={};
+    const breaks:Record<string,Array<{start:string;end:string}>>={};
+    if(enforceWorkingHours){
+      for(const day of workingDays) workingHours[day]=[{start:workStart,end:workEnd}];
+      if(breakStart&&breakEnd){
+        for(const day of workingDays) breaks[day]=[{start:breakStart,end:breakEnd}];
+      }
+    }
+    const durations:Record<string,number>={};
+    for(const pair of serviceDurationText.split(",")){
+      const [key,value]=pair.split("=").map((item)=>item.trim());
+      const minutes=Number(value);
+      if(key&&Number.isFinite(minutes)&&minutes>=5) durations[key.toLowerCase()]=Math.min(1440,Math.round(minutes));
+    }
+    return {
+      ...(enforceWorkingHours?{workingHours}:{}),
+      ...(enforceWorkingHours&&Object.keys(breaks).length?{breaks}:{}),
+      blockedDates:blockedDates.split(",").map((item)=>item.trim()).filter(Boolean),
+      minimumNoticeMinutes:Math.max(0,Number(minimumNotice)||0),
+      maximumAdvanceDays:Math.max(1,Number(maximumAdvance)||30),
+      bufferBeforeMinutes:Math.max(0,Number(bufferBefore)||0),
+      bufferAfterMinutes:Math.max(0,Number(bufferAfter)||0),
+      serviceDurations:durations,
+    };
+  }
 
   return <div className="portal-list-row" style={{alignItems:"flex-start"}}>
     <div style={{minWidth:220}}>
@@ -99,13 +168,64 @@ function ResourceEditor({
         <input type="checkbox" checked={isDefault} disabled={busy} onChange={(e)=>setIsDefault(e.target.checked)} />
         Default booking calendar
       </label>
+
+      <div className="portal-field">
+        <label>Services handled</label>
+        <input value={serviceKeys} disabled={busy} onChange={(e)=>setServiceKeys(e.target.value)} placeholder="inspection, consultation" />
+      </div>
+      <div className="portal-field">
+        <label>Branch</label>
+        <input value={branchKey} disabled={busy} onChange={(e)=>setBranchKey(e.target.value)} placeholder="lekki" />
+      </div>
+      <div className="portal-field">
+        <label>Department</label>
+        <input value={departmentKey} disabled={busy} onChange={(e)=>setDepartmentKey(e.target.value)} placeholder="sales" />
+      </div>
+      <div className="portal-field">
+        <label>Routing priority</label>
+        <input type="number" min={0} max={10000} value={routingPriority} disabled={busy} onChange={(e)=>setRoutingPriority(e.target.value)} />
+      </div>
+
+      <label style={{display:"flex",gap:8,alignItems:"center"}}>
+        <input type="checkbox" checked={enforceWorkingHours} disabled={busy} onChange={(e)=>setEnforceWorkingHours(e.target.checked)} />
+        Enforce staff working hours
+      </label>
+      {enforceWorkingHours?<div className="portal-field">
+        <label>Working days</label>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {["mon","tue","wed","thu","fri","sat","sun"].map((day)=><label key={day} style={{display:"flex",gap:4,alignItems:"center"}}>
+            <input type="checkbox" checked={workingDays.includes(day)} disabled={busy} onChange={()=>toggleDay(day)} />{day.toUpperCase()}
+          </label>)}
+        </div>
+      </div>:null}
+      {enforceWorkingHours?<div className="portal-field"><label>Working hours</label><div style={{display:"flex",gap:8}}>
+        <input type="time" value={workStart} disabled={busy} onChange={(e)=>setWorkStart(e.target.value)} />
+        <input type="time" value={workEnd} disabled={busy} onChange={(e)=>setWorkEnd(e.target.value)} />
+      </div></div>:null}
+      {enforceWorkingHours?<div className="portal-field"><label>Break / lunch</label><div style={{display:"flex",gap:8}}>
+        <input type="time" value={breakStart} disabled={busy} onChange={(e)=>setBreakStart(e.target.value)} />
+        <input type="time" value={breakEnd} disabled={busy} onChange={(e)=>setBreakEnd(e.target.value)} />
+      </div></div>:null}
+
+      <div className="portal-field"><label>Minimum booking notice (minutes)</label><input type="number" min={0} max={10080} value={minimumNotice} disabled={busy} onChange={(e)=>setMinimumNotice(e.target.value)} /></div>
+      <div className="portal-field"><label>Maximum advance booking (days)</label><input type="number" min={1} max={365} value={maximumAdvance} disabled={busy} onChange={(e)=>setMaximumAdvance(e.target.value)} /></div>
+      <div className="portal-field"><label>Buffer before (minutes)</label><input type="number" min={0} max={1440} value={bufferBefore} disabled={busy} onChange={(e)=>setBufferBefore(e.target.value)} /></div>
+      <div className="portal-field"><label>Buffer after (minutes)</label><input type="number" min={0} max={1440} value={bufferAfter} disabled={busy} onChange={(e)=>setBufferAfter(e.target.value)} /></div>
+      <div className="portal-field"><label>Blocked dates</label><input value={blockedDates} disabled={busy} onChange={(e)=>setBlockedDates(e.target.value)} placeholder="2026-12-25, 2027-01-01" /></div>
+      <div className="portal-field"><label>Service durations</label><input value={serviceDurationText} disabled={busy} onChange={(e)=>setServiceDurationText(e.target.value)} placeholder="inspection=60, consultation=30" /></div>
+
       <div>
-        <button type="button" disabled={busy||!timezone||!duration} onClick={()=>void onSave(resource,{
+        <button type="button" disabled={busy||!timezone||!duration||(enforceWorkingHours&&!workingDays.length)} onClick={()=>void onSave(resource,{
           assignedMembershipId:membershipId||null,
           timezone,
           defaultDurationMinutes:Number(duration),
           isDefault,
           status,
+          availabilityConfiguration:buildAvailability(),
+          serviceKeys:serviceKeys.split(",").map((item)=>item.trim()).filter(Boolean),
+          branchKey:branchKey||null,
+          departmentKey:departmentKey||null,
+          routingPriority:Number(routingPriority)||100,
         })}>{busy?"Saving...":"Save resource"}</button>
       </div>
     </div>
@@ -117,6 +237,7 @@ export default function GoogleCalendarPanel({
   resource,
   resources,
   members,
+  routingSettings,
   canManage,
 }:{
   integration:null|{
@@ -135,6 +256,7 @@ export default function GoogleCalendarPanel({
   };
   resources:CalendarResource[];
   members:Member[];
+  routingSettings:RoutingSettings;
   canManage:boolean;
 }){
   const router=useRouter();
@@ -154,6 +276,9 @@ export default function GoogleCalendarPanel({
   const usedCalendarIds=new Set(resources.map((item)=>item.external_calendar_id));
   const additionalCalendars=calendars.filter((item)=>!usedCalendarIds.has(item.id));
   const [additionalCalendarId,setAdditionalCalendarId]=useState(String(additionalCalendars[0]?.id||""));
+  const [routingStrategy,setRoutingStrategy]=useState(routingSettings.strategy||"default");
+  const [routingFallback,setRoutingFallback]=useState(routingSettings.fallback_to_default!==false);
+  const [routingLookahead,setRoutingLookahead]=useState(String(routingSettings.lookahead_days||30));
 
   async function selectCalendar(calendarId:string){
     setBusy(true);setMessage("");
@@ -201,6 +326,26 @@ export default function GoogleCalendarPanel({
       setMessage("Calendar resource updated.");
       router.refresh();
     }catch(err){setMessage(err instanceof Error?err.message:"Unable to update calendar resource");}
+    finally{setBusy(false);}
+  }
+
+  async function saveRouting(){
+    setBusy(true);setMessage("");
+    try{
+      const res=await fetch("/api/integrations/google-calendar/routing",{
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          strategy:routingStrategy,
+          fallbackToDefault:routingFallback,
+          lookaheadDays:Number(routingLookahead)||30,
+        }),
+      });
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(body.error||"Unable to update appointment routing");
+      setMessage("Appointment routing updated.");
+      router.refresh();
+    }catch(err){setMessage(err instanceof Error?err.message:"Unable to update appointment routing");}
     finally{setBusy(false);}
   }
 
@@ -267,6 +412,30 @@ export default function GoogleCalendarPanel({
                 {canManage?<div><button type="button" disabled={busy||!calendarId} onClick={()=>void selectCalendar(calendarId)}>{busy?"Checking...":"Use this calendar"}</button></div>:null}
               </div>
             : null}
+
+          {canManage?<div style={{marginTop:24}}>
+            <div className="portal-card-head"><div>
+              <h3>Automatic staff routing</h3>
+              <p>Used only when the customer has not requested a specific staff member or calendar.</p>
+            </div></div>
+            <div className="portal-form-grid">
+              <div className="portal-field"><label>Routing strategy</label>
+                <select value={routingStrategy} disabled={busy} onChange={(e)=>setRoutingStrategy(e.target.value)}>
+                  <option value="default">Default-first</option>
+                  <option value="least_busy">Least busy</option>
+                  <option value="round_robin">Round robin</option>
+                </select>
+              </div>
+              <div className="portal-field"><label>Least-busy lookahead (days)</label>
+                <input type="number" min={1} max={365} value={routingLookahead} disabled={busy} onChange={(e)=>setRoutingLookahead(e.target.value)} />
+              </div>
+              <label style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input type="checkbox" checked={routingFallback} disabled={busy} onChange={(e)=>setRoutingFallback(e.target.checked)} />
+                Fall back to the default calendar when no routing tags match
+              </label>
+              <div><button type="button" onClick={()=>void saveRouting()} disabled={busy}>{busy?"Saving...":"Save routing"}</button></div>
+            </div>
+          </div>:null}
 
           {resources.length?<div style={{marginTop:24}}>
             <div className="portal-card-head"><div>
