@@ -138,3 +138,20 @@
 @media(max-width:560px){.referenceVisualImage{aspect-ratio:16/9;object-fit:cover;object-position:center center;filter:contrast(1.045) saturate(1.02)}}
 
 @media(max-width:560px){.glow{filter:blur(20px);opacity:.78}.card{box-shadow:0 18px 54px rgba(0,0,0,.4),0 0 34px rgba(124,58,237,.05),inset 0 1px 0 rgba(255,255,255,.03)}}
+
+
+/* Mainline real-estate campaign CTA enhancements retained for Phase H release sync. */
+.capabilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px}
+.capabilities span{display:flex;align-items:flex-start;gap:7px;padding:9px 10px;border:1px solid rgba(139,92,246,.14);border-radius:11px;background:rgba(255,255,255,.018);color:#c9c2d1;font-size:.7rem;line-height:1.35}
+.capabilities svg{flex:0 0 auto;margin-top:1px;color:#a78bfa}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:17px}
+.actions .primary{grid-column:1/-1;margin-top:0}
+.secondary{min-height:46px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 14px;border:1px solid rgba(196,181,253,.22);border-radius:13px;color:#e9e3f0;background:rgba(255,255,255,.025);font-size:.76rem;font-weight:750;text-decoration:none;transition:background .2s ease,border-color .2s ease}
+.secondary:hover{background:rgba(139,92,246,.08);border-color:rgba(196,181,253,.38)}
+@media(max-width:560px){
+  .capabilities{grid-template-columns:1fr;gap:6px}
+  .capabilities span{padding:8px 9px;font-size:.64rem}
+  .actions{grid-template-columns:1fr}
+  .actions .primary{grid-column:auto}
+  .secondary{min-height:44px;font-size:.72rem}
+}
