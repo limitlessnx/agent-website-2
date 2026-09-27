@@ -13,7 +13,7 @@ export async function POST(_request:NextRequest){
 
   const admin=createAdminClient();
   const {data:integration,error}=await admin.from("organization_integrations")
-    .select("id")
+    .select("id,configuration")
     .eq("organization_id",session.organizationId)
     .eq("provider","google_calendar")
     .maybeSingle();
@@ -29,6 +29,21 @@ export async function POST(_request:NextRequest){
   await admin.from("appointment_calendar_resources").update({
     status:"disabled",is_default:false,updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("integration_id",integration.id);
+
+  const configuration={...((integration.configuration||{}) as Record<string,unknown>)};
+  for(const key of [
+    "connected_email",
+    "available_calendars",
+    "calendar_selection_pending",
+    "selected_calendar_id",
+    "selected_calendar_name",
+    "selected_calendar_timezone",
+  ]) delete configuration[key];
+
+  await admin.from("organization_integrations").update({
+    configuration,
+    updated_at:new Date().toISOString(),
+  }).eq("organization_id",session.organizationId).eq("id",integration.id);
 
   return NextResponse.json({ok:true});
 }
