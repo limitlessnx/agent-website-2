@@ -35,17 +35,20 @@ export default async function PortalIntegrationsPage() {
     {data:integrations,error:integrationError},
     {data:agents,error:agentError},
     {data:calendarResources,error:calendarError},
+    {data:routingSettings,error:routingError},
     members,
   ]=await Promise.all([
     admin.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id",session.organizationId).order("created_at"),
     admin.from("agents").select("id,name,status,agent_type,communication_channels").eq("organization_id",session.organizationId).order("created_at"),
-    admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,assigned_membership_id,timezone,default_duration_minutes,status,is_default,availability_configuration").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
+    admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,assigned_membership_id,timezone,default_duration_minutes,status,is_default,availability_configuration,service_keys,branch_key,department_key,routing_priority").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
+    admin.from("appointment_routing_settings").select("strategy,fallback_to_default,lookahead_days").eq("organization_id",session.organizationId).maybeSingle(),
     canViewMembers ? listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
 
   if(integrationError) throw integrationError;
   if(agentError) throw agentError;
   if(calendarError) throw calendarError;
+  if(routingError) throw routingError;
 
   const rows = integrations || [];
   const connected = rows.filter((item) => item.status === "connected").length;
@@ -74,6 +77,7 @@ export default async function PortalIntegrationsPage() {
         resource={googleResource}
         resources={calendarResources||[]}
         members={members}
+        routingSettings={routingSettings||{strategy:"default",fallback_to_default:true,lookahead_days:30}}
         canManage={access.permissions.has("integrations.manage")||access.permissions.has("appointments.manage")}
       />
 
