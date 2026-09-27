@@ -6,6 +6,7 @@ import {
   runPhase12Agent,
   type Phase12AgentKind,
 } from "@/lib/ai-runtime/migration";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tenant execution was not found inside the exact organization and agent boundary." }, { status: 404 });
     }
 
+    await preflightChargeableFluxAi({ organizationId, feature:"core_ai_support", action:"web_ai" });
+
     const result = await runPhase12Agent({
       kind,
       organizationId,
@@ -57,6 +60,16 @@ export async function POST(request: NextRequest) {
         source: "phase12-internal-agent-entry",
         input: record(body.input),
       },
+    });
+
+    await recordChargeableFluxAiUsage({
+      organizationId,
+      action:"web_ai",
+      source:"phase12_internal_agent",
+      provider:"openai",
+      model:result.model||null,
+      providerUsage:result.usage||{},
+      metadata:{agent_id:agentId,legacy_execution_id:executionId,runtime_execution_id:result.executionId},
     });
 
     await supabase.from("runtime_progress_events").insert({
