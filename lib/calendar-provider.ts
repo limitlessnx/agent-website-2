@@ -17,6 +17,10 @@ export type CalendarResource = {
   is_default: boolean;
   status: string;
   availability_configuration?: Json | null;
+  service_keys?: string[] | null;
+  branch_key?: string | null;
+  department_key?: string | null;
+  routing_priority?: number | null;
   metadata?: Json | null;
 };
 
