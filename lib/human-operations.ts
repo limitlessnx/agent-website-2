@@ -56,9 +56,11 @@ export async function claimHumanHandoff(session:ClientSession,handoffId:string){
     claimed_at:handoff.claimed_at||new Date().toISOString(),updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("id",handoffId).select().single();
   if(updateError) throw updateError;
+  const {data:conversation}=await admin.from("crm_conversations").select("metadata")
+    .eq("organization_id",session.organizationId).eq("id",handoff.conversation_id).maybeSingle();
   await admin.from("crm_conversations").update({
     status:"human_active",
-    metadata:{...((handoff.metadata||{}) as Record<string,unknown>),active_handoff_id:handoffId,ai_response_mode:"human_takeover"},
+    metadata:{...((conversation?.metadata||{}) as Record<string,unknown>),active_handoff_id:handoffId,ai_response_mode:"human_takeover"},
     updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("id",handoff.conversation_id);
   return data;
