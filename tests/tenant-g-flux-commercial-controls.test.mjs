@@ -37,14 +37,14 @@ test("G subscription changes synchronize the tenant wallet",()=>{
   assert.match(fix,/sub\.status='cancelled'/);
 });
 
-test("G lifecycle sweep catches clock-based expiry",()=>{
+test("G lifecycle sweep remains available on demand while automatic schedules are paused",()=>{
   const migration=read("supabase/migrations/20260927090724_g2_flux_subscription_lifecycle_sweep.sql");
   const trigger=read("src/trigger/system-orchestrator.ts");
   assert.match(migration,/sync_due_flux_subscription_wallets/);
   assert.match(migration,/trial_ends_at<=now\(\)/);
   assert.match(migration,/grace_period_end<=now\(\)/);
   assert.match(trigger,/id: "platform-hourly-maintenance-sweep"/);
-  assert.match(trigger,/cron: "15 \* \* \* \*"/);
+  assert.doesNotMatch(trigger,/schedules\.task/);
   assert.match(trigger,/scanAnalyticsAnomalies/);
   assert.match(trigger,/syncDueFluxSubscriptionWallets/);
 });
