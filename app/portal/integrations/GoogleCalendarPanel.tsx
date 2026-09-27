@@ -43,6 +43,9 @@ export default function GoogleCalendarPanel({
   const selectedId=resource?.external_calendar_id||String(config.selected_calendar_id||"");
   const [calendarId,setCalendarId]=useState(selectedId||String(calendars.find((item)=>item.primary)?.id||""));
   const connectedEmail=String(config.connected_email||resource?.organizer_email||"");
+  const health=(integration?.health||{}) as Record<string,unknown>;
+  const healthState=String(health.state||integration?.status||"disconnected");
+  const healthMessage=String(health.message||"");
 
   async function selectCalendar(calendarId:string){
     setBusy(true);setMessage("");
@@ -57,6 +60,24 @@ export default function GoogleCalendarPanel({
       setMessage("Google Calendar is ready.");
       router.refresh();
     }catch(err){setMessage(err instanceof Error?err.message:"Unable to select Google Calendar");}
+    finally{setBusy(false);}
+  }
+
+  async function checkConnection(){
+    setBusy(true);setMessage("");
+    try{
+      const res=await fetch("/api/integrations/google-calendar/readiness",{cache:"no-store"});
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(body.error||"Unable to verify Google Calendar");
+      if(body.state==="selection_required"){
+        setMessage("Google is connected. Choose the booking calendar to finish setup.");
+      }else if(body.ready){
+        setMessage("Google Calendar connection is healthy.");
+      }else{
+        setMessage("Google Calendar is not ready yet.");
+      }
+      router.refresh();
+    }catch(err){setMessage(err instanceof Error?err.message:"Unable to verify Google Calendar");}
     finally{setBusy(false);}
   }
 
@@ -86,7 +107,8 @@ export default function GoogleCalendarPanel({
         </div>
       : <>
           <div className="portal-list">
-            <div className="portal-list-row"><div><strong>Google account</strong><span>{connectedEmail||"Connected account"}</span></div><em>{integration.status}</em></div>
+            <div className="portal-list-row"><div><strong>Google account</strong><span>{connectedEmail||"Connected account"}</span></div><em>{healthState.replaceAll("_"," ")}</em></div>
+            {healthMessage?<div className="portal-list-row"><div><strong>Connection health</strong><span>{healthMessage}</span></div><em>{healthState.replaceAll("_"," ")}</em></div>:null}
             {resource?<div className="portal-list-row"><div><strong>Booking calendar</strong><span>{resource.display_name} · {resource.timezone}</span></div><em>ready</em></div>:null}
           </div>
 
@@ -110,6 +132,7 @@ export default function GoogleCalendarPanel({
             : null}
 
           <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+            <button type="button" onClick={()=>void checkConnection()} disabled={busy}>{busy?"Checking...":"Check connection"}</button>
             {canManage?<a href="/api/integrations/google-calendar/connect">Reconnect Google</a>:null}
             {canManage?<button type="button" onClick={()=>void disconnect()} disabled={busy}>Disconnect</button>:null}
           </div>
