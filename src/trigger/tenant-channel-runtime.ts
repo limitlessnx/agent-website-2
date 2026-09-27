@@ -123,6 +123,36 @@ export const tenantWhatsAppInbound = task({
         status:"received",
         metadata:{provider:payload.provider,inbound_event_id:inbound.id},
       });
+
+      const {data:conversation,error:conversationError}=await createAdminClient()
+        .from("crm_conversations")
+        .select("status,metadata")
+        .eq("organization_id",payload.organizationId)
+        .eq("id",conversationId)
+        .maybeSingle();
+      if(conversationError) throw conversationError;
+      const metadata=(conversation?.metadata||{}) as Record<string,unknown>;
+      const responseMode=String(metadata.ai_response_mode||"").trim();
+      const humanControlled=["waiting","human_active"].includes(String(conversation?.status||""))
+        || ["paused_for_handoff","human_takeover"].includes(responseMode);
+      if(humanControlled){
+        await completeInbound(payload.organizationId,inbound.id);
+        logger.info("Tenant WhatsApp inbound recorded while AI paused for human takeover",{
+          organizationId:payload.organizationId,
+          conversationId,
+          inboundEventId:inbound.id,
+          conversationStatus:conversation?.status||null,
+          aiResponseMode:responseMode||null,
+        });
+        return {
+          ok:true,
+          duplicate:false,
+          inboundEventId:inbound.id,
+          conversationId,
+          humanTakeover:true,
+          aiResponseSuppressed:true,
+        };
+      }
     }
     if (inbound.status === "completed") {
       return { ok:true, duplicate:true, inboundEventId:inbound.id };
