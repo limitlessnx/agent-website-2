@@ -103,6 +103,8 @@ function ResourceEditor({
   }
 
   function buildAvailability(){
+    if(enforceWorkingHours&&workEnd<=workStart) throw new Error("Working-hours end must be after start.");
+    if(breakStart&&breakEnd&&breakEnd<=breakStart) throw new Error("Break end must be after break start.");
     const workingHours:Record<string,Array<{start:string;end:string}>>={};
     const breaks:Record<string,Array<{start:string;end:string}>>={};
     if(enforceWorkingHours){
@@ -225,7 +227,7 @@ function ResourceEditor({
           serviceKeys:serviceKeys.split(",").map((item)=>item.trim()).filter(Boolean),
           branchKey:branchKey||null,
           departmentKey:departmentKey||null,
-          routingPriority:Number(routingPriority)||100,
+          routingPriority:Number.isFinite(Number(routingPriority))?Number(routingPriority):100,
         })}>{busy?"Saving...":"Save resource"}</button>
       </div>
     </div>
