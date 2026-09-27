@@ -5,6 +5,7 @@ import { publicLeoSalesDirective } from "@/lib/leo-public-policy";
 import { executePublicLeoTool } from "@/lib/leo-public-tools";
 import { buildLeoPolicySnapshot, sanitizeLeoPageContext, type LeoIdentity } from "@/lib/leo-core";
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, storeLeoMessage, storeLeoToolProposals, updateLeoPublicLeadState } from "@/lib/leo-session-store";
+import { syncPublicLeoMessage } from "@/lib/canonical-customer";
 
 const PUBLIC_IDENTITY: LeoIdentity = {
   scope: "public",
@@ -43,6 +44,12 @@ export async function POST(request: NextRequest) {
   const persistedHistory = await loadLeoHistory(PUBLIC_IDENTITY, session);
   const history = persistedHistory.length ? persistedHistory : safeHistory(body.history);
   await storeLeoMessage({ identity: PUBLIC_IDENTITY, session, role: "user", content: message });
+  if (session.leadCaptured) {
+    await syncPublicLeoMessage({
+      sessionId:session.id,role:"user",content:message,
+      externalMessageId:`public-leo:${session.id}:user:${Date.now()}`,
+    }).catch(()=>undefined);
+  }
   void auditLeoEvent({ identity: PUBLIC_IDENTITY, session, eventType: "public_message_received", details: { channel: "chat", persisted: session.persisted } });
 
   const context = await buildLeoReasoningContext({ identity: PUBLIC_IDENTITY, pageContext });
@@ -97,6 +104,12 @@ export async function POST(request: NextRequest) {
 
   const reply = concise(result.reply);
   await storeLeoMessage({ identity: PUBLIC_IDENTITY, session, role: "assistant", content: reply, metadata: { intent: result.intent, model: result.model, lead_captured: session.leadCaptured } });
+  if (session.leadCaptured) {
+    await syncPublicLeoMessage({
+      sessionId:session.id,role:"assistant",content:reply,
+      externalMessageId:`public-leo:${session.id}:assistant:${Date.now()}`,
+    }).catch(()=>undefined);
+  }
   await storeLeoToolProposals({ identity: PUBLIC_IDENTITY, session, toolCalls: toolCalls.map((call) => ({ toolKey: call.toolKey, arguments: call.arguments, reason: call.reason, approval: call.approval })) });
 
   return NextResponse.json({
