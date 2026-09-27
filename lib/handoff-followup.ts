@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import { addCanonicalCrmMessage } from "@/lib/canonical-customer";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 function rec(value:unknown):Record<string,unknown>{
   return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
@@ -32,6 +33,16 @@ export async function processDueHandoffFollowups(limit=100){
     const handoffId=str(metadata.handoff_id);
     const conversationId=str(metadata.conversation_id);
     if(!task.customer_id||!handoffId||!conversationId){
+      if(!simulated){
+        await recordChargeableFluxAiUsage({
+          organizationId:task.organization_id,
+          action:"whatsapp_follow_up_reminder",
+          source:"handoff_follow_up",
+          provider:"meta",
+          metadata:{handoff_id:handoffId,task_id:task.id,conversation_id:conversationId},
+        });
+      }
+
       await admin.from("crm_tasks").update({
         status:"failed",updated_at:new Date().toISOString(),
         metadata:{...metadata,follow_up_error:"missing_required_context"},
@@ -53,8 +64,16 @@ export async function processDueHandoffFollowups(limit=100){
       if(conversation?.channel!=="whatsapp") throw new Error("Post-handoff WhatsApp check-in requires a WhatsApp conversation.");
 
       const customerName=String(customer.full_name||customer.company_name||"there");
+      const simulated=await temporaryD4TestOrganization(task.organization_id);
+      if(!simulated){
+        await preflightChargeableFluxAi({
+          organizationId:task.organization_id,
+          feature:"follow_ups",
+          action:"whatsapp_follow_up_reminder",
+        });
+      }
       const text="Hi "+customerName+", just checking in after our team member assisted you. Was everything resolved, or do you still need help?";
-      const delivery=await temporaryD4TestOrganization(task.organization_id)
+      const delivery=simulated
         ? {
             ok:true,
             messageType:"text" as const,
