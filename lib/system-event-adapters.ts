@@ -1,13 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
-  calendarSlotAvailable,
   cancelCalendarEvent,
   createCalendarEvent,
   rescheduleCalendarEvent,
   type CalendarResource,
 } from "@/lib/calendar-provider";
 import type { SystemEventEnvelope } from "@/lib/system-orchestrator";
+import { evaluateResourceAvailability, selectAppointmentResource } from "@/lib/appointment-scheduling";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 export type SystemWorkflowAdapterInput = {
@@ -34,6 +34,7 @@ type AppointmentRow = {
   source_system_id?: string | null;
   appointment_system_id: string;
   calendar_resource_id?: string | null;
+  assigned_membership_id?: string | null;
   source_event_id?: string | null;
   correlation_id: string;
   status: string;
@@ -334,85 +335,119 @@ async function requestAppointment(input: SystemWorkflowAdapterInput) {
     || payload.staffMembershipId
     || payload.staff_membership_id,
   ) || null;
-  const resource = await resolveCalendarResource(
-    input.event.organizationId,
-    text(payload.calendarResourceId || payload.calendar_resource_id) || null,
+  const requestedResourceId=text(payload.calendarResourceId || payload.calendar_resource_id) || null;
+  const serviceKey=text(payload.serviceKey || payload.service_key || payload.service) || null;
+  const branchKey=text(payload.branchKey || payload.branch_key || payload.branch) || null;
+  const departmentKey=text(payload.departmentKey || payload.department_key || payload.department) || null;
+  const requestedDurationRaw=Number(payload.durationMinutes || payload.duration_minutes);
+  const requestedDuration=Number.isFinite(requestedDurationRaw)?requestedDurationRaw:null;
+  const startAt=appointment.start_at!;
+
+  const routing=await selectAppointmentResource({
+    organizationId:input.event.organizationId,
+    startAt,
+    requestedEndAt:safeIso(payload.requestedEnd || payload.requested_end_at),
+    requestedDurationMinutes:requestedDuration,
+    requestedResourceId,
     requestedMembershipId,
-  );
-  if (!resource) {
-    appointment = await updateAppointment(input.event.organizationId, appointment.id, {
-      status: "calendar_required",
-      customer_email: customerEmail,
-      metadata: {
-        ...(appointment.metadata || {}),
-        calendar_required_at: new Date().toISOString(),
-        requested_membership_id: requestedMembershipId,
+    serviceKey,
+    branchKey,
+    departmentKey,
+    excludeAppointmentId:appointment.id,
+  });
+
+  if(!routing.resource&&routing.status==="no_resource"){
+    appointment=await updateAppointment(input.event.organizationId,appointment.id,{
+      status:"calendar_required",
+      customer_email:customerEmail,
+      metadata:{
+        ...(appointment.metadata||{}),
+        calendar_required_at:new Date().toISOString(),
+        requested_membership_id:requestedMembershipId,
+        service_key:serviceKey,
+        branch_key:branchKey,
+        department_key:departmentKey,
+        routing_strategy:routing.strategy,
+        routing_reason:routing.reason||null,
       },
     });
     await emitAppointmentEvent({
-      event: input.event,
-      appointmentSystemId: input.targetSystemId,
-      eventType: "appointment.calendar_required",
-      idempotencySuffix: `${appointment.id}:calendar-required`,
-      payload: {
-        appointmentId: appointment.id,
-        message: requestedMembershipId
-          ? "No active calendar resource is configured for the requested staff member."
-          : "No active tenant calendar resource is configured.",
+      event:input.event,
+      appointmentSystemId:input.targetSystemId,
+      eventType:"appointment.calendar_required",
+      idempotencySuffix:`${appointment.id}:calendar-required`,
+      payload:{
+        appointmentId:appointment.id,
+        message:routing.reason||(
+          requestedMembershipId
+            ?"No active calendar resource is configured for the requested staff member."
+            :"No eligible tenant calendar resource is configured."
+        ),
+        serviceKey,branchKey,departmentKey,
       },
     });
-    return { adapter: "appointment", action: "calendar_required", appointment_id: appointment.id, status: "calendar_required" };
+    return {adapter:"appointment",action:"calendar_required",appointment_id:appointment.id,status:"calendar_required"};
   }
 
-  const requestedDuration = durationMinutes(
-    payload.durationMinutes || payload.duration_minutes,
-    resource.default_duration_minutes,
-  );
-  const startAt = appointment.start_at!;
-  const endAt =
-    safeIso(payload.requestedEnd || payload.requested_end_at)
-    || endFromStart(startAt, requestedDuration);
-
-  appointment = await updateAppointment(input.event.organizationId, appointment.id, {
-    status: "pending_availability",
-    calendar_resource_id: resource.id,
-    assigned_membership_id: resource.assigned_membership_id || requestedMembershipId || null,
-    customer_email: customerEmail,
-    organizer_email: resource.organizer_email || null,
-    provider: resource.provider,
-    external_calendar_id: resource.external_calendar_id,
-    timezone: text(payload.timezone) || resource.timezone,
-    end_at: endAt,
-  });
-
-  const available = await calendarSlotAvailable({
-    organizationId: input.event.organizationId,
-    resource,
-    startAt,
-    endAt,
-  });
-  if (!available) {
+  if(!routing.resource||!routing.endAt){
+    appointment=await updateAppointment(input.event.organizationId,appointment.id,{
+      status:"pending_availability",
+      customer_email:customerEmail,
+      metadata:{
+        ...(appointment.metadata||{}),
+        availability_checked_at:new Date().toISOString(),
+        routing_strategy:routing.strategy,
+        routing_reason:routing.reason||null,
+        checked_resource_ids:routing.checkedResourceIds,
+        service_key:serviceKey,
+        branch_key:branchKey,
+        department_key:departmentKey,
+      },
+    });
     await emitAppointmentEvent({
-      event: input.event,
-      appointmentSystemId: input.targetSystemId,
-      eventType: "appointment.slot_unavailable",
-      idempotencySuffix: `${appointment.id}:slot-unavailable:${startAt}`,
-      payload: {
-        appointmentId: appointment.id,
-        requestedStart: startAt,
-        requestedEnd: endAt,
-        timezone: appointment.timezone,
+      event:input.event,
+      appointmentSystemId:input.targetSystemId,
+      eventType:"appointment.slot_unavailable",
+      idempotencySuffix:`${appointment.id}:slot-unavailable:${startAt}`,
+      payload:{
+        appointmentId:appointment.id,
+        requestedStart:startAt,
+        requestedEnd:safeIso(payload.requestedEnd || payload.requested_end_at),
+        reason:routing.reason||"No eligible staff calendar is available at the requested time.",
+        routingStrategy:routing.strategy,
+        checkedResourceIds:routing.checkedResourceIds,
       },
     });
     return {
-      adapter: "appointment",
-      action: "choose_new_slot",
-      appointment_id: appointment.id,
-      status: "pending_availability",
-      requested_start: startAt,
-      requested_end: endAt,
+      adapter:"appointment",action:"choose_new_slot",appointment_id:appointment.id,
+      status:"pending_availability",requested_start:startAt,requested_end:null,
+      routing_strategy:routing.strategy,
     };
   }
+
+  const resource=routing.resource;
+  const endAt=routing.endAt;
+
+  appointment=await updateAppointment(input.event.organizationId,appointment.id,{
+    status:"pending_availability",
+    calendar_resource_id:resource.id,
+    assigned_membership_id:resource.assigned_membership_id||requestedMembershipId||null,
+    customer_email:customerEmail,
+    organizer_email:resource.organizer_email||null,
+    provider:resource.provider,
+    external_calendar_id:resource.external_calendar_id,
+    timezone:resource.timezone,
+    end_at:endAt,
+    metadata:{
+      ...(appointment.metadata||{}),
+      routing_strategy:routing.strategy,
+      checked_resource_ids:routing.checkedResourceIds,
+      service_key:serviceKey,
+      branch_key:branchKey,
+      department_key:departmentKey,
+      availability_checked_at:new Date().toISOString(),
+    },
+  });
 
   const external = await createCalendarEvent(input.event.organizationId, resource.provider, {
     calendarId: resource.external_calendar_id,
@@ -456,6 +491,11 @@ async function requestAppointment(input: SystemWorkflowAdapterInput) {
       organizerEmail: appointment.organizer_email || null,
       calendarEventId: external.eventId,
       location: appointment.location || null,
+      assignedMembershipId: appointment.assigned_membership_id || null,
+      routingStrategy: String((appointment.metadata || {}).routing_strategy || "default"),
+      serviceKey: String((appointment.metadata || {}).service_key || "") || null,
+      branchKey: String((appointment.metadata || {}).branch_key || "") || null,
+      departmentKey: String((appointment.metadata || {}).department_key || "") || null,
     },
   });
 
@@ -493,21 +533,34 @@ async function rescheduleAppointment(input: SystemWorkflowAdapterInput) {
 
   const unchanged = appointment.start_at === startAt && appointment.end_at === endAt;
   if (!unchanged) {
-    const available = await calendarSlotAvailable({
+    const availability = await evaluateResourceAvailability({
       organizationId: input.event.organizationId,
       resource,
       startAt,
       endAt,
+      excludeAppointmentId: appointment.id,
     });
-    if (!available) {
+    if (!availability.available) {
       await emitAppointmentEvent({
         event: input.event,
         appointmentSystemId: input.targetSystemId,
         eventType: "appointment.slot_unavailable",
         idempotencySuffix: `${appointment.id}:reschedule-unavailable:${startAt}`,
-        payload: { appointmentId: appointment.id, requestedStart: startAt, requestedEnd: endAt, timezone: resource.timezone },
+        payload: {
+          appointmentId: appointment.id,
+          requestedStart: startAt,
+          requestedEnd: endAt,
+          timezone: resource.timezone,
+          reason: availability.reason || "Requested time is unavailable.",
+        },
       });
-      return { adapter: "appointment", action: "reschedule", appointment_id: appointment.id, status: "slot_unavailable" };
+      return {
+        adapter: "appointment",
+        action: "reschedule",
+        appointment_id: appointment.id,
+        status: "slot_unavailable",
+        reason: availability.reason || null,
+      };
     }
   }
 
