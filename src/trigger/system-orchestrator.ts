@@ -77,25 +77,16 @@ export const handoffFollowupDrain = schedules.task({
 });
 
 
-export const analyticsAnomalySweep = schedules.task({
-  id: "analytics-anomaly-sweep",
-  cron: "0 * * * *",
-  maxDuration: 300,
-  run: async () => {
-    const result = await scanAnalyticsAnomalies();
-    logger.info("Analytics anomaly sweep completed", result);
-    return result;
-  },
-});
-
-
-export const fluxCommercialLifecycleSweep = schedules.task({
-  id: "flux-commercial-lifecycle-sweep",
+export const platformHourlyMaintenanceSweep = schedules.task({
+  id: "platform-hourly-maintenance-sweep",
   cron: "15 * * * *",
   maxDuration: 300,
   run: async () => {
-    const result = await syncDueFluxSubscriptionWallets();
-    logger.info("Flux commercial lifecycle sweep completed", result);
-    return result;
+    const [analytics, commercial] = await Promise.all([
+      scanAnalyticsAnomalies(),
+      syncDueFluxSubscriptionWallets(),
+    ]);
+    logger.info("Platform hourly maintenance sweep completed", { analytics, commercial });
+    return { analytics, commercial };
   },
 });
