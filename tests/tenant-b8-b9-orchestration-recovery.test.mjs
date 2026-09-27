@@ -24,10 +24,10 @@ test("B8 recovery policy only auto retries transient infrastructure failures",()
   assert.match(ops,/ensureFailureSupportCase/);
 });
 
-test("B8 Trigger runs a scheduled orchestration recovery sweep",()=>{
+test("B8 Trigger keeps orchestration recovery available on demand while schedules are paused",()=>{
   const trigger=read("src/trigger/system-orchestrator.ts");
   assert.match(trigger,/id: "orchestration-recovery-sweep"/);
-  assert.match(trigger,/cron: "\*\/5 \* \* \* \*"/);
+  assert.doesNotMatch(trigger,/schedules\.task/);
   assert.match(trigger,/recoverFailedSystemEvents/);
 });
 
