@@ -144,6 +144,7 @@ async function loadCustomer(event: SystemEventEnvelope, payload: Json): Promise<
 async function resolveCalendarResource(
   organizationId: string,
   requestedResourceId?: string | null,
+  requestedMembershipId?: string | null,
 ): Promise<CalendarResource | null> {
   const admin = createAdminClient();
   if (requestedResourceId) {
@@ -153,6 +154,21 @@ async function resolveCalendarResource(
       .eq("organization_id", organizationId)
       .eq("id", requestedResourceId)
       .eq("status", "active")
+      .maybeSingle();
+    if (error) throw error;
+    return data as CalendarResource | null;
+  }
+
+  if (requestedMembershipId) {
+    const { data, error } = await admin
+      .from("appointment_calendar_resources")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .eq("assigned_membership_id", requestedMembershipId)
+      .eq("status", "active")
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
     if (error) throw error;
     return data as CalendarResource | null;
@@ -312,9 +328,16 @@ async function requestAppointment(input: SystemWorkflowAdapterInput) {
     return { adapter: "appointment", action: "collect_email", appointment_id: appointment.id, status: "email_required" };
   }
 
+  const requestedMembershipId=text(
+    payload.assignedMembershipId
+    || payload.assigned_membership_id
+    || payload.staffMembershipId
+    || payload.staff_membership_id,
+  ) || null;
   const resource = await resolveCalendarResource(
     input.event.organizationId,
     text(payload.calendarResourceId || payload.calendar_resource_id) || null,
+    requestedMembershipId,
   );
   if (!resource) {
     appointment = await updateAppointment(input.event.organizationId, appointment.id, {
@@ -323,6 +346,7 @@ async function requestAppointment(input: SystemWorkflowAdapterInput) {
       metadata: {
         ...(appointment.metadata || {}),
         calendar_required_at: new Date().toISOString(),
+        requested_membership_id: requestedMembershipId,
       },
     });
     await emitAppointmentEvent({
@@ -332,7 +356,9 @@ async function requestAppointment(input: SystemWorkflowAdapterInput) {
       idempotencySuffix: `${appointment.id}:calendar-required`,
       payload: {
         appointmentId: appointment.id,
-        message: "No active tenant calendar resource is configured.",
+        message: requestedMembershipId
+          ? "No active calendar resource is configured for the requested staff member."
+          : "No active tenant calendar resource is configured.",
       },
     });
     return { adapter: "appointment", action: "calendar_required", appointment_id: appointment.id, status: "calendar_required" };
@@ -350,6 +376,7 @@ async function requestAppointment(input: SystemWorkflowAdapterInput) {
   appointment = await updateAppointment(input.event.organizationId, appointment.id, {
     status: "pending_availability",
     calendar_resource_id: resource.id,
+    assigned_membership_id: resource.assigned_membership_id || requestedMembershipId || null,
     customer_email: customerEmail,
     organizer_email: resource.organizer_email || null,
     provider: resource.provider,
