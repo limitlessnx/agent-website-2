@@ -132,7 +132,7 @@ export default function GoogleCalendarPanel({
             : null}
 
           <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
-            <button type="button" onClick={()=>void checkConnection()} disabled={busy}>{busy?"Checking...":"Check connection"}</button>
+            {canManage?<button type="button" onClick={()=>void checkConnection()} disabled={busy}>{busy?"Checking...":"Check connection"}</button>:null}
             {canManage?<a href="/api/integrations/google-calendar/connect">Reconnect Google</a>:null}
             {canManage?<button type="button" onClick={()=>void disconnect()} disabled={busy}>Disconnect</button>:null}
           </div>
