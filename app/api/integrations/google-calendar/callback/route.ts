@@ -13,7 +13,9 @@ import {
 function redirect(request:NextRequest,status:string){
   const url=new URL("/portal/integrations",request.url);
   url.searchParams.set("google_calendar",status);
-  return NextResponse.redirect(url);
+  const response=NextResponse.redirect(url);
+  response.cookies.delete("flux_google_calendar_oauth_state");
+  return response;
 }
 
 export async function GET(request:NextRequest){
@@ -89,16 +91,12 @@ export async function GET(request:NextRequest){
     });
     if(credentialError) throw credentialError;
 
-    const response=redirect(request,"select");
-    response.cookies.delete("flux_google_calendar_oauth_state");
-    return response;
+    return redirect(request,"select");
   }catch(error){
     console.error("Google Calendar OAuth callback failed",{
       organizationId:session.organizationId,
       error:error instanceof Error?error.message:String(error),
     });
-    const response=redirect(request,"error");
-    response.cookies.delete("flux_google_calendar_oauth_state");
-    return response;
+    return redirect(request,"error");
   }
 }
