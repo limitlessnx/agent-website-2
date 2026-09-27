@@ -65,3 +65,10 @@ test("G3 tenant billing displays pricing and supports direct top-up checkout",()
   assert.match(form,/\/api\/portal\/billing\/top-up/);
   assert.match(form,/Buy Flux Credits/);
 });
+
+
+test("G3 Super Admin billing displays the canonical top-up price",()=>{
+  const page=read("app/dashboard/billing/page.tsx");
+  assert.match(page,/1 Flux Credit = \$0\.01/);
+  assert.match(page,/minimum customer top-up is \$10 = 1,000 credits/);
+});
