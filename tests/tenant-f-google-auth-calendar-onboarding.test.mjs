@@ -169,3 +169,61 @@ test("F1 workspace setup returns the preserved post-auth destination",()=>{
   assert.match(route,/redirect_to/);
   assert.match(form,/result\.redirect_to/);
 });
+
+
+test("F2 Calendar OAuth state fails closed in production and hints the signed-in Google account",()=>{
+  const oauth=read("lib/google-calendar-oauth.ts");
+  const connect=read("app/api/integrations/google-calendar/connect/route.ts");
+  assert.match(oauth,/NODE_ENV!=="production"/);
+  assert.match(oauth,/Google Calendar OAuth state signing is not configured/);
+  assert.match(oauth,/login_hint/);
+  assert.match(connect,/loginHint:session\.email/);
+});
+
+test("F2 rejects partial Google Calendar consent",()=>{
+  const oauth=read("lib/google-calendar-oauth.ts");
+  const callback=read("app/api/integrations/google-calendar/callback/route.ts");
+  assert.match(oauth,/assertGoogleCalendarScopes/);
+  assert.match(oauth,/calendar\.events/);
+  assert.match(oauth,/calendar\.freebusy/);
+  assert.match(oauth,/calendar\.calendarlist\.readonly/);
+  assert.match(callback,/assertGoogleCalendarScopes\(tokens\.scope\)/);
+});
+
+test("F2 refreshed Google access tokens persist back to Vault without replacing refresh credentials",()=>{
+  const migration=read("supabase/migrations/20260927113512_f2_persist_google_calendar_token_refresh.sql");
+  const provider=read("lib/calendar-provider.ts");
+  assert.match(migration,/refresh_organization_integration_access_token/);
+  assert.match(migration,/v_credentials :=\s*v_credentials\s*\|\|/);
+  assert.match(migration,/vault\.update_secret/);
+  assert.match(migration,/to service_role/);
+  assert.match(provider,/refresh_organization_integration_access_token/);
+  assert.match(provider,/accessTokenExpired/);
+});
+
+test("F2 readiness verifies writable calendar state and is manager-gated",()=>{
+  const readiness=read("app/api/integrations/google-calendar/readiness/route.ts");
+  const panel=read("app/portal/integrations/GoogleCalendarPanel.tsx");
+  assert.match(readiness,/integrations\.manage/);
+  assert.match(readiness,/getValidGoogleCalendarAccessToken/);
+  assert.match(readiness,/listWritableGoogleCalendars/);
+  assert.match(readiness,/selection_required/);
+  assert.match(readiness,/state:"ready"/);
+  assert.match(panel,/Check connection/);
+});
+
+test("F2 disconnect removes Vault credentials and stale Calendar metadata",()=>{
+  const route=read("app/api/integrations/google-calendar/disconnect/route.ts");
+  assert.match(route,/disconnect_organization_integration/);
+  assert.match(route,/connected_email/);
+  assert.match(route,/available_calendars/);
+  assert.match(route,/selected_calendar_id/);
+  assert.match(route,/status:"disabled"/);
+});
+
+test("F2 Calendar callback clears the OAuth state cookie on every redirect outcome",()=>{
+  const callback=read("app/api/integrations/google-calendar/callback/route.ts");
+  assert.match(callback,/response\.cookies\.delete\("flux_google_calendar_oauth_state"\)/);
+  assert.match(callback,/return redirect\(request,"cancelled"\)/);
+  assert.match(callback,/return redirect\(request,"invalid_state"\)/);
+});
