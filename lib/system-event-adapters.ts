@@ -8,6 +8,7 @@ import {
   type CalendarResource,
 } from "@/lib/calendar-provider";
 import type { SystemEventEnvelope } from "@/lib/system-orchestrator";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 export type SystemWorkflowAdapterInput = {
   event: SystemEventEnvelope;
@@ -815,6 +816,15 @@ async function channelReplyAdapter(input: SystemWorkflowAdapterInput) {
     };
   }
 
+  const chargeReminder=input.event.eventType==="reminder.scheduled";
+  if(chargeReminder){
+    await preflightChargeableFluxAi({
+      organizationId:input.event.organizationId,
+      feature:"reminders",
+      action:"whatsapp_follow_up_reminder",
+    });
+  }
+
   const result = await sendWhatsAppMessage({
     organizationId: input.event.organizationId,
     to: customer.phone,
@@ -826,6 +836,21 @@ async function channelReplyAdapter(input: SystemWorkflowAdapterInput) {
       appointment_time: text(input.event.payload.startAt || input.event.payload.start_at || ""),
     },
   });
+
+  if(chargeReminder){
+    await recordChargeableFluxAiUsage({
+      organizationId:input.event.organizationId,
+      action:"whatsapp_follow_up_reminder",
+      source:"appointment_reminder",
+      provider:"meta",
+      metadata:{
+        customer_id:input.event.customerId,
+        source_system_id:input.event.sourceSystemId,
+        target_system_id:input.targetSystemId,
+        correlation_id:input.event.correlationId,
+      },
+    });
+  }
 
   return {
     adapter: "channel_reply",
