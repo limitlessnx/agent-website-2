@@ -1,6 +1,6 @@
-type Series={ key:string; label:string };
-type Point=Record<string,string|number|null>;
+import type { AnalyticsDailyPoint } from "@/lib/tenant-analytics-drilldown";
 
+type Series={ key:Exclude<keyof AnalyticsDailyPoint,"date">; label:string };
 function numeric(value:unknown){
   return typeof value==="number"&&Number.isFinite(value)?value:0;
 }
@@ -8,7 +8,7 @@ function numeric(value:unknown){
 export default function AnalyticsTrendChart({
   data,series,title,description,
 }:{
-  data:Point[];series:Series[];title:string;description:string;
+  data:AnalyticsDailyPoint[];series:Series[];title:string;description:string;
 }){
   const width=760;
   const height=220;
