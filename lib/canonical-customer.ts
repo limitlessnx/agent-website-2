@@ -47,6 +47,7 @@ export async function getOrCreateCanonicalConversation(input:{
   externalThreadId?:string|null;
   agentId?:string|null;
   metadata?:Record<string,unknown>;
+  createdAt?:string|null;
 }) {
   const admin=createAdminClient() as any;
   const {data,error}=await admin.rpc("get_or_create_crm_conversation",{
@@ -89,6 +90,7 @@ export async function addCanonicalCrmMessage(input:{
     external_message_id:input.externalMessageId||null,
     status:input.status|| (input.direction==="inbound"?"received":"sent"),
     metadata:input.metadata||{},
+    ...(input.createdAt?{created_at:input.createdAt}:{}),
   }).select("id").single();
   if(error) throw error;
   return String(data.id);
@@ -117,9 +119,45 @@ export async function backfillPublicLeoConversation(input:{
       externalMessageId:`public-leo-message:${message.id}`,
       status:message.role==="user"?"received":"sent",
       metadata:{source:"public_leo_backfill",session_id:input.sessionId,original_created_at:message.created_at},
+      createdAt:String(message.created_at||"")||null,
     });
   }
   return messages?.length||0;
+}
+
+export async function addCanonicalTimelineEvent(input:{
+  organizationId:string;
+  customerId:string;
+  eventType:string;
+  title:string;
+  summary?:string|null;
+  channel?:string|null;
+  conversationId?:string|null;
+  sourceTable?:string|null;
+  sourceId?:string|null;
+  actorType?:string|null;
+  actorId?:string|null;
+  metadata?:Record<string,unknown>;
+}) {
+  const admin=createAdminClient() as any;
+  const {data,error}=await admin.rpc("add_customer_timeline_event",{
+    p_organization_id:input.organizationId,
+    p_customer_id:input.customerId,
+    p_event_type:input.eventType,
+    p_title:input.title,
+    p_summary:input.summary||null,
+    p_channel:input.channel||null,
+    p_conversation_id:input.conversationId||null,
+    p_source_table:input.sourceTable||null,
+    p_source_id:input.sourceId||null,
+    p_correlation_id:null,
+    p_actor_type:input.actorType||null,
+    p_actor_id:input.actorId||null,
+    p_metadata:input.metadata||{},
+    p_occurred_at:new Date().toISOString(),
+  });
+  if(error) throw error;
+  return String(data);
 }
 
 export async function canonicalizePublicLeoLead(input:{
@@ -152,6 +190,12 @@ export async function canonicalizePublicLeoLead(input:{
   const backfilledMessages=await backfillPublicLeoConversation({
     organizationId,conversationId,sessionId:input.sessionId,
   }).catch(()=>0);
+  await addCanonicalTimelineEvent({
+    organizationId,customerId,eventType:"lead.public_leo_captured",title:"Public Leo lead captured",
+    summary:"Website visitor identified and linked to the canonical customer record.",
+    channel:"web",conversationId,sourceTable:"leo_public_leads",sourceId:input.leadId,
+    actorType:"agent",actorId:"leo",metadata:{session_id:input.sessionId},
+  });
   return {organizationId,customerId,conversationId,backfilledMessages};
 }
 
@@ -199,5 +243,11 @@ export async function canonicalizeEvaluationLead(input:{
     organization_id:organizationId,customer_id:customerId,conversation_id:conversationId,updated_at:new Date().toISOString()
   }).eq("id",input.evaluationId);
   if(error) throw error;
+  await addCanonicalTimelineEvent({
+    organizationId,customerId,eventType:"lead.evaluation_submitted",title:"Business evaluation submitted",
+    summary:"Website evaluation linked to the canonical customer record.",
+    channel:"web",conversationId,sourceTable:"evaluation_leads",sourceId:input.evaluationId,
+    actorType:"customer",actorId:customerId,metadata:{evaluation_id:input.evaluationId},
+  });
   return {organizationId,customerId,conversationId};
 }
