@@ -1,43 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 export default function GoogleAuthButton({
   nextPath="/portal",
   label="Continue with Google",
+  txRef="",
+  trialPlan="",
+  invitationToken="",
 }:{
   nextPath?:string;
   label?:string;
+  txRef?:string;
+  trialPlan?:""|"basic";
+  invitationToken?:string;
 }){
   const [loading,setLoading]=useState(false);
-  const [error,setError]=useState("");
-  const safeNext=nextPath.startsWith("/")?nextPath:"/portal";
+  const safeNext=nextPath.startsWith("/")&&!nextPath.startsWith("//")?nextPath:"/portal";
 
-  async function start(){
-    setLoading(true);setError("");
-    try{
-      const supabase=createClient();
-      const redirect=new URL("/auth/callback",window.location.origin);
-      redirect.searchParams.set("next",safeNext);
-      const {error:oauthError}=await supabase.auth.signInWithOAuth({
-        provider:"google",
-        options:{
-          redirectTo:redirect.toString(),
-          scopes:"openid email profile",
-        },
-      });
-      if(oauthError) throw oauthError;
-    }catch(err){
-      setError(err instanceof Error?err.message:"Unable to start Google sign-in.");
-      setLoading(false);
-    }
+  function start(){
+    setLoading(true);
+    const target=new URL("/api/client-auth/google/start",window.location.origin);
+    target.searchParams.set("next",safeNext);
+    if(txRef) target.searchParams.set("tx_ref",txRef);
+    if(trialPlan==="basic") target.searchParams.set("trial","basic");
+    if(invitationToken) target.searchParams.set("invitation_token",invitationToken);
+    window.location.assign(target.toString());
   }
 
-  return <div>
-    <button type="button" onClick={()=>void start()} disabled={loading}>
-      {loading?"Opening Google...":label}
-    </button>
-    {error?<p className="admin-error">{error}</p>:null}
-  </div>;
+  return <button type="button" onClick={start} disabled={loading}>
+    {loading?"Opening Google...":label}
+  </button>;
 }
