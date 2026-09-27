@@ -212,3 +212,23 @@ export function validateTwilioFormSignature(input:{
   if(expected.length!==supplied.length) return false;
   return timingSafeEqual(Buffer.from(expected),Buffer.from(supplied));
 }
+
+
+export async function deleteTwilioWhatsAppSender(input:{
+  accountSid:string;
+  authToken:string;
+  senderSid:string;
+}){
+  const response=await fetch(
+    `https://messaging.twilio.com/v2/Channels/Senders/${encodeURIComponent(input.senderSid)}`,
+    {
+      method:"DELETE",
+      headers:{Authorization:basic(input.accountSid,input.authToken),Accept:"application/json"},
+      cache:"no-store",
+    },
+  );
+  if(response.status===204)return {ok:true};
+  if(response.status===404)return {ok:true,alreadyDeleted:true};
+  await jsonResponse(response);
+  return {ok:true};
+}
