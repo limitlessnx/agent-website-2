@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Cable, CheckCircle2, CircleDashed, LockKeyhole, TriangleAlert } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
-import { getOrganizationAccessContext } from "@/lib/organization-membership";
+import { getOrganizationAccessContext, listOrganizationMembers } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import GoogleCalendarPanel from "./GoogleCalendarPanel";
 
@@ -30,14 +30,17 @@ export default async function PortalIntegrationsPage() {
   const access=await getOrganizationAccessContext(session.organizationId,session.userId);
   if(!access.permissions.has("integrations.view")&&!access.permissions.has("integrations.manage")) return null;
   const admin=createAdminClient();
+  const canViewMembers=access.permissions.has("members.view")||access.permissions.has("members.manage");
   const [
     {data:integrations,error:integrationError},
     {data:agents,error:agentError},
     {data:calendarResources,error:calendarError},
+    members,
   ]=await Promise.all([
     admin.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id",session.organizationId).order("created_at"),
     admin.from("agents").select("id,name,status,agent_type,communication_channels").eq("organization_id",session.organizationId).order("created_at"),
-    admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,timezone,status,is_default").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
+    admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,assigned_membership_id,timezone,default_duration_minutes,status,is_default,availability_configuration").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
+    canViewMembers ? listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
 
   if(integrationError) throw integrationError;
@@ -69,7 +72,9 @@ export default async function PortalIntegrationsPage() {
       <GoogleCalendarPanel
         integration={googleIntegration}
         resource={googleResource}
-        canManage={access.permissions.has("integrations.manage")}
+        resources={calendarResources||[]}
+        members={members}
+        canManage={access.permissions.has("integrations.manage")||access.permissions.has("appointments.manage")}
       />
 
       <section className="portal-card">
