@@ -227,3 +227,14 @@ test("F2 Calendar callback clears the OAuth state cookie on every redirect outco
   assert.match(callback,/return redirect\(request,"cancelled"\)/);
   assert.match(callback,/return redirect\(request,"invalid_state"\)/);
 });
+
+
+test("F2 connection failures are explicit and readiness mutation stays manage-only",()=>{
+  const connect=read("app/api/integrations/google-calendar/connect/route.ts");
+  const readiness=read("app/api/integrations/google-calendar/readiness/route.ts");
+  const panel=read("app/portal/integrations/GoogleCalendarPanel.tsx");
+  assert.match(connect,/google_calendar=not_configured/);
+  assert.match(readiness,/integrations\.manage/);
+  assert.doesNotMatch(readiness,/\["integrations\.view","integrations\.manage"\]/);
+  assert.match(panel,/canManage\?<button[^>]*Check connection|canManage\?<button/);
+});
