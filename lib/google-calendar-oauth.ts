@@ -141,6 +141,8 @@ export async function listWritableGoogleCalendars(accessToken:string):Promise<Go
 }
 
 export function platformGoogleCalendarCredentials(){
-  const cfg=googleCalendarOAuthConfig();
-  return {clientId:cfg.clientId,clientSecret:cfg.clientSecret};
+  const clientId=text(process.env.GOOGLE_CALENDAR_CLIENT_ID||process.env.GOOGLE_OAUTH_CLIENT_ID);
+  const clientSecret=text(process.env.GOOGLE_CALENDAR_CLIENT_SECRET||process.env.GOOGLE_OAUTH_CLIENT_SECRET);
+  if(!clientId||!clientSecret) throw new Error("Fluxknight Google Calendar OAuth is not configured.");
+  return {clientId,clientSecret};
 }
