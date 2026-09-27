@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CreditCard, WalletCards } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
 
 export const metadata = { title: "Billing | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -18,7 +19,10 @@ function formatNumber(value: number) {
 export default async function PortalBillingPage() {
   const session = await getClientSession();
   if (!session) return null;
-  const wallet = await getFluxWalletSummary(session.organizationId);
+  const [wallet,commercial] = await Promise.all([
+    getFluxWalletSummary(session.organizationId),
+    getFluxCommercialSnapshot(session.organizationId),
+  ]);
 
   return (
     <main className="portal-page">
@@ -42,6 +46,27 @@ export default async function PortalBillingPage() {
         <article className="portal-metric"><span><CreditCard size={16} /> Remaining</span><strong>{formatNumber(wallet.balance)}</strong><small>{formatNumber(wallet.used)} used</small></article>
         <article className="portal-metric"><span>Usage</span><strong>{wallet.percentUsed}%</strong><small>{wallet.threshold ? `${wallet.threshold}% threshold reached` : "Within normal range"}</small></article>
         <article className="portal-metric"><span>Renewal</span><strong>{formatDate(wallet.renewalDate)}</strong><small>{wallet.trialEndsAt ? `Trial ends ${formatDate(wallet.trialEndsAt)}` : "Monthly reset"}</small></article>
+      </section>
+
+      <section className="portal-grid">
+        <article className="portal-card">
+          <div className="portal-card-head"><div><h2>Subscription</h2><p>Your commercial access state and current billing period.</p></div></div>
+          <div className="portal-list">
+            <div className="portal-list-row"><div><strong>Status</strong><span>{commercial.subscription?.provider||"No provider"}</span></div><em>{commercial.subscription?.status||"No subscription"}</em></div>
+            <div className="portal-list-row"><div><strong>Billing plan</strong><span>{commercial.subscription?.billingInterval||"—"}</span></div><em>{commercial.subscription?.planName||wallet.planName}</em></div>
+            <div className="portal-list-row"><div><strong>Service package</strong><span>Systems and operational entitlement package</span></div><em>{commercial.servicePackage?.packageName||"Not assigned"}</em></div>
+            <div className="portal-list-row"><div><strong>Active systems</strong><span>{commercial.systems.needsAttention} need attention</span></div><em>{commercial.systems.active}</em></div>
+          </div>
+        </article>
+        <article className="portal-card">
+          <div className="portal-card-head"><div><h2>Usage policy</h2><p>Flux Credits are the uniform usage unit across chargeable tenant AI actions.</p></div></div>
+          <div className="portal-list">
+            <div className="portal-list-row"><div><strong>At 70%</strong><span>Usage warning</span></div><em>Heads-up</em></div>
+            <div className="portal-list-row"><div><strong>At 90%</strong><span>Near exhaustion warning</span></div><em>Action recommended</em></div>
+            <div className="portal-list-row"><div><strong>At 100%</strong><span>Chargeable AI pauses; dashboard and human operations stay available</span></div><em>Paused</em></div>
+          </div>
+          <p className="portal-empty">Fluxknight does not silently create postpaid overages. Add credits, renew, or upgrade to restore chargeable AI.</p>
+        </article>
       </section>
 
       <section className="portal-grid">
