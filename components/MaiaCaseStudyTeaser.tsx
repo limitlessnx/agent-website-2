@@ -14,6 +14,17 @@ const outcomes = [
   { icon: CalendarCheck2, label: "Books inspections" },
 ];
 
+const capabilities = [
+  "Responds to new property enquiries",
+  "Qualifies budget, location and requirements",
+  "Recommends relevant configured properties",
+  "Shares property information and media where configured",
+  "Keeps conversation context for follow-up",
+  "Helps schedule inspections and reminders",
+  "Hands serious prospects to a human with context",
+  "Keeps lead stages visible to management",
+];
+
 function WhatsAppMark() {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true">
@@ -48,11 +59,25 @@ export default function MaiaCaseStudyTeaser() {
             ))}
           </div>
 
+          <div className={styles.capabilities} aria-label="What Maia can support in a real-estate customer journey">
+            {capabilities.map((label) => (
+              <span key={label}><CheckCircle2 size={15} /> {label}</span>
+            ))}
+          </div>
+
           <div className={styles.attribution}>Limitless Realty <span>×</span> Fluxknight</div>
 
-          <Link className={styles.primary} href="/case-studies/maia" data-cta="maia-case-study-home">
-            See the Maia example <ArrowRight size={19} />
-          </Link>
+          <div className={styles.actions}>
+            <Link className={styles.primary} href="/case-studies/maia" data-cta="maia-case-study-home">
+              See the Maia case study <ArrowRight size={19} />
+            </Link>
+            <Link className={styles.secondary} href="/#talk-to-leo" data-cta="maia-talk-to-leo">
+              Talk to our support & inquiry agent
+            </Link>
+            <Link className={styles.secondary} href="/evaluation?industry=real-estate" data-cta="maia-evaluate-business">
+              Evaluate your lead process
+            </Link>
+          </div>
         </div>
       </article>
     </section>

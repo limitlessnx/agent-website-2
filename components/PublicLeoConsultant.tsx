@@ -246,6 +246,18 @@ export default function PublicLeoConsultant() {
     };
   }, []);
 
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash !== "#talk-to-leo") return;
+      setOpen(true);
+      setMessages((current) => current.length === 0 ? [firstMessage] : current);
+    };
+
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
+
   function openLeo() {
     setOpen(true);
     if (messages.length === 0) setMessages([firstMessage]);
@@ -566,7 +578,7 @@ export default function PublicLeoConsultant() {
   }
 
   return (
-    <aside className={`public-leo ${open ? "open" : ""}`} aria-label="Fluxknight Leo support assistant">
+    <aside id="talk-to-leo" className={`public-leo ${open ? "open" : ""}`} aria-label="Fluxknight Leo support assistant">
       {open ? (
         <section className="public-leo-panel">
           <header className="public-leo-header">
