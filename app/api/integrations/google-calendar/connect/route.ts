@@ -36,7 +36,7 @@ export async function GET(request:NextRequest){
     organizationId:session.organizationId,
     userId:session.userId,
   });
-  const target=googleCalendarAuthorizationUrl({origin:request.nextUrl.origin,state});
+  const target=googleCalendarAuthorizationUrl({origin:request.nextUrl.origin,state,loginHint:session.email});
   const response=NextResponse.redirect(target);
   response.cookies.set("flux_google_calendar_oauth_state",state,{
     httpOnly:true,
