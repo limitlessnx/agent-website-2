@@ -105,3 +105,33 @@ test("F7 Twilio onboarding mutation RPC is service-role only",()=>{
   assert.match(migration,/revoke all on function public\.upsert_whatsapp_twilio_binding[\s\S]*from public,anon,authenticated/);
   assert.match(migration,/grant execute on function public\.upsert_whatsapp_twilio_binding[\s\S]*to service_role/);
 });
+
+
+test("F7 disconnect removes the Twilio sender and clears the integration secret",()=>{
+  const route=read("app/api/integrations/whatsapp/twilio/disconnect/route.ts");
+  const provider=read("lib/twilio-whatsapp.ts");
+  assert.match(route,/deleteTwilioWhatsAppSender/);
+  assert.match(route,/disconnect_organization_integration/);
+  assert.match(route,/status:"disconnected"/);
+  assert.match(provider,/method:"DELETE"/);
+});
+
+test("F7 tenant UI polls asynchronous sender provisioning",()=>{
+  const panel=read("app/portal/integrations/TwilioWhatsAppOnboardingPanel.tsx");
+  assert.match(panel,/setInterval/);
+  assert.match(panel,/15000/);
+  assert.match(panel,/awaiting_sender_online/);
+  assert.match(panel,/Check sender status/);
+  assert.match(panel,/Disconnect WhatsApp/);
+});
+
+test("F7 failed sender registration remains retryable without creating a second subaccount",()=>{
+  const onboarding=read("lib/twilio-whatsapp-onboarding.ts");
+  const createIndex=onboarding.indexOf("const sub=await createTwilioSubaccount");
+  const persistIndex=onboarding.indexOf("partialIntegrationId=await storeTwilioTenantCredentials",createIndex);
+  const failureIndex=onboarding.indexOf('p_status:"failed"',persistIndex);
+  assert.ok(createIndex>=0);
+  assert.ok(persistIndex>createIndex);
+  assert.ok(failureIndex>persistIndex);
+  assert.match(onboarding,/status:"degraded"/);
+});
