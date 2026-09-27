@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { ensureFluxWallet } from "@/lib/flux-credits";
+import { BASIC_FREE_TRIAL_CREDITS, BASIC_FREE_TRIAL_DAYS, ensureFluxWallet } from "@/lib/flux-credits";
 import { getFluxPlanDefinition } from "@/lib/fluxknight-plans";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest) {
       ? Math.max(25000, requestedCredits)
       : fluxPlan.monthlyCredits;
     const now = new Date();
-    const trialEndsAt = status === "trialing" ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
+    const trialEndsAt = status === "trialing" ? new Date(now.getTime() + BASIC_FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString() : null;
 
     const { data: existing, error: existingError } = await admin
       .from("organization_subscriptions")
@@ -60,8 +60,8 @@ export async function PUT(request: NextRequest) {
         activated_by: session.email,
         activation_source: "phase_14_admin",
         plan_code: fluxPlan.code,
-        monthly_credits: status === "trialing" ? 500 : monthlyCredits,
-        trial_credit_limit: status === "trialing" ? 500 : null,
+        monthly_credits: status === "trialing" ? BASIC_FREE_TRIAL_CREDITS : monthlyCredits,
+        trial_credit_limit: status === "trialing" ? BASIC_FREE_TRIAL_CREDITS : null,
       },
       updated_at: now.toISOString(),
     };

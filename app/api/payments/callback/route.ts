@@ -11,6 +11,7 @@ type Session = {
   amount: number;
   currency: string;
   status: string;
+  billing_type?: string;
   organization_id?: string | null;
   customer_email: string;
 };
@@ -79,6 +80,23 @@ export async function GET(request: Request) {
           paid_at: new Date().toISOString(),
         }),
       });
+
+      if (session.billing_type === "top_up") {
+        await supabaseRest("rpc/apply_flux_credit_topup_from_checkout", {
+          method: "POST",
+          body: JSON.stringify({ target_checkout_session_id: session.id }),
+        });
+        if (clientSession) {
+          const billing = new URL("/portal/billing", url.origin);
+          billing.searchParams.set("topup", "success");
+          billing.searchParams.set("tx_ref", txRef);
+          return NextResponse.redirect(billing);
+        }
+        const login = new URL("/account/login", url.origin);
+        login.searchParams.set("tx_ref", txRef);
+        login.searchParams.set("next", "/portal/billing");
+        return NextResponse.redirect(login);
+      }
 
       if (clientSession) {
         const onboarding = new URL("/onboarding", url.origin);

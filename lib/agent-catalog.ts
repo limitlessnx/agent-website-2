@@ -64,53 +64,41 @@ export async function listActiveAgentOfferings() {
 export async function getOrganizationAgentAllocationContext(organizationId: string): Promise<AgentAllocationContext> {
   const admin = createAdminClient();
 
-  const { data: submission, error: submissionError } = await admin
-    .from("client_onboarding_submissions")
-    .select("package_id")
+  const { data: assignment, error: assignmentError } = await admin
+    .from("organization_service_packages")
+    .select("service_package_id")
     .eq("organization_id", organizationId)
-    .order("created_at", { ascending: false })
+    .eq("status", "active")
+    .order("starts_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (submissionError) throw submissionError;
+  if (assignmentError) throw assignmentError;
 
-  if (!submission?.package_id) {
+  if (!assignment?.service_package_id) {
     return { packageName: null, packageSlug: null, maxAgents: null, unlimited: false };
   }
 
   const { data: servicePackage, error: packageError } = await admin
     .from("service_packages")
     .select("name,slug")
-    .eq("id", submission.package_id)
+    .eq("id", assignment.service_package_id)
     .maybeSingle();
   if (packageError) throw packageError;
 
+  const { data: effectiveLimit, error: limitError } = await admin.rpc("organization_effective_limit", {
+    p_organization_id: organizationId,
+    p_feature_key: "agents.max_active",
+    p_default: null,
+  });
+  if (limitError) throw limitError;
+
   const packageName = servicePackage?.name ? String(servicePackage.name) : null;
   const packageSlug = servicePackage?.slug ? String(servicePackage.slug) : null;
-  if (!packageSlug) return { packageName, packageSlug: null, maxAgents: null, unlimited: false };
-
-  const { data: billingPlan, error: planError } = await admin
-    .from("billing_plans")
-    .select("id")
-    .eq("slug", packageSlug)
-    .eq("status", "active")
-    .maybeSingle();
-  if (planError) throw planError;
-  if (!billingPlan?.id) return { packageName, packageSlug, maxAgents: null, unlimited: false };
-
-  const { data: entitlement, error: entitlementError } = await admin
-    .from("plan_entitlements")
-    .select("enabled,limit_value")
-    .eq("plan_id", billingPlan.id)
-    .eq("feature_key", "agents")
-    .maybeSingle();
-  if (entitlementError) throw entitlementError;
-
-  if (!entitlement?.enabled) return { packageName, packageSlug, maxAgents: 0, unlimited: false };
-  if (entitlement.limit_value === null || entitlement.limit_value === undefined || entitlement.limit_value === "") {
+  if (effectiveLimit === null || effectiveLimit === undefined) {
     return { packageName, packageSlug, maxAgents: null, unlimited: true };
   }
 
-  const parsed = Number(entitlement.limit_value);
+  const parsed = Number(effectiveLimit);
   return {
     packageName,
     packageSlug,
@@ -144,10 +132,23 @@ export async function saveOrganizationAgentSelections(input: {
   const selectedKeys = [...new Set(input.agentKeys)].filter((key) => offeringMap.has(key));
   if (!selectedKeys.length) throw new Error("Select at least one marketplace agent.");
 
-  // Commercial plan limits may still be used for tenant self-service, but a Super Admin
-  // can allocate whatever workforce the organization actually needs.
-  if (input.allocationSource !== "admin" && !allocationContext.unlimited && allocationContext.maxAgents !== null && selectedKeys.length > allocationContext.maxAgents) {
-    throw new Error(`${allocationContext.packageName || "This plan"} allows ${allocationContext.maxAgents} agent${allocationContext.maxAgents === 1 ? "" : "s"}.`);
+  if (!allocationContext.unlimited && allocationContext.maxAgents !== null && selectedKeys.length > allocationContext.maxAgents) {
+    throw new Error(`${allocationContext.packageName || "This package"} allows ${allocationContext.maxAgents} agent${allocationContext.maxAgents === 1 ? "" : "s"}.`);
+  }
+
+  for (const agentKey of selectedKeys) {
+    const offering = offeringMap.get(agentKey)!;
+    const systemId = String(offering.metadata.system_catalog_id || "");
+    if (!systemId) throw new Error(`${offering.display_name} is missing its system catalog binding.`);
+
+    const { data: allowed, error } = await admin.rpc("organization_can_use_system", {
+      p_organization_id: input.organizationId,
+      p_system_id: systemId,
+    });
+    if (error) throw error;
+    if (!allowed) {
+      throw new Error(`${offering.display_name} is not included in this organization's package or entitlement.`);
+    }
   }
 
   const { data: existing, error: existingError } = await admin
@@ -173,7 +174,6 @@ export async function saveOrganizationAgentSelections(input: {
       configuration: {
         ...(current?.configuration || {}),
         allocation_source: input.allocationSource,
-        admin_plan_override: input.allocationSource === "admin",
         catalog_source: "system_catalog",
         system_catalog_id: offering.metadata.system_catalog_id,
         system_slug: offering.metadata.system_slug,

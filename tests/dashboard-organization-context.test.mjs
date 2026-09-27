@@ -4,19 +4,18 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("super admin separates system and tenant organizations", () => {
+test("super admin separates system and tenant organizations through the workspace switcher", () => {
   const nav = read("components/admin/navigationConfig.ts");
   const sidebar = read("components/admin/AdminSidebar.tsx");
-  assert.match(nav, /label: "System Organizations"/);
-  assert.match(nav, /label: "Tenant Organizations"/);
-  assert.match(nav, /href: "\/dashboard\/switch\/system\/fluxknight", label: "Fluxknight"/);
-  assert.match(nav, /href: "\/dashboard\/switch\/system\/limitless-realty", label: "Limitless Realty"/);
-  assert.match(nav, /href: "\/dashboard\/switch\/system\/gencouv", label: "Gencouv"/);
-  assert.match(nav, /href: "\/dashboard\/clients", label: "Tenant Registry"/);
+  assert.match(nav, /href:"\/dashboard\/clients",label:"Client Registry"/);
   assert.match(sidebar, /System Organizations/);
   assert.match(sidebar, /Tenant Organizations/);
+  assert.match(sidebar, /id: "fluxknight"/);
+  assert.match(sidebar, /id: "limitless-realty"/);
+  assert.match(sidebar, /id: "gencouv"/);
+  assert.match(sidebar, /switchOrganization\("system"/);
+  assert.match(sidebar, /switchOrganization\("tenant"/);
   assert.match(sidebar, /Browse tenant organizations/);
-  assert.doesNotMatch(sidebar, /\.\.\.tenants\.slice\(0, 6\)/);
 });
 
 test("Fluxknight owns the current agentic Socials module", () => {

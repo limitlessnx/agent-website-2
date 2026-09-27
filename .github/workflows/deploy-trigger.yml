@@ -7,6 +7,7 @@ on:
       - feat/flux-social-phase-3-8
       - feat/flux-social-phase-3-9
       - feat/maia-whatsapp-trigger-phase-4
+      - feature/a2-a3-tenant-membership-permissions
     paths:
       - "src/trigger/**"
       - "lib/social-learning.ts"
@@ -14,9 +15,29 @@ on:
       - "lib/ai/maia-trigger-runtime.ts"
       - "lib/ai/limitless-realty-maia.ts"
       - "lib/whatsapp-delivery.ts"
+      - "lib/system-orchestrator.ts"
+      - "lib/human-operations.ts"
+      - "lib/handoff-followup.ts"
+      - "lib/analytics-phase-e.ts"
+      - "lib/flux-ai-metering.ts"
+      - "lib/flux-credits.ts"
+      - "lib/flux-ai-metering-core.ts"
+      - "lib/flux-commercial.ts"
+      - "lib/canonical-customer.ts"
+      - "lib/orchestration-operations.ts"
+      - "lib/system-event-adapters.ts"
+      - "lib/calendar-provider.ts"
+      - "lib/appointment-scheduling.ts"
+      - "lib/google-calendar-oauth.ts"
+      - "lib/ai-runtime/production-executors.ts"
+      - "lib/ai-runtime/context.ts"
+      - "lib/tenant-system-provisioning.ts"
+      - "lib/tenant-system-management.ts"
+      - "lib/leo-core.ts"
       - "trigger.config.ts"
       - "package.json"
       - "package-lock.json"
+      - "tests/**/*.test.mjs"
       - ".github/workflows/deploy-trigger.yml"
   workflow_dispatch:
 
@@ -38,6 +59,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run tenant and runtime regression contracts
+        run: npm run test:support
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
 
       - name: Validate Trigger.dev CI token
         env:

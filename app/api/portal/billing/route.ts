@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
 
 export async function GET() {
   try {
     const session = await getClientSession();
     if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
-    const wallet = await getFluxWalletSummary(session.organizationId);
+    const [wallet,commercial] = await Promise.all([
+      getFluxWalletSummary(session.organizationId),
+      getFluxCommercialSnapshot(session.organizationId),
+    ]);
     return NextResponse.json({
+      commercial,
       wallet: {
         planName: wallet.planName,
         monthlyCredits: wallet.monthlyCredits,

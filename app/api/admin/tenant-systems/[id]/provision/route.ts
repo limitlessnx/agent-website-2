@@ -15,6 +15,7 @@ export async function POST(
     return NextResponse.json({ ok: true, result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to provision this tenant system.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = /entitlement|package|allowance|limit|archived|unavailable/i.test(message) ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

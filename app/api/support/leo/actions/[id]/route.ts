@@ -7,7 +7,7 @@ import type { SupportAction } from "@/lib/support-agent";
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-  const leoIdentity = tenantLeoIdentityFromSession(session);
+  const leoIdentity = await tenantLeoIdentityFromSession(session);
 
   const { id } = await context.params;
   const body = await request.json().catch(() => ({}));

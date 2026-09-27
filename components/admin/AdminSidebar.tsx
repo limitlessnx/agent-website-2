@@ -44,6 +44,7 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard/conversations": MessageSquareText,
   "/dashboard/social": Megaphone,
   "/dashboard/activity": Activity,
+  "/dashboard/analytics": LineChart,
   "/dashboard/limitless/leads": Building2,
   "/dashboard/gencouv": LineChart,
   "/dashboard/workflows": Activity,

@@ -10,7 +10,8 @@
       "feature/leo-conversational-lifecycle": false,
       "feature/proactive-lifecycle-monitoring": false,
       "hotfix/vercel-lifecycle-cron-daily": false,
-      "feature/realestate-email-home-cta": false
+      "feature/realestate-email-home-cta": false,
+      "feature/a2-a3-tenant-membership-permissions": true
     }
   },
   "crons": [

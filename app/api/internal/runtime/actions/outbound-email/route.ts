@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertFluxFeatureAccess } from "@/lib/flux-credits";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 const text = (v: unknown) => typeof v === "string" ? v.trim() : "";
 const record = (v: unknown): Record<string, unknown> =>
@@ -43,6 +45,15 @@ export async function POST(request: NextRequest) {
     if (duplicate.data) return NextResponse.json({
       ok: true, duplicate: true, organization_id: organizationId,
       agent_id: agentId, execution_id: executionId, idempotency_key: idempotencyKey, actions: []
+    });
+
+    const sequenceStep = Number(body.sequence_step) || 1;
+    const followUpCharge = sequenceStep > 1 || text(body.event_type).toLowerCase().includes("follow");
+    await assertFluxFeatureAccess(organizationId, "cross_channel");
+    await preflightChargeableFluxAi({
+      organizationId,
+      feature: followUpCharge ? "follow_ups" : "cross_channel",
+      action: followUpCharge ? "email_follow_up" : "ai_email",
     });
 
     const email = text(input.email) || text(input.recipient_email);
@@ -216,6 +227,26 @@ export async function POST(request: NextRequest) {
       unit: "tokens", metadata: { workflow_key: "outbound_email_crm_v5",
         provider_response_id: text(body.provider_response_id) || null }
     });
+    await recordChargeableFluxAiUsage({
+      organizationId,
+      action:followUpCharge ? "email_follow_up" : "ai_email",
+      source:"outbound_email_runtime",
+      provider:text(body.provider)||"openai",
+      model:text(body.model)||null,
+      providerUsage:{
+        inputTokens:Number(record(body.provider_usage).input_tokens)||undefined,
+        outputTokens:Number(record(body.provider_usage).output_tokens)||undefined,
+        totalTokens:Number(record(body.provider_usage).total_tokens)||undefined,
+      },
+      metadata:{
+        agent_id:agentId,
+        execution_id:executionId,
+        campaign_id:text(body.campaign_id)||null,
+        sequence_step:sequenceStep,
+        idempotency_key:idempotencyKey,
+      },
+    });
+
     await supabase.from("runtime_progress_events").insert({
       organization_id: organizationId, execution_id: executionId,
       event_type: "outbound_email.persisted",

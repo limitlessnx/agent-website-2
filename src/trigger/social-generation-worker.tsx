@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { bundle } from "@remotion/bundler";
 import { renderStill, selectComposition } from "@remotion/renderer";
-import { logger, schedules, task } from "@trigger.dev/sdk";
+import { logger, task } from "@trigger.dev/sdk";
 import { fluxSocialRenderReel } from "./social-reel-renderer";
 import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -544,31 +544,5 @@ export const fluxSocialGenerationWorker = task({
     const final = await finalizeWeeklyRun(supabase, run.id);
     logger.info("Flux Social generation worker finished", { weeklyRunId: run.id, ...final });
     return { weeklyRunId: run.id, ...final };
-  },
-});
-
-export const fluxSocialGenerationSweeper = schedules.task({
-  id: "flux-social-generation-sweeper",
-  cron: "*/10 * * * *",
-  maxDuration: 300,
-  retry: { maxAttempts: 2, minTimeoutInMs: 10_000, maxTimeoutInMs: 30_000, factor: 2 },
-  run: async () => {
-    const supabase = createSocialAdminClient();
-    const { data: runs, error } = await supabase.from("social_weekly_runs").select("id").eq("status", "generating").order("created_at", { ascending: true }).limit(20);
-    if (error) throw error;
-    const triggered: string[] = [];
-    for (const run of runs || []) {
-      const { count: runningJobs, error: runningJobsError } = await supabase
-        .from("social_generation_jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("weekly_run_id", run.id)
-        .eq("status", "running");
-      if (runningJobsError) throw runningJobsError;
-      if ((runningJobs || 0) > 0) continue;
-
-      const handle = await fluxSocialGenerationWorker.trigger({ weeklyRunId: run.id });
-      triggered.push(handle.id);
-    }
-    return { queuedRuns: triggered.length, triggerRunIds: triggered };
   },
 });

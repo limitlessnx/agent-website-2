@@ -1,5 +1,6 @@
 import { getAdminSession } from "@/lib/admin-auth";
 import { getClientSession, type ClientSession } from "@/lib/client-auth";
+import { getOrganizationAccessContext } from "@/lib/organization-membership";
 
 export type LeoScope = "public" | "tenant" | "super_admin" | "internal_service";
 export type LeoConversationVisibility = "private" | "team" | "organization";
@@ -25,6 +26,7 @@ export type LeoIdentity = {
   organizationId?: string;
   organizationSlug?: string;
   membershipId?: string;
+  permissions?: string[];
   channel: LeoChannel;
   globalScope: boolean;
 };
@@ -42,15 +44,33 @@ export type LeoToolDefinition = {
 };
 
 const TENANT_ROLE_ORDER: LeoRole[] = [
-  "visitor",
-  "viewer",
-  "member",
-  "staff",
-  "manager",
-  "owner",
-  "tenant_admin",
-  "super_admin",
+  "visitor","viewer","member","staff","manager","owner","tenant_admin","super_admin",
 ];
+
+const TENANT_TOOL_PERMISSIONS: Record<string,string[]> = {
+  "leo.agent.inspect": ["agents.view","agents.read"],
+  "leo.workflow.inspect": ["workflows.read","systems.view"],
+  "leo.workflow.inspect_failures": ["workflows.read","systems.view"],
+  "leo.orchestration.inspect": ["workflows.read","systems.view"],
+  "leo.integration.inspect": ["integrations.view"],
+  "leo.billing.inspect": ["billing.view"],
+  "leo.crm.leads.read": ["customers.view","customers.manage"],
+  "leo.crm.leads.update": ["customers.manage"],
+  "leo.crm.followup.prepare": ["customers.manage","conversations.reply"],
+  "leo.crm.followup.send": ["customers.manage","conversations.reply"],
+  "leo.campaign.prepare": ["customers.manage"],
+  "leo.campaign.send": ["customers.manage"],
+  "leo.appointment.read": ["appointments.view","appointments.manage"],
+  "leo.appointment.manage": ["appointments.manage"],
+  "leo.agent.pause": ["agents.manage"],
+  "leo.agent.resume": ["agents.manage"],
+  "leo.support.request_admin_repair": ["support.escalate"],
+};
+
+function tenantHasAnyPermission(identity: LeoIdentity, keys: string[]) {
+  const permissions = new Set(identity.permissions || []);
+  return keys.some((key) => permissions.has(key));
+}
 
 export const LEO_TOOLS: LeoToolDefinition[] = [
   {
@@ -156,6 +176,16 @@ export const LEO_TOOLS: LeoToolDefinition[] = [
     readOnly: true,
     approval: "none",
     legacyAliases: ["inspect_workflow_failures", "inspect_tenant_workflow_failures", "review_runtime_errors"],
+  },
+  {
+    key: "leo.orchestration.inspect",
+    title: "Inspect orchestration chain",
+    description: "Trace one tenant-scoped system event correlation chain, including each delivery hop, retry history and safe failure detail.",
+    scopes: ["tenant", "super_admin"],
+    minimumTenantRole: "viewer",
+    readOnly: true,
+    approval: "none",
+    legacyAliases: ["inspect_orchestration_chain", "trace_system_event"],
   },
   {
     key: "leo.integration.inspect",
@@ -281,6 +311,38 @@ export const LEO_TOOLS: LeoToolDefinition[] = [
     legacyAliases: ["request_admin_repair"],
   },
   {
+    key: "flux.system.appointment.request",
+    title: "Request appointment handling",
+    description: "Emit an appointment.requested event from the current installed source system to an authorized installed Appointment System. This requests handling; it does not claim a booking exists.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
+    key: "flux.system.followup.request",
+    title: "Request follow-up handling",
+    description: "Emit a follow_up.requested event from the current installed source system to an authorized installed Follow-up System. This requests handling; it does not send a message by itself.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
+    key: "flux.system.handoff.request",
+    title: "Hand customer conversation to a human",
+    description: "Request a human handoff for the current customer conversation. Include reason and, when known, category, priority, conversationSummary, stageKey, nextAction and slaMinutes. The platform pauses AI replies, assigns an authorized human when a matching tenant rule exists, records the handoff, and notifies the assignee.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
+    key: "flux.system.customer.stage.update",
+    title: "Update customer stage",
+    description: "Move the current customer to an active organization-defined customer stage. Requires customer_id and stageKey. Only stages configured by the tenant are accepted.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
     key: "leo.limitless.leads.read",
     title: "Search Limitless Realty leads",
     description: "Search the owned Limitless Realty CRM by lead ID, name, phone or email. Use this for requests such as pull up or find a Limitless Realty lead.",
@@ -365,6 +427,16 @@ export const LEO_TOOLS: LeoToolDefinition[] = [
     legacyAliases: ["deactivate_workflow"],
   },
   {
+    key: "leo.platform.orchestration.retry",
+    title: "Retry failed orchestration event",
+    description: "Requeue only failed delivery hops for one explicitly targeted tenant system event. Delivered hops remain untouched and the retry is audit logged.",
+    scopes: ["super_admin"],
+    readOnly: false,
+    approval: "confirm",
+    sensitive: true,
+    legacyAliases: ["retry_failed_system_event"],
+  },
+  {
     key: "leo.platform.workflow.resync",
     title: "Resync workflow registry",
     description: "Read and resync platform workflow registry information.",
@@ -395,7 +467,8 @@ function tenantRoleAtLeast(actual: LeoRole, minimum: LeoRole) {
   return TENANT_ROLE_ORDER.indexOf(actual) >= TENANT_ROLE_ORDER.indexOf(minimum);
 }
 
-function identityFromClient(session: ClientSession, channel: LeoChannel): LeoIdentity {
+async function identityFromClient(session: ClientSession, channel: LeoChannel): Promise<LeoIdentity> {
+  const access = await getOrganizationAccessContext(session.organizationId, session.userId);
   return {
     scope: "tenant",
     role: normalizeTenantRole(session.role),
@@ -404,6 +477,7 @@ function identityFromClient(session: ClientSession, channel: LeoChannel): LeoIde
     organizationId: session.organizationId,
     organizationSlug: session.organizationSlug,
     membershipId: session.membershipId,
+    permissions: [...access.permissions],
     channel,
     globalScope: false,
   };
@@ -449,8 +523,10 @@ export function isLeoToolAllowed(identity: LeoIdentity, keyOrAlias: string) {
   const tool = resolveLeoTool(keyOrAlias);
   if (!tool) return false;
   if (!tool.scopes.includes(identity.scope)) return false;
-  if (identity.scope === "tenant" && tool.minimumTenantRole) {
-    return tenantRoleAtLeast(identity.role, tool.minimumTenantRole);
+  if (identity.scope === "tenant") {
+    const requiredPermissions = TENANT_TOOL_PERMISSIONS[tool.key];
+    if (requiredPermissions) return tenantHasAnyPermission(identity, requiredPermissions);
+    if (tool.minimumTenantRole) return tenantRoleAtLeast(identity.role, tool.minimumTenantRole);
   }
   return true;
 }
@@ -508,6 +584,7 @@ export function buildLeoPolicySnapshot(identity: LeoIdentity) {
     organizationId: identity.scope === "tenant" ? identity.organizationId || null : null,
     globalScope: identity.globalScope,
     channel: identity.channel,
+    permissions: identity.scope === "tenant" ? identity.permissions || [] : undefined,
     toolCount: tools.length,
     tools: tools.map((tool) => ({
       key: tool.key,

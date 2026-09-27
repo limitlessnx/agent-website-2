@@ -100,7 +100,7 @@ export async function getActiveFluxSubscription(organizationId: string) {
     .from("organization_subscriptions")
     .select("id,status,current_period_end,trial_ends_at,metadata,billing_plans(slug,name,metadata)")
     .eq("organization_id", organizationId)
-    .in("status", ["trialing", "active", "past_due", "grace_period"])
+    .in("status", ["pending", "trialing", "active", "past_due", "grace_period", "suspended", "cancelled"])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle<SubscriptionRow>();
@@ -111,20 +111,23 @@ export async function getActiveFluxSubscription(organizationId: string) {
 export async function ensureFluxWallet(organizationId: string): Promise<WalletRow> {
   const admin = createAdminClient();
   const subscription = await getActiveFluxSubscription(organizationId);
-  const plan = planFromSubscription(subscription);
-  const configuredMonthlyCredits = numberValue(subscription?.metadata?.monthly_credits, plan.monthlyCredits);
-  const monthlyCredits = plan.configurableMonthlyCredits ? Math.max(25000, configuredMonthlyCredits) : plan.monthlyCredits;
-  const isTrial = subscription?.status === "trialing";
-  const configuredTrialLimit = numberValue(subscription?.metadata?.trial_credit_limit, BASIC_FREE_TRIAL_CREDITS);
-  const trialCreditLimit = isTrial ? Math.min(BASIC_FREE_TRIAL_CREDITS, Math.max(0, configuredTrialLimit)) : null;
 
+  if (subscription?.id) {
+    const { data, error } = await admin.rpc("sync_flux_credit_wallet_from_subscription", {
+      target_subscription_id: subscription.id,
+    });
+    if (error) throw error;
+    return requireWalletRow(data);
+  }
+
+  const plan = getFluxPlanDefinition("basic");
   const { data, error } = await admin.rpc("ensure_flux_credit_wallet", {
     target_organization_id: organizationId,
     target_plan_code: plan.code,
-    target_monthly_allowance: isTrial ? trialCreditLimit : monthlyCredits,
-    target_trial_credit_limit: trialCreditLimit,
-    target_trial_ends_at: isTrial ? subscription?.trial_ends_at || null : null,
-    target_current_period_end: subscription?.current_period_end || null,
+    target_monthly_allowance: plan.monthlyCredits,
+    target_trial_credit_limit: null,
+    target_trial_ends_at: null,
+    target_current_period_end: null,
   });
   if (error) throw error;
   return requireWalletRow(data);

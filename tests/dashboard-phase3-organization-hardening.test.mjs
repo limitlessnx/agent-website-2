@@ -4,35 +4,32 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("phase 3 preserves the production dashboard route inventory", () => {
+test("phase 3 organization hardening remains compatible with the A7 canonical admin control planes", () => {
   const nav = read("components/admin/navigationConfig.ts");
   for (const route of [
     "/dashboard",
-    "/dashboard/control-center",
-    "/dashboard/lifecycle",
+    "/dashboard/clients",
+    "/dashboard/onboarding",
+    "/dashboard/evaluations",
     "/dashboard/workflows",
     "/dashboard/agents",
+    "/dashboard/integrations",
+    "/dashboard/control-center",
     "/dashboard/conversations",
     "/dashboard/activity",
     "/dashboard/health",
-    "/dashboard/retention",
-    "/dashboard/expansion",
-    "/dashboard/value",
-    "/dashboard/evaluations",
+    "/dashboard/support",
     "/dashboard/billing",
-    "/dashboard/knowledge",
-    "/dashboard/ai-models",
-    "/dashboard/memory",
     "/dashboard/settings",
-    "/dashboard/clients",
   ]) assert.match(nav, new RegExp(route.replaceAll("/", "\\/")));
+  for (const label of ["Overview", "Clients", "Systems", "Operations", "Billing", "Security"]) {
+    assert.match(nav, new RegExp(`label:"${label}"`));
+  }
 });
 
 test("phase 3 keeps system and tenant organizations distinct", () => {
   const nav = read("components/admin/navigationConfig.ts");
   const sidebar = read("components/admin/AdminSidebar.tsx");
-  assert.match(nav, /label: "System Organizations"/);
-  assert.match(nav, /label: "Tenant Organizations"/);
   assert.match(sidebar, /System Organizations/);
   assert.match(sidebar, /Tenant Organizations/);
   assert.match(sidebar, /switchOrganization\("system"/);

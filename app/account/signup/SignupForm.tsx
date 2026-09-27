@@ -3,23 +3,27 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import GoogleAuthButton from "../GoogleAuthButton";
 
 type SignupFormProps = {
   txRef?: string;
   nextPath?: string;
   trialPlan?: "" | "basic";
+  invitationToken?: string;
 };
 
-export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan = "" }: SignupFormProps) {
+export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan = "", invitationToken = "" }: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const safeNext = nextPath.startsWith("/") ? nextPath : "/portal";
   const isBasicTrial = trialPlan === "basic";
-  const loginHref = txRef
-    ? `/account/login?tx_ref=${encodeURIComponent(txRef)}&next=${encodeURIComponent(safeNext)}`
-    : `/account/login?next=${encodeURIComponent(safeNext)}`;
+  const loginUrl=new URL("/account/login","https://fluxknight.local");
+  if(txRef) loginUrl.searchParams.set("tx_ref",txRef);
+  loginUrl.searchParams.set("next",safeNext);
+  if(invitationToken) loginUrl.searchParams.set("invitation_token",invitationToken);
+  const loginHref=`${loginUrl.pathname}${loginUrl.search}`;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,6 +44,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
           payment_tx_ref: txRef || undefined,
           post_signup_path: safeNext,
           trial_plan: isBasicTrial ? "basic" : undefined,
+          invitation_token: invitationToken || undefined,
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -77,6 +82,8 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
       {isBasicTrial ? <p className="admin-form-message">Basic free trial · no payment is collected on this screen.</p> : null}
+      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" txRef={txRef} trialPlan={trialPlan} invitationToken={invitationToken} />
+      <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>

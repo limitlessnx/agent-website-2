@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Cable, CheckCircle2, CircleDashed, LockKeyhole, TriangleAlert } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
-import { createClient } from "@/lib/supabase/server";
+import { getOrganizationAccessContext, listOrganizationMembers } from "@/lib/organization-membership";
+import { createAdminClient } from "@/lib/supabase/admin";
+import GoogleCalendarPanel from "./GoogleCalendarPanel";
+import TwilioWhatsAppOnboardingPanel from "./TwilioWhatsAppOnboardingPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +15,7 @@ const labels: Record<string, string> = {
   telegram: "Telegram",
   voice: "Voice Calling",
   sms: "SMS",
+  google_calendar: "Google Calendar",
 };
 
 function statusIcon(status: string) {
@@ -24,18 +28,42 @@ export default async function PortalIntegrationsPage() {
   const session = await getClientSession();
   if (!session) return null;
 
-  const supabase = await createClient();
-  const [{ data: integrations, error: integrationError }, { data: agents, error: agentError }] = await Promise.all([
-    supabase.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id", session.organizationId).order("created_at"),
-    supabase.from("agents").select("id,name,status,agent_type,communication_channels").eq("organization_id", session.organizationId).order("created_at"),
+  const access=await getOrganizationAccessContext(session.organizationId,session.userId);
+  if(!access.permissions.has("integrations.view")&&!access.permissions.has("integrations.manage")) return null;
+  const admin=createAdminClient();
+  const canViewMembers=access.permissions.has("members.view")||access.permissions.has("members.manage");
+  const [
+    {data:integrations,error:integrationError},
+    {data:agents,error:agentError},
+    {data:calendarResources,error:calendarError},
+    {data:routingSettings,error:routingError},
+    {data:availabilitySettings,error:availabilityError},
+    {data:twilioWhatsAppBinding,error:twilioWhatsAppError},
+    members,
+  ]=await Promise.all([
+    admin.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id",session.organizationId).order("created_at"),
+    admin.from("agents").select("id,name,status,agent_type,communication_channels").eq("organization_id",session.organizationId).order("created_at"),
+    admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,assigned_membership_id,timezone,default_duration_minutes,status,is_default,availability_configuration,service_keys,branch_key,department_key,routing_priority").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
+    admin.from("appointment_routing_settings").select("strategy,fallback_to_default,lookahead_days").eq("organization_id",session.organizationId).maybeSingle(),
+    admin.from("appointment_availability_settings").select("timezone,availability_configuration").eq("organization_id",session.organizationId).maybeSingle(),
+    admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164,sender_profile_name,twilio_sender_status,twilio_sender_sid,meta_waba_id,last_error_message").eq("organization_id",session.organizationId).maybeSingle(),
+    canViewMembers ? listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
 
-  if (integrationError) throw integrationError;
-  if (agentError) throw agentError;
+  if(integrationError) throw integrationError;
+  if(agentError) throw agentError;
+  if(calendarError) throw calendarError;
+  if(routingError) throw routingError;
+  if(availabilityError) throw availabilityError;
+  if(twilioWhatsAppError) throw twilioWhatsAppError;
 
   const rows = integrations || [];
   const connected = rows.filter((item) => item.status === "connected").length;
   const attention = rows.filter((item) => item.status === "error" || item.status === "degraded").length;
+  const googleIntegration=rows.find((item)=>item.provider==="google_calendar")||null;
+  const googleResource=(calendarResources||[]).find((item)=>item.status==="active"&&item.is_default)
+    ||(calendarResources||[]).find((item)=>item.status==="active")
+    ||null;
 
   return (
     <main className="portal-page">
@@ -50,6 +78,21 @@ export default async function PortalIntegrationsPage() {
         <article className="portal-card"><small>Needs attention</small><strong>{attention}</strong><span>Error or degraded state</span></article>
         <article className="portal-card"><small>Provisioned agents</small><strong>{agents?.length || 0}</strong><span>Draft and testing agents included</span></article>
       </section>
+
+      <TwilioWhatsAppOnboardingPanel
+        initialBinding={twilioWhatsAppBinding}
+        canManage={access.permissions.has("integrations.manage")}
+      />
+
+      <GoogleCalendarPanel
+        integration={googleIntegration}
+        resource={googleResource}
+        resources={calendarResources||[]}
+        members={members}
+        routingSettings={routingSettings||{strategy:"default",fallback_to_default:true,lookahead_days:30}}
+        availabilitySettings={availabilitySettings||{timezone:"Africa/Lagos",availability_configuration:{}}}
+        canManage={access.permissions.has("integrations.manage")||access.permissions.has("appointments.manage")}
+      />
 
       <section className="portal-card">
         <div className="portal-card-head">

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { logger, schedules, task } from "@trigger.dev/sdk";
+import { logger, task } from "@trigger.dev/sdk";
 import { runMetaAnalyticsSync } from "@/lib/social-meta-sync";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
@@ -59,23 +59,4 @@ export const fluxSocialMetaAnalytics = task({
   },
   run: async (payload: { organizationId: string; brandId: string }) =>
     runMetaCollection(payload),
-});
-
-export const fluxSocialMetaAnalyticsSchedule = schedules.task({
-  id: "flux-social-meta-analytics-schedule",
-  cron: "15 */6 * * *",
-  maxDuration: 300,
-  run: async () => {
-    const organizationId = process.env.FLUX_SOCIAL_ORGANIZATION_ID;
-    const brandId = process.env.FLUX_SOCIAL_BRAND_ID;
-
-    if (!organizationId || !brandId) {
-      logger.warn(
-        "Skipping scheduled Meta analytics collection because Flux Social tenant identifiers are not configured.",
-      );
-      return { skipped: true };
-    }
-
-    return runMetaCollection({ organizationId, brandId });
-  },
 });

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendTwilioWhatsAppMessage } from "@/lib/twilio-whatsapp";
 
-type TemplateConfig = { template_name: string; language_code: string; variable_keys?: string[] };
+type TemplateConfig = { template_name: string; language_code: string; variable_keys?: string[]; metadata?: Record<string,unknown> };
 type SendInput = {
   organizationId: string;
   to: string;
@@ -14,7 +15,9 @@ type SendInput = {
   propertyVideoUrls?: string[];
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
-type WhatsAppCredentials = { phoneNumberId: string; accessToken: string; graphVersion: string; source: "tenant_vault" | "legacy_env" };
+type MetaWhatsAppCredentials={providerFamily:"meta";phoneNumberId:string;accessToken:string;graphVersion:string;source:"tenant_vault"|"legacy_env"};
+type TwilioWhatsAppCredentials={providerFamily:"twilio";accountSid:string;authToken:string;from:string;senderSid?:string|null;source:"tenant_vault"};
+type WhatsAppCredentials=MetaWhatsAppCredentials|TwilioWhatsAppCredentials;
 
 function supabaseConfig() {
   const url = (process.env.LIMITLESS_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
@@ -59,10 +62,20 @@ async function resolveWhatsAppCredentials(organizationId: string): Promise<Whats
     if (!error && credentials && typeof credentials === "object") {
       const raw = credentials as Record<string, unknown>;
       const config = (integration.configuration || {}) as Record<string, unknown>;
+      const providerFamily=String(raw.provider_family||config.provider_family||"meta");
+      if(providerFamily==="twilio"){
+        const accountSid=String(raw.twilio_account_sid||config.twilio_subaccount_sid||"");
+        const authToken=String(raw.twilio_auth_token||"");
+        const from=String(raw.twilio_whatsapp_sender||config.sender_phone_e164||"");
+        const senderSid=String(raw.twilio_sender_sid||config.twilio_sender_sid||"")||null;
+        if(accountSid&&authToken&&from){
+          return {providerFamily:"twilio",accountSid,authToken,from,senderSid,source:"tenant_vault"};
+        }
+      }
       const phoneNumberId = String(raw.phone_number_id || raw.phoneNumberId || config.phone_number_id || "");
       const accessToken = String(raw.access_token || raw.accessToken || "");
       const graphVersion = String(raw.graph_version || config.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v23.0");
-      if (phoneNumberId && accessToken) return { phoneNumberId, accessToken, graphVersion, source: "tenant_vault" };
+      if (phoneNumberId && accessToken) return { providerFamily:"meta",phoneNumberId, accessToken, graphVersion, source: "tenant_vault" };
     }
   }
 
@@ -71,13 +84,13 @@ async function resolveWhatsAppCredentials(organizationId: string): Promise<Whats
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN || "";
     const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
-    if (phoneNumberId && accessToken) return { phoneNumberId, accessToken, graphVersion, source: "legacy_env" };
+    if (phoneNumberId && accessToken) return { providerFamily:"meta",phoneNumberId, accessToken, graphVersion, source: "legacy_env" };
   }
 
-  throw new Error("WhatsApp Cloud API credentials are not configured for this organization.");
+  throw new Error("WhatsApp credentials are not configured for this organization.");
 }
 async function getTemplateConfig(organizationId: string, purpose: string): Promise<TemplateConfig | null> {
-  const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active&select=template_name,language_code,variable_keys,status&limit=1`);
+  const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active&select=template_name,language_code,variable_keys,metadata,status&limit=1`);
   return rows[0] || null;
 }
 async function recordAttempt(payload: Record<string, unknown>) {
@@ -111,7 +124,7 @@ async function resolvePropertyMediaFromText(organizationId: string, text: string
   } catch {}
   return { videos: [] as string[], images: [] as string[] };
 }
-async function sendMedia(args: { organizationId: string; to: string; type: "image" | "video"; url: string; credentials: WhatsAppCredentials }) {
+async function sendMetaMedia(args: { organizationId: string; to: string; type: "image" | "video"; url: string; credentials: MetaWhatsAppCredentials }) {
   const { organizationId, to, type, url, credentials } = args;
   const payload = { messaging_product: "whatsapp", recipient_type: "individual", to, type, [type]: { link: url } };
   const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
@@ -133,14 +146,79 @@ export async function sendWhatsAppMessage(input: SendInput) {
   const useTemplate = Boolean(input.forceTemplate) || requestedMode === "template" || (requestedMode === "auto" && outsideWindow);
   if (requestedMode === "direct" && outsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open.");
 
+  const config=useTemplate
+    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h")
+    : null;
+  if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
+
+  if(credentials.providerFamily==="twilio"){
+    const statusCallback=`${String(process.env.FLUXKNIGHT_APP_URL||process.env.NEXT_PUBLIC_SITE_URL||"https://fluxknight.space").replace(/\/$/,"")}/api/whatsapp/twilio/status`;
+    const contentSid=useTemplate?String(config?.metadata?.twilio_content_sid||"").trim():null;
+    if(useTemplate&&!contentSid){
+      throw new Error(`No Twilio Content SID is configured for WhatsApp template ${config?.template_name||""}.`);
+    }
+
+    if(!useTemplate){
+      const suppliedVideos=(input.propertyVideoUrls||[]).filter(isDirectPublicVideoUrl).slice(0,3);
+      const suppliedImages=(input.propertyImageUrls||[]).filter(isDirectPublicImageUrl).slice(0,3);
+      const media=suppliedVideos.length||suppliedImages.length
+        ?{videos:suppliedVideos,images:suppliedImages}
+        :await resolvePropertyMediaFromText(input.organizationId,input.text||"");
+      const urls=media.videos.length?media.videos:media.images;
+      for(const url of urls){
+        await sendTwilioWhatsAppMessage({
+          accountSid:credentials.accountSid,
+          authToken:credentials.authToken,
+          from:credentials.from,
+          to:`+${to}`,
+          mediaUrl:url,
+          statusCallbackUrl:statusCallback,
+        });
+      }
+    }
+
+    const variableKeys=Array.isArray(config?.variable_keys)?config!.variable_keys!:[];
+    const contentVariables:Record<string,string>={};
+    variableKeys.forEach((key,index)=>{contentVariables[String(index+1)]=String(input.variables?.[key]??"");});
+    const result=await sendTwilioWhatsAppMessage({
+      accountSid:credentials.accountSid,
+      authToken:credentials.authToken,
+      from:credentials.from,
+      to:`+${to}`,
+      body:useTemplate?undefined:input.text,
+      contentSid:contentSid||undefined,
+      contentVariables:useTemplate?contentVariables:undefined,
+      statusCallbackUrl:statusCallback,
+    });
+    await recordAttempt({
+      organization_id:input.organizationId,
+      recipient:to,
+      message_type:useTemplate?"template":"text",
+      template_name:config?.template_name||null,
+      provider_message_id:result.sid||null,
+      status:"accepted",
+      error_code:null,
+      error_message:null,
+      request_payload:{provider:"twilio",content_sid:contentSid||null},
+      response_payload:result.raw,
+    });
+    return {
+      ok:true,
+      messageType:useTemplate?"template":"text",
+      templateName:config?.template_name||null,
+      providerMessageId:result.sid||null,
+      credentialSource:credentials.source,
+      provider:"twilio",
+      response:result.raw,
+    };
+  }
+
   let requestPayload: Record<string, unknown>;
   let templateName: string | null = null;
   if (useTemplate) {
-    const config = await getTemplateConfig(input.organizationId, input.templatePurpose || "follow_up_outside_24h");
-    if (!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
-    templateName = config.template_name;
-    const parameters = (Array.isArray(config.variable_keys) ? config.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
-    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config.template_name, language: { code: config.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
+    templateName = config!.template_name;
+    const parameters = (Array.isArray(config!.variable_keys) ? config!.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
+    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
   } else {
     if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };
@@ -150,8 +228,8 @@ export async function sendWhatsAppMessage(input: SendInput) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
     const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
     const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, input.text || "");
-    if (media.videos.length) for (const url of media.videos) await sendMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
-    else for (const url of media.images) await sendMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
+    if (media.videos.length) for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
+    else for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
   }
 
   const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
@@ -167,5 +245,5 @@ export async function sendWhatsAppMessage(input: SendInput) {
     Object.assign(error, { status: response.status, code: errorCode, response: result });
     throw error;
   }
-  return { ok: true, messageType: useTemplate ? "template" : "text", templateName, providerMessageId, credentialSource: credentials.source, response: result };
+  return { ok: true, messageType: useTemplate ? "template" : "text", templateName, providerMessageId, credentialSource: credentials.source, provider:"meta", response: result };
 }

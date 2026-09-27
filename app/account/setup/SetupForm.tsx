@@ -28,7 +28,7 @@ export default function SetupForm() {
         return;
       }
 
-      router.push("/portal");
+      router.push(String(result.redirect_to || "/portal"));
       router.refresh();
     } catch {
       setError("We could not connect to the workspace service. Check your connection and try again.");

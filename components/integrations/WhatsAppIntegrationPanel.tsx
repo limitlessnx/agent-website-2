@@ -11,6 +11,8 @@ type Readiness = {
   verifiedName?: string | null;
   qualityRating?: string | null;
   accountStatus?: string | null;
+  coexistenceActive?: boolean;
+  platformType?: string | null;
   readyForCutover?: boolean;
   checks?: ReadinessCheck[];
 };
@@ -159,6 +161,10 @@ export default function WhatsAppIntegrationPanel({
           <div className="admin-list-row">
             <div><strong>Quality rating</strong><span>Meta WhatsApp number health</span></div>
             <em>{readiness.qualityRating || "unknown"}</em>
+          </div>
+          <div className="admin-list-row">
+            <div><strong>Connection mode</strong><span>{readiness.coexistenceActive ? "WhatsApp Business App and Cloud API share this number." : "Cloud API connection."}</span></div>
+            <em>{readiness.coexistenceActive ? "coexistence" : readiness.platformType || "api"}</em>
           </div>
           <div className="admin-list-row">
             <div><strong>Credential storage</strong><span>Tenant-isolated secure credential record</span></div>
