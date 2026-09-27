@@ -114,7 +114,7 @@ export default async function AnalyticsPage({
         <div className="portal-list">
           <div className="portal-list-row"><div><strong>Average claim time</strong><span>Handoff created → human claim</span></div><em>{duration(analytics.handoffs.avgClaimMinutes)}</em></div>
           <div className="portal-list-row"><div><strong>Average resolution time</strong><span>Handoff created → resolved/closed</span></div><em>{duration(analytics.handoffs.avgResolutionMinutes)}</em></div>
-          <div className="portal-list-row"><div><strong>SLA breaches</strong><span>Handoffs resolved late or currently past SLA</span></div><em>{number(analytics.handoffs.slaBreached)}</em></div>
+          <div className="portal-list-row"><div><strong>SLA performance</strong><span>{number(analytics.handoffs.slaBreached)} breached · {number(analytics.handoffs.slaTracked)} tracked</span></div><em>{rate(analytics.handoffs.slaMetRate)}</em></div>
           <div className="portal-list-row"><div><strong>Post-handoff follow-up</strong><span>Completed customer check-ins</span></div><em>{number(analytics.handoffs.followUpCompleted)} / {number(analytics.handoffs.followUpRequired)}</em></div>
         </div>
       </article>
