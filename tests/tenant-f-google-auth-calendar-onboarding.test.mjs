@@ -309,7 +309,11 @@ test("F5 availability engine enforces business rules before Google free busy",()
   assert.match(scheduling,/bufferBeforeMinutes/);
   assert.match(scheduling,/bufferAfterMinutes/);
   assert.match(scheduling,/calendarSlotAvailable/);
-  assert.ok(scheduling.indexOf("evaluateAvailabilityPolicy")<scheduling.indexOf("calendarSlotAvailable"));
+  const availabilityStart=scheduling.indexOf("export async function evaluateResourceAvailability");
+  const routingStart=scheduling.indexOf("async function routingSettings",availabilityStart);
+  const availabilityBlock=scheduling.slice(availabilityStart,routingStart);
+  assert.ok(availabilityBlock.indexOf("evaluateAvailabilityPolicy")>=0);
+  assert.ok(availabilityBlock.indexOf("calendarSlotAvailable")>availabilityBlock.indexOf("evaluateAvailabilityPolicy"));
 });
 
 test("F5 availability is timezone aware and supports service durations",()=>{
