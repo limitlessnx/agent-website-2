@@ -11,6 +11,8 @@ export type WhatsAppReadiness = {
   verifiedName: string | null;
   qualityRating: string | null;
   accountStatus: string | null;
+  coexistenceActive: boolean;
+  platformType: string | null;
   webhookSecretConfigured: boolean;
   verifyTokenConfigured: boolean;
   triggerRuntimeConfigured: boolean;
@@ -82,7 +84,7 @@ async function verifyMetaPhoneNumber(credentials: Json) {
   const graphVersion = String(credentials.graph_version || "v23.0");
   if (!phoneNumberId || !accessToken) throw new Error("WhatsApp phone number ID or access token is missing.");
   const url = new URL(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}`);
-  url.searchParams.set("fields", "display_phone_number,verified_name,quality_rating,status");
+  url.searchParams.set("fields", "display_phone_number,verified_name,quality_rating,status,is_on_biz_app,platform_type");
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}`, accept: "application/json" },
     cache: "no-store",
@@ -135,6 +137,7 @@ export async function checkWhatsAppReadiness(organizationId: string): Promise<Wh
     { key: "webhook_signature", ok: appSecretConfigured, detail: appSecretConfigured ? "Webhook app secret is configured." : "Webhook app secret is missing." },
     { key: "verify_token", ok: verifyTokenConfigured, detail: verifyTokenConfigured ? "Webhook verify token is configured." : "Webhook verify token is missing." },
     { key: "trigger_runtime", ok: triggerRuntimeConfigured, detail: triggerRuntimeConfigured ? "Trigger.dev is the configured runtime route." : "Trigger.dev is not selected as the runtime route." },
+    { key: "coexistence", ok: true, detail: meta?.is_on_biz_app === true ? "WhatsApp Business App + Cloud API coexistence is active." : "Cloud API mode detected; Business App coexistence is not active." },
   ];
 
   const readyForCutover = checks.every((check) => check.ok);
@@ -168,6 +171,8 @@ export async function checkWhatsAppReadiness(organizationId: string): Promise<Wh
     verifiedName: meta?.verified_name ? String(meta.verified_name) : null,
     qualityRating: meta?.quality_rating ? String(meta.quality_rating) : null,
     accountStatus: meta?.status ? String(meta.status) : null,
+    coexistenceActive: meta?.is_on_biz_app === true,
+    platformType: meta?.platform_type ? String(meta.platform_type) : null,
     webhookSecretConfigured: appSecretConfigured,
     verifyTokenConfigured,
     triggerRuntimeConfigured,
