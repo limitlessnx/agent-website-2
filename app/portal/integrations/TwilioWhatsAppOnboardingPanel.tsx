@@ -99,6 +99,13 @@ export default function TwilioWhatsAppOnboardingPanel({
     return()=>window.removeEventListener("message",listener);
   },[phone,profileName]);
 
+  useEffect(()=>{
+    const status=String(binding?.status||"");
+    if(!["awaiting_sender_online","registering_sender","provisioning_subaccount"].includes(status))return;
+    const timer=window.setInterval(()=>{void refreshStatus(true);},15000);
+    return()=>window.clearInterval(timer);
+  },[binding?.status]);
+
   async function complete(sessionId:string,wabaId:string,metaPhoneNumberId:string){
     setBusy(true);setError("");setMessage("Creating your WhatsApp sender in Twilio...");
     try{
@@ -166,16 +173,31 @@ export default function TwilioWhatsAppOnboardingPanel({
     }
   }
 
-  async function refreshStatus(){
-    setBusy(true);setError("");setMessage("");
+  async function refreshStatus(silent=false){
+    if(!silent)setBusy(true);
+    if(!silent){setError("");setMessage("");}
     try{
       const response=await fetch("/api/integrations/whatsapp/twilio/status",{cache:"no-store"});
       const body=await response.json().catch(()=>({}));
       if(!response.ok) throw new Error(body.error||"Unable to check sender status.");
       setBinding(body.binding||null);
-      setMessage(body.status==="connected"?"WhatsApp sender is online.":"Twilio is still preparing the WhatsApp sender.");
+      if(!silent)setMessage(body.status==="connected"?"WhatsApp sender is online.":"Twilio is still preparing the WhatsApp sender.");
       router.refresh();
-    }catch(err){setError(err instanceof Error?err.message:"Unable to check WhatsApp status.");}
+    }catch(err){if(!silent)setError(err instanceof Error?err.message:"Unable to check WhatsApp status.");}
+    finally{if(!silent)setBusy(false);}
+  }
+
+  async function disconnect(){
+    if(!window.confirm("Disconnect WhatsApp from this Fluxknight workspace? This removes the Twilio sender but keeps customer history."))return;
+    setBusy(true);setError("");setMessage("");
+    try{
+      const response=await fetch("/api/integrations/whatsapp/twilio/disconnect",{method:"POST"});
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(body.error||"Unable to disconnect WhatsApp.");
+      setBinding({...binding,status:"disconnected",twilio_sender_status:"OFFLINE"});
+      setMessage("WhatsApp disconnected. You can reconnect this workspace at any time.");
+      router.refresh();
+    }catch(err){setError(err instanceof Error?err.message:"Unable to disconnect WhatsApp.");}
     finally{setBusy(false);}
   }
 
@@ -212,8 +234,14 @@ export default function TwilioWhatsAppOnboardingPanel({
     </div>:null}
 
     {canManage&&binding&&["awaiting_sender_online","registering_sender","provisioning_subaccount","degraded"].includes(status)
-      ?<div style={{marginTop:16}}><button type="button" onClick={()=>void refreshStatus()} disabled={busy}>{busy?"Checking...":"Check sender status"}</button></div>
+      ?<div style={{marginTop:16,display:"flex",gap:10,flexWrap:"wrap"}}>
+        <button type="button" onClick={()=>void refreshStatus(false)} disabled={busy}>{busy?"Checking...":"Check sender status"}</button>
+        <button type="button" onClick={()=>void disconnect()} disabled={busy}>Disconnect WhatsApp</button>
+      </div>
       :null}
+    {canManage&&connected?<div style={{marginTop:16}}>
+      <button type="button" onClick={()=>void disconnect()} disabled={busy}>Disconnect WhatsApp</button>
+    </div>:null}
 
     {message?<p className="portal-empty">{message}</p>:null}
     {error?<p className="portal-empty">{error}</p>:null}
