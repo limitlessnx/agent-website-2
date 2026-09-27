@@ -3,6 +3,7 @@ import { CreditCard, WalletCards } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getFluxWalletSummary } from "@/lib/flux-credits";
 import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
+import FluxCreditTopUpForm from "./FluxCreditTopUpForm";
 
 export const metadata = { title: "Billing | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -79,12 +80,15 @@ export default async function PortalBillingPage() {
         </article>
 
         <article className="portal-card">
-          <div className="portal-card-head"><div><h2>Options</h2><p>Top-ups extend credit capacity only. They do not unlock higher-plan features.</p></div></div>
-          <div className="portal-actions" style={{ marginTop: 20 }}>
-            {wallet.canTopUp ? <Link className="portal-button" href="/pricing#plan-details">Add credits</Link> : null}
+          <div className="portal-card-head"><div>
+            <h2>Top up Flux Credits</h2>
+            <p>1 Flux Credit = $0.01 of customer-facing usage value. Minimum top-up: $10 = 1,000 credits.</p>
+          </div></div>
+          {wallet.canTopUp ? <FluxCreditTopUpForm /> : <p className="portal-empty">Top-ups become available after the Basic trial converts.</p>}
+          <div className="portal-actions" style={{marginTop:20}}>
             <Link className="portal-button secondary" href="/pricing#plan-details">Upgrade plan</Link>
           </div>
-          {!wallet.canTopUp ? <p className="portal-empty">Top-ups become available after the Basic trial converts.</p> : null}
+          <p className="portal-empty">Top-ups increase usage capacity only. They do not unlock higher-plan features.</p>
         </article>
       </section>
     </main>
