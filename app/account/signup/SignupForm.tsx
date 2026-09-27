@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import GoogleAuthButton from "../GoogleAuthButton";
 
 type SignupFormProps = {
   txRef?: string;
@@ -77,6 +78,8 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
       {isBasicTrial ? <p className="admin-form-message">Basic free trial · no payment is collected on this screen.</p> : null}
+      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" />
+      <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
