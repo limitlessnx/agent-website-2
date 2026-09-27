@@ -9,9 +9,10 @@ type SignupFormProps = {
   txRef?: string;
   nextPath?: string;
   trialPlan?: "" | "basic";
+  invitationToken?: string;
 };
 
-export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan = "" }: SignupFormProps) {
+export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan = "", invitationToken = "" }: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -78,7 +79,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
       {isBasicTrial ? <p className="admin-form-message">Basic free trial · no payment is collected on this screen.</p> : null}
-      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" />
+      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" txRef={txRef} trialPlan={trialPlan} invitationToken={invitationToken} />
       <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
