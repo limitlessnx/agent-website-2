@@ -7,7 +7,7 @@ const root=process.cwd();
 const read=(file)=>fs.readFileSync(path.join(root,file),"utf8");
 
 test("F7 stores one tenant WABA on one Twilio subaccount",()=>{
-  const migration=read("supabase/migrations/20260927143920_f7_twilio_whatsapp_tech_provider_onboarding.sql");
+  const migration=read("supabase/migrations/20260927134301_f7_twilio_whatsapp_tech_provider_onboarding.sql");
   assert.match(migration,/organization_id uuid not null unique/);
   assert.match(migration,/twilio_subaccount_sid text unique/);
   assert.match(migration,/twilio_sender_sid text unique/);
@@ -101,7 +101,7 @@ test("F7 readiness treats Twilio ONLINE as the production sender gate",()=>{
 });
 
 test("F7 Twilio onboarding mutation RPC is service-role only",()=>{
-  const migration=read("supabase/migrations/20260927143920_f7_twilio_whatsapp_tech_provider_onboarding.sql");
+  const migration=read("supabase/migrations/20260927134301_f7_twilio_whatsapp_tech_provider_onboarding.sql");
   assert.match(migration,/revoke all on function public\.upsert_whatsapp_twilio_binding[\s\S]*from public,anon,authenticated/);
   assert.match(migration,/grant execute on function public\.upsert_whatsapp_twilio_binding[\s\S]*to service_role/);
 });
