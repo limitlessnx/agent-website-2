@@ -65,7 +65,7 @@ export const orchestrationRecoverySweep = schedules.task({
 
 export const handoffFollowupDrain = schedules.task({
   id: "handoff-followup-drain",
-  cron: "*/5 * * * *",
+  cron: "* * * * *",
   maxDuration: 300,
   run: async () => {
     const result = await processDueHandoffFollowups(100);
