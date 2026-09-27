@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { logger, schedules, task } from "@trigger.dev/sdk";
+import { logger, task } from "@trigger.dev/sdk";
 import {
   metaPublisherConfigFromIntegration,
   publishMetaPost,
@@ -401,87 +401,6 @@ export const fluxSocialPublishPost = task({
       platforms,
       publishedAt: completedAt,
       publisher: "meta-graph-api",
-    };
-  },
-});
-
-export const fluxSocialScheduler = schedules.task({
-  id: "flux-social-scheduler",
-  cron: "*/5 * * * *",
-  retry: {
-    maxAttempts: 3,
-    minTimeoutInMs: 5_000,
-    maxTimeoutInMs: 30_000,
-    factor: 2,
-    randomize: true,
-  },
-  maxDuration: 120,
-  run: async () => {
-    const supabase = createSocialAdminClient();
-    const now = new Date().toISOString();
-
-    const { data: dueSchedules, error } = await supabase
-      .from("social_schedules")
-      .select("id,organization_id,post_id,status,scheduled_for,metadata")
-      .eq("status", "pending")
-      .lte("scheduled_for", now)
-      .order("scheduled_for", { ascending: true })
-      .limit(20);
-
-    if (error) throw error;
-
-    let queued = 0;
-
-    for (const rawSchedule of dueSchedules || []) {
-      const schedule = rawSchedule as ScheduledPost;
-
-      const { data: claimed, error: claimError } = await supabase
-        .from("social_schedules")
-        .update({
-          status: "claimed",
-          claimed_at: now,
-          last_error: null,
-        })
-        .eq("id", schedule.id)
-        .eq("status", "pending")
-        .select("id")
-        .maybeSingle();
-
-      if (claimError) throw claimError;
-      if (!claimed) continue;
-
-      try {
-        await fluxSocialPublishPost.trigger({ scheduleId: schedule.id });
-        queued += 1;
-      } catch (triggerError) {
-        const message =
-          triggerError instanceof Error
-            ? triggerError.message
-            : String(triggerError);
-
-        await supabase
-          .from("social_schedules")
-          .update({
-            status: "pending",
-            claimed_at: null,
-            last_error: message,
-          })
-          .eq("id", schedule.id);
-
-        throw triggerError;
-      }
-    }
-
-    logger.info("Flux Social scheduler sweep complete", {
-      due: dueSchedules?.length || 0,
-      queued,
-      checkedAt: now,
-    });
-
-    return {
-      due: dueSchedules?.length || 0,
-      queued,
-      checkedAt: now,
     };
   },
 });
