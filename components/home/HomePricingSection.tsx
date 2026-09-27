@@ -40,7 +40,7 @@ export default function HomePricingSection() {
             Start with what you need. Automate more when it makes sense.
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-neutral-400 md:text-lg">
-            The homepage gives you the useful numbers. The full comparison can live on the pricing page, where pricing details belong instead of staging a small coup against the homepage.
+            See the starting numbers here, then use the pricing page for the full feature, channel and credit comparison.
           </p>
         </div>
 
