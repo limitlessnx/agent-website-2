@@ -224,6 +224,32 @@ export function registerProductionRuntimeExecutors(registry: RuntimeToolRegistry
     emitAgentSystemEvent({ eventType: "appointment.requested", args, context }));
   register(registry, "flux.system.followup.request", async (args, context) =>
     emitAgentSystemEvent({ eventType: "follow_up.requested", args, context }));
+  register(registry, "flux.system.handoff.request", async (args, context) =>
+    emitAgentSystemEvent({ eventType: "handoff.requested", args, context }));
+  register(registry, "flux.system.customer.stage.update", async (args, context) => {
+    const organizationId=requireOrganization(context);
+    const customerId=text(args.customer_id||args.customerId);
+    const stageKey=text(args.stageKey||args.stage_key);
+    if(!customerId||!stageKey) throw new Error("customer_id and stageKey are required.");
+    const stages=await supabaseServerRequest<Array<{id:string,name:string}>>(
+      `organization_customer_stages?select=id,name&organization_id=eq.${encodeURIComponent(organizationId)}&key=eq.${encodeURIComponent(stageKey)}&status=eq.active&limit=1`,
+    );
+    if(!stages[0]) throw new Error("Customer stage is not configured for this organization.");
+    const result=await supabaseServerRequest<Record<string,unknown>[]>("rpc/update_customer_stage",{
+      method:"POST",
+      body:JSON.stringify({
+        p_organization_id:organizationId,
+        p_customer_id:customerId,
+        p_stage_id:stages[0].id,
+        p_changed_by_type:"agent",
+        p_changed_by_id:context.agentId||null,
+        p_reason:text(args.reason)||null,
+        p_source:"agent_runtime",
+        p_metadata:{execution_id:context.executionId},
+      }),
+    });
+    return result[0]||{customer_id:customerId,stage_id:stages[0].id,stage_name:stages[0].name};
+  });
 
   return registry;
 }
