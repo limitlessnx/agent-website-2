@@ -217,6 +217,14 @@ export async function completeTwilioWhatsAppEmbeddedSignup(input:{
       wabaId,
       metaPhoneNumberId:String(input.metaPhoneNumberId||"").trim()||null,
     });
+    if(partialIntegrationId){
+      await admin.from("organization_integrations").update({
+        status:"configured",
+        health:{state:"provisioning",message:"Twilio subaccount created. Registering WhatsApp sender."},
+        last_checked_at:new Date().toISOString(),
+        updated_at:new Date().toISOString(),
+      }).eq("organization_id",input.organizationId).eq("id",partialIntegrationId);
+    }
     await (admin as any).rpc("upsert_whatsapp_twilio_binding",{
       p_organization_id:input.organizationId,
       p_integration_id:partialIntegrationId||null,
@@ -253,19 +261,47 @@ export async function completeTwilioWhatsAppEmbeddedSignup(input:{
       p_provider_metadata:{onboarding_session_id:session.id},
     });
 
-    const sender=await registerTwilioWhatsAppSender({
-      accountSid:subaccountSid,
-      authToken:subaccountAuthToken,
-      phoneE164:senderPhone,
-      wabaId,
-      profileName,
-      callbackUrl:`${origin}/api/whatsapp/twilio/webhook`,
-      fallbackUrl:`${origin}/api/whatsapp/twilio/fallback`,
-      statusCallbackUrl:`${origin}/api/whatsapp/twilio/status`,
-      numberSource:session.number_source as NumberSource,
-    });
-    senderSid=sender.sid;
-    senderStatus=sender.status||"CREATING";
+    try{
+      const sender=await registerTwilioWhatsAppSender({
+        accountSid:subaccountSid,
+        authToken:subaccountAuthToken,
+        phoneE164:senderPhone,
+        wabaId,
+        profileName,
+        callbackUrl:`${origin}/api/whatsapp/twilio/webhook`,
+        fallbackUrl:`${origin}/api/whatsapp/twilio/fallback`,
+        statusCallbackUrl:`${origin}/api/whatsapp/twilio/status`,
+        numberSource:session.number_source as NumberSource,
+      });
+      senderSid=sender.sid;
+      senderStatus=sender.status||"CREATING";
+    }catch(error){
+      const typed=error as Error&{code?:string};
+      await (admin as any).rpc("upsert_whatsapp_twilio_binding",{
+        p_organization_id:input.organizationId,
+        p_integration_id:existing?.integration_id||null,
+        p_status:"failed",
+        p_meta_waba_id:wabaId,
+        p_meta_phone_number_id:String(input.metaPhoneNumberId||"").trim()||null,
+        p_sender_phone_e164:senderPhone,
+        p_sender_profile_name:profileName,
+        p_number_source:session.number_source,
+        p_twilio_subaccount_sid:subaccountSid,
+        p_last_error_code:typed.code||null,
+        p_last_error_message:typed.message,
+        p_provider_metadata:{onboarding_session_id:session.id,sender_registration_failed_at:new Date().toISOString()},
+      });
+      await admin.from("whatsapp_twilio_onboarding_sessions").update({
+        status:"failed",last_error:typed.message,updated_at:new Date().toISOString(),
+      }).eq("id",session.id).eq("organization_id",input.organizationId);
+      await admin.from("organization_integrations").update({
+        status:"degraded",
+        health:{state:"degraded",message:typed.message},
+        last_checked_at:new Date().toISOString(),
+        updated_at:new Date().toISOString(),
+      }).eq("organization_id",input.organizationId).eq("provider","whatsapp");
+      throw error;
+    }
   }
 
   const integrationId=await storeTwilioTenantCredentials({
