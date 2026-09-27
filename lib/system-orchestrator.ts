@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createHandoffFromSystemEvent } from "@/lib/human-operations";
 import { executeSystemWorkflowAdapter } from "@/lib/system-event-adapters";
 
 export type SystemEventEnvelope = {
@@ -320,6 +321,16 @@ export async function processSystemEvent(eventId?: string | null) {
 
   const supabase = createAdminClient();
   try {
+    if(event.eventType==="handoff.requested"){
+      const result=await createHandoffFromSystemEvent(event);
+      const {error}=await supabase.from("domain_events").update({
+        status:"published",published_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString(),
+        metadata:{contract_version:"1",platform_handler:"human_handoff",handoff_id:result.handoffId},
+      }).eq("organization_id",event.organizationId).eq("id",event.id);
+      if(error) throw error;
+      return {status:"published" as const,eventId:event.id,correlationId:event.correlationId,platformHandler:"human_handoff",result,deliveries:[]};
+    }
+
     const routes = await resolveRoutes(event);
     if (!routes.length) {
       const message = "No active authorized system route matched this event.";
