@@ -58,7 +58,7 @@ test("D4 WhatsApp coexistence echoes record human replies and activate takeover"
   assert.match(coexistence,/whatsapp_business_app/);
 });
 
-test("D4 post-handoff check-in respects WhatsApp service window/template delivery",()=>{
+test("D4 post-handoff check-in remains callable while automatic schedules are paused",()=>{
   const followup=read("lib/handoff-followup.ts");
   const trigger=read("src/trigger/system-orchestrator.ts");
   assert.match(followup,/lastCustomerMessageAt/);
@@ -66,6 +66,7 @@ test("D4 post-handoff check-in respects WhatsApp service window/template deliver
   assert.match(followup,/templatePurpose:"handoff_follow_up"/);
   assert.match(followup,/handoff_follow_up/);
   assert.match(trigger,/id: "handoff-followup-drain"/);
+  assert.doesNotMatch(trigger,/schedules\.task/);
 });
 
 test("D4 customer and handoff settings are tenant-managed in existing portal surfaces",()=>{
