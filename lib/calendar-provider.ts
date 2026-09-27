@@ -55,7 +55,11 @@ async function getIntegrationCredentials(organizationId: string, provider: strin
   return data as Json;
 }
 
-async function refreshGoogleAccessToken(credentials: Json) {
+async function refreshGoogleAccessToken(
+  organizationId: string,
+  provider: string,
+  credentials: Json,
+) {
   const refreshToken = text(credentials.refresh_token);
   let clientId = text(credentials.client_id);
   let clientSecret = text(credentials.client_secret);
@@ -85,7 +89,38 @@ async function refreshGoogleAccessToken(credentials: Json) {
   if (!response.ok) throw new Error(text(body.error_description) || text(body.error) || "Google OAuth token refresh failed.");
   const accessToken = text(body.access_token);
   if (!accessToken) throw new Error("Google OAuth token refresh returned no access token.");
+
+  const expiresIn = Math.max(60, Number(body.expires_in) || 3600);
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  const admin = createAdminClient() as any;
+  const { error } = await admin.rpc("refresh_organization_integration_access_token", {
+    p_organization_id: organizationId,
+    p_provider: provider,
+    p_access_token: accessToken,
+    p_expires_at: expiresAt,
+    p_token_type: text(body.token_type) || "Bearer",
+  });
+  if (error) throw error;
   return accessToken;
+}
+
+function accessTokenExpired(credentials: Json) {
+  const expiresAt = text(credentials.expires_at);
+  if (!expiresAt) return false;
+  const timestamp = Date.parse(expiresAt);
+  return Number.isFinite(timestamp) && timestamp <= Date.now() + 60_000;
+}
+
+export async function getValidGoogleCalendarAccessToken(
+  organizationId: string,
+  provider = "google_calendar",
+) {
+  const credentials = await getIntegrationCredentials(organizationId, provider);
+  let accessToken = text(credentials.access_token);
+  if (!accessToken || accessTokenExpired(credentials)) {
+    accessToken = await refreshGoogleAccessToken(organizationId, provider, credentials);
+  }
+  return { accessToken, credentials };
 }
 
 async function googleFetch(
@@ -94,9 +129,8 @@ async function googleFetch(
   url: string,
   init: RequestInit,
 ) {
-  const credentials = await getIntegrationCredentials(organizationId, provider);
-  let accessToken = text(credentials.access_token);
-  if (!accessToken) accessToken = await refreshGoogleAccessToken(credentials);
+  const { accessToken: initialToken, credentials } = await getValidGoogleCalendarAccessToken(organizationId, provider);
+  let accessToken = initialToken;
 
   const request = async (token: string) => fetch(url, {
     ...init,
@@ -110,7 +144,7 @@ async function googleFetch(
 
   let response = await request(accessToken);
   if (response.status === 401 && text(credentials.refresh_token)) {
-    accessToken = await refreshGoogleAccessToken(credentials);
+    accessToken = await refreshGoogleAccessToken(organizationId, provider, credentials);
     response = await request(accessToken);
   }
   return response;
