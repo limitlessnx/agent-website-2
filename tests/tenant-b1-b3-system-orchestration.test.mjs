@@ -39,10 +39,10 @@ test("B2 target execution reuses canonical runtime and idempotency",()=>{
   assert.match(service,/p_conversation_id: event\.conversationId/);
 });
 
-test("B3 Trigger dispatcher and scheduled drain use the shared processor",()=>{
+test("B3 Trigger dispatcher and on-demand drain use the shared processor while schedules are paused",()=>{
   const trigger=read("src/trigger/system-orchestrator.ts");
   assert.match(trigger,/id: "system-event-dispatch"/);
   assert.match(trigger,/id: "system-event-drain"/);
-  assert.match(trigger,/cron: "\* \* \* \* \*"/);
+  assert.doesNotMatch(trigger,/schedules\.task/);
   assert.match(trigger,/processSystemEvent/);
 });
