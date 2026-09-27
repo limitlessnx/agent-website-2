@@ -239,6 +239,7 @@ export const tenantWhatsAppInbound = task({
           arguments:{
             ...call.arguments,
             customer_id:customerId,
+            conversation_id:conversationId,
             correlation_id:inbound.id,
             customer_phone:payload.customerPhone || null,
             customer_name:payload.customerName || null,
