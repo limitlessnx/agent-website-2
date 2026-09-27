@@ -7,7 +7,7 @@ function cleanPhone(value: unknown) {
 
 export async function recordWhatsAppBusinessAppEcho(input:{
   organizationId:string;
-  sourceSystemId:string;
+  sourceSystemId?:string|null;
   agentId:string;
   customerPhone:string;
   messageId:string;
@@ -56,7 +56,7 @@ export async function recordWhatsAppBusinessAppEcho(input:{
 
   const admin=createAdminClient();
   const {data:active,error:activeError}=await admin.from("human_handoffs")
-    .select("id,assigned_membership_id,status")
+    .select("id,assigned_membership_id,status,metadata,claimed_at")
     .eq("organization_id",input.organizationId)
     .eq("conversation_id",conversationId)
     .in("status",["open","assigned","in_progress","waiting_customer"])
@@ -92,9 +92,10 @@ export async function recordWhatsAppBusinessAppEcho(input:{
   const now=new Date().toISOString();
   await admin.from("human_handoffs").update({
     status:"in_progress",
-    claimed_at:active?.status==="in_progress" ? undefined : now,
+    ...(active?.claimed_at?{}:{claimed_at:now}),
     updated_at:now,
     metadata:{
+      ...(((active?.metadata||{}) as Record<string,unknown>)),
       source:"whatsapp_coexistence",
       last_business_app_echo_id:input.messageId,
       last_business_app_echo_at:now,
