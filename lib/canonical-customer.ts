@@ -47,7 +47,6 @@ export async function getOrCreateCanonicalConversation(input:{
   externalThreadId?:string|null;
   agentId?:string|null;
   metadata?:Record<string,unknown>;
-  createdAt?:string|null;
 }) {
   const admin=createAdminClient() as any;
   const {data,error}=await admin.rpc("get_or_create_crm_conversation",{
@@ -71,6 +70,7 @@ export async function addCanonicalCrmMessage(input:{
   externalMessageId?:string|null;
   status?:"received"|"queued"|"sent"|"delivered"|"read"|"failed";
   metadata?:Record<string,unknown>;
+  createdAt?:string|null;
 }) {
   const admin=createAdminClient();
   if(input.externalMessageId) {
