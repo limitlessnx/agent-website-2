@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Handoff={
-  id:string;reason:string;category:string;priority:string;status:string;
+  id:string;conversation_id:string;reason:string;category:string;priority:string;status:string;
   assigned_membership_id?:string|null;claimed_by_membership_id?:string|null;sla_due_at?:string|null;created_at:string;
   conversation_summary?:string|null;stage_name?:string|null;next_action?:string|null;outcome?:string|null;
   follow_up_required?:boolean;follow_up_due_at?:string|null;follow_up_status?:string|null;assigned_to_email?:string|null;
@@ -62,6 +63,7 @@ export default function HumanOperationsPanel({
           </small>
         </div>
         <div className="portal-action-list" style={{minWidth:240}}>
+          <Link href={"/portal/conversations/"+item.conversation_id}>Open conversation</Link>
           {!item.claimed_by_membership_id?
             <button type="button" disabled={busy===item.id+":claim"} onClick={()=>post(`/api/portal/handoffs/${item.id}`,{action:"claim"},item.id+":claim")}>Claim</button>:null}
           {canManageHandoffs?<select
