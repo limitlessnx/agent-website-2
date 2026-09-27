@@ -11,6 +11,7 @@ export type CalendarResource = {
   external_calendar_id: string;
   display_name: string;
   organizer_email?: string | null;
+  assigned_membership_id?: string | null;
   timezone: string;
   default_duration_minutes: number;
   is_default: boolean;
