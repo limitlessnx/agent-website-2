@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationAccessContext, assertAnyOrganizationPermission } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listWritableGoogleCalendars } from "@/lib/google-calendar-oauth";
+import { getValidGoogleCalendarAccessToken } from "@/lib/calendar-provider";
 
 export async function POST(request:NextRequest){
   const session=await getClientSession();
@@ -24,17 +25,8 @@ export async function POST(request:NextRequest){
   if(integrationError) return NextResponse.json({error:integrationError.message},{status:400});
   if(!integration) return NextResponse.json({error:"Google Calendar is not connected"},{status:404});
 
-  const {data:credentials,error:credentialError}=await (admin as any).rpc("get_organization_integration_credentials",{
-    p_organization_id:session.organizationId,
-    p_provider:"google_calendar",
-  });
-  if(credentialError) return NextResponse.json({error:credentialError.message},{status:400});
-  const accessToken=credentials&&typeof credentials==="object"
-    ? String((credentials as Record<string,unknown>).access_token||"")
-    :"";
-  if(!accessToken) return NextResponse.json({error:"Google Calendar credentials are unavailable"},{status:400});
-
   try{
+    const {accessToken}=await getValidGoogleCalendarAccessToken(session.organizationId,"google_calendar");
     const calendars=await listWritableGoogleCalendars(accessToken);
     const selected=calendars.find((item)=>item.id===calendarId);
     if(!selected) return NextResponse.json({error:"Selected calendar is not writable or no longer available"},{status:400});
