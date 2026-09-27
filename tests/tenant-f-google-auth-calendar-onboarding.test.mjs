@@ -4,12 +4,14 @@ import { readFileSync } from "node:fs";
 
 const read=(path)=>readFileSync(path,"utf8");
 
-test("F Google account auth uses Supabase Google OAuth with identity-only scopes",()=>{
+test("F1 Google account auth starts server-side with PKCE and identity-only scopes",()=>{
   const button=read("app/account/GoogleAuthButton.tsx");
+  const start=read("app/api/client-auth/google/start/route.ts");
   const callback=read("app/auth/callback/route.ts");
-  assert.match(button,/provider:"google"/);
-  assert.match(button,/openid email profile/);
-  assert.doesNotMatch(button,/calendar\.events|calendar\.freebusy|calendarlist/);
+  assert.match(button,/\/api\/client-auth\/google\/start/);
+  assert.match(start,/provider:"google"/);
+  assert.match(start,/openid email profile/);
+  assert.doesNotMatch(start,/calendar\.events|calendar\.freebusy|calendarlist/);
   assert.match(callback,/exchangeCodeForSession/);
   assert.match(callback,/getPrimaryMembership/);
   assert.match(callback,/setPendingClientSetupSession/);
@@ -97,4 +99,49 @@ test("F environment contract keeps Google OAuth secrets server-only",()=>{
   assert.match(env,/GOOGLE_CALENDAR_CLIENT_SECRET=/);
   assert.match(env,/GOOGLE_CALENDAR_REDIRECT_URI=/);
   assert.doesNotMatch(env,/NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_SECRET/);
+});
+
+
+test("F1 Google OAuth preserves signed onboarding context through redirects",()=>{
+  const auth=read("lib/client-auth.ts");
+  const button=read("app/account/GoogleAuthButton.tsx");
+  const start=read("app/api/client-auth/google/start/route.ts");
+  const callback=read("app/auth/callback/route.ts");
+  const setup=read("app/api/client-auth/setup-workspace/route.ts");
+  assert.match(auth,/CLIENT_OAUTH_CONTEXT_COOKIE/);
+  assert.match(auth,/httpOnly:true/);
+  assert.match(auth,/trialPlan/);
+  assert.match(auth,/invitationToken/);
+  assert.match(button,/tx_ref/);
+  assert.match(button,/invitation_token/);
+  assert.match(start,/setClientOAuthContext/);
+  assert.match(callback,/getClientOAuthContext/);
+  assert.match(callback,/context\.txRef/);
+  assert.match(callback,/context\.trialPlan/);
+  assert.match(setup,/redirect_to/);
+});
+
+test("F1 invited Google users join the invited tenant before primary-membership fallback",()=>{
+  const callback=read("app/auth/callback/route.ts");
+  const invitationIndex=callback.indexOf("acceptOrganizationInvitation");
+  const primaryIndex=callback.indexOf("membership=await getPrimaryMembership");
+  assert.ok(invitationIndex>=0);
+  assert.ok(primaryIndex>invitationIndex);
+  assert.match(callback,/getMembershipForOrganization/);
+});
+
+test("F1 logout clears Supabase and Fluxknight auth state",()=>{
+  const route=read("app/api/client-auth/logout/route.ts");
+  assert.match(route,/supabase\.auth\.signOut/);
+  assert.match(route,/clearClientSession/);
+  assert.match(route,/clearPendingClientSetupSession/);
+  assert.match(route,/clearClientOAuthContext/);
+});
+
+test("F1 Google start validates redirect destination and keeps provider scopes separate from Calendar",()=>{
+  const start=read("app/api/client-auth/google/start/route.ts");
+  assert.match(start,/startsWith\("\/"\)/);
+  assert.match(start,/startsWith\("\/\/"\)/);
+  assert.match(start,/new URL\("\/auth\/callback",url\.origin\)/);
+  assert.doesNotMatch(start,/GOOGLE_CALENDAR_CLIENT_ID|GOOGLE_CALENDAR_CLIENT_SECRET/);
 });
