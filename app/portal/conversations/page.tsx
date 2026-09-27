@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { requirePortalPermission } from "@/lib/portal-access";
@@ -18,6 +19,6 @@ export default async function ConversationsPage() {
 
   return <main className="portal-page">
     <section className="portal-command-hero"><div><p className="portal-kicker">Conversations</p><h1>Customer conversations</h1><p>Tenant-scoped communication activity across connected channels.</p></div></section>
-    <section className="portal-card"><div className="portal-list">{conversations.map((item)=><div className="portal-list-row" key={item.id}><div><strong>{(item.channel || "conversation").replaceAll("_"," ")}</strong><span>{item.status || "open"} · {item.customer_id ? `Customer ${item.customer_id.slice(0,8)}` : "Unlinked customer"}</span></div><em>{new Date(item.updated_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"})}</em></div>)}{!conversations.length?<p className="portal-empty">No conversations recorded yet.</p>:null}</div></section>
+    <section className="portal-card"><div className="portal-list">{conversations.map((item)=><Link href={"/portal/conversations/"+item.id} className="portal-list-row" key={item.id}><div><strong>{(item.channel || "conversation").replaceAll("_"," ")}</strong><span>{item.status || "open"} · {item.customer_id ? `Customer ${item.customer_id.slice(0,8)}` : "Unlinked customer"}</span></div><em>{new Date(item.updated_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"})}</em></Link>)}{!conversations.length?<p className="portal-empty">No conversations recorded yet.</p>:null}</div></section>
   </main>;
 }
