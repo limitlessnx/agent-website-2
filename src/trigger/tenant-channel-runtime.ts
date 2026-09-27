@@ -232,8 +232,8 @@ export const tenantWhatsAppInbound = task({
         organizationId:payload.organizationId,
         action:"whatsapp_ai",
         source:"tenant_whatsapp_runtime",
-        provider:"openai",
-        model:result.model||null,
+        provider:result.model.provider,
+        model:result.model.modelKey,
         providerUsage:result.usage||{},
         metadata:{
           agent_id:payload.agentId,
