@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AgentRuntimeSDK } from "@/lib/ai-runtime/sdk";
 import { internalRuntimeIdentity, runPhase12Agent } from "@/lib/ai-runtime/migration";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 
 export type TenantChannelInboundPayload = {
   organizationId: string;
@@ -19,45 +20,16 @@ export type TenantChannelInboundPayload = {
 };
 
 async function resolveCustomer(payload: TenantChannelInboundPayload) {
-  const phone = String(payload.customerPhone || "").replace(/[^0-9]/g, "");
-  if (!phone) return null;
-  const admin = createAdminClient();
-
-  const byPhone = await admin
-    .from("crm_customers")
-    .select("id")
-    .eq("organization_id", payload.organizationId)
-    .eq("phone", phone)
-    .limit(1)
-    .maybeSingle();
-  if (byPhone.error) throw byPhone.error;
-  if (byPhone.data) return byPhone.data.id;
-
-  const externalKey = `whatsapp:${phone}`;
-  const byKey = await admin
-    .from("crm_customers")
-    .select("id")
-    .eq("organization_id", payload.organizationId)
-    .eq("external_key", externalKey)
-    .maybeSingle();
-  if (byKey.error) throw byKey.error;
-  if (byKey.data) return byKey.data.id;
-
-  const created = await admin
-    .from("crm_customers")
-    .insert({
-      organization_id: payload.organizationId,
-      external_key: externalKey,
-      full_name: String(payload.customerName || "").trim() || "WhatsApp customer",
-      phone,
-      status: "active",
-      profile: { preferred_channel: "whatsapp" },
-      metadata: { created_by: "tenant-channel-runtime" },
-    })
-    .select("id")
-    .single();
-  if (created.error) throw created.error;
-  return created.data.id;
+  const phone=String(payload.customerPhone||"").trim();
+  if(!phone) return null;
+  const resolved=await resolveCanonicalCustomer({
+    organizationId:payload.organizationId,
+    phone,
+    externalKey:`whatsapp:${phone}`,
+    fullName:payload.customerName||"WhatsApp customer",
+    source:"tenant-whatsapp-runtime",
+  });
+  return resolved.customerId;
 }
 
 async function validateRuntimeBinding(payload: TenantChannelInboundPayload) {
@@ -130,6 +102,28 @@ export const tenantWhatsAppInbound = task({
     await validateRuntimeBinding(payload);
     const customerId = await resolveCustomer(payload);
     const inbound = await claimInbound(payload, customerId);
+    const conversationId=customerId
+      ? await getOrCreateCanonicalConversation({
+          organizationId:payload.organizationId,
+          customerId,
+          channel:"whatsapp",
+          externalThreadId:payload.externalConversationId||`whatsapp:${payload.customerPhone||customerId}`,
+          agentId:payload.agentId,
+          metadata:{source_system_id:payload.sourceSystemId,provider:payload.provider},
+        })
+      : null;
+    if(conversationId){
+      await addCanonicalCrmMessage({
+        organizationId:payload.organizationId,
+        conversationId,
+        senderType:"customer",
+        direction:"inbound",
+        content:payload.message,
+        externalMessageId:`whatsapp-inbound:${payload.externalEventId}`,
+        status:"received",
+        metadata:{provider:payload.provider,inbound_event_id:inbound.id},
+      });
+    }
     if (inbound.status === "completed") {
       return { ok:true, duplicate:true, inboundEventId:inbound.id };
     }
@@ -177,13 +171,25 @@ export const tenantWhatsAppInbound = task({
       }
 
       if (payload.customerPhone && result.reply.trim()) {
-        await sendWhatsAppMessage({
+        const delivery=await sendWhatsAppMessage({
           organizationId:payload.organizationId,
           to:payload.customerPhone,
           text:result.reply,
           deliveryMode:"direct",
           lastCustomerMessageAt:new Date().toISOString(),
         });
+        if(conversationId){
+          await addCanonicalCrmMessage({
+            organizationId:payload.organizationId,
+            conversationId,
+            senderType:"agent",
+            direction:"outbound",
+            content:result.reply,
+            externalMessageId:delivery.providerMessageId||`whatsapp-runtime:${result.executionId}`,
+            status:delivery.providerMessageId?"sent":"queued",
+            metadata:{runtime_execution_id:result.executionId,provider:payload.provider},
+          });
+        }
       }
 
       await completeInbound(payload.organizationId,inbound.id);
