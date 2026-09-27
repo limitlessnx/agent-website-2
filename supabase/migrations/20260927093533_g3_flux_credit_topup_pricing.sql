@@ -111,9 +111,20 @@ begin
   returning * into wallet;
 
   insert into public.flux_credit_ledger(
-    organization_id,wallet_organization_id,transaction_type,action_key,
-    credit_delta,balance_after,source,provider,provider_cost_cents,customer_value_cents,
-    provider_usage,metadata,reason,created_by
+    organization_id,
+    wallet_organization_id,
+    transaction_type,
+    action_key,
+    credit_delta,
+    balance_after,
+    source,
+    provider,
+    provider_cost_cents,
+    customer_value_cents,
+    provider_usage,
+    metadata,
+    reason,
+    created_by
   ) values(
     session_row.organization_id,
     session_row.organization_id,

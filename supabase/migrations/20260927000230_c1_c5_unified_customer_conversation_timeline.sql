@@ -14,8 +14,7 @@ create table if not exists public.customer_identifiers (
   foreign key(organization_id,customer_id) references public.crm_customers(organization_id,id) on delete cascade
 );
 
-create index if not exists customer_identifiers_customer_idx
-  on public.customer_identifiers(organization_id,customer_id,identifier_type);
+create index if not exists customer_identifiers_customer_idx on public.customer_identifiers(organization_id,customer_id,identifier_type);
 
 create table if not exists public.customer_identity_conflicts (
   id uuid primary key default gen_random_uuid(),
@@ -68,7 +67,6 @@ grant all on public.customer_identifiers,public.customer_identity_conflicts,publ
 
 create policy customer_identifiers_select on public.customer_identifiers for select to authenticated
 using(public.has_organization_permission(organization_id,'customers.view') or public.has_organization_permission(organization_id,'customers.manage'));
-
 create policy customer_timeline_select on public.customer_timeline_events for select to authenticated
 using(public.has_organization_permission(organization_id,'customers.view') or public.has_organization_permission(organization_id,'customers.manage'));
 
@@ -88,8 +86,13 @@ begin
 end $$;
 
 create or replace function public.resolve_crm_customer(
-  p_organization_id uuid,p_email text default null,p_phone text default null,p_external_key text default null,
-  p_full_name text default null,p_company_name text default null,p_source text default 'runtime'
+  p_organization_id uuid,
+  p_email text default null,
+  p_phone text default null,
+  p_external_key text default null,
+  p_full_name text default null,
+  p_company_name text default null,
+  p_source text default 'runtime'
 ) returns jsonb
 language plpgsql security definer set search_path=''
 as $$
@@ -97,7 +100,9 @@ declare
   v_email text:=public.normalize_customer_identifier('email',p_email);
   v_phone text:=public.normalize_customer_identifier('phone',p_phone);
   v_external text:=public.normalize_customer_identifier('external',p_external_key);
-  v_ids uuid[]:='{}'::uuid[]; v_customer uuid; v_conflict uuid;
+  v_ids uuid[]:='{}'::uuid[];
+  v_customer uuid;
+  v_conflict uuid;
 begin
   select coalesce(array_agg(distinct customer_id),'{}'::uuid[]) into v_ids
   from public.customer_identifiers
@@ -118,8 +123,10 @@ begin
     v_customer:=v_ids[1];
     update public.crm_customers set
       full_name=coalesce(nullif(trim(p_full_name),''),full_name),
-      email=coalesce(v_email,email),phone=coalesce(v_phone,phone),
-      company_name=coalesce(nullif(trim(p_company_name),''),company_name),updated_at=now()
+      email=coalesce(v_email,email),
+      phone=coalesce(v_phone,phone),
+      company_name=coalesce(nullif(trim(p_company_name),''),company_name),
+      updated_at=now()
     where organization_id=p_organization_id and id=v_customer;
   else
     insert into public.crm_customers(organization_id,external_key,full_name,email,phone,company_name,status,metadata)
@@ -150,15 +157,20 @@ revoke all on function public.resolve_crm_customer(uuid,text,text,text,text,text
 grant execute on function public.resolve_crm_customer(uuid,text,text,text,text,text,text) to service_role;
 
 create or replace function public.get_or_create_crm_conversation(
-  p_organization_id uuid,p_customer_id uuid,p_channel text,p_external_thread_id text default null,
-  p_agent_id uuid default null,p_metadata jsonb default '{}'::jsonb
+  p_organization_id uuid,
+  p_customer_id uuid,
+  p_channel text,
+  p_external_thread_id text default null,
+  p_agent_id uuid default null,
+  p_metadata jsonb default '{}'::jsonb
 ) returns uuid
 language plpgsql security definer set search_path=''
 as $$
 declare v_id uuid;
 begin
-  if not exists(select 1 from public.crm_customers where organization_id=p_organization_id and id=p_customer_id)
-  then raise exception 'Customer does not belong to organization'; end if;
+  if not exists(select 1 from public.crm_customers where organization_id=p_organization_id and id=p_customer_id) then
+    raise exception 'Customer does not belong to organization';
+  end if;
   if p_external_thread_id is not null then
     select id into v_id from public.crm_conversations
     where organization_id=p_organization_id and channel=p_channel and external_thread_id=p_external_thread_id
@@ -180,10 +192,11 @@ revoke all on function public.get_or_create_crm_conversation(uuid,uuid,text,text
 grant execute on function public.get_or_create_crm_conversation(uuid,uuid,text,text,uuid,jsonb) to service_role;
 
 create or replace function public.add_customer_timeline_event(
- p_organization_id uuid,p_customer_id uuid,p_event_type text,p_title text,p_summary text default null,
- p_channel text default null,p_conversation_id uuid default null,p_source_table text default null,
- p_source_id uuid default null,p_correlation_id uuid default null,p_actor_type text default null,
- p_actor_id text default null,p_metadata jsonb default '{}'::jsonb,p_occurred_at timestamptz default now()
+ p_organization_id uuid,p_customer_id uuid,p_event_type text,p_title text,
+ p_summary text default null,p_channel text default null,p_conversation_id uuid default null,
+ p_source_table text default null,p_source_id uuid default null,p_correlation_id uuid default null,
+ p_actor_type text default null,p_actor_id text default null,p_metadata jsonb default '{}'::jsonb,
+ p_occurred_at timestamptz default now()
 ) returns uuid
 language plpgsql security definer set search_path=''
 as $$
@@ -202,10 +215,8 @@ begin
  return v_id;
 end $$;
 
-revoke all on function public.add_customer_timeline_event(uuid,uuid,text,text,text,text,uuid,text,uuid,uuid,text,text,jsonb,timestamptz)
-from public,anon,authenticated;
-grant execute on function public.add_customer_timeline_event(uuid,uuid,text,text,text,text,uuid,text,uuid,uuid,text,text,jsonb,timestamptz)
-to service_role;
+revoke all on function public.add_customer_timeline_event(uuid,uuid,text,text,text,text,uuid,text,uuid,uuid,text,text,jsonb,timestamptz) from public,anon,authenticated;
+grant execute on function public.add_customer_timeline_event(uuid,uuid,text,text,text,text,uuid,text,uuid,uuid,text,text,jsonb,timestamptz) to service_role;
 
 create or replace function public.timeline_from_crm_message() returns trigger
 language plpgsql security definer set search_path=''
@@ -252,15 +263,19 @@ alter table public.evaluation_leads add column if not exists organization_id uui
 alter table public.evaluation_leads add column if not exists customer_id uuid;
 alter table public.evaluation_leads add column if not exists conversation_id uuid;
 
-do $$ begin alter table public.leo_public_leads add constraint leo_public_leads_customer_tenant_fk
-foreign key(organization_id,customer_id) references public.crm_customers(organization_id,id) on delete set null;
+do $$ begin
+ alter table public.leo_public_leads add constraint leo_public_leads_customer_tenant_fk
+ foreign key(organization_id,customer_id) references public.crm_customers(organization_id,id) on delete set null;
 exception when duplicate_object then null; end $$;
-do $$ begin alter table public.leo_public_leads add constraint leo_public_leads_conversation_tenant_fk
-foreign key(organization_id,conversation_id) references public.crm_conversations(organization_id,id) on delete set null;
+do $$ begin
+ alter table public.leo_public_leads add constraint leo_public_leads_conversation_tenant_fk
+ foreign key(organization_id,conversation_id) references public.crm_conversations(organization_id,id) on delete set null;
 exception when duplicate_object then null; end $$;
-do $$ begin alter table public.evaluation_leads add constraint evaluation_leads_customer_tenant_fk
-foreign key(organization_id,customer_id) references public.crm_customers(organization_id,id) on delete set null;
+do $$ begin
+ alter table public.evaluation_leads add constraint evaluation_leads_customer_tenant_fk
+ foreign key(organization_id,customer_id) references public.crm_customers(organization_id,id) on delete set null;
 exception when duplicate_object then null; end $$;
-do $$ begin alter table public.evaluation_leads add constraint evaluation_leads_conversation_tenant_fk
-foreign key(organization_id,conversation_id) references public.crm_conversations(organization_id,id) on delete set null;
+do $$ begin
+ alter table public.evaluation_leads add constraint evaluation_leads_conversation_tenant_fk
+ foreign key(organization_id,conversation_id) references public.crm_conversations(organization_id,id) on delete set null;
 exception when duplicate_object then null; end $$;

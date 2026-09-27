@@ -74,7 +74,9 @@ using(
 create policy whatsapp_twilio_sessions_select
 on public.whatsapp_twilio_onboarding_sessions
 for select to authenticated
-using(public.has_organization_permission(organization_id,'integrations.manage'));
+using(
+  public.has_organization_permission(organization_id,'integrations.manage')
+);
 
 create or replace function public.upsert_whatsapp_twilio_binding(
   p_organization_id uuid,

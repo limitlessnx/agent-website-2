@@ -31,18 +31,29 @@ begin
 
   select count(*) into v_failed
   from public.system_event_deliveries
-  where organization_id=p_organization_id and event_id=p_event_id and status='failed';
+  where organization_id=p_organization_id
+    and event_id=p_event_id
+    and status='failed';
 
   if v_failed=0 then raise exception 'System event has no failed delivery hops to retry'; end if;
 
   update public.system_event_deliveries
-  set status='pending',error_message=null,started_at=null,completed_at=null,
-      retry_count=retry_count+1,last_retried_at=now(),
+  set status='pending',
+      error_message=null,
+      started_at=null,
+      completed_at=null,
+      retry_count=retry_count+1,
+      last_retried_at=now(),
       last_retried_by=nullif(trim(coalesce(p_actor,'')),'')
-  where organization_id=p_organization_id and event_id=p_event_id and status='failed';
+  where organization_id=p_organization_id
+    and event_id=p_event_id
+    and status='failed';
 
   update public.domain_events
-  set status='pending',available_at=now(),last_error=null,updated_at=now(),
+  set status='pending',
+      available_at=now(),
+      last_error=null,
+      updated_at=now(),
       metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object(
         'last_retry_requested_at',now(),
         'last_retry_requested_by',nullif(trim(coalesce(p_actor,'')),''),
@@ -55,14 +66,19 @@ begin
   ) values (
     p_organization_id,'system_event.retry_requested','domain_event',p_event_id::text,
     nullif(trim(coalesce(p_reason,'')),''),
-    jsonb_build_object('actor',nullif(trim(coalesce(p_actor,'')),''),
-      'failed_hops',v_failed,'correlation_id',v_event.correlation_id)
+    jsonb_build_object(
+      'actor',nullif(trim(coalesce(p_actor,'')),''),
+      'failed_hops',v_failed,
+      'correlation_id',v_event.correlation_id
+    )
   );
 
   return jsonb_build_object(
-    'event_id',p_event_id,'organization_id',p_organization_id,
+    'event_id',p_event_id,
+    'organization_id',p_organization_id,
     'correlation_id',v_event.correlation_id,
-    'failed_hops_requeued',v_failed,'status','pending'
+    'failed_hops_requeued',v_failed,
+    'status','pending'
   );
 end
 $$;
@@ -86,16 +102,31 @@ as $$
     'correlation_id',p_correlation_id,
     'events',coalesce((
       select jsonb_agg(jsonb_build_object(
-        'event_id',e.id,'event_type',e.event_type,'status',e.status,'attempts',e.attempts,
-        'source',e.source,'source_system',src.slug,'target_system',target_direct.slug,
-        'causation_id',e.causation_id,'last_error',e.last_error,
-        'created_at',e.created_at,'updated_at',e.updated_at,
+        'event_id',e.id,
+        'event_type',e.event_type,
+        'status',e.status,
+        'attempts',e.attempts,
+        'source',e.source,
+        'source_system',src.slug,
+        'target_system',target_direct.slug,
+        'causation_id',e.causation_id,
+        'last_error',e.last_error,
+        'created_at',e.created_at,
+        'updated_at',e.updated_at,
         'deliveries',coalesce((
           select jsonb_agg(jsonb_build_object(
-            'delivery_id',d.id,'route_id',d.route_id,'status',d.status,'attempt',d.attempt,
-            'retry_count',d.retry_count,'target_system',dst.slug,'dispatch_mode',r.dispatch_mode,
-            'error_message',d.error_message,'result',d.result,'started_at',d.started_at,
-            'completed_at',d.completed_at,'last_retried_at',d.last_retried_at,
+            'delivery_id',d.id,
+            'route_id',d.route_id,
+            'status',d.status,
+            'attempt',d.attempt,
+            'retry_count',d.retry_count,
+            'target_system',dst.slug,
+            'dispatch_mode',r.dispatch_mode,
+            'error_message',d.error_message,
+            'result',d.result,
+            'started_at',d.started_at,
+            'completed_at',d.completed_at,
+            'last_retried_at',d.last_retried_at,
             'last_retried_by',d.last_retried_by
           ) order by r.priority,d.created_at)
           from public.system_event_deliveries d

@@ -1,8 +1,11 @@
-CREATE OR REPLACE FUNCTION public.get_tenant_funnel_analytics(p_organization_id uuid, p_period_days integer DEFAULT 30)
- RETURNS jsonb
- LANGUAGE plpgsql
- SET search_path TO ''
-AS $function$
+create or replace function public.get_tenant_funnel_analytics(
+  p_organization_id uuid,
+  p_period_days integer default 30
+) returns jsonb
+language plpgsql
+security invoker
+set search_path=''
+as $$
 declare
   v_days integer:=greatest(1,least(coalesce(p_period_days,30),365));
   v_start timestamptz:=now()-make_interval(days=>greatest(1,least(coalesce(p_period_days,30),365)));
@@ -200,7 +203,7 @@ begin
   from totals t,funnel f,source_breakdown sb,channel_breakdown cb,handoff_comparison hc,appointment_comparison ac;
 
   return v_result;
-end $function$
-;
+end $$;
+
 revoke all on function public.get_tenant_funnel_analytics(uuid,integer) from public,anon,authenticated;
 grant execute on function public.get_tenant_funnel_analytics(uuid,integer) to service_role;

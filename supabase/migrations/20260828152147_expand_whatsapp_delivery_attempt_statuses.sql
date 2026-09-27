@@ -1,0 +1,2 @@
+alter table public.whatsapp_delivery_attempts drop constraint if exists whatsapp_delivery_attempts_status_check;
+alter table public.whatsapp_delivery_attempts add constraint whatsapp_delivery_attempts_status_check check (status = any (array['pending'::text,'accepted'::text,'sent'::text,'delivered'::text,'read'::text,'failed'::text,'blocked'::text,'undelivered'::text,'expired'::text,'unknown'::text]));
