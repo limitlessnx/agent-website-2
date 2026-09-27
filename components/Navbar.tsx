@@ -13,7 +13,6 @@ const navLinks = [
   { href: "/case-studies", label: "Case Studies" },
   { href: "/pricing", label: "Pricing" },
   { href: "/faq", label: "FAQ" },
-  { href: "/evaluation", label: "Business AI Evaluation" },
   { href: "/about", label: "About" },
 ];
 
@@ -58,17 +57,23 @@ export default function Navbar() {
     <header className={`${styles.siteHeader} ${scrolled ? styles.scrolled : ""}`}>
       <nav className={styles.siteNav} aria-label="Primary navigation">
         <Link className={styles.siteBrand} href="/" aria-label="Fluxknight home"><FluxLogo /></Link>
+
         <div className={styles.desktopLinks}>
           {navLinks.map((link) => (
             <Link className={pathname === link.href ? styles.active : ""} key={link.href} href={link.href}>{link.label}</Link>
           ))}
         </div>
+
         <div className={styles.desktopActions}>
           <Link className={styles.loginLink} href="/account/login">Login</Link>
-          <Link className={`${styles.demoLink} flux-contact`} href="/account/signup?trial=basic&next=%2Fportal">Start Free Trial <span>↗</span></Link>
+          <Link className={`${styles.demoLink} flux-contact`} href="/evaluation">
+            Evaluate My Business <span>↗</span>
+          </Link>
         </div>
+
         <button className={styles.mobileToggle} type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={22} /></button>
       </nav>
+
       {menuOpen ? (
         <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Mobile navigation">
           <button className={styles.backdrop} type="button" aria-label="Close navigation menu" onClick={closeMenu} />
@@ -77,14 +82,16 @@ export default function Navbar() {
               <Link className={styles.drawerBrand} href="/" onClick={closeMenu} aria-label="Fluxknight home"><FluxLogo /></Link>
               <button className={styles.closeButton} type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={25} /></button>
             </div>
+
             <nav className={styles.mobileLinks} aria-label="Mobile navigation links">
               {navLinks.map((link) => (
                 <Link className={pathname === link.href ? styles.active : ""} key={link.href} href={link.href} onClick={closeMenu}>{link.label}</Link>
               ))}
             </nav>
+
             <div className={`${styles.mobileActions} flux-mobile-actions`}>
               <Link href="/account/login" onClick={closeMenu}>Login</Link>
-              <Link className={`${styles.primary} primary`} href="/account/signup?trial=basic&next=%2Fportal" onClick={closeMenu}>Start Free Trial</Link>
+              <Link className={`${styles.primary} primary`} href="/evaluation" onClick={closeMenu}>Evaluate My Business</Link>
             </div>
           </aside>
         </div>
