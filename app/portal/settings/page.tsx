@@ -7,6 +7,7 @@ import { getOrganizationAccessContext, listOrganizationMembers } from "@/lib/org
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import CustomerStagesPanel from "./CustomerStagesPanel";
 import HandoffContinuityPanel from "./HandoffContinuityPanel";
+import BusinessValueSettingsPanel from "./BusinessValueSettingsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function PortalSettingsPage() {
   if (!session) return null;
   const access=await getOrganizationAccessContext(session.organizationId,session.userId);
   const org=encodeURIComponent(session.organizationId);
-  const [summary, account, stages, members, notificationPreferences, handoffRules] = await Promise.all([
+  const [summary, account, stages, members, notificationPreferences, handoffRules, businessValueSettings] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getAccountAdministrationSnapshot(session.organizationId),
     supabaseServerRequest<Array<{id:string;key:string;name:string;category:string;position:number;is_terminal:boolean;follow_up_default_minutes?:number|null}>>(
@@ -28,6 +29,13 @@ export default async function PortalSettingsPage() {
     supabaseServerRequest<Array<{id:string;name:string;category?:string|null;assigned_membership_id:string;priority:number;notify_whatsapp:boolean;status:string}>>(
       "handoff_assignment_rules?organization_id=eq."+org+"&select=id,name,category,assigned_membership_id,priority,notify_whatsapp,status&order=priority.asc&limit=200",
     ).catch(()=>[]),
+    supabaseServerRequest<Array<{
+      enabled:boolean;currency?:string|null;human_hourly_value?:number|null;
+      minutes_per_ai_handled_conversation?:number|null;minutes_per_follow_up?:number|null;
+      minutes_per_appointment?:number|null;minutes_per_handoff_triage?:number|null;
+    }>>(
+      "organization_business_value_settings?organization_id=eq."+org+"&select=enabled,currency,human_hourly_value,minutes_per_ai_handled_conversation,minutes_per_follow_up,minutes_per_appointment,minutes_per_handoff_triage&limit=1",
+    ).then((rows)=>rows[0]||null).catch(()=>null),
   ]);
   const profile = summary.onboarding;
 
@@ -63,6 +71,11 @@ export default async function PortalSettingsPage() {
         preferences={notificationPreferences}
         rules={handoffRules}
         canManage={access.permissions.has("handoffs.manage")}
+      />
+
+      <BusinessValueSettingsPanel
+        settings={businessValueSettings}
+        canManage={access.permissions.has("organization.manage")}
       />
 
       <section className="portal-card">
