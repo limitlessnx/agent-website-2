@@ -27,7 +27,7 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
       const response = await fetch("/api/client-auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.get("email"), password: data.get("password") }),
+        body: JSON.stringify({ email: data.get("email"), password: data.get("password"), invitation_token: invitationToken || undefined }),
       });
       const result = await response.json().catch(() => ({}));
 
