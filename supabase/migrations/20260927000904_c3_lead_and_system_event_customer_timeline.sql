@@ -3,10 +3,17 @@ language plpgsql security definer set search_path=''
 as $$
 begin
   perform public.add_customer_timeline_event(
-    new.organization_id,new.customer_id,'lead.'||new.stage,
+    new.organization_id,
+    new.customer_id,
+    'lead.'||new.stage,
     'Lead '||replace(new.stage,'_',' '),
     coalesce(new.summary,'Lead stage updated'),
-    coalesce(new.source,'crm'),null,'crm_leads',new.id,null,'system',
+    coalesce(new.source,'crm'),
+    null,
+    'crm_leads',
+    new.id,
+    null,
+    'system',
     coalesce(new.assigned_agent_id::text,null),
     jsonb_build_object('score',new.score,'value_estimate',new.value_estimate,'currency',new.currency),
     new.updated_at
@@ -26,12 +33,24 @@ as $$
 begin
   if new.customer_id is not null then
     perform public.add_customer_timeline_event(
-      new.organization_id,new.customer_id,'system.'||new.event_type,
+      new.organization_id,
+      new.customer_id,
+      'system.'||new.event_type,
       replace(initcap(replace(new.event_type,'.',' ')),'_',' '),
       left(coalesce(new.payload->>'message',new.payload->>'reason',new.event_type),500),
-      new.source,new.conversation_id,'domain_events',new.id,new.correlation_id,'system',
+      new.source,
+      new.conversation_id,
+      'domain_events',
+      new.id,
+      new.correlation_id,
+      'system',
       coalesce(new.source_system_id::text,null),
-      jsonb_build_object('event_type',new.event_type,'status',new.status,'source_system_id',new.source_system_id,'target_system_id',new.target_system_id),
+      jsonb_build_object(
+        'event_type',new.event_type,
+        'status',new.status,
+        'source_system_id',new.source_system_id,
+        'target_system_id',new.target_system_id
+      ),
       new.created_at
     );
   end if;

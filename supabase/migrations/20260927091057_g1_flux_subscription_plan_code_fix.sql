@@ -1,9 +1,9 @@
-CREATE OR REPLACE FUNCTION public.sync_flux_credit_wallet_from_subscription(target_subscription_id uuid)
- RETURNS flux_credit_wallets
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
+create or replace function public.sync_flux_credit_wallet_from_subscription(target_subscription_id uuid)
+returns public.flux_credit_wallets
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
   sub public.organization_subscriptions%rowtype;
   plan public.billing_plans%rowtype;
@@ -92,7 +92,7 @@ begin
 
   return wallet;
 end;
-$function$
-;
+$$;
+
 revoke all on function public.sync_flux_credit_wallet_from_subscription(uuid) from public,anon,authenticated;
 grant execute on function public.sync_flux_credit_wallet_from_subscription(uuid) to service_role;

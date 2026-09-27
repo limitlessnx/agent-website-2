@@ -38,16 +38,23 @@ declare
   v public.appointment_availability_settings%rowtype;
 begin
   if auth.role()<>'service_role' then raise exception 'service_role required'; end if;
-  select name into v_timezone from pg_catalog.pg_timezone_names where name=trim(p_timezone) limit 1;
+
+  select name into v_timezone
+  from pg_catalog.pg_timezone_names
+  where name=trim(p_timezone)
+  limit 1;
   if v_timezone is null then raise exception 'Invalid timezone'; end if;
+
   if coalesce((v_config->>'minimumNoticeMinutes')::integer,0)<0
      or coalesce((v_config->>'minimumNoticeMinutes')::integer,0)>10080 then
     raise exception 'Minimum notice must be between 0 and 10080 minutes';
   end if;
+
   if coalesce((v_config->>'maximumAdvanceDays')::integer,30)<1
      or coalesce((v_config->>'maximumAdvanceDays')::integer,30)>365 then
     raise exception 'Maximum advance days must be between 1 and 365';
   end if;
+
   if coalesce((v_config->>'bufferBeforeMinutes')::integer,0)<0
      or coalesce((v_config->>'bufferBeforeMinutes')::integer,0)>1440
      or coalesce((v_config->>'bufferAfterMinutes')::integer,0)<0

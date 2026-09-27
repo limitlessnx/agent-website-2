@@ -48,10 +48,12 @@ begin
   from public.appointment_calendar_resources
   where organization_id=p_organization_id and id=p_resource_id
   for update;
+
   if not found then raise exception 'Calendar resource not found'; end if;
 
   if p_assigned_membership_id is not null and not exists(
-    select 1 from public.organization_memberships
+    select 1
+    from public.organization_memberships
     where organization_id=p_organization_id
       and id=p_assigned_membership_id
       and status='active'
@@ -64,7 +66,9 @@ begin
     from pg_catalog.pg_timezone_names
     where name=trim(p_timezone)
     limit 1;
-    if v_timezone is null then raise exception 'Invalid timezone'; end if;
+    if v_timezone is null then
+      raise exception 'Invalid timezone';
+    end if;
   end if;
 
   if p_default_duration_minutes is not null

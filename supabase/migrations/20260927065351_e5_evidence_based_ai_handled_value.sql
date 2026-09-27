@@ -1,8 +1,11 @@
-CREATE OR REPLACE FUNCTION public.get_tenant_business_value_analytics(p_organization_id uuid, p_period_days integer DEFAULT 30)
- RETURNS jsonb
- LANGUAGE plpgsql
- SET search_path TO ''
-AS $function$
+create or replace function public.get_tenant_business_value_analytics(
+  p_organization_id uuid,
+  p_period_days integer default 30
+) returns jsonb
+language plpgsql
+security invoker
+set search_path=''
+as $$
 declare
   v_days integer:=greatest(1,least(coalesce(p_period_days,30),365));
   v_start timestamptz:=now()-make_interval(days=>greatest(1,least(coalesce(p_period_days,30),365)));
@@ -90,7 +93,7 @@ begin
     'estimatedHoursSaved',case when coalesce(v_settings.enabled,false) then round(v_minutes/60.0,1) else null end,
     'estimatedValue',case when coalesce(v_settings.enabled,false) then v_money else null end
   );
-end $function$
-;
+end $$;
+
 revoke all on function public.get_tenant_business_value_analytics(uuid,integer) from public,anon,authenticated;
 grant execute on function public.get_tenant_business_value_analytics(uuid,integer) to service_role;

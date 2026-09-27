@@ -17,7 +17,6 @@ revoke all on public.organization_business_value_settings from anon,authenticate
 grant select on public.organization_business_value_settings to authenticated;
 grant all on public.organization_business_value_settings to service_role;
 
-drop policy if exists organization_business_value_settings_select on public.organization_business_value_settings;
 create policy organization_business_value_settings_select
 on public.organization_business_value_settings for select to authenticated
 using(
@@ -25,15 +24,21 @@ using(
   or public.has_organization_permission(organization_id,'organization.manage')
 );
 
-create index if not exists crm_leads_org_created_idx on public.crm_leads(organization_id,created_at desc);
-create index if not exists crm_leads_org_source_created_idx on public.crm_leads(organization_id,source,created_at desc);
-create index if not exists dashboard_notifications_source_org_idx on public.dashboard_notifications(source,organization_id,resolved_at);
+create index if not exists crm_leads_org_created_idx
+  on public.crm_leads(organization_id,created_at desc);
+create index if not exists crm_leads_org_source_created_idx
+  on public.crm_leads(organization_id,source,created_at desc);
+create index if not exists dashboard_notifications_source_org_idx
+  on public.dashboard_notifications(source,organization_id,resolved_at);
 
-CREATE OR REPLACE FUNCTION public.get_tenant_funnel_analytics(p_organization_id uuid, p_period_days integer DEFAULT 30)
- RETURNS jsonb
- LANGUAGE plpgsql
- SET search_path TO ''
-AS $function$
+create or replace function public.get_tenant_funnel_analytics(
+  p_organization_id uuid,
+  p_period_days integer default 30
+) returns jsonb
+language plpgsql
+security invoker
+set search_path=''
+as $$
 declare
   v_days integer:=greatest(1,least(coalesce(p_period_days,30),365));
   v_start timestamptz:=now()-make_interval(days=>greatest(1,least(coalesce(p_period_days,30),365)));
@@ -226,14 +231,19 @@ begin
   from totals t,funnel f,source_breakdown sb,channel_breakdown cb,handoff_comparison hc,appointment_comparison ac;
 
   return v_result;
-end $function$
-;
+end $$;
 
-CREATE OR REPLACE FUNCTION public.get_tenant_business_value_analytics(p_organization_id uuid, p_period_days integer DEFAULT 30)
- RETURNS jsonb
- LANGUAGE plpgsql
- SET search_path TO ''
-AS $function$
+revoke all on function public.get_tenant_funnel_analytics(uuid,integer) from public,anon,authenticated;
+grant execute on function public.get_tenant_funnel_analytics(uuid,integer) to service_role;
+
+create or replace function public.get_tenant_business_value_analytics(
+  p_organization_id uuid,
+  p_period_days integer default 30
+) returns jsonb
+language plpgsql
+security invoker
+set search_path=''
+as $$
 declare
   v_days integer:=greatest(1,least(coalesce(p_period_days,30),365));
   v_start timestamptz:=now()-make_interval(days=>greatest(1,least(coalesce(p_period_days,30),365)));
@@ -306,14 +316,18 @@ begin
     'estimatedHoursSaved',case when coalesce(v_settings.enabled,false) then round(v_minutes/60.0,1) else null end,
     'estimatedValue',case when coalesce(v_settings.enabled,false) then v_money else null end
   );
-end $function$
-;
+end $$;
 
-CREATE OR REPLACE FUNCTION public.get_platform_analytics_health(p_period_days integer DEFAULT 7)
- RETURNS jsonb
- LANGUAGE plpgsql
- SET search_path TO ''
-AS $function$
+revoke all on function public.get_tenant_business_value_analytics(uuid,integer) from public,anon,authenticated;
+grant execute on function public.get_tenant_business_value_analytics(uuid,integer) to service_role;
+
+create or replace function public.get_platform_analytics_health(
+  p_period_days integer default 7
+) returns jsonb
+language plpgsql
+security invoker
+set search_path=''
+as $$
 declare
   v_days integer:=greatest(1,least(coalesce(p_period_days,7),90));
   v_start timestamptz:=now()-make_interval(days=>greatest(1,least(coalesce(p_period_days,7),90)));
@@ -378,15 +392,17 @@ begin
   into v_result
   from rows;
   return v_result;
-end $function$
-;
+end $$;
 
-CREATE OR REPLACE FUNCTION public.scan_analytics_anomalies()
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+revoke all on function public.get_platform_analytics_health(integer) from public,anon,authenticated;
+grant execute on function public.get_platform_analytics_health(integer) to service_role;
+
+create or replace function public.scan_analytics_anomalies()
+returns jsonb
+language plpgsql
+security definer
+set search_path=''
+as $$
 declare
   r record;
   v_now timestamptz:=now();
@@ -529,15 +545,7 @@ begin
   end loop;
 
   return jsonb_build_object('activeOrRefreshed',v_created,'resolved',v_resolved,'scannedAt',v_now);
-end $function$
-;
+end $$;
 
-
-revoke all on function public.get_tenant_funnel_analytics(uuid,integer) from public,anon,authenticated;
-grant execute on function public.get_tenant_funnel_analytics(uuid,integer) to service_role;
-revoke all on function public.get_tenant_business_value_analytics(uuid,integer) from public,anon,authenticated;
-grant execute on function public.get_tenant_business_value_analytics(uuid,integer) to service_role;
-revoke all on function public.get_platform_analytics_health(integer) from public,anon,authenticated;
-grant execute on function public.get_platform_analytics_health(integer) to service_role;
 revoke all on function public.scan_analytics_anomalies() from public,anon,authenticated;
 grant execute on function public.scan_analytics_anomalies() to service_role;

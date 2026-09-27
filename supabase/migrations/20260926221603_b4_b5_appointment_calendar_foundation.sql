@@ -77,16 +77,25 @@ from (
 join public.system_catalog s on s.slug=v.source_slug
 join public.system_catalog t on t.slug=v.target_slug
 on conflict(source_system_catalog_id,event_type,target_system_catalog_id)
-do update set dispatch_mode=excluded.dispatch_mode,priority=excluded.priority,configuration=excluded.configuration,status='active',updated_at=now();
+do update set
+ dispatch_mode=excluded.dispatch_mode,
+ priority=excluded.priority,
+ configuration=excluded.configuration,
+ status='active',
+ updated_at=now();
 
 create or replace function public.sync_system_routes_after_installation_change()
-returns trigger language plpgsql security definer set search_path=''
+returns trigger
+language plpgsql
+security definer
+set search_path=''
 as $$
 begin
   perform public.sync_organization_system_event_routes(coalesce(new.organization_id,old.organization_id));
   return coalesce(new,old);
 end
 $$;
+
 revoke all on function public.sync_system_routes_after_installation_change() from public,anon,authenticated;
 grant execute on function public.sync_system_routes_after_installation_change() to service_role;
 
@@ -174,17 +183,25 @@ create table if not exists public.appointments (
     references public.appointment_calendar_resources(organization_id,id) on delete set null
 );
 
-create index if not exists appointments_org_status_start_idx on public.appointments(organization_id,status,start_at);
-create index if not exists appointments_org_customer_idx on public.appointments(organization_id,customer_id,created_at desc);
-create index if not exists appointments_org_correlation_idx on public.appointments(organization_id,correlation_id,created_at);
+create index if not exists appointments_org_status_start_idx
+  on public.appointments(organization_id,status,start_at);
+
+create index if not exists appointments_org_customer_idx
+  on public.appointments(organization_id,customer_id,created_at desc);
+
+create index if not exists appointments_org_correlation_idx
+  on public.appointments(organization_id,correlation_id,created_at);
 
 alter table public.appointment_calendar_resources enable row level security;
 alter table public.appointments enable row level security;
+
 revoke all on public.appointment_calendar_resources,public.appointments from anon,authenticated;
 grant select on public.appointment_calendar_resources,public.appointments to authenticated;
 grant all on public.appointment_calendar_resources,public.appointments to service_role;
 
-create policy appointment_calendar_resources_select on public.appointment_calendar_resources
+drop policy if exists appointment_calendar_resources_select on public.appointment_calendar_resources;
+create policy appointment_calendar_resources_select
+on public.appointment_calendar_resources
 for select to authenticated
 using (
   public.has_organization_permission(organization_id,'appointments.view')
@@ -193,7 +210,9 @@ using (
   or public.has_organization_permission(organization_id,'integrations.manage')
 );
 
-create policy appointments_select on public.appointments
+drop policy if exists appointments_select on public.appointments;
+create policy appointments_select
+on public.appointments
 for select to authenticated
 using (
   public.has_organization_permission(organization_id,'appointments.view')
@@ -201,41 +220,67 @@ using (
 );
 
 create or replace function public.upsert_appointment_calendar_resource(
-  p_organization_id uuid,p_integration_id uuid,p_provider text,p_external_calendar_id text,p_display_name text,
-  p_organizer_email text default null,p_timezone text default 'Africa/Lagos',
-  p_default_duration_minutes integer default 60,p_is_default boolean default false,
-  p_availability_configuration jsonb default '{}'::jsonb,p_metadata jsonb default '{}'::jsonb
-) returns uuid
-language plpgsql security definer set search_path=''
+  p_organization_id uuid,
+  p_integration_id uuid,
+  p_provider text,
+  p_external_calendar_id text,
+  p_display_name text,
+  p_organizer_email text default null,
+  p_timezone text default 'Africa/Lagos',
+  p_default_duration_minutes integer default 60,
+  p_is_default boolean default false,
+  p_availability_configuration jsonb default '{}'::jsonb,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path=''
 as $$
-declare v_resource_id uuid;
+declare
+  v_resource_id uuid;
 begin
   if not exists(
     select 1 from public.organization_integrations i
-    where i.organization_id=p_organization_id and i.id=p_integration_id
+    where i.organization_id=p_organization_id
+      and i.id=p_integration_id
       and i.status in ('configured','connected','degraded')
   ) then raise exception 'Active calendar integration not found for organization'; end if;
+
   if p_is_default then
-    update public.appointment_calendar_resources set is_default=false,updated_at=now()
+    update public.appointment_calendar_resources
+    set is_default=false,updated_at=now()
     where organization_id=p_organization_id and is_default=true;
   end if;
+
   insert into public.appointment_calendar_resources(
-    organization_id,integration_id,provider,external_calendar_id,display_name,organizer_email,
-    timezone,default_duration_minutes,is_default,status,availability_configuration,metadata
+    organization_id,integration_id,provider,external_calendar_id,display_name,
+    organizer_email,timezone,default_duration_minutes,is_default,status,
+    availability_configuration,metadata
   ) values (
     p_organization_id,p_integration_id,trim(p_provider),trim(p_external_calendar_id),trim(p_display_name),
     nullif(trim(coalesce(p_organizer_email,'')),''),coalesce(nullif(trim(p_timezone),''),'Africa/Lagos'),
-    p_default_duration_minutes,p_is_default,'active',coalesce(p_availability_configuration,'{}'::jsonb),
-    coalesce(p_metadata,'{}'::jsonb)
+    p_default_duration_minutes,p_is_default,'active',
+    coalesce(p_availability_configuration,'{}'::jsonb),coalesce(p_metadata,'{}'::jsonb)
   )
   on conflict(organization_id,integration_id,external_calendar_id)
-  do update set provider=excluded.provider,display_name=excluded.display_name,organizer_email=excluded.organizer_email,
-    timezone=excluded.timezone,default_duration_minutes=excluded.default_duration_minutes,is_default=excluded.is_default,
-    status='active',availability_configuration=excluded.availability_configuration,metadata=excluded.metadata,updated_at=now()
+  do update set
+    provider=excluded.provider,
+    display_name=excluded.display_name,
+    organizer_email=excluded.organizer_email,
+    timezone=excluded.timezone,
+    default_duration_minutes=excluded.default_duration_minutes,
+    is_default=excluded.is_default,
+    status='active',
+    availability_configuration=excluded.availability_configuration,
+    metadata=excluded.metadata,
+    updated_at=now()
   returning id into v_resource_id;
+
   return v_resource_id;
 end
 $$;
+
 revoke all on function public.upsert_appointment_calendar_resource(uuid,uuid,text,text,text,text,text,integer,boolean,jsonb,jsonb)
 from public,anon,authenticated;
 grant execute on function public.upsert_appointment_calendar_resource(uuid,uuid,text,text,text,text,text,integer,boolean,jsonb,jsonb)

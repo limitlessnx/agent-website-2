@@ -1,7 +1,7 @@
 -- FluxAgents workflow orchestrator foundation
 -- Run this migration in the Supabase SQL editor before using the workflow registry dashboard.
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto
 
 create table if not exists public.workflow_registry (
   id uuid primary key default gen_random_uuid(),
@@ -25,7 +25,7 @@ create table if not exists public.workflow_registry (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (organization_id, workflow_key)
-);
+)
 
 create table if not exists public.workflow_runs (
   id uuid primary key default gen_random_uuid(),
@@ -44,7 +44,7 @@ create table if not exists public.workflow_runs (
   started_at timestamptz,
   completed_at timestamptz,
   created_at timestamptz not null default now()
-);
+)
 
 create table if not exists public.workflow_versions (
   id uuid primary key default gen_random_uuid(),
@@ -55,7 +55,7 @@ create table if not exists public.workflow_versions (
   created_by text,
   created_at timestamptz not null default now(),
   unique (workflow_id, version)
-);
+)
 
 create table if not exists public.workflow_webhooks (
   id uuid primary key default gen_random_uuid(),
@@ -69,14 +69,16 @@ create table if not exists public.workflow_webhooks (
   updated_at timestamptz not null default now(),
   unique (workflow_id, webhook_key),
   unique (path)
-);
+)
 
 create index if not exists workflow_registry_project_idx
-  on public.workflow_registry (organization_id, project_id, status);
+  on public.workflow_registry (organization_id, project_id, status)
+
 create index if not exists workflow_runs_workflow_created_idx
-  on public.workflow_runs (workflow_id, created_at desc);
+  on public.workflow_runs (workflow_id, created_at desc)
+
 create index if not exists workflow_runs_status_created_idx
-  on public.workflow_runs (status, created_at desc);
+  on public.workflow_runs (status, created_at desc)
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -86,27 +88,35 @@ begin
   new.updated_at = now();
   return new;
 end;
-$$;
+$$
 
-drop trigger if exists workflow_registry_set_updated_at on public.workflow_registry;
+drop trigger if exists workflow_registry_set_updated_at on public.workflow_registry
+
 create trigger workflow_registry_set_updated_at
 before update on public.workflow_registry
-for each row execute function public.set_updated_at();
+for each row execute function public.set_updated_at()
 
-drop trigger if exists workflow_webhooks_set_updated_at on public.workflow_webhooks;
+drop trigger if exists workflow_webhooks_set_updated_at on public.workflow_webhooks
+
 create trigger workflow_webhooks_set_updated_at
 before update on public.workflow_webhooks
-for each row execute function public.set_updated_at();
+for each row execute function public.set_updated_at()
 
-alter table public.workflow_registry enable row level security;
-alter table public.workflow_runs enable row level security;
-alter table public.workflow_versions enable row level security;
-alter table public.workflow_webhooks enable row level security;
+alter table public.workflow_registry enable row level security
+
+alter table public.workflow_runs enable row level security
+
+alter table public.workflow_versions enable row level security
+
+alter table public.workflow_webhooks enable row level security
 
 -- The Next.js server uses the Supabase service-role key and bypasses RLS.
 -- No public policies are created intentionally. Never expose the service-role key to the browser.
 
-comment on table public.workflow_registry is 'Canonical registry of agent and automation workflows across FluxAgents projects.';
-comment on table public.workflow_runs is 'Execution history and failure records for registered workflows.';
-comment on table public.workflow_versions is 'Versioned workflow configuration snapshots.';
-comment on table public.workflow_webhooks is 'Webhook mappings owned by registered workflows.';
+comment on table public.workflow_registry is 'Canonical registry of agent and automation workflows across FluxAgents projects.'
+
+comment on table public.workflow_runs is 'Execution history and failure records for registered workflows.'
+
+comment on table public.workflow_versions is 'Versioned workflow configuration snapshots.'
+
+comment on table public.workflow_webhooks is 'Webhook mappings owned by registered workflows.'
