@@ -145,3 +145,27 @@ test("F1 Google start validates redirect destination and keeps provider scopes s
   assert.match(start,/new URL\("\/auth\/callback",url\.origin\)/);
   assert.doesNotMatch(start,/GOOGLE_CALENDAR_CLIENT_ID|GOOGLE_CALENDAR_CLIENT_SECRET/);
 });
+
+
+test("F1 switching between Google and email preserves invitation context",()=>{
+  const login=read("app/account/login/LoginForm.tsx");
+  const signup=read("app/account/signup/SignupForm.tsx");
+  const loginPage=read("app/account/login/page.tsx");
+  const signupPage=read("app/account/signup/page.tsx");
+  assert.match(login,/invitation_token: invitationToken/);
+  assert.match(signup,/invitation_token: invitationToken/);
+  assert.match(login,/signupUrl\.searchParams\.set\("invitation_token"/);
+  assert.match(signup,/loginUrl\.searchParams\.set\("invitation_token"/);
+  assert.match(loginPage,/invitation_token/);
+  assert.match(signupPage,/invitation_token/);
+});
+
+test("F1 workspace setup returns the preserved post-auth destination",()=>{
+  const route=read("app/api/client-auth/setup-workspace/route.ts");
+  const form=read("app/account/setup/SetupForm.tsx");
+  assert.match(route,/pending\.nextPath/);
+  assert.match(route,/pending\.txRef/);
+  assert.match(route,/pending\.trialPlan/);
+  assert.match(route,/redirect_to/);
+  assert.match(form,/result\.redirect_to/);
+});
