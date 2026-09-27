@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Cable, CheckCircle2, CircleDashed, LockKeyhole, TriangleAlert } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
-import { createClient } from "@/lib/supabase/server";
+import { getOrganizationAccessContext } from "@/lib/organization-membership";
+import { createAdminClient } from "@/lib/supabase/admin";
+import GoogleCalendarPanel from "./GoogleCalendarPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,7 @@ const labels: Record<string, string> = {
   telegram: "Telegram",
   voice: "Voice Calling",
   sms: "SMS",
+  google_calendar: "Google Calendar",
 };
 
 function statusIcon(status: string) {
@@ -24,18 +27,30 @@ export default async function PortalIntegrationsPage() {
   const session = await getClientSession();
   if (!session) return null;
 
-  const supabase = await createClient();
-  const [{ data: integrations, error: integrationError }, { data: agents, error: agentError }] = await Promise.all([
-    supabase.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id", session.organizationId).order("created_at"),
-    supabase.from("agents").select("id,name,status,agent_type,communication_channels").eq("organization_id", session.organizationId).order("created_at"),
+  const access=await getOrganizationAccessContext(session.organizationId,session.userId);
+  if(!access.permissions.has("integrations.view")&&!access.permissions.has("integrations.manage")) return null;
+  const admin=createAdminClient();
+  const [
+    {data:integrations,error:integrationError},
+    {data:agents,error:agentError},
+    {data:calendarResources,error:calendarError},
+  ]=await Promise.all([
+    admin.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id",session.organizationId).order("created_at"),
+    admin.from("agents").select("id,name,status,agent_type,communication_channels").eq("organization_id",session.organizationId).order("created_at"),
+    admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,timezone,status,is_default").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
   ]);
 
-  if (integrationError) throw integrationError;
-  if (agentError) throw agentError;
+  if(integrationError) throw integrationError;
+  if(agentError) throw agentError;
+  if(calendarError) throw calendarError;
 
   const rows = integrations || [];
   const connected = rows.filter((item) => item.status === "connected").length;
   const attention = rows.filter((item) => item.status === "error" || item.status === "degraded").length;
+  const googleIntegration=rows.find((item)=>item.provider==="google_calendar")||null;
+  const googleResource=(calendarResources||[]).find((item)=>item.status==="active"&&item.is_default)
+    ||(calendarResources||[]).find((item)=>item.status==="active")
+    ||null;
 
   return (
     <main className="portal-page">
@@ -50,6 +65,12 @@ export default async function PortalIntegrationsPage() {
         <article className="portal-card"><small>Needs attention</small><strong>{attention}</strong><span>Error or degraded state</span></article>
         <article className="portal-card"><small>Provisioned agents</small><strong>{agents?.length || 0}</strong><span>Draft and testing agents included</span></article>
       </section>
+
+      <GoogleCalendarPanel
+        integration={googleIntegration}
+        resource={googleResource}
+        canManage={access.permissions.has("integrations.manage")}
+      />
 
       <section className="portal-card">
         <div className="portal-card-head">
