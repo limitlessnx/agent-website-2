@@ -52,7 +52,7 @@ test("B6 WhatsApp webhook keeps Maia and modular tenants on separate Trigger pat
 });
 
 
-test("B6 appointment reminders have an independent scheduled Follow-Up path",()=>{
+test("B6 appointment reminders keep an independent on-demand Follow-Up path while schedules are paused",()=>{
   const adapters=read("lib/system-event-adapters.ts");
   const trigger=read("src/trigger/system-orchestrator.ts");
   assert.match(adapters,/appointment_reminder/);
@@ -61,6 +61,7 @@ test("B6 appointment reminders have an independent scheduled Follow-Up path",()=
   assert.match(adapters,/appointment-reminder:/);
   assert.match(trigger,/id: "appointment-reminder-drain"/);
   assert.match(trigger,/processDueAppointmentReminders/);
+  assert.doesNotMatch(trigger,/schedules\.task/);
 });
 
 test("B6 deterministic WhatsApp appointment updates use tenant delivery gateway",()=>{
