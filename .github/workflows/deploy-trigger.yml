@@ -18,6 +18,7 @@ on:
       - "lib/system-orchestrator.ts"
       - "lib/human-operations.ts"
       - "lib/handoff-followup.ts"
+      - "lib/analytics-phase-e.ts"
       - "lib/canonical-customer.ts"
       - "lib/orchestration-operations.ts"
       - "lib/system-event-adapters.ts"
