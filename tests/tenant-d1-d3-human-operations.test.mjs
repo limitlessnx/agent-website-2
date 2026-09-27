@@ -80,3 +80,15 @@ test("D1 application claim preserves existing conversation metadata",()=>{
   assert.match(service,/from\("crm_conversations"\)\.select\("metadata"\)/);
   assert.match(service,/conversation\?\.metadata/);
 });
+
+
+test("D2 future tenant role presets preserve handoff and approval authority",()=>{
+  const migration=read("supabase/migrations/20260927004334_d2_future_role_handoff_approval_permissions.sql");
+  assert.match(migration,/handoffs\.view/);
+  assert.match(migration,/handoffs\.manage/);
+  assert.match(migration,/approvals\.view/);
+  assert.match(migration,/approvals\.manage/);
+  assert.match(migration,/Team Member/);
+  assert.match(migration,/Supervisor/);
+  assert.match(migration,/Manager/);
+});
