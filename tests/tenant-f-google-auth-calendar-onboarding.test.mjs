@@ -297,3 +297,95 @@ test("F3 explicit staff routing precedes tenant default fallback",()=>{
   assert.ok(staffIndex>=0);
   assert.ok(defaultIndex>staffIndex);
 });
+
+
+test("F5 availability engine enforces business rules before Google free busy",()=>{
+  const scheduling=read("lib/appointment-scheduling.ts");
+  assert.match(scheduling,/minimumNoticeMinutes/);
+  assert.match(scheduling,/maximumAdvanceDays/);
+  assert.match(scheduling,/blockedDates/);
+  assert.match(scheduling,/workingHours/);
+  assert.match(scheduling,/breaks/);
+  assert.match(scheduling,/bufferBeforeMinutes/);
+  assert.match(scheduling,/bufferAfterMinutes/);
+  assert.match(scheduling,/calendarSlotAvailable/);
+  assert.ok(scheduling.indexOf("evaluateAvailabilityPolicy")<scheduling.indexOf("calendarSlotAvailable"));
+});
+
+test("F5 availability is timezone aware and supports service durations",()=>{
+  const scheduling=read("lib/appointment-scheduling.ts");
+  assert.match(scheduling,/Intl\.DateTimeFormat/);
+  assert.match(scheduling,/timeZone/);
+  assert.match(scheduling,/serviceDurations/);
+  assert.match(scheduling,/Appointments must fit within one local working day/);
+});
+
+test("F5 blocks overlapping Fluxknight appointments in addition to provider free busy",()=>{
+  const scheduling=read("lib/appointment-scheduling.ts");
+  assert.match(scheduling,/hasFluxknightOverlap/);
+  assert.match(scheduling,/pending_availability/);
+  assert.match(scheduling,/confirmed/);
+  assert.match(scheduling,/rescheduled/);
+  assert.match(scheduling,/lt\("start_at"/);
+  assert.match(scheduling,/gt\("end_at"/);
+});
+
+test("F6 routing supports explicit staff, tags, default, least busy and round robin",()=>{
+  const migration=read("supabase/migrations/20260927123647_f5_f6_availability_and_intelligent_routing.sql");
+  const scheduling=read("lib/appointment-scheduling.ts");
+  assert.match(migration,/service_keys text\[\]/);
+  assert.match(migration,/branch_key/);
+  assert.match(migration,/department_key/);
+  assert.match(migration,/appointment_routing_settings/);
+  assert.match(migration,/least_busy/);
+  assert.match(migration,/round_robin/);
+  assert.match(scheduling,/requestedMembershipId/);
+  assert.match(scheduling,/specificity/);
+  assert.match(scheduling,/leastBusyOrder/);
+  assert.match(scheduling,/roundRobinOrder/);
+  assert.match(scheduling,/advance_appointment_round_robin/);
+});
+
+test("F6 explicit staff routing never silently falls back to another staff member",()=>{
+  const scheduling=read("lib/appointment-scheduling.ts");
+  assert.match(scheduling,/const explicit=Boolean\(request\.requestedResourceId\|\|request\.requestedMembershipId\)/);
+  assert.match(scheduling,/if\(!candidates\.length&&settings\.fallbackToDefault&&!explicit\)/);
+});
+
+test("F5 F6 appointment adapter uses policy routing for booking and rescheduling",()=>{
+  const adapter=read("lib/system-event-adapters.ts");
+  assert.match(adapter,/selectAppointmentResource/);
+  assert.match(adapter,/evaluateResourceAvailability/);
+  assert.match(adapter,/serviceKey/);
+  assert.match(adapter,/branchKey/);
+  assert.match(adapter,/departmentKey/);
+  assert.match(adapter,/routing_strategy/);
+  assert.match(adapter,/assignedMembershipId/);
+});
+
+test("F5 F6 tenant configuration exposes availability and automatic staff routing",()=>{
+  const panel=read("app/portal/integrations/GoogleCalendarPanel.tsx");
+  const page=read("app/portal/integrations/page.tsx");
+  const resourceRoute=read("app/api/integrations/google-calendar/resources/[id]/route.ts");
+  const routingRoute=read("app/api/integrations/google-calendar/routing/route.ts");
+  assert.match(panel,/Enforce staff working hours/);
+  assert.match(panel,/Minimum booking notice/);
+  assert.match(panel,/Maximum advance booking/);
+  assert.match(panel,/Buffer before/);
+  assert.match(panel,/Blocked dates/);
+  assert.match(panel,/Service durations/);
+  assert.match(panel,/Automatic staff routing/);
+  assert.match(panel,/Least busy/);
+  assert.match(panel,/Round robin/);
+  assert.match(page,/appointment_routing_settings/);
+  assert.match(resourceRoute,/update_appointment_resource_scheduling_policy/);
+  assert.match(routingRoute,/set_appointment_routing_settings/);
+});
+
+test("F5 F6 mutation RPCs remain service role only",()=>{
+  const migration=read("supabase/migrations/20260927123647_f5_f6_availability_and_intelligent_routing.sql");
+  assert.match(migration,/revoke all on function public\.update_appointment_resource_scheduling_policy[\s\S]*from public,anon,authenticated/);
+  assert.match(migration,/grant execute on function public\.update_appointment_resource_scheduling_policy[\s\S]*to service_role/);
+  assert.match(migration,/revoke all on function public\.set_appointment_routing_settings[\s\S]*from public,anon,authenticated/);
+  assert.match(migration,/advance_appointment_round_robin/);
+});
