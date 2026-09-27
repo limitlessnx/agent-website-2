@@ -33,16 +33,6 @@ export async function processDueHandoffFollowups(limit=100){
     const handoffId=str(metadata.handoff_id);
     const conversationId=str(metadata.conversation_id);
     if(!task.customer_id||!handoffId||!conversationId){
-      if(!simulated){
-        await recordChargeableFluxAiUsage({
-          organizationId:task.organization_id,
-          action:"whatsapp_follow_up_reminder",
-          source:"handoff_follow_up",
-          provider:"meta",
-          metadata:{handoff_id:handoffId,task_id:task.id,conversation_id:conversationId},
-        });
-      }
-
       await admin.from("crm_tasks").update({
         status:"failed",updated_at:new Date().toISOString(),
         metadata:{...metadata,follow_up_error:"missing_required_context"},
@@ -109,6 +99,16 @@ export async function processDueHandoffFollowups(limit=100){
           template_name:delivery.templateName||null,
         },
       });
+
+      if(!simulated){
+        await recordChargeableFluxAiUsage({
+          organizationId:task.organization_id,
+          action:"whatsapp_follow_up_reminder",
+          source:"handoff_follow_up",
+          provider:"meta",
+          metadata:{handoff_id:handoffId,task_id:task.id,conversation_id:conversationId},
+        });
+      }
 
       await admin.from("crm_tasks").update({
         status:"completed",
