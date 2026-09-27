@@ -111,11 +111,41 @@ function overlapsWindow(start:number,end:number,window:Window){
   return start<to&&end>from;
 }
 
+function mergeAvailabilityConfiguration(
+  organization:AvailabilityConfiguration,
+  resource:AvailabilityConfiguration,
+):AvailabilityConfiguration{
+  const blockedDates=[
+    ...(Array.isArray(organization.blockedDates)?organization.blockedDates:[]),
+    ...(Array.isArray(resource.blockedDates)?resource.blockedDates:[]),
+  ].filter((value,index,array)=>array.indexOf(value)===index);
+  return {
+    ...organization,
+    ...resource,
+    blockedDates,
+    serviceDurations:{
+      ...(organization.serviceDurations||{}),
+      ...(resource.serviceDurations||{}),
+    },
+  };
+}
+
+async function loadOrganizationAvailability(organizationId:string):Promise<AvailabilityConfiguration>{
+  const {data,error}=await createAdminClient()
+    .from("appointment_availability_settings")
+    .select("availability_configuration")
+    .eq("organization_id",organizationId)
+    .maybeSingle();
+  if(error) throw error;
+  return (data?.availability_configuration||{}) as AvailabilityConfiguration;
+}
+
 export function evaluateAvailabilityPolicy(input:{
   resource:CalendarResource;
   startAt:string;
   endAt:string;
   now?:Date;
+  organizationConfiguration?:AvailabilityConfiguration;
 }):{available:boolean;reason?:string}{
   const start=toIso(input.startAt);
   const end=toIso(input.endAt);
@@ -123,7 +153,10 @@ export function evaluateAvailabilityPolicy(input:{
     return {available:false,reason:"Appointment end must be after start."};
   }
 
-  const config=(input.resource.availability_configuration||{}) as AvailabilityConfiguration;
+  const config=mergeAvailabilityConfiguration(
+    input.organizationConfiguration||{},
+    (input.resource.availability_configuration||{}) as AvailabilityConfiguration,
+  );
   const now=input.now||new Date();
   const notice=Math.max(0,number(config.minimumNoticeMinutes,0));
   if(new Date(start).getTime()<now.getTime()+notice*60_000){
@@ -185,15 +218,22 @@ export async function evaluateResourceAvailability(input:{
   startAt:string;
   endAt:string;
   excludeAppointmentId?:string|null;
+  organizationConfiguration?:AvailabilityConfiguration;
 }){
+  const organizationConfiguration=input.organizationConfiguration
+    ||await loadOrganizationAvailability(input.organizationId);
   const policy=evaluateAvailabilityPolicy({
     resource:input.resource,
     startAt:input.startAt,
     endAt:input.endAt,
+    organizationConfiguration,
   });
   if(!policy.available) return policy;
 
-  const config=(input.resource.availability_configuration||{}) as AvailabilityConfiguration;
+  const config=mergeAvailabilityConfiguration(
+    organizationConfiguration,
+    (input.resource.availability_configuration||{}) as AvailabilityConfiguration,
+  );
   const bufferedStart=addMinutes(input.startAt,-Math.max(0,number(config.bufferBeforeMinutes,0)));
   const bufferedEnd=addMinutes(input.endAt,Math.max(0,number(config.bufferAfterMinutes,0)));
 
@@ -347,7 +387,10 @@ function routingKey(request:RoutingRequest){
 }
 
 export async function selectAppointmentResource(request:RoutingRequest):Promise<RoutingDecision>{
-  const settings=await routingSettings(request.organizationId);
+  const [settings,organizationConfiguration]=await Promise.all([
+    routingSettings(request.organizationId),
+    loadOrganizationAvailability(request.organizationId),
+  ]);
   const all=await loadCandidateResources(request);
   if(!all.length){
     return {
@@ -395,6 +438,7 @@ export async function selectAppointmentResource(request:RoutingRequest):Promise<
       organizationId:request.organizationId,
       resource,startAt:request.startAt,endAt,
       excludeAppointmentId:request.excludeAppointmentId,
+      organizationConfiguration,
     });
     if(!availability.available){
       lastReason=availability.reason||lastReason;
