@@ -41,6 +41,7 @@ export default function GoogleCalendarPanel({
     :[];
   const pending=config.calendar_selection_pending===true;
   const selectedId=resource?.external_calendar_id||String(config.selected_calendar_id||"");
+  const [calendarId,setCalendarId]=useState(selectedId||String(calendars.find((item)=>item.primary)?.id||""));
   const connectedEmail=String(config.connected_email||resource?.organizer_email||"");
 
   async function selectCalendar(calendarId:string){
@@ -94,9 +95,9 @@ export default function GoogleCalendarPanel({
                 <div className="portal-field">
                   <label>Choose booking calendar</label>
                   <select
-                    defaultValue={selectedId||calendars.find((item)=>item.primary)?.id||""}
+                    value={calendarId}
                     disabled={!canManage||busy}
-                    onChange={(event)=>void selectCalendar(event.target.value)}
+                    onChange={(event)=>setCalendarId(event.target.value)}
                   >
                     <option value="" disabled>Select calendar</option>
                     {calendars.map((calendar)=><option key={calendar.id} value={calendar.id}>
@@ -104,6 +105,7 @@ export default function GoogleCalendarPanel({
                     </option>)}
                   </select>
                 </div>
+                {canManage?<div><button type="button" disabled={busy||!calendarId} onClick={()=>void selectCalendar(calendarId)}>{busy?"Checking...":"Use this calendar"}</button></div>:null}
               </div>
             : null}
 
