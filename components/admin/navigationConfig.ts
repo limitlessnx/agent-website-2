@@ -31,6 +31,7 @@ export const ADMIN_NAV_GROUPS:AdminNavGroup[]=[
     {href:"/dashboard/conversations",label:"Conversations"},
     {href:"/dashboard/activity",label:"Activity"},
     {href:"/dashboard/health",label:"Health & Failures"},
+    {href:"/dashboard/analytics",label:"Analytics & Tenant Health"},
     {href:"/dashboard/support",label:"Support & Leo"},
   ]}]},
   {id:"billing",label:"Billing",sections:[{items:[
