@@ -17,7 +17,13 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
     }
     if(action==="resolve"){
       return NextResponse.json({ok:true,result:await resolveHumanHandoff(
-        session,id,String(body.resolution||""),body.resumeAi!==false,
+        session,id,String(body.resolution||""),body.resumeAi!==false,{
+          outcome:String(body.outcome||"").trim()||null,
+          nextAction:String(body.nextAction||"").trim()||null,
+          stageId:String(body.stageId||"").trim()||null,
+          followUpRequired:body.followUpRequired!==false,
+          followUpMinutes:Number(body.followUpMinutes||720),
+        },
       )});
     }
     return NextResponse.json({error:"Unsupported handoff action"},{status:400});
