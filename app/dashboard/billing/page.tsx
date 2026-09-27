@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { WalletCards } from "@/components/admin/ServerIcons";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxInternalUsageSummary } from "@/lib/flux-credits";
+import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CreditAdjustmentForm from "./CreditAdjustmentForm";
 
@@ -30,7 +31,10 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
 
   const selectedOrganizationId = params?.organizationId || organizations?.find((organization) => organization.status === "active")?.id || organizations?.[0]?.id;
   const selectedOrganization = organizations?.find((organization) => organization.id === selectedOrganizationId) || null;
-  const usage = selectedOrganizationId ? await getFluxInternalUsageSummary(selectedOrganizationId) : null;
+  const [usage,commercial] = selectedOrganizationId ? await Promise.all([
+    getFluxInternalUsageSummary(selectedOrganizationId),
+    getFluxCommercialSnapshot(selectedOrganizationId),
+  ]) : [null,null];
 
   return (
     <main className="admin-page">
@@ -67,7 +71,13 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
               <div><span>Customer value</span><strong>{formatMoney(usage.customerValueCents)}</strong></div>
               <div><span>Gross margin</span><strong>{formatMoney(usage.grossMarginCents)}</strong></div>
               <div><span>Top-up balance</span><strong>{formatCredits(usage.topUpCredits)}</strong></div>
+              <div><span>Subscription</span><strong>{commercial?.subscription?.status || "None"}</strong></div>
+              <div><span>Service package</span><strong>{commercial?.servicePackage?.packageName || "Not assigned"}</strong></div>
+              <div><span>Active systems</span><strong>{formatCredits(commercial?.systems.active || 0)}</strong></div>
             </div>
+            <p className="admin-note">
+              Commercial policy: Flux Credits are prepaid. At exhaustion, chargeable AI pauses rather than creating an unapproved postpaid overage.
+            </p>
             <h3>Usage by action</h3>
             <div className="admin-list compact">
               {Object.entries(usage.usageByAction).map(([action, credits]) => <div key={action}><strong>{action.replaceAll("_", " ")}</strong><span>{formatCredits(credits)} credits</span></div>)}
