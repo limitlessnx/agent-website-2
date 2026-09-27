@@ -33,6 +33,12 @@ export async function POST(request: Request) {
     const validPayment = Boolean((verifiedStatus === "successful" || verifiedStatus === "succeeded") && verified?.tx_ref === session.tx_ref && verified?.currency === session.currency && Number(verified?.amount) >= Number(session.amount));
 
     await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(String(data.tx_ref))}`, { method: "PATCH", body: JSON.stringify({ status: validPayment ? "successful" : "verification_failed", provider_transaction_id: verified?.id ? String(verified.id) : String(data.id), provider_reference: verified?.flw_ref || data?.reference || null, provider_payload: verification, paid_at: validPayment ? new Date().toISOString() : null }) });
+    if (validPayment && session.billing_type === "top_up") {
+      await supabaseRest("rpc/apply_flux_credit_topup_from_checkout", {
+        method: "POST",
+        body: JSON.stringify({ target_checkout_session_id: session.id }),
+      });
+    }
     await supabaseRest(`payment_webhook_events?provider=eq.flutterwave&external_event_id=eq.${encodeURIComponent(externalEventId)}`, { method: "PATCH", body: JSON.stringify({ processed_at: new Date().toISOString(), processing_error: validPayment ? null : "Flutterwave verification did not match the locked checkout session." }) }).catch(() => undefined);
     return NextResponse.json({ received: true, verified: validPayment });
   } catch (error) {
