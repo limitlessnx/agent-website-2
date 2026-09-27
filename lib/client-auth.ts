@@ -4,13 +4,16 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 const CLIENT_COOKIE="fluxknight_client_session";
 const CLIENT_SETUP_COOKIE="fluxknight_client_setup";
+const CLIENT_OAUTH_CONTEXT_COOKIE="fluxknight_oauth_context";
 const CLIENT_SESSION_TTL=60*60*24*7;
 const CLIENT_SETUP_TTL=60*60;
+const CLIENT_OAUTH_CONTEXT_TTL=60*10;
 
 type SupabaseAuthUser={id:string;email?:string;user_metadata?:Record<string,unknown>};
 type SupabaseAuthResponse={access_token?:string;refresh_token?:string;expires_in?:number;user?:SupabaseAuthUser;error?:string;error_description?:string;msg?:string};
 export type ClientSession={userId:string;email:string;organizationId:string;organizationSlug:string;membershipId:string;role:string;issuedAt:number};
-export type PendingClientSetupSession={userId:string;email:string;invitationToken?:string;issuedAt:number};
+export type PendingClientSetupSession={userId:string;email:string;invitationToken?:string;nextPath?:string;txRef?:string;trialPlan?:""|"basic";issuedAt:number};
+export type ClientOAuthContext={nextPath:string;txRef?:string;trialPlan?:""|"basic";invitationToken?:string;issuedAt:number};
 type MembershipRow={id:string;organization_id:string;status:string;organizations:{slug:string}|{slug:string}[]|null;membership_roles:Array<{roles:{slug:string}|{slug:string}[]|null}>};
 
 function projectRefFromUrl(value:string){try{return new URL(value).hostname.match(/^([a-z0-9]+)\.supabase\.co$/i)?.[1]||""}catch{return""}}
@@ -43,6 +46,9 @@ export function createClientSessionToken(session:ClientSession){return createSig
 export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId||!session.membershipId)return null;return session}
 export async function setClientSession(session:ClientSession){const store=await cookies();store.set(CLIENT_COOKIE,createClientSessionToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
 export async function setPendingClientSetupSession(session:PendingClientSetupSession){const store=await cookies();store.set(CLIENT_SETUP_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SETUP_TTL,path:"/"})}
+export async function setClientOAuthContext(context:ClientOAuthContext){const store=await cookies();store.set(CLIENT_OAUTH_CONTEXT_COOKIE,createSignedToken(context),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_OAUTH_CONTEXT_TTL,path:"/"})}
+export async function getClientOAuthContext(){const store=await cookies();const context=readSignedToken<ClientOAuthContext>(store.get(CLIENT_OAUTH_CONTEXT_COOKIE)?.value,CLIENT_OAUTH_CONTEXT_TTL);if(!context?.nextPath)return null;return context}
+export async function clearClientOAuthContext(){const store=await cookies();store.delete(CLIENT_OAUTH_CONTEXT_COOKIE)}
 export async function getPendingClientSetupSession(){const store=await cookies();const session=readSignedToken<PendingClientSetupSession>(store.get(CLIENT_SETUP_COOKIE)?.value,CLIENT_SETUP_TTL);if(!session?.userId||!session.email)return null;return session}
 export async function clearPendingClientSetupSession(){const store=await cookies();store.delete(CLIENT_SETUP_COOKIE)}
 export async function getClientSession(){
