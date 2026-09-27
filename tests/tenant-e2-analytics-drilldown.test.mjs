@@ -62,3 +62,9 @@ test("E2 agent drilldown does not guess system attribution",()=>{
   assert.match(page,/human_handoffs\.source_agent_id/);
   assert.match(page,/avoids guessing attribution/);
 });
+
+
+test("E2 uses the canonical Supabase migration version",()=>{
+  const migration=read("supabase/migrations/20260927061931_e2_analytics_time_series_drilldown.sql");
+  assert.match(migration,/get_tenant_analytics_drilldown/);
+});
