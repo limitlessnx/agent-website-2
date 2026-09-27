@@ -48,7 +48,7 @@ export async function GET(request:NextRequest){
     return NextResponse.redirect(new URL("/account/login?error=google_email",origin));
   }
 
-  let membership=null;
+  let membership:Awaited<ReturnType<typeof getPrimaryMembership>>=null;
 
   if(context?.invitationToken){
     try{
