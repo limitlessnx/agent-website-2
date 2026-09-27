@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { logger, schedules, task } from "@trigger.dev/sdk";
+import { logger, task } from "@trigger.dev/sdk";
 import { generateWeeklySocialPlan } from "@/lib/social-ai";
-import { buildSocialLearningSnapshot } from "@/lib/social-learning";
 import type { SocialBrand, SocialPostFormat } from "@/lib/social";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
@@ -277,41 +276,5 @@ export const fluxSocialWeeklyCycle = task({
       await supabase.from("social_weekly_runs").update({ status: "failed", last_error: message, completed_at: new Date().toISOString() }).eq("id", run.id);
       throw error;
     }
-  },
-});
-
-export const fluxSocialWeeklyPlanner = schedules.task({
-  id: "flux-social-weekly-planner",
-  cron: "0 17 * * 0",
-  maxDuration: 600,
-  retry: { maxAttempts: 2, minTimeoutInMs: 10_000, maxTimeoutInMs: 60_000, factor: 2 },
-  run: async () => {
-    const supabase = createSocialAdminClient();
-    const { data: brands, error } = await supabase
-      .from("social_brands")
-      .select("id,organization_id,name")
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-
-    const weekStart = weekStartUtc();
-    const triggered: Array<{ organizationId: string; brandId: string; runId: string }> = [];
-    for (const brand of brands || []) {
-      const learning=await buildSocialLearningSnapshot({
-        supabase,
-        organizationId:brand.organization_id,
-        brandId:brand.id,
-      });
-      logger.info("Flux Social learning refreshed before weekly planning", {
-        organizationId:brand.organization_id,
-        brandId:brand.id,
-        snapshotId:learning.id,
-        status:learning.status,
-      });
-      const run = await fluxSocialWeeklyCycle.trigger({ organizationId: brand.organization_id, brandId: brand.id, weekStart });
-      triggered.push({ organizationId: brand.organization_id, brandId: brand.id, runId: run.id });
-    }
-
-    logger.info("Flux Social weekly planner queued brands", { weekStart, count: triggered.length });
-    return { weekStart, triggered };
   },
 });
