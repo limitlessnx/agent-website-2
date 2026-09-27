@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { platformGoogleCalendarCredentials } from "@/lib/google-calendar-oauth";
 
 type Json = Record<string, unknown>;
 
@@ -56,8 +57,9 @@ async function getIntegrationCredentials(organizationId: string, provider: strin
 
 async function refreshGoogleAccessToken(credentials: Json) {
   const refreshToken = text(credentials.refresh_token);
-  const clientId = text(credentials.client_id);
-  const clientSecret = text(credentials.client_secret);
+  const platform = platformGoogleCalendarCredentials();
+  const clientId = platform.clientId || text(credentials.client_id);
+  const clientSecret = platform.clientSecret || text(credentials.client_secret);
   if (!refreshToken || !clientId || !clientSecret) {
     throw new Error("Google Calendar access token expired and refresh credentials are incomplete.");
   }
