@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canonicalizePublicLeoLead } from "@/lib/canonical-customer";
 
 export type LeoPublicLead = {
   id: string;
@@ -95,5 +96,18 @@ export async function upsertLeoPublicLead(input: {
     : await supabase.from("leo_public_leads").insert({ ...payload, created_at: now }).select("*").single();
 
   if (result.error) throw result.error;
-  return result.data as LeoPublicLead;
+  const lead=result.data as LeoPublicLead;
+  if (email || clean(input.phone,80)) {
+    await canonicalizePublicLeoLead({
+      leadId:lead.id,
+      sessionId,
+      fullName:lead.full_name,
+      email:lead.email,
+      phone:lead.phone,
+      companyName:lead.company_name,
+    }).catch((error)=>{
+      console.error("[public-leo] canonical CRM sync failed",error);
+    });
+  }
+  return lead;
 }
