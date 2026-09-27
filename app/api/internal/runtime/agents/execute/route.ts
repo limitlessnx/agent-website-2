@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
       organizationId,
       action:"web_ai",
       source:"phase12_internal_agent",
-      provider:"openai",
-      model:result.model||null,
+      provider:result.model.provider,
+      model:result.model.modelKey,
       providerUsage:result.usage||{},
       metadata:{agent_id:agentId,legacy_execution_id:executionId,runtime_execution_id:result.executionId},
     });
