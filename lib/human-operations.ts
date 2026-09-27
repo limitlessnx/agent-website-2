@@ -136,3 +136,50 @@ export async function decideOperationApproval(session:ClientSession,approvalId:s
   });
   return data;
 }
+
+
+export async function createHandoffFromSystemEvent(event:{
+  id:string;
+  organizationId:string;
+  customerId?:string|null;
+  conversationId?:string|null;
+  sourceSystemId:string;
+  correlationId:string;
+  payload:Record<string,unknown>;
+}){
+  if(!event.customerId) throw new Error("handoff.requested requires customerId.");
+  if(!event.conversationId) throw new Error("handoff.requested requires conversationId.");
+  const admin=createAdminClient();
+  const {data:existing,error:lookupError}=await admin.from("human_handoffs")
+    .select("id,status")
+    .eq("organization_id",event.organizationId)
+    .contains("metadata",{source_event_id:event.id})
+    .limit(1)
+    .maybeSingle();
+  if(lookupError) throw lookupError;
+  if(existing) return {handoffId:String(existing.id),status:String(existing.status),duplicate:true};
+
+  const payload=event.payload||{};
+  const reason=String(payload.reason||payload.message||"AI requested human assistance").trim();
+  const category=String(payload.category||"general").trim()||"general";
+  const priorityRaw=String(payload.priority||"normal").toLowerCase();
+  const priority=["low","normal","high","critical"].includes(priorityRaw)?priorityRaw:"normal";
+  const slaMinutes=Math.max(1,Math.min(10080,Number(payload.slaMinutes||payload.sla_minutes||60)));
+  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+    p_organization_id:event.organizationId,
+    p_customer_id:event.customerId,
+    p_conversation_id:event.conversationId,
+    p_reason:reason,
+    p_category:category,
+    p_priority:priority,
+    p_source_system_id:event.sourceSystemId,
+    p_source_agent_id:null,
+    p_correlation_id:event.correlationId,
+    p_sla_due_at:new Date(Date.now()+slaMinutes*60_000).toISOString(),
+    p_created_by_type:"system",
+    p_created_by_id:event.sourceSystemId,
+    p_metadata:{source_event_id:event.id,source:"system_event",payload},
+  });
+  if(error) throw error;
+  return {handoffId:String(data),status:"open",duplicate:false};
+}
