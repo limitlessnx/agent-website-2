@@ -33,10 +33,12 @@ export function googleCalendarOAuthConfig(origin?:string){
 }
 
 function stateSecret(){
-  return process.env.CLIENT_SESSION_SECRET
+  const secret=process.env.CLIENT_SESSION_SECRET
     || process.env.ADMIN_SESSION_SECRET
-    || process.env.GOOGLE_CALENDAR_CLIENT_SECRET
-    || "development-google-calendar-state";
+    || process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
+  if(secret) return secret;
+  if(process.env.NODE_ENV!=="production") return "development-google-calendar-state";
+  throw new Error("Google Calendar OAuth state signing is not configured.");
 }
 
 export function createGoogleCalendarState(input:{organizationId:string;userId:string}){
@@ -65,7 +67,7 @@ export function verifyGoogleCalendarState(value:string){
   }catch{return null;}
 }
 
-export function googleCalendarAuthorizationUrl(input:{origin:string;state:string}){
+export function googleCalendarAuthorizationUrl(input:{origin:string;state:string;loginHint?:string|null}){
   const cfg=googleCalendarOAuthConfig(input.origin);
   const url=new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id",cfg.clientId);
@@ -76,6 +78,7 @@ export function googleCalendarAuthorizationUrl(input:{origin:string;state:string
   url.searchParams.set("include_granted_scopes","true");
   url.searchParams.set("scope",GOOGLE_CALENDAR_SCOPES.join(" "));
   url.searchParams.set("state",input.state);
+  if(input.loginHint?.trim()) url.searchParams.set("login_hint",input.loginHint.trim());
   return url.toString();
 }
 
