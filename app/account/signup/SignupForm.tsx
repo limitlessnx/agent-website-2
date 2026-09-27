@@ -19,9 +19,11 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
 
   const safeNext = nextPath.startsWith("/") ? nextPath : "/portal";
   const isBasicTrial = trialPlan === "basic";
-  const loginHref = txRef
-    ? `/account/login?tx_ref=${encodeURIComponent(txRef)}&next=${encodeURIComponent(safeNext)}`
-    : `/account/login?next=${encodeURIComponent(safeNext)}`;
+  const loginUrl=new URL("/account/login","https://fluxknight.local");
+  if(txRef) loginUrl.searchParams.set("tx_ref",txRef);
+  loginUrl.searchParams.set("next",safeNext);
+  if(invitationToken) loginUrl.searchParams.set("invitation_token",invitationToken);
+  const loginHref=`${loginUrl.pathname}${loginUrl.search}`;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
