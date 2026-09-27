@@ -9,8 +9,8 @@ export async function GET(){
   const session=await getClientSession();
   if(!session) return NextResponse.json({error:"Unauthorized"},{status:401});
   const access=await getOrganizationAccessContext(session.organizationId,session.userId);
-  try{assertAnyOrganizationPermission(access,["integrations.view","integrations.manage"]);}catch{
-    return NextResponse.json({error:"Integration access required"},{status:403});
+  try{assertAnyOrganizationPermission(access,["integrations.manage"]);}catch{
+    return NextResponse.json({error:"integrations.manage required"},{status:403});
   }
 
   const admin=createAdminClient();
