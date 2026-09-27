@@ -9,7 +9,8 @@
       "feature/leo-operational-intelligence": false,
       "feature/leo-conversational-lifecycle": false,
       "feature/proactive-lifecycle-monitoring": false,
-      "hotfix/vercel-lifecycle-cron-daily": false
+      "hotfix/vercel-lifecycle-cron-daily": false,
+      "feature/realestate-email-home-cta": false
     }
   },
   "crons": [
