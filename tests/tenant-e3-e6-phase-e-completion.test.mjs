@@ -109,3 +109,19 @@ test("Phase E canonical migration versions are present",()=>{
   assert.match(read("supabase/migrations/20260927064439_e3_e6_analytics_completion.sql"),/get_tenant_funnel_analytics/);
   assert.match(read("supabase/migrations/20260927064924_e6_tenant_anomaly_audience.sql"),/scan_analytics_anomalies/);
 });
+
+
+test("E3 funnel window calculation is precomputed before JSON aggregation",()=>{
+  const patch=read("supabase/migrations/20260927065230_e3_funnel_window_fix.sql");
+  assert.match(patch,/stage_steps/);
+  assert.match(patch,/lag\(reached\)/);
+  assert.match(patch,/previous_reached/);
+  assert.doesNotMatch(patch,/jsonb_agg\(jsonb_build_object\([\s\S]*lag\(reached\)/);
+});
+
+test("E5 AI-handled value requires real AI messages and no human messages",()=>{
+  const patch=read("supabase/migrations/20260927065351_e5_evidence_based_ai_handled_value.sql");
+  assert.match(patch,/sender_type='agent'/);
+  assert.match(patch,/sender_type='human'/);
+  assert.match(patch,/not exists\([\s\S]*human_handoffs/);
+});
