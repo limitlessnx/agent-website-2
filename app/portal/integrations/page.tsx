@@ -4,6 +4,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationAccessContext, listOrganizationMembers } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import GoogleCalendarPanel from "./GoogleCalendarPanel";
+import TwilioWhatsAppOnboardingPanel from "./TwilioWhatsAppOnboardingPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function PortalIntegrationsPage() {
     {data:calendarResources,error:calendarError},
     {data:routingSettings,error:routingError},
     {data:availabilitySettings,error:availabilityError},
+    {data:twilioWhatsAppBinding,error:twilioWhatsAppError},
     members,
   ]=await Promise.all([
     admin.from("organization_integrations").select("id,provider,display_name,status,health,last_connected_at,configuration").eq("organization_id",session.organizationId).order("created_at"),
@@ -44,6 +46,7 @@ export default async function PortalIntegrationsPage() {
     admin.from("appointment_calendar_resources").select("id,integration_id,external_calendar_id,display_name,organizer_email,assigned_membership_id,timezone,default_duration_minutes,status,is_default,availability_configuration,service_keys,branch_key,department_key,routing_priority").eq("organization_id",session.organizationId).eq("provider","google_calendar").order("created_at"),
     admin.from("appointment_routing_settings").select("strategy,fallback_to_default,lookahead_days").eq("organization_id",session.organizationId).maybeSingle(),
     admin.from("appointment_availability_settings").select("timezone,availability_configuration").eq("organization_id",session.organizationId).maybeSingle(),
+    admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164,sender_profile_name,twilio_sender_status,twilio_sender_sid,meta_waba_id,last_error_message").eq("organization_id",session.organizationId).maybeSingle(),
     canViewMembers ? listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
 
@@ -52,6 +55,7 @@ export default async function PortalIntegrationsPage() {
   if(calendarError) throw calendarError;
   if(routingError) throw routingError;
   if(availabilityError) throw availabilityError;
+  if(twilioWhatsAppError) throw twilioWhatsAppError;
 
   const rows = integrations || [];
   const connected = rows.filter((item) => item.status === "connected").length;
@@ -74,6 +78,11 @@ export default async function PortalIntegrationsPage() {
         <article className="portal-card"><small>Needs attention</small><strong>{attention}</strong><span>Error or degraded state</span></article>
         <article className="portal-card"><small>Provisioned agents</small><strong>{agents?.length || 0}</strong><span>Draft and testing agents included</span></article>
       </section>
+
+      <TwilioWhatsAppOnboardingPanel
+        initialBinding={twilioWhatsAppBinding}
+        canManage={access.permissions.has("integrations.manage")}
+      />
 
       <GoogleCalendarPanel
         integration={googleIntegration}
