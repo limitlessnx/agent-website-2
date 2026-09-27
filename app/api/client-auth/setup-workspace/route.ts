@@ -59,9 +59,14 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
+    const redirectTo=new URL(pending.nextPath&&pending.nextPath.startsWith("/")&&!pending.nextPath.startsWith("//")?pending.nextPath:"/portal","https://fluxknight.local");
+    if(pending.txRef&&redirectTo.pathname==="/onboarding") redirectTo.searchParams.set("tx_ref",pending.txRef);
+    if(pending.trialPlan==="basic") redirectTo.searchParams.set("trial","basic");
+
     return NextResponse.json({
       ok: true,
       organization_slug: membership.organizationSlug,
+      redirect_to:`${redirectTo.pathname}${redirectTo.search}`,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to finish workspace setup.";
