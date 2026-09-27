@@ -127,11 +127,15 @@ export async function checkWhatsAppReadiness(organizationId: string): Promise<Wh
     const readyForCutover=checks.every((check)=>check.ok);
     const health={status:readyForCutover?"healthy":"attention_required",ready_for_cutover:readyForCutover,credential_source:credentialSource,provider_family:"twilio",checks,sender_status:binding?.twilio_sender_status||null};
     if(integration?.id){
-      await admin.from("organization_integrations").update({
-        health,last_checked_at:new Date().toISOString(),
-        status:readyForCutover?"connected":integration.status,
-        ...(readyForCutover?{last_connected_at:new Date().toISOString()}:{})
-      }).eq("id",integration.id).catch(()=>undefined);
+      try{
+        await admin.from("organization_integrations").update({
+          health,last_checked_at:new Date().toISOString(),
+          status:readyForCutover?"connected":integration.status,
+          ...(readyForCutover?{last_connected_at:new Date().toISOString()}:{})
+        }).eq("id",integration.id);
+      }catch{
+        // Readiness reporting remains available even if health persistence fails.
+      }
     }
     return {
       organizationId,configured:Boolean(accountSid&&authToken&&sender),credentialSource,
