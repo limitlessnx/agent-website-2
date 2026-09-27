@@ -30,7 +30,7 @@ test("E1 analytics compares current and immediately previous equal periods",()=>
 
 test("E1 analytics exposes handoff SLA, claim, resolution and follow-up metrics",()=>{
   const migration=read("supabase/migrations/20260927024930_e1_tenant_operational_analytics.sql");
-  for(const key of ["slaMetRate","slaBreached","avgClaimMinutes","avgResolutionMinutes","followUpRequired","followUpCompleted"]){
+  for(const key of ["slaTracked","slaMetRate","slaBreached","avgClaimMinutes","avgResolutionMinutes","followUpRequired","followUpCompleted"]){
     assert.match(migration,new RegExp(key));
   }
 });
@@ -45,6 +45,13 @@ test("E1 portal analytics uses the canonical RPC reader and 7 30 90 day periods"
   assert.match(page,/Customer stages/);
   assert.match(page,/Conversation channels/);
   assert.match(reader,/rpc\/get_tenant_operational_analytics/);
+});
+
+test("E1 SLA met rate only uses handoffs with an SLA",()=>{
+  const migration=read("supabase/migrations/20260927024930_e1_tenant_operational_analytics.sql");
+  assert.match(migration,/slaTracked/);
+  assert.match(migration,/hm\.sla_tracked=0/);
+  assert.match(migration,/hm\.sla_tracked-hm\.sla_breached/);
 });
 
 test("E1 containment label is explicitly not customer satisfaction",()=>{
