@@ -4,6 +4,7 @@ import { processDueAppointmentReminders } from "@/lib/system-event-adapters";
 import { recoverFailedSystemEvents } from "@/lib/orchestration-operations";
 import { processDueHandoffFollowups } from "@/lib/handoff-followup";
 import { scanAnalyticsAnomalies } from "@/lib/analytics-phase-e";
+import { syncDueFluxSubscriptionWallets } from "@/lib/flux-commercial";
 
 export const systemEventDispatch = task({
   id: "system-event-dispatch",
@@ -83,6 +84,18 @@ export const analyticsAnomalySweep = schedules.task({
   run: async () => {
     const result = await scanAnalyticsAnomalies();
     logger.info("Analytics anomaly sweep completed", result);
+    return result;
+  },
+});
+
+
+export const fluxCommercialLifecycleSweep = schedules.task({
+  id: "flux-commercial-lifecycle-sweep",
+  cron: "15 * * * *",
+  maxDuration: 300,
+  run: async () => {
+    const result = await syncDueFluxSubscriptionWallets();
+    logger.info("Flux commercial lifecycle sweep completed", result);
     return result;
   },
 });
