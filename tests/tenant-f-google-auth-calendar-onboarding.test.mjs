@@ -393,3 +393,31 @@ test("F5 F6 mutation RPCs remain service role only",()=>{
   assert.match(migration,/revoke all on function public\.set_appointment_routing_settings[\s\S]*from public,anon,authenticated/);
   assert.match(migration,/advance_appointment_round_robin/);
 });
+
+
+test("F5 organization defaults are inherited by staff resources",()=>{
+  const migration=read("supabase/migrations/20260927124511_f5_organization_business_availability.sql");
+  const scheduling=read("lib/appointment-scheduling.ts");
+  const page=read("app/portal/integrations/page.tsx");
+  const panel=read("app/portal/integrations/GoogleCalendarPanel.tsx");
+  const editor=read("app/portal/integrations/BusinessAvailabilityEditor.tsx");
+  const route=read("app/api/integrations/google-calendar/availability/route.ts");
+  assert.match(migration,/appointment_availability_settings/);
+  assert.match(migration,/set_appointment_availability_settings/);
+  assert.match(scheduling,/loadOrganizationAvailability/);
+  assert.match(scheduling,/mergeAvailabilityConfiguration/);
+  assert.match(scheduling,/organizationConfiguration/);
+  assert.match(page,/appointment_availability_settings/);
+  assert.match(panel,/Business availability/);
+  assert.match(editor,/Enforce business hours/);
+  assert.match(editor,/Closed \/ holiday dates/);
+  assert.match(route,/set_appointment_availability_settings/);
+});
+
+test("F5 staff overrides merge with organization defaults instead of deleting them",()=>{
+  const scheduling=read("lib/appointment-scheduling.ts");
+  assert.match(scheduling,/\.\.\.organization/);
+  assert.match(scheduling,/\.\.\.resource/);
+  assert.match(scheduling,/blockedDates/);
+  assert.match(scheduling,/serviceDurations/);
+});
