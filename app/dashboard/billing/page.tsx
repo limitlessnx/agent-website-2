@@ -76,7 +76,7 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
               <div><span>Active systems</span><strong>{formatCredits(commercial?.systems.active || 0)}</strong></div>
             </div>
             <p className="admin-note">
-              Commercial policy: Flux Credits are prepaid. At exhaustion, chargeable AI pauses rather than creating an unapproved postpaid overage.
+              Commercial policy: Flux Credits are prepaid. At exhaustion, chargeable AI pauses rather than creating an unapproved postpaid overage. 1 Flux Credit = $0.01 customer-facing usage value; minimum customer top-up is $10 = 1,000 credits.
             </p>
             <h3>Usage by action</h3>
             <div className="admin-list compact">
