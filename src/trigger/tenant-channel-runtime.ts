@@ -32,6 +32,50 @@ async function resolveCustomer(payload: TenantChannelInboundPayload) {
   return resolved.customerId;
 }
 
+async function loadCustomerContinuityContext(organizationId:string,customerId:string|null){
+  if(!customerId) return { customerStage:null,lastHumanHandoff:null };
+  const admin=createAdminClient();
+  const {data:customer,error:customerError}=await admin.from("crm_customers")
+    .select("current_stage_id")
+    .eq("organization_id",organizationId)
+    .eq("id",customerId)
+    .maybeSingle();
+  if(customerError) throw customerError;
+
+  let customerStage:null|{id:string;key:string;name:string;category:string}=null;
+  if(customer?.current_stage_id){
+    const {data:stage,error:stageError}=await admin.from("organization_customer_stages")
+      .select("id,key,name,category")
+      .eq("organization_id",organizationId)
+      .eq("id",customer.current_stage_id)
+      .maybeSingle();
+    if(stageError) throw stageError;
+    if(stage) customerStage={id:stage.id,key:stage.key,name:stage.name,category:stage.category};
+  }
+
+  const {data:handoff,error:handoffError}=await admin.from("human_handoffs")
+    .select("id,resolution_summary,outcome,next_action,resolved_at,follow_up_status")
+    .eq("organization_id",organizationId)
+    .eq("customer_id",customerId)
+    .eq("status","resolved")
+    .order("resolved_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(handoffError) throw handoffError;
+
+  return {
+    customerStage,
+    lastHumanHandoff:handoff?{
+      id:handoff.id,
+      resolutionSummary:handoff.resolution_summary||null,
+      outcome:handoff.outcome||null,
+      nextAction:handoff.next_action||null,
+      resolvedAt:handoff.resolved_at||null,
+      followUpStatus:handoff.follow_up_status||null,
+    }:null,
+  };
+}
+
 async function validateRuntimeBinding(payload: TenantChannelInboundPayload) {
   const admin = createAdminClient();
   const [organization, agent, installation] = await Promise.all([
@@ -159,6 +203,7 @@ export const tenantWhatsAppInbound = task({
     }
 
     try {
+      const continuity=await loadCustomerContinuityContext(payload.organizationId,customerId);
       const sdk = new AgentRuntimeSDK();
       const identity = internalRuntimeIdentity(payload.organizationId, "whatsapp");
       const result = await runPhase12Agent({
@@ -176,6 +221,8 @@ export const tenantWhatsAppInbound = task({
           inboundEventId:inbound.id,
           customerId,
           customerPhone:payload.customerPhone || null,
+          customerStage:continuity.customerStage,
+          lastHumanHandoff:continuity.lastHumanHandoff,
         },
       });
 
