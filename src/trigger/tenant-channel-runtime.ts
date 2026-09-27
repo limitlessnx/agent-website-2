@@ -133,8 +133,8 @@ export const tenantWhatsAppInbound = task({
       if(conversationError) throw conversationError;
       const metadata=(conversation?.metadata||{}) as Record<string,unknown>;
       const responseMode=String(metadata.ai_response_mode||"").trim();
-      const humanControlled=["waiting","human_active"].includes(String(conversation?.status||""))
-        || ["paused_for_handoff","human_takeover"].includes(responseMode);
+      const humanControlled=["waiting","human_active","resolved"].includes(String(conversation?.status||""))
+        || ["paused_for_handoff","human_takeover","stopped"].includes(responseMode);
       if(humanControlled){
         await completeInbound(payload.organizationId,inbound.id);
         logger.info("Tenant WhatsApp inbound recorded while AI paused for human takeover",{
