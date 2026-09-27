@@ -79,9 +79,10 @@ test("E6 anomaly notifications are tenant scoped and do not send admins to porta
 test("E6 Trigger scan runs hourly and deploy watches anomaly logic",()=>{
   const trigger=read("src/trigger/system-orchestrator.ts");
   const workflow=read(".github/workflows/deploy-trigger.yml");
-  assert.match(trigger,/id: "analytics-anomaly-sweep"/);
-  assert.match(trigger,/cron: "0 \* \* \* \*"/);
+  assert.match(trigger,/id: "platform-hourly-maintenance-sweep"/);
+  assert.match(trigger,/cron: "15 \* \* \* \*"/);
   assert.match(trigger,/scanAnalyticsAnomalies/);
+  assert.match(trigger,/syncDueFluxSubscriptionWallets/);
   assert.match(workflow,/lib\/analytics-phase-e\.ts/);
 });
 
