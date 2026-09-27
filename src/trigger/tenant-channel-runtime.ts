@@ -4,6 +4,7 @@ import { AgentRuntimeSDK } from "@/lib/ai-runtime/sdk";
 import { internalRuntimeIdentity, runPhase12Agent } from "@/lib/ai-runtime/migration";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 export type TenantChannelInboundPayload = {
   organizationId: string;
@@ -203,6 +204,7 @@ export const tenantWhatsAppInbound = task({
     }
 
     try {
+      await preflightChargeableFluxAi({ organizationId:payload.organizationId, feature:"core_ai_support", action:"whatsapp_ai" });
       const continuity=await loadCustomerContinuityContext(payload.organizationId,customerId);
       const sdk = new AgentRuntimeSDK();
       const identity = internalRuntimeIdentity(payload.organizationId, "whatsapp");
@@ -223,6 +225,21 @@ export const tenantWhatsAppInbound = task({
           customerPhone:payload.customerPhone || null,
           customerStage:continuity.customerStage,
           lastHumanHandoff:continuity.lastHumanHandoff,
+        },
+      });
+
+      await recordChargeableFluxAiUsage({
+        organizationId:payload.organizationId,
+        action:"whatsapp_ai",
+        source:"tenant_whatsapp_runtime",
+        provider:"openai",
+        model:result.model||null,
+        providerUsage:result.usage||{},
+        metadata:{
+          agent_id:payload.agentId,
+          source_system_id:payload.sourceSystemId,
+          inbound_event_id:inbound.id,
+          runtime_execution_id:result.executionId,
         },
       });
 
