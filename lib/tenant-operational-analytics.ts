@@ -15,7 +15,7 @@ export type TenantOperationalAnalytics={
   conversations:{current:number;previous:number;uniqueCustomers:number;aiHandledRate:number|null};
   messages:{current:number;previous:number;ai:number;human:number;customer:number};
   handoffs:{
-    current:number;previous:number;resolved:number;assigned:number;slaBreached:number;slaMetRate:number|null;
+    current:number;previous:number;resolved:number;assigned:number;slaTracked:number;slaBreached:number;slaMetRate:number|null;
     avgClaimMinutes:number|null;avgResolutionMinutes:number|null;followUpRequired:number;followUpCompleted:number;
   };
   appointments:{
