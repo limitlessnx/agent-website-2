@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 
 export const dynamic = "force-dynamic";
 
@@ -203,6 +204,7 @@ export async function POST(request: NextRequest) {
   let statusUpdates = 0;
   let inboundQueued = 0;
   let ignoredInbound = 0;
+  let humanEchoes = 0;
 
   for (const entry of Array.isArray(body.entry) ? body.entry : []) {
     for (const change of Array.isArray(entry?.changes) ? entry.changes : []) {
@@ -228,6 +230,33 @@ export async function POST(request: NextRequest) {
       const tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
       const contacts = Array.isArray(value.contacts) ? value.contacts : [];
       const contactName = String(contacts[0]?.profile?.name || "");
+
+      if (change?.field === "smb_message_echoes" && tenant) {
+        for (const echo of Array.isArray(value.message_echoes) ? value.message_echoes : []) {
+          const messageId=String(echo?.id||"");
+          const to=String(echo?.to||"").replace(/[^0-9]/g,"");
+          const text=inboundText(echo);
+          if(!messageId||!to||!text) continue;
+          await recordWhatsAppBusinessAppEcho({
+            organizationId:tenant.organizationId,
+            sourceSystemId:tenant.sourceSystemId,
+            agentId:tenant.agentId,
+            customerPhone:to,
+            messageId,
+            text,
+            phoneNumberId,
+            timestamp:String(echo?.timestamp||"")||null,
+          }).catch((error)=>{
+            console.error("[whatsapp-webhook] coexistence echo failed",{
+              organizationId:tenant.organizationId,
+              messageId,
+              error:error instanceof Error?error.message:"unknown",
+            });
+          });
+          humanEchoes += 1;
+        }
+        continue;
+      }
 
       for (const message of Array.isArray(value.messages) ? value.messages : []) {
         const messageId = String(message?.id || "");
@@ -269,5 +298,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound });
+  return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes });
 }
