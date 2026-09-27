@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { requirePortalPermission } from "@/lib/portal-access";
 import { analyticsChangePercent, getTenantOperationalAnalytics } from "@/lib/tenant-operational-analytics";
+import { getTenantAnalyticsDrilldown } from "@/lib/tenant-analytics-drilldown";
+import { listOrganizationMembers } from "@/lib/organization-membership";
+import AnalyticsTrendChart from "./AnalyticsTrendChart";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Analytics | Fluxknight" };
@@ -41,7 +44,12 @@ export default async function AnalyticsPage({
   const params=await searchParams;
   const requested=Number(params.period||30);
   const periodDays=[7,30,90].includes(requested)?requested:30;
-  const analytics=await getTenantOperationalAnalytics(session.organizationId,periodDays);
+  const [analytics,drilldown,members]=await Promise.all([
+    getTenantOperationalAnalytics(session.organizationId,periodDays),
+    getTenantAnalyticsDrilldown(session.organizationId,periodDays),
+    listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]),
+  ]);
+  const memberById=new Map(members.map((member)=>[member.id,member]));
 
   const stageMax=Math.max(1,...analytics.stageDistribution.map((item)=>item.count));
   const channelMax=Math.max(1,...analytics.channelDistribution.map((item)=>item.count));
@@ -102,6 +110,69 @@ export default async function AnalyticsPage({
         <span>Messages</span>
         <strong>{number(analytics.messages.current)}</strong>
         <small>{number(analytics.messages.ai)} AI · {number(analytics.messages.human)} human · {number(analytics.messages.customer)} customer</small>
+      </article>
+    </section>
+
+    <section className="portal-grid">
+      <AnalyticsTrendChart
+        data={drilldown.daily}
+        series={[
+          {key:"conversations",label:"Conversations"},
+          {key:"messages",label:"Messages"},
+          {key:"handoffs",label:"Handoffs"},
+          {key:"appointments",label:"Appointments"},
+        ]}
+        title="Customer activity over time"
+        description="Daily canonical customer activity during the selected period."
+      />
+      <AnalyticsTrendChart
+        data={drilldown.daily}
+        series={[
+          {key:"runtimeExecutions",label:"AI executions"},
+          {key:"runtimeFailed",label:"Runtime failures"},
+          {key:"whatsappAttempts",label:"WhatsApp attempts"},
+          {key:"whatsappFailed",label:"WhatsApp failures"},
+        ]}
+        title="Automation health over time"
+        description="Daily runtime and WhatsApp delivery activity."
+      />
+    </section>
+
+    <section className="portal-grid">
+      <article className="portal-card">
+        <div className="portal-card-head"><div>
+          <h2>Systems</h2>
+          <p>Activity attributed to installed Fluxknight systems.</p>
+        </div></div>
+        <div className="portal-list">
+          {drilldown.systems.map((item)=><Link
+            href={"/portal/analytics/systems/"+item.organizationSystemId+"?period="+periodDays}
+            className="portal-list-row"
+            key={item.organizationSystemId}
+          >
+            <div><strong>{item.name}</strong><span>{item.status} · {number(item.events)} events · {number(item.handoffs)} handoffs</span></div>
+            <em>{number(item.appointments)} appts</em>
+          </Link>)}
+          {!drilldown.systems.length?<p className="portal-empty">No canonical installed systems are attached to this tenant yet.</p>:null}
+        </div>
+      </article>
+
+      <article className="portal-card">
+        <div className="portal-card-head"><div>
+          <h2>Agents</h2>
+          <p>AI runtime and customer handling by canonical agent.</p>
+        </div></div>
+        <div className="portal-list">
+          {drilldown.agents.map((item)=><Link
+            href={"/portal/analytics/agents/"+item.agentId+"?period="+periodDays}
+            className="portal-list-row"
+            key={item.agentId}
+          >
+            <div><strong>{item.name}</strong><span>{item.model||"Model not recorded"} · {number(item.conversations)} conversations · {number(item.handoffs)} handoffs</span></div>
+            <em>{rate(item.runtimeSuccessRate)} runtime</em>
+          </Link>)}
+          {!drilldown.agents.length?<p className="portal-empty">No canonical agents are configured for this tenant.</p>:null}
+        </div>
       </article>
     </section>
 
@@ -184,6 +255,53 @@ export default async function AnalyticsPage({
         <div className="portal-list-row"><div><strong>Appointments cancelled</strong><span>Customer/team cancellations</span></div><em>{number(analytics.appointments.cancelled)}</em></div>
         <div className="portal-list-row"><div><strong>WhatsApp successful delivery states</strong><span>Sent, delivered, read or accepted</span></div><em>{number(analytics.whatsapp.successful)}</em></div>
         <div className="portal-list-row"><div><strong>WhatsApp reads</strong><span>Provider-confirmed read state</span></div><em>{number(analytics.whatsapp.read)}</em></div>
+      </div>
+    </section>
+
+    <section className="portal-grid">
+      <article className="portal-card">
+        <div className="portal-card-head"><div>
+          <h2>Handoff reasons</h2>
+          <p>Why customer conversations required a human during this period.</p>
+        </div></div>
+        <div className="portal-list">
+          {drilldown.handoffCategories.map((item)=><div className="portal-list-row" key={item.category}>
+            <div><strong>{item.category.replaceAll("_"," ")}</strong><span>{number(item.resolved)} resolved · {number(item.slaBreached)} SLA breaches</span></div>
+            <em>{number(item.count)}</em>
+          </div>)}
+          {!drilldown.handoffCategories.length?<p className="portal-empty">No human handoffs recorded in this period.</p>:null}
+        </div>
+      </article>
+
+      <article className="portal-card">
+        <div className="portal-card-head"><div>
+          <h2>Human workload</h2>
+          <p>Assignment and SLA performance for team members receiving handoffs.</p>
+        </div></div>
+        <div className="portal-list">
+          {drilldown.assignees.map((item)=>{
+            const member=memberById.get(item.membershipId);
+            return <div className="portal-list-row" key={item.membershipId}>
+              <div><strong>{member?.email||item.membershipId.slice(0,8)}</strong><span>{number(item.resolved)} resolved · {number(item.open)} open · {rate(item.slaMetRate)} SLA</span></div>
+              <em>{duration(item.avgClaimMinutes)}</em>
+            </div>;
+          })}
+          {!drilldown.assignees.length?<p className="portal-empty">No assigned handoffs recorded in this period.</p>:null}
+        </div>
+      </article>
+    </section>
+
+    <section className="portal-card">
+      <div className="portal-card-head"><div>
+        <h2>Customer stage movement</h2>
+        <p>Observed transitions through this organization's configured customer journey.</p>
+      </div></div>
+      <div className="portal-list">
+        {drilldown.stageTransitions.map((item)=><div className="portal-list-row" key={(item.fromStageId||"none")+"-"+item.toStageId}>
+          <div><strong>{item.fromStage} → {item.toStage}</strong><span>Recorded stage transitions</span></div>
+          <em>{number(item.count)}</em>
+        </div>)}
+        {!drilldown.stageTransitions.length?<p className="portal-empty">No customer stage transitions recorded in this period.</p>:null}
       </div>
     </section>
 
