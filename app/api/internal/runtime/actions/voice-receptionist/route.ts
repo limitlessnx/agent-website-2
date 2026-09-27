@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 const text = (v: unknown) => typeof v === "string" ? v.trim() : "";
 const rec = (v: unknown): Record<string, unknown> => v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : {};
@@ -24,6 +25,13 @@ export async function POST(request: NextRequest) {
     const duplicate=await supabase.from("conversation_messages").select("id").eq("organization_id",organizationId).contains("payload",{workflow_key:"voice_receptionist_v6",idempotency_key:idempotencyKey}).limit(1).maybeSingle();
     if(duplicate.error) throw duplicate.error;
     if(duplicate.data) return NextResponse.json({ok:true,duplicate:true,organization_id:organizationId,agent_id:agentId,execution_id:executionId,idempotency_key:idempotencyKey,actions:[]});
+
+    await preflightChargeableFluxAi({
+      organizationId,
+      feature:"leo_voice",
+      action:"leo_voice_minute",
+      quantity:1,
+    });
 
     const inputCustomer=rec(input.customer);
     let customerId=text(body.customer_id);
@@ -69,6 +77,56 @@ export async function POST(request: NextRequest) {
     const memories=arr(decision.memory_facts).map(rec).filter(x=>text(x.summary)).map(x=>({organization_id:organizationId,customer_key:customerKey,memory_type:text(x.type)||"voice",summary:text(x.summary),confidence:Math.max(0,Math.min(1,Number(x.confidence)||0.8)),source_type:"runtime_execution",source_id:executionId,metadata:{agent_id:agentId,conversation_id:conversationId,lead_id:leadId,call_id:text(input.call_id),workflow_key:"voice_receptionist_v6"}}));
     if(memories.length){ const m=await supabase.from("customer_memories").insert(memories); if(m.error) throw m.error; }
     if(Object.keys(usage).length){ await supabase.from("usage_ledger").insert({organization_id:organizationId,agent_id:agentId,execution_id:executionId,usage_type:"ai_tokens",quantity:Number(usage.total_tokens)||Number(usage.total)||1,unit:"tokens",metadata:{workflow_key:"voice_receptionist_v6",provider_usage:usage}}); }
+
+    const callStatus=text(decision.call_status).toLowerCase();
+    const terminalCall=["completed","ended","finished","hangup","hung_up"].includes(callStatus)
+      || ["voice.call_ended","voice.completed","call.ended"].includes(eventType.toLowerCase());
+    if(terminalCall){
+      const durationSeconds=Number(
+        usage.duration_seconds ?? usage.durationSeconds
+        ?? input.duration_seconds ?? input.durationSeconds
+        ?? body.duration_seconds ?? body.durationSeconds
+        ?? 0
+      );
+      const durationMinutes=Number(
+        usage.duration_minutes ?? usage.durationMinutes
+        ?? input.duration_minutes ?? input.durationMinutes
+        ?? body.duration_minutes ?? body.durationMinutes
+        ?? 0
+      );
+      const billableMinutes=Math.max(
+        1,
+        durationSeconds>0 ? Math.ceil(durationSeconds/60) : durationMinutes>0 ? Math.ceil(durationMinutes) : 1,
+      );
+      await preflightChargeableFluxAi({
+        organizationId,
+        feature:"leo_voice",
+        action:"leo_voice_minute",
+        quantity:billableMinutes,
+      });
+      await recordChargeableFluxAiUsage({
+        organizationId,
+        action:"leo_voice_minute",
+        quantity:billableMinutes,
+        source:"voice_receptionist_runtime",
+        provider:text(input.provider)||text(body.provider)||undefined,
+        model:text(body.model)||null,
+        providerUsage:{
+          inputTokens:Number(usage.input_tokens)||undefined,
+          outputTokens:Number(usage.output_tokens)||undefined,
+          totalTokens:Number(usage.total_tokens)||Number(usage.total)||undefined,
+          durationSeconds:durationSeconds||undefined,
+          billableMinutes,
+        },
+        metadata:{
+          agent_id:agentId,
+          execution_id:executionId,
+          call_id:text(input.call_id)||null,
+          idempotency_key:idempotencyKey,
+          call_status:callStatus||null,
+        },
+      });
+    }
     await supabase.from("runtime_progress_events").insert({organization_id:organizationId,execution_id:executionId,event_type:"voice.outcome_persisted",message:"Tenant-safe voice outcome persisted.",payload:{conversation_id:conversationId,customer_id:customerId,lead_id:leadId,call_id:text(input.call_id),event_type:eventType,actions_count:actions.length}});
 
     return NextResponse.json({ok:true,organization_id:organizationId,agent_id:agentId,execution_id:executionId,conversation_id:conversationId,customer_id:customerId,lead_id:leadId,idempotency_key:idempotencyKey,event_type:eventType,call_id:text(input.call_id)||null,call_status:text(decision.call_status)||"in_progress",summary:text(decision.summary),reply_text:reply||null,handoff,actions});
