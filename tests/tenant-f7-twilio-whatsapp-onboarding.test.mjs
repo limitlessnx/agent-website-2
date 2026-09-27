@@ -28,7 +28,9 @@ test("F7 Embedded Signup uses Meta config and Twilio Partner Solution without ex
   assert.match(panel,/config_id:bootstrap\.configId/);
   assert.match(panel,/solutionID:bootstrap\.solutionId/);
   assert.match(panel,/sessionInfoVersion:3/);
-  assert.match(panel,/only_waba_sharing/);
+  const onboarding=read("lib/twilio-whatsapp-onboarding.ts");
+  assert.match(onboarding,/only_waba_sharing/);
+  assert.match(panel,/bootstrap\.featureType/);
   assert.match(panel,/event\.origin\.endsWith\("facebook\.com"\)/);
   assert.match(panel,/FINISH_ONLY_WABA/);
   assert.doesNotMatch(panel,/TWILIO_AUTH_TOKEN|twilio_auth_token/);
