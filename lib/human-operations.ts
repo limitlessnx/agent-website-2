@@ -128,6 +128,7 @@ export type HumanHandoffRow={
   assigned_membership_id?:string|null; claimed_by_membership_id?:string|null; sla_due_at?:string|null;
   conversation_summary?:string|null; stage_id_at_handoff?:string|null; next_action?:string|null; outcome?:string|null;
   follow_up_required?:boolean; follow_up_due_at?:string|null; follow_up_status?:string|null; notified_at?:string|null;
+  customer_name?:string|null; stage_name?:string|null; assigned_to_email?:string|null;
   created_at:string; updated_at:string; resolution_summary?:string|null;
 };
 export type OperationApprovalRow={
@@ -153,8 +154,31 @@ export async function listHumanOperations(session:ClientSession){
   ]);
   if(handoffsResult.error) throw handoffsResult.error;
   if(approvalsResult.error) throw approvalsResult.error;
+  const handoffRows=(handoffsResult.data||[]) as HumanHandoffRow[];
+  const customerIds=[...new Set(handoffRows.map((item)=>item.customer_id).filter(Boolean))];
+  const stageIds=[...new Set(handoffRows.map((item)=>item.stage_id_at_handoff).filter(Boolean))] as string[];
+  const [customersResult,stagesResult]=await Promise.all([
+    customerIds.length
+      ? admin.from("crm_customers").select("id,full_name,company_name").eq("organization_id",session.organizationId).in("id",customerIds)
+      : Promise.resolve({data:[],error:null}),
+    stageIds.length
+      ? admin.from("organization_customer_stages").select("id,name").eq("organization_id",session.organizationId).in("id",stageIds)
+      : Promise.resolve({data:[],error:null}),
+  ]);
+  if(customersResult.error) throw customersResult.error;
+  if(stagesResult.error) throw stagesResult.error;
+  const customerNameById=new Map((customersResult.data||[]).map((row)=>[row.id,String(row.full_name||row.company_name||"Customer")]));
+  const stageNameById=new Map((stagesResult.data||[]).map((row)=>[row.id,String(row.name||"")]));
+  const memberEmailById=new Map(members.map((member)=>[member.id,member.email||null]));
+  const handoffs=handoffRows.map((item)=>({
+    ...item,
+    customer_name:customerNameById.get(item.customer_id)||"Customer",
+    stage_name:item.stage_id_at_handoff?stageNameById.get(item.stage_id_at_handoff)||null:null,
+    assigned_to_email:item.assigned_membership_id?memberEmailById.get(item.assigned_membership_id)||null:null,
+  }));
+
   return {
-    handoffs:(handoffsResult.data||[]) as HumanHandoffRow[],
+    handoffs,
     approvals:(approvalsResult.data||[]) as OperationApprovalRow[],
     members,
     permissions:[...access.permissions],
