@@ -48,5 +48,30 @@ export async function PATCH(request:NextRequest,{params}:{params:Promise<{id:str
     p_availability_configuration:availability,
   });
   if(settingsError) return NextResponse.json({error:settingsError.message},{status:400});
-  return NextResponse.json({ok:true,settings});
+
+  const serviceKeys=Array.isArray(body.serviceKeys)
+    ? body.serviceKeys.map((value)=>String(value||"").trim()).filter(Boolean)
+    : (Array.isArray(resource.service_keys)?resource.service_keys:[]);
+  const branchKey=Object.prototype.hasOwnProperty.call(body,"branchKey")
+    ? String(body.branchKey||"").trim()||null
+    : resource.branch_key;
+  const departmentKey=Object.prototype.hasOwnProperty.call(body,"departmentKey")
+    ? String(body.departmentKey||"").trim()||null
+    : resource.department_key;
+  const routingPriority=Object.prototype.hasOwnProperty.call(body,"routingPriority")
+    ? Number(body.routingPriority)
+    : Number(resource.routing_priority||100);
+
+  const {data:scheduling,error:schedulingError}=await (admin as any).rpc("update_appointment_resource_scheduling_policy",{
+    p_organization_id:session.organizationId,
+    p_resource_id:id,
+    p_availability_configuration:availability,
+    p_service_keys:serviceKeys,
+    p_branch_key:branchKey,
+    p_department_key:departmentKey,
+    p_routing_priority:routingPriority,
+  });
+  if(schedulingError) return NextResponse.json({error:schedulingError.message},{status:400});
+
+  return NextResponse.json({ok:true,settings,scheduling});
 }
