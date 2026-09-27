@@ -44,6 +44,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
           payment_tx_ref: txRef || undefined,
           post_signup_path: safeNext,
           trial_plan: isBasicTrial ? "basic" : undefined,
+          invitation_token: invitationToken || undefined,
         }),
       });
       const result = await response.json().catch(() => ({}));
