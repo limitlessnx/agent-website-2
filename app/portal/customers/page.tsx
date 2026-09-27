@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { requirePortalPermission } from "@/lib/portal-access";
@@ -26,7 +27,7 @@ export default async function CustomersPage() {
       <article className="portal-business-metric"><span>Leads</span><strong>{leads.length}</strong><small>recent opportunities</small></article>
     </section>
     <section className="portal-card"><div className="portal-card-head"><div><h2>Recent customers</h2><p>Tenant-scoped CRM records only.</p></div></div>
-      <div className="portal-list">{customers.map((customer)=><div className="portal-list-row" key={customer.id}><div><strong>{customer.full_name || customer.company_name || "Unnamed customer"}</strong><span>{customer.email || customer.phone || "No contact detail"} · {customer.status || "active"}</span></div><em>{new Date(customer.updated_at).toLocaleDateString("en-NG")}</em></div>)}{!customers.length?<p className="portal-empty">No customer records yet.</p>:null}</div>
+      <div className="portal-list">{customers.map((customer)=><Link href={`/portal/customers/${customer.id}`} className="portal-list-row" key={customer.id}><div><strong>{customer.full_name || customer.company_name || "Unnamed customer"}</strong><span>{customer.email || customer.phone || "No contact detail"} · {customer.status || "active"}</span></div><em>{new Date(customer.updated_at).toLocaleDateString("en-NG")}</em></Link>)}{!customers.length?<p className="portal-empty">No customer records yet.</p>:null}</div>
     </section>
   </main>;
 }
