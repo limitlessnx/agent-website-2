@@ -43,8 +43,10 @@ test("G lifecycle sweep catches clock-based expiry",()=>{
   assert.match(migration,/sync_due_flux_subscription_wallets/);
   assert.match(migration,/trial_ends_at<=now\(\)/);
   assert.match(migration,/grace_period_end<=now\(\)/);
-  assert.match(trigger,/id: "flux-commercial-lifecycle-sweep"/);
+  assert.match(trigger,/id: "platform-hourly-maintenance-sweep"/);
   assert.match(trigger,/cron: "15 \* \* \* \*"/);
+  assert.match(trigger,/scanAnalyticsAnomalies/);
+  assert.match(trigger,/syncDueFluxSubscriptionWallets/);
 });
 
 test("G credit thresholds create tenant billing notifications",()=>{
