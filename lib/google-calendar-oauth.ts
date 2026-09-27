@@ -18,6 +18,12 @@ export type GoogleCalendarChoice={
   timeZone:string;
 };
 
+const REQUIRED_GOOGLE_CALENDAR_SCOPES=[
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.freebusy",
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+];
+
 function text(value:unknown){return typeof value==="string"?value.trim():"";}
 
 export function googleCalendarOAuthConfig(origin?:string){
@@ -80,6 +86,14 @@ export function googleCalendarAuthorizationUrl(input:{origin:string;state:string
   url.searchParams.set("state",input.state);
   if(input.loginHint?.trim()) url.searchParams.set("login_hint",input.loginHint.trim());
   return url.toString();
+}
+
+export function assertGoogleCalendarScopes(grantedScope:string){
+  const granted=new Set(grantedScope.split(/\s+/).map((item)=>item.trim()).filter(Boolean));
+  const missing=REQUIRED_GOOGLE_CALENDAR_SCOPES.filter((scope)=>!granted.has(scope));
+  if(missing.length){
+    throw new Error("Google Calendar permissions were not fully granted. Reconnect and approve Calendar access.");
+  }
 }
 
 export async function exchangeGoogleCalendarCode(input:{origin:string;code:string}){
