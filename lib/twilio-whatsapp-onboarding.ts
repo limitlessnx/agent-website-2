@@ -93,7 +93,7 @@ async function storeTwilioTenantCredentials(input:{
   organizationId:string;
   accountSid:string;
   authToken:string;
-  senderSid:string;
+  senderSid?:string|null;
   senderPhoneE164:string;
   wabaId:string;
   metaPhoneNumberId?:string|null;
@@ -107,7 +107,7 @@ async function storeTwilioTenantCredentials(input:{
       provider_family:"twilio",
       twilio_account_sid:input.accountSid,
       twilio_auth_token:input.authToken,
-      twilio_sender_sid:input.senderSid,
+      twilio_sender_sid:input.senderSid||null,
       twilio_whatsapp_sender:`whatsapp:${input.senderPhoneE164}`,
       waba_id:input.wabaId,
       meta_phone_number_id:input.metaPhoneNumberId||null,
@@ -119,9 +119,9 @@ async function storeTwilioTenantCredentials(input:{
       waba_id:input.wabaId,
       meta_phone_number_id:input.metaPhoneNumberId||null,
       twilio_subaccount_sid:input.accountSid,
-      twilio_sender_sid:input.senderSid,
+      twilio_sender_sid:input.senderSid||null,
       sender_phone_e164:input.senderPhoneE164,
-      sender_status:"CREATING",
+      sender_status:input.senderSid?"CREATING":"SUBACCOUNT_READY",
       maia_active:false,
       configured_at:new Date().toISOString(),
     },
@@ -207,6 +207,28 @@ export async function completeTwilioWhatsAppEmbeddedSignup(input:{
     const sub=await createTwilioSubaccount(`Fluxknight · ${org.name||org.slug||input.organizationId}`);
     subaccountSid=sub.sid;
     subaccountAuthToken=sub.authToken;
+
+    const partialIntegrationId=await storeTwilioTenantCredentials({
+      organizationId:input.organizationId,
+      accountSid:subaccountSid,
+      authToken:subaccountAuthToken,
+      senderSid:null,
+      senderPhoneE164:senderPhone,
+      wabaId,
+      metaPhoneNumberId:String(input.metaPhoneNumberId||"").trim()||null,
+    });
+    await (admin as any).rpc("upsert_whatsapp_twilio_binding",{
+      p_organization_id:input.organizationId,
+      p_integration_id:partialIntegrationId||null,
+      p_status:"registering_sender",
+      p_meta_waba_id:wabaId,
+      p_meta_phone_number_id:String(input.metaPhoneNumberId||"").trim()||null,
+      p_sender_phone_e164:senderPhone,
+      p_sender_profile_name:profileName,
+      p_number_source:session.number_source,
+      p_twilio_subaccount_sid:subaccountSid,
+      p_provider_metadata:{onboarding_session_id:session.id,subaccount_persisted:true},
+    });
   }
 
   await admin.from("whatsapp_twilio_onboarding_sessions").update({
