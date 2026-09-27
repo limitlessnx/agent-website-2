@@ -97,3 +97,36 @@ test("D4 WhatsApp readiness detects coexistence instead of assuming API-only",()
   assert.match(integration,/coexistenceActive/);
   assert.match(ui,/coexistence/);
 });
+
+
+test("D4 dashboard shared inbox sends human WhatsApp replies and keeps AI paused",()=>{
+  const route=read("app/api/portal/conversations/[id]/messages/route.ts");
+  const page=read("app/portal/conversations/[id]/page.tsx");
+  const composer=read("app/portal/conversations/[id]/HumanWhatsAppComposer.tsx");
+  assert.match(route,/conversations\.reply/);
+  assert.match(route,/sendWhatsAppMessage/);
+  assert.match(route,/senderType:"human"/);
+  assert.match(route,/ai_response_mode:"human_takeover"/);
+  assert.match(route,/human_takeover_source:"fluxknight_dashboard"/);
+  assert.match(page,/HumanWhatsAppComposer/);
+  assert.match(composer,/Send on WhatsApp/);
+});
+
+test("D4 WhatsApp system tools carry canonical conversation context for handoff",()=>{
+  const runtime=read("src/trigger/tenant-channel-runtime.ts");
+  assert.match(runtime,/conversation_id:conversationId/);
+  assert.match(runtime,/customerStage:continuity\.customerStage/);
+  assert.match(runtime,/lastHumanHandoff:continuity\.lastHumanHandoff/);
+});
+
+test("D4 new organizations automatically receive default customer stages",()=>{
+  const migration=read("supabase/migrations/20260927012333_d4_future_organization_customer_stages.sql");
+  assert.match(migration,/seed_customer_stages_on_organization_insert/);
+  assert.match(migration,/seed_default_customer_stages/);
+});
+
+test("D4 stage history uses exact inserted history id for timeline linkage",()=>{
+  const migration=read("supabase/migrations/20260927012456_d4_stage_history_exact_timeline_link.sql");
+  assert.match(migration,/returning id into v_history_id/);
+  assert.match(migration,/v_history_id/);
+});
