@@ -327,6 +327,22 @@ export const LEO_TOOLS: LeoToolDefinition[] = [
     approval: "none",
   },
   {
+    key: "flux.system.handoff.request",
+    title: "Hand customer conversation to a human",
+    description: "Request a human handoff for the current customer conversation. Include reason and, when known, category, priority, conversationSummary, stageKey, nextAction and slaMinutes. The platform pauses AI replies, assigns an authorized human when a matching tenant rule exists, records the handoff, and notifies the assignee.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
+    key: "flux.system.customer.stage.update",
+    title: "Update customer stage",
+    description: "Move the current customer to an active organization-defined customer stage. Requires customer_id and stageKey. Only stages configured by the tenant are accepted.",
+    scopes: ["internal_service"],
+    readOnly: false,
+    approval: "none",
+  },
+  {
     key: "leo.limitless.leads.read",
     title: "Search Limitless Realty leads",
     description: "Search the owned Limitless Realty CRM by lead ID, name, phone or email. Use this for requests such as pull up or find a Limitless Realty lead.",
