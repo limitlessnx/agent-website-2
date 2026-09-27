@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import GoogleAuthButton from "../GoogleAuthButton";
 
 export default function ClientLoginForm({ txRef = "", nextPath = "/portal" }: { txRef?: string; nextPath?: string }) {
   const router = useRouter();
@@ -56,6 +57,8 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal" }: { 
         <p className="admin-muted">Sign in to your Fluxknight account to continue.</p>
       </div>
       {txRef ? <p className="admin-form-message">Your payment is verified. Sign in to continue to onboarding.</p> : null}
+      <GoogleAuthButton nextPath={safeNext} />
+      <p className="admin-muted">or continue with email</p>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <label>Password<input name="password" type="password" required autoComplete="current-password" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
