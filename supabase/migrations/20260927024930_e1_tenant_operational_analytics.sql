@@ -69,6 +69,7 @@ begin
       count(distinct conversation_id) filter(where created_at>=v_start)::int current_conversations,
       count(*) filter(where created_at>=v_start and status in ('resolved','closed'))::int resolved,
       count(*) filter(where created_at>=v_start and assigned_membership_id is not null)::int assigned,
+      count(*) filter(where created_at>=v_start and sla_due_at is not null)::int sla_tracked,
       count(*) filter(where created_at>=v_start and sla_due_at is not null and
         coalesce(resolved_at,closed_at,v_now)>sla_due_at)::int sla_breached,
       count(*) filter(where created_at>=v_start and follow_up_required=true)::int follow_up_required,
@@ -184,8 +185,8 @@ begin
     ),
     'handoffs',jsonb_build_object(
       'current',hm.current_count,'previous',hm.previous_count,'resolved',hm.resolved,'assigned',hm.assigned,
-      'slaBreached',hm.sla_breached,
-      'slaMetRate',case when hm.current_count=0 then null else round(((hm.current_count-hm.sla_breached)::numeric/hm.current_count)*100,1) end,
+      'slaTracked',hm.sla_tracked,'slaBreached',hm.sla_breached,
+      'slaMetRate',case when hm.sla_tracked=0 then null else round(((hm.sla_tracked-hm.sla_breached)::numeric/hm.sla_tracked)*100,1) end,
       'avgClaimMinutes',hm.avg_claim_minutes,'avgResolutionMinutes',hm.avg_resolution_minutes,
       'followUpRequired',hm.follow_up_required,'followUpCompleted',hm.follow_up_completed
     ),
