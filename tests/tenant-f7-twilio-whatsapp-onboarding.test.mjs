@@ -80,7 +80,7 @@ test("F7 outbound WhatsApp delivery is provider neutral",()=>{
   assert.match(delivery,/sendTwilioWhatsAppMessage/);
   assert.match(delivery,/providerFamily:"meta"/);
   assert.match(delivery,/No Twilio Content SID is configured/);
-  assert.match(delivery,/StatusCallback/);
+  assert.match(delivery,/statusCallbackUrl/);
 });
 
 test("F7 delivery status callbacks update the existing WhatsApp delivery ledger",()=>{
@@ -134,4 +134,13 @@ test("F7 failed sender registration remains retryable without creating a second 
   assert.ok(persistIndex>createIndex);
   assert.ok(failureIndex>persistIndex);
   assert.match(onboarding,/status:"degraded"/);
+});
+
+
+test("F7 provisioning does not claim connected before sender ONLINE",()=>{
+  const onboarding=read("lib/twilio-whatsapp-onboarding.ts");
+  assert.match(onboarding,/status:"configured"/);
+  assert.match(onboarding,/state:"provisioning"/);
+  assert.match(onboarding,/senderStatus==="ONLINE"\?"connected":"awaiting_sender_online"/);
+  assert.match(onboarding,/status:senderStatus==="ONLINE"\?"connected":"configured"/);
 });
