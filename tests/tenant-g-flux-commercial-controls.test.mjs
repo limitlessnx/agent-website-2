@@ -7,8 +7,9 @@ const read=(path)=>readFileSync(path,"utf8");
 test("G keeps Flux Credits as the canonical tenant usage currency",()=>{
   const credits=read("lib/flux-credits.ts");
   const plans=read("lib/fluxknight-plans.ts");
-  assert.match(credits,/flux_credit_wallets/);
-  assert.match(credits,/flux_credit_ledger/);
+  assert.match(credits,/sync_flux_credit_wallet_from_subscription/);
+  assert.match(credits,/record_flux_credit_usage/);
+  assert.match(credits,/adjust_flux_credit_wallet/);
   assert.match(plans,/FLUX_CREDIT_ACTION_RATES/);
   assert.match(plans,/whatsapp_ai: 4/);
   assert.match(plans,/ai_email: 3/);
@@ -92,7 +93,7 @@ test("G provider runtime gates generic email and voice workloads without double 
 test("G outbound email duplicates return before Flux debit and uses channel-specific rates",()=>{
   const route=read("app/api/internal/runtime/actions/outbound-email/route.ts");
   const duplicateIndex=route.indexOf("if (duplicate.data) return");
-  const preflightIndex=route.indexOf("preflightChargeableFluxAi");
+  const preflightIndex=route.indexOf("await preflightChargeableFluxAi",duplicateIndex);
   assert.ok(duplicateIndex>=0&&preflightIndex>duplicateIndex);
   assert.match(route,/email_follow_up/);
   assert.match(route,/ai_email/);
