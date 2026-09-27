@@ -48,9 +48,9 @@ export async function GET(request:NextRequest){
     return NextResponse.redirect(new URL("/account/login?error=google_email",origin));
   }
 
-  let membership=await getPrimaryMembership(data.user.id);
+  let membership=null;
 
-  if(!membership&&context?.invitationToken){
+  if(context?.invitationToken){
     try{
       const accepted=await acceptOrganizationInvitation({
         userId:data.user.id,
@@ -71,6 +71,10 @@ export async function GET(request:NextRequest){
       await clearClientOAuthContext().catch(()=>undefined);
       return NextResponse.redirect(new URL("/account/setup?error=invitation",origin));
     }
+  }
+
+  if(!membership){
+    membership=await getPrimaryMembership(data.user.id);
   }
 
   if(membership){
