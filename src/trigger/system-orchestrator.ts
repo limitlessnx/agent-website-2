@@ -1,4 +1,4 @@
-import { logger, schedules, task } from "@trigger.dev/sdk";
+import { logger, task } from "@trigger.dev/sdk";
 import { processSystemEvent } from "@/lib/system-orchestrator";
 import { processDueAppointmentReminders } from "@/lib/system-event-adapters";
 import { recoverFailedSystemEvents } from "@/lib/orchestration-operations";
@@ -24,9 +24,8 @@ export const systemEventDispatch = task({
   },
 });
 
-export const systemEventDrain = schedules.task({
+export const systemEventDrain = task({
   id: "system-event-drain",
-  cron: "* * * * *",
   maxDuration: 300,
   run: async () => {
     const results = [];
@@ -41,9 +40,8 @@ export const systemEventDrain = schedules.task({
 });
 
 
-export const appointmentReminderDrain = schedules.task({
+export const appointmentReminderDrain = task({
   id: "appointment-reminder-drain",
-  cron: "* * * * *",
   maxDuration: 300,
   run: async () => {
     const result = await processDueAppointmentReminders(100);
@@ -53,9 +51,8 @@ export const appointmentReminderDrain = schedules.task({
 });
 
 
-export const orchestrationRecoverySweep = schedules.task({
+export const orchestrationRecoverySweep = task({
   id: "orchestration-recovery-sweep",
-  cron: "*/5 * * * *",
   maxDuration: 300,
   run: async () => {
     const result = await recoverFailedSystemEvents(50);
@@ -65,9 +62,8 @@ export const orchestrationRecoverySweep = schedules.task({
 });
 
 
-export const handoffFollowupDrain = schedules.task({
+export const handoffFollowupDrain = task({
   id: "handoff-followup-drain",
-  cron: "* * * * *",
   maxDuration: 300,
   run: async () => {
     const result = await processDueHandoffFollowups(100);
@@ -77,9 +73,8 @@ export const handoffFollowupDrain = schedules.task({
 });
 
 
-export const platformHourlyMaintenanceSweep = schedules.task({
+export const platformHourlyMaintenanceSweep = task({
   id: "platform-hourly-maintenance-sweep",
-  cron: "15 * * * *",
   maxDuration: 300,
   run: async () => {
     const [analytics, commercial] = await Promise.all([
