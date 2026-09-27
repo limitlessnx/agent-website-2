@@ -6,6 +6,7 @@ import { analyticsChangePercent, getTenantOperationalAnalytics } from "@/lib/ten
 import { getTenantAnalyticsDrilldown } from "@/lib/tenant-analytics-drilldown";
 import { listOrganizationMembers } from "@/lib/organization-membership";
 import AnalyticsTrendChart from "./AnalyticsTrendChart";
+import { getTenantBusinessValueAnalytics, getTenantFunnelAnalytics } from "@/lib/analytics-phase-e";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Analytics | Fluxknight" };
@@ -44,9 +45,11 @@ export default async function AnalyticsPage({
   const params=await searchParams;
   const requested=Number(params.period||30);
   const periodDays=[7,30,90].includes(requested)?requested:30;
-  const [analytics,drilldown,members]=await Promise.all([
+  const [analytics,drilldown,funnel,businessValue,members]=await Promise.all([
     getTenantOperationalAnalytics(session.organizationId,periodDays),
     getTenantAnalyticsDrilldown(session.organizationId,periodDays),
+    getTenantFunnelAnalytics(session.organizationId,periodDays),
+    getTenantBusinessValueAnalytics(session.organizationId,periodDays),
     listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]),
   ]);
   const memberById=new Map(members.map((member)=>[member.id,member]));
@@ -302,6 +305,66 @@ export default async function AnalyticsPage({
           <em>{number(item.count)}</em>
         </div>)}
         {!drilldown.stageTransitions.length?<p className="portal-empty">No customer stage transitions recorded in this period.</p>:null}
+      </div>
+    </section>
+
+    <section className="portal-grid">
+      <article className="portal-card">
+        <div className="portal-card-head"><div>
+          <h2>Customer funnel</h2>
+          <p>Customers created in this period and the stages they reached.</p>
+        </div></div>
+        <div className="portal-list">
+          {funnel.funnel.map((item)=><div className="portal-list-row" key={item.stageId}>
+            <div><strong>{item.name}</strong><span>{item.previousReached==null?"Cohort entry":rate(item.stepConversionRate)+" from previous configured stage"}</span></div>
+            <em>{number(item.reached)}</em>
+          </div>)}
+          {!funnel.funnel.length?<p className="portal-empty">No configured funnel stages.</p>:null}
+        </div>
+      </article>
+
+      <article className="portal-card">
+        <div className="portal-card-head"><div>
+          <h2>Conversion context</h2>
+          <p>Observed won outcomes by handoff and appointment participation.</p>
+        </div></div>
+        <div className="portal-list">
+          <div className="portal-list-row"><div><strong>Overall won</strong><span>{number(funnel.cohort.won)} of {number(funnel.cohort.customers)} cohort customers</span></div><em>{rate(funnel.cohort.wonRate)}</em></div>
+          <div className="portal-list-row"><div><strong>With human handoff</strong><span>{number(funnel.handoffComparison.withHandoff.won)} won · {number(funnel.handoffComparison.withHandoff.customers)} customers</span></div><em>{rate(funnel.handoffComparison.withHandoff.wonRate)}</em></div>
+          <div className="portal-list-row"><div><strong>Without human handoff</strong><span>{number(funnel.handoffComparison.withoutHandoff.won)} won · {number(funnel.handoffComparison.withoutHandoff.customers)} customers</span></div><em>{rate(funnel.handoffComparison.withoutHandoff.wonRate)}</em></div>
+          <div className="portal-list-row"><div><strong>With confirmed appointment</strong><span>{number(funnel.appointmentComparison.withAppointment.won)} won · {number(funnel.appointmentComparison.withAppointment.customers)} customers</span></div><em>{rate(funnel.appointmentComparison.withAppointment.wonRate)}</em></div>
+        </div>
+      </article>
+    </section>
+
+    <section className="portal-grid">
+      <article className="portal-card">
+        <div className="portal-card-head"><div><h2>Lead source conversion</h2><p>Won outcomes by recorded CRM lead source.</p></div></div>
+        <div className="portal-list">
+          {funnel.sources.map((item)=><div className="portal-list-row" key={item.source||"unknown"}><div><strong>{item.source||"unknown"}</strong><span>{number(item.won)} won · {number(item.leads)} leads</span></div><em>{rate(item.wonRate)}</em></div>)}
+          {!funnel.sources.length?<p className="portal-empty">No source-attributed CRM leads in this period.</p>:null}
+        </div>
+      </article>
+      <article className="portal-card">
+        <div className="portal-card-head"><div><h2>Channel conversion</h2><p>Won outcomes grouped by each customer's first canonical conversation channel.</p></div></div>
+        <div className="portal-list">
+          {funnel.channels.map((item)=><div className="portal-list-row" key={item.channel||"unknown"}><div><strong>{item.channel||"unknown"}</strong><span>{number(item.won)} won · {number(item.customers)} customers</span></div><em>{rate(item.wonRate)}</em></div>)}
+          {!funnel.channels.length?<p className="portal-empty">No channel-attributed cohort customers yet.</p>:null}
+        </div>
+      </article>
+    </section>
+
+    <section className="portal-card">
+      <div className="portal-card-head"><div>
+        <h2>Automation business value</h2>
+        <p>Operational volume is factual. Time/value estimates appear only when your organization enables explicit assumptions in Settings.</p>
+      </div></div>
+      <div className="portal-business-metrics">
+        <article className="portal-business-metric"><span>AI-handled conversations</span><strong>{number(businessValue.automationVolume.aiHandledConversations)}</strong><small>no human handoff in period</small></article>
+        <article className="portal-business-metric"><span>Completed follow-ups</span><strong>{number(businessValue.automationVolume.completedFollowUps)}</strong><small>automated post-handoff checks</small></article>
+        <article className="portal-business-metric"><span>Confirmed appointments</span><strong>{number(businessValue.automationVolume.confirmedAppointments)}</strong><small>confirmed/rescheduled</small></article>
+        <article className="portal-business-metric"><span>Estimated hours saved</span><strong>{businessValue.estimatedHoursSaved==null?"—":number(businessValue.estimatedHoursSaved)}</strong><small>{businessValue.configured?"based on your assumptions":"configure in Settings"}</small></article>
+        <article className="portal-business-metric"><span>Estimated time value</span><strong>{businessValue.estimatedValue==null?"—":(businessValue.currency?businessValue.currency+" ":"")+number(businessValue.estimatedValue)}</strong><small>time saved × configured hourly value</small></article>
       </div>
     </section>
 
