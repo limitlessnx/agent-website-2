@@ -238,3 +238,62 @@ test("F2 connection failures are explicit and readiness mutation stays manage-on
   assert.doesNotMatch(readiness,/\["integrations\.view","integrations\.manage"\]/);
   assert.match(panel,/canManage\?<button[^>]*Check connection|canManage\?<button/);
 });
+
+
+test("F3 calendar resources use tenant-bound staff ownership",()=>{
+  const migration=read("supabase/migrations/20260927120801_f3_calendar_staff_resource_settings.sql");
+  const fix=read("supabase/migrations/20260927120832_f3_calendar_staff_fk_delete_behavior.sql");
+  assert.match(migration,/organization_memberships_organization_id_id_key/);
+  assert.match(migration,/appointment_calendar_resources_staff_idx/);
+  assert.match(migration,/update_appointment_calendar_resource_settings/);
+  assert.match(migration,/Assigned staff member must be active in this organization/);
+  assert.match(migration,/pg_timezone_names/);
+  assert.match(fix,/on delete set null \(assigned_membership_id\)/i);
+});
+
+test("F3 appointments persist routed staff membership",()=>{
+  const migration=read("supabase/migrations/20260927120950_f3_appointment_staff_assignment.sql");
+  const adapter=read("lib/system-event-adapters.ts");
+  assert.match(migration,/assigned_membership_id uuid/);
+  assert.match(migration,/appointments_assigned_membership_org_fkey/);
+  assert.match(adapter,/requestedMembershipId/);
+  assert.match(adapter,/assigned_membership_id/);
+  assert.match(adapter,/staffMembershipId/);
+  assert.match(adapter,/No active calendar resource is configured for the requested staff member/);
+});
+
+test("F3 resource APIs are permission and tenant scoped",()=>{
+  const create=read("app/api/integrations/google-calendar/resources/route.ts");
+  const update=read("app/api/integrations/google-calendar/resources/[id]/route.ts");
+  assert.match(create,/integrations\.manage/);
+  assert.match(create,/appointments\.manage/);
+  assert.match(create,/eq\("organization_id",session\.organizationId\)/);
+  assert.match(create,/upsert_appointment_calendar_resource/);
+  assert.match(create,/update_appointment_calendar_resource_settings/);
+  assert.match(update,/eq\("organization_id",session\.organizationId\)/);
+  assert.match(update,/update_appointment_calendar_resource_settings/);
+});
+
+test("F3 tenant UI supports multiple staff calendar resources",()=>{
+  const page=read("app/portal/integrations/page.tsx");
+  const panel=read("app/portal/integrations/GoogleCalendarPanel.tsx");
+  assert.match(page,/assigned_membership_id/);
+  assert.match(page,/default_duration_minutes/);
+  assert.match(page,/listOrganizationMembers/);
+  assert.match(panel,/Calendar resources/);
+  assert.match(panel,/Assigned staff/);
+  assert.match(panel,/Default duration/);
+  assert.match(panel,/Default booking calendar/);
+  assert.match(panel,/Add another staff calendar/);
+});
+
+test("F3 explicit staff routing precedes tenant default fallback",()=>{
+  const adapter=read("lib/system-event-adapters.ts");
+  const functionStart=adapter.indexOf("async function resolveCalendarResource");
+  const functionEnd=adapter.indexOf("async function loadAppointment",functionStart);
+  const block=adapter.slice(functionStart,functionEnd);
+  const staffIndex=block.indexOf("requestedMembershipId");
+  const defaultIndex=block.indexOf('eq("is_default", true)');
+  assert.ok(staffIndex>=0);
+  assert.ok(defaultIndex>staffIndex);
+});
