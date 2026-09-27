@@ -27,6 +27,7 @@ on:
       - "lib/orchestration-operations.ts"
       - "lib/system-event-adapters.ts"
       - "lib/calendar-provider.ts"
+      - "lib/google-calendar-oauth.ts"
       - "lib/ai-runtime/production-executors.ts"
       - "lib/ai-runtime/context.ts"
       - "lib/tenant-system-provisioning.ts"
