@@ -31,11 +31,25 @@ export async function GET(request: Request) {
     const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit")) || 50, 100));
     const snapshot = await scanLeoProactiveSignals({ limit });
     const persisted = await reconcileLeoProactiveSignals(snapshot, actorFor(identity));
-    const allPersisted = await listPersistedLeoSignals(500);
-    const [notificationSync] = await Promise.all([
+    const allPersisted = await listPersistedLeoSignals(500).catch((error) => {
+      console.warn("Leo proactive persisted-signal refresh degraded", error);
+      return persisted;
+    });
+    const [proactiveNotificationResult, lifecycleNotificationResult] = await Promise.allSettled([
       syncLeoProactiveLifecycleDashboardNotifications(allPersisted),
       syncLifecycleDashboardNotifications(),
     ]);
+    const notificationSync = {
+      proactive: proactiveNotificationResult.status === "fulfilled" ? proactiveNotificationResult.value : null,
+      lifecycle: lifecycleNotificationResult.status === "fulfilled" ? lifecycleNotificationResult.value : null,
+      degraded: proactiveNotificationResult.status === "rejected" || lifecycleNotificationResult.status === "rejected",
+    };
+    if (proactiveNotificationResult.status === "rejected") {
+      console.warn("Leo proactive notification sync degraded", proactiveNotificationResult.reason);
+    }
+    if (lifecycleNotificationResult.status === "rejected") {
+      console.warn("Leo lifecycle notification sync degraded", lifecycleNotificationResult.reason);
+    }
     const signals = enrichSignals(persisted);
     const alerts = sortDeliverableSignals(persisted.filter((item) => alertPolicyForLeoSignal(item).deliver)).slice(0, 8).map((item) => ({ ...item, alertPolicy: alertPolicyForLeoSignal(item), analysis: recommendationForLeoSignal(item), actionAvailable: Boolean(actionBlueprintForLeoSignal(item)) }));
     return NextResponse.json({ ok: true, ...snapshot, signals, alerts, lifecycle: lifecycleSummary(persisted), notificationSync, policy: { interrupt: alerts.filter((item) => item.alertPolicy.mode === "interrupt").length, surface: alerts.filter((item) => item.alertPolicy.mode === "surface").length, quiet: signals.filter((item) => item.alertPolicy.mode === "quiet").length }, monitoringAudit: auditLeoProactiveMonitoring(allPersisted) }, { headers: { "cache-control": "no-store" } });
