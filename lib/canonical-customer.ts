@@ -94,6 +94,34 @@ export async function addCanonicalCrmMessage(input:{
   return String(data.id);
 }
 
+export async function backfillPublicLeoConversation(input:{
+  organizationId:string;
+  conversationId:string;
+  sessionId:string;
+}) {
+  const admin=createAdminClient();
+  const {data:messages,error}=await admin.from("leo_messages")
+    .select("id,role,content,created_at")
+    .eq("session_id",input.sessionId)
+    .in("role",["user","assistant"])
+    .order("created_at",{ascending:true})
+    .limit(200);
+  if(error) throw error;
+  for(const message of messages||[]){
+    await addCanonicalCrmMessage({
+      organizationId:input.organizationId,
+      conversationId:input.conversationId,
+      senderType:message.role==="user"?"customer":"agent",
+      direction:message.role==="user"?"inbound":"outbound",
+      content:String(message.content||""),
+      externalMessageId:`public-leo-message:${message.id}`,
+      status:message.role==="user"?"received":"sent",
+      metadata:{source:"public_leo_backfill",session_id:input.sessionId,original_created_at:message.created_at},
+    });
+  }
+  return messages?.length||0;
+}
+
 export async function canonicalizePublicLeoLead(input:{
   leadId:string;
   sessionId:string;
@@ -121,7 +149,10 @@ export async function canonicalizePublicLeoLead(input:{
     organization_id:organizationId,customer_id:customerId,conversation_id:conversationId,updated_at:new Date().toISOString()
   }).eq("id",input.leadId);
   if(error) throw error;
-  return {organizationId,customerId,conversationId};
+  const backfilledMessages=await backfillPublicLeoConversation({
+    organizationId,conversationId,sessionId:input.sessionId,
+  }).catch(()=>0);
+  return {organizationId,customerId,conversationId,backfilledMessages};
 }
 
 export async function syncPublicLeoMessage(input:{
