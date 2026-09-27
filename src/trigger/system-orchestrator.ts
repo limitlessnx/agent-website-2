@@ -3,6 +3,7 @@ import { processSystemEvent } from "@/lib/system-orchestrator";
 import { processDueAppointmentReminders } from "@/lib/system-event-adapters";
 import { recoverFailedSystemEvents } from "@/lib/orchestration-operations";
 import { processDueHandoffFollowups } from "@/lib/handoff-followup";
+import { scanAnalyticsAnomalies } from "@/lib/analytics-phase-e";
 
 export const systemEventDispatch = task({
   id: "system-event-dispatch",
@@ -70,6 +71,18 @@ export const handoffFollowupDrain = schedules.task({
   run: async () => {
     const result = await processDueHandoffFollowups(100);
     logger.info("Handoff follow-up drain completed", result);
+    return result;
+  },
+});
+
+
+export const analyticsAnomalySweep = schedules.task({
+  id: "analytics-anomaly-sweep",
+  cron: "0 * * * *",
+  maxDuration: 300,
+  run: async () => {
+    const result = await scanAnalyticsAnomalies();
+    logger.info("Analytics anomaly sweep completed", result);
     return result;
   },
 });
