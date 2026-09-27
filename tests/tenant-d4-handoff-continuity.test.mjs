@@ -1,0 +1,99 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read=(path)=>readFileSync(path,"utf8");
+
+test("D4 customer stages are organization scoped and auditable",()=>{
+  const migration=read("supabase/migrations/20260927011048_d4_handoff_continuity_stages_notifications.sql");
+  assert.match(migration,/organization_customer_stages/);
+  assert.match(migration,/customer_stage_history/);
+  assert.match(migration,/update_customer_stage/);
+  assert.match(migration,/unique\(organization_id,key\)/);
+});
+
+test("D4 handoff continuity stores summary stage next action and follow-up state",()=>{
+  const migration=read("supabase/migrations/20260927011048_d4_handoff_continuity_stages_notifications.sql");
+  assert.match(migration,/conversation_summary/);
+  assert.match(migration,/stage_id_at_handoff/);
+  assert.match(migration,/next_action/);
+  assert.match(migration,/follow_up_required/);
+  assert.match(migration,/follow_up_status/);
+});
+
+test("D4 AI can request handoff and update tenant-defined customer stages",()=>{
+  const core=read("lib/leo-core.ts");
+  const executors=read("lib/ai-runtime/production-executors.ts");
+  assert.match(core,/flux\.system\.handoff\.request/);
+  assert.match(core,/flux\.system\.customer\.stage\.update/);
+  assert.match(executors,/eventType: "handoff\.requested"/);
+  assert.match(executors,/update_customer_stage/);
+});
+
+test("D4 handoff assignment resolves rules agent destination and staff notifications",()=>{
+  const operations=read("lib/human-operations.ts");
+  assert.match(operations,/handoff_assignment_rules/);
+  assert.match(operations,/human_handoff_destination/);
+  assert.match(operations,/organization_member_notification_preferences/);
+  assert.match(operations,/templatePurpose:"internal_handoff"/);
+  assert.match(operations,/conversation_summary/);
+});
+
+test("D4 WhatsApp runtime suppresses AI while human owns the conversation",()=>{
+  const runtime=read("src/trigger/tenant-channel-runtime.ts");
+  assert.match(runtime,/paused_for_handoff/);
+  assert.match(runtime,/human_takeover/);
+  assert.match(runtime,/aiResponseSuppressed:true/);
+  assert.match(runtime,/"stopped"/);
+});
+
+test("D4 WhatsApp coexistence echoes record human replies and activate takeover",()=>{
+  const webhook=read("app/api/whatsapp/webhook/route.ts");
+  const coexistence=read("lib/whatsapp-coexistence.ts");
+  assert.match(webhook,/smb_message_echoes/);
+  assert.match(webhook,/message_echoes/);
+  assert.match(webhook,/recordWhatsAppBusinessAppEcho/);
+  assert.match(coexistence,/senderType:"human"/);
+  assert.match(coexistence,/ai_response_mode:"human_takeover"/);
+  assert.match(coexistence,/whatsapp_business_app/);
+});
+
+test("D4 post-handoff check-in respects WhatsApp service window/template delivery",()=>{
+  const followup=read("lib/handoff-followup.ts");
+  const trigger=read("src/trigger/system-orchestrator.ts");
+  assert.match(followup,/lastCustomerMessageAt/);
+  assert.match(followup,/deliveryMode:"auto"/);
+  assert.match(followup,/templatePurpose:"handoff_follow_up"/);
+  assert.match(followup,/handoff_follow_up/);
+  assert.match(trigger,/id: "handoff-followup-drain"/);
+});
+
+test("D4 customer and handoff settings are tenant-managed in existing portal surfaces",()=>{
+  const customer=read("app/portal/customers/[id]/page.tsx");
+  const settings=read("app/portal/settings/page.tsx");
+  const handoffPanel=read("app/portal/settings/HandoffContinuityPanel.tsx");
+  const stagePanel=read("app/portal/settings/CustomerStagesPanel.tsx");
+  assert.match(customer,/CustomerStageControl/);
+  assert.match(settings,/CustomerStagesPanel/);
+  assert.match(settings,/HandoffContinuityPanel/);
+  assert.match(handoffPanel,/Assignment rules/);
+  assert.match(stagePanel,/Customer stages/);
+});
+
+test("D4 Needs Attention shows structured handoff context and explicit AI resume choice",()=>{
+  const panel=read("app/portal/notifications/HumanOperationsPanel.tsx");
+  assert.match(panel,/Summary:/);
+  assert.match(panel,/Next action:/);
+  assert.match(panel,/Assigned to:/);
+  assert.match(panel,/Resolve & resume AI/);
+  assert.match(panel,/Resolve & keep AI off/);
+});
+
+test("D4 WhatsApp readiness detects coexistence instead of assuming API-only",()=>{
+  const integration=read("lib/whatsapp-integration.ts");
+  const ui=read("components/integrations/WhatsAppIntegrationPanel.tsx");
+  assert.match(integration,/is_on_biz_app/);
+  assert.match(integration,/platform_type/);
+  assert.match(integration,/coexistenceActive/);
+  assert.match(ui,/coexistence/);
+});
