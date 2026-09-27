@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationAccessContext, assertAnyOrganizationPermission } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  assertGoogleCalendarScopes,
   exchangeGoogleCalendarCode,
   getGoogleConnectedEmail,
   listWritableGoogleCalendars,
@@ -35,6 +36,7 @@ export async function GET(request:NextRequest){
 
   try{
     const tokens=await exchangeGoogleCalendarCode({origin:request.nextUrl.origin,code});
+    assertGoogleCalendarScopes(tokens.scope);
     const [email,calendars]=await Promise.all([
       getGoogleConnectedEmail(tokens.accessToken),
       listWritableGoogleCalendars(tokens.accessToken),
