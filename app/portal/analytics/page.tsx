@@ -105,7 +105,7 @@ export default async function AnalyticsPage({
       </article>
     </section>
 
-    <section className="portal-grid-two">
+    <section className="portal-grid">
       <article className="portal-card">
         <div className="portal-card-head"><div>
           <h2>Human handoff performance</h2>
@@ -133,7 +133,7 @@ export default async function AnalyticsPage({
       </article>
     </section>
 
-    <section className="portal-grid-two">
+    <section className="portal-grid">
       <article className="portal-card">
         <div className="portal-card-head"><div>
           <h2>Customer stages</h2>
