@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import BusinessAvailabilityEditor from "./BusinessAvailabilityEditor";
 
 type CalendarChoice={
   id:string;
@@ -240,6 +241,7 @@ export default function GoogleCalendarPanel({
   resources,
   members,
   routingSettings,
+  availabilitySettings,
   canManage,
 }:{
   integration:null|{
@@ -259,6 +261,10 @@ export default function GoogleCalendarPanel({
   resources:CalendarResource[];
   members:Member[];
   routingSettings:RoutingSettings;
+  availabilitySettings:{
+    timezone:string;
+    availability_configuration?:Record<string,unknown>|null;
+  };
   canManage:boolean;
 }){
   const router=useRouter();
@@ -328,6 +334,22 @@ export default function GoogleCalendarPanel({
       setMessage("Calendar resource updated.");
       router.refresh();
     }catch(err){setMessage(err instanceof Error?err.message:"Unable to update calendar resource");}
+    finally{setBusy(false);}
+  }
+
+  async function saveBusinessAvailability(values:{timezone:string;availabilityConfiguration:Record<string,unknown>}){
+    setBusy(true);setMessage("");
+    try{
+      const res=await fetch("/api/integrations/google-calendar/availability",{
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(values),
+      });
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(body.error||"Unable to update business availability");
+      setMessage("Business availability updated.");
+      router.refresh();
+    }catch(err){setMessage(err instanceof Error?err.message:"Unable to update business availability");}
     finally{setBusy(false);}
   }
 
@@ -414,6 +436,14 @@ export default function GoogleCalendarPanel({
                 {canManage?<div><button type="button" disabled={busy||!calendarId} onClick={()=>void selectCalendar(calendarId)}>{busy?"Checking...":"Use this calendar"}</button></div>:null}
               </div>
             : null}
+
+          {canManage?<div style={{marginTop:24}}>
+            <div className="portal-card-head"><div>
+              <h3>Business availability</h3>
+              <p>Organization-wide booking rules inherited by staff calendars unless a staff resource overrides them.</p>
+            </div></div>
+            <BusinessAvailabilityEditor settings={availabilitySettings} busy={busy} onSave={saveBusinessAvailability} />
+          </div>:null}
 
           {canManage?<div style={{marginTop:24}}>
             <div className="portal-card-head"><div>
