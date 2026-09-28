@@ -15,14 +15,12 @@ const outcomes = [
 ];
 
 const capabilities = [
-  "Responds to new property enquiries",
-  "Qualifies budget, location and requirements",
-  "Recommends relevant configured properties",
-  "Shares property information and media where configured",
-  "Keeps conversation context for follow-up",
-  "Helps schedule inspections and reminders",
-  "Hands serious prospects to a human with context",
-  "Keeps lead stages visible to management",
+  "Lead sends a WhatsApp enquiry",
+  "Maia qualifies budget, location and requirements",
+  "Relevant property information is shared",
+  "Follow-up and reminders continue automatically",
+  "Inspection is scheduled when the buyer is ready",
+  "A human agent receives the conversation summary and takes over",
 ];
 
 function WhatsAppMark() {
@@ -48,7 +46,7 @@ export default function MaiaCaseStudyTeaser() {
         <div className={styles.content}>
           <span className={styles.eyebrow}>A real example · Real estate</span>
           <h2 id="maia-case-study-title">See how Fluxknight works in <span>a real business.</span></h2>
-          <p>Maia helps Limitless Realty reply to property enquiries, collect buyer details, follow up with interested buyers and book inspections.</p>
+          <p>A buyer can move from first enquiry to qualified lead, follow-up, inspection booking and human handoff without your team manually pushing every step.</p>
 
           <div className={styles.outcomes} aria-label="Maia case study outcomes">
             {outcomes.map(({ icon: Icon, label }) => (
@@ -71,11 +69,8 @@ export default function MaiaCaseStudyTeaser() {
             <Link className={styles.primary} href="/case-studies/maia" data-cta="maia-case-study-home">
               See the Maia case study <ArrowRight size={19} />
             </Link>
-            <Link className={styles.secondary} href="/#talk-to-leo" data-cta="maia-talk-to-leo">
-              Talk to our support & inquiry agent
-            </Link>
             <Link className={styles.secondary} href="/evaluation?industry=real-estate" data-cta="maia-evaluate-business">
-              Evaluate your lead process
+              Evaluate My Business
             </Link>
           </div>
         </div>
