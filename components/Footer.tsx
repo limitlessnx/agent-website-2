@@ -45,6 +45,7 @@ export default function Footer() {
 
         <div className={styles.bottom}>
           <span>© {new Date().getFullYear()} Fluxknight. All rights reserved.</span>
+          <span><Link href="/privacy">Privacy Policy</Link> · <Link href="/terms">Terms of Service</Link></span>
           <span>Serve Better. Operate Smarter.</span>
         </div>
       </div>
