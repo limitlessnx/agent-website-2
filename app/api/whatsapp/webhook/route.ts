@@ -1,10 +1,34 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 
 export const dynamic = "force-dynamic";
+
+async function logWebhookEvent(input: {
+  requestId: string;
+  eventType: string;
+  organizationId?: string | null;
+  providerMessageId?: string | null;
+  httpStatus?: number | null;
+  details?: Record<string, unknown>;
+}) {
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("whatsapp_webhook_event_logs").insert({
+      request_id: input.requestId,
+      event_type: input.eventType,
+      organization_id: input.organizationId || null,
+      provider_message_id: input.providerMessageId || null,
+      http_status: input.httpStatus ?? null,
+      details: input.details || {},
+    });
+    if (error) console.error("[whatsapp-webhook] diagnostic persistence failed", { requestId: input.requestId, eventType: input.eventType, error: error.message });
+  } catch (error) {
+    console.error("[whatsapp-webhook] diagnostic persistence failed", { requestId: input.requestId, eventType: input.eventType, error: error instanceof Error ? error.message : "unknown" });
+  }
+}
 
 function verifySignature(rawBody: string, signature: string | null) {
   const appSecret = process.env.WHATSAPP_APP_SECRET || process.env.META_WHATSAPP_APP_SECRET || process.env.META_APP_SECRET || "";
@@ -285,18 +309,41 @@ export async function POST(request: NextRequest) {
           },
         };
 
-        if (tenant.mode === "maia") {
-          await tasks.trigger("maia-process-inbound-message", inboundPayload);
-        } else {
-          await tasks.trigger("tenant-whatsapp-process-inbound-message", {
-            ...inboundPayload,
-            sourceSystemId: tenant.sourceSystemId,
+        const taskName = tenant.mode === "maia" ? "maia-process-inbound-message" : "tenant-whatsapp-process-inbound-message";
+        try {
+          const taskHandle = tenant.mode === "maia"
+            ? await tasks.trigger(taskName, inboundPayload)
+            : await tasks.trigger(taskName, { ...inboundPayload, sourceSystemId: tenant.sourceSystemId });
+          inboundQueued += 1;
+          await logWebhookEvent({
+            requestId,
+            eventType: "trigger_queued",
+            organizationId: tenant.organizationId,
+            providerMessageId: messageId,
+            httpStatus: 200,
+            details: { taskName, taskRunId: (taskHandle as any)?.id || null, mode: tenant.mode, messageType: String(message?.type || "unknown") },
           });
+        } catch (error) {
+          await logWebhookEvent({
+            requestId,
+            eventType: "trigger_failed",
+            organizationId: tenant.organizationId,
+            providerMessageId: messageId,
+            httpStatus: 500,
+            details: { taskName, error: error instanceof Error ? error.message : "unknown" },
+          });
+          throw error;
         }
-        inboundQueued += 1;
       }
     }
   }
 
-  return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes });
+  const response = { ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes, requestId };
+  await logWebhookEvent({
+    requestId,
+    eventType: "webhook_completed",
+    httpStatus: 200,
+    details: { ...response, durationMs: Date.now() - startedAt },
+  });
+  return NextResponse.json(response);
 }
