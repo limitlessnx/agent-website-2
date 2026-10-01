@@ -19,6 +19,15 @@ import {
   validateMaiaTenantContext,
 } from "@/lib/ai/maia-trigger-runtime";
 
+const MAX_PROVIDER_EVENT_AGE_MS = 24 * 60 * 60 * 1000;
+
+function providerEventIsStale(payload: MaiaInboundPayload) {
+  const raw = Number(payload.metadata?.timestamp);
+  if (!Number.isFinite(raw) || raw <= 0) return false;
+  const eventMs = raw > 10_000_000_000 ? raw : raw * 1000;
+  return Date.now() - eventMs > MAX_PROVIDER_EVENT_AGE_MS;
+}
+
 export const maiaProcessInboundMessage = task({
   id: "maia-process-inbound-message",
   maxDuration: 300,
@@ -38,6 +47,21 @@ export const maiaProcessInboundMessage = task({
   },
   run: async (payload: MaiaInboundPayload) => {
     await validateMaiaTenantContext(payload);
+
+    if (providerEventIsStale(payload)) {
+      logger.info("Ignoring stale Maia provider event", {
+        organizationId: payload.organizationId,
+        agentId: payload.agentId,
+        externalEventId: payload.externalEventId,
+        providerTimestamp: String(payload.metadata?.timestamp || ""),
+      });
+      return {
+        ok: true,
+        stale: true,
+        ignored: true,
+        reason: "provider_event_older_than_24_hours",
+      };
+    }
 
     const registration = await registerMaiaInboundEvent(payload);
     if (registration.duplicate) {
