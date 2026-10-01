@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { dispatchMaiaWhatsAppFollowUp } from "@/lib/maia-action-gateway";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -245,25 +245,12 @@ export async function POST(request: NextRequest) {
                 record(leadResult.data),
               );
 
-              const delivery = await dispatchMaiaWhatsAppFollowUp({
-                commandId: actionKey,
-                recipient,
-                recipientName: text(customerResult.data?.full_name) || "there",
-                message: text(payload.content) || "Following up on your property enquiry.",
-                deliveryMode: "template",
-                templateName: templateConfig.template_name,
-                templateLanguage: templateConfig.language_code,
-                templateParameters: templateVariables.parameters,
-                templateVariableKeys: variableKeys,
-                topic: "Maia CRM follow-up",
-                propertyTitle: templateVariables.values.property_name,
-                createdBy: `runtime:${executionId}`,
-              });
+              const delivery = await sendWhatsAppMessage({ organizationId, to: recipient, text: text(payload.content) || "Following up on your property enquiry.", lastCustomerMessageAt: lastInboundAt?.toISOString() || null, deliveryMode: "template", templatePurpose: "follow_up_outside_24h", variables: Object.fromEntries(variableKeys.map((key) => [key, templateVariables.values[key] || "Not specified"])) });
 
               results.push({
                 type,
-                status: delivery.accepted > 0 ? "submitted" : delivery.status,
-                provider: "maia_action_n8n",
+                status: delivery.ok ? "submitted" : "failed",
+                provider: "meta_whatsapp",
                 delivery_mode: "template",
                 template_name: templateConfig.template_name,
                 customer_service_window: {
@@ -271,44 +258,24 @@ export async function POST(request: NextRequest) {
                   hours: 24,
                   last_inbound_at: lastInboundAt?.toISOString() || null,
                 },
-                delivery: {
-                  execution_id: delivery.executionId,
-                  accepted: delivery.accepted,
-                  failed: delivery.failed,
-                  pending_delivery: delivery.pendingDelivery,
-                  template_sent: delivery.templateSent,
-                },
+                delivery: { provider_message_id: delivery.providerMessageId || null, message_type: delivery.messageType, template_sent: delivery.messageType === "template" },
               });
               continue;
             }
 
-            const delivery = await dispatchMaiaWhatsAppFollowUp({
-              commandId: actionKey,
-              recipient,
-              recipientName: text(customerResult.data?.full_name) || "there",
-              message: text(payload.content),
-              deliveryMode: "direct",
-              topic: "Maia CRM follow-up",
-              createdBy: `runtime:${executionId}`,
-            });
+            const delivery = await sendWhatsAppMessage({ organizationId, to: recipient, text: text(payload.content), lastCustomerMessageAt: lastInboundAt?.toISOString() || null, deliveryMode: "direct" });
 
             results.push({
               type,
-              status: delivery.accepted > 0 ? "submitted" : delivery.status,
-              provider: "maia_action_n8n",
+              status: delivery.ok ? "submitted" : "failed",
+              provider: "meta_whatsapp",
               delivery_mode: "free_form",
               customer_service_window: {
                 open: true,
                 hours: 24,
                 last_inbound_at: lastInboundAt?.toISOString() || null,
               },
-              delivery: {
-                execution_id: delivery.executionId,
-                accepted: delivery.accepted,
-                failed: delivery.failed,
-                pending_delivery: delivery.pendingDelivery,
-                free_form_sent: delivery.freeFormSent,
-              },
+              delivery: { provider_message_id: delivery.providerMessageId || null, message_type: delivery.messageType },
             });
             continue;
           }
