@@ -83,11 +83,11 @@ export const maiaProcessInboundMessage = task({
 
     try {
       const isLimitlessRealty = payload.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d";
-      const stopIntent = /\\b(stop(?: sending| messaging| contacting)?|unsubscribe|opt[- ]?out|remove me from (?:your )?(?:messages|list)|(?:do not|don't) (?:send|message|contact)|no more messages)\\b/i.test(payload.message);
+      const stopIntent = /\b(stop(?: sending| messaging| contacting)?|unsubscribe|opt[- ]?out|remove me from (?:your )?(?:messages|list)|(?:do not|don't) (?:send|message|contact)|no more messages)\b/i.test(payload.message);
 
       if (isLimitlessRealty && stopIntent && payload.customerPhone) {
         const admin = createAdminClient();
-        const phone = payload.customerPhone.replace(/\\D/g, "");
+        const phone = payload.customerPhone.replace(/\D/g, "");
         await admin
           .from("leads")
           .update({ opted_out: true, status: "opted_out", updated_at: new Date().toISOString() })
