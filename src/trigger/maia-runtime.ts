@@ -1,5 +1,6 @@
 import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
   queueLimitlessFollowup,
