@@ -133,12 +133,10 @@ export async function GET(request: NextRequest) {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
   const expected = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.META_WHATSAPP_VERIFY_TOKEN || "";
-  // Meta's verify token is only used for the initial GET handshake. Webhook events
-  // remain authenticated by x-hub-signature-256 in POST.
-  const verified = mode === "subscribe" && Boolean(token) && Boolean(challenge);
-
   const queryKeys = Array.from(url.searchParams.keys()).sort();
   const nextUrlQueryKeys = Array.from(nextUrl.searchParams.keys()).sort();
+  const tokenMatches = Boolean(token && expected && token === expected);
+  const isMetaProbe = request.headers.get("user-agent") === "facebookexternalua";
 
   console.info("[whatsapp-webhook] verification", {
     host: url.host,
@@ -152,14 +150,26 @@ export async function GET(request: NextRequest) {
     challengePresent: Boolean(challenge),
     tokenPresent: Boolean(token),
     expectedTokenPresent: Boolean(expected),
-    tokenMatches: Boolean(token && expected && token === expected),
-    verified,
+    tokenMatches,
+    isMetaProbe,
     userAgent: request.headers.get("user-agent") || "",
     refererPresent: Boolean(request.headers.get("referer")),
     forwardedHost: request.headers.get("x-forwarded-host") || "",
     forwardedProto: request.headers.get("x-forwarded-proto") || "",
     vercelIdPresent: Boolean(request.headers.get("x-vercel-id")),
   });
+
+  // Meta connectivity checks can hit the callback URL without the
+  // verification query string. Keep those probes healthy; the actual
+  // subscription handshake below still requires the configured token.
+  if (!mode && !token && !challenge && isMetaProbe) {
+    return NextResponse.json(
+      { ok: true, probe: true },
+      { status: 200, headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  const verified = mode === "subscribe" && tokenMatches && Boolean(challenge);
 
   if (verified) {
     return new Response(challenge, {
@@ -180,6 +190,7 @@ export async function GET(request: NextRequest) {
         challengePresent: Boolean(challenge),
         tokenPresent: Boolean(token),
         expectedTokenPresent: Boolean(expected),
+        tokenMatches,
       },
     },
     {
