@@ -93,22 +93,28 @@ export const maiaProcessInboundMessage = task({
           .update({ opted_out: true, status: "opted_out", updated_at: new Date().toISOString() })
           .eq("organization_id", payload.organizationId)
           .eq("phone", phone);
-        await admin
-          .from("follow_ups")
-          .update({ status: "cancelled" })
+        const { data: matchingLeads } = await admin
+          .from("leads")
+          .select("id")
           .eq("organization_id", payload.organizationId)
-          .eq("status", "pending")
-          .in(
-            "lead_id",
-            (await admin.from("leads").select("id").eq("organization_id", payload.organizationId).eq("phone", phone)).data?.map((lead) => lead.id) || [],
-          );
+          .eq("phone", phone);
+        const leadIds = (matchingLeads || []).map((lead) => lead.id).filter(Boolean);
+        if (leadIds.length) {
+          await admin
+            .from("follow_ups")
+            .update({ status: "cancelled" })
+            .eq("organization_id", payload.organizationId)
+            .eq("status", "pending")
+            .in("lead_id", leadIds);
+        }
         await admin
           .from("agent_runtime_goals")
           .update({ status: "cancelled", updated_at: new Date().toISOString() })
           .eq("organization_id", payload.organizationId)
           .eq("agent_id", payload.agentId)
           .eq("goal_type", "follow_up")
-          .in("status", ["queued", "running"]);
+          .in("status", ["queued", "running"])
+          .filter("input->>customer_phone", "eq", phone);
         await markMaiaInboundCompleted(eventId);
         await recordMaiaRuntimeEvent({
           organizationId: payload.organizationId,
