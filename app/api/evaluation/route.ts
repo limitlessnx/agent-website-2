@@ -25,14 +25,6 @@ const requiredStringFields: Array<keyof EvaluationPayload> = [
 function isValidEmail(email:string){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
 function sanitizeString(value:unknown){ return typeof value==="string" ? value.trim() : ""; }
 
-async function sendToN8n(payload:Record<string,unknown>){
-  const webhookUrl=process.env.N8N_EVALUATION_WEBHOOK_URL;
-  if(!webhookUrl) return {configured:false};
-  const res=await fetch(webhookUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-  if(!res.ok) throw new Error(`n8n webhook failed: ${await res.text()}`);
-  return {configured:true};
-}
-
 export async function POST(req:NextRequest){
   try{
     const body=(await req.json()) as EvaluationPayload;
@@ -90,24 +82,12 @@ export async function POST(req:NextRequest){
       companyName:lead.business_name,
     });
 
-    const n8nResult=await sendToN8n({
-      event:"evaluation_request_created",
-      evaluationId:String(saved.id),
-      customerId:canonical.customerId,
-      conversationId:canonical.conversationId,
-      lead,
-      createdAt:now,
-    }).catch((error)=>{
-      console.error("[evaluation] legacy n8n delivery failed",error);
-      return {configured:Boolean(process.env.N8N_EVALUATION_WEBHOOK_URL),failed:true};
-    });
-
     return NextResponse.json({
       success:true,
       evaluationId:String(saved.id),
       customerId:canonical.customerId,
       conversationId:canonical.conversationId,
-      destinations:{supabase:true,n8n:n8nResult.configured},
+      destinations:{supabase:true},
     });
   }catch(error){
     console.error("[Evaluation API Error]",error);
