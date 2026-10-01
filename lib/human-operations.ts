@@ -142,7 +142,6 @@ async function notifyHandoffAssignee(input:{
         summary:input.summary.slice(0,900),
         next_action:input.nextAction||"Review customer conversation",
         handoff_id:input.handoffId,
-        customer_name:input.customerName,
         last_topic:"Human handoff",
         property_name:"",
         property_location:"",
