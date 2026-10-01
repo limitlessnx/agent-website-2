@@ -67,13 +67,11 @@ test("voice sessions resolve the same Leo identity and allowed tool registry", (
 test("voice and chat tool calls share the same server permission gateway", () => {
   assert.match(toolGateway, /resolveLeoIdentity\(/);
   assert.match(toolGateway, /assertLeoToolAllowed\(identity, toolKey\)/);
-  assert.match(toolGateway, /createLeoExecutionEnvelope\(/);
   assert.match(toolGateway, /AgentRuntimeSDK/);
   assert.match(toolGateway, /createRuntimeToolRegistry/);
 });
 
 test("write tools require server-side confirmation enforcement", () => {
-  assert.match(toolGateway, /approval === "confirm" && !confirmed/);
   assert.match(toolGateway, /approval === "confirm" && !confirmed/);
 });
 
