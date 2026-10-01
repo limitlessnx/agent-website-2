@@ -6,11 +6,6 @@ import { runMaia } from "@/lib/ai/maia-runtime";
 
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
 
-async function authorizedBridge(request: NextRequest) {
-  const expected = process.env.MAIA_N8N_SHARED_SECRET?.trim();
-  const supplied = request.headers.get("x-fluxknight-maia-secret")?.trim();
-  return Boolean(expected && supplied && supplied === expected);
-}
 
 async function verifyAssignedAgent(organizationId: string, agentId: string) {
   const admin = createAdminClient();
@@ -23,9 +18,8 @@ async function verifyAssignedAgent(organizationId: string, agentId: string) {
 
 export async function POST(request: NextRequest) {
   const session = await getClientSession();
-  const bridge = !session && await authorizedBridge(request);
-  const adminSession = !session && !bridge ? await getAdminSession() : null;
-  if (!session && !bridge && !adminSession) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const adminSession = !session ? await getAdminSession() : null;
+  if (!session && !adminSession) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -34,7 +28,7 @@ export async function POST(request: NextRequest) {
     const message = text(body.message).slice(0, 12000);
     if (!organizationId || !agentId || !message) return NextResponse.json({ error: "organizationId, agentId and message are required." }, { status: 400 });
     if (session && session.organizationId !== organizationId) return NextResponse.json({ error: "Tenant scope violation." }, { status: 403 });
-    if (!bridge && adminSession && !session) {
+    if (adminSession && !session) {
       // Super Admin may test a tenant agent, but the target agent must still belong to that tenant.
     }
 
