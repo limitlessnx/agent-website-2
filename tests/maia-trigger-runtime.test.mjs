@@ -31,6 +31,20 @@ test("Maia Trigger runtime is idempotent and conversation-serialized", () => {
   assert.match(runtimeStore, /release_maia_conversation_lock/);
 });
 
+test("Maia Trigger does not retry deterministic OpenAI 4xx failures", () => {
+  assert.match(triggerTask, /AbortTaskRunError/);
+  assert.match(triggerTask, /OpenAI request failed \\(4\\d\\d\\)/);
+  assert.match(triggerTask, /catchError:/);
+});
+
+test("Maia Trigger persists Limitless Realty opt-out and suppresses the reply", () => {
+  assert.match(triggerTask, /stopIntent/);
+  assert.match(triggerTask, /opted_out: true/);
+  assert.match(triggerTask, /customer_opted_out/);
+  assert.match(triggerTask, /suppressedReply: true/);
+  assert.match(triggerTask, /input->>customer_phone/);
+});
+
 test("Maia Trigger runtime reuses active conversation memory", () => {
   assert.match(maiaRuntime, /external_conversation_id/);
   assert.match(maiaRuntime, /\.eq\("status", "active"\)/);
