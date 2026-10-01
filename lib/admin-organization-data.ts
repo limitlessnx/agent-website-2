@@ -81,14 +81,22 @@ async function notificationNotices(organizationId: string) {
 
 async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<OrganizationOperationalSnapshot> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("leads")
-    .select("id,name,phone,email,status,score,budget,location_preference,follow_up_stage,last_follow_up_at,last_contacted_at,created_at,updated_at")
-    .eq("organization_id", scope.organizationId)
-    .order("updated_at", { ascending: false })
-    .limit(500);
+  const [{ data }, { data: paymentPlans }] = await Promise.all([
+    admin
+      .from("leads")
+      .select("id,name,phone,email,status,score,budget,location_preference,follow_up_stage,last_follow_up_at,last_contacted_at,created_at,updated_at")
+      .eq("organization_id", scope.organizationId)
+      .order("updated_at", { ascending: false })
+      .limit(500),
+    admin
+      .from("payment_plans")
+      .select("total_paid,status")
+      .eq("organization_id", scope.organizationId)
+      .limit(500),
+  ]);
 
   const leads = data || [];
+  const revenueCollected = (paymentPlans || []).reduce((sum, plan) => sum + Number(plan.total_paid || 0), 0);
   const active = leads.filter((lead) => !["closed", "converted", "cold", "opted_out"].includes(lower(lead.status)));
   const conversations = active.filter((lead) =>
     Boolean(lead.last_contacted_at) || ["in_conversation", "contacted", "engaged", "qualified"].some((state) => lower(lead.status).includes(state))
@@ -113,6 +121,7 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
       { label: "Conversations", value: conversations.length, detail: "Leads currently engaged", icon: "conversations" },
       { label: "Follow-ups", value: followUps.length, detail: "Leads needing continued contact", icon: "followups" },
       { label: "Qualified leads", value: qualified.length, detail: "Ready for the next sales step", icon: "qualified" },
+      { label: "Revenue collected", value: new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(revenueCollected), detail: "Recorded payments across installment plans", icon: "revenue" },
     ],
     notices: [
       ...notices,
