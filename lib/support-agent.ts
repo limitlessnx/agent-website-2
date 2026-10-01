@@ -215,7 +215,7 @@ export function buildSupportReply(
   if (failedRuns.length) findings.push(`${failedRuns.length} recent workflow run(s) failed or timed out.`);
   if (registry.total > 0 && registry.active === 0) findings.push("Workflows exist, but none are currently active.");
 
-  if (/workflow|automation|n8n|failed|error|not working|broken/i.test(text)) {
+  if (/workflow|automation|failed|error|not working|broken/i.test(text)) {
     actions.push({
       organization_id: diagnostics.organizationId,
       action_key: "inspect_tenant_workflow_failures",
