@@ -96,7 +96,7 @@ async function resolveHandoffAssignment(input:{
 }
 
 async function notifyHandoffAssignee(input:{
-  organizationId:string; handoffId:string; membershipId:string; customerName:string; stageName:string|null;
+  organizationId:string; handoffId:string; conversationId:string; membershipId:string; customerName:string; stageName:string|null;
   summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
@@ -127,7 +127,7 @@ async function notifyHandoffAssignee(input:{
     const {data:lastInbound}=await admin.from("crm_messages").select("created_at")
       .eq("organization_id",input.organizationId)
       .eq("direction","inbound")
-      .eq("conversation_id",String((await admin.from("human_handoffs").select("conversation_id").eq("organization_id",input.organizationId).eq("id",input.handoffId).maybeSingle()).data?.conversation_id||""))
+      .eq("conversation_id",input.conversationId)
       .order("created_at",{ascending:false}).limit(1).maybeSingle();
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
@@ -268,6 +268,7 @@ export async function assignHumanHandoff(session:ClientSession,handoffId:string,
   await notifyHandoffAssignee({
     organizationId:session.organizationId,
     handoffId,
+    conversationId:String(data.conversation_id),
     membershipId,
     customerName:String(customer?.full_name||customer?.company_name||"Customer"),
     stageName,
@@ -500,6 +501,7 @@ export async function createHandoffFromSystemEvent(event:{
     await notifyHandoffAssignee({
       organizationId:event.organizationId,
       handoffId,
+      conversationId:event.conversationId,
       membershipId:assignment.membershipId,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
       stageName,
