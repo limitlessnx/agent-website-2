@@ -13,7 +13,7 @@ const toolGateway = readFileSync(resolve(root, "app/api/leo/tool/route.ts"), "ut
 const realtime = readFileSync(resolve(root, "app/api/leo/realtime/call/route.ts"), "utf8");
 const envelope = readFileSync(resolve(root, "lib/leo-execution-envelope.ts"), "utf8");
 const internalExecutor = readFileSync(resolve(root, "app/api/internal/leo/execute/route.ts"), "utf8");
-const migration = readFileSync(resolve(root, "supabase/migrations/20260810_001_leo_core_v2.sql"), "utf8");
+const migration = readFileSync(resolve(root, "supabase/migrations/20260801142121_agent_leo_support.sql"), "utf8");
 const workflow = readFileSync(resolve(root, "n8n/workflows/agent-leo-core-v2-executor.json"), "utf8");
 
 test("Leo has explicit public, tenant and super-admin scopes", () => {
@@ -52,7 +52,7 @@ test("untrusted context cannot redefine Leo authority", () => {
 });
 
 test("Leo v2 persistence tables are RLS protected", () => {
-  for (const table of ["leo_sessions", "leo_messages", "leo_tool_calls", "leo_audit_logs"]) {
+  for (const table of ["support_conversations", "support_messages", "support_actions"]) {
     assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
   }
 });
