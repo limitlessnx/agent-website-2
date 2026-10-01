@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { activateN8nWorkflow } from "@/lib/n8n-api";
 
 type InstallationRow = {
   id: string;
@@ -232,11 +231,6 @@ export async function activateTenantSystem(installationId: string) {
       .in("id", automationIds);
     if (error) throw error;
     automations = (data || []) as OrganizationAutomationRow[];
-  }
-
-  const workflowIds = [...new Set(automations.map((item) => item.backend_workflow_id).filter((value): value is string => Boolean(value)))];
-  for (const workflowId of workflowIds) {
-    await activateN8nWorkflow(workflowId);
   }
 
   if (automationIds.length) {

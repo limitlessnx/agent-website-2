@@ -1,29 +1,19 @@
-import {
-  activateN8nWorkflow,
-  findN8nWorkflowByName,
-  getN8nBaseUrl,
-  getN8nWorkflow,
-  listN8nExecutions,
-  updateN8nWorkflow,
-} from "@/lib/n8n-api";
-import type { ProgressiveLead } from "@/lib/lead-profile-service";
-import { normalizeLeadPhone } from "@/lib/lead-profile-service";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeLeadPhone, type ProgressiveLead } from "@/lib/lead-profile-service";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
-const ACTION_WORKFLOW_NAME = "Maia Action - Search Lead";
-const ACTION_WORKFLOW_ID = "ZdRPo2dzteuK5Gup";
-const ACTION_WEBHOOK_NODE = "Fluxknight Maia Action Webhook";
-const ACTION_NORMALIZE_NODE = "Fluxknight Normalize Maia Action";
-const ACTION_WEBHOOK_PATH = "fluxknight-maia-action";
-const ACTION_ENTRY_NODE = "Route Delete Request";
-const CAMPAIGN_SUMMARY_NODE = "Campaign Send Summary";
-const EXECUTION_TIMEOUT_MS = 60000;
-const POLL_INTERVAL_MS = 750;
+export type MaiaCampaignAction = {
+  commandId: string;
+  campaignType?: string;
+  templateName?: string;
+  topic: string;
+  message: string;
+  recipients: ProgressiveLead[];
+  propertyTitle?: string;
+  mediaUrl?: string;
+  createdBy?: string;
+};
 
-type WorkflowNode = { id?: string; name: string; type: string; typeVersion?: number; position?: number[]; parameters?: Record<string, unknown>; [key: string]: unknown };
-type WorkflowConnection = { main?: Array<Array<{ node: string; type: string; index: number }>>; [key: string]: unknown };
-type CampaignSummary = { success?: boolean; action?: string; status?: string; attempted?: number; submitted?: number; accepted_by_whatsapp_api?: number; immediate_failed?: number; skipped?: number; pending_delivery_confirmation?: number; free_form_sent?: number; template_sent?: number; template_name?: string; failed_recipients?: Array<Record<string, unknown>>; accepted_recipients?: Array<Record<string, unknown>>; message?: string };
-
-export type MaiaCampaignAction = { commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; mediaUrl?: string; createdBy?: string };
 export type MaiaWhatsAppFollowUpAction = {
   commandId: string;
   recipient: string;
@@ -39,208 +29,198 @@ export type MaiaWhatsAppFollowUpAction = {
   createdBy?: string;
 };
 
-async function resolveActionWorkflow() {
-  try { const exact = await getN8nWorkflow(ACTION_WORKFLOW_ID); if (exact?.id) return exact; } catch {}
-  const summary = await findN8nWorkflowByName(ACTION_WORKFLOW_NAME);
-  if (!summary) throw new Error(`The proven n8n workflow "${ACTION_WORKFLOW_NAME}" was not found.`);
-  return getN8nWorkflow(summary.id);
+async function resolveOrganizationId() {
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("organizations").select("id").eq("slug", "limitless-realty").maybeSingle();
+  if (error) throw error;
+  if (!data?.id) throw new Error("Limitless Realty organization is not configured.");
+  return String(data.id);
 }
 
-export async function ensureMaiaActionWebhook() {
-  const workflow = await resolveActionWorkflow();
-  const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as WorkflowNode[];
-  const connections = (workflow.connections || {}) as Record<string, WorkflowConnection>;
-  const entryNode = nodes.find((node) => node.name === ACTION_ENTRY_NODE);
-  if (!entryNode) throw new Error(`${ACTION_WORKFLOW_NAME} is missing ${ACTION_ENTRY_NODE}.`);
-  const webhookNode = nodes.find((node) => node.name === ACTION_WEBHOOK_NODE);
-  const normalizeNode = nodes.find((node) => node.name === ACTION_NORMALIZE_NODE);
-  const cleanedNodes = nodes.filter((node) => node.name !== ACTION_WEBHOOK_NODE && node.name !== ACTION_NORMALIZE_NODE);
-  const baseX = Number(entryNode.position?.[0] || 0); const baseY = Number(entryNode.position?.[1] || 0);
-  const webhook: WorkflowNode = { id: webhookNode?.id || crypto.randomUUID(), name: ACTION_WEBHOOK_NODE, type: "n8n-nodes-base.webhook", typeVersion: 2, position: [baseX - 440, baseY + 180], webhookId: String(webhookNode?.webhookId || crypto.randomUUID()), parameters: { httpMethod: "POST", path: ACTION_WEBHOOK_PATH, responseMode: "onReceived", options: {} } };
-  const normalize: WorkflowNode = { id: normalizeNode?.id || crypto.randomUUID(), name: ACTION_NORMALIZE_NODE, type: "n8n-nodes-base.code", typeVersion: 2, position: [baseX - 220, baseY + 180], parameters: { mode: "runOnceForEachItem", jsCode: "const value = $json.body && typeof $json.body === 'object' ? $json.body : $json; return { json: value };" } };
-  const webhookConnection: WorkflowConnection = { main: [[{ node: ACTION_NORMALIZE_NODE, type: "main", index: 0 }]] };
-  const normalizeConnection: WorkflowConnection = { main: [[{ node: ACTION_ENTRY_NODE, type: "main", index: 0 }]] };
-  const needsUpdate = !webhookNode || !normalizeNode || webhookNode.parameters?.responseMode !== "onReceived" || JSON.stringify(connections[ACTION_WEBHOOK_NODE] || {}) !== JSON.stringify(webhookConnection) || JSON.stringify(connections[ACTION_NORMALIZE_NODE] || {}) !== JSON.stringify(normalizeConnection);
-  if (needsUpdate) {
-    const nextConnections = { ...connections }; delete nextConnections[ACTION_WEBHOOK_NODE]; delete nextConnections[ACTION_NORMALIZE_NODE];
-    const updated = await updateN8nWorkflow(workflow.id, { name: workflow.name, nodes: [...cleanedNodes, webhook, normalize], connections: { ...nextConnections, [ACTION_WEBHOOK_NODE]: webhookConnection, [ACTION_NORMALIZE_NODE]: normalizeConnection }, settings: { ...(workflow.settings || {}), saveExecutionProgress: true, saveDataSuccessExecution: "all", saveDataErrorExecution: "all" } });
-    if (workflow.active && !updated.active) await activateN8nWorkflow(workflow.id);
-  }
-  return { workflowId: workflow.id, workflowName: workflow.name, webhookPath: ACTION_WEBHOOK_PATH, entryNode: ACTION_ENTRY_NODE, repaired: needsUpdate };
+async function lastInboundAt(organizationId: string, phone: string) {
+  const admin = createAdminClient();
+  const normalized = normalizeLeadPhone(phone);
+  const { data: conversation, error: conversationError } = await admin
+    .from("agent_conversations")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("external_thread_key", normalized)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (conversationError) throw conversationError;
+  if (!conversation?.id) return null;
+  const { data: message, error: messageError } = await admin
+    .from("conversation_messages")
+    .select("created_at")
+    .eq("organization_id", organizationId)
+    .eq("conversation_id", conversation.id)
+    .eq("sender_type", "customer")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (messageError) throw messageError;
+  return message?.created_at ? String(message.created_at) : null;
 }
 
-function splitCampaignParagraphs(message: string) { return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean); }
-
-function buildTemplateComponents(command: MaiaCampaignAction) {
-  const paragraphs = splitCampaignParagraphs(command.message);
-  const bodyFor = (leadName?: string) => [
-    { type: "text", text: String(leadName || "there").trim() || "there" },
-    { type: "text", text: paragraphs[0] || command.message.trim() },
-    { type: "text", text: paragraphs[1] || "" },
-    { type: "text", text: paragraphs[2] || "" },
-  ];
-  const bodyParameters = bodyFor();
-  // limitless_realty_update_v2 is approved with four BODY variables and no CTA/media component.
-  const components = [{ type: "body", parameters: bodyParameters }];
-  const byRecipient = command.recipients.map((lead) => ({
-    phone: normalizeLeadPhone(String(lead.phone || "")),
-    name: String(lead.name || "there").trim() || "there",
-    components: [{ type: "body", parameters: bodyFor(String(lead.name || "there").trim()) }],
-  }));
-  return { body_parameters: bodyParameters, components, components_by_recipient: byRecipient };
+function mediaUrlForType(url: string, type: "image" | "video" | "document") {
+  if (type === "document") return undefined;
+  if (type === "video") return { propertyVideoUrls: [url] };
+  return { propertyImageUrls: [url] };
 }
 
-function buildCampaignInput(command: MaiaCampaignAction) {
-  const phones = [...new Set(command.recipients.map((lead) => normalizeLeadPhone(String(lead.phone || ""))).filter(Boolean))];
-  const isUpdateTemplate = command.campaignType === "limitless_realty_update" || command.templateName === "limitless_realty_update_v2";
+function inferMediaType(url: string) {
+  const clean = url.split("?")[0].split("#")[0].toLowerCase();
+  if (/\.(mp4|mov|m4v|webm)$/.test(clean)) return "video" as const;
+  if (/\.(jpe?g|png|webp|gif)$/.test(clean)) return "image" as const;
+  return null;
+}
+
+async function sendCampaignRecipient(
+  organizationId: string,
+  command: MaiaCampaignAction,
+  lead: ProgressiveLead,
+) {
+  const phone = normalizeLeadPhone(String(lead.phone || ""));
+  if (!phone) return { accepted: false, failed: true, reason: "invalid_phone" };
+
+  const inbound = await lastInboundAt(organizationId, phone);
   const isDirect = command.campaignType === "direct_message";
-  const defaultTemplate = command.templateName || "limitless_realty_update_v2";
-  const templateComponents = buildTemplateComponents(command);
-  return {
-    source: "fluxknight_dashboard", command_id: command.commandId, chat_id: command.createdBy || "fluxknight_dashboard", user_id: command.createdBy || "fluxknight_dashboard", text: command.message, original_text: command.message,
-    action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: false,
-    action_params: {
-      recipient_phones: phones, custom_message: command.message, message_text: command.message, preserve_exact_message: true,
-      message_delivery_mode: isDirect ? "direct" : "auto",
-      campaign_type: command.campaignType || "limitless_realty_update", template_name: defaultTemplate, approved_template_name: defaultTemplate,
-      allow_template_fallback: !isDirect, use_approved_template_outside_24h: !isDirect,
-      topic: command.topic, property_filter: command.propertyTitle || "", media_url: "", image_url: "", media_type: "", has_media: false,
-      template_components: templateComponents.components,
-      template_body_parameters: templateComponents.body_parameters,
-      template_components_by_recipient: templateComponents.components_by_recipient,
-      // Intentionally omit template_button_parameters/dynamic_url/action_button_url.
-      // The Channel link is delivered only after a client replies YES.
-      confirm_send: true, confirm_real_client_broadcast: true, include_incomplete_leads: true, max_recipients: phones.length,
-    },
-    natural_response: isDirect
-      ? "Send this direct WhatsApp message exactly as written. Do not rewrite it. Direct mode is only valid for contacts inside the 24-hour customer service window."
-      : isUpdateTemplate
-        ? "Send limitless_realty_update_v2 using exactly four BODY parameters: {{1}} recipient name, {{2}} main campaign update, {{3}} supporting paragraph, {{4}} response prompt. The approved template has NO URL button and NO media component. Do not send any URL, media attachment, or extra template component. The Limitless Realty WhatsApp Channel link is sent separately only when the client replies YES."
-        : command.mediaUrl
-          ? "Send the campaign with approved Meta template components. Map body {{1}} to each recipient's name, body {{2}} to the first campaign paragraph, body {{3}} to the second campaign paragraph, and use the configured URL button only if the approved template defines one. Do not put URLs into body variables."
-          : "Send the campaign using its configured approved Meta template outside the 24-hour window when required. Do not regenerate the campaign message.",
-  };
-}
-
-function containsCommandId(value: unknown, commandId: string) { try { return JSON.stringify(value).includes(commandId); } catch { return false; } }
-function sleep(ms: number) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-function extractNodeJson(execution: Record<string, any>, nodeName: string) { const runs = execution.data?.resultData?.runData?.[nodeName]; const firstRun = Array.isArray(runs) ? runs[0] : null; const branches = Array.isArray(firstRun?.data?.main) ? firstRun.data.main : []; const firstBranch = Array.isArray(branches[0]) ? branches[0] : []; return (firstBranch[0]?.json || null) as CampaignSummary | null; }
-async function waitForCampaignExecution(workflowId: string, commandId: string, startedAfter: number) {
-  const deadline = Date.now() + EXECUTION_TIMEOUT_MS; let seenId: string | null = null;
-  while (Date.now() < deadline) {
-    const executions = (await listN8nExecutions({ workflowId, includeData: true, limit: 50 })) as Array<Record<string, any>>;
-    const execution = executions.find((candidate) => { const startedAt = candidate.startedAt ? new Date(candidate.startedAt).getTime() : 0; return startedAt >= startedAfter - 5000 && containsCommandId(candidate, commandId); });
-    if (!execution) { await sleep(POLL_INTERVAL_MS); continue; }
-    seenId = String(execution.id); const resultData = execution.data?.resultData || {}; const status = String(execution.status || "").toLowerCase(); const error = resultData.error;
-    if (error || ["error", "crashed", "canceled"].includes(status)) { const node = error?.node?.name || resultData.lastNodeExecuted || "unknown node"; const detail = error?.message || error?.description || `Execution ended with status ${status || "error"}.`; throw new Error(`Maia action execution ${execution.id} failed at ${node}: ${detail}`); }
-    if (execution.finished || status === "success") { const path = Object.keys(resultData.runData || {}); const summary = extractNodeJson(execution, CAMPAIGN_SUMMARY_NODE); if (!summary) throw new Error(`Maia action execution ${execution.id} finished without ${CAMPAIGN_SUMMARY_NODE}. Executed: ${path.join(" -> ") || "none"}.`); return { executionId: String(execution.id), path, summary }; }
-    await sleep(POLL_INTERVAL_MS);
+  if (isDirect) {
+    if (!inbound || Date.now() - new Date(inbound).getTime() >= 24 * 60 * 60 * 1000) {
+      return { accepted: false, failed: false, skipped: true, reason: "outside_24h_window" };
+    }
   }
-  throw new Error(seenId ? `Maia action execution ${seenId} did not finish within ${EXECUTION_TIMEOUT_MS / 1000} seconds.` : `No Maia action execution was found for command ${commandId}.`);
-}
 
-async function runMaiaActionPayload(commandId: string, payload: Record<string, unknown>) {
-  const route = await ensureMaiaActionWebhook();
-  const startedAt = Date.now();
-  const response = await fetch(`${getN8nBaseUrl()}/webhook/${route.webhookPath}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
-  const responseText = await response.text().catch(() => "");
-  if (!response.ok) throw new Error(`Maia action webhook rejected the command: ${response.status}${responseText ? ` ${responseText}` : ""}`);
-  const execution = await waitForCampaignExecution(route.workflowId, commandId, startedAt);
-  return { route, execution };
+  const mediaType = command.mediaUrl ? inferMediaType(command.mediaUrl) : null;
+  const variables = {
+    customer_name: String(lead.name || "there").trim() || "there",
+    lead_name: String(lead.name || "there").trim() || "there",
+    message: command.message,
+    custom_message: command.message,
+    last_customer_message: command.message,
+    conversation_summary: command.message,
+    customer_goal: String(lead.purpose || "").trim(),
+    property_interest: String(lead.property_interest || command.propertyTitle || "").trim(),
+    property_name: String(command.propertyTitle || lead.property_interest || "").trim(),
+    property_location: String(lead.location_preference || "").trim(),
+    response_prompt: "Reply CHANNEL if you want to join our Limitless Realty WhatsApp Channel.",
+    topic: command.topic,
+  };
+
+  const delivery = await sendWhatsAppMessage({
+    organizationId,
+    to: phone,
+    text: command.message,
+    lastCustomerMessageAt: inbound,
+    deliveryMode: isDirect ? "direct" : "auto",
+    templatePurpose: command.campaignType === "limitless_realty_reminder" ? "follow_up_outside_24h" : "campaign",
+    templateName: isDirect ? undefined : command.templateName,
+    variables,
+    ...(mediaType ? mediaUrlForType(command.mediaUrl || "", mediaType) : {}),
+  });
+
+  return {
+    accepted: true,
+    failed: false,
+    skipped: false,
+    phone,
+    name: lead.name,
+    providerMessageId: delivery.providerMessageId,
+    messageType: delivery.messageType,
+    templateName: delivery.templateName,
+    provider: delivery.provider,
+  };
 }
 
 export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
   if (!command.message.trim()) throw new Error("A campaign message is required.");
   if (!command.recipients.length) throw new Error("The campaign has no recipients.");
-  const payload = buildCampaignInput(command);
-  const { route, execution } = await runMaiaActionPayload(command.commandId, payload);
-  const summary = execution.summary;
-  const failedRecipients = summary.failed_recipients || [];
-  const immediateFailed = Number(summary.immediate_failed || failedRecipients.length || 0);
-  if (immediateFailed > 0 && Number(summary.accepted_by_whatsapp_api || summary.submitted || 0) === 0) {
-    const details = failedRecipients.map((item) => String(item.error || item.reason || item.message || JSON.stringify(item))).filter(Boolean).join("; ");
-    throw new Error(`WhatsApp rejected the campaign: ${details || summary.message || `${immediateFailed} recipient(s) failed.`}`);
+
+  const organizationId = await resolveOrganizationId();
+  const results: Array<Record<string, unknown>> = [];
+  for (const lead of command.recipients) {
+    try {
+      results.push(await sendCampaignRecipient(organizationId, command, lead));
+    } catch (error) {
+      results.push({
+        accepted: false,
+        failed: true,
+        phone: normalizeLeadPhone(String(lead.phone || "")),
+        name: lead.name,
+        reason: error instanceof Error ? error.message : "WhatsApp delivery failed",
+      });
+    }
   }
-  return { route, executionId: execution.executionId, path: execution.path, summary, attempted: Number(summary.attempted || command.recipients.length), accepted: Number(summary.accepted_by_whatsapp_api || summary.submitted || 0), failed: immediateFailed, skipped: Number(summary.skipped || 0), pendingDelivery: Number(summary.pending_delivery_confirmation || 0), freeFormSent: Number(summary.free_form_sent || 0), templateSent: Number(summary.template_sent || 0), acceptedRecipients: summary.accepted_recipients || [], failedRecipients, status: String(summary.status || "submitted"), message: String(summary.message || "Campaign submitted to WhatsApp.") };
+
+  const acceptedRecipients = results.filter((item) => item.accepted);
+  const failedRecipients = results.filter((item) => item.failed);
+  const skippedRecipients = results.filter((item) => item.skipped);
+  const firstError = failedRecipients[0]?.reason;
+  return {
+    route: "trigger-dev-meta-cloud-api",
+    executionId: command.commandId,
+    path: ["trigger-dev", "canonical-whatsapp-delivery"],
+    summary: {
+      status: failedRecipients.length && acceptedRecipients.length ? "partially_sent" : failedRecipients.length ? "failed" : "submitted",
+      attempted: command.recipients.length,
+      submitted: acceptedRecipients.length,
+      accepted_by_whatsapp_api: acceptedRecipients.length,
+      immediate_failed: failedRecipients.length,
+      skipped: skippedRecipients.length,
+      pending_delivery_confirmation: acceptedRecipients.length,
+      free_form_sent: acceptedRecipients.filter((item) => item.messageType === "text").length,
+      template_sent: acceptedRecipients.filter((item) => item.messageType === "template").length,
+      template_name: acceptedRecipients.find((item) => item.templateName)?.templateName || null,
+      failed_recipients: failedRecipients,
+      accepted_recipients: acceptedRecipients,
+      message: firstError || "Campaign submitted through the canonical WhatsApp delivery gateway.",
+    },
+    attempted: command.recipients.length,
+    accepted: acceptedRecipients.length,
+    failed: failedRecipients.length,
+    skipped: skippedRecipients.length,
+    pendingDelivery: acceptedRecipients.length,
+    freeFormSent: acceptedRecipients.filter((item) => item.messageType === "text").length,
+    templateSent: acceptedRecipients.filter((item) => item.messageType === "template").length,
+    acceptedRecipients,
+    failedRecipients,
+    status: failedRecipients.length && acceptedRecipients.length ? "partially_sent" : failedRecipients.length ? "failed" : "submitted",
+    message: firstError || "Campaign submitted through the canonical WhatsApp delivery gateway.",
+  };
 }
 
 export async function dispatchMaiaWhatsAppFollowUp(command: MaiaWhatsAppFollowUpAction) {
+  const organizationId = await resolveOrganizationId();
   const phone = normalizeLeadPhone(command.recipient);
   if (!phone) throw new Error("A valid WhatsApp recipient is required.");
   if (!command.message.trim()) throw new Error("A follow-up message is required.");
-  if (command.deliveryMode === "template" && !command.templateName?.trim()) throw new Error("An approved WhatsApp template name is required outside the customer service window.");
 
-  const recipientName = String(command.recipientName || "there").trim() || "there";
-  const templateParameters = (command.templateParameters || []).map((value) => String(value || "Not specified").trim() || "Not specified");
-  const bodyParameters = templateParameters.map((value) => ({ type: "text", text: value }));
-  const isTemplate = command.deliveryMode === "template";
-  const templateName = String(command.templateName || "").trim();
-
-  const payload = {
-    source: "fluxknight_maia_follow_up",
-    command_id: command.commandId,
-    chat_id: command.createdBy || "maia_follow_up",
-    user_id: command.createdBy || "maia_follow_up",
+  const inbound = await lastInboundAt(organizationId, phone);
+  const delivery = await sendWhatsAppMessage({
+    organizationId,
+    to: phone,
     text: command.message,
-    original_text: command.message,
-    action_type: "send_whatsapp_campaign",
-    operation: "send_whatsapp_campaign",
-    has_action: true,
-    has_media: false,
-    action_params: {
-      recipient_phones: [phone],
-      custom_message: command.message,
-      message_text: command.message,
-      preserve_exact_message: true,
-      message_delivery_mode: isTemplate ? "auto" : "direct",
-      campaign_type: isTemplate ? "limitless_realty_reminder" : "direct_message",
-      template_name: isTemplate ? templateName : "",
-      approved_template_name: isTemplate ? templateName : "",
-      template_language: isTemplate ? String(command.templateLanguage || "en_US") : "",
-      allow_template_fallback: isTemplate,
-      use_approved_template_outside_24h: isTemplate,
-      topic: command.topic || "Maia CRM follow-up",
-      property_filter: command.propertyTitle || "",
-      media_url: "",
-      image_url: "",
-      media_type: "",
-      has_media: false,
-      template_components: isTemplate ? [{ type: "body", parameters: bodyParameters }] : [],
-      template_body_parameters: isTemplate ? bodyParameters : [],
-      template_components_by_recipient: isTemplate ? [{ phone, name: recipientName, components: [{ type: "body", parameters: bodyParameters }] }] : [],
-      template_variable_keys: isTemplate ? command.templateVariableKeys || [] : [],
-      confirm_send: true,
-      confirm_real_client_broadcast: true,
-      include_incomplete_leads: true,
-      max_recipients: 1,
-    },
-    natural_response: isTemplate
-      ? `Send the approved Meta WhatsApp template ${templateName} to this one CRM follow-up recipient. Use the supplied BODY parameters exactly in order. Do not regenerate or substitute a different template.`
-      : "Send this direct WhatsApp follow-up exactly as written. Do not rewrite it. Direct mode is only valid because Fluxknight already verified the customer-service window is open.",
-  };
-
-  const { route, execution } = await runMaiaActionPayload(command.commandId, payload);
-  const summary = execution.summary;
-  const failedRecipients = summary.failed_recipients || [];
-  const immediateFailed = Number(summary.immediate_failed || failedRecipients.length || 0);
-  const accepted = Number(summary.accepted_by_whatsapp_api || summary.submitted || 0);
-  if (immediateFailed > 0 && accepted === 0) {
-    const details = failedRecipients.map((item) => String(item.error || item.reason || item.message || JSON.stringify(item))).filter(Boolean).join("; ");
-    throw new Error(`WhatsApp rejected Maia follow-up: ${details || summary.message || `${immediateFailed} recipient(s) failed.`}`);
-  }
+    lastCustomerMessageAt: inbound,
+    deliveryMode: command.deliveryMode,
+    templatePurpose: "follow_up_outside_24h",
+    templateName: command.templateName,
+    templateLanguageCode: command.templateLanguage,
+    variables: Object.fromEntries((command.templateVariableKeys || []).map((key, index) => [key, command.templateParameters?.[index] || "Not specified"])),
+  });
 
   return {
-    route,
-    executionId: execution.executionId,
-    path: execution.path,
-    summary,
-    accepted,
-    failed: immediateFailed,
-    pendingDelivery: Number(summary.pending_delivery_confirmation || 0),
-    freeFormSent: Number(summary.free_form_sent || 0),
-    templateSent: Number(summary.template_sent || 0),
-    templateName: isTemplate ? templateName : null,
-    status: String(summary.status || "submitted"),
-    message: String(summary.message || "Maia follow-up submitted to WhatsApp."),
+    route: "trigger-dev-meta-cloud-api",
+    executionId: command.commandId,
+    path: ["trigger-dev", "canonical-whatsapp-delivery"],
+    summary: { accepted_by_whatsapp_api: delivery.ok ? 1 : 0, submitted: delivery.ok ? 1 : 0, immediate_failed: 0, status: "submitted" },
+    accepted: delivery.ok ? 1 : 0,
+    failed: 0,
+    pendingDelivery: delivery.ok ? 1 : 0,
+    freeFormSent: delivery.messageType === "text" ? 1 : 0,
+    templateSent: delivery.messageType === "template" ? 1 : 0,
+    templateName: delivery.templateName,
+    status: "submitted",
+    message: "Maia follow-up submitted through the canonical WhatsApp delivery gateway.",
   };
 }

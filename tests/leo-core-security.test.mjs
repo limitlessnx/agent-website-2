@@ -11,10 +11,7 @@ const model = readFileSync(resolve(root, "lib/ai/leo-model.ts"), "utf8");
 const gateway = readFileSync(resolve(root, "app/api/leo/route.ts"), "utf8");
 const toolGateway = readFileSync(resolve(root, "app/api/leo/tool/route.ts"), "utf8");
 const realtime = readFileSync(resolve(root, "app/api/leo/realtime/call/route.ts"), "utf8");
-const envelope = readFileSync(resolve(root, "lib/leo-execution-envelope.ts"), "utf8");
-const internalExecutor = readFileSync(resolve(root, "app/api/internal/leo/execute/route.ts"), "utf8");
 const migration = readFileSync(resolve(root, "supabase/migrations/20260801142121_agent_leo_support.sql"), "utf8");
-const workflow = readFileSync(resolve(root, "n8n/workflows/agent-leo-core-v2-executor.json"), "utf8");
 
 test("Leo has explicit public, tenant and super-admin scopes", () => {
   assert.match(core, /"public" \| "tenant" \| "super_admin"/);
@@ -38,7 +35,6 @@ test("tenant organization boundary is rechecked server side", () => {
   assert.match(core, /Cross-tenant Leo access was blocked/);
   assert.match(gateway, /enforceLeoOrganizationScope\(/);
   assert.match(gateway, /scoped\.organization_id = organizationId/);
-  assert.match(envelope, /enforceLeoOrganizationScope\(/);
 });
 
 test("model output is validated against the same permission engine", () => {
@@ -71,18 +67,16 @@ test("voice sessions resolve the same Leo identity and allowed tool registry", (
 test("voice and chat tool calls share the same server permission gateway", () => {
   assert.match(toolGateway, /resolveLeoIdentity\(/);
   assert.match(toolGateway, /assertLeoToolAllowed\(identity, toolKey\)/);
-  assert.match(toolGateway, /createLeoExecutionEnvelope\(/);
-  assert.match(toolGateway, /executeLeoEnvelopeViaN8n\(/);
+  assert.match(toolGateway, /AgentRuntimeSDK/);
+  assert.match(toolGateway, /createRuntimeToolRegistry/);
 });
 
 test("write tools require server-side confirmation enforcement", () => {
   assert.match(toolGateway, /approval === "confirm" && !confirmed/);
-  assert.match(internalExecutor, /approval === "confirm" && !envelope\.approvalGranted/);
 });
 
-test("n8n executor receives signed envelopes and cannot mint Leo identities", () => {
-  assert.match(workflow, /Validate Signed Leo Envelope/);
-  assert.match(workflow, /x-fluxknight-leo-secret/);
-  assert.match(workflow, /\/api\/internal\/leo\/execute/);
-  assert.match(internalExecutor, /verifyLeoExecutionEnvelope\(body\)/);
+test("Leo tool execution uses the canonical runtime registry and never depends on n8n", () => {
+  assert.match(toolGateway, /executeTool\(/);
+  assert.match(toolGateway, /createRuntimeToolRegistry/);
+  assert.doesNotMatch(toolGateway, /n8n/i);
 });

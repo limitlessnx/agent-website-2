@@ -10,10 +10,9 @@ type Props = {
   configured: boolean;
 };
 
-const providers = ["n8n", "trigger.dev", "telegram", "whatsapp", "email", "elevenlabs", "custom"];
+const providers = ["trigger.dev", "telegram", "whatsapp", "email", "elevenlabs", "custom"];
 const statuses: WorkflowRecord["status"][] = ["active", "paused", "draft", "error", "disabled"];
 const providerLabels: Record<string, string> = {
-  n8n: "Automation Engine",
   "trigger.dev": "Task Runner",
   telegram: "Telegram",
   whatsapp: "WhatsApp",
@@ -69,7 +68,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
       workflow_key: String(data.get("workflow_key") || ""),
       name: String(data.get("name") || ""),
       description: String(data.get("description") || ""),
-      provider: String(data.get("provider") || "n8n"),
+      provider: String(data.get("provider") || "custom"),
       external_workflow_id: String(data.get("external_workflow_id") || ""),
       endpoint_url: String(data.get("endpoint_url") || ""),
       status: String(data.get("status") || "draft"),
@@ -138,9 +137,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
   }
 
   function renderWorkflow(workflow: WorkflowRecord) {
-    const canActivate = workflow.provider === "n8n"
-      ? Boolean(workflow.external_workflow_id)
-      : Boolean(workflow.endpoint_url);
+    const canActivate = Boolean(workflow.endpoint_url || workflow.provider === "trigger.dev");
 
     return (
       <div key={workflow.id} className="admin-list-row">
@@ -184,7 +181,7 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
             <label>Workflow key<input name="workflow_key" required placeholder="maia-lead-onboarding" /></label>
             <label>Agent family / organization<input name="organization_id" defaultValue="limitless-realty" required /></label>
             <label>Project<input name="project_id" defaultValue="limitless-realty" required /></label>
-            <label>Provider<select name="provider" defaultValue="n8n">{providers.map((provider) => <option key={provider} value={provider}>{providerLabels[provider] || provider}</option>)}</select></label>
+            <label>Provider<select name="provider" defaultValue="custom">{providers.map((provider) => <option key={provider} value={provider}>{providerLabels[provider] || provider}</option>)}</select></label>
             <label>Status<select name="status" defaultValue="draft">{statuses.map((status) => <option key={status}>{status}</option>)}</select></label>
             <label>External workflow ID<input name="external_workflow_id" placeholder="Automation engine ID" /></label>
             <label>Endpoint URL<input name="endpoint_url" type="url" placeholder="https://..." /></label>

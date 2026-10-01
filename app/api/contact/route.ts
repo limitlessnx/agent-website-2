@@ -51,20 +51,6 @@ async function saveToSupabase(row: Record<string, unknown>): Promise<Destination
   return { configured: true, data: await response.json() };
 }
 
-async function sendToN8n(payload: Record<string, unknown>): Promise<DestinationResult> {
-  const webhookUrl = process.env.N8N_CONTACT_WEBHOOK_URL || process.env.N8N_EVALUATION_WEBHOOK_URL;
-  if (!webhookUrl) return { configured: false };
-
-  const response = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) throw new Error(`n8n webhook failed: ${await response.text()}`);
-  return { configured: true };
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as ContactPayload;
@@ -112,9 +98,7 @@ export async function POST(req: NextRequest) {
     };
 
     let supabaseResult: DestinationResult = { configured: false };
-    let n8nResult: DestinationResult = { configured: false };
     let supabaseError: unknown = null;
-    let n8nError: unknown = null;
 
     try {
       supabaseResult = await saveToSupabase(lead);
@@ -123,15 +107,8 @@ export async function POST(req: NextRequest) {
       console.error("[Contact API Supabase]", error);
     }
 
-    try {
-      n8nResult = await sendToN8n({ event: "contact_request_created", lead, createdAt: now });
-    } catch (error) {
-      n8nError = error;
-      console.error("[Contact API n8n]", error);
-    }
-
-    const recorded = supabaseResult.configured || n8nResult.configured;
-    const hadDestinationError = Boolean(supabaseError || n8nError);
+    const recorded = supabaseResult.configured;
+    const hadDestinationError = Boolean(supabaseError);
 
     if (!recorded) {
       if (hadDestinationError) {
@@ -144,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      destinations: { supabase: supabaseResult.configured, n8n: n8nResult.configured },
+      destinations: { supabase: supabaseResult.configured },
       degraded: recorded && hadDestinationError,
     });
   } catch (error) {

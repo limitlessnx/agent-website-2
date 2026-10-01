@@ -10,6 +10,8 @@ type SendInput = {
   deliveryMode?: "auto" | "direct" | "template";
   forceTemplate?: boolean;
   templatePurpose?: string;
+  templateName?: string;
+  templateLanguageCode?: string;
   variables?: Record<string, string | number | null | undefined>;
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
@@ -89,8 +91,11 @@ async function resolveWhatsAppCredentials(organizationId: string): Promise<Whats
 
   throw new Error("WhatsApp credentials are not configured for this organization.");
 }
-async function getTemplateConfig(organizationId: string, purpose: string): Promise<TemplateConfig | null> {
-  const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active&select=template_name,language_code,variable_keys,metadata,status&limit=1`);
+async function getTemplateConfig(organizationId: string, purpose: string, templateName?: string): Promise<TemplateConfig | null> {
+  const query = templateName?.trim()
+    ? `whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&template_name=eq.${encodeURIComponent(templateName.trim())}&status=eq.active&select=template_name,language_code,variable_keys,metadata,status&limit=1`
+    : `whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active&select=template_name,language_code,variable_keys,metadata,status&limit=1`;
+  const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(query);
   return rows[0] || null;
 }
 async function recordAttempt(payload: Record<string, unknown>) {
@@ -147,7 +152,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
   if (requestedMode === "direct" && outsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open.");
 
   const config=useTemplate
-    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h")
+    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h",input.templateName)
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
 
@@ -218,7 +223,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
   if (useTemplate) {
     templateName = config!.template_name;
     const parameters = (Array.isArray(config!.variable_keys) ? config!.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
-    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
+    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: input.templateLanguageCode || config!.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
   } else {
     if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };

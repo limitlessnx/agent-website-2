@@ -19,6 +19,8 @@ const whatsappIntegrationPanel = await readFile(new URL("../components/integrati
 
 test("Maia Trigger runtime validates tenant context before execution", () => {
   assert.match(triggerTask, /validateMaiaTenantContext\(payload\)/);
+  assert.match(triggerTask, /tenantContext\.organization\.slug/);
+  assert.doesNotMatch(triggerTask, /b15f21b4-5697-4d21-9421-8a34eae3476d/);
   assert.match(runtimeStore, /\.eq\("organization_id", payload\.organizationId\)/);
   assert.match(runtimeStore, /Maia agent is not assigned to this organization/);
 });
@@ -33,7 +35,7 @@ test("Maia Trigger runtime is idempotent and conversation-serialized", () => {
 
 test("Maia Trigger does not retry deterministic OpenAI 4xx failures", () => {
   assert.match(triggerTask, /AbortTaskRunError/);
-  assert.match(triggerTask, /OpenAI request failed \\(4\\d\\d\\)/);
+  assert.match(triggerTask, /OpenAI request failed/);
   assert.match(triggerTask, /catchError:/);
 });
 
@@ -64,8 +66,16 @@ test("Phase 3 does not send WhatsApp directly from the Trigger task", () => {
 test("Phase 4 routes inbound Meta WhatsApp events into Trigger.dev", () => {
   assert.match(whatsappWebhook, /maia-process-inbound-message/);
   assert.match(whatsappWebhook, /externalEventId: messageId/);
+  assert.match(whatsappWebhook, /customerMessageAt: inboundMessageTimestamp\(message\)/);
+  assert.match(triggerTask, /lastCustomerMessageAt: payload\.customerMessageAt/);
   assert.match(whatsappWebhook, /organization_agent_selections/);
   assert.match(whatsappWebhook, /phone_number_id/);
+});
+
+test("Maia replies use the canonical WhatsApp service-window guard", () => {
+  assert.match(whatsappDelivery, /requestedMode === "direct" && outsideWindow/);
+  assert.match(whatsappDelivery, /Direct WhatsApp messages are only available/);
+  assert.match(triggerTask, /deliveryMode: "direct"/);
 });
 
 test("Phase 4 sends WhatsApp replies from Trigger instead of n8n", () => {

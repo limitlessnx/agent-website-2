@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertLeoToolAllowed, leoApprovalFor, resolveLeoIdentity, type LeoChannel } from "@/lib/leo-core";
-import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
-import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
+import { AgentRuntimeSDK } from "@/lib/ai-runtime/sdk";
+import { createRuntimeToolRegistry } from "@/lib/ai-runtime/tool-registry";
 import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState, updateLeoVoiceWorkingContext, type LeoSessionState, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -125,7 +125,27 @@ export async function POST(request: NextRequest) {
   }
   if (identity.scope === "super_admin" && tool.key === "leo.crm.leads.update" && limitlessWorkspace(args)) { const result = await saveLimitlessLead(args); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: "saved" } }); return NextResponse.json({ ok: true, requestId: String(body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: "saved", result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
   if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) { let result: Record<string, unknown>; if (tool.key === "leo.limitless.leads.read") result = await findLimitlessLeads(args); else if (tool.key === "leo.limitless.followup.prepare") result = await prepareLimitlessFollowup(args); else if (tool.key === "leo.limitless.followup.send") result = await sendLimitlessFollowup(request, args) as Record<string, unknown>; else if (tool.key === "leo.limitless.campaign.prepare") result = await prepareLimitlessCampaign(args); else if (tool.key === "leo.limitless.campaign.send") result = await sendThroughLimitlessCampaignRoute(request, args) as Record<string, unknown>; else throw new Error(`Unsupported Limitless Realty Leo tool: ${tool.key}`); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: String(result.status || "completed"), request_id: String(args.request_id || "") } }); return NextResponse.json({ ok: true, requestId: String(args.request_id || body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: String(result.status || "completed"), result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
-  const requestId = String(body.requestId || body.request_id || randomUUID()).trim(); const sessionId = String(body.sessionId || body.session_id || "").trim() || null; const envelope = createLeoExecutionEnvelope({ requestId, sessionId, identity, toolKey: tool.key, arguments: args, approvalGranted: approval === "none" || confirmed }); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_dispatched", toolKey: tool.key, details: { request_id: requestId, channel: identity.channel, approval } }); const result = await executeLeoEnvelopeViaN8n(envelope); if (result.ok) await setVoiceResult(identity, activeVoiceSession, tool.key, args, result as unknown as Record<string, unknown>); return NextResponse.json({ ...result, approval, channel: identity.channel, scope: identity.scope }, { status: result.ok ? 200 : 502 });
+  const requestId = String(body.requestId || body.request_id || randomUUID()).trim();
+  const sessionId = String(body.sessionId || body.session_id || "").trim() || undefined;
+  const organizationId = identity.scope === "tenant"
+    ? identity.organizationId
+    : typeof args.organization_id === "string" ? args.organization_id : undefined;
+  const agentId = typeof args.agent_id === "string" ? args.agent_id : undefined;
+  const sdk = new AgentRuntimeSDK(createRuntimeToolRegistry());
+  await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_dispatched", toolKey: tool.key, details: { request_id: requestId, channel: identity.channel, approval, execution_path: "runtime_registry" } });
+  const result = await sdk.executeTool({
+    identity,
+    executionId: requestId,
+    organizationId,
+    agentId,
+    sessionId,
+    toolKey: tool.key,
+    arguments: args,
+    approvalRequestId: typeof body.approvalRequestId === "string" ? body.approvalRequestId : undefined,
+    superAdminConfirmed: identity.scope === "super_admin" && confirmed,
+  });
+  if (result.status === "succeeded") await setVoiceResult(identity, activeVoiceSession, tool.key, args, result as unknown as Record<string, unknown>);
+  return NextResponse.json({ ...result, requestId, approval, channel: identity.channel, scope: identity.scope }, { status: result.status === "succeeded" ? 200 : result.status === "approval_required" ? 409 : 500 });
  } catch (error) {
   const message = error instanceof Error ? error.message : "Leo could not execute this action.";
   const status = /not permitted|Cross-tenant|Unauthorized/i.test(message) ? 403 : 500;

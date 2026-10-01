@@ -75,34 +75,6 @@ async function findThreadMessage(data: Record<string, unknown>, senderEmail: str
   return fallback[0] || null;
 }
 
-async function syncEventToN8n(payload: unknown, eventType: string, providerEventId: string) {
-  const enabled = process.env.GENCOUV_RESEND_N8N_SYNC_ENABLED === "true";
-  if (!enabled) return { attempted: false, ok: false, disabled: true };
-
-  const url = process.env.GENCOUV_RESEND_N8N_SYNC_URL || "";
-  const secret = process.env.GENCOUV_EMAIL_EVENT_SECRET || process.env.GENCOUV_DASHBOARD_SECRET || "";
-  if (!url || !secret) return { attempted: false, ok: false };
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-gencouv-event-secret": secret,
-      },
-      body: JSON.stringify({
-        ...(payload && typeof payload === "object" ? payload : { payload }),
-        provider_event_id: providerEventId,
-        event_type: eventType,
-        source: "resend-webhook",
-      }),
-    });
-    return { attempted: true, ok: response.ok, status: response.status };
-  } catch {
-    return { attempted: true, ok: false };
-  }
-}
-
 async function upsertSuppression(email: string, reason: string, eventType: string, providerEmailId: string, payload: unknown) {
   if (!email) return;
   await supabaseServerRequest("gencouv_suppression_list?on_conflict=organization_id,normalized_email", {
@@ -356,9 +328,7 @@ export async function POST(request: Request) {
     }
     await updateEnrollment(affectedEmail, enrollmentPatch);
 
-    const sheetSync = await syncEventToN8n(payload, type, providerEventId);
-
-    return NextResponse.json({ success: true, synced_message: Boolean(message?.id), sheet_sync: sheetSync });
+    return NextResponse.json({ success: true, synced_message: Boolean(message?.id) });
   } catch (error) {
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Webhook processing failed." },

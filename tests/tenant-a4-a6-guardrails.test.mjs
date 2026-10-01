@@ -43,11 +43,11 @@ test("provisioning stops at testing and does not activate n8n", () => {
   assert.doesNotMatch(code, /activateN8nWorkflow/);
 });
 
-test("activation owns n8n activation after readiness passes", () => {
+test("activation owns tenant system activation after readiness passes", () => {
   const code = read("lib/tenant-system-management.ts");
   assert.match(code, /testTenantSystem/);
   assert.match(code, /activateTenantSystem/);
-  assert.match(code, /activateN8nWorkflow/);
+  assert.match(code, /organization_automations/);
   assert.match(code, /activate_organization_system_record/);
   assert.match(code, /test_passed/);
 });

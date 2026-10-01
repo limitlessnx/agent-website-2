@@ -108,6 +108,14 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
     : null;
 }
 
+function inboundMessageTimestamp(message: Record<string, any>) {
+  const raw = String(message?.timestamp || "").trim();
+  if (!raw) return null;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  return new Date(seconds * 1000).toISOString();
+}
+
 function inboundText(message: Record<string, any>) {
   const type = String(message.type || "");
   if (type === "text") return String(message.text?.body || "").trim();
@@ -289,12 +297,14 @@ export async function POST(request: NextRequest) {
           externalConversationId: from,
           customerPhone: from,
           customerName: contactName,
+          customerMessageAt: inboundMessageTimestamp(message),
           message: text,
           metadata: {
             phoneNumberId,
             waId: String(contacts[0]?.wa_id || from),
             messageType: String(message?.type || "unknown"),
             timestamp: String(message?.timestamp || ""),
+            customerMessageAt: inboundMessageTimestamp(message),
           },
         };
 

@@ -37,7 +37,7 @@ export const maiaProcessInboundMessage = task({
     }
   },
   run: async (payload: MaiaInboundPayload) => {
-    await validateMaiaTenantContext(payload);
+    const tenantContext = await validateMaiaTenantContext(payload);
 
     const registration = await registerMaiaInboundEvent(payload);
     if (registration.duplicate) {
@@ -83,7 +83,7 @@ export const maiaProcessInboundMessage = task({
     });
 
     try {
-      const isLimitlessRealty = payload.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d";
+      const isLimitlessRealty = String(tenantContext.organization.slug || "").toLowerCase() === "limitless-realty";
       const stopIntent = /\b(stop(?: sending| messaging| contacting)?|unsubscribe|opt[- ]?out|remove me from (?:your )?(?:messages|list)|(?:do not|don't) (?:send|message|contact)|no more messages)\b/i.test(payload.message);
 
       if (isLimitlessRealty && stopIntent && payload.customerPhone) {
@@ -182,7 +182,7 @@ export const maiaProcessInboundMessage = task({
           to: payload.customerPhone,
           text: result.reply,
           deliveryMode: "direct",
-          lastCustomerMessageAt: new Date().toISOString(),
+          lastCustomerMessageAt: payload.customerMessageAt || null,
         });
       }
 

@@ -9,6 +9,7 @@ export type MaiaInboundPayload = {
   externalConversationId?: string;
   customerPhone?: string;
   customerName?: string;
+  customerMessageAt?: string | null;
   message: string;
   metadata?: Record<string, unknown>;
 };

@@ -6,9 +6,7 @@ import {
   saveOrganizationAgentSelections,
 } from "@/lib/agent-catalog";
 
-const AI_SALES_APPLICATION_WEBHOOK =
-  process.env.AI_SALES_APPLICATION_WEBHOOK_URL ||
-  "https://n8n.srv1720757.hstgr.cloud/webhook/fluxknight-ai-sales-test-v1";
+const AI_SALES_APPLICATION_WEBHOOK = process.env.AI_SALES_APPLICATION_WEBHOOK_URL?.trim() || "";
 
 const FLUXKNIGHT_ORGANIZATION_ID = "15046426-e520-438b-8694-7662a6986efb";
 const FLUXKNIGHT_SALES_AGENT_ID = "23d18ba2-1de8-450f-95af-194378bc7dc9";
@@ -46,6 +44,8 @@ async function sendAgentApplicationToSales(input: {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
+
+  if (!AI_SALES_APPLICATION_WEBHOOK) return { delivered: false, status: 0, reason: "sales_intake_endpoint_not_configured" };
 
   try {
     const response = await fetch(AI_SALES_APPLICATION_WEBHOOK, {

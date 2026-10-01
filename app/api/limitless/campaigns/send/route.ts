@@ -4,8 +4,6 @@ import { getCampaignGroup, matchesCampaignGroupRules } from "@/lib/campaign-grou
 import { getProperties } from "@/lib/limitless-data";
 import { getCampaignAudienceLeads, normalizeLeadPhone, type ProgressiveLead } from "@/lib/lead-profile-service";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
-import { repairMaiaActionWorkflowInput } from "@/lib/maia-action-workflow-repair";
-import { repairMaiaCampaignFormatting } from "@/lib/maia-campaign-format-repair";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
 import { splitWhatsAppMessage } from "@/lib/whatsapp-message-splitter";
 import { buildPropertyCampaignContent, PropertyCampaignMessageError } from "@/lib/property-campaign-message";
@@ -69,7 +67,6 @@ export async function POST(request: Request) {
     const recipients = matchedRecipients.filter((lead) => !cooldowns.has(normalizeLeadPhone(lead.phone)));
     const cooldownSkipped = matchedRecipients.length - recipients.length;
     if (!recipients.length) return NextResponse.json({ error: cooldownSkipped ? "All matched leads are currently in WhatsApp cooldown after Meta delivery blocks. Wait before retrying or ask the contact to message Maia first." : "No campaign-eligible leads matched this audience.", skipped: cooldownSkipped, cooldownSkipped }, { status: 400 });
-    await repairMaiaActionWorkflowInput(); await repairMaiaCampaignFormatting();
     const campaignId = requestId;
     const createdBy = String((session as { email?: string; id?: string }).email || (session as { id?: string }).id || "admin_dashboard");
     const dispatches = [];

@@ -1,4 +1,3 @@
-import { activateN8nWorkflow, deactivateN8nWorkflow, getN8nWorkflow, listN8nExecutions } from "@/lib/n8n-api";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 export type LeoAction = {
@@ -124,17 +123,11 @@ export async function executeLeoAction(action: LeoAction, actor: string) {
       }
       case "inspect_workflow":
       case "inspect_workflow_failures": {
-        const workflowId = String(payload.n8n_workflow_id || "").trim();
-        if (workflowId) {
-          const [workflow, executions] = await Promise.all([
-            getN8nWorkflow(workflowId),
-            listN8nExecutions({ workflowId, limit: 20, includeData: true }),
-          ]);
-          result = { workflow, executions };
-        } else {
-          const organizationId = requiredString(payload, "organization_id");
-          result = await inspectTenant(organizationId);
-        }
+        const organizationId = requiredString(payload, "organization_id");
+        const workflowKey = String(payload.workflow_key || "").trim();
+        const workflows = await supabaseServerRequest<any[]>(`workflow_registry?organization_uuid=eq.${encodeURIComponent(organizationId)}&select=id,name,workflow_key,status,provider,external_workflow_id,last_run_at,last_error_at&order=updated_at.desc&limit=100`);
+        const runs = await supabaseServerRequest<any[]>(`workflow_runs?organization_uuid=eq.${encodeURIComponent(organizationId)}${workflowKey ? `&workflow_key=eq.${encodeURIComponent(workflowKey)}` : ""}&select=id,workflow_key,status,error_message,created_at&order=created_at.desc&limit=50`);
+        result = { workflows, runs: action.action_key === "inspect_workflow_failures" ? runs.filter((run) => ["failed", "timed_out", "error"].includes(String(run.status).toLowerCase())) : runs };
         afterState = result;
         break;
       }
@@ -186,30 +179,14 @@ export async function executeLeoAction(action: LeoAction, actor: string) {
         const rows = await supabaseServerRequest<any[]>(`workflow_registry?id=eq.${encodeURIComponent(registryId)}&select=*&limit=1`);
         if (!rows[0]) throw new Error("Workflow registry record not found.");
         beforeState = rows[0];
-        const n8nWorkflowId = String(payload.n8n_workflow_id || rows[0].external_workflow_id || "").trim();
-        if (!n8nWorkflowId) throw new Error("No n8n workflow ID is mapped to this registry record.");
-        const n8nWorkflow = action.action_key === "activate_workflow"
-          ? await activateN8nWorkflow(n8nWorkflowId)
-          : await deactivateN8nWorkflow(n8nWorkflowId);
         const status = action.action_key === "activate_workflow" ? "active" : "paused";
-        const updated = await supabaseServerRequest<any[]>(`workflow_registry?id=eq.${encodeURIComponent(registryId)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
-        });
-        const workflowState: Record<string, unknown> = { registry: updated[0], n8n: n8nWorkflow };
-        afterState = workflowState;
-        result = {
-          registry: updated[0],
-          n8n: n8nWorkflow,
-          verified: Boolean(n8nWorkflow.active) === (status === "active"),
-        };
+        const updated = await supabaseServerRequest<any[]>(`workflow_registry?id=eq.${encodeURIComponent(registryId)}`, { method: "PATCH", body: JSON.stringify({ status, updated_at: new Date().toISOString() }) });
+        afterState = updated[0];
+        result = { registry: updated[0], verified: updated[0]?.status === status };
         break;
       }
       case "retry_failed_execution": {
-        result = {
-          queued: false,
-          note: "n8n public API does not provide a universal execution retry endpoint. The failed execution has been inspected; use the workflow webhook or n8n UI retry for this workflow.",
-        };
+        result = { queued: false, note: "Retry is handled by the current runtime/orchestration layer; this legacy action records the inspection result." };
         afterState = result;
         break;
       }

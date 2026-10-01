@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveLeoIdentity } from "@/lib/leo-core";
-import { LeoExecutionGateway, type LeoExecutionRequest } from "@/lib/leo-execution";
-import { LeoN8nExecutor } from "@/lib/leo-n8n";
-import { auditLeoRuntimeConfiguration, loadLeoRuntimeConfiguration } from "@/lib/leo-runtime-config";
+import { AgentRuntimeSDK } from "@/lib/ai-runtime/sdk";
+import { createRuntimeToolRegistry } from "@/lib/ai-runtime/tool-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
 
 export async function POST(request: NextRequest) {
   const identity = await resolveLeoIdentity({ channel: "api", allowPublic: false });
@@ -15,38 +18,35 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as Record<string, unknown>;
-    const workflowKey = String(body.workflowKey || "").trim();
-    if (!workflowKey) return NextResponse.json({ error: "workflowKey is required." }, { status: 400 });
+    const body = record(await request.json().catch(() => ({})));
+    const toolKey = String(body.toolKey || body.tool_key || "").trim();
+    if (!toolKey) return NextResponse.json({ error: "toolKey is required." }, { status: 400 });
 
-    const config = loadLeoRuntimeConfiguration();
-    const readiness = auditLeoRuntimeConfiguration(config);
-    if (!readiness.ready) return NextResponse.json({ error: "Runtime configuration is not ready.", blockers: readiness.blockers }, { status: 503 });
+    const executionId = String(body.executionId || body.execution_id || randomUUID()).trim();
+    const organizationId = String(body.organizationId || body.organization_id || "").trim() || undefined;
+    const agentId = String(body.agentId || body.agent_id || "").trim() || undefined;
+    const sessionId = String(body.sessionId || body.session_id || "").trim() || undefined;
+    const args = record(body.arguments || body.input);
 
-    const workflow = config.n8n.workflows[workflowKey];
-    if (!workflow) return NextResponse.json({ error: "n8n workflow is not registered." }, { status: 404 });
+    if (organizationId) args.organization_id = organizationId;
 
-    const executionId = String(body.executionId || randomUUID());
-    const risk = workflow.consequential ? "consequential" : "read_only";
-    const approved = body.approved === true;
-    const requestPayload: LeoExecutionRequest = {
+    const sdk = new AgentRuntimeSDK(createRuntimeToolRegistry());
+    const result = await sdk.executeTool({
+      identity,
       executionId,
-      organizationId: typeof body.organizationId === "string" ? body.organizationId : undefined,
-      agentRole: String(body.agentRole || "leo"),
-      action: `n8n.${workflowKey}`,
-      risk,
-      input: body.input ?? {},
-      approval: approved ? { approved: true, approvedBy: identity.userId || identity.email || "super_admin", approvedAt: new Date().toISOString() } : undefined,
-      idempotencyKey: typeof body.idempotencyKey === "string" ? body.idempotencyKey : undefined,
-    };
+      organizationId,
+      agentId,
+      sessionId,
+      toolKey,
+      arguments: args,
+      approvalRequestId: typeof body.approvalRequestId === "string" ? body.approvalRequestId : undefined,
+      superAdminConfirmed: body.confirmed === true || body.approved === true,
+    });
 
-    const n8n = new LeoN8nExecutor(config);
-    const gateway = new LeoExecutionGateway(config);
-    gateway.register(requestPayload.action, async (execution) => n8n.execute(workflowKey, execution));
-    const result = await gateway.execute(identity, requestPayload);
-    const status = result.status === "succeeded" ? 200 : result.status === "rejected" ? 409 : 502;
-    return NextResponse.json({ ok: result.status === "succeeded", result }, { status, headers: { "cache-control": "no-store" } });
+    const status = result.status === "succeeded" ? 200 : result.status === "approval_required" ? 409 : result.status === "rejected" ? 403 : 500;
+    return NextResponse.json({ ok: result.status === "succeeded", executionId, ...result }, { status, headers: { "cache-control": "no-store" } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Runtime execution failed." }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Leo runtime execution failed.";
+    return NextResponse.json({ error: message }, { status: 500, headers: { "cache-control": "no-store" } });
   }
 }

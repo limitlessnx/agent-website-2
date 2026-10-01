@@ -1,11 +1,5 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
-import {
-  createN8nProject,
-  createN8nWorkflow,
-  findN8nProjectByName,
-  getN8nWorkflow,
-  transferN8nWorkflow,
-} from "@/lib/n8n-api";
+
 
 type Organization = { id: string; name: string; slug: string };
 type OrganizationSystem = {
@@ -33,8 +27,6 @@ type AutomationTemplate = {
 type AutomationVersion = {
   id: string;
   version: number;
-  source_n8n_workflow_id: string;
-  source_n8n_workflow_name: string;
   configuration_defaults?: Record<string, unknown> | null;
 };
 type OrganizationAutomation = {
@@ -261,8 +253,6 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     },
   });
 
-  const projectName = `Fluxknight Tenant - ${organization.name}`;
-  const project = (await findN8nProjectByName(projectName)) || (await createN8nProject(projectName));
   const results: Array<Record<string, unknown>> = [];
 
   for (const mapping of mappings) {
@@ -277,8 +267,8 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     const version = await one<AutomationVersion>(
       `automation_template_versions?automation_template_id=eq.${encodeURIComponent(template.id)}&version=eq.${template.latest_approved_version}&status=eq.approved&select=*&limit=1`,
     );
-    if (!version?.source_n8n_workflow_id) {
-      if (mapping.required) throw new Error(`${template.name} has no approved n8n source workflow.`);
+    if (!version) {
+      if (mapping.required) throw new Error(`${template.name} has no approved automation version.`);
       continue;
     }
 
@@ -334,36 +324,18 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     });
 
     try {
-      const source = await getN8nWorkflow(version.source_n8n_workflow_id);
-      const workflowName = `${organization.name} - ${template.name} - v${version.version}`;
-      const replacements = {
-        "{{ORGANIZATION_ID}}": organization.id,
-        "{{ORGANIZATION_SLUG}}": organization.slug,
-        "{{ORGANIZATION_NAME}}": organization.name,
-        "{{SYSTEM_INSTALLATION_ID}}": installation.id,
-      };
-      const nodes = replaceTenantPlaceholders(source.nodes || [], replacements) as unknown[];
-      const connections = replaceTenantPlaceholders(source.connections || {}, replacements) as Record<string, unknown>;
-      const settings = replaceTenantPlaceholders(source.settings || {}, replacements) as Record<string, unknown>;
-
-      const clone = await createN8nWorkflow({ name: workflowName, nodes, connections, settings });
-      if (project.id) await transferN8nWorkflow(clone.id, project.id);
-
-      await patch("organization_automations", organizationAutomation.id, {
-        status: "paused",
-        backend_workflow_id: clone.id,
-        backend_workflow_name: workflowName,
-        activated_at: null,
-        last_error: null,
-        last_provisioning_job_id: job.id,
+      results.push({
+        automation: template.slug,
+        status: "queued",
+        workflow_id: organizationAutomation.backend_workflow_id || null,
+        provisioning_job_id: job.id,
       });
       await patch("automation_provisioning_jobs", job.id, {
         status: "completed",
-        result: { workflow_id: clone.id, workflow_name: workflowName, n8n_project_id: project.id },
+        result: { queued: true, automation_template: template.slug },
         completed_at: new Date().toISOString(),
         last_error: null,
       });
-      results.push({ automation: template.slug, status: "provisioned", workflow_id: clone.id });
     } catch (error) {
       const message = error instanceof Error ? error.message : `Unable to provision ${template.name}.`;
       await Promise.all([
@@ -390,7 +362,6 @@ export async function provisionTenantSystem(installationId: string, actorUserId?
     last_error: failed.length ? "One or more optional automations require attention." : null,
     metadata: {
       ...(installation.metadata || {}),
-      n8n_project_id: project.id,
       provisioning_results: results,
       agent_provisioning: agentProvisioning,
       test_passed: false,
