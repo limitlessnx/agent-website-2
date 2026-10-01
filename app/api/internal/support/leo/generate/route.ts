@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { generateSupportAgentReply } from "@/lib/ai/support-model";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import {
@@ -9,14 +10,8 @@ import {
   type SupportScope,
 } from "@/lib/support-agent";
 
-function authorized(request: NextRequest) {
-  const expected = process.env.LEO_N8N_SHARED_SECRET?.trim();
-  const supplied = request.headers.get("x-fluxknight-leo-secret")?.trim();
-  return Boolean(expected && supplied && supplied === expected);
-}
-
 export async function POST(request: NextRequest) {
-  if (!authorized(request)) return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  try { assertRuntimeSecret(request.headers.get("x-runtime-secret")); } catch { return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 }); }
 
   const startedAt = Date.now();
   const body = await request.json().catch(() => ({}));
