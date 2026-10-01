@@ -21,7 +21,8 @@ test("Phase 10.2 enforces tenant isolation and consequential approval", () => {
 });
 
 test("Phase 10.3 keeps the canonical Leo runtime execution path available", () => {
-  assert.match(executeRoute, /LeoExecutionGateway/);
+  assert.match(executeRoute, /AgentRuntimeSDK/);
+  assert.match(executeRoute, /createRuntimeToolRegistry/);
   assert.match(executeRoute, /Super Admin authorization required/);
   assert.doesNotMatch(executeRoute, /n8n/i);
   assert.doesNotMatch(execution, /n8n/i);
