@@ -182,7 +182,7 @@ export const maiaProcessInboundMessage = task({
           to: payload.customerPhone,
           text: result.reply,
           deliveryMode: "direct",
-          lastCustomerMessageAt: new Date().toISOString(),
+          lastCustomerMessageAt: payload.customerMessageAt || null,
         });
       }
 
