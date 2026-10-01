@@ -13,7 +13,7 @@ const leoRoute = readFileSync(resolve(root, "app/api/leo/route.ts"), "utf8");
 const voiceRoute = readFileSync(resolve(root, "app/api/leo/realtime/call/route.ts"), "utf8");
 const maiaRuntime = readFileSync(resolve(root, "lib/ai/maia-runtime.ts"), "utf8");
 const clientOnboarding = readFileSync(resolve(root, "lib/client-onboarding.ts"), "utf8");
-const trialMigration = readFileSync(resolve(root, "supabase/migrations/20260909_free_trial_system_v1.sql"), "utf8");
+const trialMigration = readFileSync(resolve(root, "supabase/migrations/20260909170206_free_trial_system_v1.sql"), "utf8");
 const packageJson = readFileSync(resolve(root, "package.json"), "utf8");
 
 test("modeled provider cost uses the locked two-times Flux Credit multiplier", () => {
