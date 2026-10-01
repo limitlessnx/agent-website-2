@@ -4,8 +4,8 @@ import { summarizeFollowupStatuses } from "@/lib/followup-runtime";
 
 export type FollowupSequence = { id:string; organization_id:string; name:string; description:string|null; status:"draft"|"active"|"paused"|"archived"; stop_on_reply:boolean; stop_on_qualified:boolean; stop_on_appointment:boolean; created_at:string; updated_at:string };
 export type FollowupStep = { id:string; sequence_id:string; position:number; channel:"whatsapp"|"email"|"call"|"telegram"|"task"; delay_value:number; delay_unit:"minutes"|"hours"|"days"; title:string|null; message_template:string|null; workflow_id:string|null; enabled:boolean };
-export type FollowupEnrollment = { id:string; organization_id:string; sequence_id:string; lead_id:string; lead_name:string|null; lead_phone:string|null; status:"active"|"paused"|"completed"|"cancelled"|"failed"; current_step:number; next_run_at:string|null; last_run_at:string|null; n8n_execution_id:string|null; pause_reason:string|null; created_at:string; updated_at:string };
-export type FollowupLog = { id:string; enrollment_id:string|null; sequence_id:string|null; step_id:string|null; organization_id:string; lead_id:string|null; channel:string|null; status:string; n8n_execution_id:string|null; scheduled_for:string|null; executed_at:string|null; error_message:string|null; created_at:string };
+export type FollowupEnrollment = { id:string; organization_id:string; sequence_id:string; lead_id:string; lead_name:string|null; lead_phone:string|null; status:"active"|"paused"|"completed"|"cancelled"|"failed"; current_step:number; next_run_at:string|null; last_run_at:string|null; pause_reason:string|null; created_at:string; updated_at:string };
+export type FollowupLog = { id:string; enrollment_id:string|null; sequence_id:string|null; step_id:string|null; organization_id:string; lead_id:string|null; channel:string|null; status:string; scheduled_for:string|null; executed_at:string|null; error_message:string|null; created_at:string };
 
 async function safe<T>(promise: Promise<T>, fallback: T) { try { return await promise; } catch { return fallback; } }
 
@@ -16,20 +16,17 @@ export async function getFollowupControlSummary(organizationId = "limitless-real
     configured ? safe(supabaseServerRequest<FollowupStep[]>("followup_sequence_steps?select=*&order=sequence_id,position"), []) : [],
     configured ? safe(supabaseServerRequest<FollowupEnrollment[]>(`followup_enrollments?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=next_run_at.asc.nullslast`), []) : [],
     configured ? safe(supabaseServerRequest<FollowupLog[]>(`followup_execution_log?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=created_at.desc&limit=100`), []) : [],
-    isN8nApiConfigured() ? safe(listN8nWorkflows(250), []) : [],
-    isN8nApiConfigured() ? safe(listN8nExecutions({ limit:100, includeData:false }), []) : [],
-  ]);
-  const followupWorkflows = workflows.filter((item) => /follow|remind|sequence|const [sequences, steps, enrollments, logs, workflows, executions] = await Promise.all([
-    configured ? safe(supabaseServerRequest<FollowupSequence[]>(`followup_sequences?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=updated_at.desc`), []) : [],
-    configured ? safe(supabaseServerRequest<FollowupStep[]>("followup_sequence_steps?select=*&order=sequence_id,position"), []) : [],
-    configured ? safe(supabaseServerRequest<FollowupEnrollment[]>(`followup_enrollments?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=next_run_at.asc.nullslast`), []) : [],
-    configured ? safe(supabaseServerRequest<FollowupLog[]>(`followup_execution_log?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=created_at.desc&limit=100`), []) : [],
     configured ? safe(getWorkflows(250, true), []) : [],
     configured ? safe(getWorkflowRuns(100), []) : [],
   ]);
-  const followupWorkflows = workflows.filter((item) => /follow|remind|sequence|nurture/i.test(item.name) && (item.organization_uuid === organizationId || item.organization_id === organizationId));
+  const followupWorkflows = workflows.filter((item) =>
+    /follow|remind|sequence|nurture/i.test(item.name)
+    && (item.organization_uuid === organizationId || item.organization_id === organizationId),
+  );
   const relevantIds = new Set(followupWorkflows.map((item) => item.id));
-  const workflowExecutions = executions.filter((item) => relevantIds.has(item.workflow_id) || /follow|remind|sequence|nurture/i.test(item.workflow_key));
+  const workflowExecutions = executions.filter((item) =>
+    relevantIds.has(item.workflow_id) || /follow|remind|sequence|nurture/i.test(item.workflow_key),
+  );
   return { configured, sequences, steps, enrollments, logs, workflows: followupWorkflows, executions: workflowExecutions, statusSummary: summarizeFollowupStatuses(enrollments) };
 }
 
