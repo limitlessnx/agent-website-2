@@ -113,17 +113,24 @@ export const maiaProcessInboundMessage = task({
       if (isLimitlessRealty && stopIntent && payload.customerPhone) {
         const admin = createAdminClient();
         const phone = payload.customerPhone.replace(/\D/g, "");
-        await admin
+        const { data: candidateLeads } = await admin
           .from("leads")
-          .update({ opted_out: true, status: "opted_out", updated_at: new Date().toISOString() })
-          .eq("organization_id", payload.organizationId)
-          .eq("phone", phone);
-        const { data: matchingLeads } = await admin
-          .from("leads")
-          .select("id")
-          .eq("organization_id", payload.organizationId)
-          .eq("phone", phone);
-        const leadIds = (matchingLeads || []).map((lead) => lead.id).filter(Boolean);
+          .select("id,phone")
+          .eq("organization_id", payload.organizationId);
+        const matchingLeadIds = (candidateLeads || [])
+          .filter((lead) => String(lead.phone || "").replace(/\D/g, "") === phone)
+          .map((lead) => lead.id)
+          .filter(Boolean);
+
+        if (matchingLeadIds.length) {
+          await admin
+            .from("leads")
+            .update({ opted_out: true, status: "opted_out", updated_at: new Date().toISOString() })
+            .eq("organization_id", payload.organizationId)
+            .in("id", matchingLeadIds);
+        }
+
+        const leadIds = matchingLeadIds;
         if (leadIds.length) {
           await admin
             .from("follow_ups")
