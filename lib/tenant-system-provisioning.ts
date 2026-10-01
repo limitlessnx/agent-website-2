@@ -1,3 +1,5 @@
+import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+
 
 type Organization = { id: string; name: string; slug: string };
 type OrganizationSystem = {
