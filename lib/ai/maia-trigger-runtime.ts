@@ -95,7 +95,6 @@ export async function registerMaiaInboundEvent(payload: MaiaInboundPayload) {
       external_conversation_id: clean(payload.externalConversationId, 300) || null,
       customer_phone: clean(payload.customerPhone, 80) || null,
       customer_name: clean(payload.customerName, 180) || null,
-      customer_message_at: clean(payload.customerMessageAt, 80) || null,
       message: clean(payload.message, 20000),
       payload: payload.metadata || {},
       status: "processing",
