@@ -146,3 +146,5 @@ test("Tenant WhatsApp UI never renders stored access tokens", () => {
   assert.doesNotMatch(whatsappIntegrationPanel, /defaultValue=.*accessToken/);
   assert.match(whatsappIntegrationPanel, /type="password"/);
 });
+
+// Build verification checkpoint.
