@@ -38,10 +38,11 @@ export async function GET(request: Request) {
   const results = await Promise.allSettled([
     fetch(`${baseUrl}/api/maia/autonomous`, { method: "GET", headers, cache: "no-store" }),
     fetch(`${baseUrl}/api/limitless/maia/followups`, { method: "GET", headers, cache: "no-store" }),
+    fetch(`${baseUrl}/api/cron/limitless-installment-reminders`, { method: "GET", headers, cache: "no-store" }),
   ]);
 
   const summary = results.map((result, index) => ({
-    task: index === 0 ? "autonomous" : "followups",
+    task: index === 0 ? "autonomous" : index === 1 ? "followups" : "installment-reminders",
     ok: result.status === "fulfilled" && result.value.ok,
     status: result.status === "fulfilled" ? result.value.status : null,
     error: result.status === "rejected" ? String(result.reason) : null,
