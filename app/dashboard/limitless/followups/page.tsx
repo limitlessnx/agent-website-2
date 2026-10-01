@@ -15,8 +15,8 @@ export default async function FollowupsPage() {
   const dueNow = summary.statusSummary.due;
   const overdue = summary.statusSummary.overdue;
   const logFailures = summary.logs.filter((item) => ["failed", "error", "blocked"].includes(String(item.status).toLowerCase())).length;
-  const n8nFailures = summary.executions.filter((item) => item.status === "error").length;
-  const attention = logFailures + n8nFailures;
+  const workflowFailures = summary.executions.filter((item) => ["failed", "timed_out"].includes(String(item.status))).length;
+  const attention = logFailures + workflowFailures;
 
   return (
     <div className="admin-page">
