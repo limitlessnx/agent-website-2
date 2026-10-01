@@ -1,6 +1,6 @@
 # Fluxknight Workflow Registry
 
-The workflow registry is the canonical control layer for n8n workflows, voice agents, messaging automations, scheduled jobs, and future providers.
+The workflow registry is the canonical control layer for voice agents, messaging automations, scheduled jobs, task runners, and future providers.
 
 ## Setup
 
@@ -28,9 +28,8 @@ A bearer token containing `LIMITLESS_API_KEY` is also accepted.
   "workflow_key": "lead-qualification",
   "name": "Maia Lead Qualification",
   "description": "Qualifies a new real-estate lead and updates the CRM.",
-  "provider": "n8n",
-  "external_workflow_id": "n8n-workflow-id",
-  "endpoint_url": "https://your-n8n.example/webhook/lead-qualification",
+  "provider": "trigger.dev",
+  "endpoint_url": "https://your-app.example/api/workflows/lead-qualification",
   "status": "active",
   "current_version": 1,
   "timeout_seconds": 60,
