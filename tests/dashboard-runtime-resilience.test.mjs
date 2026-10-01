@@ -4,12 +4,11 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("n8n dashboard status fails soft on transport or invalid JSON failures", () => {
-  const source = read("lib/limitless-data.ts");
-  assert.match(source, /n8n status unavailable/);
-  assert.match(source, /Automation engine is temporarily unavailable/);
-  assert.match(source, /n8n workflow response was empty/);
-  assert.match(source, /JSON\.parse\(raw\)/);
+test("workflow registry dashboard status fails soft when unavailable", () => {
+  const source = read("app/dashboard/page.tsx");
+  assert.match(source, /getWorkflowRegistrySummary\(scope\)\.catch/);
+  assert.match(source, /failures: 0/);
+  assert.match(source, /active: 0/);
 });
 
 test("Leo proactive monitor degrades without a 500 response", () => {
