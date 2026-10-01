@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const action = rows[0];
     if (!action) return NextResponse.json({ error: "Action not found." }, { status: 404 });
     try {
-      const result = await executeLeoAction(action, String(body.actor || "leo-n8n"));
+      const result = await executeLeoAction(action, String(body.actor || "leo-runtime"));
       return NextResponse.json(result);
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : "Action failed." }, { status: 500 });
@@ -59,13 +59,13 @@ export async function POST(request: NextRequest) {
       action_id: action.id,
       organization_id: organizationId,
       event_type: requiresApproval(actionKey) ? "proposed" : "approved",
-      actor: String(body.actor || "leo-n8n"),
+      actor: String(body.actor || "leo-runtime"),
       details: { source: "leo_internal_api" }
     }),
   });
 
   if (!requiresApproval(actionKey)) {
-    const result = await executeLeoAction(action, String(body.actor || "leo-n8n"));
+    const result = await executeLeoAction(action, String(body.actor || "leo-runtime"));
     return NextResponse.json({ ok: true, action, execution: result });
   }
   return NextResponse.json({ ok: true, action, approval_required: true });
