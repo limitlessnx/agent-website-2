@@ -75,7 +75,7 @@ test("Phase 4 routes inbound Meta WhatsApp events into Trigger.dev", () => {
 test("Maia replies use the canonical WhatsApp service-window guard", () => {
   assert.match(whatsappDelivery, /requestedMode === "direct" && outsideWindow/);
   assert.match(whatsappDelivery, /Direct WhatsApp messages are only available/);
-  assert.match(whatsappDelivery, /deliveryMode: "direct"/);
+  assert.match(triggerTask, /deliveryMode: "direct"/);
 });
 
 test("Phase 4 sends WhatsApp replies from Trigger instead of n8n", () => {
