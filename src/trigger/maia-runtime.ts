@@ -2,6 +2,12 @@ import { logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
+  queueLimitlessFollowup,
+  queueLimitlessPropertyFollowupSequence,
+  searchLimitlessProperties,
+  shouldFollowUp,
+} from "@/lib/ai/limitless-realty-maia";
+import {
   type MaiaInboundPayload,
   claimMaiaConversationLock,
   markMaiaInboundCompleted,
@@ -68,14 +74,55 @@ export const maiaProcessInboundMessage = task({
     });
 
     try {
+      const isLimitlessRealty = payload.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d";
+      const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(payload.message) : null;
+      const runtimeMessage = propertyContext
+        ? [
+            payload.message,
+            "",
+            "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:",
+            JSON.stringify(propertyContext),
+            "",
+            "Use the verified property result when answering. Never invent availability, pricing, title, documentation or property media. If the customer asks about a named property, use the exact verified catalog match.",
+            "For a clear property enquiry or buying intent, preserve the property context for follow-up scheduling.",
+          ].join("\n")
+        : payload.message;
       const result = await runMaia({
         organizationId: payload.organizationId,
         agentId: payload.agentId,
-        message: payload.message,
+        message: runtimeMessage,
         channel: payload.channel,
         externalConversationId: payload.externalConversationId,
         autonomous: true,
       });
+
+      let followup: unknown = null;
+      if (isLimitlessRealty && payload.channel === "whatsapp" && payload.customerPhone) {
+        const lowerMessage = payload.message.toLowerCase();
+        const propertyMentioned = Boolean(propertyContext?.matches?.some((property) => {
+          const title = String(property.title || "").trim().toLowerCase();
+          return title.length >= 5 && lowerMessage.includes(title);
+        })) || /\b(this|that|the)\s+(property|estate|land|plot|house|apartment)\b/i.test(payload.message);
+        const buyingIntent = /\b(interested|interest|like|love|want|looking to buy|looking for|how much|price|payment|installment|inspection|title|documentation|documents|location|availability|reserve|book|pay|purchase)\b/i.test(payload.message);
+        if (propertyMentioned && buyingIntent) {
+          followup = await queueLimitlessPropertyFollowupSequence({
+            organizationId: payload.organizationId,
+            agentId: payload.agentId,
+            customerPhone: payload.customerPhone,
+            customerName: payload.customerName,
+            propertyContext,
+          });
+        } else if (shouldFollowUp(payload.message)) {
+          followup = await queueLimitlessFollowup({
+            organizationId: payload.organizationId,
+            agentId: payload.agentId,
+            customerPhone: payload.customerPhone,
+            customerName: payload.customerName,
+            when: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            message: `Follow up with ${payload.customerName || "the client"} about the Limitless Realty enquiry. Preserve the verified catalogue context and do not invent availability or pricing.`,
+          });
+        }
+      }
 
       let delivery: unknown = null;
       if (payload.channel === "whatsapp" && payload.customerPhone) {
@@ -101,6 +148,7 @@ export const maiaProcessInboundMessage = task({
           model: result.model,
           toolResults: result.toolResults,
           delivery,
+          followup,
         },
       });
 
@@ -123,6 +171,7 @@ export const maiaProcessInboundMessage = task({
         model: result.model,
         toolResults: result.toolResults,
         delivery,
+        followup,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Maia Trigger execution failed.";

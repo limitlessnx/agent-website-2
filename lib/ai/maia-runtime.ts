@@ -154,12 +154,19 @@ function toolSet(): ToolDefinition[] {
     },
     {
       name: "search_leads",
-      description: "Search this tenant's CRM leads by name, stage, email, phone or summary.",
+      description: "Search this tenant's leads by name, stage, email, phone, property interest or summary. For Limitless Realty, use the same lead records shown in the Fluxknight dashboard.",
       parameters: { type: "object", additionalProperties: false, properties: { query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 20 } }, required: ["query"] },
       execute: async (input, ctx) => {
         const query = text(input.query).slice(0, 120).replace(/[%_]/g, "");
         const admin = createAdminClient();
         const limit = Math.min(Number(input.limit || 10), 20);
+        if (ctx.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d") {
+          const { data, error } = await admin.from("leads").select("*").eq("organization_id", ctx.organizationId).order("updated_at", { ascending: false, nullsFirst: false }).limit(200);
+          if (error) throw error;
+          const needle = query.toLowerCase();
+          const leads = (data || []).filter((row: Record<string, unknown>) => Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(needle))).slice(0, limit);
+          return { source: "fluxknight_limitless_dashboard", leads };
+        }
         const { data } = await admin.from("crm_leads").select("id,customer_id,assigned_agent_id,source,stage,score,value_estimate,currency,summary,details,created_at,updated_at").eq("organization_id", ctx.organizationId).or(`summary.ilike.%${query}%,stage.ilike.%${query}%,source.ilike.%${query}%`).order("updated_at", { ascending: false }).limit(limit);
         return { leads: data || [] };
       },
@@ -184,6 +191,29 @@ function toolSet(): ToolDefinition[] {
         const name = text(input.name).slice(0, 160);
         const email = text(input.email).slice(0, 200) || null;
         const phone = text(input.phone).slice(0, 80) || null;
+        if (ctx.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d") {
+          if (!phone) throw new Error("A phone number is required to save a Limitless Realty lead.");
+          const existing = await admin.from("leads").select("id").eq("organization_id", ctx.organizationId).eq("phone", phone).maybeSingle();
+          if (existing.error) throw existing.error;
+          const payload = {
+            organization_id: ctx.organizationId,
+            name: name || "Limitless Realty prospect",
+            phone,
+            email,
+            status: text(input.stage) || "new",
+            score: text(input.score) || "unscored",
+            budget: typeof input.valueEstimate === "number" ? String(input.valueEstimate) : "",
+            source: "maia",
+            property_interest: text(input.details && typeof input.details === "object" ? (input.details as Record<string, unknown>).property_interest : "") || null,
+            notes: text(input.summary) || null,
+            conversation_log: [],
+          };
+          const result = existing.data
+            ? await admin.from("leads").update(payload).eq("id", existing.data.id).eq("organization_id", ctx.organizationId).select("id,name,phone,status,updated_at").single()
+            : await admin.from("leads").insert(payload).select("id,name,phone,status,created_at").single();
+          if (result.error) throw result.error;
+          return { source: "fluxknight_limitless_dashboard", lead: result.data };
+        }
         let customer: any = null;
         if (email || phone) {
           let query = admin.from("crm_customers").select("id,full_name,email,phone").eq("organization_id", ctx.organizationId).limit(1);
