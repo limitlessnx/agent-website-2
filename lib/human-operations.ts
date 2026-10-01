@@ -160,6 +160,7 @@ export type HumanHandoffRow={
   conversation_summary?:string|null; stage_id_at_handoff?:string|null; next_action?:string|null; outcome?:string|null;
   follow_up_required?:boolean; follow_up_due_at?:string|null; follow_up_status?:string|null; notified_at?:string|null;
   customer_name?:string|null; stage_name?:string|null; assigned_to_email?:string|null;
+  metadata?:Record<string,unknown>|null;
   created_at:string; updated_at:string; resolution_summary?:string|null;
 };
 export type OperationApprovalRow={
@@ -176,7 +177,7 @@ export async function listHumanOperations(session:ClientSession){
   const canApprovals=access.permissions.has("approvals.view")||access.permissions.has("approvals.manage");
   const [handoffsResult,approvalsResult,members]=await Promise.all([
     canHandoffs
-      ? admin.from("human_handoffs").select("id,customer_id,conversation_id,reason,category,priority,status,assigned_membership_id,claimed_by_membership_id,sla_due_at,conversation_summary,stage_id_at_handoff,next_action,outcome,follow_up_required,follow_up_due_at,follow_up_status,notified_at,created_at,updated_at,resolution_summary").eq("organization_id",session.organizationId).not("status","in",'(resolved,closed)').order("created_at",{ascending:false}).limit(100)
+      ? admin.from("human_handoffs").select("id,customer_id,conversation_id,reason,category,priority,status,assigned_membership_id,claimed_by_membership_id,sla_due_at,conversation_summary,stage_id_at_handoff,next_action,outcome,follow_up_required,follow_up_due_at,follow_up_status,notified_at,metadata,created_at,updated_at,resolution_summary").eq("organization_id",session.organizationId).not("status","in",'(resolved,closed)').order("created_at",{ascending:false}).limit(100)
       : Promise.resolve({data:[],error:null}),
     canApprovals
       ? admin.from("operation_approvals").select("id,approval_type,title,description,risk_level,status,requested_by_type,requested_by_id,subject_type,subject_id,action_key,preview,assigned_membership_id,requested_at,expires_at,decided_at").eq("organization_id",session.organizationId).eq("status","pending").order("requested_at",{ascending:false}).limit(100)
