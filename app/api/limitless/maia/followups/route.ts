@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   const { data: organization } = await admin.from("organizations").select("id").eq("slug", LIMITLESS_REALTY_SLUG).maybeSingle();
   if (!organization) return NextResponse.json({ error: "Limitless Realty organization is not configured." }, { status: 500 });
   const now = new Date().toISOString();
-  const { data: rows, error } = await admin.from("follow_ups").select("id,organization_id,lead_id,scheduled_at,message_sent,status,leads(phone,name,opted_out)").eq("organization_id", organization.id).eq("status", "pending").lte("scheduled_at", now).order("scheduled_at", { ascending: true }).limit(25);
+  const { data: rows, error } = await admin.from("follow_ups").select("id,organization_id,lead_id,scheduled_at,message_sent,status,leads!follow_ups_lead_id_fkey(phone,name,opted_out)").eq("organization_id", organization.id).eq("status", "pending").lte("scheduled_at", now).order("scheduled_at", { ascending: true }).limit(25);
   if (error) return NextResponse.json({ error: "Unable to load due follow-ups." }, { status: 500 });
   const results: Array<Record<string, unknown>> = [];
   for (const row of rows || []) {

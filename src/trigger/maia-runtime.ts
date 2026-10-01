@@ -1,5 +1,6 @@
-import { logger, task } from "@trigger.dev/sdk";
+import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
   queueLimitlessFollowup,
@@ -26,6 +27,14 @@ export const maiaProcessInboundMessage = task({
     minTimeoutInMs: 5_000,
     maxTimeoutInMs: 45_000,
     factor: 2,
+  },
+  catchError: async ({ error }) => {
+    const message = error instanceof Error ? error.message : String(error);
+    // Provider-side 4xx errors are deterministic request/configuration failures.
+    // Retrying them created a production retry storm and duplicated persisted user messages.
+    if (/OpenAI request failed \(4\d\d\)/i.test(message)) {
+      throw new AbortTaskRunError(message);
+    }
   },
   run: async (payload: MaiaInboundPayload) => {
     await validateMaiaTenantContext(payload);
@@ -75,6 +84,48 @@ export const maiaProcessInboundMessage = task({
 
     try {
       const isLimitlessRealty = payload.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d";
+      const stopIntent = /\b(stop(?: sending| messaging| contacting)?|unsubscribe|opt[- ]?out|remove me from (?:your )?(?:messages|list)|(?:do not|don't) (?:send|message|contact)|no more messages)\b/i.test(payload.message);
+
+      if (isLimitlessRealty && stopIntent && payload.customerPhone) {
+        const admin = createAdminClient();
+        const phone = payload.customerPhone.replace(/\D/g, "");
+        await admin
+          .from("leads")
+          .update({ opted_out: true, status: "opted_out", updated_at: new Date().toISOString() })
+          .eq("organization_id", payload.organizationId)
+          .eq("phone", phone);
+        const { data: matchingLeads } = await admin
+          .from("leads")
+          .select("id")
+          .eq("organization_id", payload.organizationId)
+          .eq("phone", phone);
+        const leadIds = (matchingLeads || []).map((lead) => lead.id).filter(Boolean);
+        if (leadIds.length) {
+          await admin
+            .from("follow_ups")
+            .update({ status: "cancelled" })
+            .eq("organization_id", payload.organizationId)
+            .eq("status", "pending")
+            .in("lead_id", leadIds);
+        }
+        await admin
+          .from("agent_runtime_goals")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("organization_id", payload.organizationId)
+          .eq("agent_id", payload.agentId)
+          .eq("goal_type", "follow_up")
+          .in("status", ["queued", "running"])
+          .filter("input->>customer_phone", "eq", phone);
+        await markMaiaInboundCompleted(eventId);
+        await recordMaiaRuntimeEvent({
+          organizationId: payload.organizationId,
+          agentId: payload.agentId,
+          eventType: "trigger_inbound_completed",
+          status: "completed",
+          payload: { eventId, stopIntent: true, suppressedReply: true },
+        });
+        return { ok: true, duplicate: false, eventId, suppressedReply: true, reason: "customer_opted_out" };
+      }
       const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(payload.message) : null;
       const runtimeMessage = propertyContext
         ? [
