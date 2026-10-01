@@ -45,7 +45,7 @@ const seedProperties: PropertyRecord[] = [
 ];
 const seedCampaigns: CampaignReport[] = [{ id: "sample-campaign-1", campaign_topic: "Benin estate update", attempted: 1, accepted: 1, failed: 0, skipped: 3, created_at: new Date().toISOString() }];
 export const automationProjects: AutomationProject[] = [
-  { id: "limitless-realty", name: "Limitless Realty", status: "production", channel: "WhatsApp + Telegram + n8n", description: "Maia property assistant, leads, properties, campaigns, and auto follow-ups.", workflows: 8 },
+  { id: "limitless-realty", name: "Limitless Realty", status: "production", channel: "WhatsApp + Telegram", description: "Maia property assistant, leads, properties, campaigns, and auto follow-ups.", workflows: 8 },
   { id: "gencouv", name: "Gencouv", status: "draft", channel: "Email + CRM", description: "Lead generation and dormant-lead outbound system.", workflows: 2 },
   { id: "fluxagents", name: "FluxAgents Voice AI", status: "draft", channel: "Voice + Web", description: "Voice agent intake and website demo automation.", workflows: 1 },
 ];
