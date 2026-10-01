@@ -66,6 +66,8 @@ test("Phase 3 does not send WhatsApp directly from the Trigger task", () => {
 test("Phase 4 routes inbound Meta WhatsApp events into Trigger.dev", () => {
   assert.match(whatsappWebhook, /maia-process-inbound-message/);
   assert.match(whatsappWebhook, /externalEventId: messageId/);
+  assert.match(whatsappWebhook, /customerMessageAt: inboundMessageTimestamp\(message\)/);
+  assert.match(triggerTask, /lastCustomerMessageAt: payload\.customerMessageAt/);
   assert.match(whatsappWebhook, /organization_agent_selections/);
   assert.match(whatsappWebhook, /phone_number_id/);
 });
