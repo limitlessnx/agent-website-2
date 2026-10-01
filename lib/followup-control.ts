@@ -1,5 +1,5 @@
 import { isServerSupabaseConfigured, supabaseServerRequest } from "@/lib/supabase-server-rest";
-import { isN8nApiConfigured, listN8nExecutions, listN8nWorkflows } from "@/lib/n8n-api";
+import { getWorkflows, getWorkflowRuns } from "@/lib/workflow-registry";
 import { summarizeFollowupStatuses } from "@/lib/followup-runtime";
 
 export type FollowupSequence = { id:string; organization_id:string; name:string; description:string|null; status:"draft"|"active"|"paused"|"archived"; stop_on_reply:boolean; stop_on_qualified:boolean; stop_on_appointment:boolean; created_at:string; updated_at:string };
@@ -19,10 +19,18 @@ export async function getFollowupControlSummary(organizationId = "limitless-real
     isN8nApiConfigured() ? safe(listN8nWorkflows(250), []) : [],
     isN8nApiConfigured() ? safe(listN8nExecutions({ limit:100, includeData:false }), []) : [],
   ]);
-  const followupWorkflows = workflows.filter((item) => /follow|remind|sequence|nurture/i.test(item.name));
+  const followupWorkflows = workflows.filter((item) => /follow|remind|sequence|const [sequences, steps, enrollments, logs, workflows, executions] = await Promise.all([
+    configured ? safe(supabaseServerRequest<FollowupSequence[]>(`followup_sequences?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=updated_at.desc`), []) : [],
+    configured ? safe(supabaseServerRequest<FollowupStep[]>("followup_sequence_steps?select=*&order=sequence_id,position"), []) : [],
+    configured ? safe(supabaseServerRequest<FollowupEnrollment[]>(`followup_enrollments?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=next_run_at.asc.nullslast`), []) : [],
+    configured ? safe(supabaseServerRequest<FollowupLog[]>(`followup_execution_log?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=created_at.desc&limit=100`), []) : [],
+    configured ? safe(getWorkflows(250, true), []) : [],
+    configured ? safe(getWorkflowRuns(100), []) : [],
+  ]);
+  const followupWorkflows = workflows.filter((item) => /follow|remind|sequence|nurture/i.test(item.name) && (item.organization_uuid === organizationId || item.organization_id === organizationId));
   const relevantIds = new Set(followupWorkflows.map((item) => item.id));
-  const n8nExecutions = executions.filter((item) => relevantIds.has(item.workflowId) || item.status === "waiting" || item.status === "running");
-  return { configured, sequences, steps, enrollments, logs, workflows: followupWorkflows, executions: n8nExecutions, statusSummary: summarizeFollowupStatuses(enrollments) };
+  const workflowExecutions = executions.filter((item) => relevantIds.has(item.workflow_id) || /follow|remind|sequence|nurture/i.test(item.workflow_key));
+  return { configured, sequences, steps, enrollments, logs, workflows: followupWorkflows, executions: workflowExecutions, statusSummary: summarizeFollowupStatuses(enrollments) };
 }
 
 export async function createSequence(input:{organization_id:string;name:string;description?:string;steps:Array<Omit<FollowupStep,"id"|"sequence_id">>}) {
