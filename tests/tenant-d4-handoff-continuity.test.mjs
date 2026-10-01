@@ -37,7 +37,7 @@ test("D4 handoff assignment resolves rules agent destination and staff notificat
   assert.match(operations,/organization_member_notification_preferences/);
   assert.match(operations,/deliveryMode:"auto"/);
   assert.match(operations,/lastCustomerMessageAt/);
-  assert.match(operations,/templatePurpose:"internal_handoff"/);
+  assert.match(operations,/templatePurpose:"follow_up_outside_24h"/);
   assert.match(operations,/conversation_summary/);
 });
 
@@ -158,4 +158,14 @@ test("D4 Maia handoff contract keeps AI takeover and tenant isolation explicit",
   assert.match(operations,/active_handoff_id/);
   assert.match(runtime,/human_takeover/);
   assert.match(runtime,/aiResponseSuppressed:true/);
+});
+
+
+test("D4 outside-window handoff reuses the approved update template contract",()=>{
+  const operations=read("lib/human-operations.ts");
+  const delivery=read("lib/whatsapp-delivery.ts");
+  assert.match(operations,/templatePurpose:"follow_up_outside_24h"/);
+  assert.match(delivery,/follow_up_outside_24h/);
+  assert.match(delivery,/No active approved WhatsApp template/);
+  assert.doesNotMatch(operations,/templatePurpose:"internal_handoff"/);
 });
