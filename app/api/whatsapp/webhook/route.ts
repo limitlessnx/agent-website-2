@@ -108,6 +108,15 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
     : null;
 }
 
+const MAX_PROVIDER_EVENT_AGE_MS = 24 * 60 * 60 * 1000;
+
+function providerEventIsStale(message: Record<string, any>) {
+  const raw = Number(message?.timestamp);
+  if (!Number.isFinite(raw) || raw <= 0) return false;
+  const eventMs = raw > 10_000_000_000 ? raw : raw * 1000;
+  return Date.now() - eventMs > MAX_PROVIDER_EVENT_AGE_MS;
+}
+
 function inboundText(message: Record<string, any>) {
   const type = String(message.type || "");
   if (type === "text") return String(message.text?.body || "").trim();
@@ -277,6 +286,21 @@ export async function POST(request: NextRequest) {
         const text = inboundText(message);
         if (!tenant || !messageId || !from || !text) {
           ignoredInbound += 1;
+          continue;
+        }
+
+        // Meta can redeliver webhook events long after the original message was sent.
+        // Never turn an old provider event into a fresh Maia conversation or outbound reply.
+        if (providerEventIsStale(message)) {
+          ignoredInbound += 1;
+          console.info("[whatsapp-webhook] ignoring stale provider event", {
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            externalEventId: messageId,
+            customerPhone: from,
+            providerTimestamp: String(message?.timestamp || ""),
+            maxAgeMs: MAX_PROVIDER_EVENT_AGE_MS,
+          });
           continue;
         }
 
