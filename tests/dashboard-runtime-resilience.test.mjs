@@ -34,3 +34,5 @@ test("Dashboard Home Conversations and Activity remain renderable when organizat
   assert.match(activity, /getWorkflowRegistrySummary\(scope\)\.catch/);
   assert.match(data, /Live data temporarily unavailable/);
 });
+
+// Draft n8n-removal regression coverage.
