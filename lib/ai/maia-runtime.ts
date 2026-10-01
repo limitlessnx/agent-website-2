@@ -234,10 +234,39 @@ async function callOpenAI(model: Model, messages: any[], tools: ToolDefinition[]
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
   try {
+    if (/^gpt-5(?:\.|$)/i.test(model.model_key)) {
+      const input = messages.flatMap((message) => {
+        if (message.role === "tool") return [{ type: "function_call_output", call_id: message.tool_call_id, output: message.content || "" }];
+        if (message.role === "assistant" && Array.isArray(message.tool_calls)) {
+          return message.tool_calls.map((call: any) => ({ type: "function_call", call_id: call.id, name: call.function?.name, arguments: call.function?.arguments || "{}" }));
+        }
+        const textContent = typeof message.content === "string" ? message.content : JSON.stringify(message.content || "");
+        return [{ role: message.role, content: [{ type: message.role === "assistant" ? "output_text" : "input_text", text: textContent }] }];
+      });
+      const request = {
+        model: model.model_key,
+        input,
+        tools: tools.map((tool) => ({ type: "function", name: tool.name, description: tool.description, parameters: tool.parameters })),
+        tool_choice: "auto",
+      };
+      const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY!.trim()}`, "Content-Type": "application/json" }, body: JSON.stringify(request), signal: controller.signal, cache: "no-store" });
+      const responsePayload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const providerMessage = responsePayload?.error?.message;
+        throw new Error(providerMessage ? `OpenAI request failed (${response.status}): ${providerMessage}` : `OpenAI request failed (${response.status}).`);
+      }
+      const output = Array.isArray(responsePayload.output) ? responsePayload.output : [];
+      const textParts = output.flatMap((item: any) => item.type === "message" && Array.isArray(item.content) ? item.content.filter((part: any) => part.type === "output_text").map((part: any) => part.text) : []);
+      const toolCalls = output.filter((item: any) => item.type === "function_call").map((call: any) => ({ id: call.call_id, type: "function", function: { name: call.name, arguments: call.arguments || "{}" } }));
+      const usage = responsePayload.usage || {};
+      return { choices: [{ message: { role: "assistant", content: textParts.join("\n") || null, ...(toolCalls.length ? { tool_calls: toolCalls } : {}) } }], usage: { prompt_tokens: usage.input_tokens, completion_tokens: usage.output_tokens, total_tokens: usage.total_tokens } };
+    }
     const request: Record<string, unknown> = { model: model.model_key, messages, tools: toolSchemas(tools), tool_choice: "auto" };
-    if (!/^gpt-5(?:\.|$)/i.test(model.model_key)) request.temperature = 0.2;
     const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY!.trim()}`, "Content-Type": "application/json" }, body: JSON.stringify(request), signal: controller.signal, cache: "no-store" });
-    if (!response.ok) throw new Error(`OpenAI request failed (${response.status}).`);
+    if (!response.ok) {
+      const providerMessage = (await response.json().catch(() => ({})))?.error?.message;
+      throw new Error(providerMessage ? `OpenAI request failed (${response.status}): ${providerMessage}` : `OpenAI request failed (${response.status}).`);
+    }
     return await response.json();
   } finally { clearTimeout(timeout); }
 }
