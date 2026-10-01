@@ -35,6 +35,8 @@ test("D4 handoff assignment resolves rules agent destination and staff notificat
   assert.match(operations,/handoff_assignment_rules/);
   assert.match(operations,/human_handoff_destination/);
   assert.match(operations,/organization_member_notification_preferences/);
+  assert.match(operations,/deliveryMode:"auto"/);
+  assert.match(operations,/lastCustomerMessageAt/);
   assert.match(operations,/templatePurpose:"internal_handoff"/);
   assert.match(operations,/conversation_summary/);
 });
@@ -130,4 +132,30 @@ test("D4 stage history uses exact inserted history id for timeline linkage",()=>
   const migration=read("supabase/migrations/20260927012456_d4_stage_history_exact_timeline_link.sql");
   assert.match(migration,/returning id into v_history_id/);
   assert.match(migration,/v_history_id/);
+});
+
+
+test("D4 Maia handoff stores a structured customer context contract and exposes it in the portal",()=>{
+  const operations=read("lib/human-operations.ts");
+  const panel=read("app/portal/notifications/HumanOperationsPanel.tsx");
+  const conversation=read("app/portal/conversations/[id]/page.tsx");
+  assert.match(operations,/structured_handoff/);
+  assert.match(operations,/customerIntent/);
+  assert.match(operations,/customerQuestions/);
+  assert.match(operations,/requestedDate/);
+  assert.match(operations,/availability/);
+  assert.match(panel,/structured.customerIntent/);
+  assert.match(panel,/structured.property/);
+  assert.match(conversation,/Customer context/);
+  assert.match(conversation,/Key points/);
+  assert.match(conversation,/Customer questions/);
+});
+
+test("D4 Maia handoff contract keeps AI takeover and tenant isolation explicit",()=>{
+  const operations=read("lib/human-operations.ts");
+  const runtime=read("src/trigger/tenant-channel-runtime.ts");
+  assert.match(operations,/eq\("organization_id",event.organizationId\)/);
+  assert.match(operations,/active_handoff_id/);
+  assert.match(runtime,/human_takeover/);
+  assert.match(runtime,/aiResponseSuppressed:true/);
 });
