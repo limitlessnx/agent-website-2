@@ -4,9 +4,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 const GENCOUV_ORG_ID = "05737e03-f8f0-4202-8e9b-0a8982a1091c";
 const CAMPAIGN_KEY = "gencouv_long_form_copy_trading";
 
-const controlUrl =
-  process.env.GENCOUV_EMAIL_CONTROL_API_URL ||
-  "https://n8n.srv1720757.hstgr.cloud/webhook/gencouv-email-control";
+const controlUrl = process.env.GENCOUV_EMAIL_CONTROL_API_URL?.trim() || "";
 
 export async function POST(request: Request) {
   const secret = process.env.GENCOUV_DASHBOARD_SECRET;
@@ -41,6 +39,8 @@ export async function POST(request: Request) {
     }).catch(() => undefined);
   }
 
+  if (!controlUrl) return NextResponse.json({ success: false, error: "email_control_endpoint_not_configured" }, { status: 503 });
+
   const response = await fetch(controlUrl, {
     method: "POST",
     headers: {
@@ -53,8 +53,8 @@ export async function POST(request: Request) {
 
   const data = await response.json().catch(() => ({
     success: false,
-    error: "invalid_n8n_response",
-    message: "The Gencouv control workflow returned an unreadable response.",
+    error: "invalid_control_response",
+    message: "The Gencouv control endpoint returned an unreadable response.",
   }));
 
   return NextResponse.json(data, { status: response.status });
