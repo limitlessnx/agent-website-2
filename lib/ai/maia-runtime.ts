@@ -234,7 +234,9 @@ async function callOpenAI(model: Model, messages: any[], tools: ToolDefinition[]
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY!.trim()}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: model.model_key, temperature: 0.2, messages, tools: toolSchemas(tools), tool_choice: "auto" }), signal: controller.signal, cache: "no-store" });
+    const request: Record<string, unknown> = { model: model.model_key, messages, tools: toolSchemas(tools), tool_choice: "auto" };
+    if (!/^gpt-5(?:\.|$)/i.test(model.model_key)) request.temperature = 0.2;
+    const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY!.trim()}`, "Content-Type": "application/json" }, body: JSON.stringify(request), signal: controller.signal, cache: "no-store" });
     if (!response.ok) throw new Error(`OpenAI request failed (${response.status}).`);
     return await response.json();
   } finally { clearTimeout(timeout); }
