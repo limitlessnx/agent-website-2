@@ -1,5 +1,6 @@
 import { Bot, Building2, Search, Users, Workflow } from "@/components/admin/ServerIcons";
-import { getLeads, getN8nStatus, getProperties } from "@/lib/limitless-data";
+import { getLeads, getProperties } from "@/lib/limitless-data";
+import { getWorkflows } from "@/lib/workflow-registry";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ function includes(value: unknown, query: string) {
 export default async function GlobalSearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
   const query = String(params.q || "").trim().toLowerCase();
-  const [leads, properties, n8n] = await Promise.all([getLeads(1000), getProperties(1000), getN8nStatus()]);
+  const [leads, properties, workflows] = await Promise.all([getLeads(1000), getProperties(1000), getWorkflows(1000, true)]);
 
   const leadResults = query
     ? leads.filter((lead) => [lead.name, lead.phone, lead.budget, lead.location_preference, lead.property_type, lead.purpose, lead.status, lead.score].some((value) => includes(value, query))).slice(0, 25)
@@ -21,7 +22,7 @@ export default async function GlobalSearchPage({ searchParams }: SearchPageProps
     ? properties.filter((property) => [property.title, property.location_area, property.location_city, property.type, property.description, property.status].some((value) => includes(value, query))).slice(0, 25)
     : [];
   const workflowResults = query
-    ? n8n.workflows.filter((workflow) => [workflow.name, workflow.id].some((value) => includes(value, query))).slice(0, 25)
+    ? workflows.filter((workflow) => [workflow.name, workflow.id, workflow.workflow_key].some((value) => includes(value, query))).slice(0, 25)
     : [];
 
   const total = leadResults.length + propertyResults.length + workflowResults.length;
@@ -76,7 +77,7 @@ export default async function GlobalSearchPage({ searchParams }: SearchPageProps
           <div className="admin-list">
             {workflowResults.map((workflow) => (
               <a className="admin-list-row compact" href="/dashboard/workflows" key={workflow.id}>
-                <div><strong>{workflow.name}</strong><span>{workflow.id}</span></div><em>{workflow.active ? "active" : "inactive"}</em>
+                <div><strong>{workflow.name}</strong><span>{workflow.id}</span></div><em>{workflow.status}</em>
               </a>
             ))}
           </div>
