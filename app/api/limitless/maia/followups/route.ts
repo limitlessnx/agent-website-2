@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         text: message,
         deliveryMode: "auto",
         templatePurpose: "follow_up_outside_24h",
-        variables: templateVariables(lead, message),
+        variables: templateVariables(lead || {}, message),
       });
 
       await admin
