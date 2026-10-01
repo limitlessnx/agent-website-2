@@ -1,4 +1,3 @@
-import { isN8nApiConfigured, listN8nExecutions, listN8nWorkflows } from "@/lib/n8n-api";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 
@@ -124,22 +123,6 @@ export async function collectSupportDiagnostics(scope: SupportScope, organizatio
     ),
   ]);
 
-  let n8n: Record<string, unknown> = { configured: isN8nApiConfigured(), visibleToTenant: false };
-  if (scope === "admin" && isN8nApiConfigured()) {
-    const [workflows, executions] = await Promise.all([
-      listN8nWorkflows(100).catch(() => []),
-      listN8nExecutions({ limit: 50, includeData: true }).catch(() => []),
-    ]);
-    n8n = {
-      configured: true,
-      workflows: workflows.length,
-      activeWorkflows: workflows.filter((workflow) => workflow.active).length,
-      recentExecutions: executions.length,
-      recentErrors: executions.filter((execution) => execution.status === "error").length,
-      visibleToTenant: false,
-    };
-  }
-
   const workflowFailures = tenantRuns.filter((run) => ["failed", "timed_out"].includes(run.status)).length;
   const workflowSuccesses = tenantRuns.filter((run) => run.status === "succeeded").length;
   const completed = workflowFailures + workflowSuccesses;
@@ -161,8 +144,7 @@ export async function collectSupportDiagnostics(scope: SupportScope, organizatio
           active: tenantWorkflows.filter((workflow) => workflow.status === "active").length,
           failures: workflowFailures,
           successRate: completed ? Math.round((workflowSuccesses / completed) * 100) : 0,
-        },
-    n8n,
+        }
   };
 }
 
@@ -197,7 +179,6 @@ export function buildSupportReply(
   const text = message.toLowerCase();
   const scope = diagnostics.scope;
   const registry = diagnostics.workflowRegistry;
-  const n8n = diagnostics.n8n as { configured?: boolean; recentErrors?: number; activeWorkflows?: number; workflows?: number };
   const previousAssistant = [...history].reverse().find((item) => item.role === "assistant");
 
   if (/menu|navigate|where do i|where can i|find|page|dashboard/i.test(message)) {
@@ -232,8 +213,6 @@ export function buildSupportReply(
   if (inactiveAgents.length) findings.push(`${inactiveAgents.length} agent(s) are not published or testing.`);
   if (disconnectedIntegrations.length) findings.push(`${disconnectedIntegrations.length} integration(s) need attention.`);
   if (failedRuns.length) findings.push(`${failedRuns.length} recent workflow run(s) failed or timed out.`);
-  if (scope === "admin" && !n8n.configured) findings.push("The n8n API connection is not available to Agent Leo in this deployment.");
-  if (scope === "admin" && (n8n.recentErrors || 0) > 0) findings.push(`${n8n.recentErrors} recent n8n execution error(s) were detected.`);
   if (registry.total > 0 && registry.active === 0) findings.push("Workflows exist, but none are currently active.");
 
   if (/workflow|automation|n8n|failed|error|not working|broken/i.test(text)) {
