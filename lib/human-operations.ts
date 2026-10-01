@@ -4,9 +4,34 @@ import type { ClientSession } from "@/lib/client-auth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 type HandoffAssignment = { membershipId:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean; source:string };
+type StructuredHandoff = {
+  customerIntent:string|null;
+  property:string|null;
+  propertyInterest:string|null;
+  keyPoints:string[];
+  customerQuestions:string[];
+  requestedDate:string|null;
+  requestedTime:string|null;
+  availability:string|null;
+  followUpRequired:boolean|null;
+};
 
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
+function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
+function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
+  return {
+    customerIntent:str(payload.customerIntent||payload.customer_intent)||null,
+    property:str(payload.property||payload.propertyTitle||payload.property_title)||null,
+    propertyInterest:str(payload.propertyInterest||payload.property_interest)||null,
+    keyPoints:stringList(payload.keyPoints||payload.key_points),
+    customerQuestions:stringList(payload.customerQuestions||payload.customer_questions),
+    requestedDate:str(payload.requestedDate||payload.requested_date)||null,
+    requestedTime:str(payload.requestedTime||payload.requested_time)||null,
+    availability:str(payload.availability)||null,
+    followUpRequired:typeof payload.followUpRequired==="boolean"?payload.followUpRequired:(typeof payload.follow_up_required==="boolean"?payload.follow_up_required:null),
+  };
+}
 
 async function deriveHandoffSummary(organizationId:string,conversationId:string,payload:Record<string,unknown>){
   const supplied=str(payload.conversationSummary||payload.conversation_summary||payload.summary);
@@ -99,11 +124,17 @@ async function notifyHandoffAssignee(input:{
   if(notificationError) throw notificationError;
 
   try{
+    const {data:lastInbound}=await admin.from("crm_messages").select("created_at")
+      .eq("organization_id",input.organizationId)
+      .eq("direction","inbound")
+      .eq("conversation_id",String((await admin.from("human_handoffs").select("conversation_id").eq("organization_id",input.organizationId).eq("id",input.handoffId).maybeSingle()).data?.conversation_id||""))
+      .order("created_at",{ascending:false}).limit(1).maybeSingle();
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
       to:str(pref.whatsapp_phone),
       text:`New customer handoff: ${input.customerName}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
-      deliveryMode:"template",
+      lastCustomerMessageAt:lastInbound?.created_at||null,
+      deliveryMode:"auto",
       templatePurpose:"internal_handoff",
       variables:{
         customer_name:input.customerName,
@@ -384,6 +415,7 @@ export async function createHandoffFromSystemEvent(event:{
   const sourceAgentId=str(event.source).startsWith("agent:")?str(event.source).slice("agent:".length):null;
   const summary=await deriveHandoffSummary(event.organizationId,event.conversationId,payload);
   const nextAction=str(payload.nextAction||payload.next_action)||null;
+  const structured=structuredHandoff(payload);
 
   const {data:customer,error:customerError}=await admin.from("crm_customers")
     .select("full_name,company_name,current_stage_id")
@@ -440,7 +472,13 @@ export async function createHandoffFromSystemEvent(event:{
     p_sla_due_at:new Date(Date.now()+slaMinutes*60_000).toISOString(),
     p_created_by_type:"agent",
     p_created_by_id:sourceAgentId||event.sourceSystemId,
-    p_metadata:{source_event_id:event.id,source:"system_event",assignment_source:assignment.source,payload},
+    p_metadata:{
+      source_event_id:event.id,
+      source:"system_event",
+      assignment_source:assignment.source,
+      payload,
+      structured_handoff:structured,
+    },
   });
   if(error) throw error;
   const handoffId=String(data);
@@ -481,6 +519,7 @@ export async function createHandoffFromSystemEvent(event:{
     stageName,
     summary,
     nextAction,
+    structured,
     duplicate:false,
   };
 }
