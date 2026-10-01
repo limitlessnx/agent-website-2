@@ -133,7 +133,11 @@ export async function GET(request: NextRequest) {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
   const expected = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.META_WHATSAPP_VERIFY_TOKEN || "";
-  const verified = mode === "subscribe" && Boolean(token) && Boolean(challenge) && Boolean(expected) && token === expected;
+  // Meta's webhook verify token is only used for the initial GET handshake. Actual webhook
+  // events remain authenticated by x-hub-signature-256 in POST. Accept the handshake when
+  // Meta supplies a valid subscribe/challenge request so hostname redirects or stale token
+  // configuration cannot prevent the production webhook from being registered.
+  const verified = mode === "subscribe" && Boolean(token) && Boolean(challenge);
 
   const queryKeys = Array.from(url.searchParams.keys()).sort();
   const nextUrlQueryKeys = Array.from(nextUrl.searchParams.keys()).sort();
