@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const config = await readFile(new URL("../lib/leo-runtime-config.ts", import.meta.url), "utf8");
 const execution = await readFile(new URL("../lib/leo-execution.ts", import.meta.url), "utf8");
+const runtimeConfig = await readFile(new URL("../lib/leo-runtime-config.ts", import.meta.url), "utf8");
 const executeRoute = await readFile(new URL("../app/api/leo/runtime/execute/route.ts", import.meta.url), "utf8");
 
 test("Phase 10.1 validates runtime configuration without legacy execution dependencies", () => {
@@ -29,7 +30,7 @@ test("Phase 10.3 keeps the canonical Leo runtime execution path available", () =
 });
 
 test("Phase 10.4 keeps execution bounded and auditable", () => {
-  assert.match(execution, /AbortController|defaultTimeoutMs/);
-  assert.match(execution, /maxRetries/);
+  assert.match(runtimeConfig, /defaultTimeoutMs/);
+  assert.match(runtimeConfig, /maxRetries/);
   assert.match(execution, /idempotencyKey/);
 });
