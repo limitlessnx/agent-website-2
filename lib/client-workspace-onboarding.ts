@@ -15,6 +15,10 @@ export type ClientOnboardingProfile = {
   business_email: string | null;
   phone: string | null;
   staff_size: string | null;
+  business_description: string | null;
+  ai_requirements: string | null;
+  business_knowledge: Record<string, string>;
+  whatsapp_preferences: { connection_path?: "already_have_whatsapp_business" | "need_help"; preferred_number?: string };
   requested_agents: string[];
   business_goals: string[];
   channels: string[];
@@ -31,13 +35,14 @@ export type ClientOnboardingProfile = {
 };
 
 export type SaveOnboardingInput = Partial<Omit<ClientOnboardingProfile,
-  "id" | "organization_id" | "membership_id" | "user_id" | "agent_family_id" | "project_id" | "agent_id" | "created_at" | "updated_at" | "completed_at"
+  "id" | "organization_id" | "membership_id" | "user_id" | "agent_family_id" | "project_id" | "agent_id" | "created_at" | "updated_at"
 >>;
 
 const profileFields = [
   "id", "organization_id", "membership_id", "user_id", "status", "current_step",
   "business_name", "industry", "website", "country", "timezone", "business_email",
-  "phone", "staff_size", "requested_agents", "business_goals", "channels", "existing_tools",
+  "phone", "staff_size", "business_description", "ai_requirements", "business_knowledge",
+  "whatsapp_preferences", "requested_agents", "business_goals", "channels", "existing_tools",
   "human_contact_name", "human_contact_email", "notes", "agent_family_id", "project_id",
   "agent_id", "completed_at", "created_at", "updated_at",
 ].join(",");
@@ -46,9 +51,7 @@ async function assertOrganizationExists(organizationId: string) {
   const rows = await supabaseServerRequest<Array<{ id: string; status?: string }>>(
     `organizations?id=eq.${encodeURIComponent(organizationId)}&select=id,status&limit=1`,
   );
-  if (!rows[0]?.id) {
-    throw new Error("Your organization session is no longer valid. Please sign in again.");
-  }
+  if (!rows[0]?.id) throw new Error("Your organization session is no longer valid. Please sign in again.");
   return rows[0];
 }
 
@@ -67,7 +70,6 @@ export async function ensureClientOnboardingProfile(input: {
   email: string;
 }) {
   await assertOrganizationExists(input.organizationId);
-
   const current = await getClientOnboardingProfile(input.organizationId);
   if (current) return current;
 
@@ -81,6 +83,8 @@ export async function ensureClientOnboardingProfile(input: {
       business_email: input.email,
       status: "in_progress",
       current_step: 1,
+      channels: ["WhatsApp"],
+      whatsapp_preferences: { connection_path: "need_help" },
     }),
   });
   return rows[0];
@@ -92,7 +96,6 @@ export async function saveClientOnboardingProfile(
   input: SaveOnboardingInput,
 ) {
   await assertOrganizationExists(organizationId);
-
   const allowed = {
     current_step: input.current_step,
     business_name: input.business_name,
@@ -103,6 +106,10 @@ export async function saveClientOnboardingProfile(
     business_email: input.business_email,
     phone: input.phone,
     staff_size: input.staff_size,
+    business_description: input.business_description,
+    ai_requirements: input.ai_requirements,
+    business_knowledge: input.business_knowledge,
+    whatsapp_preferences: input.whatsapp_preferences,
     requested_agents: input.requested_agents,
     business_goals: input.business_goals,
     channels: input.channels,
@@ -120,9 +127,27 @@ export async function saveClientOnboardingProfile(
   return rows[0] || null;
 }
 
+export async function submitClientOnboarding(
+  organizationId: string,
+  userId: string,
+) {
+  await assertOrganizationExists(organizationId);
+  const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
+    `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "submitted",
+        current_step: 5,
+        completed_at: new Date().toISOString(),
+      }),
+    },
+  );
+  return rows[0] || null;
+}
+
 export async function completeClientOnboarding(organizationId: string, userId: string) {
   await assertOrganizationExists(organizationId);
-
   return supabaseServerRequest<{
     onboarding_id: string;
     status: string;
