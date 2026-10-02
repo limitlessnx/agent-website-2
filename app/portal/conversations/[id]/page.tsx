@@ -35,6 +35,9 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
     supabaseServerRequest<Message[]>(
       "crm_messages?organization_id=eq."+org+"&conversation_id=eq."+cid+"&select=id,sender_type,direction,content,status,created_at,metadata&order=created_at.asc&limit=300",
     ).catch(()=>[]),
+    supabaseServerRequest<Handoff[]>(
+      "human_handoffs?organization_id=eq."+org+"&conversation_id=eq."+cid+"&select=id,status,priority,category,reason,conversation_summary,next_action,metadata,sla_due_at,created_at&order=created_at.desc&limit=1",
+    ).catch(()=>[]),
   ]);
   const customer=customers[0];
 
