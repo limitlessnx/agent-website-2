@@ -61,13 +61,12 @@ export default function HumanOperationsPanel({
         <div>
           <strong>{item.customer_name||"Customer"} · {item.priority.toUpperCase()}</strong>
           <span>{item.stage_name||"Stage not set"} · {item.category.replaceAll("_"," ")} · {item.status.replaceAll("_"," ")}</span>
-          <span><strong>Reason:</strong> {item.reason}</span>
-          {item.conversation_summary?<span><strong>Summary:</strong> {item.conversation_summary}</span>:null}
-          {structured.customerIntent?<span><strong>Intent:</strong> {String(structured.customerIntent)}</span>:null}
+          <span><strong>Current request:</strong> {String(structured.customerIntent||item.reason||"Human assistance requested")}</span>
           {structured.property||structured.propertyInterest?<span><strong>Property:</strong> {String(structured.property||structured.propertyInterest)}</span>:null}
-          {item.next_action?<span><strong>Next action:</strong> {item.next_action}</span>:null}
+          {item.conversation_summary?<span><strong>Summary:</strong> {item.conversation_summary}</span>:null}
           {keyPoints.length?<span><strong>Key points:</strong> {keyPoints.join(" · ")}</span>:null}
-          {questions.length?<span><strong>Questions:</strong> {questions.join(" · ")}</span>:null}
+          {questions.length?<span><strong>Customer questions:</strong> {questions.join(" · ")}</span>:null}
+          {item.next_action?<span><strong>Next action:</strong> {item.next_action}</span>:null}
           {item.assigned_to_email?<span><strong>Assigned to:</strong> {item.assigned_to_email}</span>:null}
           <small>
             {item.sla_due_at?"SLA due "+new Date(item.sla_due_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):"No SLA"}
