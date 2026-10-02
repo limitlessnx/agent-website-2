@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { bookLimitlessInspection } from "@/lib/limitless-inspections";
 
 export type MaiaRuntimeInput = {
   organizationId: string;
@@ -14,7 +15,7 @@ export type MaiaRuntimeInput = {
 
 type Model = { id: string; provider: string; model_key: string; display_name: string; capabilities: Record<string, unknown> };
 type RuntimeProfile = { enabled: boolean; autonomy_mode: "supervised" | "autonomous"; max_steps: number; model_strategy: "best_available" | "fastest" | "reasoning" | "balanced"; memory_enabled: boolean; tool_policy: Record<string, unknown> };
-type ToolContext = { organizationId: string; agentId: string; sessionId: string };
+type ToolContext = { organizationId: string; agentId: string; sessionId: string; externalConversationId?: string };
 type ToolDefinition = { name: string; description: string; parameters: Record<string, unknown>; execute: (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown> };
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
@@ -172,6 +173,45 @@ function toolSet(): ToolDefinition[] {
       },
     },
     {
+      name: "book_property_inspection",
+      description: "Book a verified Limitless Realty property inspection for the current WhatsApp customer. Only use after the customer has clearly agreed to the property and a specific future date/time has been established. This creates the inspection, moves the Limitless lead to inspection stage, and schedules reminder/follow-up tasks.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          leadId: { type: "string", description: "Existing Limitless Realty lead ID when known." },
+          scheduledAt: { type: "string", description: "ISO-8601 date/time for the agreed inspection." },
+          propertyId: { type: "string" },
+          propertyName: { type: "string" },
+          timezone: { type: "string", description: "IANA timezone, default Africa/Lagos." },
+          notes: { type: "string" }
+        },
+        required: ["scheduledAt", "propertyName"]
+      },
+      execute: async (input, ctx) => {
+        if (ctx.organizationId !== "b15f21b4-5697-4d21-9421-8a34eae3476d") throw new Error("This inspection tool is currently enabled only for Limitless Realty.");
+        const admin = createAdminClient();
+        let leadId = text(input.leadId);
+        if (!leadId && ctx.externalConversationId) {
+          const phone = ctx.externalConversationId.replace(/[^\d]/g, "");
+          const { data: lead, error } = await admin.from("leads").select("id").eq("organization_id", ctx.organizationId).eq("phone", phone).maybeSingle();
+          if (error) throw error;
+          leadId = text(lead?.id);
+        }
+        if (!leadId) throw new Error("I could not resolve the customer's Limitless Realty lead. Save the lead before booking the inspection.");
+        const result = await bookLimitlessInspection({
+          leadId,
+          scheduledAt: text(input.scheduledAt),
+          propertyId: text(input.propertyId) || undefined,
+          propertyName: text(input.propertyName),
+          timezone: text(input.timezone) || "Africa/Lagos",
+          source: "maia_whatsapp",
+          notes: text(input.notes) || undefined,
+        });
+        return { ok: true, inspection: result };
+      },
+    },
+    {
       name: "create_followup_task",
       description: "Create a tenant CRM follow-up task. This is a low-risk autonomous action and never crosses tenant boundaries.",
       parameters: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, description: { type: "string" }, dueAt: { type: "string" }, leadId: { type: "string" } }, required: ["title"] },
@@ -316,7 +356,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const profile = await loadProfile(input.organizationId, input.agentId);
   if (!profile.enabled) throw new Error("This agent's autonomous runtime is disabled.");
   const session = await createSession(input);
-  const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id };
+  const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId };
   const model = await chooseModel(input.organizationId, profile, input.message);
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
   await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
@@ -332,6 +372,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
     "Never access, infer, or expose another organization's data. Never invent prices, availability, legal status, land documentation facts, policies, credentials or integrations. For land/property documentation questions, use approved tenant knowledge and clearly distinguish education from legal advice.",
     "For named property questions, use search_properties before relying on memory. For property pictures, videos, brochures or documents, resolve one exact property ID first and then use get_property_media. Never guess a property match or attach media from a different property.",
     "Use tools when a tool can verify a fact or perform a useful low-risk action. Do not call tools merely to appear autonomous.",
+    "For a property inspection, only book_property_inspection after the customer has explicitly agreed to inspect and a specific future date/time has been established. Never invent a time or claim an inspection is booked unless the tool succeeds.",
     "When a request requires approval, sensitive production change, payment, credential change, or a commitment you cannot verify, explain the limitation and create a handoff/task when appropriate.",
     `Autonomy mode: ${profile.autonomy_mode}. Maximum reasoning/tool steps: ${profile.max_steps}.`,
     `CURRENT TENANT CONTEXT:\n${JSON.stringify(business).slice(0, 30000)}`,
