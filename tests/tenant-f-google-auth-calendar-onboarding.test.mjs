@@ -421,3 +421,51 @@ test("F5 staff overrides merge with organization defaults instead of deleting th
   assert.match(scheduling,/blockedDates/);
   assert.match(scheduling,/serviceDurations/);
 });
+
+
+test("F3 client signup requires matching password confirmation and exposes password visibility controls",()=>{
+  const signup=read("app/account/signup/SignupForm.tsx");
+  const password=read("app/account/PasswordField.tsx");
+  const route=read("app/api/client-auth/signup/route.ts");
+  assert.match(signup,/password_confirmation/);
+  assert.match(signup,/Passwords do not match/);
+  assert.match(password,/type=\{visible \? "text" : "password"\}/);
+  assert.match(password,/Show/);
+  assert.match(password,/Hide/);
+  assert.match(route,/passwordConfirmation/);
+  assert.match(route,/password!==passwordConfirmation/);
+});
+
+test("F3 client login has forgot-password entry and password visibility control",()=>{
+  const login=read("app/account/login/LoginForm.tsx");
+  assert.match(login,/forgot-password/);
+  assert.match(login,/PasswordField/);
+});
+
+test("F3 password recovery uses Supabase recovery without exposing credentials and fails closed on expired reset state",()=>{
+  const forgot=read("app/api/client-auth/forgot-password/route.ts");
+  const recovery=read("app/auth/recovery/route.ts");
+  const reset=read("app/api/client-auth/reset-password/route.ts");
+  const auth=read("lib/client-auth.ts");
+  assert.match(forgot,/\/auth\/v1\/recover/);
+  assert.match(forgot,/redirect_to/);
+  assert.doesNotMatch(forgot,/service_role|SERVICE_ROLE/);
+  assert.match(recovery,/exchangeCodeForSession/);
+  assert.match(recovery,/setPendingPasswordReset/);
+  assert.match(reset,/getPendingPasswordReset/);
+  assert.match(reset,/clearPendingPasswordReset/);
+  assert.match(reset,/\/auth\/v1\/user/);
+  assert.match(auth,/CLIENT_PASSWORD_RESET_TTL/);
+  assert.match(auth,/httpOnly:true/);
+});
+
+test("F3 reset form requires confirmation and uses Fluxknight branded auth surface",()=>{
+  const form=read("app/account/reset-password/ResetPasswordForm.tsx");
+  const page=read("app/account/reset-password/page.tsx");
+  const forgot=read("app/account/forgot-password/page.tsx");
+  assert.match(form,/PasswordField/);
+  assert.match(form,/password_confirmation/);
+  assert.match(form,/Passwords do not match/);
+  assert.match(page,/AuthExperience/);
+  assert.match(forgot,/AuthExperience/);
+});
