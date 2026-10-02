@@ -167,7 +167,7 @@ test("D4 handoff uses the dashboard internal_handoff template contract",()=>{
   const settings=read("app/portal/settings/HandoffContinuityPanel.tsx");
   assert.match(operations,/deliveryMode:"template"/);
   assert.match(operations,/templatePurpose:"internal_handoff"/);
-  assert.match(delivery,/internal_handoff/);
+  assert.match(delivery,/purpose=eq\.\$\{encodeURIComponent\(purpose\)\}/);
   assert.match(delivery,/No active approved WhatsApp template/);
   assert.ok(settings.includes("approved <strong>internal_handoff</strong> template"));
   assert.doesNotMatch(operations,/templatePurpose:"follow_up_outside_24h"/);
