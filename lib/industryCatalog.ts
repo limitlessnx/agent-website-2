@@ -232,6 +232,46 @@ export const industries: IndustryDefinition[] = [
     databaseLabel: "Administrative patient-service database"
   },
   {
+    slug: "beauty-salons",
+    name: "Beauty & Salons",
+    hero: "Turn beauty enquiries into bookings, repeat visits and promotional campaigns without adding more front-desk work.",
+    subhead: "Automate appointment enquiries, promotional calls and campaigns, reminders and customer reactivation while keeping staff focused on delivering the service.",
+    problem: [
+      "Appointment enquiries arrive while staff are busy with clients.",
+      "Customers often need repeated answers about services, prices, availability and booking details.",
+      "Promotions and repeat-visit campaigns are difficult to run consistently from a busy salon.",
+      "Missed appointments and inactive customers create avoidable revenue leakage."
+    ],
+    outcomes: [
+      "Faster appointment response",
+      "More consistent booking follow-up",
+      "Promotional calls and campaigns without manual list chasing",
+      "Better customer reactivation",
+      "More consistent reminders and repeat-visit communication"
+    ],
+    journey: ["Enquiry", "Service qualification", "Appointment booking", "Reminder", "Promotion", "Customer reactivation"],
+    basicExample: "Service Q&A, appointment intake, customer detail capture and human handoff.",
+    starterExample: "Adds appointment reminders, missed-booking follow-up and same-channel nurture.",
+    businessExample: "Adds promotional calls and campaigns, WhatsApp + email follow-up, admin users, inbound voice, Leo and higher usage.",
+    businessPlusExample: "Adds a customer, service, appointment and campaign history database for deeper lifecycle visibility.",
+    databaseLabel: "Customer + appointment operations database",
+    channels: ["WhatsApp", "Website support", "Inbound voice", "Email follow-up on Business", "Promotional calls and campaigns on Business"],
+    workflowTitle: "From beauty enquiry to booked appointment and repeat customer.",
+    workflowIntro: "Fluxknight handles repetitive customer communication while the salon team stays focused on clients and service delivery.",
+    workflowSteps: [
+      { title: "Answer service enquiries", description: "The agent responds to approved questions about services, pricing, availability, location and booking requirements." },
+      { title: "Qualify the appointment", description: "It captures the requested service, preferred time, customer details and other configured booking information." },
+      { title: "Book and remind", description: "Plus and above can support booking workflows, reminders and follow-up for incomplete or missed appointments." },
+      { title: "Run promotions", description: "Business can support promotional calls and campaigns to reach eligible customers with configured offers, launches or appointment promotions." },
+      { title: "Reactivate customers", description: "Configured follow-up can identify customers who have not returned and invite them back with relevant service or promotional messaging." },
+      { title: "Hand off when needed", description: "Complex requests, complaints or high-value opportunities can be routed to staff with the conversation context intact." }
+    ],
+    businessNotes: [
+      "Promotional calling and campaign workflows should use customer consent, applicable calling rules and configured audience eligibility.",
+      "Business+ is designed to connect customer, service, appointment and campaign history into one operational view."
+    ]
+  },
+  {
     slug: "gyms",
     name: "Gyms",
     hero: "Turn trial interest into memberships and keep member communication from becoming manual admin work.",
