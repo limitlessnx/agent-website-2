@@ -1,44 +1,10 @@
 import Link from "next/link";
 import { getPaymentPlans, getPaymentRecords, formatNaira } from "@/lib/limitless-payments";
-import { createPaymentRecord, updatePaymentPlan } from "@/lib/limitless-payments";
-import { getAdminSession } from "@/lib/admin-auth";
-import { revalidatePath } from "next/cache";
+import { recordPaymentAction, updatePlanStatusAction, updatePlanCadenceAction } from "../actions";
 import PaymentSubmitButton from "../PaymentSubmitButton";
 import "../payments.css";
 
 export const dynamic = "force-dynamic";
-
-async function recordPayment(formData: FormData) {
-  "use server";
-  const session = await getAdminSession();
-  if (!session) throw new Error("Unauthorized");
-  const planId = String(formData.get("payment_plan_id") || "");
-  const amount = Number(formData.get("amount") || 0);
-  if (!planId || !Number.isFinite(amount) || amount <= 0) throw new Error("Select a client and enter a valid payment amount.");
-  await createPaymentRecord({
-    payment_plan_id: planId,
-    amount,
-    payment_date: String(formData.get("payment_date") || new Date().toISOString().slice(0,10)),
-    payment_method: String(formData.get("payment_method") || "bank_transfer"),
-    payment_reference: String(formData.get("payment_reference") || "").trim() || null,
-    notes: String(formData.get("notes") || "").trim() || null,
-    created_by: session.email,
-  });
-  revalidatePath("/dashboard/limitless/payments");
-  revalidatePath("/dashboard/limitless/payments/installments");
-}
-
-async function updateStatus(formData: FormData) {
-  "use server";
-  const session = await getAdminSession();
-  if (!session) throw new Error("Unauthorized");
-  const id = String(formData.get("payment_plan_id") || "");
-  const status = String(formData.get("status") || "");
-  if (!id || !["active","due_soon","overdue","completed","paused","cancelled"].includes(status)) throw new Error("Invalid installment status.");
-  await updatePaymentPlan(id, { status, reminders_enabled: !["completed","cancelled","paused"].includes(status) });
-  revalidatePath("/dashboard/limitless/payments");
-  revalidatePath("/dashboard/limitless/payments/installments");
-}
 
 export default async function InstallmentsPage() {
   const [plans, records] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500)]);
@@ -66,12 +32,13 @@ export default async function InstallmentsPage() {
           <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
           <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
           <div className="payment-meta"><span>Next due: {plan.next_due_date || "Not set"}</span><span>Cadence: {plan.frequency || "biweekly"}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Paused"}</span></div>
-          <form action={updateStatus} className="payment-status-form">
+          <form action={updatePlanCadenceAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="frequency" defaultValue={plan.frequency || "biweekly"}><option value="weekly">Weekly</option><option value="biweekly">Bi-weekly</option><option value="monthly">Monthly</option></select><PaymentSubmitButton className="payment-status-button">Set cadence</PaymentSubmitButton></form>
+          <form action={updatePlanStatusAction} className="payment-status-form">
             <input type="hidden" name="payment_plan_id" value={plan.id}/>
             <select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select>
             <PaymentSubmitButton className="payment-status-button">Update</PaymentSubmitButton>
           </form>
-          <details><summary>Record payment</summary><form action={recordPayment} className="payment-form">
+          <details><summary>Record payment</summary><form action={recordPaymentAction} className="payment-form">
             <input type="hidden" name="payment_plan_id" value={plan.id}/>
             <input name="amount" type="number" min="1" placeholder="Amount paid (₦)" required/>
             <input name="payment_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required/>
