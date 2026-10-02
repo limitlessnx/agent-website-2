@@ -54,6 +54,10 @@ export async function POST(request: NextRequest) {
       p_agent_id: agentId,
     });
     if (readinessError) throw readinessError;
+    if (passed) {
+      await admin.from("client_onboarding_profiles").update({ status: "testing" })
+        .eq("organization_id", organizationId).eq("status", "configuration");
+    }
 
     return NextResponse.json({ ok: true, test: data, checks });
   } catch (error) {
