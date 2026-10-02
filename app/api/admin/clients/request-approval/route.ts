@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
     if (statusError) throw statusError;
 
     await admin.rpc("refresh_agent_runtime_readiness", { p_organization_id: organizationId, p_agent_id: agentId });
+    await admin.from("client_onboarding_profiles").update({ status: "awaiting_approval" })
+      .eq("organization_id", organizationId).in("status", ["testing", "configuration"]);
     return NextResponse.json({ ok: true, approval: data });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to submit approval." }, { status: 400 });
