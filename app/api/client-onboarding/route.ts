@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
-import { ensureClientOnboardingProfile, getClientOnboardingProfile, saveClientOnboardingProfile, type SaveOnboardingInput } from "@/lib/client-workspace-onboarding";
+import { ensureClientOnboardingProfile, getClientOnboardingProfile, saveClientOnboardingProfile, submitClientOnboarding, type SaveOnboardingInput } from "@/lib/client-workspace-onboarding";
 
 const cleanText = (value: unknown, max = 5000) => typeof value === "string" ? value.trim().slice(0, max) : undefined;
 const cleanList = (value: unknown) => Array.isArray(value) ? [...new Set(value.map((item) => String(item).trim()).filter(Boolean))].slice(0, 30) : undefined;
