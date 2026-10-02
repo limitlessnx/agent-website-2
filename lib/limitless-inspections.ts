@@ -236,7 +236,15 @@ export async function updateLimitlessInspectionStatus(input: { inspectionId: str
   }).eq("id", inspectionId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).select("*").single();
   if (error) throw error;
   const leadStage = input.status === "completed" ? "negotiation" : input.status === "cancelled" || input.status === "no_show" ? "qualified" : input.status === "requested" ? "inspection_requested" : "inspection";
-  const leadUpdate = await admin.from("crm_leads").update({ stage: leadStage, updated_at: new Date().toISOString() }).eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
+  const leadUpdate = LIMITLESS_REALTY_ORGANIZATION_ID === "b15f21b4-5697-4d21-9421-8a34eae3476d"
+    ? await admin.from("leads").update({
+        status: leadStage,
+        viewing_booked: ["booked","confirmed"].includes(input.status),
+        viewing_datetime: scheduled.toISOString(),
+        property_interest: existing.property_name || null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+    : await admin.from("crm_leads").update({ stage: leadStage, updated_at: new Date().toISOString() }).eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
   if (leadUpdate.error) throw leadUpdate.error;
   return data as LimitlessInspection;
 }
