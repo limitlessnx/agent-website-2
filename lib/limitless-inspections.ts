@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const LIMITLESS_REALTY_ORGANIZATION_ID = process.env.LIMITLESS_REALTY_ORGANIZATION_ID || "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
-export type LimitlessInspectionStatus = "booked" | "confirmed" | "completed" | "cancelled" | "rescheduled" | "no_show";
+export type LimitlessInspectionStatus = "requested" | "booked" | "confirmed" | "completed" | "cancelled" | "rescheduled" | "no_show";
 export type LimitlessInspection = {
   id: string;
   organization_id: string;
@@ -56,6 +56,61 @@ export async function listLimitlessInspections(input: { leadId?: string; status?
   const { data, error } = await query;
   if (error) throw error;
   return (data || []) as LimitlessInspection[];
+}
+
+export async function requestLimitlessInspection(input: {
+  leadId: string;
+  requestedAt: string;
+  propertyId?: string;
+  propertyName?: string;
+  timezone?: string;
+  source?: string;
+  notes?: string;
+}) {
+  const leadId = clean(input.leadId, 100);
+  if (!leadId) throw new Error("leadId is required.");
+  const requested = new Date(input.requestedAt);
+  if (Number.isNaN(requested.getTime())) throw new Error("A valid requested inspection date and time is required.");
+  if (requested.getTime() <= Date.now()) throw new Error("Requested inspection time must be in the future.");
+
+  const admin = createAdminClient();
+  const { data: lead, error: leadError } = await admin.from("leads")
+    .select("id,name,phone,status")
+    .eq("id", leadId)
+    .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+    .maybeSingle();
+  if (leadError) throw leadError;
+  if (!lead) throw new Error("Limitless Realty lead was not found.");
+
+  const requestedIso = requested.toISOString();
+  const now = new Date().toISOString();
+  const propertyName = clean(input.propertyName, 240) || null;
+  const { data: inspection, error } = await admin.from("limitless_inspections").insert({
+    organization_id: LIMITLESS_REALTY_ORGANIZATION_ID,
+    lead_id: leadId,
+    customer_id: null,
+    property_id: clean(input.propertyId, 100) || null,
+    property_name: propertyName,
+    scheduled_at: requestedIso,
+    timezone: clean(input.timezone, 80) || "Africa/Lagos",
+    status: "requested",
+    source: clean(input.source, 80) || "maia_whatsapp",
+    notes: [clean(input.notes, 2000), "Customer requested inspection. Admin confirmation required before booking."].filter(Boolean).join("\n"),
+    updated_at: now,
+  }).select("*").single();
+  if (error) throw error;
+
+  const leadUpdate = await admin.from("leads").update({
+    status: "inspection_requested",
+    viewing_booked: false,
+    viewing_datetime: requestedIso,
+    property_interest: propertyName,
+    notes: [String(lead.status || ""), propertyName ? `Inspection requested for ${propertyName} at ${requestedIso}. Awaiting admin confirmation.` : `Inspection requested at ${requestedIso}. Awaiting admin confirmation.`].filter(Boolean).join("\n"),
+    updated_at: now,
+  }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
+  if (leadUpdate.error) throw leadUpdate.error;
+
+  return inspection as LimitlessInspection;
 }
 
 export async function bookLimitlessInspection(input: {
@@ -146,15 +201,41 @@ export async function bookLimitlessInspection(input: {
   return inspection as LimitlessInspection;
 }
 
-export async function updateLimitlessInspectionStatus(input: { inspectionId: string; status: LimitlessInspectionStatus; notes?: string }) {
+export async function updateLimitlessInspectionStatus(input: { inspectionId: string; status: LimitlessInspectionStatus; notes?: string; scheduledAt?: string; timezone?: string }) {
   const admin = createAdminClient();
   const inspectionId = clean(input.inspectionId, 100);
-  const { data: existing, error: existingError } = await admin.from("limitless_inspections").select("id,lead_id,notes").eq("id", inspectionId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
+  const { data: existing, error: existingError } = await admin.from("limitless_inspections").select("id,lead_id,notes,scheduled_at,timezone,property_name,reminder_24h_task_id,reminder_2h_task_id,post_followup_task_id").eq("id", inspectionId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
   if (existingError) throw existingError;
   if (!existing) throw new Error("Inspection was not found.");
-  const { data, error } = await admin.from("limitless_inspections").update({ status: input.status, notes: clean(input.notes, 2000) || existing.notes || null, updated_at: new Date().toISOString() }).eq("id", inspectionId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).select("*").single();
+  const scheduled = input.scheduledAt ? new Date(input.scheduledAt) : new Date(existing.scheduled_at);
+  if (Number.isNaN(scheduled.getTime()) || scheduled.getTime() <= Date.now()) throw new Error("A valid future inspection date and time is required.");
+  const now = new Date().toISOString();
+  let reminder24TaskId = existing.reminder_24h_task_id || null;
+  let reminder2TaskId = existing.reminder_2h_task_id || null;
+  let postTaskId = existing.post_followup_task_id || null;
+  if (["booked","confirmed"].includes(input.status) && (!reminder24TaskId || !reminder2TaskId || !postTaskId)) {
+    const leadRow = await admin.from("leads").select("id").eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
+    if (leadRow.error) throw leadRow.error;
+    if (!leadRow.data) throw new Error("Limitless Realty lead was not found.");
+    const reminder24Due = dueBefore(scheduled, 24);
+    const reminder2Due = dueBefore(scheduled, 2);
+    const postDue = dueAfter(scheduled, 24);
+    reminder24TaskId = !reminder24TaskId && reminder24Due > now ? await createReminderTask({ leadId: existing.lead_id, kind: "inspection_reminder", title: "Inspection reminder: 24 hours", description: `Remind the client about the ${existing.property_name || "property"} inspection scheduled for ${scheduled.toISOString()}.`, dueAt: reminder24Due }) : reminder24TaskId;
+    reminder2TaskId = !reminder2TaskId && reminder2Due > now ? await createReminderTask({ leadId: existing.lead_id, kind: "inspection_reminder", title: "Inspection reminder: 2 hours", description: `Remind the client that the ${existing.property_name || "property"} inspection is in about 2 hours.`, dueAt: reminder2Due }) : reminder2TaskId;
+    postTaskId = !postTaskId ? await createReminderTask({ leadId: existing.lead_id, kind: "inspection_follow_up", title: "Post-inspection follow-up", description: `Follow up after the ${existing.property_name || "property"} inspection and record the outcome.`, dueAt: postDue }) : postTaskId;
+  }
+  const { data, error } = await admin.from("limitless_inspections").update({
+    status: input.status,
+    scheduled_at: scheduled.toISOString(),
+    timezone: clean(input.timezone, 80) || existing.timezone || "Africa/Lagos",
+    notes: clean(input.notes, 2000) || existing.notes || null,
+    reminder_24h_task_id: reminder24TaskId,
+    reminder_2h_task_id: reminder2TaskId,
+    post_followup_task_id: postTaskId,
+    updated_at: now
+  }).eq("id", inspectionId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).select("*").single();
   if (error) throw error;
-  const leadStage = input.status === "completed" ? "negotiation" : input.status === "cancelled" || input.status === "no_show" ? "qualified" : "inspection";
+  const leadStage = input.status === "completed" ? "negotiation" : input.status === "cancelled" || input.status === "no_show" ? "qualified" : input.status === "requested" ? "inspection_requested" : "inspection";
   const leadUpdate = await admin.from("crm_leads").update({ stage: leadStage, updated_at: new Date().toISOString() }).eq("id", existing.lead_id).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
   if (leadUpdate.error) throw leadUpdate.error;
   return data as LimitlessInspection;
