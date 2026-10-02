@@ -2,9 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { completeClientOnboarding, ensureClientOnboardingProfile, getClientOnboardingProfile, saveClientOnboardingProfile, type SaveOnboardingInput } from "@/lib/client-workspace-onboarding";
 
-const cleanText = (value: unknown, max = 500) => typeof value === "string" ? value.trim().slice(0, max) : undefined;
+const cleanText = (value: unknown, max = 5000) => typeof value === "string" ? value.trim().slice(0, max) : undefined;
 const cleanList = (value: unknown) => Array.isArray(value) ? [...new Set(value.map((item) => String(item).trim()).filter(Boolean))].slice(0, 30) : undefined;
-const parseStep = (value: unknown) => { const step = Number(value); return Number.isInteger(step) && step >= 1 && step <= 4 ? step : undefined; };
+const cleanKnowledge = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, typeof item === "string" ? item.trim().slice(0, 10000) : ""]).filter(([, item]) => item));
+};
+const cleanWhatsApp = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  return {
+    connection_path: raw.connection_path === "already_have_whatsapp_business" ? "already_have_whatsapp_business" : "need_help",
+    preferred_number: typeof raw.preferred_number === "string" ? raw.preferred_number.trim().slice(0, 60) : undefined,
+  };
+};
+const parseStep = (value: unknown) => { const step = Number(value); return Number.isInteger(step) && step >= 1 && step <= 5 ? step : undefined; };
 
 function validateEmail(value: string | null | undefined, field: string) {
   if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error(`${field} must be a valid email address.`);
@@ -33,11 +45,15 @@ export async function POST(request: NextRequest) {
     const session = await requireSession(); const body = await request.json().catch(() => ({}));
     if (body.action !== "complete") return NextResponse.json({ error: "Unsupported onboarding action." }, { status: 400 });
     const profile = await getClientOnboardingProfile(session.organizationId);
-    if (!profile?.business_name?.trim() || !profile.industry?.trim()) throw new Error("Business name and industry are required.");
-    if (!profile.business_goals?.length) throw new Error("Select at least one business goal.");
-    if (!profile.human_contact_email?.trim()) throw new Error("A human contact email is required.");
-    validateEmail(profile.human_contact_email, "Human contact email");
-    const result = await completeClientOnboarding(session.organizationId, session.userId);
-    return NextResponse.json({ ok: true, result, next: "/portal/agents/select" });
+    if (!profile?.business_name?.trim()) throw new Error("Business name is required.");
+    if (!profile.business_description?.trim()) throw new Error("Tell us what your business does.");
+    if (!profile.ai_requirements?.trim()) throw new Error("Tell us what you want your AI to handle.");
+    if (!profile.business_goals?.length) throw new Error("Choose at least one AI outcome.");
+    if (!profile.business_knowledge || Object.values(profile.business_knowledge).every((value) => !String(value || "").trim())) {
+      throw new Error("Add at least some business knowledge so we can prepare your AI accurately.");
+    }
+    const submitted = await submitClientOnboarding(session.organizationId, session.userId);
+    if (!submitted) throw new Error("Your setup request could not be submitted.");
+    return NextResponse.json({ ok: true, status: submitted.status, next: "/portal" });
   } catch (error) { return failure(error); }
 }
