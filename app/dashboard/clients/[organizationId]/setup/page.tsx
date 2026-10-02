@@ -6,6 +6,7 @@ import AgentAllocationControl from "../../AgentAllocationControl";
 import AgentConfigurationControl from "../../AgentConfigurationControl";
 import ClientModelAssignmentControl from "../../ClientModelAssignmentControl";
 import ClientStatusControl from "../../ClientStatusControl";
+import ClientTestingApprovalControl from "../../ClientTestingApprovalControl";
 import MaiaRuntimeControl from "../../MaiaRuntimeControl";
 import ProvisionFromBriefControl from "../../ProvisionFromBriefControl";
 
@@ -202,6 +203,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
           })}
           {!agents.length ? <p className="admin-empty">Assign an AI worker before testing.</p> : null}
         </div>
+        {agents.length ? <ClientTestingApprovalControl organizationId={organizationId} agents={agents.map((agent) => ({ id: agent.id, name: agent.name }))} /> : null}
       </section>
 
       <section className="admin-panel" id="launch">
