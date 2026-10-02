@@ -84,6 +84,7 @@ export async function updatePlanStatusAction(formData: FormData) {
   await requireAdmin();
   const planId = String(formData.get("payment_plan_id") || "");
   const status = String(formData.get("status") || "active");
+  if (!["active","due_soon","overdue","completed","paused","cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
   await updatePaymentPlan(planId, { status, reminders_enabled: !["completed", "cancelled", "paused"].includes(status) });
   revalidatePath("/dashboard/limitless/payments");
 }
