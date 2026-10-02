@@ -128,15 +128,8 @@ async function notifyHandoffAssignee(input:{
       organizationId:input.organizationId,
       to:str(pref.whatsapp_phone),
       text:`New customer handoff: ${input.customerName}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
-      deliveryMode:"template",
-      templatePurpose:"internal_handoff",
-      variables:{
-        customer_name:input.customerName,
-        stage:input.stageName||"Not set",
-        summary:input.summary.slice(0,900),
-        next_action:input.nextAction||"Review customer conversation",
-        handoff_id:input.handoffId,
-      },
+      deliveryMode:"direct",
+      recipientType:"internal_staff",
     });
     await admin.from("handoff_notifications").update({
       status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
