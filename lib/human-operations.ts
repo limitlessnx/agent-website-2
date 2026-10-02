@@ -124,11 +124,6 @@ async function notifyHandoffAssignee(input:{
   if(notificationError) throw notificationError;
 
   try{
-    const {data:lastInbound}=await admin.from("crm_messages").select("created_at")
-      .eq("organization_id",input.organizationId)
-      .eq("direction","inbound")
-      .eq("conversation_id",input.conversationId)
-      .order("created_at",{ascending:false}).limit(1).maybeSingle();
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
       to:str(pref.whatsapp_phone),
