@@ -9,6 +9,11 @@ const page = fs.readFileSync("app/dashboard/clients/[organizationId]/setup/page.
 const control = fs.readFileSync("app/dashboard/clients/ProvisionFromBriefControl.tsx", "utf8");
 const catalog = fs.readFileSync("lib/agent-catalog.ts", "utf8");
 const readinessMigration = fs.readFileSync("supabase/migrations/202610020002_expose_service_readiness_refresh.sql", "utf8");
+const adminTest = fs.readFileSync("app/api/admin/clients/run-test/route.ts", "utf8");
+const requestApproval = fs.readFileSync("app/api/admin/clients/request-approval/route.ts", "utf8");
+const decideApproval = fs.readFileSync("app/api/admin/clients/decide-approval/route.ts", "utf8");
+const statusControl = fs.readFileSync("app/dashboard/clients/ClientStatusControl.tsx", "utf8");
+const testingControl = fs.readFileSync("app/dashboard/clients/ClientTestingApprovalControl.tsx", "utf8");
 
 test("brief provisioning is tenant-scoped and uses the new outcome brief", () => {
   assert.match(provision, /client_onboarding_profiles/);
@@ -64,4 +69,40 @@ test("agent allocation persistence can preserve existing manual selections", () 
   assert.match(catalog, /input\.preserveExisting/);
   assert.match(readinessMigration, /private\.refresh_agent_runtime_readiness/);
   assert.match(readinessMigration, /grant execute/);
+});
+
+
+test("admin test gate records tenant-scoped passed runs and refreshes readiness", () => {
+  assert.match(adminTest, /getAdminSession/);
+  assert.match(adminTest, /agent_test_runs/);
+  assert.match(adminTest, /organization_id.*organizationId/);
+  assert.match(adminTest, /refresh_agent_runtime_readiness/);
+  assert.match(adminTest, /status: "testing"/);
+});
+
+test("approval workflow uses existing approval records and remains tenant scoped", () => {
+  assert.match(requestApproval, /agent_approval_requests/);
+  assert.match(requestApproval, /status: "submitted"/);
+  assert.match(requestApproval, /organization_id.*organizationId/);
+  assert.match(decideApproval, /status: decision/);
+  assert.match(decideApproval, /reviewed_by/);
+  assert.match(decideApproval, /status: decision === "approved" ? "published" : "testing"/);
+  assert.match(decideApproval, /refresh_agent_runtime_readiness/);
+});
+
+test("client launch status enforces test and approval records", () => {
+  assert.match(status, /agent_test_runs/);
+  assert.match(status, /agent_approval_requests/);
+  assert.match(status, /status === "testing"/);
+  assert.match(status, /status === "awaiting_approval"/);
+  assert.match(status, /approval\.status === "approved"/);
+});
+
+test("setup UI exposes explicit test and approval actions", () => {
+  assert.match(page, /ClientTestingApprovalControl/);
+  assert.match(testingControl, /run-test/);
+  assert.match(testingControl, /request-approval/);
+  assert.match(testingControl, /decide-approval/);
+  assert.match(testingControl, /does not invoke a live model/);
+  assert.match(statusControl, /Update onboarding status/);
 });
