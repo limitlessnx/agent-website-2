@@ -112,5 +112,8 @@ test("setup UI exposes live test and approval actions", () => {
   assert.match(testingControl, /decide-approval/);
   assert.match(testingControl, /real tenant AgentRuntimeSDK/);
   assert.match(testingControl, /does not send WhatsApp messages/);
+  assert.match(testingControl, /approvals/);
+  assert.match(testingControl, /canRequest/);
+  assert.match(testingControl, /canApprove/);
   assert.match(statusControl, /Update onboarding status/);
 });
