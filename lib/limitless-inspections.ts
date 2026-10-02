@@ -74,13 +74,18 @@ export async function bookLimitlessInspection(input: {
   if (scheduled.getTime() <= Date.now()) throw new Error("Inspection must be scheduled in the future.");
 
   const admin = createAdminClient();
-  const { data: lead, error: leadError } = await admin.from("crm_leads")
-    .select("id,customer_id,stage,assigned_agent_id")
-    .eq("id", leadId)
-    .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
-    .maybeSingle();
-  if (leadError) throw leadError;
-  if (!lead) throw new Error("Limitless CRM lead was not found.");
+  let lead: { id: string; customer_id?: string | null; stage?: string | null; assigned_agent_id?: string | null } | null = null;
+  if (LIMITLESS_REALTY_ORGANIZATION_ID === "b15f21b4-5697-4d21-9421-8a34eae3476d") {
+    const { data, error } = await admin.from("leads").select("id,name,phone,status").eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("Limitless Realty lead was not found.");
+    lead = { id: data.id, customer_id: null, stage: data.status || null, assigned_agent_id: null };
+  } else {
+    const { data, error } = await admin.from("crm_leads").select("id,customer_id,stage,assigned_agent_id").eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("Limitless CRM lead was not found.");
+    lead = data;
+  }
 
   const propertyName = clean(input.propertyName, 240) || null;
   const timezone = clean(input.timezone, 80) || "Africa/Lagos";
@@ -118,13 +123,24 @@ export async function bookLimitlessInspection(input: {
   if (error) throw error;
 
   const detailsPatch = { inspection_id: inspection.id, inspection_status: "booked", inspection_scheduled_at: scheduledIso, inspection_property_name: propertyName };
-  const current = await admin.from("crm_leads").select("details").eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
+  const current = LIMITLESS_REALTY_ORGANIZATION_ID === "b15f21b4-5697-4d21-9421-8a34eae3476d"
+    ? await admin.from("leads").select("notes").eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle()
+    : await admin.from("crm_leads").select("details").eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).maybeSingle();
   if (current.error) throw current.error;
-  const leadUpdate = await admin.from("crm_leads").update({
-    stage: "inspection",
-    details: { ...(current.data?.details || {}), ...detailsPatch },
-    updated_at: now,
-  }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
+  const leadUpdate = LIMITLESS_REALTY_ORGANIZATION_ID === "b15f21b4-5697-4d21-9421-8a34eae3476d"
+    ? await admin.from("leads").update({
+        status: "inspection",
+        viewing_booked: true,
+        viewing_datetime: scheduledIso,
+        property_interest: propertyName,
+        notes: [String((current.data as any)?.notes || ""), propertyName ? `Inspection booked for ${propertyName} at ${scheduledIso}` : `Inspection booked at ${scheduledIso}`].filter(Boolean).join("\n"),
+        updated_at: now,
+      }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+    : await admin.from("crm_leads").update({
+        stage: "inspection",
+        details: { ...(current.data?.details || {}), ...detailsPatch },
+        updated_at: now,
+      }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
   if (leadUpdate.error) throw leadUpdate.error;
 
   return inspection as LimitlessInspection;
