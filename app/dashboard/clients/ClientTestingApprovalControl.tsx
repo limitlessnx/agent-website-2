@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-type Agent = { id: string; name: string };\ntype Readiness = { agent_id: string; readiness_score: number | null };\ntype Approval = { agent_id: string; status: string; created_at: string };
+type Agent = { id: string; name: string };
+type Readiness = { agent_id: string; readiness_score: number | null };
+type Approval = { agent_id: string; status: string; created_at: string };
 export default function ClientTestingApprovalControl({ organizationId, agents, readiness, approvals }: { organizationId: string; agents: Agent[]; readiness: Readiness[]; approvals: Map<string, Approval> }) {
   const router = useRouter();
   const [message, setMessage] = useState("Hello, I would like to learn more about your services.");
@@ -17,7 +19,8 @@ export default function ClientTestingApprovalControl({ organizationId, agents, r
       router.refresh();
     } catch (error) { setNotice(error instanceof Error ? error.message : "The gate action failed."); } finally { setBusy(""); }
   }
-  const ready = new Map(readiness.map(item => [item.agent_id, Number(item.readiness_score || 0)]));\n  return (
+  const ready = new Map(readiness.map(item => [item.agent_id, Number(item.readiness_score || 0)]));
+  return (
     <div className="admin-list" style={{ marginTop: 16 }}>
       <div className="admin-list-row" style={{ alignItems: "flex-start", display: "grid", gap: 10 }}>
         <div><strong>Live runtime test</strong><span>Sends the test message through the real tenant AgentRuntimeSDK and records the actual response. It does not send WhatsApp messages or execute proposed tools.</span></div>
