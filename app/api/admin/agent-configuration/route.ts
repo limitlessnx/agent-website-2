@@ -120,6 +120,12 @@ export async function PATCH(request: NextRequest) {
     }).eq("id", agentId).eq("organization_id", organizationId);
     if (updateError) throw updateError;
 
+    const { error: readinessError } = await admin.rpc("refresh_agent_runtime_readiness", {
+      p_organization_id: organizationId,
+      p_agent_id: agentId,
+    });
+    if (readinessError) throw readinessError;
+
     const { data: existingAssignments, error: assignmentReadError } = await admin.from("agent_workflow_assignments").select("id,workflow_definition_id").eq("organization_id", organizationId).eq("agent_id", agentId);
     if (assignmentReadError) throw assignmentReadError;
     const removeIds = (existingAssignments || []).filter((a) => !workflowIds.includes(a.workflow_definition_id)).map((a) => a.id);
