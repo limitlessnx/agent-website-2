@@ -11,12 +11,16 @@ import {
 } from "@/components/admin/ServerIcons";
 import PlanEntitlementsPanel from "@/components/portal/PlanEntitlementsPanel";
 import { getClientSession } from "@/lib/client-auth";
-import { getClientPortalSummary } from "@/lib/client-portal-data";
+import { getClientPortalSummary, type PortalAgent, type PortalWorkflow, type PortalWorkflowRun } from "@/lib/client-portal-data";
 import { getFluxWalletSummary } from "@/lib/flux-credits";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
+
+async function safeWalletSummary(organizationId: string) {
+  try { return await getFluxWalletSummary(organizationId); } catch { return null; }
+}
 
 function formatDate(value?: string | null) {
   if (!value) return "Never";
@@ -42,13 +46,13 @@ export default async function ClientPortalPage() {
   const admin = createAdminClient();
   const [summary, wallet, whatsappBinding] = await Promise.all([
     getClientPortalSummary(session.organizationId),
-    getFluxWalletSummary(session.organizationId).catch(() => null),
+    safeWalletSummary(session.organizationId),
     (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
-  const activeAgents = summary.agents.filter((agent) => ["published", "testing"].includes(agent.status)).length;
-  const activeWorkflows = summary.workflows.filter((workflow) => workflow.status === "active").length;
-  const successfulRuns = summary.runs.filter((run) => run.status === "succeeded").length;
+  const activeAgents = summary.agents.filter((agent: PortalAgent) => ["published", "testing"].includes(agent.status)).length;
+  const activeWorkflows = summary.workflows.filter((workflow: PortalWorkflow) => workflow.status === "active").length;
+  const successfulRuns = summary.runs.filter((run: PortalWorkflowRun) => run.status === "succeeded").length;
   const failedRuns = summary.runs.filter((run) => ["failed", "timed_out", "cancelled", "error"].includes(run.status.toLowerCase()));
   const attentionAgents = summary.agents.filter((agent) => ["error", "disabled", "paused"].includes(agent.status.toLowerCase()));
   const trialDays = trialDaysRemaining(wallet?.trialEndsAt || null);
@@ -136,7 +140,7 @@ export default async function ClientPortalPage() {
           </div>
 
           <div className="portal-list">
-            {failedRuns.slice(0, 3).map((run) => (
+            {failedRuns.slice(0, 3).map((run: PortalWorkflowRun) => (
               <Link className="portal-list-row portal-list-link" href="/portal/systems" key={run.id}>
                 <div>
                   <strong>{friendlyWorkflowName(run.workflow_key)}</strong>
@@ -145,7 +149,7 @@ export default async function ClientPortalPage() {
                 <em>Review</em>
               </Link>
             ))}
-            {attentionAgents.slice(0, 2).map((agent) => (
+            {attentionAgents.slice(0, 2).map((agent: PortalAgent) => (
               <Link className="portal-list-row portal-list-link" href="/portal/agents" key={agent.id}>
                 <div>
                   <strong>{agent.name}</strong>
@@ -189,7 +193,7 @@ export default async function ClientPortalPage() {
           <Link href="/portal/agents">View all agents <ChevronRight size={14} /></Link>
         </div>
         <div className="portal-ai-team-grid">
-          {summary.agents.slice(0, 3).map((agent) => (
+          {summary.agents.slice(0, 3).map((agent: PortalAgent) => (
             <Link href="/portal/agents" className="portal-ai-team-card" key={agent.id}>
               <span className="portal-agent-icon"><Bot size={20} /></span>
               <div>
