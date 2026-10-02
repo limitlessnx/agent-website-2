@@ -20,6 +20,7 @@ async function authorized(request: Request) {
 function reminderIntervalDays(frequency: string) {
   const normalized = frequency.trim().toLowerCase().replace(/[-\s]+/g, "_");
   if (["monthly", "month", "every_month", "30_days", "30_day"].includes(normalized)) return 30;
+  if (["weekly", "week", "every_week", "7_days", "7_day"].includes(normalized)) return 7;
   if (["biweekly", "bi_weekly", "fortnightly", "every_2_weeks", "2_weeks", "14_days", "14_day"].includes(normalized)) return 14;
   return DEFAULT_REMINDER_INTERVAL_DAYS;
 }
@@ -107,9 +108,19 @@ export async function GET(request: Request) {
       .limit(1)
       .maybeSingle();
 
-    const anchor = lastAttempt?.scheduled_for
-      ? new Date(lastAttempt.scheduled_for)
-      : new Date(String(plan.created_at));
+    const { data: latestPayment } = await admin
+      .from("payment_records")
+      .select("payment_date,created_at")
+      .eq("organization_id", LIMITLESS_REALTY_ORG)
+      .eq("payment_plan_id", plan.id)
+      .order("payment_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const paymentAnchor = latestPayment?.payment_date ? new Date(`${latestPayment.payment_date}T00:00:00Z`) : null;
+    const reminderAnchor = lastAttempt?.scheduled_for ? new Date(lastAttempt.scheduled_for) : new Date(String(plan.created_at));
+    const anchor = paymentAnchor && paymentAnchor.getTime() > reminderAnchor.getTime() ? paymentAnchor : reminderAnchor;
 
     if (Number.isNaN(anchor.getTime())) continue;
 
