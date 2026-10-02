@@ -10,13 +10,13 @@ function firstName(value:string){return value.trim().split(/\s+/)[0]||"there"}
 export async function POST(request:NextRequest){
  try{
   const body=await request.json().catch(()=>({}));
-  const fullName=String(body.full_name||"").trim(),email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
+  const fullName=String(body.full_name||"").trim(),email=String(body.email||"").trim().toLowerCase(),password=String(body.password||""),passwordConfirmation=String(body.password_confirmation||"");
   const invitationToken=String(body.invitation_token||"").trim(),joiningOrganization=Boolean(invitationToken);
   const companyName=String(body.company_name||"").trim(),companySlug=slugify(String(body.company_slug||companyName));
   const templateSlug=String(body.template_slug||"").trim()||undefined,agentFamilyName=String(body.agent_family_name||companyName).trim();
   if(fullName.length<2)return NextResponse.json({error:"Full name is required."},{status:400});
   if(!/^\S+@\S+\.\S+$/.test(email))return NextResponse.json({error:"A valid email is required."},{status:400});
-  if(password.length<8)return NextResponse.json({error:"Password must contain at least 8 characters."},{status:400});
+  if(password.length<8)return NextResponse.json({error:"Password must contain at least 8 characters."},{status:400});\n  if(password!==passwordConfirmation)return NextResponse.json({error:"Passwords do not match."},{status:400});
   if(!joiningOrganization&&companyName.length<2)return NextResponse.json({error:"Company name is required."},{status:400});
   if(!joiningOrganization&&!companySlug)return NextResponse.json({error:"A valid company slug is required."},{status:400});
 
