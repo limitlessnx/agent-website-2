@@ -71,13 +71,20 @@ test("agent allocation persistence can preserve existing manual selections", () 
   assert.match(readinessMigration, /grant execute/);
 });
 
-
-test("admin test gate records tenant-scoped passed runs and refreshes readiness", () => {
+test("admin test gate performs a real tenant-scoped runtime execution", () => {
   assert.match(adminTest, /getAdminSession/);
+  assert.match(adminTest, /runtime_executions/);
+  assert.match(adminTest, /runPhase12Agent/);
+  assert.match(adminTest, /internalRuntimeIdentity/);
+  assert.match(adminTest, /preflightChargeableFluxAi/);
+  assert.match(adminTest, /recordChargeableFluxAiUsage/);
   assert.match(adminTest, /agent_test_runs/);
   assert.match(adminTest, /organization_id.*organizationId/);
+  assert.match(adminTest, /tools_not_executed: true/);
+  assert.match(adminTest, /external_delivery: "not_sent"/);
   assert.match(adminTest, /refresh_agent_runtime_readiness/);
   assert.match(adminTest, /status: "testing"/);
+  assert.doesNotMatch(adminTest, /fetch\(.*internal\/runtime/);
 });
 
 test("approval workflow uses existing approval records and remains tenant scoped", () => {
@@ -98,11 +105,12 @@ test("client launch status enforces test and approval records", () => {
   assert.match(status, /approval\.status === "approved"/);
 });
 
-test("setup UI exposes explicit test and approval actions", () => {
+test("setup UI exposes live test and approval actions", () => {
   assert.match(page, /ClientTestingApprovalControl/);
   assert.match(testingControl, /run-test/);
   assert.match(testingControl, /request-approval/);
   assert.match(testingControl, /decide-approval/);
-  assert.match(testingControl, /does not invoke a live model/);
+  assert.match(testingControl, /real tenant AgentRuntimeSDK/);
+  assert.match(testingControl, /does not send WhatsApp messages/);
   assert.match(statusControl, /Update onboarding status/);
 });
