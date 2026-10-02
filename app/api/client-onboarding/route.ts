@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
-import { completeClientOnboarding, ensureClientOnboardingProfile, getClientOnboardingProfile, saveClientOnboardingProfile, type SaveOnboardingInput } from "@/lib/client-workspace-onboarding";
+import { ensureClientOnboardingProfile, getClientOnboardingProfile, saveClientOnboardingProfile, type SaveOnboardingInput } from "@/lib/client-workspace-onboarding";
 
 const cleanText = (value: unknown, max = 5000) => typeof value === "string" ? value.trim().slice(0, max) : undefined;
 const cleanList = (value: unknown) => Array.isArray(value) ? [...new Set(value.map((item) => String(item).trim()).filter(Boolean))].slice(0, 30) : undefined;
@@ -24,9 +24,9 @@ function validateEmail(value: string | null | undefined, field: string) {
 
 function sanitize(body: Record<string, unknown>): SaveOnboardingInput {
   const payload: SaveOnboardingInput = {
-    current_step: parseStep(body.current_step), business_name: cleanText(body.business_name, 160), industry: cleanText(body.industry, 120), website: cleanText(body.website, 300), country: cleanText(body.country, 100), timezone: cleanText(body.timezone, 100), business_email: cleanText(body.business_email, 254), phone: cleanText(body.phone, 60), staff_size: cleanText(body.staff_size, 40), requested_agents: [], business_goals: cleanList(body.business_goals), channels: cleanList(body.channels), existing_tools: cleanList(body.existing_tools), human_contact_name: cleanText(body.human_contact_name, 160), human_contact_email: cleanText(body.human_contact_email, 254), notes: cleanText(body.notes, 5000),
+    current_step: parseStep(body.current_step), business_name: cleanText(body.business_name, 160), industry: cleanText(body.industry, 120), website: cleanText(body.website, 300), country: cleanText(body.country, 100), timezone: cleanText(body.timezone, 100), business_email: cleanText(body.business_email, 254), phone: cleanText(body.phone, 60), staff_size: cleanText(body.staff_size, 40), business_description: cleanText(body.business_description, 5000), ai_requirements: cleanText(body.ai_requirements, 5000), business_knowledge: cleanKnowledge(body.business_knowledge), whatsapp_preferences: cleanWhatsApp(body.whatsapp_preferences), requested_agents: [], business_goals: cleanList(body.business_goals), channels: ["WhatsApp"], existing_tools: [], human_contact_name: undefined, human_contact_email: undefined, notes: undefined,
   };
-  validateEmail(payload.business_email, "Business email"); validateEmail(payload.human_contact_email, "Human contact email"); return payload;
+  validateEmail(payload.business_email, "Business email"); return payload;
 }
 
 async function requireSession() { const session = await getClientSession(); if (!session) throw new Error("Authentication required."); return session; }
