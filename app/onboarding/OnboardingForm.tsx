@@ -116,6 +116,19 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
     </section>}
 
     {error&&<p className="onboarding-error" role="alert">{error}</p>}
-    <div className="onboarding-actions"><button type="button" className="back" disabled={step===1||saving} onClick={()=>setStep(Math.max(1,step-1))}><ArrowLeft size={17}/> Back</button>{step<5?<button type="button" className="next" disabled={saving} onClick={next}>{saving?<Loader2 className="spin" size={17}:null} Save and continue <ArrowRight size={17}/></button>:<button type="button" className="next" disabled={saving} onClick={submit}>{saving?<Loader2 className="spin" size={17}:<Check size={17}/>} Submit setup</button>}</div>
+    <div className="onboarding-actions">
+      <button type="button" className="back" disabled={step===1||saving} onClick={()=>setStep(Math.max(1,step-1))}>
+        <ArrowLeft size={17}/> Back
+      </button>
+      {step < 5 ? (
+        <button type="button" className="next" disabled={saving} onClick={next}>
+          {saving ? <Loader2 className="spin" size={17}/> : null} Save and continue <ArrowRight size={17}/>
+        </button>
+      ) : (
+        <button type="button" className="next" disabled={saving} onClick={submit}>
+          {saving ? <Loader2 className="spin" size={17}/> : <Check size={17}/>} Submit setup
+        </button>
+      )}
+    </div>
   </div>;
 }
