@@ -11,6 +11,7 @@ type Handoff={
   follow_up_required?:boolean;follow_up_due_at?:string|null;follow_up_status?:string|null;assigned_to_email?:string|null;
   customer_name?:string|null;
   metadata?:Record<string,unknown>|null;
+  whatsapp_notification_status?:string|null; whatsapp_notification_error?:string|null;
 };
 type Approval={
   id:string;approval_type:string;title:string;description?:string|null;risk_level:string;status:string;
@@ -68,6 +69,7 @@ export default function HumanOperationsPanel({
           {questions.length?<span><strong>Customer questions:</strong> {questions.join(" · ")}</span>:null}
           {item.next_action?<span><strong>Next action:</strong> {item.next_action}</span>:null}
           {item.assigned_to_email?<span><strong>Assigned to:</strong> {item.assigned_to_email}</span>:null}
+          <span><strong>WhatsApp handover:</strong> {item.whatsapp_notification_status?item.whatsapp_notification_status.replaceAll("_"," "):"Not attempted"}{item.whatsapp_notification_error?" · "+item.whatsapp_notification_error:""}</span>
           <small>
             {item.sla_due_at?"SLA due "+new Date(item.sla_due_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):"No SLA"}
             {item.follow_up_status?" · follow-up "+item.follow_up_status.replaceAll("_"," "):""}
