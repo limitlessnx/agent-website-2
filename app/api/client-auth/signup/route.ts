@@ -16,7 +16,8 @@ export async function POST(request:NextRequest){
   const templateSlug=String(body.template_slug||"").trim()||undefined,agentFamilyName=String(body.agent_family_name||companyName).trim();
   if(fullName.length<2)return NextResponse.json({error:"Full name is required."},{status:400});
   if(!/^\S+@\S+\.\S+$/.test(email))return NextResponse.json({error:"A valid email is required."},{status:400});
-  if(password.length<8)return NextResponse.json({error:"Password must contain at least 8 characters."},{status:400});\n  if(password!==passwordConfirmation)return NextResponse.json({error:"Passwords do not match."},{status:400});
+  if(password.length<8)return NextResponse.json({error:"Password must contain at least 8 characters."},{status:400});
+  if(password!==passwordConfirmation)return NextResponse.json({error:"Passwords do not match."},{status:400});
   if(!joiningOrganization&&companyName.length<2)return NextResponse.json({error:"Company name is required."},{status:400});
   if(!joiningOrganization&&!companySlug)return NextResponse.json({error:"A valid company slug is required."},{status:400});
 
