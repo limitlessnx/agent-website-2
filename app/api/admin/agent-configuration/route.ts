@@ -13,26 +13,25 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function buildSuggestedPrompt(agent: { name: string; agent_type: string | null }, submission: any) {
-  const info = submission?.business_information || {};
-  const services = submission?.business_services || {};
-  const comms = submission?.communication_details || {};
-  const automation = submission?.automation_requirements || {};
-  const resources = submission?.business_resources || {};
-  const businessName = text(info.businessName) || "this organization";
+function knowledgeText(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  return Object.entries(value as Record<string, unknown>)
+    .filter(([, item]) => item !== null && item !== undefined && String(item).trim())
+    .map(([key, item]) => `${key.replaceAll("_", " ")}: ${Array.isArray(item) ? item.join(", ") : String(item)}`)
+    .join("\n");
+}
+
+function buildSuggestedPrompt(agent: { name: string; agent_type: string | null }, profile: any) {
+  const businessName = text(profile?.business_name) || "this organization";
   const role = agent.name || agent.agent_type || "AI agent";
+  const knowledge = knowledgeText(profile?.business_knowledge);
   const lines = [
     `You are the ${role} for ${businessName}.`,
-    text(info.businessDescription) ? `Business: ${text(info.businessDescription)}` : "",
-    text(services.productsServices) ? `Products/services: ${text(services.productsServices)}` : "",
-    text(services.targetCustomers) ? `Target customers: ${text(services.targetCustomers)}` : "",
-    text(services.productDetails) ? `Commercial details: ${text(services.productDetails)}` : "",
-    text(comms.businessHours) ? `Business hours: ${text(comms.businessHours)}` : "",
-    text(automation.goals) ? `Primary goals: ${text(automation.goals)}` : "",
-    text(automation.tasks) ? `Primary tasks: ${text(automation.tasks)}` : "",
-    text(automation.handoffRules) ? `Human handoff rules: ${text(automation.handoffRules)}` : "",
-    text(automation.systemMessage) ? `Tone and behaviour requested by the client: ${text(automation.systemMessage)}` : "",
-    text(resources.businessDetails) ? `Additional approved business rules: ${text(resources.businessDetails)}` : "",
+    text(profile?.business_description) ? `Business: ${text(profile.business_description)}` : "",
+    text(profile?.ai_requirements) ? `What this AI should handle: ${text(profile.ai_requirements)}` : "",
+    knowledge ? `Approved business knowledge:\n${knowledge}` : "",
+    Array.isArray(profile?.business_goals) && profile.business_goals.length ? `Requested outcomes: ${profile.business_goals.join(", ")}` : "",
+    `Primary channel: WhatsApp.`,
     "Use only approved tenant knowledge and connected tenant tools. Do not invent prices, policies, availability or facts. Ask for missing information when needed.",
     "Keep this tenant's data isolated from every other organization. Escalate to the configured human contact whenever a request requires approval, pricing discretion, an exception, or information you cannot verify.",
   ];
@@ -68,15 +67,17 @@ export async function GET(request: NextRequest) {
     await ensureOrg(admin, organizationId);
     const ids = await assignedAgentIds(admin, organizationId);
 
-    const [agentsResult, submissionResult, workflowsResult, assignmentsResult, routesResult] = await Promise.all([
+    const [agentsResult, profileResult, legacyResult, workflowsResult, assignmentsResult, routesResult] = await Promise.all([
       ids.length ? admin.from("agents").select("id,name,agent_type,status,system_prompt,communication_channels").eq("organization_id", organizationId).in("id", ids).order("created_at") : Promise.resolve({ data: [], error: null }),
+      admin.from("client_onboarding_profiles").select("business_name,business_description,ai_requirements,business_knowledge,business_goals,whatsapp_preferences").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("client_onboarding_submissions").select("business_information,business_services,communication_details,automation_requirements,business_resources").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("workflow_definitions").select("id,workflow_key,name,description,provider,agent_type,channel,role,status").eq("status", "ready").order("name"),
       admin.from("agent_workflow_assignments").select("id,agent_id,workflow_definition_id,role,status").eq("organization_id", organizationId),
       admin.from("agent_orchestration_routes").select("id,source_agent_id,source_workflow_definition_id,target_type,target_agent_id,target_workflow_definition_id,target_channel,trigger_event,status,configuration").eq("organization_id", organizationId).order("created_at"),
     ]);
-    for (const result of [agentsResult, submissionResult, workflowsResult, assignmentsResult, routesResult]) if (result.error) throw result.error;
-    const agents = (agentsResult.data || []).map((agent) => ({ ...agent, suggested_prompt: buildSuggestedPrompt(agent, submissionResult.data) }));
+    for (const result of [agentsResult, profileResult, legacyResult, workflowsResult, assignmentsResult, routesResult]) if (result.error) throw result.error;
+    const profile = profileResult.data || legacyResult.data;
+    const agents = (agentsResult.data || []).map((agent) => ({ ...agent, suggested_prompt: buildSuggestedPrompt(agent, profile) }));
     return NextResponse.json({ agents, workflows: workflowsResult.data || [], assignments: assignmentsResult.data || [], routes: routesResult.data || [] });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load agent configuration.";
