@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await admin.from("agent_test_runs").insert({
       organization_id: organizationId,
       agent_id: agentId,
-      initiated_by: session.userId,
+      initiated_by: null,
       test_type: "admin_conversation",
       input: { message },
       output: {
