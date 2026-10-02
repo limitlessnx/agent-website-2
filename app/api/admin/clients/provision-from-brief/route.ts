@@ -79,10 +79,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No marketplace agent matches the client's requested outcomes. Review the catalog before provisioning." }, { status: 409 });
     }
 
+    const { data: existingSelections, error: existingSelectionsError } = await admin
+      .from("organization_agent_selections")
+      .select("agent_key")
+      .eq("organization_id", organizationId);
+    if (existingSelectionsError) throw existingSelectionsError;
+
+    const existingKeys = (existingSelections || []).map((row) => text(row.agent_key)).filter(Boolean);
+    const mergedKeys = [...new Set([...existingKeys, ...selected])];
+
     const allocation = await saveOrganizationAgentSelections({
       organizationId,
-      agentKeys: selected,
+      agentKeys: mergedKeys,
       allocationSource: "admin",
+      preserveExisting: true,
     });
 
     const { data: provisioning, error: provisioningError } = await admin.rpc("provision_selected_agent_allocations", {
@@ -105,13 +115,18 @@ export async function POST(request: NextRequest) {
     if (agentIds.length) {
       const { data: agents, error: agentsError } = await admin
         .from("agents")
-        .select("id,name,agent_type")
+        .select("id,name,agent_type,system_prompt,communication_channels,configuration")
         .eq("organization_id", organizationId)
         .in("id", agentIds);
       if (agentsError) throw agentsError;
 
       const selectedAgents = agents || [];
       for (const agent of selectedAgents) {
+        const currentConfiguration = (agent.configuration || {}) as Record<string, unknown>;
+        const manuallyConfigured = currentConfiguration.configuration_source === "super_admin"
+          || currentConfiguration.brief_prompt_generated === false;
+        if (manuallyConfigured) continue;
+
         const channels = (String(agent.agent_type || "").includes("voice") || String(agent.agent_type || "").includes("call"))
           ? ["voice"]
           : ["whatsapp"];
@@ -119,8 +134,11 @@ export async function POST(request: NextRequest) {
           system_prompt: promptFor(agent, profile),
           communication_channels: channels,
           configuration: {
+            ...currentConfiguration,
             onboarding_profile_id: profile.id,
             provisioning_source: "client_outcome_brief",
+            configuration_source: "client_outcome_brief",
+            brief_prompt_generated: true,
             business_knowledge: profile.business_knowledge || {},
             ai_requirements: profile.ai_requirements,
             business_description: profile.business_description,
@@ -145,6 +163,8 @@ export async function POST(request: NextRequest) {
       ok: true,
       status: "configuration",
       selectedAgentKeys: selected,
+      preservedAgentKeys: existingKeys,
+      effectiveAgentKeys: mergedKeys,
       provisionedAgentCount: agentIds.length,
       provisioning,
       allocation: { ...allocation.allocationContext },
