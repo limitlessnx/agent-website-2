@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 
-type MetricIcon = "leads" | "conversations" | "followups" | "qualified";
+type MetricIcon = "leads" | "conversations" | "followups" | "qualified" | "revenue";
 
 export type OrganizationHomeMetric = {
   label: string;
