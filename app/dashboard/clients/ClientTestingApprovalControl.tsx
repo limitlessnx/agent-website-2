@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-type Agent = { id: string; name: string };
-export default function ClientTestingApprovalControl({ organizationId, agents }: { organizationId: string; agents: Agent[] }) {
+type Agent = { id: string; name: string };\ntype Readiness = { agent_id: string; readiness_score: number | null };\ntype Approval = { agent_id: string; status: string; created_at: string };
+export default function ClientTestingApprovalControl({ organizationId, agents, readiness, approvals }: { organizationId: string; agents: Agent[]; readiness: Readiness[]; approvals: Map<string, Approval> }) {
   const router = useRouter();
   const [message, setMessage] = useState("Hello, I would like to learn more about your services.");
   const [busy, setBusy] = useState("");
@@ -17,7 +17,7 @@ export default function ClientTestingApprovalControl({ organizationId, agents }:
       router.refresh();
     } catch (error) { setNotice(error instanceof Error ? error.message : "The gate action failed."); } finally { setBusy(""); }
   }
-  return (
+  const ready = new Map(readiness.map(item => [item.agent_id, Number(item.readiness_score || 0)]));\n  return (
     <div className="admin-list" style={{ marginTop: 16 }}>
       <div className="admin-list-row" style={{ alignItems: "flex-start", display: "grid", gap: 10 }}>
         <div><strong>Live runtime test</strong><span>Sends the test message through the real tenant AgentRuntimeSDK and records the actual response. It does not send WhatsApp messages or execute proposed tools.</span></div>
@@ -27,10 +27,10 @@ export default function ClientTestingApprovalControl({ organizationId, agents }:
         </div>
       </div>
       <div className="admin-list-row">
-        <div><strong>Approval</strong><span>Submit a passed live test for approval, then record the Super Admin decision.</span></div>
+        <div><strong>Approval</strong><span>Approval follows a fresh live runtime test. Launch remains blocked until every agent is approved.</span></div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {agents.map(agent => <button key={"request-" + agent.id} className="admin-button secondary" disabled={Boolean(busy)} onClick={() => call("/api/admin/clients/request-approval", { organizationId, agentId: agent.id })}>{busy === "/api/admin/clients/request-approval" ? "Submitting..." : "Request " + agent.name}</button>)}
-          {agents.map(agent => <button key={"approve-" + agent.id} className="admin-button" disabled={Boolean(busy)} onClick={() => call("/api/admin/clients/decide-approval", { organizationId, agentId: agent.id, decision: "approved" })}>{busy === "/api/admin/clients/decide-approval" ? "Approving..." : "Approve " + agent.name}</button>)}
+          {agents.map(agent => { const approval = approvals.get(agent.id); const canRequest = ready.get(agent.id) === 100 && approval?.status !== "approved"; return <button key={"request-" + agent.id} className="admin-button secondary" disabled={Boolean(busy) || !canRequest} onClick={() => call("/api/admin/clients/request-approval", { organizationId, agentId: agent.id })}>{approval?.status === "submitted" ? "Approval pending" : approval?.status === "changes_requested" ? "Resubmit " + agent.name : "Request " + agent.name}</button>; })}
+          {agents.map(agent => { const approval = approvals.get(agent.id); const canApprove = approval?.status === "submitted"; return <button key={"approve-" + agent.id} className="admin-button" disabled={Boolean(busy) || !canApprove} onClick={() => call("/api/admin/clients/decide-approval", { organizationId, agentId: agent.id, decision: "approved" })}>{canApprove ? "Approve " + agent.name : approval?.status === "approved" ? "Approved" : "Approve " + agent.name}</button>; })}
         </div>
       </div>
       {notice ? <p className="admin-form-message">{notice}</p> : null}
