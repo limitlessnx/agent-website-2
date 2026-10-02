@@ -35,9 +35,9 @@ test("D4 handoff assignment resolves rules agent destination and staff notificat
   assert.match(operations,/handoff_assignment_rules/);
   assert.match(operations,/human_handoff_destination/);
   assert.match(operations,/organization_member_notification_preferences/);
-  assert.match(operations,/deliveryMode:"auto"/);
-  assert.match(operations,/lastCustomerMessageAt/);
-  assert.match(operations,/templatePurpose:"follow_up_outside_24h"/);
+  assert.match(operations,/deliveryMode:"template"/);
+  assert.match(operations,/templatePurpose:"internal_handoff"/);
+  assert.doesNotMatch(operations,/templatePurpose:"follow_up_outside_24h"/);
   assert.match(operations,/conversation_summary/);
 });
 
@@ -161,11 +161,14 @@ test("D4 Maia handoff contract keeps AI takeover and tenant isolation explicit",
 });
 
 
-test("D4 outside-window handoff reuses the approved update template contract",()=>{
+test("D4 handoff uses the dashboard internal_handoff template contract",()=>{
   const operations=read("lib/human-operations.ts");
   const delivery=read("lib/whatsapp-delivery.ts");
-  assert.match(operations,/templatePurpose:"follow_up_outside_24h"/);
-  assert.match(delivery,/follow_up_outside_24h/);
+  const settings=read("app/portal/settings/HandoffContinuityPanel.tsx");
+  assert.match(operations,/deliveryMode:"template"/);
+  assert.match(operations,/templatePurpose:"internal_handoff"/);
+  assert.match(delivery,/internal_handoff/);
   assert.match(delivery,/No active approved WhatsApp template/);
-  assert.doesNotMatch(operations,/templatePurpose:"internal_handoff"/);
+  assert.match(settings,/approved <strong>internal_handoff<\\/strong> template/);
+  assert.doesNotMatch(operations,/templatePurpose:"follow_up_outside_24h"/);
 });
