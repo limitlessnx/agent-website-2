@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
     const [{ data: agent, error: agentError }, { data: tests, error: testError }, { data: integrations, error: integrationError }] = await Promise.all([
-      admin.from("agents").select("id,name,system_prompt,communication_channels,human_handoff_destination").eq("organization_id", organizationId).eq("id", agentId).maybeSingle(),
+      admin.from("agents").select("id,name,system_prompt,communication_channels,human_handoff_destination,updated_at").eq("organization_id", organizationId).eq("id", agentId).maybeSingle(),
       admin.from("agent_test_runs").select("id,status,created_at").eq("organization_id", organizationId).eq("agent_id", agentId).eq("status", "passed").order("created_at", { ascending: false }).limit(1),
       admin.from("organization_integrations").select("provider,status").eq("organization_id", organizationId),
     ]);
@@ -25,11 +25,13 @@ export async function POST(request: NextRequest) {
 
     const requiredChannels = Array.isArray(agent.communication_channels) ? agent.communication_channels.map(String) : [];
     const connected = new Set((integrations || []).filter((item) => ["connected", "active", "healthy"].includes(String(item.status))).map((item) => String(item.provider).toLowerCase()));
-    const missingChannels = requiredChannels.filter((channel) => !connected.has(channel.toLowerCase()));
+    const whatsappRequired = requiredChannels.some((channel) => channel.toLowerCase() === "whatsapp");
+    const whatsappConnected = whatsappRequired ? Boolean((await admin.from("whatsapp_twilio_bindings").select("status").eq("organization_id", organizationId).eq("status", "connected").maybeSingle()).data) : true;
+    const missingChannels = requiredChannels.filter((channel) => channel.toLowerCase() === "whatsapp" ? !whatsappConnected : !connected.has(channel.toLowerCase()));
     const readiness = {
       prompt_ready: Boolean(agent.system_prompt?.trim()),
       handoff_ready: Boolean(agent.human_handoff_destination && Object.keys(agent.human_handoff_destination).length),
-      test_passed: Boolean(tests?.length),
+      test_passed: Boolean(tests?.length && new Date(String(tests[0].created_at)).getTime() >= new Date(String(agent.updated_at)).getTime()),
       required_channels: requiredChannels,
       missing_channels: missingChannels,
     };
