@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getPaymentPlans, getPaymentRecords, formatNaira } from "@/lib/limitless-payments";
-import { recordPaymentAction, updatePlanStatusAction, updatePlanCadenceAction } from "../actions";
+import { recordPaymentAction, updatePlanStatusAction } from "../actions";
 import PaymentSubmitButton from "../PaymentSubmitButton";
 import "../payments.css";
 
@@ -32,7 +32,7 @@ export default async function InstallmentsPage() {
           <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
           <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
           <div className="payment-meta"><span>Next due: {plan.next_due_date || "Not set"}</span><span>Cadence: {plan.frequency || "biweekly"}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Paused"}</span></div>
-          <form action={updatePlanCadenceAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="frequency" defaultValue={plan.frequency || "biweekly"}><option value="weekly">Weekly</option><option value="biweekly">Bi-weekly</option><option value="monthly">Monthly</option></select><PaymentSubmitButton className="payment-status-button">Set cadence</PaymentSubmitButton></form>
+          <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><input type="hidden" name="status" value={plan.status}/><select name="frequency" defaultValue={plan.frequency || "biweekly"}><option value="weekly">Weekly</option><option value="biweekly">Bi-weekly</option><option value="monthly">Monthly</option></select><PaymentSubmitButton className="payment-status-button">Set cadence</PaymentSubmitButton></form>
           <form action={updatePlanStatusAction} className="payment-status-form">
             <input type="hidden" name="payment_plan_id" value={plan.id}/>
             <select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select>
