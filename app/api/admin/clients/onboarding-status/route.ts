@@ -18,26 +18,29 @@ export async function PATCH(request: NextRequest) {
     const admin = createAdminClient();
     const { data: profile, error: profileError } = await admin
       .from("client_onboarding_profiles")
-      .select("id,organization_id,status")
+      .select("id,organization_id,status,whatsapp_preferences")
       .eq("id", id)
       .maybeSingle();
     if (profileError) throw profileError;
     if (!profile) return NextResponse.json({ error: "Onboarding record was not found." }, { status: 404 });
 
     if (status === "live") {
-      const [{ data: agents, error: agentsError }, { data: readiness, error: readinessError }, { data: models, error: modelsError }] = await Promise.all([
+      const [{ data: agents, error: agentsError }, { data: readiness, error: readinessError }, { data: models, error: modelsError }, { data: whatsapp, error: whatsappError }] = await Promise.all([
         admin.from("agents").select("id,system_prompt").eq("organization_id", profile.organization_id),
         admin.from("agent_runtime_readiness").select("agent_id,readiness_score,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready").eq("organization_id", profile.organization_id),
         admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", profile.organization_id),
+        admin.from("whatsapp_twilio_bindings").select("status").eq("organization_id", profile.organization_id).maybeSingle(),
       ]);
       if (agentsError) throw agentsError;
       if (readinessError) throw readinessError;
       if (modelsError) throw modelsError;
+      if (whatsappError) throw whatsappError;
 
       const agentRows = agents || [];
       const readinessByAgent = new Map((readiness || []).map((row) => [String(row.agent_id), row]));
       const ready = agentRows.length > 0
         && (models || []).length > 0
+        && whatsapp?.status === "connected"
         && agentRows.every((agent) => {
           const snapshot = readinessByAgent.get(String(agent.id));
           return Boolean(
@@ -54,7 +57,7 @@ export async function PATCH(request: NextRequest) {
           );
         });
       if (!ready) {
-        return NextResponse.json({ error: "Launch blocked. Every agent needs a configured prompt, assigned model and 100% runtime readiness before the tenant can go live." }, { status: 409 });
+        return NextResponse.json({ error: "Launch blocked. Every agent needs a configured prompt, assigned model and 100% runtime readiness, and the tenant WhatsApp connection must be connected before the tenant can go live." }, { status: 409 });
       }
     }
 
