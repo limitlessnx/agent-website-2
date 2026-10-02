@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       .in("status", ["draft", "submitted", "changes_requested"]).maybeSingle();
 
     const payload = {
-      organization_id: organizationId, agent_id: agentId, requested_by: session.userId,
+      organization_id: organizationId, agent_id: agentId, requested_by: null,
       status: "submitted", readiness_snapshot: readiness,
       client_notes: String(body.notes || "").trim() || null,
       submitted_at: new Date().toISOString(), updated_at: new Date().toISOString(),
