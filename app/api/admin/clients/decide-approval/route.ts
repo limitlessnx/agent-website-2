@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const { data: updated, error: updateError } = await admin.from("agent_approval_requests").update({
       status: decision,
-      reviewed_by: session.userId,
+      reviewed_by: null,
       reviewer_notes: String(body.notes || "").trim() || null,
       reviewed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
