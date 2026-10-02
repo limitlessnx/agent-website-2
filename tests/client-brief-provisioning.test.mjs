@@ -8,6 +8,7 @@ const status = fs.readFileSync("app/api/admin/clients/onboarding-status/route.ts
 const page = fs.readFileSync("app/dashboard/clients/[organizationId]/setup/page.tsx", "utf8");
 const control = fs.readFileSync("app/dashboard/clients/ProvisionFromBriefControl.tsx", "utf8");
 const catalog = fs.readFileSync("lib/agent-catalog.ts", "utf8");
+const readinessMigration = fs.readFileSync("supabase/migrations/202610020002_expose_service_readiness_refresh.sql", "utf8");
 
 test("brief provisioning is tenant-scoped and uses the new outcome brief", () => {
   assert.match(provision, /client_onboarding_profiles/);
@@ -21,6 +22,10 @@ test("brief provisioning is tenant-scoped and uses the new outcome brief", () =>
   assert.match(provision, /status: "configuration"/);
   assert.match(provision, /preserveExisting: true/);
   assert.match(provision, /existingKeys/);
+  assert.match(provision, /knowledge_sources/);
+  assert.match(provision, /source_type: "manual_note"/);
+  assert.match(provision, /status: "ready"/);
+  assert.match(provision, /refresh_agent_runtime_readiness/);
   assert.match(provision, /brief_prompt_generated: true/);
   assert.match(provision, /configuration_source === "super_admin"/);
   assert.doesNotMatch(provision, /Account SID|Auth Token|WABA|webhook URL/);
@@ -44,6 +49,8 @@ test("launch status is tenant-scoped and gated by readiness", () => {
   assert.match(status, /readiness_score/);
   assert.match(status, /organization_ai_model_assignments/);
   assert.match(status, /Launch blocked/);
+  assert.match(status, /whatsapp_twilio_bindings/);
+  assert.match(status, /whatsapp\?\.status === "connected"/);
 });
 
 test("setup exposes controlled brief provisioning without auto-launch", () => {
@@ -55,4 +62,6 @@ test("setup exposes controlled brief provisioning without auto-launch", () => {
 test("agent allocation persistence can preserve existing manual selections", () => {
   assert.match(catalog, /preserveExisting\?: boolean/);
   assert.match(catalog, /input\.preserveExisting/);
+  assert.match(readinessMigration, /private\.refresh_agent_runtime_readiness/);
+  assert.match(readinessMigration, /grant execute/);
 });
