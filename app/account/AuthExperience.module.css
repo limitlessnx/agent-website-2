@@ -198,6 +198,42 @@
   transition: border-color .18s ease, background .18s ease, box-shadow .18s ease !important;
 }
 
+.card :global(.auth-password-control) {
+  position: relative;
+  display: block;
+}
+.card :global(.auth-password-control input) {
+  padding-right: 58px !important;
+}
+.card :global(.auth-password-toggle) {
+  position: absolute !important;
+  top: 50% !important;
+  right: 11px !important;
+  transform: translateY(-50%) !important;
+  min-height: 30px !important;
+  padding: 4px 7px !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  color: #a78bfa !important;
+  font: inherit !important;
+  font-size: .7rem !important;
+  font-weight: 760 !important;
+  cursor: pointer !important;
+}
+.card :global(.auth-password-toggle:hover) {
+  color: #fff !important;
+  background: rgba(168,85,247,.08) !important;
+}
+.card :global(.auth-inline-row) {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -7px;
+  font-size: .75rem;
+}
+.card :global(.auth-inline-row a) {
+  color: #a78bfa !important;
+}
 .card :global(.admin-login-card input:hover) {
   border-color: rgba(255,255,255,.16) !important;
 }
