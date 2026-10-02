@@ -24,23 +24,54 @@ export async function PATCH(request: NextRequest) {
     if (profileError) throw profileError;
     if (!profile) return NextResponse.json({ error: "Onboarding record was not found." }, { status: 404 });
 
+    if (status === "testing" || status === "awaiting_approval") {
+      const { data: gateAgents, error: gateAgentsError } = await admin
+        .from("agents").select("id").eq("organization_id", profile.organization_id);
+      if (gateAgentsError) throw gateAgentsError;
+      const agentIds = (gateAgents || []).map((row) => String(row.id));
+      if (!agentIds.length) return NextResponse.json({ error: "Testing gate blocked. Provision at least one AI worker first." }, { status: 409 });
+
+      const { data: passedTests, error: passedTestsError } = await admin
+        .from("agent_test_runs").select("agent_id,created_at").eq("organization_id", profile.organization_id)
+        .eq("status", "passed").in("agent_id", agentIds).order("created_at", { ascending: false });
+      if (passedTestsError) throw passedTestsError;
+      const testedIds = new Set((passedTests || []).map((row) => String(row.agent_id)));
+      if (agentIds.some((id) => !testedIds.has(id))) {
+        return NextResponse.json({ error: "Testing gate blocked. Every assigned agent needs a passed test run." }, { status: 409 });
+      }
+
+      if (status === "awaiting_approval") {
+        const { data: approvals, error: approvalsError } = await admin
+          .from("agent_approval_requests").select("agent_id,status").eq("organization_id", profile.organization_id)
+          .in("agent_id", agentIds).in("status", ["submitted", "approved"]);
+        if (approvalsError) throw approvalsError;
+        const approvalIds = new Set((approvals || []).map((row) => String(row.agent_id)));
+        if (agentIds.some((id) => !approvalIds.has(id))) {
+          return NextResponse.json({ error: "Approval gate blocked. Every assigned agent needs a submitted approval request." }, { status: 409 });
+        }
+      }
+    }
+
     if (status === "live") {
-      const [{ data: agents, error: agentsError }, { data: readiness, error: readinessError }, { data: models, error: modelsError }, { data: whatsapp, error: whatsappError }] = await Promise.all([
+      const [{ data: agents, error: agentsError }, { data: readiness, error: readinessError }, { data: models, error: modelsError }, { data: whatsapp, error: whatsappError }, { data: approvals, error: approvalsError }] = await Promise.all([
         admin.from("agents").select("id,system_prompt").eq("organization_id", profile.organization_id),
         admin.from("agent_runtime_readiness").select("agent_id,readiness_score,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready").eq("organization_id", profile.organization_id),
         admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", profile.organization_id),
         admin.from("whatsapp_twilio_bindings").select("status").eq("organization_id", profile.organization_id).maybeSingle(),
+        admin.from("agent_approval_requests").select("agent_id,status").eq("organization_id", profile.organization_id).eq("status", "approved"),
       ]);
       if (agentsError) throw agentsError;
       if (readinessError) throw readinessError;
       if (modelsError) throw modelsError;
       if (whatsappError) throw whatsappError;
+      if (approvalsError) throw approvalsError;
 
       const agentRows = agents || [];
       const readinessByAgent = new Map((readiness || []).map((row) => [String(row.agent_id), row]));
       const ready = agentRows.length > 0
         && (models || []).length > 0
         && whatsapp?.status === "connected"
+        && agentRows.every((agent) => (approvals || []).some((approval) => String(approval.agent_id) === String(agent.id) && approval.status === "approved"))
         && agentRows.every((agent) => {
           const snapshot = readinessByAgent.get(String(agent.id));
           return Boolean(
