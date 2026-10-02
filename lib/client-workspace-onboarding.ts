@@ -19,10 +19,6 @@ export type ClientOnboardingProfile = {
   ai_requirements: string | null;
   business_knowledge: Record<string, string>;
   whatsapp_preferences: { connection_path?: "already_have_whatsapp_business" | "need_help"; preferred_number?: string };
-  business_description: string | null;
-  ai_requirements: string | null;
-  business_knowledge: Record<string, string>;
-  whatsapp_preferences: { connection_path?: "already_have_whatsapp_business" | "need_help"; preferred_number?: string };
   requested_agents: string[];
   business_goals: string[];
   channels: string[];
