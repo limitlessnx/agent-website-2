@@ -17,7 +17,7 @@ const whatsappActivationRoute = await readFile(new URL("../app/api/integrations/
 const limitlessConnectionsPage = await readFile(new URL("../app/dashboard/limitless/integrations/page.tsx", import.meta.url), "utf8");
 const whatsappIntegrationPanel = await readFile(new URL("../components/integrations/WhatsAppIntegrationPanel.tsx", import.meta.url), "utf8");
 
-test("Maia Trigger runtime validates tenant context before execution", () => {
+test("Maia Trigger runtime validates tenant context before execution", () => { // CI recheck
   assert.match(triggerTask, /validateMaiaTenantContext\(payload\)/);
   assert.match(runtimeStore, /\.eq\("organization_id", payload\.organizationId\)/);
   assert.match(runtimeStore, /Maia agent is not assigned to this organization/);
