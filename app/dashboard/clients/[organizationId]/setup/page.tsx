@@ -7,6 +7,7 @@ import AgentConfigurationControl from "../../AgentConfigurationControl";
 import ClientModelAssignmentControl from "../../ClientModelAssignmentControl";
 import ClientStatusControl from "../../ClientStatusControl";
 import MaiaRuntimeControl from "../../MaiaRuntimeControl";
+import ProvisionFromBriefControl from "../../ProvisionFromBriefControl";
 
 export const dynamic = "force-dynamic";
 
@@ -137,7 +138,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
       <section className="admin-panel" id="brief">
         <div className="admin-panel-header">
           <div><p className="admin-kicker">Client brief</p><h2>What the client asked Fluxknight to build</h2><p>Review this before configuring anything. It is the source of truth for the initial AI setup.</p></div>
-          <span className={stageState(businessComplete && briefComplete && knowledgeComplete)}>{businessComplete && briefComplete && knowledgeComplete ? "Brief ready" : "Review needed"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}><span className={stageState(businessComplete && briefComplete && knowledgeComplete)}>{businessComplete && briefComplete && knowledgeComplete ? "Brief ready" : "Review needed"}</span>{profile ? <ProvisionFromBriefControl organizationId={organizationId} disabled={!(businessComplete && briefComplete && knowledgeComplete)} /> : null}</div>
         </div>
         <div className="admin-form-grid">
           <div className="admin-list-row"><Building2 size={16} /><div><strong>Business</strong><span>{profile?.business_name || organization.name} · {profile?.industry || "Business type not provided"}</span></div></div>
