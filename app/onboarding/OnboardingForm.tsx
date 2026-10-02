@@ -93,7 +93,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
         ["policies","Policies","Refunds, cancellations, eligibility, delivery, privacy or other rules."],
         ["booking","Booking / sales process","Explain how a customer moves from enquiry to booking or purchase."],
       ].map(([key,label,placeholder])=><label key={key}>{label}<textarea rows={4} value={form.business_knowledge[key]||""} onChange={e=>setForm({...form,business_knowledge:{...form.business_knowledge,[key]:e.target.value}})} placeholder={placeholder}/></label>)}</div>
-      <p className="knowledge-note">Website sources and documents can be connected by the Fluxknight team during setup. You do not need to configure APIs or webhooks.</p>
+      <p className="knowledge-note">Website sources and documents can be connected by the Fluxknight team during setup.</p>
     </section>}
 
     {step===4&&<section><div className="setup-card"><div className="setup-card-icon"><ShieldCheck size={20}/></div><div><strong>WhatsApp AI agent is included in your trial.</strong><p>We handle the technical setup. You only need to tell us which starting path applies to you.</p></div></div>
