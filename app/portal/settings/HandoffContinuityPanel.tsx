@@ -105,7 +105,7 @@ export default function HandoffContinuityPanel({members,preferences,rules,canMan
       <div><button type="submit" disabled={busy}>{busy?"Saving...":"Add rule"}</button></div>
     </form>:null}
 
-    <p className="portal-empty">WhatsApp staff alerts require an approved <strong>internal_handoff</strong> template. Dashboard handoff visibility remains available even if WhatsApp notification delivery fails.</p>
+    <p className="portal-empty">WhatsApp staff alerts use direct internal messaging and do not depend on a customer template. Dashboard handoff visibility remains available even if WhatsApp notification delivery fails.</p>
     {message?<p className="portal-empty">{message}</p>:null}
   </section>;
 }
