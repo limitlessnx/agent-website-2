@@ -37,6 +37,7 @@ type Organization = { id: string; name: string; slug: string; status: string };
 type Integration = { id: string; provider: string; display_name: string; status: string };
 type Agent = { id: string; name: string; status: string; agent_type: string | null; system_prompt: string | null; communication_channels: string[] };
 type Readiness = { agent_id: string; readiness_score: number | null };
+type Approval = { agent_id: string; status: string; created_at: string };
 type AiModel = { id: string; provider: string; model_key: string; display_name: string };
 type ModelAssignment = { model_id: string };
 
@@ -69,6 +70,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
     readinessResult,
     modelsResult,
     modelAssignmentsResult,
+    approvalsResult,
   ] = await Promise.all([
     admin.from("organizations").select("id,name,slug,status").eq("id", organizationId).maybeSingle(),
     admin.from("client_onboarding_profiles").select(
@@ -79,6 +81,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
     admin.from("agent_runtime_readiness").select("agent_id,readiness_score").eq("organization_id", organizationId),
     admin.from("ai_model_catalog").select("id,provider,model_key,display_name").eq("status", "active").order("provider").order("display_name"),
     admin.from("organization_ai_model_assignments").select("model_id").eq("organization_id", organizationId).order("assigned_at"),
+    admin.from("agent_approval_requests").select("agent_id,status,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }),
   ]);
 
   if (organizationResult.error) throw organizationResult.error;
@@ -93,6 +96,9 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const models = (modelsResult.data || []) as AiModel[];
   const modelAssignments = (modelAssignmentsResult.data || []) as ModelAssignment[];
   const currentModelIds = modelAssignments.map((assignment) => assignment.model_id);
+  const approvals = (approvalsResult.data || []) as Approval[];
+  const latestApprovalByAgent = new Map<string, Approval>();
+  for (const approval of approvals) if (!latestApprovalByAgent.has(approval.agent_id)) latestApprovalByAgent.set(approval.agent_id, approval);
   const knowledge = knowledgeEntries(profile?.business_knowledge);
 
   const businessComplete = Boolean(profile?.business_name && profile?.business_email);
@@ -203,7 +209,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
           })}
           {!agents.length ? <p className="admin-empty">Assign an AI worker before testing.</p> : null}
         </div>
-        {agents.length ? <ClientTestingApprovalControl organizationId={organizationId} agents={agents.map((agent) => ({ id: agent.id, name: agent.name }))} /> : null}
+        {agents.length ? <ClientTestingApprovalControl organizationId={organizationId} agents={agents.map((agent) => ({ id: agent.id, name: agent.name }))} readiness={readiness} approvals={latestApprovalByAgent} /> : null}
       </section>
 
       <section className="admin-panel" id="launch">
