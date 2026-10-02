@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
-import { bookLimitlessInspection } from "@/lib/limitless-inspections";
+import { requestLimitlessInspection } from "@/lib/limitless-inspections";
 
 export type MaiaRuntimeInput = {
   organizationId: string;
@@ -173,20 +173,20 @@ function toolSet(): ToolDefinition[] {
       },
     },
     {
-      name: "book_property_inspection",
-      description: "Book a verified Limitless Realty property inspection for the current WhatsApp customer. Only use after the customer has clearly agreed to the property and a specific future date/time has been established. This creates the inspection, moves the Limitless lead to inspection stage, and schedules reminder/follow-up tasks.",
+      name: "request_property_inspection",
+      description: "Create an inspection request for the current Limitless Realty customer. Maia must never confirm or book the inspection. The requested date/time is only a proposal. An admin must review/update the date/time in the dashboard and explicitly confirm the inspection before it becomes booked/confirmed.",
       parameters: {
         type: "object",
         additionalProperties: false,
         properties: {
           leadId: { type: "string", description: "Existing Limitless Realty lead ID when known." },
-          scheduledAt: { type: "string", description: "ISO-8601 date/time for the agreed inspection." },
+          requestedAt: { type: "string", description: "ISO-8601 date/time requested by the customer. This is not a confirmed booking." },
           propertyId: { type: "string" },
           propertyName: { type: "string" },
           timezone: { type: "string", description: "IANA timezone, default Africa/Lagos." },
           notes: { type: "string" }
         },
-        required: ["scheduledAt", "propertyName"]
+        required: ["requestedAt", "propertyName"]
       },
       execute: async (input, ctx) => {
         if (ctx.organizationId !== "b15f21b4-5697-4d21-9421-8a34eae3476d") throw new Error("This inspection tool is currently enabled only for Limitless Realty.");
@@ -199,16 +199,16 @@ function toolSet(): ToolDefinition[] {
           leadId = text(lead?.id);
         }
         if (!leadId) throw new Error("I could not resolve the customer's Limitless Realty lead. Save the lead before booking the inspection.");
-        const result = await bookLimitlessInspection({
+        const result = await requestLimitlessInspection({
           leadId,
-          scheduledAt: text(input.scheduledAt),
+          requestedAt: text(input.requestedAt),
           propertyId: text(input.propertyId) || undefined,
           propertyName: text(input.propertyName),
           timezone: text(input.timezone) || "Africa/Lagos",
           source: "maia_whatsapp",
           notes: text(input.notes) || undefined,
         });
-        return { ok: true, inspection: result };
+        return { ok: true, inspection: result, status: "requested", admin_confirmation_required: true };
       },
     },
     {
@@ -372,7 +372,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
     "Never access, infer, or expose another organization's data. Never invent prices, availability, legal status, land documentation facts, policies, credentials or integrations. For land/property documentation questions, use approved tenant knowledge and clearly distinguish education from legal advice.",
     "For named property questions, use search_properties before relying on memory. For property pictures, videos, brochures or documents, resolve one exact property ID first and then use get_property_media. Never guess a property match or attach media from a different property.",
     "Use tools when a tool can verify a fact or perform a useful low-risk action. Do not call tools merely to appear autonomous.",
-    "For a property inspection, only book_property_inspection after the customer has explicitly agreed to inspect and a specific future date/time has been established. Never invent a time or claim an inspection is booked unless the tool succeeds.",
+    "For property inspections, Maia may only create a request after the customer asks for an inspection and provides a preferred future date/time. Never tell the customer the inspection is booked or confirmed. Tell them the request has been submitted and that an admin must confirm the date/time. Only the admin dashboard can move the request into booked/confirmed status.",
     "When a request requires approval, sensitive production change, payment, credential change, or a commitment you cannot verify, explain the limitation and create a handoff/task when appropriate.",
     `Autonomy mode: ${profile.autonomy_mode}. Maximum reasoning/tool steps: ${profile.max_steps}.`,
     `CURRENT TENANT CONTEXT:\n${JSON.stringify(business).slice(0, 30000)}`,
