@@ -155,6 +155,7 @@ export type HumanHandoffRow={
   follow_up_required?:boolean; follow_up_due_at?:string|null; follow_up_status?:string|null; notified_at?:string|null;
   customer_name?:string|null; stage_name?:string|null; assigned_to_email?:string|null;
   metadata?:Record<string,unknown>|null;
+  whatsapp_notification_status?:string|null; whatsapp_notification_error?:string|null;
   created_at:string; updated_at:string; resolution_summary?:string|null;
 };
 export type OperationApprovalRow={
@@ -183,24 +184,36 @@ export async function listHumanOperations(session:ClientSession){
   const handoffRows=(handoffsResult.data||[]) as HumanHandoffRow[];
   const customerIds=[...new Set(handoffRows.map((item)=>item.customer_id).filter(Boolean))];
   const stageIds=[...new Set(handoffRows.map((item)=>item.stage_id_at_handoff).filter(Boolean))] as string[];
-  const [customersResult,stagesResult]=await Promise.all([
+  const [customersResult,stagesResult,notificationsResult]=await Promise.all([
     customerIds.length
       ? admin.from("crm_customers").select("id,full_name,company_name").eq("organization_id",session.organizationId).in("id",customerIds)
       : Promise.resolve({data:[],error:null}),
     stageIds.length
       ? admin.from("organization_customer_stages").select("id,name").eq("organization_id",session.organizationId).in("id",stageIds)
       : Promise.resolve({data:[],error:null}),
+    handoffRows.length
+      ? admin.from("handoff_notifications").select("handoff_id,status,error_message,created_at").eq("organization_id",session.organizationId).eq("channel","whatsapp").in("handoff_id",handoffRows.map((item)=>item.id)).order("created_at",{ascending:false}).limit(200)
+      : Promise.resolve({data:[],error:null}),
   ]);
   if(customersResult.error) throw customersResult.error;
   if(stagesResult.error) throw stagesResult.error;
+  if(notificationsResult.error) throw notificationsResult.error;
   const customerNameById=new Map((customersResult.data||[]).map((row)=>[row.id,String(row.full_name||row.company_name||"Customer")]));
   const stageNameById=new Map((stagesResult.data||[]).map((row)=>[row.id,String(row.name||"")]));
+  const notificationByHandoff=new Map<string,{status:string;error_message:string|null}>();
+  for(const notification of notificationsResult.data||[]){
+    if(!notificationByHandoff.has(String(notification.handoff_id))){
+      notificationByHandoff.set(String(notification.handoff_id),{status:String(notification.status||"unknown"),error_message:notification.error_message?String(notification.error_message):null});
+    }
+  }
   const memberEmailById=new Map(members.map((member)=>[member.id,member.email||null]));
   const handoffs=handoffRows.map((item)=>({
     ...item,
     customer_name:customerNameById.get(item.customer_id)||"Customer",
     stage_name:item.stage_id_at_handoff?stageNameById.get(item.stage_id_at_handoff)||null:null,
     assigned_to_email:item.assigned_membership_id?memberEmailById.get(item.assigned_membership_id)||null:null,
+    whatsapp_notification_status:notificationByHandoff.get(item.id)?.status||null,
+    whatsapp_notification_error:notificationByHandoff.get(item.id)?.error_message||null,
   }));
 
   return {
