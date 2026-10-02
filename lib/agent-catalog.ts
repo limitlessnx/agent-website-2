@@ -122,6 +122,7 @@ export async function saveOrganizationAgentSelections(input: {
   organizationId: string;
   agentKeys: string[];
   allocationSource: "tenant" | "admin";
+  preserveExisting?: boolean;
 }) {
   const admin = createAdminClient();
   const [offerings, allocationContext] = await Promise.all([
@@ -187,8 +188,9 @@ export async function saveOrganizationAgentSelections(input: {
     .upsert(rows, { onConflict: "organization_id,agent_key" });
   if (upsertError) throw upsertError;
 
-  const removableIds = (existing || [])
-    .filter((item) => !selectedKeys.includes(item.agent_key) && !protectedStatuses.has(item.status))
+  const removableIds = input.preserveExisting
+    ? []
+    : (existing || []).filter((item) => !selectedKeys.includes(item.agent_key) && !protectedStatuses.has(item.status))
     .map((item) => item.id);
   if (removableIds.length) {
     const { error: removeError } = await admin

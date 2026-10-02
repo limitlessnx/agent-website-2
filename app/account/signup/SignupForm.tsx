@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import GoogleAuthButton from "../GoogleAuthButton";
+import PasswordField from "../PasswordField";
 
 type SignupFormProps = {
   txRef?: string;
@@ -17,13 +18,13 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const safeNext = nextPath.startsWith("/") ? nextPath : "/portal";
+  const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
   const isBasicTrial = trialPlan === "basic";
-  const loginUrl=new URL("/account/login","https://fluxknight.local");
-  if(txRef) loginUrl.searchParams.set("tx_ref",txRef);
-  loginUrl.searchParams.set("next",safeNext);
-  if(invitationToken) loginUrl.searchParams.set("invitation_token",invitationToken);
-  const loginHref=`${loginUrl.pathname}${loginUrl.search}`;
+  const loginUrl = new URL("/account/login", "https://fluxknight.local");
+  if (txRef) loginUrl.searchParams.set("tx_ref", txRef);
+  loginUrl.searchParams.set("next", safeNext);
+  if (invitationToken) loginUrl.searchParams.set("invitation_token", invitationToken);
+  const loginHref = `${loginUrl.pathname}${loginUrl.search}`;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,6 +33,13 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
 
     try {
       const data = new FormData(event.currentTarget);
+      const password = String(data.get("password") || "");
+      const passwordConfirmation = String(data.get("password_confirmation") || "");
+      if (password !== passwordConfirmation) {
+        setError("Passwords do not match.");
+        return;
+      }
+
       const email = String(data.get("email") || "").trim().toLowerCase();
       const response = await fetch("/api/client-auth/signup", {
         method: "POST",
@@ -40,7 +48,8 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
           full_name: data.get("full_name"),
           company_name: data.get("company_name"),
           email,
-          password: data.get("password"),
+          password,
+          password_confirmation: passwordConfirmation,
           payment_tx_ref: txRef || undefined,
           post_signup_path: safeNext,
           trial_plan: isBasicTrial ? "basic" : undefined,
@@ -87,7 +96,8 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
-      <label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" /></label>
+      <PasswordField name="password" label="Password" autoComplete="new-password" minLength={8} />
+      <PasswordField name="password_confirmation" label="Confirm password" autoComplete="new-password" minLength={8} />
       {error ? <p className="admin-error">{error}</p> : null}
       <button type="submit" disabled={loading}>{loading ? "Creating account..." : isBasicTrial ? "Start Free Trial" : "Create account"}</button>
       <p className="admin-muted">Already have an account? <Link href={loginHref}>Sign in</Link></p>

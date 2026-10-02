@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "app/api/admin/clients/**"
       - "app/dashboard/**"
       - "app/portal/**"
       - "components/admin/**"
@@ -13,6 +14,7 @@ on:
       - "lib/client-*.ts"
       - "lib/workflow-registry.ts"
       - "tests/dashboard-*.test.mjs"
+      - "tests/client-brief-provisioning.test.mjs"
       - "tests/portal-*.test.mjs"
       - "package.json"
       - ".github/workflows/dashboard-final-qa.yml"

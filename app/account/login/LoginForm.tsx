@@ -4,18 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import GoogleAuthButton from "../GoogleAuthButton";
+import PasswordField from "../PasswordField";
 
 export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invitationToken = "" }: { txRef?: string; nextPath?: string; invitationToken?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const safeNext = nextPath.startsWith("/") ? nextPath : "/portal";
-  const signupUrl=new URL("/account/signup","https://fluxknight.local");
-  if(txRef) signupUrl.searchParams.set("tx_ref",txRef);
-  signupUrl.searchParams.set("next",safeNext);
-  if(invitationToken) signupUrl.searchParams.set("invitation_token",invitationToken);
-  const signupHref=`${signupUrl.pathname}${signupUrl.search}`;
+  const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
+  const signupUrl = new URL("/account/signup", "https://fluxknight.local");
+  if (txRef) signupUrl.searchParams.set("tx_ref", txRef);
+  signupUrl.searchParams.set("next", safeNext);
+  if (invitationToken) signupUrl.searchParams.set("invitation_token", invitationToken);
+  const signupHref = `${signupUrl.pathname}${signupUrl.search}`;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,7 +63,8 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
       <GoogleAuthButton nextPath={safeNext} txRef={txRef} invitationToken={invitationToken} />
       <p className="admin-muted">or continue with email</p>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
-      <label>Password<input name="password" type="password" required autoComplete="current-password" /></label>
+      <PasswordField name="password" label="Password" autoComplete="current-password" />
+      <div className="auth-inline-row"><Link href={`/account/forgot-password?next=${encodeURIComponent(safeNext)}`}>Forgot password?</Link></div>
       {error ? <p className="admin-error">{error}</p> : null}
       <button type="submit" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</button>
       <p className="admin-muted">New to Fluxknight? <Link href={signupHref}>Create an account</Link></p>

@@ -24,10 +24,15 @@ async function requireAdmin() {
 export async function GET() {
   try {
     await requireAdmin();
-    const submissions = await supabaseServerRequest(
-      "client_onboarding_submissions?select=*,service_packages(id,name,slug,currency,billing_interval),organizations(id,name,slug,status)&order=created_at.desc",
-    );
-    return NextResponse.json({ submissions });
+    const [submissions, clientProfiles] = await Promise.all([
+      supabaseServerRequest(
+        "client_onboarding_submissions?select=*,service_packages(id,name,slug,currency,billing_interval),organizations(id,name,slug,status)&order=created_at.desc",
+      ),
+      supabaseServerRequest(
+        "client_onboarding_profiles?select=id,organization_id,status,business_name,industry,ai_requirements,business_knowledge,whatsapp_preferences,created_at&status=in.(submitted,configuration,testing,awaiting_approval)&order=created_at.desc&limit=100",
+      ),
+    ]);
+    return NextResponse.json({ submissions, clientProfiles });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load onboarding queue." }, { status: 401 });
   }

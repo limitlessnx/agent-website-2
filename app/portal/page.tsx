@@ -13,6 +13,7 @@ import PlanEntitlementsPanel from "@/components/portal/PlanEntitlementsPanel";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary } from "@/lib/client-portal-data";
 import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -38,9 +39,11 @@ export default async function ClientPortalPage() {
   const session = await getClientSession();
   if (!session) return null;
 
-  const [summary, wallet] = await Promise.all([
+  const admin = createAdminClient();
+  const [summary, wallet, whatsappBinding] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
+    (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
   const activeAgents = summary.agents.filter((agent) => ["published", "testing"].includes(agent.status)).length;
@@ -84,6 +87,17 @@ export default async function ClientPortalPage() {
             <small>Trial ends when time expires or credits reach zero.</small>
           </div>
           <Link className="portal-button" href="/pricing">Upgrade plan</Link>
+        </section>
+      ) : null}
+
+      {summary.onboarding?.status === "submitted" && whatsappBinding?.status !== "connected" ? (
+        <section className="portal-card portal-activation-banner" aria-label="WhatsApp setup">
+          <div>
+            <p className="portal-kicker">Next step</p>
+            <h2>Your AI setup brief is with Fluxknight.</h2>
+            <p>While our team prepares your AI agent, connect the WhatsApp Business number you want to use during your trial.</p>
+          </div>
+          <Link className="portal-button" href="/portal/integrations">Connect WhatsApp</Link>
         </section>
       ) : null}
 
