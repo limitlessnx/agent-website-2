@@ -66,7 +66,6 @@ export default function TwilioWhatsAppOnboardingPanel({
   const [binding,setBinding]=useState<Binding|null>(initialBinding);
   const [phone,setPhone]=useState(initialBinding?.sender_phone_e164||"");
   const [profileName,setProfileName]=useState(initialBinding?.sender_profile_name||"");
-  const [numberSource,setNumberSource]=useState<"customer"|"twilio_sms"|"twilio_voice">("customer");
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
@@ -141,7 +140,7 @@ export default function TwilioWhatsAppOnboardingPanel({
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          numberSource,
+          numberSource:"customer",
           senderPhoneE164:phone,
           senderProfileName:profileName,
         }),
@@ -206,11 +205,11 @@ export default function TwilioWhatsAppOnboardingPanel({
   return <section className="portal-card">
     <div className="portal-card-head"><div>
       <h2>WhatsApp</h2>
-      <p>Connect your WhatsApp Business account through Fluxknight. Meta authorization and Twilio sender registration are handled as one onboarding flow.</p>
+      <p>Connect your WhatsApp Business account through Fluxknight. Connect your business WhatsApp number. Fluxknight handles the provider setup, registration and technical configuration for you.</p>
     </div><em>{connected?"ready":status.replaceAll("_"," ")}</em></div>
 
     <div className="portal-list">
-      <div className="portal-list-row"><div><strong>Provider</strong><span>Twilio · Meta Tech Provider onboarding</span></div><em>managed</em></div>
+      <div className="portal-list-row"><div><strong>Connection</strong><span>Managed WhatsApp Business connection</span></div><em>managed</em></div>
       <div className="portal-list-row"><div><strong>WhatsApp number</strong><span>{binding?.sender_phone_e164||"Not connected yet"}</span></div><em>{binding?.twilio_sender_status||"pending"}</em></div>
       {binding?.meta_waba_id?<div className="portal-list-row"><div><strong>Business account</strong><span>Meta WABA connected</span></div><em>linked</em></div>:null}
       {binding?.last_error_message?<div className="portal-list-row"><div><strong>Needs attention</strong><span>{binding.last_error_message}</span></div><em>error</em></div>:null}
@@ -222,13 +221,6 @@ export default function TwilioWhatsAppOnboardingPanel({
       </div>
       <div className="portal-field"><label>Business display name</label>
         <input value={profileName} onChange={(e)=>setProfileName(e.target.value)} disabled={busy} placeholder="Company name" />
-      </div>
-      <div className="portal-field"><label>Phone number source</label>
-        <select value={numberSource} onChange={(e)=>setNumberSource(e.target.value as typeof numberSource)} disabled={busy}>
-          <option value="customer">Existing / customer-owned number</option>
-          <option value="twilio_sms">Twilio SMS-capable number</option>
-          <option value="twilio_voice">Twilio voice-only number</option>
-        </select>
       </div>
       <div><button type="button" onClick={()=>void start()} disabled={busy}>{busy?"Connecting...":"Connect WhatsApp with Meta"}</button></div>
     </div>:null}
