@@ -98,11 +98,20 @@ export async function PATCH(request: NextRequest) {
     await ensureOrg(admin, organizationId);
     await ensureAssignedAgent(admin, organizationId, agentId);
 
+    const { data: currentAgent, error: currentAgentError } = await admin
+      .from("agents")
+      .select("configuration")
+      .eq("id", agentId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    if (currentAgentError) throw currentAgentError;
+    if (!currentAgent) throw new Error("Assigned agent not found.");
+
     const { error: updateError } = await admin.from("agents").update({
       system_prompt: text(body.systemPrompt),
       communication_channels: channels,
       configuration: {
-        ...((await admin.from("agents").select("configuration").eq("id", agentId).eq("organization_id", organizationId).maybeSingle()).data?.configuration || {}),
+        ...((currentAgent.configuration as Record<string, unknown> | null) || {}),
         configuration_source: "super_admin",
         brief_prompt_generated: false,
         manually_configured_at: new Date().toISOString(),
