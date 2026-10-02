@@ -146,22 +146,6 @@ export async function submitClientOnboarding(
   return rows[0] || null;
 }
 
-export async function submitClientOnboarding(organizationId: string, userId: string) {
-  await assertOrganizationExists(organizationId);
-  const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
-    `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "submitted",
-        current_step: 5,
-        completed_at: new Date().toISOString(),
-      }),
-    },
-  );
-  return rows[0] || null;
-}
-
 export async function completeClientOnboarding(organizationId: string, userId: string) {
   await assertOrganizationExists(organizationId);
   return supabaseServerRequest<{
