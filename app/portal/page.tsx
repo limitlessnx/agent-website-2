@@ -43,7 +43,7 @@ export default async function ClientPortalPage() {
   const [summary, wallet, whatsappBinding] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
-    admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle().then(({data}) => data).catch(() => null),
+    (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
   const activeAgents = summary.agents.filter((agent) => ["published", "testing"].includes(agent.status)).length;
