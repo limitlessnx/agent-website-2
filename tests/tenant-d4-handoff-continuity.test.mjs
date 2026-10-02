@@ -169,6 +169,6 @@ test("D4 handoff uses the dashboard internal_handoff template contract",()=>{
   assert.match(operations,/templatePurpose:"internal_handoff"/);
   assert.match(delivery,/internal_handoff/);
   assert.match(delivery,/No active approved WhatsApp template/);
-  assert.match(settings,/approved <strong>internal_handoff<\\/strong> template/);
+  assert.ok(settings.includes("approved <strong>internal_handoff</strong> template"));
   assert.doesNotMatch(operations,/templatePurpose:"follow_up_outside_24h"/);
 });
