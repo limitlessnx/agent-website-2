@@ -8,7 +8,7 @@ const cleanKnowledge = (value: unknown) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, typeof item === "string" ? item.trim().slice(0, 10000) : ""]).filter(([, item]) => item));
 };
-const cleanWhatsApp = (value: unknown) => {
+const cleanWhatsApp = (value: unknown): SaveOnboardingInput["whatsapp_preferences"] => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
   return {
