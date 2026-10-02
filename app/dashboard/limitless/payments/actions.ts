@@ -106,3 +106,13 @@ export async function saveReminderTemplateAction(formData: FormData) {
   else await createReminderTemplate(payload);
   revalidatePath("/dashboard/limitless/payments");
 }
+
+export async function updatePlanCadenceAction(formData: FormData) {
+  await requireAdmin();
+  const planId = String(formData.get("payment_plan_id") || "");
+  const frequency = String(formData.get("frequency") || "biweekly");
+  if (!planId || !["weekly", "biweekly", "monthly"].includes(frequency)) throw new Error("Invalid reminder cadence.");
+  await updatePaymentPlan(planId, { frequency });
+  revalidatePath("/dashboard/limitless/payments");
+  revalidatePath("/dashboard/limitless/payments/installments");
+}
