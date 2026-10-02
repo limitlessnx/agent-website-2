@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -120,12 +121,81 @@ export async function POST(request: NextRequest) {
         .in("id", agentIds);
       if (agentsError) throw agentsError;
 
+      const knowledge = profile.business_knowledge && typeof profile.business_knowledge === "object"
+        ? Object.entries(profile.business_knowledge)
+            .filter(([, value]) => value !== null && value !== undefined && String(value).trim())
+            .map(([key, value]) => key.replaceAll("_", " ") + ": " + (Array.isArray(value) ? value.join(", ") : String(value)))
+            .join("\n")
+        : "";
+      const knowledgeContent = [
+        profile.business_description ? "Business description: " + profile.business_description : "",
+        profile.ai_requirements ? "AI responsibilities: " + profile.ai_requirements : "",
+        knowledge ? "Approved business knowledge:\n" + knowledge : "",
+        Array.isArray(profile.business_goals) && profile.business_goals.length ? "Requested outcomes: " + profile.business_goals.join(", ") : "",
+      ].filter(Boolean).join("\n\n").trim();
+
+      if (knowledgeContent) {
+        const checksum = createHash("sha256")
+          .update("client_outcome_brief:" + profile.id + ":" + knowledgeContent)
+          .digest("hex");
+        const { data: collection, error: collectionError } = await admin
+          .from("knowledge_collections")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .eq("slug", "business-knowledge")
+          .maybeSingle();
+        if (collectionError) throw collectionError;
+        if (collection?.id) {
+          const { data: existingSource, error: sourceReadError } = await admin
+            .from("knowledge_sources")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .eq("collection_id", collection.id)
+            .eq("checksum", checksum)
+            .maybeSingle();
+          if (sourceReadError) throw sourceReadError;
+          if (!existingSource) {
+            const { error: sourceInsertError } = await admin.from("knowledge_sources").insert({
+              organization_id: organizationId,
+              collection_id: collection.id,
+              title: "Client outcome brief",
+              source_type: "manual_note",
+              source_url: null,
+              content: knowledgeContent,
+              status: "ready",
+              checksum,
+              metadata: { source: "client_outcome_brief", onboarding_profile_id: profile.id },
+            });
+            if (sourceInsertError) throw sourceInsertError;
+          }
+          const { count, error: countError } = await admin
+            .from("knowledge_sources")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", organizationId)
+            .eq("collection_id", collection.id);
+          if (countError) throw countError;
+          const { error: collectionUpdateError } = await admin
+            .from("knowledge_collections")
+            .update({ source_count: count || 0, updated_at: new Date().toISOString() })
+            .eq("id", collection.id)
+            .eq("organization_id", organizationId);
+          if (collectionUpdateError) throw collectionUpdateError;
+        }
+      }
+
       const selectedAgents = agents || [];
       for (const agent of selectedAgents) {
         const currentConfiguration = (agent.configuration || {}) as Record<string, unknown>;
         const manuallyConfigured = currentConfiguration.configuration_source === "super_admin"
           || currentConfiguration.brief_prompt_generated === false;
-        if (manuallyConfigured) continue;
+        if (manuallyConfigured) {
+          const { error: readinessError } = await admin.rpc("refresh_agent_runtime_readiness", {
+            p_organization_id: organizationId,
+            p_agent_id: agent.id,
+          });
+          if (readinessError) throw readinessError;
+          continue;
+        }
 
         const channels = (String(agent.agent_type || "").includes("voice") || String(agent.agent_type || "").includes("call"))
           ? ["voice"]
@@ -149,6 +219,11 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         }).eq("id", agent.id).eq("organization_id", organizationId);
         if (error) throw error;
+        const { error: readinessError } = await admin.rpc("refresh_agent_runtime_readiness", {
+          p_organization_id: organizationId,
+          p_agent_id: agent.id,
+        });
+        if (readinessError) throw readinessError;
       }
     }
 
