@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     const ids = await assignedAgentIds(admin, organizationId);
 
     const [agentsResult, profileResult, legacyResult, workflowsResult, assignmentsResult, routesResult] = await Promise.all([
-      ids.length ? admin.from("agents").select("id,name,agent_type,status,system_prompt,communication_channels").eq("organization_id", organizationId).in("id", ids).order("created_at") : Promise.resolve({ data: [], error: null }),
+      ids.length ? admin.from("agents").select("id,name,agent_type,status,system_prompt,communication_channels,configuration").eq("organization_id", organizationId).in("id", ids).order("created_at") : Promise.resolve({ data: [], error: null }),
       admin.from("client_onboarding_profiles").select("business_name,business_description,ai_requirements,business_knowledge,business_goals,whatsapp_preferences").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("client_onboarding_submissions").select("business_information,business_services,communication_details,automation_requirements,business_resources").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("workflow_definitions").select("id,workflow_key,name,description,provider,agent_type,channel,role,status").eq("status", "ready").order("name"),
@@ -101,6 +101,12 @@ export async function PATCH(request: NextRequest) {
     const { error: updateError } = await admin.from("agents").update({
       system_prompt: text(body.systemPrompt),
       communication_channels: channels,
+      configuration: {
+        ...((await admin.from("agents").select("configuration").eq("id", agentId).eq("organization_id", organizationId).maybeSingle()).data?.configuration || {}),
+        configuration_source: "super_admin",
+        brief_prompt_generated: false,
+        manually_configured_at: new Date().toISOString(),
+      },
       updated_at: new Date().toISOString(),
     }).eq("id", agentId).eq("organization_id", organizationId);
     if (updateError) throw updateError;
