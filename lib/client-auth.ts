@@ -7,13 +7,16 @@ const CLIENT_SETUP_COOKIE="fluxknight_client_setup";
 const CLIENT_OAUTH_CONTEXT_COOKIE="fluxknight_oauth_context";
 const CLIENT_SESSION_TTL=60*60*24*7;
 const CLIENT_SETUP_TTL=60*60;
-const CLIENT_OAUTH_CONTEXT_TTL=60*10;\nconst CLIENT_PASSWORD_RESET_COOKIE="fluxknight_password_reset";\nconst CLIENT_PASSWORD_RESET_TTL=60*10;
+const CLIENT_OAUTH_CONTEXT_TTL=60*10;
+const CLIENT_PASSWORD_RESET_COOKIE="fluxknight_password_reset";
+const CLIENT_PASSWORD_RESET_TTL=60*10;
 
 type SupabaseAuthUser={id:string;email?:string;user_metadata?:Record<string,unknown>};
 type SupabaseAuthResponse={access_token?:string;refresh_token?:string;expires_in?:number;user?:SupabaseAuthUser;error?:string;error_description?:string;msg?:string};
 export type ClientSession={userId:string;email:string;organizationId:string;organizationSlug:string;membershipId:string;role:string;issuedAt:number};
 export type PendingClientSetupSession={userId:string;email:string;invitationToken?:string;nextPath?:string;txRef?:string;trialPlan?:""|"basic";issuedAt:number};
-export type ClientOAuthContext={nextPath:string;txRef?:string;trialPlan?:""|"basic";invitationToken?:string;issuedAt:number};\nexport type PendingPasswordReset={accessToken:string;refreshToken?:string;nextPath?:string;issuedAt:number};
+export type ClientOAuthContext={nextPath:string;txRef?:string;trialPlan?:""|"basic";invitationToken?:string;issuedAt:number};
+export type PendingPasswordReset={accessToken:string;refreshToken?:string;nextPath?:string;issuedAt:number};
 type MembershipRow={id:string;organization_id:string;status:string;organizations:{slug:string}|{slug:string}[]|null;membership_roles:Array<{roles:{slug:string}|{slug:string}[]|null}>};
 
 function projectRefFromUrl(value:string){try{return new URL(value).hostname.match(/^([a-z0-9]+)\.supabase\.co$/i)?.[1]||""}catch{return""}}
