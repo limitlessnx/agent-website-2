@@ -86,7 +86,7 @@ test("approval workflow uses existing approval records and remains tenant scoped
   assert.match(requestApproval, /organization_id.*organizationId/);
   assert.match(decideApproval, /status: decision/);
   assert.match(decideApproval, /reviewed_by/);
-  assert.match(decideApproval, /status: decision === "approved" ? "published" : "testing"/);
+  assert.match(decideApproval, /status: decision === "approved" \? "published" : "testing"/);
   assert.match(decideApproval, /refresh_agent_runtime_readiness/);
 });
 
