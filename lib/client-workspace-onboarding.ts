@@ -19,6 +19,10 @@ export type ClientOnboardingProfile = {
   ai_requirements: string | null;
   business_knowledge: Record<string, string>;
   whatsapp_preferences: { connection_path?: "already_have_whatsapp_business" | "need_help"; preferred_number?: string };
+  business_description: string | null;
+  ai_requirements: string | null;
+  business_knowledge: Record<string, string>;
+  whatsapp_preferences: { connection_path?: "already_have_whatsapp_business" | "need_help"; preferred_number?: string };
   requested_agents: string[];
   business_goals: string[];
   channels: string[];
@@ -131,6 +135,22 @@ export async function submitClientOnboarding(
   organizationId: string,
   userId: string,
 ) {
+  await assertOrganizationExists(organizationId);
+  const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
+    `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "submitted",
+        current_step: 5,
+        completed_at: new Date().toISOString(),
+      }),
+    },
+  );
+  return rows[0] || null;
+}
+
+export async function submitClientOnboarding(organizationId: string, userId: string) {
   await assertOrganizationExists(organizationId);
   const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
     `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
