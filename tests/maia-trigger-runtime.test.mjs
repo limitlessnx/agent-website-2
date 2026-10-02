@@ -33,7 +33,7 @@ test("Maia Trigger runtime is idempotent and conversation-serialized", () => {
 
 test("Maia Trigger does not retry deterministic OpenAI 4xx failures", () => {
   assert.match(triggerTask, /AbortTaskRunError/);
-  assert.match(triggerTask, /OpenAI request failed \\(4\\d\\d\\)/);
+  assert.ok(triggerTask.includes("OpenAI request failed \\(4\\d\\d\\)"));
   assert.match(triggerTask, /catchError:/);
 });
 
@@ -146,3 +146,4 @@ test("Tenant WhatsApp UI never renders stored access tokens", () => {
   assert.doesNotMatch(whatsappIntegrationPanel, /defaultValue=.*accessToken/);
   assert.match(whatsappIntegrationPanel, /type="password"/);
 });
+

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import styles from "./HumanOperationsPanel.module.css";
 
 type Handoff={
   id:string;conversation_id:string;reason:string;category:string;priority:string;status:string;
@@ -10,6 +11,8 @@ type Handoff={
   conversation_summary?:string|null;stage_name?:string|null;next_action?:string|null;outcome?:string|null;
   follow_up_required?:boolean;follow_up_due_at?:string|null;follow_up_status?:string|null;assigned_to_email?:string|null;
   customer_name?:string|null;
+  metadata?:Record<string,unknown>|null;
+  whatsapp_notification_status?:string|null; whatsapp_notification_error?:string|null;
 };
 type Approval={
   id:string;approval_type:string;title:string;description?:string|null;risk_level:string;status:string;
@@ -27,6 +30,7 @@ export default function HumanOperationsPanel({
   const [error,setError]=useState<string|null>(null);
   const canManageHandoffs=permissions.includes("handoffs.manage");
   const canManageApprovals=permissions.includes("approvals.manage");
+  const listValue=(value:unknown)=>Array.isArray(value)?value.filter((item)=>typeof item==="string"&&item.trim()).map(String):[];
 
   async function post(url:string,body:Record<string,unknown>,key:string){
     setBusy(key);setError(null);
@@ -48,21 +52,31 @@ export default function HumanOperationsPanel({
 
     {error?<p className="portal-empty">{error}</p>:null}
 
-    <div className="portal-list">
-      {handoffs.map((item)=><div className="portal-list-row" key={item.id}>
+    <div className={styles.handoffList}>
+      {handoffs.map((item)=>{
+        const structured=item.metadata&&typeof item.metadata.structured_handoff==="object"&&!Array.isArray(item.metadata.structured_handoff)
+          ? item.metadata.structured_handoff as Record<string,unknown>
+          : {};
+        const keyPoints=listValue(structured.keyPoints);
+        const questions=listValue(structured.customerQuestions);
+        return <article className={styles.handoffCard} key={item.id}>
         <div>
           <strong>{item.customer_name||"Customer"} · {item.priority.toUpperCase()}</strong>
           <span>{item.stage_name||"Stage not set"} · {item.category.replaceAll("_"," ")} · {item.status.replaceAll("_"," ")}</span>
-          <span><strong>Reason:</strong> {item.reason}</span>
+          <span><strong>Current request:</strong> {String(structured.customerIntent||item.reason||"Human assistance requested")}</span>
+          {structured.property||structured.propertyInterest?<span><strong>Property:</strong> {String(structured.property||structured.propertyInterest)}</span>:null}
           {item.conversation_summary?<span><strong>Summary:</strong> {item.conversation_summary}</span>:null}
+          {keyPoints.length?<span><strong>Key points:</strong> {keyPoints.join(" · ")}</span>:null}
+          {questions.length?<span><strong>Customer questions:</strong> {questions.join(" · ")}</span>:null}
           {item.next_action?<span><strong>Next action:</strong> {item.next_action}</span>:null}
           {item.assigned_to_email?<span><strong>Assigned to:</strong> {item.assigned_to_email}</span>:null}
+          <span><strong>WhatsApp handover:</strong> {item.whatsapp_notification_status?item.whatsapp_notification_status.replaceAll("_"," "):"Not attempted"}{item.whatsapp_notification_error?" · "+item.whatsapp_notification_error:""}</span>
           <small>
             {item.sla_due_at?"SLA due "+new Date(item.sla_due_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):"No SLA"}
             {item.follow_up_status?" · follow-up "+item.follow_up_status.replaceAll("_"," "):""}
           </small>
         </div>
-        <div className="portal-action-list" style={{minWidth:240}}>
+        <div className={styles.actions}>
           <Link href={"/portal/conversations/"+item.conversation_id}>Open conversation</Link>
           {!item.claimed_by_membership_id?
             <button type="button" disabled={busy===item.id+":claim"} onClick={()=>post(`/api/portal/handoffs/${item.id}`,{action:"claim"},item.id+":claim")}>Claim</button>:null}
@@ -94,7 +108,7 @@ export default function HumanOperationsPanel({
             }}>Resolve & keep AI off</button>
           </>:null}
         </div>
-      </div>)}
+      </article>})}
       {!handoffs.length?<p className="portal-empty">No active human handoffs.</p>:null}
     </div>
 
@@ -106,7 +120,7 @@ export default function HumanOperationsPanel({
           <span>{item.description||item.action_key}</span>
           <small>Requested {new Date(item.requested_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"})}</small>
         </div>
-        {canManageApprovals?<div className="portal-action-list" style={{minWidth:220}}>
+        {canManageApprovals?<div className={styles.actions}>
           <button type="button" disabled={busy===item.id+":approve"} onClick={()=>post(`/api/portal/approvals/${item.id}`,{decision:"approved",reason:"Approved from tenant operations queue"},item.id+":approve")}>Approve</button>
           <button type="button" disabled={busy===item.id+":reject"} onClick={()=>post(`/api/portal/approvals/${item.id}`,{decision:"rejected",reason:"Rejected from tenant operations queue"},item.id+":reject")}>Reject</button>
         </div>:null}

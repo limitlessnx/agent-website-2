@@ -329,7 +329,7 @@ export const LEO_TOOLS: LeoToolDefinition[] = [
   {
     key: "flux.system.handoff.request",
     title: "Hand customer conversation to a human",
-    description: "Request a human handoff for the current customer conversation. Include reason and, when known, category, priority, conversationSummary, stageKey, nextAction and slaMinutes. The platform pauses AI replies, assigns an authorized human when a matching tenant rule exists, records the handoff, and notifies the assignee.",
+    description: "Request a human handoff for the current customer conversation. Include reason and, when known, category, priority, conversationSummary, stageKey, nextAction and slaMinutes, plus structured customer context such as customerIntent, property/propertyInterest, keyPoints, customerQuestions, requestedDate, requestedTime, availability and followUpRequired. The platform stores that structured handoff context, pauses AI replies, assigns an authorized human when a matching tenant rule exists, records the handoff, and routes staff WhatsApp notification through the canonical 24-hour direct-or-approved-template delivery path.",
     scopes: ["internal_service"],
     readOnly: false,
     approval: "none",

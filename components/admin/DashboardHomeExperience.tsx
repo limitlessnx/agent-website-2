@@ -8,6 +8,7 @@ import {
   Target,
   Users,
   Workflow,
+  WalletCards,
 } from "@/components/admin/ServerIcons";
 import styles from "./DashboardHomeExperience.module.css";
 
@@ -15,7 +16,7 @@ type Metric = {
   label: string;
   value: number | string;
   detail: string;
-  icon: "leads" | "conversations" | "followups" | "qualified";
+  icon: "leads" | "conversations" | "followups" | "qualified" | "revenue";
 };
 
 type Notice = {
@@ -42,6 +43,7 @@ const icons = {
   conversations: MessageSquareText,
   followups: Workflow,
   qualified: Target,
+  revenue: WalletCards,
 };
 
 function noticeTone(type: string) {

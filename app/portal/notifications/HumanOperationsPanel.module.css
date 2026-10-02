@@ -1,0 +1,10 @@
+.handoffList{display:grid;gap:14px}
+.handoffCard{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,260px);gap:18px;padding:18px;border:1px solid rgba(168,85,247,.16);border-radius:18px;background:rgba(255,255,255,.018)}
+.handoffCard>div:first-child{display:grid;gap:7px;min-width:0}
+.handoffCard strong{color:rgba(255,255,255,.92)}
+.handoffCard span{color:rgba(255,255,255,.68);line-height:1.5}
+.handoffCard small{color:rgba(255,255,255,.46)}
+.actions{display:flex;align-content:flex-start;gap:7px;flex-wrap:wrap;min-width:0}
+.actions>*{flex:1 1 100%}
+.actions select,.actions button,.actions a{min-height:38px}
+@media (max-width:760px){.handoffCard{grid-template-columns:1fr;padding:14px}.actions>*{flex:1 1 100%}}

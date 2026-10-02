@@ -4,9 +4,34 @@ import type { ClientSession } from "@/lib/client-auth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 type HandoffAssignment = { membershipId:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean; source:string };
+type StructuredHandoff = {
+  customerIntent:string|null;
+  property:string|null;
+  propertyInterest:string|null;
+  keyPoints:string[];
+  customerQuestions:string[];
+  requestedDate:string|null;
+  requestedTime:string|null;
+  availability:string|null;
+  followUpRequired:boolean|null;
+};
 
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
+function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
+function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
+  return {
+    customerIntent:str(payload.customerIntent||payload.customer_intent)||null,
+    property:str(payload.property||payload.propertyTitle||payload.property_title)||null,
+    propertyInterest:str(payload.propertyInterest||payload.property_interest)||null,
+    keyPoints:stringList(payload.keyPoints||payload.key_points),
+    customerQuestions:stringList(payload.customerQuestions||payload.customer_questions),
+    requestedDate:str(payload.requestedDate||payload.requested_date)||null,
+    requestedTime:str(payload.requestedTime||payload.requested_time)||null,
+    availability:str(payload.availability)||null,
+    followUpRequired:typeof payload.followUpRequired==="boolean"?payload.followUpRequired:(typeof payload.follow_up_required==="boolean"?payload.follow_up_required:null),
+  };
+}
 
 async function deriveHandoffSummary(organizationId:string,conversationId:string,payload:Record<string,unknown>){
   const supplied=str(payload.conversationSummary||payload.conversation_summary||payload.summary);
@@ -71,7 +96,7 @@ async function resolveHandoffAssignment(input:{
 }
 
 async function notifyHandoffAssignee(input:{
-  organizationId:string; handoffId:string; membershipId:string; customerName:string; stageName:string|null;
+  organizationId:string; handoffId:string; conversationId:string; membershipId:string; customerName:string; stageName:string|null;
   summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
@@ -103,15 +128,8 @@ async function notifyHandoffAssignee(input:{
       organizationId:input.organizationId,
       to:str(pref.whatsapp_phone),
       text:`New customer handoff: ${input.customerName}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
-      deliveryMode:"template",
-      templatePurpose:"internal_handoff",
-      variables:{
-        customer_name:input.customerName,
-        stage:input.stageName||"Not set",
-        summary:input.summary.slice(0,900),
-        next_action:input.nextAction||"Review customer conversation",
-        handoff_id:input.handoffId,
-      },
+      deliveryMode:"direct",
+      recipientType:"internal_staff",
     });
     await admin.from("handoff_notifications").update({
       status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
@@ -129,6 +147,8 @@ export type HumanHandoffRow={
   conversation_summary?:string|null; stage_id_at_handoff?:string|null; next_action?:string|null; outcome?:string|null;
   follow_up_required?:boolean; follow_up_due_at?:string|null; follow_up_status?:string|null; notified_at?:string|null;
   customer_name?:string|null; stage_name?:string|null; assigned_to_email?:string|null;
+  metadata?:Record<string,unknown>|null;
+  whatsapp_notification_status?:string|null; whatsapp_notification_error?:string|null;
   created_at:string; updated_at:string; resolution_summary?:string|null;
 };
 export type OperationApprovalRow={
@@ -145,7 +165,7 @@ export async function listHumanOperations(session:ClientSession){
   const canApprovals=access.permissions.has("approvals.view")||access.permissions.has("approvals.manage");
   const [handoffsResult,approvalsResult,members]=await Promise.all([
     canHandoffs
-      ? admin.from("human_handoffs").select("id,customer_id,conversation_id,reason,category,priority,status,assigned_membership_id,claimed_by_membership_id,sla_due_at,conversation_summary,stage_id_at_handoff,next_action,outcome,follow_up_required,follow_up_due_at,follow_up_status,notified_at,created_at,updated_at,resolution_summary").eq("organization_id",session.organizationId).not("status","in",'(resolved,closed)').order("created_at",{ascending:false}).limit(100)
+      ? admin.from("human_handoffs").select("id,customer_id,conversation_id,reason,category,priority,status,assigned_membership_id,claimed_by_membership_id,sla_due_at,conversation_summary,stage_id_at_handoff,next_action,outcome,follow_up_required,follow_up_due_at,follow_up_status,notified_at,metadata,created_at,updated_at,resolution_summary").eq("organization_id",session.organizationId).not("status","in",'(resolved,closed)').order("created_at",{ascending:false}).limit(100)
       : Promise.resolve({data:[],error:null}),
     canApprovals
       ? admin.from("operation_approvals").select("id,approval_type,title,description,risk_level,status,requested_by_type,requested_by_id,subject_type,subject_id,action_key,preview,assigned_membership_id,requested_at,expires_at,decided_at").eq("organization_id",session.organizationId).eq("status","pending").order("requested_at",{ascending:false}).limit(100)
@@ -157,24 +177,36 @@ export async function listHumanOperations(session:ClientSession){
   const handoffRows=(handoffsResult.data||[]) as HumanHandoffRow[];
   const customerIds=[...new Set(handoffRows.map((item)=>item.customer_id).filter(Boolean))];
   const stageIds=[...new Set(handoffRows.map((item)=>item.stage_id_at_handoff).filter(Boolean))] as string[];
-  const [customersResult,stagesResult]=await Promise.all([
+  const [customersResult,stagesResult,notificationsResult]=await Promise.all([
     customerIds.length
       ? admin.from("crm_customers").select("id,full_name,company_name").eq("organization_id",session.organizationId).in("id",customerIds)
       : Promise.resolve({data:[],error:null}),
     stageIds.length
       ? admin.from("organization_customer_stages").select("id,name").eq("organization_id",session.organizationId).in("id",stageIds)
       : Promise.resolve({data:[],error:null}),
+    handoffRows.length
+      ? admin.from("handoff_notifications").select("handoff_id,status,error_message,created_at").eq("organization_id",session.organizationId).eq("channel","whatsapp").in("handoff_id",handoffRows.map((item)=>item.id)).order("created_at",{ascending:false}).limit(200)
+      : Promise.resolve({data:[],error:null}),
   ]);
   if(customersResult.error) throw customersResult.error;
   if(stagesResult.error) throw stagesResult.error;
+  if(notificationsResult.error) throw notificationsResult.error;
   const customerNameById=new Map((customersResult.data||[]).map((row)=>[row.id,String(row.full_name||row.company_name||"Customer")]));
   const stageNameById=new Map((stagesResult.data||[]).map((row)=>[row.id,String(row.name||"")]));
+  const notificationByHandoff=new Map<string,{status:string;error_message:string|null}>();
+  for(const notification of notificationsResult.data||[]){
+    if(!notificationByHandoff.has(String(notification.handoff_id))){
+      notificationByHandoff.set(String(notification.handoff_id),{status:String(notification.status||"unknown"),error_message:notification.error_message?String(notification.error_message):null});
+    }
+  }
   const memberEmailById=new Map(members.map((member)=>[member.id,member.email||null]));
   const handoffs=handoffRows.map((item)=>({
     ...item,
     customer_name:customerNameById.get(item.customer_id)||"Customer",
     stage_name:item.stage_id_at_handoff?stageNameById.get(item.stage_id_at_handoff)||null:null,
     assigned_to_email:item.assigned_membership_id?memberEmailById.get(item.assigned_membership_id)||null:null,
+    whatsapp_notification_status:notificationByHandoff.get(item.id)?.status||null,
+    whatsapp_notification_error:notificationByHandoff.get(item.id)?.error_message||null,
   }));
 
   return {
@@ -236,6 +268,7 @@ export async function assignHumanHandoff(session:ClientSession,handoffId:string,
   await notifyHandoffAssignee({
     organizationId:session.organizationId,
     handoffId,
+    conversationId:String(data.conversation_id),
     membershipId,
     customerName:String(customer?.full_name||customer?.company_name||"Customer"),
     stageName,
@@ -384,6 +417,7 @@ export async function createHandoffFromSystemEvent(event:{
   const sourceAgentId=str(event.source).startsWith("agent:")?str(event.source).slice("agent:".length):null;
   const summary=await deriveHandoffSummary(event.organizationId,event.conversationId,payload);
   const nextAction=str(payload.nextAction||payload.next_action)||null;
+  const structured=structuredHandoff(payload);
 
   const {data:customer,error:customerError}=await admin.from("crm_customers")
     .select("full_name,company_name,current_stage_id")
@@ -440,7 +474,13 @@ export async function createHandoffFromSystemEvent(event:{
     p_sla_due_at:new Date(Date.now()+slaMinutes*60_000).toISOString(),
     p_created_by_type:"agent",
     p_created_by_id:sourceAgentId||event.sourceSystemId,
-    p_metadata:{source_event_id:event.id,source:"system_event",assignment_source:assignment.source,payload},
+    p_metadata:{
+      source_event_id:event.id,
+      source:"system_event",
+      assignment_source:assignment.source,
+      payload,
+      structured_handoff:structured,
+    },
   });
   if(error) throw error;
   const handoffId=String(data);
@@ -461,6 +501,7 @@ export async function createHandoffFromSystemEvent(event:{
     await notifyHandoffAssignee({
       organizationId:event.organizationId,
       handoffId,
+      conversationId:event.conversationId,
       membershipId:assignment.membershipId,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
       stageName,
@@ -481,6 +522,7 @@ export async function createHandoffFromSystemEvent(event:{
     stageName,
     summary,
     nextAction,
+    structured,
     duplicate:false,
   };
 }

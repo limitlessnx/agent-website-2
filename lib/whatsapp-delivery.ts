@@ -8,6 +8,7 @@ type SendInput = {
   text?: string;
   lastCustomerMessageAt?: string | null;
   deliveryMode?: "auto" | "direct" | "template";
+  recipientType?: "customer" | "internal_staff";
   forceTemplate?: boolean;
   templatePurpose?: string;
   variables?: Record<string, string | number | null | undefined>;
@@ -141,7 +142,8 @@ export async function sendWhatsAppMessage(input: SendInput) {
   const credentials = await resolveWhatsAppCredentials(input.organizationId);
   const to = normalizePhone(input.to);
   if (!to) throw new Error("A valid WhatsApp recipient is required.");
-  const outsideWindow = outsideCustomerWindow(input.lastCustomerMessageAt);
+  const recipientType = input.recipientType || "customer";
+  const outsideWindow = recipientType === "customer" ? outsideCustomerWindow(input.lastCustomerMessageAt) : false;
   const requestedMode = input.deliveryMode || "auto";
   const useTemplate = Boolean(input.forceTemplate) || requestedMode === "template" || (requestedMode === "auto" && outsideWindow);
   if (requestedMode === "direct" && outsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open.");
