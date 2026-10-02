@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     });
 
     const replyPresent = Boolean(runtime.reply?.trim());
-    const passed = replyPresent && runtime.needsHumanReview !== true;
+    const passed = replyPresent;
     const completedAt = new Date().toISOString();
     await admin.from("runtime_executions").update({
       status: passed ? "completed" : "failed",
