@@ -84,7 +84,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
       <label className="stacked-field">Anything else you want the AI to handle?<textarea rows={5} value={form.ai_requirements} onChange={e=>setForm({...form,ai_requirements:e.target.value})} placeholder="Describe the conversations, tasks or decisions you want Fluxknight to take care of."/></label>
     </section>}
 
-    {step===3&&<section><h1>Teach Fluxknight your business.</h1><p>The more useful context you give us, the less your agent has to guess. Humanity has suffered enough from confident guessing.</p>
+    {step===3&&<section><h1>Teach Fluxknight your business.</h1><p>The more useful context you give us, the more accurately your AI can represent your business.</p>
       <div className="knowledge-stack">{[
         ["services","Products & services","What do you offer? Include the important differences between services."],
         ["faqs","FAQs","Paste common customer questions and the answers you want the agent to use."],
@@ -97,7 +97,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
     </section>}
 
     {step===4&&<section><div className="setup-card"><div className="setup-card-icon"><ShieldCheck size={20}/></div><div><strong>WhatsApp AI agent is included in your trial.</strong><p>We handle the technical setup. You only need to tell us which starting path applies to you.</p></div></div>
-      <h1>Connect your WhatsApp.</h1><p>No API keys. No Account SIDs. No webhook archaeology. We take care of the plumbing.</p>
+      <h1>Connect your WhatsApp.</h1><p>We handle the connection and technical setup for you.</p>
       <div className="choice-grid whatsapp-choice">
         <button type="button" className={form.whatsapp_preferences.connection_path==="already_have_whatsapp_business"?"selected":""} onClick={()=>setForm({...form,whatsapp_preferences:{...form.whatsapp_preferences,connection_path:"already_have_whatsapp_business"}})}><Check size={16}/><span><strong>I already have WhatsApp Business</strong><small>Use my existing business number during setup.</small></span></button>
         <button type="button" className={form.whatsapp_preferences.connection_path==="need_help"?"selected":""} onClick={()=>setForm({...form,whatsapp_preferences:{...form.whatsapp_preferences,connection_path:"need_help"}})}><Check size={16}/><span><strong>I need help setting it up</strong><small>Fluxknight will guide the connection.</small></span></button>
