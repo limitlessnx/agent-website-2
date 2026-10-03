@@ -193,7 +193,7 @@ export async function bookLimitlessInspection(input: {
       }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
     : await admin.from("crm_leads").update({
         stage: "inspection",
-        details: { ...(current.data?.details || {}), ...detailsPatch },
+        details: { ...((current.data as { details?: Record<string, unknown> } | null)?.details || {}), ...detailsPatch },
         updated_at: now,
       }).eq("id", leadId).eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID);
   if (leadUpdate.error) throw leadUpdate.error;
