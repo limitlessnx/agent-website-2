@@ -186,7 +186,7 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
         .select("amount,payment_date,payment_plan_id")
         .in("payment_plan_id", planIds)
         .order("payment_date", { ascending: false })
-        .limit(1000))).data
+        .limit(1000)).data
     : [];
   const payments = recentPayments || [];
   const monthCollected = payments
