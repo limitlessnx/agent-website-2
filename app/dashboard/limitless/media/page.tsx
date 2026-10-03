@@ -57,6 +57,7 @@ function PropertyMediaCard({ property, linked = false, assets = [] }: { property
 }
 
 export default async function MediaPage() {
+  const scope = await resolveAdminOrganizationScope();
   const [properties, mediaResult] = await Promise.all([
     getProperties(200),
     createAdminClient().from("media_assets").select("id,property_id,storage_bucket,storage_path,mime_type,file_name,caption,metadata,created_at").eq("organization_id", scope.organizationId).eq("direction", "outbound").not("property_id", "is", null).order("created_at", { ascending: false }).limit(500),
