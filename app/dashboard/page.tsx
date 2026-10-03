@@ -24,6 +24,8 @@ export default async function DashboardPage() {
         metrics={snapshot.metrics}
         notices={snapshot.notices}
         agents={snapshot.agents}
+        activity={snapshot.activity}
+        limitlessDashboard={snapshot.limitlessDashboard}
       />
     </main>
   );

@@ -24,14 +24,14 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
-    const { data: property, error: propertyError } = await admin
+    const { data: propertyRecord, error: propertyError } = await admin
       .from("properties")
       .select("id,organization_id")
       .eq("id", propertyId)
       .eq("organization_id", scope.organizationId)
       .maybeSingle();
     if (propertyError) throw new Error(`Property validation failed: ${propertyError.message}`);
-    if (!property) return NextResponse.json({ error: "Property was not found in this organization." }, { status: 404 });
+    if (!propertyRecord) return NextResponse.json({ error: "Property was not found in this organization." }, { status: 404 });
 
     const uploaded = await uploadPublicMedia(propertyMedia, {
       organizationKey: scope.slug,
