@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bot, Home, Menu, MessageSquareText, Plus } from "@/components/admin/ServerIcons";
 import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import styles from "./MobileBottomNav.module.css";
@@ -12,7 +13,7 @@ const items = [
 ];
 
 export default function MobileBottomNav() {
-  const pathname = require("next/navigation").usePathname() as string;
+  const pathname = usePathname();
   const { open, openMenu } = useMobileNavigation();
 
   return (
