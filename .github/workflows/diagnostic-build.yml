@@ -1,4 +1,4 @@
-name: Diagnostic build
+name: Diagnostic build v2
 on:
   push:
     branches: [diag/vercel-build-b4c886]
