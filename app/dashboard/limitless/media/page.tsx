@@ -1,5 +1,6 @@
 import { ExternalLink, ImagePlus } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { getProperties } from "@/lib/limitless-data";
 import PropertyImageUploader from "./PropertyImageUploader";
 
@@ -58,7 +59,7 @@ function PropertyMediaCard({ property, linked = false, assets = [] }: { property
 export default async function MediaPage() {
   const [properties, mediaResult] = await Promise.all([
     getProperties(200),
-    createAdminClient().from("media_assets").select("id,property_id,storage_bucket,storage_path,mime_type,file_name,caption,metadata,created_at").eq("organization_id", "b15f21b4-5697-4d21-9421-8a34eae3476d").eq("direction", "outbound").not("property_id", "is", null).order("created_at", { ascending: false }).limit(500),
+    createAdminClient().from("media_assets").select("id,property_id,storage_bucket,storage_path,mime_type,file_name,caption,metadata,created_at").eq("organization_id", scope.organizationId).eq("direction", "outbound").not("property_id", "is", null).order("created_at", { ascending: false }).limit(500),
   ]);
   if (mediaResult.error) throw mediaResult.error;
   const assets = (mediaResult.data || []) as MediaAsset[];
