@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
+import { maiaAppointmentTools } from "@/lib/ai/maia-appointment-tools";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 import { requestLimitlessInspection } from "@/lib/limitless-inspections";
 
@@ -128,6 +129,7 @@ async function logTool(ctx: ToolContext, toolName: string, input: Record<string,
 function toolSet(): ToolDefinition[] {
   return [
     ...maiaPropertyTools(),
+    ...maiaAppointmentTools(),
     { name: "get_business_context", description: "Read the current tenant's approved business profile, onboarding submission and approved knowledge sources. Property-specific facts must come from the live property dashboard/search tool.", parameters: { type: "object", additionalProperties: false, properties: {} }, execute: async (_input, ctx) => loadBusinessContext(ctx.organizationId) },
     {
       name: "search_knowledge",
