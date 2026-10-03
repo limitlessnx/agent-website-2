@@ -4,7 +4,7 @@ import {
   Bot,
   CheckCircle2,
   ChevronRight,
-  MessageSquareText,\n  ImageIcon,
+  MessageSquareText,\n  Image,
   Target,
   Users,
   Workflow,
@@ -119,7 +119,7 @@ export default function DashboardHomeExperience({
           </Link>
           <Link href="/dashboard/limitless/media" className={styles.agentCard}>
             <div className={styles.agentHead}>
-              <span className={styles.avatar}><ImageIcon size={20} /></span>
+              <span className={styles.avatar}><Image size={20} /></span>
               <div><strong>Property Media</strong><p>Pictures + videos</p><small>Upload and review customer-ready media</small></div>
               <ChevronRight size={18} aria-hidden="true" />
             </div>
