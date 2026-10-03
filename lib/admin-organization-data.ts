@@ -63,6 +63,7 @@ export type LimitlessDashboardData = {
     overdue: number;
     agreed: number;
     collectionRate: number;
+    recentCollectionSeries: number[];
   };
   properties: {
     total: number;
@@ -207,6 +208,14 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
       overdue,
       agreed,
       collectionRate: agreed > 0 ? Math.round((totalCollected / agreed) * 100) : 0,
+      recentCollectionSeries: Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(now);
+        day.setDate(day.getDate() - (6 - index));
+        const key = day.toISOString().slice(0, 10);
+        return payments
+          .filter((payment) => String(payment.payment_date || "").slice(0, 10) === key)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      }),
     },
     properties: {
       total: properties.length,
