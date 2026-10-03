@@ -30,7 +30,7 @@ function PropertyMediaCard({ property, linked = false, assets = [] }: { property
   return (
     <article className="property-media-card">
       <div className="property-media-info">
-        <span className={`property-media-badge ${linked ? "linked" : "missing"}`}>{linked ? "Media linked" : "Images needed"}</span>
+        <span className={`property-media-badge ${linked ? "linked" : "missing"}`}>{linked ? "Media linked" : "Media needed"}</span>
         <h3>{property.title}</h3>
         <p>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "No location saved"}</p>
         <small>{images.length} image{images.length === 1 ? "" : "s"} · {videos.length} video{videos.length === 1 ? "" : "s"}</small>
@@ -57,6 +57,7 @@ function PropertyMediaCard({ property, linked = false, assets = [] }: { property
 }
 
 export default async function MediaPage() {
+  const scope = await resolveAdminOrganizationScope();
   const [properties, mediaResult] = await Promise.all([
     getProperties(200),
     createAdminClient().from("media_assets").select("id,property_id,storage_bucket,storage_path,mime_type,file_name,caption,metadata,created_at").eq("organization_id", scope.organizationId).eq("direction", "outbound").not("property_id", "is", null).order("created_at", { ascending: false }).limit(500),
