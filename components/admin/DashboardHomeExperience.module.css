@@ -43,3 +43,79 @@
   .financeActions{grid-template-columns:1fr}.financeActions a{justify-content:flex-start;padding:0 12px}.financeHeader{grid-template-columns:1fr}.financeChart{justify-content:flex-start}.propertyCard{flex-basis:84vw}
 }
 @media(prefers-reduced-motion:reduce){.propertyCarousel{scroll-behavior:auto}.financeChart span{transition:none}}
+
+
+/* Reference-locked Limitless Realty mobile composition */
+@media(max-width:900px){
+  .home{gap:14px;padding:0 0 78px}
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;padding:4px 2px 0}
+  .heroCopy{min-width:0}
+  .eyebrow{display:none}
+  .hero h1{margin:0;font-size:24px;line-height:1.12;letter-spacing:-.035em}
+  .hero p{margin-top:5px;font-size:11px;max-width:340px}
+  .heroStatus{margin-top:8px;font-size:9px;padding:6px 9px}
+  .maiaCard{grid-column:2;grid-row:1 / span 3;align-self:start;width:152px;min-width:152px;padding:9px;border-radius:16px}
+  .maiaAvatar{width:38px;height:38px}
+  .financeHero{padding:14px;border-radius:18px}
+  .financeHeader{position:relative;grid-template-columns:minmax(0,1fr) 126px;min-height:108px;align-items:end}
+  .cardKicker{font-size:9px}
+  .financeHeader>div:first-child>strong{font-size:36px}
+  .financePeriod{position:absolute;top:0;right:0;margin:0;padding:6px 9px;border:1px solid color-mix(in srgb,var(--fk-brand) 28%,var(--fk-border));border-radius:999px;background:var(--fk-brand-soft);color:var(--fk-brand-hover)}
+  .financeChart{height:76px;gap:4px}
+  .financeChart span{width:8px}
+  .financeMeta{display:flex;flex-wrap:wrap;flex-direction:row;justify-content:flex-start;gap:6px;margin-top:4px}
+  .financeMeta span,.financeMeta small{padding:7px 9px;border:1px solid var(--fk-border);border-radius:999px;background:var(--fk-surface-raised);font-size:9px}
+  .financeMeta small{color:var(--fk-text-secondary);text-align:left}
+  .financeActions{margin-top:12px;gap:7px}
+  .financeActions a{min-height:50px;border-radius:11px;font-size:9px}
+  .kpiGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .kpiCard{display:block;padding:10px;border-radius:13px;min-height:102px}
+  .kpiIcon{width:29px;height:29px;margin-bottom:10px}
+  .kpiCard strong{display:block;font-size:20px}
+  .kpiCard>span:not(.kpiIcon){display:block;margin-top:4px;font-size:9px}
+  .kpiCard small{display:block;margin-top:6px;font-size:8px}
+  .sectionCard,.compactCard{padding:13px;border-radius:17px}
+  .sectionHeader h2{font-size:15px}
+  .propertyTabs{margin:10px 0 10px}
+  .propertyCarousel{gap:9px}
+  .propertyCard{flex-basis:242px;border-radius:14px}
+  .propertyMedia{aspect-ratio:1.55}
+  .propertyBody{padding:10px}
+  .propertyTitleRow strong{font-size:11px}
+  .propertyPrice{font-size:13px}
+  .twoColumn{grid-template-columns:1fr 1fr;gap:8px}
+  .compactCard .sectionHeader{gap:6px}
+  .compactCard .sectionHeader h2{font-size:13px}
+  .collectionBody{grid-template-columns:92px minmax(0,1fr);gap:8px}
+  .donut{width:88px;height:88px}
+  .donut::after{inset:9px}
+  .donut strong{font-size:18px}
+  .donut span{font-size:7px}
+  .collectionLegend{gap:7px}
+  .collectionLegend span,.collectionLegend b{font-size:8px}
+  .paymentRow{grid-template-columns:auto minmax(0,1fr) auto;gap:5px;padding:8px 0}
+  .paymentAvatar{width:28px;height:28px}
+  .paymentCopy strong{font-size:9px}
+  .paymentCopy small{font-size:7px}
+  .paymentRow>b{font-size:8px}
+  .paymentRow>svg{display:none}
+  .notice{padding:9px 0}
+  .noticeIcon{width:28px;height:28px}
+  .notice strong{font-size:9px}
+  .notice small{font-size:7px}
+  .activityList{margin-top:6px}
+}
+@media(max-width:560px){
+  .hero{grid-template-columns:minmax(0,1fr) 148px}
+  .maiaCard{width:148px;min-width:148px}
+  .hero h1{font-size:23px}
+  .financeHeader{grid-template-columns:minmax(0,1fr) 112px}
+  .financeHeader>div:first-child>strong{font-size:32px}
+  .financeActions a span{max-width:60px;text-align:left;line-height:1.15}
+}
+@media(max-width:430px){
+  .hero{grid-template-columns:1fr}
+  .maiaCard{grid-column:1;grid-row:auto;width:100%;min-width:0}
+  .kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .twoColumn{grid-template-columns:1fr}
+}
