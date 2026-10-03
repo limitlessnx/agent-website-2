@@ -173,8 +173,7 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
   const [{ data: recentPayments }] = await Promise.all([
     admin
       .from("payment_records")
-      .select("amount,payment_date")
-      .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+      .select("amount,payment_date,payment_plan_id")
       .order("payment_date", { ascending: false })
       .limit(1000),
   ]);
