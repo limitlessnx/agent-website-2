@@ -155,7 +155,7 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
     return {
       ...property,
       imageUrl: images[0]?.url || property.drive_photos_link || undefined,
-      imageCount: images.length,
+      imageCount: images.length || property.drive_photos_link ? Math.max(1, images.length) : 0,
       videoCount: videos.length,
       featured: lower(property.status) === "featured",
     };
