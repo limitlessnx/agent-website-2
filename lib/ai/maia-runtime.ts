@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
+import { maiaAppointmentTools } from "@/lib/ai/maia-appointment-tools";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 import { requestLimitlessInspection } from "@/lib/limitless-inspections";
 
@@ -20,6 +21,7 @@ type ToolDefinition = { name: string; description: string; parameters: Record<st
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const json = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const LIMITLESS_REALTY_ORG_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 function configuredProvider(provider: string) {
   const key = provider.toLowerCase();
@@ -80,7 +82,7 @@ async function loadBusinessContext(organizationId: string) {
   const [profile, submission, knowledge] = await Promise.all([
     admin.from("client_onboarding_profiles").select("business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("client_onboarding_submissions").select("business_information,business_services,communication_details,automation_requirements,business_resources").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    admin.from("knowledge_sources").select("title,source_type,content,metadata").eq("organization_id", organizationId).eq("status", "active").order("updated_at", { ascending: false }).limit(20),
+    admin.from("knowledge_sources").select("title,source_type,content,metadata").eq("organization_id", organizationId).eq("status", "ready").order("updated_at", { ascending: false }).limit(20),
   ]);
   return { profile: profile.data || {}, onboarding: submission.data || {}, approvedKnowledge: knowledge.data || [] };
 }
@@ -127,17 +129,18 @@ async function logTool(ctx: ToolContext, toolName: string, input: Record<string,
 function toolSet(): ToolDefinition[] {
   return [
     ...maiaPropertyTools(),
-    { name: "get_business_context", description: "Read the current tenant's approved business profile, onboarding submission and approved knowledge sources.", parameters: { type: "object", additionalProperties: false, properties: {} }, execute: async (_input, ctx) => loadBusinessContext(ctx.organizationId) },
+    ...maiaAppointmentTools(),
+    { name: "get_business_context", description: "Read the current tenant's approved business profile, onboarding submission and approved knowledge sources. Property-specific facts must come from the live property dashboard/search tool.", parameters: { type: "object", additionalProperties: false, properties: {} }, execute: async (_input, ctx) => loadBusinessContext(ctx.organizationId) },
     {
       name: "search_knowledge",
-      description: "Search only this tenant's approved knowledge base for facts, services, policies, property information or documentation guidance.",
+      description: "Search only this tenant's approved knowledge base for business rules, services, FAQs and guidance. Do not use it as the source of truth for Limitless Realty property price, availability, size, location, documentation status or media.",
       parameters: { type: "object", additionalProperties: false, properties: { query: { type: "string" } }, required: ["query"] },
       execute: async (input, ctx) => {
         const query = text(input.query).slice(0, 160);
         if (!query) return { results: [] };
         const admin = createAdminClient();
         const needle = query.replace(/[%_]/g, "");
-        const { data } = await admin.from("knowledge_sources").select("id,title,source_type,content,metadata").eq("organization_id", ctx.organizationId).eq("status", "active").or(`title.ilike.%${needle}%,content.ilike.%${needle}%`).limit(8);
+        const { data } = await admin.from("knowledge_sources").select("id,title,source_type,content,metadata").eq("organization_id", ctx.organizationId).eq("status", "ready").or(`title.ilike.%${needle}%,content.ilike.%${needle}%`).limit(8);
         return { results: data || [] };
       },
     },
@@ -161,7 +164,7 @@ function toolSet(): ToolDefinition[] {
         const query = text(input.query).slice(0, 120).replace(/[%_]/g, "");
         const admin = createAdminClient();
         const limit = Math.min(Number(input.limit || 10), 20);
-        if (ctx.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d") {
+        if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID) {
           const { data, error } = await admin.from("leads").select("*").eq("organization_id", ctx.organizationId).order("updated_at", { ascending: false, nullsFirst: false }).limit(200);
           if (error) throw error;
           const needle = query.toLowerCase();
@@ -217,6 +220,18 @@ function toolSet(): ToolDefinition[] {
       parameters: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, description: { type: "string" }, dueAt: { type: "string" }, leadId: { type: "string" } }, required: ["title"] },
       execute: async (input, ctx) => {
         const admin = createAdminClient();
+        if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID) {
+          const leadId = text(input.leadId);
+          if (!leadId) throw new Error("A Limitless Realty lead ID is required for follow-up tasks.");
+          const { data: lead, error: leadError } = await admin.from("leads").select("id,phone,whatsapp_opted_out").eq("id", leadId).eq("organization_id", ctx.organizationId).maybeSingle();
+          if (leadError) throw leadError;
+          if (!lead) throw new Error("Limitless Realty lead not found for this organization.");
+          if (lead.whatsapp_opted_out) throw new Error("This lead has opted out of WhatsApp follow-up.");
+          if (!lead.phone) throw new Error("This lead has no phone number for WhatsApp follow-up.");
+          const { data, error } = await admin.from("follow_ups").insert({ organization_id: ctx.organizationId, lead_id: lead.id, stage: 0, scheduled_at: text(input.dueAt) || new Date().toISOString(), message_sent: false, status: "pending", channel: "whatsapp", agent_key: "maia" }).select("id,lead_id,stage,scheduled_at,status,channel,agent_key").single();
+          if (error) throw error;
+          return { source: "limitless_realty_follow_up_pipeline", followUp: data };
+        }
         const { data, error } = await admin.from("crm_tasks").insert({ organization_id: ctx.organizationId, lead_id: text(input.leadId) || null, assigned_agent_id: ctx.agentId, task_type: "ai_follow_up", title: text(input.title).slice(0, 180), description: text(input.description).slice(0, 1000) || null, due_at: text(input.dueAt) || null, metadata: { source: "maia_agentic_runtime" } }).select("id,title,status,due_at").single();
         if (error) throw error;
         return data;
@@ -370,7 +385,8 @@ export async function runMaia(input: MaiaRuntimeInput) {
     agent.system_prompt || "Follow the organization's approved business context and act as a helpful professional agent.",
     "You are not a passive chatbot. Understand the goal, inspect approved tenant data when needed, choose the right tool, take low-risk actions, and continue until the task is complete or requires a human.",
     "Never access, infer, or expose another organization's data. Never invent prices, availability, legal status, land documentation facts, policies, credentials or integrations. For land/property documentation questions, use approved tenant knowledge and clearly distinguish education from legal advice.",
-    "For named property questions, use search_properties before relying on memory. For property pictures, videos, brochures or documents, resolve one exact property ID first and then use get_property_media. Never guess a property match or attach media from a different property.",
+    "LIMITLESS REALTY PROPERTY SOURCE OF TRUTH: The property dashboard's live property records are authoritative for all property-specific facts. When serving Limitless Realty, always use search_properties for property name, price, availability, location, plot/size, documentation status and other property-specific facts. Do not use knowledge-base text, memory, onboarding text or prior conversation as a substitute for live property records. The dashboard is updated regularly and Maia must reflect its current state.",
+    "For property pictures, videos, brochures or documents, resolve one exact property ID from the live property records first and then use get_property_media. Never guess a property match or attach media from a different property.",
     "Use tools when a tool can verify a fact or perform a useful low-risk action. Do not call tools merely to appear autonomous.",
     "For property inspections, Maia may only create a request after the customer asks for an inspection and provides a preferred future date/time. Never tell the customer the inspection is booked or confirmed. Tell them the request has been submitted and that an admin must confirm the date/time. Only the admin dashboard can move the request into booked/confirmed status.",
     "When a request requires approval, sensitive production change, payment, credential change, or a commitment you cannot verify, explain the limitation and create a handoff/task when appropriate.",
