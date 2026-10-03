@@ -162,21 +162,32 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
   });
 
   const now = new Date();
-  const monthKey = now.toISOString().slice(0, 7);
-  const todayKey = now.toISOString().slice(0, 10);
+  const lagosParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now).reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const monthKey = `${lagosParts.year}-${lagosParts.month}`;
+  const todayKey = `${monthKey}-${lagosParts.day}`;
   const totalCollected = paymentPlans.reduce((sum, plan) => sum + Number(plan.total_paid || 0), 0);
   const agreed = paymentPlans.reduce((sum, plan) => sum + Number(plan.agreed_price || 0), 0);
   const outstanding = paymentPlans.reduce((sum, plan) => sum + Number(plan.outstanding_balance || 0), 0);
   const overduePlans = paymentPlans.filter((plan) => lower(plan.status) === "overdue");
   const overdue = overduePlans.reduce((sum, plan) => sum + Number(plan.outstanding_balance || 0), 0);
 
-  const [{ data: recentPayments }] = await Promise.all([
-    admin
-      .from("payment_records")
-      .select("amount,payment_date,payment_plan_id")
-      .order("payment_date", { ascending: false })
-      .limit(1000),
-  ]);
+  const planIds = paymentPlans.map((plan) => String(plan.id)).filter(Boolean);
+  const recentPayments = planIds.length
+    ? (await admin
+        .from("payment_records")
+        .select("amount,payment_date,payment_plan_id")
+        .in("payment_plan_id", planIds)
+        .order("payment_date", { ascending: false })
+        .limit(1000))).data
+    : [];
   const payments = recentPayments || [];
   const monthCollected = payments
     .filter((payment) => String(payment.payment_date || "").slice(0, 7) === monthKey)
@@ -252,7 +263,7 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
     Boolean(lead.last_contacted_at) || ["in_conversation", "contacted", "engaged", "qualified"].some((state) => lower(lead.status).includes(state))
   );
   const followUps = active.filter((lead) => Boolean(lead.last_follow_up_at) || Number(lead.follow_up_stage || 0) > 0 || lower(lead.status).includes("follow"));
-  const qualified = active.filter((lead) => ["hot", "high", "qualified", "ready"].includes(lower(lead.score)) || lower(lead.status).includes("qualified"));
+  const qualified = active.filter((lead) => ["hot", "high", "qualified", "ready"].includes(lower(lead.score)) || Number(lead.score || 0) >= 70 || lower(lead.status).includes("qualified"));
   const notices = await notificationNotices(scope.organizationId);
 
   const items = active.slice(0, 12).map((lead) => ({
