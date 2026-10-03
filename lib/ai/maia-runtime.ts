@@ -80,7 +80,7 @@ async function loadBusinessContext(organizationId: string) {
   const [profile, submission, knowledge] = await Promise.all([
     admin.from("client_onboarding_profiles").select("business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("client_onboarding_submissions").select("business_information,business_services,communication_details,automation_requirements,business_resources").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    admin.from("knowledge_sources").select("title,source_type,content,metadata").eq("organization_id", organizationId).eq("status", "active").order("updated_at", { ascending: false }).limit(20),
+    admin.from("knowledge_sources").select("title,source_type,content,metadata").eq("organization_id", organizationId).eq("status", "ready").order("updated_at", { ascending: false }).limit(20),
   ]);
   return { profile: profile.data || {}, onboarding: submission.data || {}, approvedKnowledge: knowledge.data || [] };
 }
@@ -137,7 +137,7 @@ function toolSet(): ToolDefinition[] {
         if (!query) return { results: [] };
         const admin = createAdminClient();
         const needle = query.replace(/[%_]/g, "");
-        const { data } = await admin.from("knowledge_sources").select("id,title,source_type,content,metadata").eq("organization_id", ctx.organizationId).eq("status", "active").or(`title.ilike.%${needle}%,content.ilike.%${needle}%`).limit(8);
+        const { data } = await admin.from("knowledge_sources").select("id,title,source_type,content,metadata").eq("organization_id", ctx.organizationId).eq("status", "ready").or(`title.ilike.%${needle}%,content.ilike.%${needle}%`).limit(8);
         return { results: data || [] };
       },
     },
