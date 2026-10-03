@@ -43,7 +43,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
 
         const { data: resources, error: resourceError } = await admin
           .from("appointment_calendar_resources")
-          .select("id,provider,external_calendar_id,display_name,organizer_email,timezone,default_duration_minutes,is_default,status,availability_configuration,metadata")
+          .select("id,integration_id,provider,external_calendar_id,display_name,organizer_email,timezone,default_duration_minutes,is_default,status,availability_configuration,metadata")
           .eq("organization_id", ctx.organizationId)
           .eq("status", "active")
           .order("is_default", { ascending: false })
@@ -56,19 +56,32 @@ export function maiaAppointmentTools(): ToolDefinition[] {
           || String(resource.provider || "").toLowerCase() === "google"
         );
 
-        if (!googleResources.length) {
+        const integrationIds = googleResources.map((resource) => resource.integration_id).filter(Boolean);
+        let connectedIntegrationIds = new Set<string>();
+        if (integrationIds.length) {
+          const { data: integrations, error: integrationError } = await admin
+            .from("organization_integrations")
+            .select("id,status")
+            .eq("organization_id", ctx.organizationId)
+            .in("id", integrationIds);
+          if (integrationError) throw integrationError;
+          connectedIntegrationIds = new Set((integrations || []).filter((integration) => integration.status === "connected").map((integration) => String(integration.id)));
+        }
+        const connectedGoogleResources = googleResources.filter((resource) => resource.integration_id && connectedIntegrationIds.has(String(resource.integration_id)));
+
+        if (!connectedGoogleResources.length) {
           return {
             status: "calendar_not_configured",
             provider: ctx.organizationId === LIMITLESS_REALTY_ORG_ID ? "google_calendar" : "tenant_configured_provider",
             timezone,
             requested_window: { startAt, endAt },
             available: false,
-            reason: "No active Google Calendar resource is configured for this tenant. Maia must not claim the requested time is available.",
+            reason: "No active, connected Google Calendar resource is configured for this tenant. Maia must not claim the requested time is available.",
             next_action: "Connect Google Calendar, select a calendar resource, and configure availability in the appointment settings."
           };
         }
 
-        const resource = googleResources[0];
+        const resource = connectedGoogleResources[0];
         return {
           status: "calendar_resource_configured",
           provider: "google_calendar",
