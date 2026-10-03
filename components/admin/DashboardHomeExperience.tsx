@@ -124,12 +124,12 @@ export default function DashboardHomeExperience({
     <section className={styles.home} aria-label={(workspaceName || "Organization") + " dashboard overview"}>
       <header className={styles.hero}>
         <div className={styles.heroCopy}>
-          <span className={styles.eyebrow}>{workspaceName ? workspaceName.toUpperCase() + " · COMMAND CENTER" : "COMMAND CENTER"}</span>
+          <span className={styles.eyebrow}>{limitless ? "LIMITLESS REALTY · COMMAND CENTER" : workspaceName ? workspaceName.toUpperCase() + " · COMMAND CENTER" : "COMMAND CENTER"}</span>
           <h1>{greeting()}, {name} <span aria-hidden="true">👋</span></h1>
           <p>{healthy ? "Here’s what’s happening across your business today." : "Your workspace is active, with a few items that need your attention."}</p>
           <div className={styles.heroStatus}><span className={healthy ? styles.statusDot : styles.statusDotWarning} />{healthy ? "All systems active" : health}</div>
         </div>
-        {maia ? <Link href={maia.href} className={styles.maiaCard}><span className={styles.maiaAvatar}><Bot size={20} /></span><span><strong>{maia.name}</strong><small>{maia.status === "live" ? "Online" : maia.status}</small></span><ChevronRight size={18} /></Link> : null}
+        {maia ? <Link href={maia.href} className={styles.maiaCard}><span className={styles.maiaAvatar}><Bot size={20} /></span><span><strong>{maia.name}</strong><small>{limitless ? "Limitless Realty assistant · " : ""}{maia.status === "live" ? "Online" : maia.status}</small></span><ChevronRight size={18} /></Link> : null}
       </header>
 
       {limitless ? (
