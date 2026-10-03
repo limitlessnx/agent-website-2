@@ -4,7 +4,7 @@ import {
   Bot,
   CheckCircle2,
   ChevronRight,
-  MessageSquareText,
+  MessageSquareText,\n  ImageIcon,
   Target,
   Users,
   Workflow,
@@ -99,6 +99,42 @@ export default function DashboardHomeExperience({
           );
         })}
       </div>
+
+      <section style={{ marginTop: 24 }}>
+        <header className={styles.sectionHeader}>
+          <div>
+            <span className={styles.sectionKicker}>LIMITLESS REALTY</span>
+            <h2>Property Operations</h2>
+            <p>Manage the catalog, installment clients, and property media from the command center.</p>
+          </div>
+        </header>
+        <div className={styles.agentGrid}>
+          <Link href="/dashboard/limitless/properties" className={styles.agentCard}>
+            <div className={styles.agentHead}>
+              <span className={styles.avatar}><WalletCards size={20} /></span>
+              <div><strong>Properties</strong><p>Property catalog</p><small>Listings, pricing, details and status</small></div>
+              <ChevronRight size={18} aria-hidden="true" />
+            </div>
+            <p className={styles.agentNote}>Open the Limitless Realty property page to add, edit and manage listings.</p>
+          </Link>
+          <Link href="/dashboard/limitless/media" className={styles.agentCard}>
+            <div className={styles.agentHead}>
+              <span className={styles.avatar}><ImageIcon size={20} /></span>
+              <div><strong>Property Media</strong><p>Pictures + videos</p><small>Upload and review customer-ready media</small></div>
+              <ChevronRight size={18} aria-hidden="true" />
+            </div>
+            <p className={styles.agentNote}>Approved property media is registered for Maia's property-media workflow.</p>
+          </Link>
+          <Link href="/dashboard/limitless/payments/installments" className={styles.agentCard}>
+            <div className={styles.agentHead}>
+              <span className={styles.avatar}><WalletCards size={20} /></span>
+              <div><strong>Installments</strong><p>Payment management</p><small>Balances, payments and reminder cadence</small></div>
+              <ChevronRight size={18} aria-hidden="true" />
+            </div>
+            <p className={styles.agentNote}>Manage installment clients and payment reminders without leaving Limitless Realty.</p>
+          </Link>
+        </div>
+      </section>
 
       <section className={styles.attentionPanel}>
         <header>
