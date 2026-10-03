@@ -1,10 +1,34 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 
 export const dynamic = "force-dynamic";
+
+async function logWebhookEvent(input: {
+  requestId: string;
+  eventType: string;
+  organizationId?: string | null;
+  providerMessageId?: string | null;
+  httpStatus?: number | null;
+  details?: Record<string, unknown>;
+}) {
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("whatsapp_webhook_event_logs").insert({
+      request_id: input.requestId,
+      event_type: input.eventType,
+      organization_id: input.organizationId || null,
+      provider_message_id: input.providerMessageId || null,
+      http_status: input.httpStatus ?? null,
+      details: input.details || {},
+    });
+    if (error) console.error("[whatsapp-webhook] diagnostic persistence failed", { requestId: input.requestId, eventType: input.eventType, error: error.message });
+  } catch (error) {
+    console.error("[whatsapp-webhook] diagnostic persistence failed", { requestId: input.requestId, eventType: input.eventType, error: error instanceof Error ? error.message : "unknown" });
+  }
+}
 
 function verifySignature(rawBody: string, signature: string | null) {
   const appSecret = process.env.WHATSAPP_APP_SECRET || process.env.META_WHATSAPP_APP_SECRET || process.env.META_APP_SECRET || "";
@@ -210,17 +234,36 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
   const rawBody = await request.text();
-  if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"))) {
-    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
+  let parsedPayload: any = null;
+  try { parsedPayload = JSON.parse(rawBody); } catch { /* never persist raw payloads */ }
+  const signatureValid = verifySignature(rawBody, request.headers.get("x-hub-signature-256"));
+  await logWebhookEvent({
+    requestId, eventType: "webhook_received", httpStatus: signatureValid ? 200 : 401,
+    details: {
+      signatureValid, bodyBytes: Buffer.byteLength(rawBody, "utf8"),
+      object: typeof parsedPayload?.object === "string" ? parsedPayload.object : null,
+      entryCount: Array.isArray(parsedPayload?.entry) ? parsedPayload.entry.length : 0,
+      vercelIdPresent: Boolean(request.headers.get("x-vercel-id")),
+    },
+  });
+  if (!signatureValid) {
+    await logWebhookEvent({ requestId, eventType: "signature_rejected", httpStatus: 401 });
+    return NextResponse.json({ error: "Invalid webhook signature.", requestId }, { status: 401 });
   }
 
   let body: any;
   try { body = JSON.parse(rawBody); }
-  catch { return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 }); }
+  catch {
+    await logWebhookEvent({ requestId, eventType: "invalid_json", httpStatus: 400 });
+    return NextResponse.json({ error: "Invalid JSON payload.", requestId }, { status: 400 });
+  }
 
   if (body?.object !== "whatsapp_business_account") {
-    return NextResponse.json({ ok: true, ignored: true });
+    await logWebhookEvent({ requestId, eventType: "unsupported_object", httpStatus: 200 });
+    return NextResponse.json({ ok: true, ignored: true, requestId });
   }
 
   let statusUpdates = 0;
@@ -249,7 +292,18 @@ export async function POST(request: NextRequest) {
       }
 
       const phoneNumberId = String(value?.metadata?.phone_number_id || "");
-      const tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+      let tenant: Awaited<ReturnType<typeof resolveWhatsAppTenant>> = null;
+      try {
+        tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+        await logWebhookEvent({
+          requestId, eventType: tenant ? "tenant_resolved" : "tenant_not_resolved",
+          organizationId: tenant?.organizationId || null, httpStatus: 200,
+          details: { phoneNumberIdPresent: Boolean(phoneNumberId), changeField: String(change?.field || ""), mode: tenant?.mode || null },
+        });
+      } catch (error) {
+        await logWebhookEvent({ requestId, eventType: "tenant_resolution_failed", httpStatus: 500, details: { error: error instanceof Error ? error.message : "unknown" } });
+        throw error;
+      }
       const contacts = Array.isArray(value.contacts) ? value.contacts : [];
       const contactName = String(contacts[0]?.profile?.name || "");
 
@@ -286,6 +340,11 @@ export async function POST(request: NextRequest) {
         const text = inboundText(message);
         if (!tenant || !messageId || !from || !text) {
           ignoredInbound += 1;
+          await logWebhookEvent({
+            requestId, eventType: "inbound_ignored", organizationId: tenant?.organizationId || null,
+            providerMessageId: messageId || null,
+            details: { tenantResolved: Boolean(tenant), messageIdPresent: Boolean(messageId), senderPresent: Boolean(from), textPresent: Boolean(text), messageType: String(message?.type || "unknown") },
+          });
           continue;
         }
 
@@ -322,18 +381,27 @@ export async function POST(request: NextRequest) {
           },
         };
 
-        if (tenant.mode === "maia") {
-          await tasks.trigger("maia-process-inbound-message", inboundPayload);
-        } else {
-          await tasks.trigger("tenant-whatsapp-process-inbound-message", {
-            ...inboundPayload,
-            sourceSystemId: tenant.sourceSystemId,
-          });
+        const taskName = tenant.mode === "maia" ? "maia-process-inbound-message" : "tenant-whatsapp-process-inbound-message";
+        try {
+          const taskHandle = tenant.mode === "maia"
+            ? await tasks.trigger("maia-process-inbound-message", inboundPayload)
+            : await tasks.trigger("tenant-whatsapp-process-inbound-message", { ...inboundPayload, sourceSystemId: tenant.sourceSystemId });
+          inboundQueued += 1;
+          await logWebhookEvent({ requestId, eventType: "trigger_queued", organizationId: tenant.organizationId, providerMessageId: messageId, httpStatus: 200, details: { taskName, taskRunId: (taskHandle as any)?.id || null, mode: tenant.mode, messageType: String(message?.type || "unknown") } });
+        } catch (error) {
+          await logWebhookEvent({ requestId, eventType: "trigger_failed", organizationId: tenant.organizationId, providerMessageId: messageId, httpStatus: 500, details: { taskName, error: error instanceof Error ? error.message : "unknown" } });
+          throw error;
         }
-        inboundQueued += 1;
       }
     }
   }
 
-  return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes });
+  const response = { ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes, requestId };
+  await logWebhookEvent({
+    requestId,
+    eventType: "webhook_completed",
+    httpStatus: 200,
+    details: { ...response, durationMs: Date.now() - startedAt },
+  });
+  return NextResponse.json(response);
 }
