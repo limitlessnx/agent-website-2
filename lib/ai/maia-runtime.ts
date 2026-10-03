@@ -217,7 +217,60 @@ function toolSet(): ToolDefinition[] {
       parameters: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, description: { type: "string" }, dueAt: { type: "string" }, leadId: { type: "string" } }, required: ["title"] },
       execute: async (input, ctx) => {
         const admin = createAdminClient();
-        const { data, error } = await admin.from("crm_tasks").insert({ organization_id: ctx.organizationId, lead_id: text(input.leadId) || null, assigned_agent_id: ctx.agentId, task_type: "ai_follow_up", title: text(input.title).slice(0, 180), description: text(input.description).slice(0, 1000) || null, due_at: text(input.dueAt) || null, metadata: { source: "maia_agentic_runtime" } }).select("id,title,status,due_at").single();
+        const title = text(input.title).slice(0, 180);
+        const description = text(input.description).slice(0, 1000);
+        const dueAt = text(input.dueAt) || null;
+        const leadId = text(input.leadId) || null;
+
+        // Limitless Realty uses its established follow_ups pipeline, whose lead
+        // foreign key points to public.leads rather than public.crm_leads.
+        // Writing a Limitless lead ID into crm_tasks therefore fails at the FK
+        // boundary and bypasses the scheduler that actually sends Maia follow-ups.
+        if (ctx.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d") {
+          if (!leadId) throw new Error("A Limitless Realty lead is required to create a follow-up.");
+          const { data: lead, error: leadError } = await admin
+            .from("leads")
+            .select("id,phone,opted_out")
+            .eq("organization_id", ctx.organizationId)
+            .eq("id", leadId)
+            .maybeSingle();
+          if (leadError) throw leadError;
+          if (!lead) throw new Error("The lead is not assigned to this Limitless Realty organization.");
+          if (lead.opted_out) throw new Error("This lead has opted out of follow-up messages.");
+          if (!lead.phone) throw new Error("This lead has no phone number for WhatsApp follow-up.");
+
+          const { data, error } = await admin
+            .from("follow_ups")
+            .insert({
+              organization_id: ctx.organizationId,
+              lead_id: lead.id,
+              stage: 0,
+              scheduled_at: dueAt,
+              message_sent: description || title,
+              status: "pending",
+              channel: "whatsapp",
+              agent_key: "maia",
+            })
+            .select("id,lead_id,stage,scheduled_at,message_sent,status,channel,agent_key")
+            .single();
+          if (error) throw error;
+          return { ...data, pipeline: "limitless_follow_ups" };
+        }
+
+        const { data, error } = await admin
+          .from("crm_tasks")
+          .insert({
+            organization_id: ctx.organizationId,
+            lead_id: leadId,
+            assigned_agent_id: ctx.agentId,
+            task_type: "ai_follow_up",
+            title,
+            description: description || null,
+            due_at: dueAt,
+            metadata: { source: "maia_agentic_runtime" },
+          })
+          .select("id,title,status,due_at")
+          .single();
         if (error) throw error;
         return data;
       },
