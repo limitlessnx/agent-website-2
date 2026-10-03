@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+import { resolveSupabaseUrl } from "@/lib/supabase/config";
 
 const CLIENT_COOKIE="fluxknight_client_session";
 const CLIENT_SETUP_COOKIE="fluxknight_client_setup";
@@ -22,7 +23,7 @@ type MembershipRow={id:string;organization_id:string;status:string;organizations
 function projectRefFromUrl(value:string){try{return new URL(value).hostname.match(/^([a-z0-9]+)\.supabase\.co$/i)?.[1]||""}catch{return""}}
 function projectRefFromKey(value:string){if(!value||!value.includes("."))return"";try{return String((JSON.parse(Buffer.from(value.split(".")[1],"base64url").toString("utf8")) as {ref?:string}).ref||"")}catch{return""}}
 function authConfig(){
- const url=(process.env.FLUXKNIGHT_SUPABASE_URL||process.env.LIMITLESS_SUPABASE_URL||process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||"").trim().replace(/\/$/,"");
+ const url=resolveSupabaseUrl(process.env.FLUXKNIGHT_SUPABASE_URL||process.env.LIMITLESS_SUPABASE_URL||process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||"");
  const anonKey=(process.env.FLUXKNIGHT_SUPABASE_ANON_KEY||process.env.LIMITLESS_SUPABASE_ANON_KEY||process.env.SUPABASE_ANON_KEY||process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"").trim();
  if(!url||!anonKey)throw new Error("Fluxknight authentication is not configured.");
  const urlProjectRef=projectRefFromUrl(url),keyProjectRef=projectRefFromKey(anonKey);
