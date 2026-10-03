@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
-import { getProperties, type PropertyRecord } from "@/lib/limitless-data";
+import { getProperties, LIMITLESS_REALTY_ORGANIZATION_ID, type PropertyRecord } from "@/lib/limitless-data";
 
 type MetricIcon = "leads" | "conversations" | "followups" | "qualified" | "revenue";
 
