@@ -8,6 +8,7 @@ const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime
 
 type MediaUploadOptions = {
   organizationKey?: string;
+  organizationId?: string;
   propertyId?: string;
   channel?: "whatsapp" | "telegram";
   caption?: string;
@@ -86,6 +87,7 @@ export async function uploadPublicMedia(file: File, options: MediaUploadOptions 
     const { data, error } = await supabase.from("media_assets").insert({
       channel: options.channel,
       direction: "outbound",
+      organization_id: options.organizationId || null,
       storage_bucket: PUBLIC_MEDIA_BUCKET,
       storage_path: path,
       mime_type: file.type,
