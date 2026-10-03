@@ -36,7 +36,7 @@ export type LeadImportResult = { imported: number; skipped: number; errors: stri
 export type SupabaseTableStatus = { table: string; ready: boolean; error?: string };
 export type SupabaseReadiness = { configured: boolean; ready: boolean; tables: SupabaseTableStatus[] };
 const requiredSupabaseTables = ["leads", "properties", "bot_sessions"] as const;
-const LIMITLESS_REALTY_ORGANIZATION_ID = process.env.LIMITLESS_REALTY_ORGANIZATION_ID || "b15f21b4-5697-4d21-9421-8a34eae3476d";
+export const LIMITLESS_REALTY_ORGANIZATION_ID = process.env.LIMITLESS_REALTY_ORGANIZATION_ID || "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 const seedLeads: Lead[] = [{ id: "sample-1", name: "Limitless Test", phone: "2347036233508", status: "in_conversation", score: "warm", budget: "N5,000,000", location_preference: "Benin City, Edo State", property_type: "land", purpose: "investment", follow_up_stage: 1, last_contacted_at: new Date().toISOString() }];
 const seedProperties: PropertyRecord[] = [
