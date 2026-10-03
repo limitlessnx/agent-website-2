@@ -167,7 +167,7 @@ export default function DashboardHomeExperience({
             <section className={styles.compactCard}>
               <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>COLLECTIONS</span><h2>Collection Performance</h2></div><span className={styles.periodLabel}>Recorded plans</span></header>
               <div className={styles.collectionBody}>
-                <div className={styles.donut} style={{ ["--collection" as string]: Math.min(100, limitless.financial.collectionRate) + "%" }}><strong>{limitless.financial.collectionRate}%</strong><span>Collection rate</span></div>
+                <div className={styles.donut} style={{ background: `conic-gradient(var(--fk-success) ${Math.min(100, limitless.financial.collectionRate)}%, var(--fk-brand) 0)` }}><strong>{limitless.financial.collectionRate}%</strong><span>Collection rate</span></div>
                 <div className={styles.collectionLegend}><span><i className={styles.greenDot} />Collected <b>{formatNaira(limitless.financial.collected)}</b></span><span><i className={styles.purpleDot} />Outstanding <b>{formatNaira(limitless.financial.outstanding)}</b></span><span><i className={styles.redDot} />Overdue <b>{formatNaira(limitless.financial.overdue)}</b></span></div>
               </div>
             </section>
