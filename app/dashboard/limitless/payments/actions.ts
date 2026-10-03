@@ -91,7 +91,7 @@ export async function updatePlanStatusAction(formData: FormData) {
   revalidatePath("/dashboard/limitless/payments");
 }
 
-export async function updatePlanCadenceAction(formData: FormData) {\n  await requireAdmin();\n  const planId = String(formData.get("payment_plan_id") || "");\n  const frequency = String(formData.get("frequency") || "").trim();\n  if (!planId) throw new Error("Installment plan is required.");\n  if (!["weekly","biweekly","monthly"].includes(frequency)) throw new Error("Invalid installment cadence.");\n  await updatePaymentPlan(planId, { frequency });\n  revalidatePath("/dashboard/limitless/payments");\n}\n\nexport async function saveReminderTemplateAction(formData: FormData) {
+export async function saveReminderTemplateAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("template_id") || "");
   const payload = {
