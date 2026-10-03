@@ -11,8 +11,10 @@ const cleanKnowledge = (value: unknown) => {
 const cleanWhatsApp = (value: unknown): SaveOnboardingInput["whatsapp_preferences"] => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
+  const connectionPath: NonNullable<SaveOnboardingInput["whatsapp_preferences"]>["connection_path"] =
+    raw.connection_path === "already_have_whatsapp_business" ? "already_have_whatsapp_business" : "need_help";
   return {
-    connection_path: raw.connection_path === "already_have_whatsapp_business" ? "already_have_whatsapp_business" : "need_help",
+    connection_path: connectionPath,
     preferred_number: typeof raw.preferred_number === "string" ? raw.preferred_number.trim().slice(0, 60) : undefined,
   };
 };

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
 import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
@@ -29,11 +30,12 @@ export default async function PaymentsPage() {
   return (
     <div className="admin-page payment-page">
       <div className="admin-page-header">
-        <div><p className="admin-kicker">Limitless Realty</p><h1>Payments & Installments</h1><p>Record client payments, calculate balances, and configure reminder placeholders.</p></div>
+        <div><p className="admin-kicker">Limitless Realty</p><h1>Payments & Installments</h1><p>Record client payments, calculate balances, and configure payment reminder cadence and approved message templates.</p></div>
       </div>
 
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><WalletCards size={15}/> Agreed value</p><strong>{formatNaira(agreed)}</strong><span>{plans.length} payment plans</span></article>
+        <article className="admin-metric-card"><p><WalletCards size={15}/> Installment payments</p><strong>{plans.length}</strong><span>Active and historical client plans</span></article>
+        <Link href="/dashboard/limitless/payments/installments" className="admin-metric-card" style={{ textDecoration: "none" }}><p><WalletCards size={15}/> Revenue amount</p><strong>{formatNaira(agreed)}</strong><span>Open installment client management →</span></Link>
         <article className="admin-metric-card"><p><CreditCard size={15}/> Total paid</p><strong>{formatNaira(paid)}</strong><span>Recorded payments</span></article>
         <article className="admin-metric-card"><p><BellRing size={15}/> Outstanding</p><strong>{formatNaira(outstanding)}</strong><span>Pending collection</span></article>
         <article className="admin-metric-card"><p><AlertTriangle size={15}/> Overdue</p><strong>{overdue}</strong><span>Plans needing attention</span></article>
@@ -52,7 +54,7 @@ export default async function PaymentsPage() {
             <input name="property_title" placeholder="Property title" required />
             <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
             <input name="installment_amount" type="number" min="0" placeholder="Installment amount (₦)" />
-            <select name="frequency"><option value="custom">Custom</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option></select>
+            <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom</option></select>
             <label>Next due date<input name="next_due_date" type="date" /></label>
             <label>Final due date<input name="final_due_date" type="date" /></label>
             <input name="assigned_agent" placeholder="Assigned agent" />

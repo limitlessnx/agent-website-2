@@ -84,7 +84,10 @@ export async function updatePlanStatusAction(formData: FormData) {
   await requireAdmin();
   const planId = String(formData.get("payment_plan_id") || "");
   const status = String(formData.get("status") || "active");
-  await updatePaymentPlan(planId, { status, reminders_enabled: !["completed", "cancelled", "paused"].includes(status) });
+  const frequency = String(formData.get("frequency") || "").trim();
+  if (!["active","due_soon","overdue","completed","paused","cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
+  if (frequency && !["weekly","biweekly","monthly"].includes(frequency)) throw new Error("Invalid installment cadence.");
+  await updatePaymentPlan(planId, { status, ...(frequency ? { frequency } : {}), reminders_enabled: !["completed", "cancelled", "paused"].includes(status) });
   revalidatePath("/dashboard/limitless/payments");
 }
 
@@ -105,3 +108,4 @@ export async function saveReminderTemplateAction(formData: FormData) {
   else await createReminderTemplate(payload);
   revalidatePath("/dashboard/limitless/payments");
 }
+
