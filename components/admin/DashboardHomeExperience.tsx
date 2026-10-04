@@ -3,25 +3,19 @@ import Link from "next/link";
 import LimitlessRevenueCard from "./LimitlessRevenueCard";
 import {
   AlertTriangle,
-  ArrowUpRight,
-  BarChart2,
   Bot,
   Building2,
-  CalendarDays,
   CheckCircle2,
   ChevronRight,
   CircleDollarSign,
-  CreditCard,
   Image as ImageIcon,
   MessageSquareText,
   Play,
   Target,
   Users,
-  WalletCards,
   Workflow,
 } from "@/components/admin/ServerIcons";
 import type { LimitlessDashboardData, OrganizationOperationalItem } from "@/lib/admin-organization-data";
-import { formatNaira } from "@/lib/limitless-payments";
 import styles from "./DashboardHomeExperience.module.css";
 
 type Metric = { label: string; value: number | string; detail: string; icon: "leads" | "conversations" | "followups" | "qualified" | "revenue" };
