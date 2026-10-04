@@ -23,8 +23,8 @@ export default async function PortalSettingsPage() {
       "organization_customer_stages?organization_id=eq."+org+"&status=eq.active&select=id,key,name,category,position,is_terminal,follow_up_default_minutes&order=position.asc&limit=100",
     ).catch(()=>[]),
     listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]),
-    supabaseServerRequest<Array<{membership_id:string;whatsapp_phone?:string|null;notify_whatsapp_handoffs:boolean}>>(
-      "organization_member_notification_preferences?organization_id=eq."+org+"&select=membership_id,whatsapp_phone,notify_whatsapp_handoffs&limit=200",
+    supabaseServerRequest<Array<{membership_id:string;whatsapp_phone?:string|null;notify_whatsapp_handoffs:boolean;metadata?:Record<string,unknown>|null}>>(
+      "organization_member_notification_preferences?organization_id=eq."+org+"&select=membership_id,whatsapp_phone,notify_whatsapp_handoffs,metadata&limit=200",
     ).catch(()=>[]),
     supabaseServerRequest<Array<{id:string;name:string;category?:string|null;assigned_membership_id:string;priority:number;notify_whatsapp:boolean;status:string}>>(
       "handoff_assignment_rules?organization_id=eq."+org+"&select=id,name,category,assigned_membership_id,priority,notify_whatsapp,status&order=priority.asc&limit=200",
