@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sessions = await supabaseRest<Session[]>(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&limit=1`);
+    const sessions = await supabaseRest<Session[]>(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&select=id,tx_ref,amount,currency,status,billing_type,organization_id,customer_email,metadata&limit=1`);
     const session = sessions[0];
     if (!session) {
       destination.searchParams.set("payment", "not_found");
