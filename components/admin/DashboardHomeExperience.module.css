@@ -68,29 +68,32 @@
   .financeMeta small{color:var(--fk-text-secondary);text-align:left}
   .financeActions{margin-top:12px;gap:7px}
   .financeActions a{min-height:50px;border-radius:11px;font-size:9px}
-  .kpiGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-  .kpiCard{display:block;padding:10px;border-radius:13px;min-height:102px}
-  .kpiIcon{width:29px;height:29px;margin-bottom:10px}
-  .kpiCard strong{display:block;font-size:20px}
-  .kpiCard>span:not(.kpiIcon){display:block;margin-top:4px;font-size:9px}
-  .kpiCard small{display:block;margin-top:6px;font-size:8px}
+  .kpiGrid{display:flex;grid-template-columns:none;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .kpiGrid::-webkit-scrollbar{display:none}
+  .kpiCard{display:block;flex:0 0 88px;padding:9px;border-radius:13px;min-height:94px}
+  .kpiIcon{width:27px;height:27px;margin-bottom:8px}
+  .kpiCard strong{display:block;font-size:19px}
+  .kpiCard>span:not(.kpiIcon){display:block;margin-top:3px;font-size:8px}
+  .kpiCard small{display:block;margin-top:5px;font-size:7px}
   .sectionCard,.compactCard{padding:13px;border-radius:17px}
   .sectionHeader h2{font-size:15px}
   .propertyTabs{margin:10px 0 10px}
-  .propertyCarousel{gap:9px}
-  .propertyCard{flex-basis:242px;border-radius:14px}
-  .propertyMedia{aspect-ratio:1.55}
-  .propertyBody{padding:10px}
-  .propertyTitleRow strong{font-size:11px}
-  .propertyPrice{font-size:13px}
+  .propertyCarousel{gap:7px}
+  .propertyCard{flex-basis:145px;border-radius:13px}
+  .propertyMedia{aspect-ratio:1.48}
+  .propertyBody{padding:8px}
+  .propertyTitleRow strong{font-size:10px}
+  .propertyLocation,.propertyType{font-size:8px}
+  .propertyPrice{font-size:12px}
+  .propertyMediaCounts{gap:6px;font-size:8px}
   .twoColumn{grid-template-columns:1fr 1fr;gap:8px}
   .compactCard .sectionHeader{gap:6px}
   .compactCard .sectionHeader h2{font-size:13px}
-  .collectionBody{grid-template-columns:92px minmax(0,1fr);gap:8px}
-  .donut{width:88px;height:88px}
-  .donut::after{inset:9px}
-  .donut strong{font-size:18px}
-  .donut span{font-size:7px}
+  .collectionBody{grid-template-columns:72px minmax(0,1fr);gap:6px}
+  .donut{width:72px;height:72px}
+  .donut::after{inset:8px}
+  .donut strong{font-size:15px}
+  .donut span{font-size:6px;margin-top:-23px}
   .collectionLegend{gap:7px}
   .collectionLegend span,.collectionLegend b{font-size:8px}
   .paymentRow{grid-template-columns:auto minmax(0,1fr) auto;gap:5px;padding:8px 0}
@@ -109,13 +112,22 @@
   .hero{grid-template-columns:minmax(0,1fr) 148px}
   .maiaCard{width:148px;min-width:148px}
   .hero h1{font-size:23px}
-  .financeHeader{grid-template-columns:minmax(0,1fr) 112px}
-  .financeHeader>div:first-child>strong{font-size:32px}
+  .financeHeader{grid-template-columns:minmax(0,1fr) 105px;min-height:92px}
+  .financeHeader>div:first-child>strong{font-size:30px}
+  .financeChart{height:62px}
+  .financeActions a{min-height:44px}
   .financeActions a span{max-width:60px;text-align:left;line-height:1.15}
 }
 @media(max-width:430px){
-  .hero{grid-template-columns:1fr}
-  .maiaCard{grid-column:1;grid-row:auto;width:100%;min-width:0}
-  .kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .twoColumn{grid-template-columns:1fr}
+  .hero{grid-template-columns:minmax(0,1fr) 132px;gap:8px}
+  .maiaCard{grid-column:2;grid-row:1 / span 3;width:132px;min-width:132px;padding:8px}
+  .maiaAvatar{width:34px;height:34px}
+  .maiaCard strong{font-size:11px}
+  .maiaCard small{font-size:8px}
+  .hero h1{font-size:21px}
+  .hero p{font-size:10px}
+  .twoColumn{grid-template-columns:1fr 1fr;gap:7px}
+  .compactCard{padding:10px}
+  .compactCard .sectionHeader h2{font-size:12px}
+  .compactCard .periodLabel{font-size:7px}
 }
