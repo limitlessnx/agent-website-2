@@ -57,6 +57,7 @@ export type LimitlessUpcomingPayment = {
 export type LimitlessDashboardData = {
   financial: {
     collected: number;
+    yearCollected: number;
     monthCollected: number;
     todayCollected: number;
     outstanding: number;
@@ -189,6 +190,9 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
         .limit(1000)).data
     : [];
   const payments = recentPayments || [];
+  const yearCollected = payments
+    .filter((payment) => String(payment.payment_date || "").slice(0, 4) === String(lagosParts.year))
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const monthCollected = payments
     .filter((payment) => String(payment.payment_date || "").slice(0, 7) === monthKey)
     .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
@@ -212,6 +216,7 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
   return {
     financial: {
       collected: totalCollected,
+      yearCollected,
       monthCollected,
       todayCollected,
       outstanding,
