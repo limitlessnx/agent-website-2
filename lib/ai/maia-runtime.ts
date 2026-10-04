@@ -3,6 +3,7 @@ import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { maiaAppointmentTools } from "@/lib/ai/maia-appointment-tools";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 import { requestLimitlessInspection } from "@/lib/limitless-inspections";
+import { createHumanHandoffFromMaia } from "@/lib/human-operations";
 
 export type MaiaRuntimeInput = {
   organizationId: string;
@@ -11,12 +12,15 @@ export type MaiaRuntimeInput = {
   sessionId?: string;
   channel?: string;
   externalConversationId?: string;
+  customerId?: string;
+  conversationId?: string;
+  correlationId?: string;
   autonomous?: boolean;
 };
 
 type Model = { id: string; provider: string; model_key: string; display_name: string; capabilities: Record<string, unknown> };
 type RuntimeProfile = { enabled: boolean; autonomy_mode: "supervised" | "autonomous"; max_steps: number; model_strategy: "best_available" | "fastest" | "reasoning" | "balanced"; memory_enabled: boolean; tool_policy: Record<string, unknown> };
-type ToolContext = { organizationId: string; agentId: string; sessionId: string; externalConversationId?: string };
+type ToolContext = { organizationId: string; agentId: string; sessionId: string; externalConversationId?: string; customerId?: string; conversationId?: string; correlationId?: string };
 type ToolDefinition = { name: string; description: string; parameters: Record<string, unknown>; execute: (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown> };
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
@@ -341,6 +345,35 @@ function toolSet(): ToolDefinition[] {
       },
     },
     {
+      name: "handoff_to_human_supervisor",
+      description: "Hand a customer to a configured human supervisor when the customer asks for a human or the request requires payment, booking, documentation, complaint handling, negotiation or another human-only action. This does not open a human chat inside Maia. It creates the canonical handoff, pauses Maia for this conversation, assigns a configured supervisor when a rule exists, and sends the supervisor a concise WhatsApp summary.",
+      parameters: { type: "object", additionalProperties: false, properties: {
+        reason: { type: "string" },
+        category: { type: "string" },
+        priority: { type: "string", enum: ["low","normal","high","critical"] },
+        summary: { type: "string" },
+        nextAction: { type: "string" },
+        assignedMembershipId: { type: "string" }
+      }, required: ["reason","category","summary"] },
+      execute: async (input, ctx) => {
+        if (!ctx.customerId || !ctx.conversationId) throw new Error("Maia cannot create a human handoff until the canonical customer and conversation are resolved.");
+        const result = await createHumanHandoffFromMaia({
+          organizationId: ctx.organizationId,
+          customerId: ctx.customerId,
+          conversationId: ctx.conversationId,
+          sourceAgentId: ctx.agentId,
+          correlationId: ctx.correlationId || null,
+          reason: text(input.reason),
+          category: text(input.category) || "general",
+          priority: text(input.priority) || "normal",
+          summary: text(input.summary) || null,
+          nextAction: text(input.nextAction) || null,
+          assignedMembershipId: text(input.assignedMembershipId) || null,
+        });
+        return { ...result, mode: "external_supervisor_handoff", maiaChatTakeover: false };
+      },
+    },
+    {
       name: "handoff_to_agent",
       description: "Queue a task for another agent assigned to this tenant. Use only when the other agent is actually assigned.",
       parameters: { type: "object", additionalProperties: false, properties: { targetAgentId: { type: "string" }, title: { type: "string" }, instructions: { type: "string" } }, required: ["targetAgentId", "title", "instructions"] },
@@ -424,7 +457,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const profile = await loadProfile(input.organizationId, input.agentId);
   if (!profile.enabled) throw new Error("This agent's autonomous runtime is disabled.");
   const session = await createSession(input);
-  const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId };
+  const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId, customerId: input.customerId, conversationId: input.conversationId, correlationId: input.correlationId };
   const model = await chooseModel(input.organizationId, profile, input.message);
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
   await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
