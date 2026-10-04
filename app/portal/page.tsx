@@ -10,9 +10,10 @@ import {
   Workflow,
 } from "@/components/admin/ServerIcons";
 import PlanEntitlementsPanel from "@/components/portal/PlanEntitlementsPanel";
+import TrialActivationButton from "./TrialActivationButton";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary, type PortalAgent, type PortalWorkflow, type PortalWorkflowRun } from "@/lib/client-portal-data";
-import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { getActiveFluxSubscription, getFluxWalletSummary } from "@/lib/flux-credits";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
@@ -44,9 +45,10 @@ export default async function ClientPortalPage() {
   if (!session) return null;
 
   const admin = createAdminClient();
-  const [summary, wallet, whatsappBinding] = await Promise.all([
+  const [summary, wallet, subscription, whatsappBinding] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     safeWalletSummary(session.organizationId),
+    getActiveFluxSubscription(session.organizationId).catch(() => null),
     (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
@@ -57,6 +59,7 @@ export default async function ClientPortalPage() {
   const attentionAgents = summary.agents.filter((agent) => ["error", "disabled", "paused"].includes(agent.status.toLowerCase()));
   const trialDays = trialDaysRemaining(wallet?.trialEndsAt || null);
   const isTrial = Boolean(wallet && (wallet.trialEndsAt !== null || wallet.trialCreditLimit !== null));
+  const isFreeWorkspace = !subscription && !isTrial;
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
   const recentActivity = summary.runs.slice(0, 6);
@@ -77,6 +80,20 @@ export default async function ClientPortalPage() {
           </div>
         </div>
       </section>
+
+      {isFreeWorkspace ? (
+        <section className="portal-card portal-activation-banner" aria-label="Choose a Fluxknight plan">
+          <div>
+            <p className="portal-kicker">Free workspace</p>
+            <h2>Your workspace is ready. Activate it when you are ready.</h2>
+            <p>Explore your dashboard and complete your business setup without paying or starting a trial. Choose a paid plan or activate the Basic free trial when you want customer-facing AI turned on.</p>
+          </div>
+          <div className="portal-actions">
+            <Link className="portal-button secondary" href="/pricing">Choose a plan</Link>
+            <TrialActivationButton />
+          </div>
+        </section>
+      ) : null}
 
       {isTrial ? (
         <section className="portal-trial-banner" aria-label="Free trial status">
