@@ -3,7 +3,6 @@ import { getMembershipForOrganization, getPrimaryMembership, setClientSession, s
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
 import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
-function slugify(value:string){return value.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)}
 function firstName(value:string){return value.trim().split(/\s+/)[0]||"there"}
 
 export async function POST(request:NextRequest){
