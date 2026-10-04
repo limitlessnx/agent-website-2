@@ -18,6 +18,7 @@ type Props = {
   plan: Plan;
   initialTerm: PrepaidTerm | null;
   customer: { name: string; email: string } | null;
+  evaluationSessionId: string;
 };
 
 type BillingTerm = "monthly" | PrepaidTerm;
@@ -55,6 +56,7 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
           billingType: "setup",
           term: term === "monthly" ? null : term,
           customer: { name, email, phone },
+          evaluationSessionId: evaluationSessionId || null,
         }),
       });
       const result = await response.json().catch(() => ({}));
