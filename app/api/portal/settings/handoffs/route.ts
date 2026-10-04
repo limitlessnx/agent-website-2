@@ -16,14 +16,21 @@ export async function POST(req:NextRequest){
     const membershipId=String(body.membershipId||"").trim();
     if(!membershipId) return NextResponse.json({error:"membershipId is required"},{status:400});
     const {data:member}=await admin.from("organization_memberships").select("id").eq("organization_id",session.organizationId).eq("id",membershipId).eq("status","active").maybeSingle();
+    const {data:supervisorPref}=await admin.from("organization_member_notification_preferences").select("metadata").eq("organization_id",session.organizationId).eq("membership_id",membershipId).maybeSingle();
+    if((supervisorPref?.metadata as Record<string,unknown>|null)?.supervisor!==true) return NextResponse.json({error:"Assignment target must be configured as a supervisor."},{status:400});
     if(!member) return NextResponse.json({error:"Member is not active in this organization"},{status:400});
     const phone=String(body.whatsappPhone||"").replace(/[^0-9+]/g,"").trim()||null;
+    const supervisorName=String(body.supervisorName||"").trim().slice(0,160)||null;
+    const isSupervisor=Boolean(body.isSupervisor);
+    const {data:existingPref}=await admin.from("organization_member_notification_preferences").select("metadata").eq("organization_id",session.organizationId).eq("membership_id",membershipId).maybeSingle();
+    const metadata={...((existingPref?.metadata||{}) as Record<string,unknown>),supervisor:isSupervisor,supervisor_name:supervisorName};
     const {data,error}=await admin.from("organization_member_notification_preferences").upsert({
       membership_id:membershipId,
       organization_id:session.organizationId,
       whatsapp_phone:phone,
       notify_whatsapp_handoffs:Boolean(body.notifyWhatsAppHandoffs),
       notify_dashboard_handoffs:true,
+      metadata,
       updated_at:new Date().toISOString(),
     },{onConflict:"membership_id"}).select().single();
     if(error) return NextResponse.json({error:error.message},{status:400});
