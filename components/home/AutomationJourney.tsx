@@ -1,35 +1,11 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  CalendarDays,
+  BarChart2,
+  CheckCircle2,
   MessageSquareText,
-  UserRound,
-} from "@/components/admin/ServerIcons";
+  } from "@/components/admin/ServerIcons";
 import styles from "./AutomationJourney.module.css";
-
-const activityCards = [
-  {
-    tone: "whatsapp",
-    label: "New enquiry",
-    meta: "2m",
-    text: "Interested in the 2-bedroom apartment…",
-    icon: MessageSquareText,
-  },
-  {
-    tone: "booking",
-    label: "Booking confirmed",
-    meta: "15m",
-    text: "Inspection · Sat, 10:00 AM",
-    icon: CalendarDays,
-  },
-  {
-    tone: "followup",
-    label: "Follow-up",
-    meta: "1h",
-    text: "Reminder scheduled",
-    icon: UserRound,
-  },
-] as const;
 
 function ActionLink() {
   return (
@@ -60,34 +36,31 @@ export default function AutomationJourney() {
           </h2>
         </div>
 
-        <div className={styles.visual} aria-label="Customer activity being handled across business channels">
-          <div className={styles.visualImage}>
+        <div className={styles.visual} aria-label="Business team discussing customer growth and operations">
+          <div className={styles.growthVisual}>
             <img
-              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/9366e3a0-ece8-4429-9be8-bcd6d241dd7d.jpg"
-              alt="Business professional reviewing customer conversations and property enquiries"
+              className={styles.growthVisualImage}
+              src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1800&q=88"
+              alt="Business team collaborating around a table and reviewing growth"
               loading="lazy"
               decoding="async"
+              fetchPriority="low"
             />
-          </div>
-
-          <div className={styles.activityLayer}>
-            {activityCards.map(({ tone, label, meta, text, icon: Icon }) => (
-              <article className={`${styles.activity} ${styles[tone]}`} key={label}>
-                <span className={styles.activityIcon} aria-hidden="true">
-                  <Icon size={16} />
+            <div className={styles.growthVisualShade} aria-hidden="true" />
+            <div className={styles.growthPanel} aria-label="Customer growth signals">
+              <div className={styles.growthPanelHeader}>
+                <span className={styles.growthIcon}><BarChart2 size={15} /></span>
+                <span>
+                  <small>Customer growth</small>
+                  <strong>More opportunities in motion</strong>
                 </span>
-                <div className={styles.activityCopy}>
-                  <div className={styles.activityTopline}>
-                    <strong>{label}</strong>
-                    <small>{meta}</small>
-                  </div>
-                  <p>{text}</p>
-                  {tone === "followup" && (
-                    <span className={styles.confirmed}>✓ Scheduled</span>
-                  )}
-                </div>
-              </article>
-            ))}
+              </div>
+              <div className={styles.growthMetrics}>
+                <span><MessageSquareText size={13} /> Enquiries <b>↑</b></span>
+                <span><CheckCircle2 size={13} /> Bookings <b>↑</b></span>
+                <span><CheckCircle2 size={13} /> Follow-ups <b>↑</b></span>
+              </div>
+            </div>
           </div>
         </div>
 
