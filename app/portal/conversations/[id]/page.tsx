@@ -28,7 +28,7 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
   const conversation=conversations[0];
   if(!conversation) notFound();
 
-  const [customers,messages,handoffRows]=await Promise.all([
+  const [customers,messages,handoffRows,followUps,appointments]=await Promise.all([
     supabaseServerRequest<Customer[]>(
       "crm_customers?organization_id=eq."+org+"&id=eq."+encodeURIComponent(conversation.customer_id)+"&select=id,full_name,company_name,email,phone,current_stage_id&limit=1",
     ).catch(()=>[]),
@@ -38,8 +38,16 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
     supabaseServerRequest<Handoff[]>(
       "human_handoffs?organization_id=eq."+org+"&conversation_id=eq."+cid+"&select=id,status,priority,category,reason,conversation_summary,next_action,metadata,sla_due_at,created_at&order=created_at.desc&limit=1",
     ).catch(()=>[]),
+    supabaseServerRequest<Array<{id:string;status:string;scheduled_at?:string|null;message_sent?:string|null;channel?:string|null;stage?:number}>>(
+      "follow_ups?organization_id=eq."+org+"&conversation_id=eq."+cid+"&select=id,status,scheduled_at,message_sent,channel,stage&order=scheduled_at.desc&limit=5",
+    ).catch(()=>[]),
+    supabaseServerRequest<Array<{id:string;title:string;start_at?:string|null;end_at?:string|null;status:string;customer_name?:string|null;location?:string|null}>>(
+      "appointments?organization_id=eq."+org+"&conversation_id=eq."+cid+"&select=id,title,start_at,end_at,status,customer_name,location&order=start_at.desc&limit=5",
+    ).catch(()=>[]),
   ]);
   const customer=customers[0];
+  const latestFollowUp=followUps[0];
+  const latestAppointment=appointments[0];
 
   let stage:Stage|null=null;
   if(customer?.current_stage_id){
@@ -50,6 +58,9 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
   }
 
   const mode=String(conversation.metadata?.ai_response_mode||"active");
+  const intent=String(structured.customerIntent||structured.intent||handoff?.reason||"Intent not captured");
+  const propertyContext=String(structured.property||structured.propertyInterest||structured.service||structured.serviceInterest||"Not specified");
+  const summary=handoff?.conversation_summary||String(structured.summary||"Maia has not recorded a structured summary yet.");
   const handoff=handoffRows[0];
   const structured=handoff?.metadata&&typeof handoff.metadata.structured_handoff==="object"&&!Array.isArray(handoff.metadata.structured_handoff)
     ? handoff.metadata.structured_handoff as Record<string,unknown>
@@ -64,11 +75,34 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
       <p>{stage?.name||"Stage not set"} · {conversation.status.replaceAll("_"," ")} · AI {mode.replaceAll("_"," ")}</p>
     </div><Link href="/portal/conversations">Back to conversations</Link></section>
 
-    {handoff?<section className="portal-card">
+    <section className="portal-card" aria-label="Customer context">
+      <div className="portal-card-head"><div><p className="portal-kicker">Customer context</p><h2>Who Maia is speaking with</h2><p>The operational context your team needs before reading the transcript.</p></div></div>
+      <div className="portal-list">
+        <div className="portal-list-row"><div><strong>Customer</strong><span>{customer?.full_name||customer?.company_name||"Unknown customer"}</span></div><div><strong>Stage</strong><span>{stage?.name||"Not set"}</span></div></div>
+        <div className="portal-list-row"><div><strong>Phone</strong><span>{customer?.phone||"Not provided"}</span></div><div><strong>Email</strong><span>{customer?.email||"Not provided"}</span></div></div>
+      </div>
+    </section>
+
+    <section className="portal-card" aria-label="Maia summary">
+      <div className="portal-card-head"><div><p className="portal-kicker">Maia summary</p><h2>{intent}</h2><p>{summary}</p></div></div>
+      <div className="portal-list">
+        <div className="portal-list-row"><div><strong>Intent / request</strong><span>{intent}</span></div><div><strong>Property / service</strong><span>{propertyContext}</span></div></div>
+        <div className="portal-list-row"><div><strong>Needs & key points</strong>{keyPoints.length?keyPoints.map((point)=><span key={point}>• {point}</span>):<span>No structured needs captured yet.</span>}</div>{customerQuestions.length?<div><strong>Customer questions</strong>{customerQuestions.map((question)=><span key={question}>• {question}</span>)}</div>:null}</div>
+      </div>
+    </section>
+
+    <section className="portal-business-metrics" aria-label="Conversation operations">
+      <article className="portal-business-metric"><span>Stage</span><strong>{stage?.name||"Not set"}</strong><small>Current customer stage</small></article>
+      <article className="portal-business-metric"><span>Follow-up</span><strong>{latestFollowUp?.status?.replaceAll("_"," ")||"None"}</strong><small>{latestFollowUp?.scheduled_at?new Date(latestFollowUp.scheduled_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):"No scheduled follow-up"}</small></article>
+      <article className="portal-business-metric"><span>Appointment</span><strong>{latestAppointment?.status?.replaceAll("_"," ")||"None"}</strong><small>{latestAppointment?.start_at?new Date(latestAppointment.start_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):"No booking recorded"}</small></article>
+      <article className="portal-business-metric"><span>Handoff</span><strong>{handoff?.status?.replaceAll("_"," ")||"Not required"}</strong><small>{handoff?.priority?handoff.priority+" priority":"No human escalation"}</small></article>
+    </section>
+
+    {handoff?<section className="portal-card" aria-label="Human handoff">
       <div className="portal-card-head"><div>
         <p className="portal-kicker">Human handoff</p>
-        <h2>Customer context</h2>
-        <p>Operational context captured before Maia handed this conversation to a person.</p>
+        <h2>What the teammate needs to know</h2>
+        <p>{handoff.next_action||"Review the conversation and assist the customer."}</p>
       </div></div>
       <div className="portal-list">
         <div className="portal-list-row">
@@ -88,7 +122,7 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
     </section>:null}
 
     <section className="portal-card">
-      <div className="portal-card-head"><div><h2>Conversation</h2><p>{customer?.phone||customer?.email||"No customer contact detail"}</p></div></div>
+      <div className="portal-card-head"><div><p className="portal-kicker">Conversation evidence</p><h2>Conversation</h2><p>{customer?.phone||customer?.email||"No customer contact detail"}</p></div></div>
       <div className="portal-list">
         {messages.map((message)=><div className="portal-list-row" key={message.id}>
           <div>
