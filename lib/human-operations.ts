@@ -51,7 +51,7 @@ async function deriveHandoffSummary(organizationId:string,conversationId:string,
 }
 
 async function resolveHandoffAssignment(input:{
-  organizationId:string; sourceSystemId:string; sourceAgentId:string|null; category:string; payload:Record<string,unknown>;
+  organizationId:string; sourceSystemId:string|null; sourceAgentId:string|null; category:string; payload:Record<string,unknown>;
 }):Promise<HandoffAssignment>{
   const admin=createAdminClient();
   const explicit=str(input.payload.assignedMembershipId||input.payload.assigned_membership_id);
@@ -64,10 +64,11 @@ async function resolveHandoffAssignment(input:{
     }
   }
 
-  const {data:rules,error:rulesError}=await admin.from("handoff_assignment_rules")
+  let rulesQuery=admin.from("handoff_assignment_rules")
     .select("assigned_membership_id,category,source_system_id,notify_whatsapp,notify_dashboard,priority")
-    .eq("organization_id",input.organizationId).eq("status","active")
-    .order("priority",{ascending:true}).limit(100);
+    .eq("organization_id",input.organizationId).eq("status","active");
+  if(input.sourceSystemId) rulesQuery=rulesQuery.eq("source_system_id",input.sourceSystemId);
+  const {data:rules,error:rulesError}=await rulesQuery.order("priority",{ascending:true}).limit(100);
   if(rulesError) throw rulesError;
   const rule=(rules||[]).find((item)=>
     (!item.category||item.category===input.category)&&(!item.source_system_id||item.source_system_id===input.sourceSystemId)
@@ -549,7 +550,7 @@ export async function createHumanHandoffFromMaia(input:{
   };
   const assignment=await resolveHandoffAssignment({
     organizationId:input.organizationId,
-    sourceSystemId:"",
+    sourceSystemId:null,
     sourceAgentId:input.sourceAgentId,
     category,
     payload,
