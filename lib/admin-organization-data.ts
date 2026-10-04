@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
+import { getProperties, LIMITLESS_REALTY_ORGANIZATION_ID, type PropertyRecord } from "@/lib/limitless-data";
 
 type MetricIcon = "leads" | "conversations" | "followups" | "qualified" | "revenue";
 
@@ -37,6 +38,44 @@ export type OrganizationOperationalItem = {
   tone: "conversation" | "automation" | "warning" | "muted";
 };
 
+export type LimitlessDashboardProperty = PropertyRecord & {
+  imageUrl?: string;
+  imageCount: number;
+  videoCount: number;
+  featured?: boolean;
+};
+
+export type LimitlessUpcomingPayment = {
+  id: string;
+  clientName: string;
+  propertyTitle: string;
+  amount: number;
+  dueDate: string | null;
+  status: string;
+};
+
+export type LimitlessDashboardData = {
+  financial: {
+    collected: number;
+    monthCollected: number;
+    todayCollected: number;
+    outstanding: number;
+    overdue: number;
+    agreed: number;
+    collectionRate: number;
+    recentCollectionSeries: number[];
+  };
+  properties: {
+    total: number;
+    active: number;
+    featured: number;
+    sold: number;
+    draft: number;
+    items: LimitlessDashboardProperty[];
+  };
+  upcomingPayments: LimitlessUpcomingPayment[];
+};
+
 export type OrganizationOperationalSnapshot = {
   organizationName: string;
   metrics: OrganizationHomeMetric[];
@@ -45,6 +84,7 @@ export type OrganizationOperationalSnapshot = {
   conversations: OrganizationOperationalItem[];
   activity: OrganizationOperationalItem[];
   attentionCount: number;
+  limitlessDashboard?: LimitlessDashboardData;
 };
 
 function text(value: unknown, fallback = "") {
@@ -79,9 +119,129 @@ async function notificationNotices(organizationId: string) {
   }));
 }
 
+async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminClient>): Promise<LimitlessDashboardData> {
+  const properties = await getProperties(150).catch(() => []);
+  const [{ data: plans }, { data: assets }] = await Promise.all([
+    admin
+      .from("payment_plans")
+      .select("id,client_name,property_title,agreed_price,total_paid,outstanding_balance,installment_amount,next_due_date,status")
+      .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+      .limit(500),
+    admin
+      .from("media_assets")
+      .select("id,property_id,mime_type,metadata,created_at")
+      .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+      .eq("direction", "outbound")
+      .not("property_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1000),
+  ]);
+
+  const paymentPlans = plans || [];
+  const media = assets || [];
+  const mediaByProperty = new Map<string, Array<{ mimeType: string; url?: string }>>();
+  for (const asset of media) {
+    const list = mediaByProperty.get(String(asset.property_id)) || [];
+    const metadata = asset.metadata && typeof asset.metadata === "object" ? asset.metadata as Record<string, unknown> : {};
+    const publicUrl = typeof metadata.public_url === "string" && metadata.public_url.startsWith("http") ? metadata.public_url : undefined;
+    list.push({ mimeType: String(asset.mime_type || ""), url: publicUrl });
+    mediaByProperty.set(String(asset.property_id), list);
+  }
+
+  const propertyItems: LimitlessDashboardProperty[] = properties.slice(0, 12).map((property) => {
+    const linked = mediaByProperty.get(property.id) || [];
+    const images = linked.filter((asset) => asset.mimeType.startsWith("image/"));
+    const videos = linked.filter((asset) => asset.mimeType.startsWith("video/"));
+    return {
+      ...property,
+      imageUrl: images[0]?.url || property.drive_photos_link || undefined,
+      imageCount: images.length || property.drive_photos_link ? Math.max(1, images.length) : 0,
+      videoCount: videos.length,
+      featured: lower(property.status) === "featured",
+    };
+  });
+
+  const now = new Date();
+  const lagosParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now).reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const monthKey = `${lagosParts.year}-${lagosParts.month}`;
+  const todayKey = `${monthKey}-${lagosParts.day}`;
+  const totalCollected = paymentPlans.reduce((sum, plan) => sum + Number(plan.total_paid || 0), 0);
+  const agreed = paymentPlans.reduce((sum, plan) => sum + Number(plan.agreed_price || 0), 0);
+  const outstanding = paymentPlans.reduce((sum, plan) => sum + Number(plan.outstanding_balance || 0), 0);
+  const overduePlans = paymentPlans.filter((plan) => lower(plan.status) === "overdue");
+  const overdue = overduePlans.reduce((sum, plan) => sum + Number(plan.outstanding_balance || 0), 0);
+
+  const planIds = paymentPlans.map((plan) => String(plan.id)).filter(Boolean);
+  const recentPayments = planIds.length
+    ? (await admin
+        .from("payment_records")
+        .select("amount,payment_date,payment_plan_id")
+        .in("payment_plan_id", planIds)
+        .order("payment_date", { ascending: false })
+        .limit(1000)).data
+    : [];
+  const payments = recentPayments || [];
+  const monthCollected = payments
+    .filter((payment) => String(payment.payment_date || "").slice(0, 7) === monthKey)
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const todayCollected = payments
+    .filter((payment) => String(payment.payment_date || "").slice(0, 10) === todayKey)
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+  const upcomingPayments = paymentPlans
+    .filter((plan) => plan.next_due_date && !["completed", "cancelled", "paused"].includes(lower(plan.status)))
+    .sort((a, b) => String(a.next_due_date).localeCompare(String(b.next_due_date)))
+    .slice(0, 5)
+    .map((plan) => ({
+      id: String(plan.id),
+      clientName: text(plan.client_name, "Client"),
+      propertyTitle: text(plan.property_title, "Property"),
+      amount: Number(plan.installment_amount || plan.outstanding_balance || 0),
+      dueDate: plan.next_due_date || null,
+      status: text(plan.status, "active"),
+    }));
+
+  return {
+    financial: {
+      collected: totalCollected,
+      monthCollected,
+      todayCollected,
+      outstanding,
+      overdue,
+      agreed,
+      collectionRate: agreed > 0 ? Math.round((totalCollected / agreed) * 100) : 0,
+      recentCollectionSeries: Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(now);
+        day.setDate(day.getDate() - (6 - index));
+        const key = day.toISOString().slice(0, 10);
+        return payments
+          .filter((payment) => String(payment.payment_date || "").slice(0, 10) === key)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      }),
+    },
+    properties: {
+      total: properties.length,
+      active: properties.filter((property) => lower(property.status) === "active").length,
+      featured: properties.filter((property) => lower(property.status) === "featured").length,
+      sold: properties.filter((property) => lower(property.status) === "sold").length,
+      draft: properties.filter((property) => ["draft", "inactive"].includes(lower(property.status))).length,
+      items: propertyItems,
+    },
+    upcomingPayments,
+  };
+}
+
 async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<OrganizationOperationalSnapshot> {
   const admin = createAdminClient();
-  const [{ data }, { data: paymentPlans }] = await Promise.all([
+  const [{ data }, { data: paymentPlans }, limitlessDashboard] = await Promise.all([
     admin
       .from("leads")
       .select("id,name,phone,email,status,score,budget,location_preference,follow_up_stage,last_follow_up_at,last_contacted_at,created_at,updated_at")
@@ -93,6 +253,7 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
       .select("total_paid,status")
       .eq("organization_id", scope.organizationId)
       .limit(500),
+    getLimitlessDashboardData(admin),
   ]);
 
   const leads = data || [];
@@ -102,7 +263,7 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
     Boolean(lead.last_contacted_at) || ["in_conversation", "contacted", "engaged", "qualified"].some((state) => lower(lead.status).includes(state))
   );
   const followUps = active.filter((lead) => Boolean(lead.last_follow_up_at) || Number(lead.follow_up_stage || 0) > 0 || lower(lead.status).includes("follow"));
-  const qualified = active.filter((lead) => ["hot", "high", "qualified", "ready"].includes(lower(lead.score)) || lower(lead.status).includes("qualified"));
+  const qualified = active.filter((lead) => ["hot", "high", "qualified", "ready"].includes(lower(lead.score)) || Number(lead.score || 0) >= 70 || lower(lead.status).includes("qualified"));
   const notices = await notificationNotices(scope.organizationId);
 
   const items = active.slice(0, 12).map((lead) => ({
@@ -148,6 +309,7 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
     conversations: items,
     activity: items,
     attentionCount: followUps.length,
+    limitlessDashboard,
   };
 }
 
@@ -457,6 +619,7 @@ export function emptyOrganizationOperationalSnapshot(organizationName: string): 
     conversations: [],
     activity: [],
     attentionCount: 0,
+    limitlessDashboard: undefined,
   };
 }
 
