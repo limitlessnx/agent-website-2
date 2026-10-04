@@ -1,7 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateRuntimeStructuredOutput } from "@/lib/ai-runtime/provider";
-import { routeRuntimeModel } from "@/lib/ai-runtime/model-router";
-const clean=(v:unknown,max=500)=>typeof v==="string"?v.trim().slice(0,max):"";
-const schema={type:"object",additionalProperties:false,properties:{reply:{type:"string"},ready:{type:"boolean"}},required:["reply","ready"]} as const;
-export async function POST(req:NextRequest){try{const b=await req.json(),industry=clean(b.industry,120),plan=clean(b.plan,80),admin=createAdminClient();const {data,error}=await admin.from("ai_business_evaluation_sessions").insert({industry:industry||null,context:{industry,plan}}).select("id").single();if(error)throw error;const model=await routeRuntimeModel({identity:{scope:"public",channel:"chat"} as any});const ai=await generateRuntimeStructuredOutput({model,systemPrompt:"You are Maia, Fluxknight's business evaluation assistant. Start a concise diagnostic. Ask ONE useful question at a time. Do not ask for name, email, phone, budget, or consent yet. Understand business, channels, bottlenecks, workflow, volume, desired automation and integrations. When enough context exists, say so and set ready=true. Never claim a final evaluation here.",input:{industry,plan},outputSchema:schema});const messages=[{role:"assistant",content:String(ai.parsed?.reply||"Tell me what your business does and what you want to improve.")}];await admin.from("ai_business_evaluation_sessions").update({messages,updated_at:new Date().toISOString()}).eq("id",data.id);return NextResponse.json({sessionId:data.id,messages,industry})}catch(error){console.error("[evaluation/session]",error);return NextResponse.json({error:"Unable to start the AI evaluation."},{status:500})}}
+
+const clean = (v: unknown, max = 500) => typeof v === "string" ? v.trim().slice(0, max) : "";
+
+export async function POST(req: NextRequest) {
+  try {
+    const b = await req.json();
+    const industry = clean(b.industry, 120);
+    const plan = clean(b.plan, 80);
+    const c = b.contact || {};
+    const name = clean(c.name);
+    const email = clean(c.email, 320).toLowerCase();
+    const phone = clean(c.phone, 80);
+    const consent = c.consent === true;
+
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !phone || !consent) {
+      return NextResponse.json({ error: "Name, valid email, phone and consent are required before the evaluation starts." }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+    const { data, error } = await admin.from("ai_business_evaluation_sessions").insert({
+      industry: industry || null,
+      context: { industry, plan },
+      contact_name: name,
+      contact_email: email,
+      contact_phone: phone,
+      contact_consent: true,
+      status: "started",
+    }).select("id").single();
+
+    if (error) throw error;
+
+    const messages = [{
+      role: "assistant",
+      content: `Thanks, ${name.split(/\s+/)[0]}. Let’s start with the business itself. What does your business do, who do you serve, and what would you most like to improve or automate?`,
+    }];
+
+    await admin.from("ai_business_evaluation_sessions")
+      .update({ messages, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+
+    return NextResponse.json({ sessionId: data.id, messages, industry });
+  } catch (error) {
+    console.error("[evaluation/session]", error);
+    return NextResponse.json({ error: "Unable to create the evaluation session. Please try again." }, { status: 500 });
+  }
+}
