@@ -19,12 +19,12 @@ test("Maia conversation route keeps tenant and conversation scoping on operation
   assert.match(route, /conversation_id=eq/);
 });
 
-test("Maia conversation route preserves authenticated access and WhatsApp human reply gating", () => {
+test("Maia conversation route preserves authenticated access and does not expose a human takeover composer", () => {
   const route = read("app/portal/conversations/[id]/page.tsx");
   assert.match(route, /getClientSession/);
   assert.match(route, /getOrganizationAccessContext/);
   assert.match(route, /conversations\.view/);
   assert.match(route, /conversations\.reply/);
-  assert.match(route, /HumanWhatsAppComposer/);
-  assert.match(route, /canReply=\{access\.permissions\.has\("conversations\.reply"\)\}/);
+  assert.doesNotMatch(route, /HumanWhatsAppComposer/);
+  assert.doesNotMatch(route, /human_takeover/);
 });
