@@ -212,7 +212,7 @@ export const maiaProcessInboundMessage = task({
         }
       }
 
-      let delivery: unknown = null;
+      let delivery: Awaited<ReturnType<typeof sendWhatsAppMessage>> | null = null;
       if (payload.channel === "whatsapp" && payload.customerPhone) {
         delivery = await sendWhatsAppMessage({
           organizationId: payload.organizationId,
