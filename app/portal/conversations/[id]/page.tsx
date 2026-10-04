@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationAccessContext } from "@/lib/organization-membership";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
-import HumanWhatsAppComposer from "./HumanWhatsAppComposer";
 
 type Conversation={id:string;customer_id:string;channel:string;status:string;metadata?:Record<string,unknown>|null;started_at:string;updated_at:string};
 type Handoff={id:string;status:string;priority:string;category:string;reason:string;conversation_summary?:string|null;next_action?:string|null;metadata?:Record<string,unknown>|null;sla_due_at?:string|null;created_at:string;};
@@ -122,7 +121,7 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
     </section>:null}
 
     <section className="portal-card">
-      <div className="portal-card-head"><div><p className="portal-kicker">Conversation evidence</p><h2>Conversation</h2><p>{customer?.phone||customer?.email||"No customer contact detail"}</p></div></div>
+      <div className="portal-card-head"><div><p className="portal-kicker">Conversation evidence</p><h2>Conversation</h2><p>{customer?.phone||customer?.email||"No customer contact detail"} · Human communication remains external to Maia after handoff.</p></div></div>
       <div className="portal-list">
         {messages.map((message)=><div className="portal-list-row" key={message.id}>
           <div>
@@ -135,8 +134,5 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
       </div>
     </section>
 
-    {conversation.channel==="whatsapp"
-      ? <HumanWhatsAppComposer conversationId={conversation.id} canReply={access.permissions.has("conversations.reply")} />
-      : null}
   </main>;
 }
