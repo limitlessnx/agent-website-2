@@ -526,3 +526,98 @@ export async function createHandoffFromSystemEvent(event:{
     duplicate:false,
   };
 }
+
+
+export async function createHumanHandoffFromMaia(input:{
+  organizationId:string;
+  customerId:string;
+  conversationId:string;
+  sourceAgentId:string;
+  reason:string;
+  category?:string;
+  priority?:string;
+  summary?:string|null;
+  nextAction?:string|null;
+  assignedMembershipId?:string|null;
+  correlationId?:string|null;
+}){
+  const admin=createAdminClient();
+  const category=str(input.category)||"general";
+  const priorityRaw=str(input.priority).toLowerCase()||"normal";
+  const priority=["low","normal","high","critical"].includes(priorityRaw)?priorityRaw:"normal";
+  const payload:Record<string,unknown>={
+    assignedMembershipId:input.assignedMembershipId||null,
+  };
+  const assignment=await resolveHandoffAssignment({
+    organizationId:input.organizationId,
+    sourceSystemId:"",
+    sourceAgentId:input.sourceAgentId,
+    category,
+    payload,
+  });
+  const summary=String(input.summary||input.reason||"Human assistance requested").slice(0,4000);
+  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+    p_organization_id:input.organizationId,
+    p_customer_id:input.customerId,
+    p_conversation_id:input.conversationId,
+    p_reason:str(input.reason).slice(0,1000),
+    p_category:category,
+    p_priority:priority,
+    p_source_system_id:null,
+    p_source_agent_id:input.sourceAgentId,
+    p_correlation_id:input.correlationId||null,
+    p_sla_due_at:new Date(Date.now()+60*60*1000).toISOString(),
+    p_created_by_type:"agent",
+    p_created_by_id:input.sourceAgentId,
+    p_metadata:{
+      source:"maia_runtime",
+      assignment_source:assignment.source,
+      structured_handoff:{
+        customerIntent:str(input.reason)||null,
+        keyPoints:[],
+        customerQuestions:[],
+        followUpRequired:true,
+      },
+    },
+  });
+  if(error) throw error;
+  const handoffId=String(data);
+  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,current_stage_id")
+    .eq("organization_id",input.organizationId).eq("id",input.customerId).maybeSingle();
+  let stageName:string|null=null;
+  if(customer?.current_stage_id){
+    const {data:stage}=await admin.from("organization_customer_stages").select("name")
+      .eq("organization_id",input.organizationId).eq("id",customer.current_stage_id).maybeSingle();
+    stageName=stage?.name||null;
+  }
+  await admin.from("human_handoffs").update({
+    conversation_summary:summary,
+    stage_id_at_handoff:customer?.current_stage_id||null,
+    next_action:str(input.nextAction)||null,
+    assigned_membership_id:assignment.membershipId,
+    status:assignment.membershipId?"assigned":"open",
+    updated_at:new Date().toISOString(),
+  }).eq("organization_id",input.organizationId).eq("id",handoffId);
+  if(assignment.membershipId){
+    await notifyHandoffAssignee({
+      organizationId:input.organizationId,
+      handoffId,
+      conversationId:input.conversationId,
+      membershipId:assignment.membershipId,
+      customerName:String(customer?.full_name||customer?.company_name||"Customer"),
+      stageName,
+      summary,
+      nextAction:str(input.nextAction)||null,
+      notifyWhatsApp:assignment.notifyWhatsApp,
+      notifyDashboard:assignment.notifyDashboard,
+    }).catch((error)=>loggerSafeHandoffError(error));
+    await admin.from("human_handoffs").update({notified_at:new Date().toISOString()})
+      .eq("organization_id",input.organizationId).eq("id",handoffId);
+  }
+  return {handoffId,status:assignment.membershipId?"assigned":"open",assignedMembershipId:assignment.membershipId,summary,nextAction:str(input.nextAction)||null};
+}
+
+function loggerSafeHandoffError(error:unknown){
+  // Notification delivery must not roll back the canonical handoff record.
+  return error;
+}
