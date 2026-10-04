@@ -2,37 +2,11 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart2,
-  CalendarDays,
-  CalendarCheck2,
+    CalendarCheck2,
   CheckCircle2,
   MessageSquareText,
-  UserRound,
-} from "@/components/admin/ServerIcons";
+  } from "@/components/admin/ServerIcons";
 import styles from "./AutomationJourney.module.css";
-
-const activityCards = [
-  {
-    tone: "whatsapp",
-    label: "New enquiry",
-    meta: "2m",
-    text: "Interested in the 2-bedroom apartment…",
-    icon: MessageSquareText,
-  },
-  {
-    tone: "booking",
-    label: "Booking confirmed",
-    meta: "15m",
-    text: "Inspection · Sat, 10:00 AM",
-    icon: CalendarDays,
-  },
-  {
-    tone: "followup",
-    label: "Follow-up",
-    meta: "1h",
-    text: "Reminder scheduled",
-    icon: UserRound,
-  },
-] as const;
 
 function ActionLink() {
   return (
