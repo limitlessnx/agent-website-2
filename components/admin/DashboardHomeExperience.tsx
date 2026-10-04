@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import LimitlessRevenueCard from "./LimitlessRevenueCard";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -119,7 +120,6 @@ export default function DashboardHomeExperience({
   const healthy = health === "Operational";
   const limitless = limitlessDashboard;
   const maia = agents.find((agent) => agent.name.toLowerCase() === "maia") || agents[0];
-  const maxBar = Math.max(...(limitless?.financial.recentCollectionSeries || [0]), 1);
 
   return (
     <section className={styles.home} aria-label={(workspaceName || "Organization") + " dashboard overview"}>
@@ -135,20 +135,7 @@ export default function DashboardHomeExperience({
 
       {limitless ? (
         <>
-          <section className={styles.financeHero} aria-labelledby="finance-heading">
-            <div className={styles.financeHeader}>
-              <div><span className={styles.cardKicker}><WalletCards size={15} /> REVENUE COLLECTED</span><strong id="finance-heading">{formatNaira(limitless.financial.monthCollected)}</strong><span className={styles.financePeriod}>This month</span></div>
-              <div className={styles.financeChart} aria-label="Last seven days of recorded collections">
-                {limitless.financial.recentCollectionSeries.map((value, index) => <span key={index} style={{ height: Math.max(8, (value / maxBar) * 100) + "%" }} />)}
-              </div>
-            </div>
-            <div className={styles.financeMeta}><span><ArrowUpRight size={15} /> {formatNaira(limitless.financial.todayCollected)} today</span><small>{formatNaira(limitless.financial.collected)} collected across recorded installment plans</small></div>
-            <div className={styles.financeActions}>
-              <Link href="/dashboard/limitless/payments"><CreditCard size={16} /><span>Record Payment</span></Link>
-              <Link href="/dashboard/limitless/payments/installments"><CalendarDays size={16} /><span>View Installments</span></Link>
-              <Link href="/dashboard/limitless/payments"><BarChart2 size={16} /><span>View Collections</span></Link>
-            </div>
-          </section>
+          <LimitlessRevenueCard financial={limitless.financial} />
 
           <section className={styles.kpiGrid} aria-label="Business KPIs">
             {metrics.filter((metric) => metric.icon !== "revenue").slice(0, 4).map((metric) => {
