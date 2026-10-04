@@ -23,7 +23,23 @@ export default function EvaluationClient(){
   <section style={{padding:"0 20px 100px"}}><div style={{maxWidth:920,margin:"0 auto",background:palette.soft,border:"1px solid "+palette.strong,borderRadius:20,overflow:"hidden"}}>
    <div style={{padding:"18px 22px",borderBottom:"1px solid "+palette.border,display:"flex",gap:10}}><div style={{width:34,height:34,borderRadius:10,display:"grid",placeItems:"center",background:"rgba(168,85,247,.14)"}}><Sparkles size={17} color="#c084fc"/></div><div><strong>Maia</strong><div style={{fontSize:12,color:palette.muted}}>{industry?"Evaluating "+industry:"Business systems diagnostic"}</div></div></div>
    <div style={{padding:26,minHeight:390}}>
-    {phase==="chat"&&<><div style={{display:"grid",gap:14}}>{messages.map((m,i)=><motion.div key={i} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{justifySelf:m.role==="user"?"end":"start",maxWidth:"88%",padding:"14px 16px",borderRadius:16,background:m.role==="user"?"rgba(168,85,247,.18)":palette.panel,border:"1px solid "+palette.border,lineHeight:1.65}}>{m.content}</motion.div>)}</div><div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,marginTop:28}}><textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();void send()}}} placeholder="Tell Maia about your business and what you want to improve…" rows={3} style={{...inputStyle,resize:"vertical"}}/><button onClick={()=>void send()} disabled={loading||!input.trim()} style={{minWidth:92,border:0,borderRadius:12,color:"white",fontWeight:900,background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2)"}}>{loading?"Thinking…":"Send"}</button></div></>}
+    {phase==="chat"&&(
+  <>
+   <div style={{display:"grid",gap:14}}>
+    {messages.map((m,i)=>(
+     <motion.div key={i} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{justifySelf:m.role==="user"?"end":"start",maxWidth:"88%",padding:"14px 16px",borderRadius:16,background:m.role==="user"?"rgba(168,85,247,.18)":palette.panel,border:"1px solid "+palette.border,lineHeight:1.65}}>
+      {m.content}
+     </motion.div>
+    ))}
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,marginTop:28}}>
+    <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();void send()}}} placeholder="Tell Maia about your business and what you want to improve…" rows={3} style={{...inputStyle,resize:"vertical"}}/>
+    <button onClick={()=>void send()} disabled={loading||!input.trim()} style={{minWidth:92,border:0,borderRadius:12,color:"white",fontWeight:900,background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2)"}}>
+     {loading?"Thinking…":"Send"}
+    </button>
+   </div>
+  </>
+)}
     {phase==="evaluation"&&evaluation&&<EvaluationCard evaluation={evaluation} onApprove={approve} onRefine={()=>setPhase("chat")}/>}
     {phase==="contact"&&<div style={{maxWidth:600}}><h2>The assessment looks right. Where should Fluxknight reach you?</h2><p style={{color:palette.muted,lineHeight:1.65}}>Your contact details are requested only after you approve the evaluation. Nothing is contacted without your consent.</p><div style={{display:"grid",gap:14,marginTop:22}}><input placeholder="Full name" value={contact.name} onChange={e=>setContact({...contact,name:e.target.value})} style={inputStyle}/><input placeholder="Business email" type="email" value={contact.email} onChange={e=>setContact({...contact,email:e.target.value})} style={inputStyle}/><input placeholder="Phone / WhatsApp" value={contact.phone} onChange={e=>setContact({...contact,phone:e.target.value})} style={inputStyle}/><label style={{display:"flex",gap:10,color:palette.muted}}><input type="checkbox" checked={contact.consent} onChange={e=>setContact({...contact,consent:e.target.checked})}/><span>I agree that Fluxknight may contact me about implementing this evaluation, including by WhatsApp, email or AI voice where available.</span></label><button onClick={()=>void submitApproval()} disabled={loading} style={{border:0,borderRadius:12,padding:15,fontWeight:900,color:"white",background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2)"}}>{loading?"Saving…":"Approve & continue"}</button></div></div>}
     {phase==="done"&&<div style={{textAlign:"center",maxWidth:620,margin:"60px auto"}}><CheckCircle size={52} color={palette.accent}/><h2>Evaluation approved</h2><p style={{color:palette.muted,lineHeight:1.7}}>Your approved business evaluation is now a structured implementation brief for Fluxknight.</p><Link href="/" style={{display:"inline-flex",gap:8,marginTop:20,padding:"12px 20px",borderRadius:10,background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2)",color:"white",textDecoration:"none",fontWeight:800}}>Back to Fluxknight <ArrowRight size={15}/></Link></div>}
