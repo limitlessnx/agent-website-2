@@ -19,6 +19,7 @@ type CheckoutSession = {
   status: string;
   customer_email: string;
   organization_id: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 async function claimPaidCheckout(txRef: string, session: Awaited<ReturnType<typeof getClientSession>>) {
