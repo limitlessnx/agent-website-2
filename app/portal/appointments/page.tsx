@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getPortalCapabilities, requirePortalPermission } from "@/lib/portal-access";
+import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getIndustryExperience } from "@/lib/industryExperience";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 type Appointment = {
@@ -23,8 +25,12 @@ export default async function AppointmentsPage() {
   const session = await getClientSession();
   if (!session) redirect("/account/login");
   try { await requirePortalPermission(session, ["appointments.view","appointments.manage"]); } catch { redirect("/portal"); }
-  const capabilities = await getPortalCapabilities(session);
-  if (!capabilities.appointments) redirect("/portal");
+  const [capabilities, profile] = await Promise.all([
+    getPortalCapabilities(session),
+    getClientOnboardingProfile(session.organizationId).catch(() => null),
+  ]);
+  const experience = getIndustryExperience(profile?.industry);
+  if (!capabilities.appointments || !experience.features.appointments) redirect("/portal");
 
   const appointments = await supabaseServerRequest<Appointment[]>(
     `appointments?organization_id=eq.${encodeURIComponent(session.organizationId)}&select=id,title,start_at,end_at,status,customer_name,customer_email,organizer_email,location,external_event_id&order=start_at.desc.nullslast,created_at.desc&limit=75`,
@@ -32,8 +38,8 @@ export default async function AppointmentsPage() {
 
   return <main className="portal-page">
     <section className="portal-command-hero"><div>
-      <p className="portal-kicker">Appointments</p>
-      <h1>Scheduled appointments</h1>
+      <p className="portal-kicker">{experience.appointmentLabel}</p>
+      <h1>{experience.appointmentLabel}</h1>
       <p>Calendar-backed bookings created by your installed Appointment System.</p>
     </div></section>
 
