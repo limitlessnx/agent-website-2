@@ -3,13 +3,26 @@
 @media(max-width:390px){.heading{padding-inline:13px}.heading h2{font-size:1.9rem}.visual{min-height:455px}.activity{max-width:166px;padding:6px 7px}.activityIcon{width:24px;height:24px;flex-basis:24px}.activityTopline strong{font-size:.58rem}.activityCopy p{font-size:.49rem}.whatsapp{left:6px}.booking,.followup{right:6px}}
 @media(prefers-reduced-motion:reduce){.actionLink{transition:none}}
 
-/* Growth-team visual belongs to the upper automation journey image slot only. */
+/* Growth-team visual: one focused product layer over the photo. */
 .growthVisual{position:absolute;inset:0;overflow:hidden;background:#05020b}
-.growthVisualImage{display:block;width:100%;height:100%;object-fit:cover;object-position:center center;filter:saturate(.88) contrast(1.06)}
-.growthVisualShade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,1,10,.06),rgba(4,1,10,.1) 48%,rgba(4,1,10,.72)),linear-gradient(90deg,rgba(4,1,10,.28),transparent 55%,rgba(4,1,10,.22));pointer-events:none}
-.growthBadge{position:absolute;left:24px;bottom:24px;z-index:2;display:flex;align-items:center;gap:10px;max-width:290px;padding:11px 13px;border:1px solid rgba(205,173,255,.28);border-radius:15px;background:rgba(13,7,24,.78);backdrop-filter:blur(14px);box-shadow:0 14px 35px rgba(0,0,0,.3)}
-.growthIcon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;color:#c9a3ff;background:rgba(139,92,246,.2);border:1px solid rgba(177,121,255,.4)}
-.growthBadge span:last-child{display:flex;flex-direction:column;gap:2px}.growthBadge small{color:#b9aec5;font-size:.55rem}.growthBadge strong{color:#fff;font-size:.72rem;line-height:1.2}
-.signalStack{position:absolute;right:20px;top:20px;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:flex-end}.signalStack span{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid rgba(255,255,255,.14);border-radius:999px;color:#eee7f5;background:rgba(12,7,21,.68);backdrop-filter:blur(10px);font-size:.55rem;font-weight:750}.signalStack svg{color:#b985ff}
-@media(max-width:760px){.growthVisualImage{object-position:center center}.growthBadge{left:12px;bottom:12px;max-width:220px;padding:8px 9px;border-radius:12px;gap:7px}.growthIcon{width:29px;height:29px;border-radius:8px}.growthBadge small{font-size:.45rem}.growthBadge strong{font-size:.59rem}.signalStack{right:10px;top:10px;gap:4px}.signalStack span{padding:5px 7px;font-size:.46rem}.signalStack svg{width:11px;height:11px}}
-@media(max-width:390px){.growthBadge{max-width:195px}.growthBadge strong{font-size:.55rem}.signalStack span{font-size:.42rem}}
+.growthVisualImage{display:block;width:100%;height:100%;object-fit:cover;object-position:center 38%;filter:saturate(.88) contrast(1.06)}
+.growthVisualShade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,1,10,.02),rgba(4,1,10,.04) 48%,rgba(4,1,10,.72)),linear-gradient(90deg,rgba(4,1,10,.18),transparent 58%,rgba(4,1,10,.18));pointer-events:none}
+.growthPanel{position:absolute;left:24px;bottom:24px;z-index:2;width:min(430px,calc(100% - 48px));padding:12px 14px;border:1px solid rgba(205,173,255,.28);border-radius:16px;background:rgba(13,7,24,.78);backdrop-filter:blur(14px);box-shadow:0 14px 35px rgba(0,0,0,.3)}
+.growthPanelHeader{display:flex;align-items:center;gap:10px}.growthIcon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:10px;color:#c9a3ff;background:rgba(139,92,246,.2);border:1px solid rgba(177,121,255,.4)}
+.growthPanelHeader>span:last-child{display:flex;flex-direction:column;gap:2px}.growthPanel small{color:#b9aec5;font-size:.55rem}.growthPanel strong{color:#fff;font-size:.72rem;line-height:1.2}
+.growthMetrics{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.09)}
+.growthMetrics span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(255,255,255,.1);border-radius:999px;color:#eee7f5;background:rgba(255,255,255,.035);font-size:.55rem;font-weight:700}.growthMetrics svg{color:#b985ff}.growthMetrics b{color:#c9a3ff;font-weight:800}
+@media(max-width:760px){
+  .visual{min-height:360px}
+  .growthVisualImage{object-position:center 34%;transform:none}
+  .growthVisualShade{background:linear-gradient(180deg,rgba(4,1,10,.02),rgba(4,1,10,.05) 42%,rgba(4,1,10,.76)),linear-gradient(90deg,rgba(4,1,10,.1),transparent 72%)}
+  .growthPanel{left:10px;bottom:10px;width:calc(100% - 20px);padding:9px 10px;border-radius:13px}
+  .growthPanelHeader{gap:7px}.growthIcon{width:28px;height:28px;flex-basis:28px;border-radius:8px}
+  .growthPanel small{font-size:.43rem}.growthPanel strong{font-size:.58rem}
+  .growthMetrics{gap:4px;margin-top:7px;padding-top:7px}.growthMetrics span{padding:4px 6px;font-size:.44rem;gap:4px}.growthMetrics svg{width:11px;height:11px}
+}
+@media(max-width:390px){
+  .visual{min-height:340px}
+  .growthPanel strong{font-size:.55rem}.growthMetrics span{font-size:.41rem}
+}
+@media(prefers-reduced-motion:reduce){.actionLink{transition:none}}
