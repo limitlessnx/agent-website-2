@@ -63,8 +63,8 @@ export default function AutomationJourney() {
         <div className={styles.visual} aria-label="Customer activity being handled across business channels">
           <div className={styles.visualImage}>
             <img
-              src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/9366e3a0-ece8-4429-9be8-bcd6d241dd7d.jpg"
-              alt="Business professional reviewing customer conversations and property enquiries"
+              src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1800&q=88"
+              alt="Team collaborating around a laptop and discussing business growth"
               loading="lazy"
               decoding="async"
             />
