@@ -63,8 +63,10 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
+    const preservedTrialPlan = pending.trialPlan;
     const destination = pending.nextPath && pending.nextPath.startsWith("/") && !pending.nextPath.startsWith("//") ? pending.nextPath : "/onboarding";
     const redirectTo=new URL(destination,"https://fluxknight.local");
+    void preservedTrialPlan;
     if(pending.txRef&&redirectTo.pathname==="/onboarding") redirectTo.searchParams.set("tx_ref",pending.txRef);
 
     return NextResponse.json({
