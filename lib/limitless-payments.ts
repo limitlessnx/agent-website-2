@@ -1,3 +1,4 @@
+import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 export type PaymentPlan = {
@@ -46,31 +47,31 @@ export type ReminderTemplate = {
 };
 
 export async function getPaymentPlans(limit = 100) {
-  return supabaseServerRequest<PaymentPlan[]>(`payment_plans?select=*&order=created_at.desc&limit=${limit}`);
+  return supabaseServerRequest<PaymentPlan[]>(`payment_plans?select=*&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}&order=created_at.desc&limit=${limit}`);
 }
 
 export async function getPaymentRecords(limit = 200) {
-  return supabaseServerRequest<PaymentRecord[]>(`payment_records?select=*&order=payment_date.desc,created_at.desc&limit=${limit}`);
+  return supabaseServerRequest<PaymentRecord[]>(`payment_records?select=*&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}&order=payment_date.desc,created_at.desc&limit=${limit}`);
 }
 
 export async function getReminderTemplates() {
-  return supabaseServerRequest<ReminderTemplate[]>("reminder_templates?select=*&order=position.asc");
+  return supabaseServerRequest<ReminderTemplate[]>(`reminder_templates?select=*&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}&order=position.asc`);
 }
 
 export async function createPaymentPlan(payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<PaymentPlan[]>("payment_plans", { method: "POST", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentPlan[]>("payment_plans", { method: "POST", body: JSON.stringify({ organization_id: LIMITLESS_REALTY_ORGANIZATION_ID, ...payload }) });
   if (!rows[0]) throw new Error("Payment plan was not created. No record was returned by the database.");
   return rows[0];
 }
 
 export async function createPaymentRecord(payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<PaymentRecord[]>("payment_records", { method: "POST", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentRecord[]>("payment_records", { method: "POST", body: JSON.stringify({ organization_id: LIMITLESS_REALTY_ORGANIZATION_ID, ...payload }) });
   if (!rows[0]) throw new Error("Payment was not recorded. No record was returned by the database.");
   return rows[0];
 }
 
 export async function updatePaymentRecord(recordId: string, payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, {
+  const rows = await supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -95,19 +96,19 @@ export async function deletePaymentRecord(recordId: string) {
 }
 
 export async function updatePaymentPlan(planId: string, payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<PaymentPlan[]>(`payment_plans?id=eq.${encodeURIComponent(planId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<PaymentPlan[]>(`payment_plans?id=eq.${encodeURIComponent(planId)}&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}`, { method: "PATCH", body: JSON.stringify(payload) });
   if (rows.length !== 1) throw new Error("Payment plan could not be updated. The target plan was not found.");
   return rows[0];
 }
 
 export async function createReminderTemplate(payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<ReminderTemplate[]>("reminder_templates", { method: "POST", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<ReminderTemplate[]>("reminder_templates", { method: "POST", body: JSON.stringify({ organization_id: LIMITLESS_REALTY_ORGANIZATION_ID, ...payload }) });
   if (!rows[0]) throw new Error("Reminder template was not saved.");
   return rows[0];
 }
 
 export async function updateReminderTemplate(templateId: string, payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<ReminderTemplate[]>(`reminder_templates?id=eq.${encodeURIComponent(templateId)}`, { method: "PATCH", body: JSON.stringify(payload) });
+  const rows = await supabaseServerRequest<ReminderTemplate[]>(`reminder_templates?id=eq.${encodeURIComponent(templateId)}&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}`, { method: "PATCH", body: JSON.stringify(payload) });
   if (rows.length !== 1) throw new Error("Reminder template could not be updated. The target template was not found.");
   return rows[0];
 }
