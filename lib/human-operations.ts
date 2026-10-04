@@ -95,7 +95,10 @@ async function resolveHandoffAssignment(input:{
     if(membershipId){
       const {data}=await admin.from("organization_memberships").select("id").eq("organization_id",input.organizationId)
         .eq("id",membershipId).eq("status","active").maybeSingle();
-      if(data?.id) return {membershipId:String(data.id),notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination"};
+      if(data?.id){
+        const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",membershipId).maybeSingle();
+        if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"agent_destination"};
+      }
     }
   }
 
