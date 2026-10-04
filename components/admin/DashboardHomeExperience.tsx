@@ -160,7 +160,12 @@ export default function DashboardHomeExperience({
 
           <section className={styles.sectionCard}>
             <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>LIMITLESS REALTY</span><h2>Property Catalog</h2><p>Your active property inventory</p></div><Link href="/dashboard/limitless/properties">View all <ChevronRight size={14} /></Link></header>
-            <div className={styles.propertyTabs}><span className={styles.tabActive}>Active {limitless.properties.active}</span><span>Featured {limitless.properties.featured}</span><span>Sold {limitless.properties.sold}</span><span>Draft {limitless.properties.draft}</span></div>
+            <div className={styles.propertySummary}>
+              <span><b>{limitless.properties.active}</b> active</span>
+              <span><b>{limitless.properties.featured}</b> featured</span>
+              <span><b>{limitless.properties.sold}</b> sold</span>
+              <span><b>{limitless.properties.draft}</b> draft</span>
+            </div>
             <div className={styles.propertyCarousel}>{limitless.properties.items.map((property) => <PropertyCard property={property} key={property.id} />)}{!limitless.properties.items.length ? <div className={styles.emptyInline}>No properties are currently available in the catalog.</div> : null}</div>
           </section>
 
