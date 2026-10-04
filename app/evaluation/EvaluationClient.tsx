@@ -2,192 +2,51 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { AlertCircle, ArrowRight, CheckCircle, Clock, Search, ShieldCheck, Sparkles } from "@/components/admin/ServerIcons";
+import { ArrowRight, CheckCircle, Sparkles } from "@/components/admin/ServerIcons";
 import { useEffect, useState } from "react";
 
-type FormState = "idle" | "loading" | "success" | "error";
-type PlanKey = "basic" | "starter" | "business" | "business-plus";
+type Phase="chat"|"evaluation"|"contact"|"done";
+type Message={role:"assistant"|"user";content:string};
+type Evaluation={opportunity:"low"|"medium"|"high";bottlenecks:string[];recommendedAgents:string[];channels:string[];integrations:string[];recommendedPlan:"basic"|"plus"|"business"|"business_plus";pricingType:"standard"|"custom";customReason:string|null;summary:string;nextStep:string};
+const palette={page:"#090510",panel:"#10091a",soft:"#140c20",border:"rgba(168,85,247,.28)",strong:"rgba(168,85,247,.48)",text:"#f7f0ff",muted:"#b9a8c9",accent:"#a855f7",accent2:"#8b5cf6"};
 
-type EvaluationForm = {
-  name: string;
-  email: string;
-  phone: string;
-  businessName: string;
-  businessType: string;
-  agentTypes: string[];
-  mainGoal: string;
-  currentTools: string;
-  leadVolume: string;
-  timeline: string;
-  budget: string;
-  preferredContactTime: string;
-  consent: boolean;
-};
-
-const industryOptions = [
-  { slug: "real-estate", label: "Real Estate" },
-  { slug: "sales-companies", label: "Sales Companies" },
-  { slug: "hotels", label: "Hotels" },
-  { slug: "restaurants", label: "Restaurants" },
-  { slug: "clinics", label: "Clinics" },
-  { slug: "gyms", label: "Gyms" },
-  { slug: "service-businesses", label: "Service Businesses" },
-  { slug: "auto-shops", label: "Auto Shops" },
-  { slug: "ecommerce", label: "E-commerce" },
-  { slug: "professional-services", label: "Professional Services" },
-  { slug: "other", label: "Other" },
-];
-
-const planOptions: Array<{ key: PlanKey; label: string; note: string }> = [
-  { key: "basic", label: "Basic", note: "Answer, qualify and hand over without automated follow-up." },
-  { key: "starter", label: "Starter", note: "Adds same-channel follow-up and reminders." },
-  { key: "business", label: "Business", note: "Adds admins, higher credits, cross-channel follow-up and Leo." },
-  { key: "business-plus", label: "Business+", note: "Adds the industry operations/database layer as released." },
-];
-
-const leadVolumes = ["Under 25 leads/month", "25-100 leads/month", "100-500 leads/month", "500+ leads/month", "Not sure yet"];
-const timelines = ["Immediately", "This month", "1-3 months", "Just exploring"];
-const budgetRanges = ["Under $1,000", "$1,000 - $3,000", "$3,000 - $6,000", "$6,000 - $10,000", "$10,000+", "Not sure yet"];
-
-const initialForm: EvaluationForm = {
-  name: "", email: "", phone: "", businessName: "", businessType: "", agentTypes: [], mainGoal: "", currentTools: "", leadVolume: "", timeline: "", budget: "", preferredContactTime: "", consent: false,
-};
-
-const palette = { page: "#090510", panel: "#10091a", panelSoft: "#140c20", border: "rgba(168,85,247,.28)", borderStrong: "rgba(168,85,247,.48)", text: "#f7f0ff", muted: "#b9a8c9", accent: "#a855f7", accent2: "#8b5cf6", danger: "#f87171" };
-
-export default function EvaluationClientPhase9() {
-  const [form, setForm] = useState<EvaluationForm>(initialForm);
-  const [status, setStatus] = useState<FormState>("idle");
-  const [errors, setErrors] = useState<Partial<Record<keyof EvaluationForm, string>>>({});
-  const [industrySlug, setIndustrySlug] = useState("");
-  const [planInterest, setPlanInterest] = useState<PlanKey | "">("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestedIndustry = params.get("industry") || "";
-    const requestedPlan = params.get("plan") as PlanKey | null;
-    const industry = industryOptions.find((item) => item.slug === requestedIndustry);
-    if (industry) {
-      setIndustrySlug(industry.slug);
-      setForm((current) => ({ ...current, businessType: industry.label }));
-    }
-    if (requestedPlan && planOptions.some((item) => item.key === requestedPlan)) setPlanInterest(requestedPlan);
-  }, []);
-
-  const selectedIndustry = industryOptions.find((item) => item.slug === industrySlug);
-  const selectedPlan = planOptions.find((item) => item.key === planInterest);
-
-  const update = <K extends keyof EvaluationForm>(key: K, value: EvaluationForm[K]) => {
-    setForm((current) => ({ ...current, [key]: value }));
-    setErrors((current) => ({ ...current, [key]: undefined }));
-  };
-
-  const changeIndustry = (slug: string) => {
-    setIndustrySlug(slug);
-    const industry = industryOptions.find((item) => item.slug === slug);
-    update("businessType", industry?.label || "");
-  };
-
-  const validate = () => {
-    const nextErrors: Partial<Record<keyof EvaluationForm, string>> = {};
-    if (!form.name.trim()) nextErrors.name = "Name is required";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) nextErrors.email = "Valid email is required";
-    if (!form.phone.trim()) nextErrors.phone = "Phone number is required";
-    if (!form.businessName.trim()) nextErrors.businessName = "Business name is required";
-    if (!form.businessType) nextErrors.businessType = "Select your industry";
-    if (form.mainGoal.trim().length < 20) nextErrors.mainGoal = "Tell us a little more about the problem or outcome you want";
-    if (!form.leadVolume) nextErrors.leadVolume = "Select your monthly lead volume";
-    if (!form.timeline) nextErrors.timeline = "Select your timeline";
-    if (!form.budget) nextErrors.budget = "Select a budget range";
-    if (!form.consent) nextErrors.consent = "Consent is required before our evaluation system can contact you";
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const submit = async () => {
-    if (!validate()) return;
-    setStatus("loading");
-    try {
-      const contextTags = [
-        selectedIndustry ? `Industry: ${selectedIndustry.label}` : "",
-        selectedPlan ? `Plan interest: ${selectedPlan.label}` : "",
-      ].filter(Boolean);
-      const response = await fetch("/api/evaluation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, agentTypes: [...form.agentTypes, ...contextTags] }),
-      });
-      setStatus(response.ok ? "success" : "error");
-    } catch {
-      setStatus("error");
-    }
-  };
-
-  const inputStyle = (field: keyof EvaluationForm): React.CSSProperties => ({ width: "100%", background: palette.page, border: `1px solid ${errors[field] ? palette.danger : palette.border}`, borderRadius: 12, padding: "13px 15px", fontSize: ".94rem", color: palette.text, outline: "none" });
-  const labelStyle: React.CSSProperties = { display: "block", fontSize: ".75rem", fontWeight: 800, letterSpacing: ".08em", color: palette.muted, marginBottom: 8, textTransform: "uppercase" };
-  const errorMessage = (field: keyof EvaluationForm) => errors[field] ? <p style={{ color: palette.danger, fontSize: ".75rem", marginTop: 6 }}>{errors[field]}</p> : null;
-
-  if (status === "success") return (
-    <main style={{ minHeight: "100vh", background: palette.page, display: "grid", placeItems: "center", padding: "120px 24px" }}>
-      <motion.div initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: 600, textAlign: "center" }}>
-        <div style={{ width: 68, height: 68, borderRadius: "50%", background: "rgba(168,85,247,.12)", border: `1px solid ${palette.borderStrong}`, display: "grid", placeItems: "center", margin: "0 auto 24px" }}><CheckCircle size={30} color={palette.accent} /></div>
-        <h1 style={{ fontSize: "2.1rem", fontWeight: 900, color: palette.text, letterSpacing: "-.03em", marginBottom: 14 }}>Evaluation request received</h1>
-        <p style={{ color: palette.muted, lineHeight: 1.75, marginBottom: 18 }}>We have your business context{selectedIndustry ? ` for ${selectedIndustry.label}` : ""}{selectedPlan ? ` and your interest in the ${selectedPlan.label} plan` : ""}. Fluxknight can now evaluate the right channels, workflows and deployment scope.</p>
-        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: `linear-gradient(135deg,${palette.accent},${palette.accent2})`, color: "white", borderRadius: 10, fontWeight: 800, textDecoration: "none" }}>Back to home <ArrowRight size={15} /></Link>
-      </motion.div>
-    </main>
-  );
-
-  return (
-    <main style={{ minHeight: "100vh", background: palette.page, color: palette.text }}>
-      <section style={{ padding: "144px 24px 82px", background: "radial-gradient(circle at 50% 0%,rgba(168,85,247,.16),transparent 42%),linear-gradient(180deg,#10091a 0%,#090510 100%)", borderBottom: `1px solid ${palette.border}` }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}>
-            <p style={{ color: "#c084fc", fontWeight: 800, letterSpacing: ".16em", textTransform: "uppercase", fontSize: ".78rem", marginBottom: 16 }}>Business AI Evaluation</p>
-            <h1 style={{ fontSize: "clamp(2.25rem,5vw,4.35rem)", lineHeight: 1.04, letterSpacing: "-.045em", fontWeight: 950, marginBottom: 20 }}>{selectedIndustry ? `Evaluate Fluxknight for ${selectedIndustry.label}.` : "Tell us what your business needs."} <span style={{ color: "#c084fc" }}>We&apos;ll scope the right system.</span></h1>
-            <p style={{ maxWidth: 720, margin: "0 auto", color: palette.muted, fontSize: "1.04rem", lineHeight: 1.75 }}>Your industry and plan context can travel with you from the page you were viewing. You can change either below before submitting.</p>
-          </motion.div>
-        </div>
-      </section>
-
-      <section style={{ padding: "64px 24px 110px" }}>
-        <div className="evaluation-grid" style={{ maxWidth: 1160, margin: "0 auto", display: "grid", gridTemplateColumns: ".78fr 1.5fr", gap: 48, alignItems: "start" }}>
-          <motion.aside initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .45 }}>
-            <div style={{ position: "sticky", top: 110, display: "grid", gap: 18 }}>
-              {[
-                { icon: Search, title: "Context travels with you", desc: "Industry and plan selections from pricing or industry pages are carried into this evaluation automatically." },
-                { icon: Sparkles, title: "System recommendation", desc: "We still evaluate whether your selected tier is actually the smallest system that solves the problem." },
-                { icon: ShieldCheck, title: "Human-reviewed setup", desc: "Your request becomes a practical implementation brief before anything is deployed." },
-                { icon: Clock, title: "Clear next step", desc: "We use the evaluation to determine channels, usage, integrations, timeline and scope." },
-              ].map(({ icon: Icon, title, desc }) => <div key={title} style={{ display: "flex", gap: 14, padding: 18, borderRadius: 14, background: palette.panel, border: `1px solid ${palette.border}` }}><div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(168,85,247,.12)", border: `1px solid ${palette.border}`, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon size={18} color="#c084fc" /></div><div><h2 style={{ fontSize: ".96rem", marginBottom: 5 }}>{title}</h2><p style={{ color: palette.muted, fontSize: ".86rem", lineHeight: 1.62 }}>{desc}</p></div></div>)}
-            </div>
-          </motion.aside>
-
-          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .45, delay: .08 }}>
-            <div style={{ background: palette.panelSoft, border: `1px solid ${palette.borderStrong}`, borderRadius: 18, padding: "clamp(22px,4vw,40px)", boxShadow: "0 24px 80px rgba(0,0,0,.24)" }}>
-              {(selectedIndustry || selectedPlan) && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>{selectedIndustry && <span style={{ padding: "7px 11px", borderRadius: 999, border: `1px solid ${palette.border}`, color: "#d8b4fe", fontSize: 12, fontWeight: 800 }}>Industry: {selectedIndustry.label}</span>}{selectedPlan && <span style={{ padding: "7px 11px", borderRadius: 999, border: `1px solid ${palette.border}`, color: "#d8b4fe", fontSize: 12, fontWeight: 800 }}>Plan: {selectedPlan.label}</span>}</div>}
-              <h2 style={{ fontSize: "1.35rem", marginBottom: 8 }}>Describe your business and what you want to improve</h2>
-              <p style={{ color: palette.muted, lineHeight: 1.65, marginBottom: 28 }}>We&apos;ll use the context below to determine the right deployment scope.</p>
-
-              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                <div><label style={labelStyle}>Industry *</label><select value={industrySlug} onChange={(e) => changeIndustry(e.target.value)} style={{ ...inputStyle("businessType"), cursor: "pointer" }}><option value="" disabled>Select your industry</option>{industryOptions.map((item) => <option key={item.slug} value={item.slug}>{item.label}</option>)}</select>{errorMessage("businessType")}</div>
-                <div><label style={labelStyle}>Plan interest</label><select value={planInterest} onChange={(e) => setPlanInterest(e.target.value as PlanKey | "")} style={{ ...inputStyle("agentTypes"), cursor: "pointer" }}><option value="">Recommend the right plan</option>{planOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>{selectedPlan && <p style={{ color: palette.muted, fontSize: 12, lineHeight: 1.55, marginTop: 7 }}>{selectedPlan.note}</p>}</div>
-              </div>
-
-              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}><div><label style={labelStyle}>Full name *</label><input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Your name" style={inputStyle("name")} />{errorMessage("name")}</div><div><label style={labelStyle}>Business name *</label><input value={form.businessName} onChange={(e) => update("businessName", e.target.value)} placeholder="Company or brand" style={inputStyle("businessName")} />{errorMessage("businessName")}</div></div>
-              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}><div><label style={labelStyle}>Email *</label><input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@company.com" style={inputStyle("email")} />{errorMessage("email")}</div><div><label style={labelStyle}>Phone / WhatsApp *</label><input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+234... / +971..." style={inputStyle("phone")} />{errorMessage("phone")}</div></div>
-              <div style={{ marginBottom: 20 }}><label style={labelStyle}>What do you want to improve, automate or solve? *</label><textarea rows={7} value={form.mainGoal} onChange={(e) => update("mainGoal", e.target.value)} placeholder={selectedIndustry ? `Describe the main ${selectedIndustry.label.toLowerCase()} customer or operational problem you want Fluxknight to solve.` : "Describe the problem, bottleneck or outcome you want."} style={{ ...inputStyle("mainGoal"), resize: "vertical", lineHeight: 1.6 }} />{errorMessage("mainGoal")}</div>
-              <div style={{ marginBottom: 20 }}><label style={labelStyle}>How do you currently handle this?</label><textarea rows={4} value={form.currentTools} onChange={(e) => update("currentTools", e.target.value)} placeholder="WhatsApp, email, calls, spreadsheets, CRM, staff process, existing tools or integrations." style={{ ...inputStyle("currentTools"), resize: "vertical", lineHeight: 1.6 }} /></div>
-              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}><div><label style={labelStyle}>Lead / enquiry volume *</label><select value={form.leadVolume} onChange={(e) => update("leadVolume", e.target.value)} style={{ ...inputStyle("leadVolume"), cursor: "pointer" }}><option value="" disabled>Select volume</option>{leadVolumes.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("leadVolume")}</div><div><label style={labelStyle}>Timeline *</label><select value={form.timeline} onChange={(e) => update("timeline", e.target.value)} style={{ ...inputStyle("timeline"), cursor: "pointer" }}><option value="" disabled>Select timeline</option>{timelines.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("timeline")}</div></div>
-              <div className="evaluation-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 22 }}><div><label style={labelStyle}>Budget range *</label><select value={form.budget} onChange={(e) => update("budget", e.target.value)} style={{ ...inputStyle("budget"), cursor: "pointer" }}><option value="" disabled>Select budget</option>{budgetRanges.map((item) => <option key={item}>{item}</option>)}</select>{errorMessage("budget")}</div><div><label style={labelStyle}>Preferred contact time</label><input value={form.preferredContactTime} onChange={(e) => update("preferredContactTime", e.target.value)} placeholder="e.g. Weekdays after 2pm" style={inputStyle("preferredContactTime")} /></div></div>
-              <label style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 16, border: `1px solid ${errors.consent ? palette.danger : palette.border}`, borderRadius: 12, background: "rgba(168,85,247,.06)", cursor: "pointer" }}><input type="checkbox" checked={form.consent} onChange={(e) => update("consent", e.target.checked)} style={{ marginTop: 4 }} /><span style={{ color: palette.muted, lineHeight: 1.55, fontSize: ".9rem" }}>I agree to be contacted about this request, including by an AI evaluation call agent at the phone number provided. Consent is not required to purchase.</span></label>
-              {errorMessage("consent")}
-              {status === "error" && <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 18, padding: 14, borderRadius: 10, border: "1px solid rgba(248,113,113,.35)", background: "rgba(248,113,113,.08)", color: "#fca5a5" }}><AlertCircle size={17} />The evaluation request could not be sent. Please try again.</div>}
-              <button type="button" onClick={submit} disabled={status === "loading"} style={{ width: "100%", marginTop: 22, border: 0, borderRadius: 12, padding: "15px 20px", fontWeight: 900, fontSize: "1rem", color: "white", background: `linear-gradient(135deg,${palette.accent},${palette.accent2})`, cursor: status === "loading" ? "wait" : "pointer", opacity: status === "loading" ? .7 : 1 }}>{status === "loading" ? "Submitting evaluation..." : "Request AI Evaluation"} <ArrowRight size={16} style={{ display: "inline", verticalAlign: "middle", marginLeft: 6 }} /></button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-    </main>
-  );
+export default function EvaluationClient(){
+ const [phase,setPhase]=useState<Phase>("chat"),[sessionId,setSessionId]=useState(""),[messages,setMessages]=useState<Message[]>([]),[input,setInput]=useState(""),[loading,setLoading]=useState(true),[error,setError]=useState(""),[evaluation,setEvaluation]=useState<Evaluation|null>(null),[contact,setContact]=useState({name:"",email:"",phone:"",consent:false}),[industry,setIndustry]=useState("");
+ useEffect(()=>{void start()},[]);
+ async function start(){try{const p=new URLSearchParams(window.location.search),r=await fetch("/api/evaluation/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({industry:p.get("industry")||"",plan:p.get("plan")||""})}),d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to start evaluation.");setSessionId(d.sessionId);setMessages(d.messages||[]);setIndustry(d.industry||"")}catch(e){setError(e instanceof Error?e.message:"Unable to start evaluation.")}finally{setLoading(false)}}
+ async function send(){const value=input.trim();if(!value||loading||!sessionId)return;setInput("");setError("");setLoading(true);try{const r=await fetch("/api/evaluation/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId,message:value})}),d=await r.json();if(!r.ok)throw new Error(d.error||"The evaluation could not continue.");setMessages(d.messages||[]);if(d.evaluation){setEvaluation(d.evaluation);setPhase("evaluation")}}catch(e){setError(e instanceof Error?e.message:"The evaluation could not continue.")}finally{setLoading(false)}}
+ async function approve(){setPhase("contact")}
+ async function submitApproval(){if(!contact.name.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)||!contact.phone.trim()||!contact.consent){setError("Name, valid email, phone and contact consent are required.");return}setLoading(true);setError("");try{const r=await fetch("/api/evaluation/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId,evaluation,contact})}),d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to save approval.");if(d.pricingType==="standard"){window.location.href=d.onboardingUrl;return}setPhase("done")}catch(e){setError(e instanceof Error?e.message:"Unable to save approval.")}finally{setLoading(false)}}
+ const inputStyle:React.CSSProperties={width:"100%",boxSizing:"border-box",background:palette.page,border:"1px solid "+palette.border,borderRadius:12,padding:"14px 15px",color:palette.text,outline:"none",fontSize:"1rem"};
+ return <main style={{minHeight:"100vh",background:palette.page,color:palette.text}}>
+  <section style={{padding:"130px 20px 70px",background:"radial-gradient(circle at 50% 0%,rgba(168,85,247,.18),transparent 45%)"}}><div style={{maxWidth:920,margin:"0 auto"}}><p style={{color:"#c084fc",fontWeight:800,letterSpacing:".15em",textTransform:"uppercase",fontSize:".76rem"}}>Maia · Business AI Evaluation</p><h1 style={{fontSize:"clamp(2.25rem,5vw,4.2rem)",lineHeight:1.04,letterSpacing:"-.045em",fontWeight:950,marginBottom:16}}>Let Maia understand the business <span style={{color:"#c084fc"}}>before recommending the system.</span></h1><p style={{maxWidth:700,color:palette.muted,lineHeight:1.7}}>No twelve-field interrogation. Tell Maia what you do and what is slowing the business down. She asks only what she needs to build an evaluation.</p></div></section>
+  <section style={{padding:"0 20px 100px"}}><div style={{maxWidth:920,margin:"0 auto",background:palette.soft,border:"1px solid "+palette.strong,borderRadius:20,overflow:"hidden"}}>
+   <div style={{padding:"18px 22px",borderBottom:"1px solid "+palette.border,display:"flex",gap:10}}><div style={{width:34,height:34,borderRadius:10,display:"grid",placeItems:"center",background:"rgba(168,85,247,.14)"}}><Sparkles size={17} color="#c084fc"/></div><div><strong>Maia</strong><div style={{fontSize:12,color:palette.muted}}>{industry?"Evaluating "+industry:"Business systems diagnostic"}</div></div></div>
+   <div style={{padding:26,minHeight:390}}>
+    {phase==="chat"&&(
+  <>
+   <div style={{display:"grid",gap:14}}>
+    {messages.map((m,i)=>(
+     <motion.div key={i} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} style={{justifySelf:m.role==="user"?"end":"start",maxWidth:"88%",padding:"14px 16px",borderRadius:16,background:m.role==="user"?"rgba(168,85,247,.18)":palette.panel,border:"1px solid "+palette.border,lineHeight:1.65}}>
+      {m.content}
+     </motion.div>
+    ))}
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,marginTop:28}}>
+    <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();void send()}}} placeholder="Tell Maia about your business and what you want to improve…" rows={3} style={{...inputStyle,resize:"vertical"}}/>
+    <button onClick={()=>void send()} disabled={loading||!input.trim()} style={{minWidth:92,border:0,borderRadius:12,color:"white",fontWeight:900,background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2+")"}}>
+     {loading?"Thinking…":"Send"}
+    </button>
+   </div>
+  </>
+)}
+    {phase==="evaluation"&&evaluation&&<EvaluationCard evaluation={evaluation} onApprove={approve} onRefine={()=>setPhase("chat")}/>}
+    {phase==="contact"&&<div style={{maxWidth:600}}><h2>The assessment looks right. Where should Fluxknight reach you?</h2><p style={{color:palette.muted,lineHeight:1.65}}>Your contact details are requested only after you approve the evaluation. Nothing is contacted without your consent.</p><div style={{display:"grid",gap:14,marginTop:22}}><input placeholder="Full name" value={contact.name} onChange={e=>setContact({...contact,name:e.target.value})} style={inputStyle}/><input placeholder="Business email" type="email" value={contact.email} onChange={e=>setContact({...contact,email:e.target.value})} style={inputStyle}/><input placeholder="Phone / WhatsApp" value={contact.phone} onChange={e=>setContact({...contact,phone:e.target.value})} style={inputStyle}/><label style={{display:"flex",gap:10,color:palette.muted}}><input type="checkbox" checked={contact.consent} onChange={e=>setContact({...contact,consent:e.target.checked})}/><span>I agree that Fluxknight may contact me about implementing this evaluation, including by WhatsApp, email or AI voice where available.</span></label><button onClick={()=>void submitApproval()} disabled={loading} style={{border:0,borderRadius:12,padding:15,fontWeight:900,color:"white",background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2+")"}}>{loading?"Saving…":"Approve & continue"}</button></div></div>}
+    {phase==="done"&&<div style={{textAlign:"center",maxWidth:620,margin:"60px auto"}}><CheckCircle size={52} color={palette.accent}/><h2>Evaluation approved</h2><p style={{color:palette.muted,lineHeight:1.7}}>Your approved business evaluation is now a structured implementation brief for Fluxknight.</p><Link href="/" style={{display:"inline-flex",gap:8,marginTop:20,padding:"12px 20px",borderRadius:10,background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2+")",color:"white",textDecoration:"none",fontWeight:800}}>Back to Fluxknight <ArrowRight size={15}/></Link></div>}
+    {error&&<div style={{marginTop:22,padding:13,borderRadius:10,border:"1px solid rgba(248,113,113,.35)",color:"#fca5a5"}}>{error}</div>}
+   </div>
+  </div></section>
+ </main>
 }
+function EvaluationCard({evaluation,onApprove,onRefine}:{evaluation:Evaluation;onApprove:()=>void;onRefine:()=>void}){return <div><div style={{display:"inline-flex",padding:"7px 11px",borderRadius:999,background:"rgba(168,85,247,.12)",border:"1px solid rgba(168,85,247,.35)",fontSize:12,fontWeight:900}}>Automation opportunity: {evaluation.opportunity.toUpperCase()}</div><h2 style={{fontSize:"2rem",margin:"16px 0 10px"}}>{evaluation.summary}</h2><p style={{color:palette.muted,lineHeight:1.7}}>{evaluation.nextStep}</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:12,marginTop:24}}><Info title="Bottlenecks" items={evaluation.bottlenecks}/><Info title="Recommended agents" items={evaluation.recommendedAgents}/><Info title="Channels" items={evaluation.channels}/><Info title="Integrations" items={evaluation.integrations}/></div><div style={{marginTop:22,padding:18,borderRadius:14,border:"1px solid "+palette.border,background:palette.panel}}><strong>Recommended scope: {evaluation.pricingType==="custom"?"Custom Fluxknight System":evaluation.recommendedPlan.replace("_"," + ")}</strong>{evaluation.customReason&&<p style={{color:palette.muted}}>{evaluation.customReason}</p>}</div><div style={{display:"flex",gap:10,marginTop:24,flexWrap:"wrap"}}><button onClick={onApprove} style={{border:0,borderRadius:11,padding:"14px 18px",fontWeight:900,color:"white",background:"linear-gradient(135deg,"+palette.accent+","+palette.accent2+")"}}>Yes, this reflects what I need</button><button onClick={onRefine} style={{border:"1px solid "+palette.border,padding:"14px 18px",borderRadius:11,fontWeight:800,color:palette.text,background:"transparent"}}>Change something</button></div></div>}
+function Info({title,items}:{title:string;items:string[]}){return <div style={{padding:16,borderRadius:14,background:palette.panel,border:"1px solid "+palette.border}}><strong>{title}</strong><ul style={{margin:"10px 0 0",paddingLeft:18,color:palette.muted,lineHeight:1.65}}>{items.length?items.map((x,i)=><li key={i}>{x}</li>):<li>None identified yet</li>}</ul></div>}
