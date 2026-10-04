@@ -40,6 +40,24 @@ begin
     updated_at = now()
   where id = v_org_id;
 
+  insert into public.flux_credit_wallets (
+    organization_id,
+    plan_code,
+    monthly_allowance,
+    balance,
+    status,
+    metadata
+  )
+  values (
+    v_org_id,
+    'basic',
+    0,
+    0,
+    'paused',
+    jsonb_build_object('workspace_mode', 'free', 'trial_available', true)
+  )
+  on conflict (organization_id) do nothing;
+
   insert into public.client_onboarding_profiles (
     organization_id,
     membership_id,
