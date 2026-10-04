@@ -15,6 +15,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary, type PortalAgent, type PortalWorkflow, type PortalWorkflowRun } from "@/lib/client-portal-data";
 import { getActiveFluxSubscription, getFluxWalletSummary } from "@/lib/flux-credits";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getIndustryExperience } from "@/lib/industryExperience";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -61,6 +62,7 @@ export default async function ClientPortalPage() {
   const isTrial = Boolean(wallet && (wallet.trialEndsAt !== null || wallet.trialCreditLimit !== null));
   const isFreeWorkspace = !subscription && !isTrial;
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
+  const experience = getIndustryExperience(summary.onboarding?.industry);
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
   const recentActivity = summary.runs.slice(0, 6);
 
@@ -68,9 +70,9 @@ export default async function ClientPortalPage() {
     <main className="portal-page portal-command-center">
       <section className="portal-command-hero">
         <div>
-          <p className="portal-kicker">Business command center</p>
+          <p className="portal-kicker">{experience.name} command center</p>
           <h1>Welcome back, {businessName}.</h1>
-          <p>See what your AI team is handling, what needs your attention, and how your business systems are performing.</p>
+          <p>{experience.dashboardDescription} See what your AI team is handling, what needs your attention, and how your business systems are performing.</p>
         </div>
         <div className={`portal-health-pill ${systemHealthy ? "healthy" : "attention"}`}>
           <span />
