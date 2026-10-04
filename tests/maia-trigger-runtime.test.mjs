@@ -51,6 +51,17 @@ test("Maia Trigger runtime reuses active conversation memory", () => {
   assert.match(maiaRuntime, /if \(existing\) return existing/);
 });
 
+test("Limitless Maia follow-ups use the established follow_ups scheduler", () => {
+  const followupBlock = maiaRuntime.slice(maiaRuntime.indexOf('name: "create_followup_task"'), maiaRuntime.indexOf('name: "upsert_lead"'));
+  assert.match(followupBlock, /ctx\.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d"/);
+  assert.match(followupBlock, /\.from\("leads"\)/);
+  assert.match(followupBlock, /\.eq\("organization_id", ctx\.organizationId\)/);
+  assert.match(followupBlock, /\.from\("follow_ups"\)/);
+  assert.match(followupBlock, /channel: "whatsapp"/);
+  assert.match(followupBlock, /agent_key: "maia"/);
+  assert.doesNotMatch(followupBlock, /crm_tasks.*insert/);
+});
+
 test("Legacy Limitless Maia lead access remains tenant-scoped", () => {
   assert.match(limitlessRuntime, /\.eq\("organization_id", args\.organizationId\)\.eq\("phone", phone\)/);
   assert.match(limitlessRuntime, /organization_id: args\.organizationId/);
