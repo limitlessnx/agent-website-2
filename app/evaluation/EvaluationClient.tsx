@@ -31,10 +31,10 @@ export default function EvaluationClient(){
   {phase==="profile"&&<Profile business={business} setBusiness={setBusiness} valid={profileValid()} next={()=>setPhase("operations")}/>}
   {phase==="operations"&&<Operations ops={ops} setOps={setOps} back={()=>setPhase("profile")} run={runEvaluation} valid={opsValid()}/>}
   {phase==="analyzing"&&<Analyzing/>}
-  {phase==="results"&&evaluation&&<Results evaluation={evaluation} onApprove={()=>setPhase("contact")} onRefine={()=>setPhase("operations")}/>}
+  {phase==="results"&&evaluation&&<Results evaluation={evaluation} sessionId={sessionId} onRefine={()=>setPhase("operations")}/>}
   {phase==="contact"&&<Contact contact={contact} setContact={setContact} submit={submitApproval} loading={loading} error={error}/>}
   {phase==="done"&&<div className={styles.card}><div className={styles.analysis}><div><CheckCircle size={60} color="#7c3aed"/><h2>Implementation opportunity created</h2><p>Fluxknight now has your approved evaluation and can prepare the implementation conversation.</p><Link className={styles.primary} href="/">Back to Fluxknight <ArrowRight size={15}/></Link></div></div></div>}
-  {error&&phase!=="contact"&&<div className={styles.error}>{error}</div>}
+  {error&&<div className={styles.error}>{error}</div>}
  </div></div></main>
 }
 
