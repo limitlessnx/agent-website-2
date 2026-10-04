@@ -3,15 +3,15 @@ import {
   ArrowRight,
   CalendarCheck2,
   CheckCircle2,
-  Database,
   MessageSquareText,
+  BarChart2,
 } from "@/components/admin/ServerIcons";
 import styles from "./MaiaCaseStudyTeaser.module.css";
 
 const outcomes = [
-  { icon: MessageSquareText, label: "Replies day and night" },
-  { icon: CheckCircle2, label: "Follows up with buyers" },
-  { icon: CalendarCheck2, label: "Books inspections" },
+  { icon: MessageSquareText, label: "More customer conversations" },
+  { icon: CheckCircle2, label: "More qualified opportunities" },
+  { icon: CalendarCheck2, label: "More bookings" },
 ];
 
 const capabilities = [
@@ -25,24 +25,33 @@ const capabilities = [
   "Keeps lead stages visible to management",
 ];
 
-function WhatsAppMark() {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M16 3.2A12.6 12.6 0 0 0 5.2 22.3L3.5 28.5l6.4-1.7A12.6 12.6 0 1 0 16 3.2Zm0 22.9c-2 0-4-.6-5.6-1.7l-.4-.2-3.8 1 1-3.7-.2-.4A10.2 10.2 0 1 1 16 26.1Zm5.6-7.6c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-1.8-.9-3.1-1.7-4.3-3.8-.3-.5.3-.5.9-1.7.1-.2 0-.5-.1-.7l-1-2.3c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.3 1.4 3.6c.2.2 2.4 3.7 5.9 5.2 3.5 1.5 3.5 1 4.1.9.6-.1 1.8-.8 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.2-.4-.3-.7-.5Z"
-      />
-    </svg>
-  );
-}
-
 export default function MaiaCaseStudyTeaser() {
   return (
     <section className={styles.section} id="maia-case-study" aria-labelledby="maia-case-study-title">
       <div className={styles.glow} aria-hidden="true" />
       <article className={styles.card}>
-        <div className={styles.referenceVisual} aria-label="Maia real-phone conversation and CRM workflow">
-          <img className={styles.referenceVisualImage} src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/9366e3a0-ece8-4429-9be8-bcd6d241dd7d.jpg" alt="Prospect using WhatsApp with Maia to explore Lagos property options" loading="lazy" decoding="async" fetchPriority="low" />
+        <div className={styles.referenceVisual} aria-label="A business team reviewing customer growth and operations">
+          <img
+            className={styles.referenceVisualImage}
+            src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1800&q=88"
+            alt="Business team collaborating around a table and reviewing growth"
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+          />
+          <div className={styles.visualShade} aria-hidden="true" />
+          <div className={styles.growthBadge}>
+            <span className={styles.growthIcon}><BarChart2 size={15} /></span>
+            <span>
+              <small>Customer growth</small>
+              <strong>More opportunities in motion</strong>
+            </span>
+          </div>
+          <div className={styles.signalStack} aria-label="Business growth signals">
+            <span><MessageSquareText size={13} /> Enquiries ↑</span>
+            <span><CalendarCheck2 size={13} /> Bookings ↑</span>
+            <span><CheckCircle2 size={13} /> Follow-ups ↑</span>
+          </div>
         </div>
 
         <div className={styles.content}>
