@@ -31,7 +31,7 @@ function money(value: number, currency: "NGN" | "USD") {
   }).format(value);
 }
 
-export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
+export default function CheckoutClient({ plan, initialTerm, customer, evaluationSessionId }: Props) {
   const [name, setName] = useState(customer?.name || "");
   const [email, setEmail] = useState(customer?.email || "");
   const [phone, setPhone] = useState("");
