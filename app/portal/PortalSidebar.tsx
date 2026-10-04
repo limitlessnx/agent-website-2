@@ -63,7 +63,7 @@ export default function PortalSidebar({
         {capabilities.customers?<Link href="/portal/customers" className={active("/portal/customers")?"active":""} onClick={close}><Users size={18}/><span>{experience.customerLabel}</span></Link>:null}
         {capabilities.conversations?<Link href="/portal/conversations" className={active("/portal/conversations")?"active":""} onClick={close}><MessageSquareText size={18}/><span>Conversations</span></Link>:null}
         {capabilities.systems?<Link href="/portal/systems" className={active("/portal/systems")?"active":""} onClick={close}><Workflow size={18}/><span>Systems</span></Link>:null}
-        {capabilities.appointments?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
+        {capabilities.appointments&&experience.features.appointments?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
         {capabilities.analytics?<Link href="/portal/analytics" className={active("/portal/analytics")?"active":""} onClick={close}><Activity size={18}/><span>Analytics</span></Link>:null}
         {capabilities.team?<Link href="/portal/team" className={active("/portal/team")?"active":""} onClick={close}><Users size={18}/><span>Team</span></Link>:null}
 
