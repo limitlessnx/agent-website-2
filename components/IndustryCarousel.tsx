@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Briefcase, Building2, Dumbbell, Hotel, ShoppingCart, Stethoscope, Truck } from "@/components/admin/ServerIcons";
 import { industries as industryCatalog } from "@/lib/industryCatalog";
@@ -20,6 +23,8 @@ const industryMeta = [
 const industryNames = new Map(industryCatalog.map((industry) => [industry.slug, industry.name]));
 
 export default function IndustryCarousel() {
+  const [showAll, setShowAll] = useState(false);
+
   return (
     <section className={styles.section} id="industries" aria-labelledby="industry-list-title">
       <div className={styles.glow} aria-hidden="true" />
@@ -30,13 +35,13 @@ export default function IndustryCarousel() {
           <p>Every business works differently. These are just a few examples of what we can automate. We can also build around the way your business already works.</p>
         </div>
 
-        <div className={styles.list}>
+        <div className={styles.list} id="industry-cards">
           {industryMeta.map(({ id, icon: Icon, image, eyebrow, text, examples }, index) => {
             const title = industryNames.get(id) ?? eyebrow;
             const reverse = index % 2 === 1;
 
             return (
-              <article className={`${styles.card} ${reverse ? styles.reverse : ""}`} key={id}>
+              <article className={`${styles.card} ${reverse ? styles.reverse : ""}`} key={id} hidden={!showAll && index >= 4}>
                 <div className={styles.imageWrap}>
                   <img className={styles.cardImage} src={image} alt={`${title} business environment`} loading={index < 2 ? "eager" : "lazy"} decoding="async" />
                   <div className={styles.imageShade} aria-hidden="true" />
@@ -65,9 +70,9 @@ export default function IndustryCarousel() {
           })}
         </div>
 
-        <Link href="/industries" className={styles.allIndustries}>
-          See more business examples <ArrowRight size={17} />
-        </Link>
+        <button type="button" className={styles.allIndustries} onClick={() => setShowAll((current) => !current)} aria-expanded={showAll} aria-controls="industry-cards">
+          {showAll ? "Show fewer industries" : "See more industries"} <ArrowRight size={17} />
+        </button>
       </div>
     </section>
   );
