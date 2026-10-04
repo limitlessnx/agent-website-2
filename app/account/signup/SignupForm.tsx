@@ -18,7 +18,8 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
+  const requestedNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
+  const safeNext = invitationToken ? requestedNext : "/onboarding";
   const isBasicTrial = trialPlan === "basic";
   const loginUrl = new URL("/account/login", "https://fluxknight.local");
   if (txRef) loginUrl.searchParams.set("tx_ref", txRef);
