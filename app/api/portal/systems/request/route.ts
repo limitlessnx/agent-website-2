@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { getMarketplaceSystem, requestOrganizationSystem } from "@/lib/client-systems";
+import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 
 export async function POST(request: NextRequest) {
   const session = await getClientSession();
@@ -11,7 +12,8 @@ export async function POST(request: NextRequest) {
     const slug = String(body.slug || "").trim();
     if (!slug) return NextResponse.json({ error: "System is required." }, { status: 400 });
 
-    const system = await getMarketplaceSystem(slug);
+    const profile = await getClientOnboardingProfile(session.organizationId);
+    const system = await getMarketplaceSystem(slug, profile?.industry);
     if (!system || system.status !== "available") {
       return NextResponse.json({ error: "This system is not currently available." }, { status: 409 });
     }
