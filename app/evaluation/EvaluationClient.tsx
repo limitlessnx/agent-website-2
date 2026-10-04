@@ -6,7 +6,7 @@ import { ArrowRight, CheckCircle } from "@/components/admin/ServerIcons";
 import { useEffect, useState } from "react";
 import styles from "./EvaluationClient.module.css";
 
-type Phase="profile"|"operations"|"analyzing"|"results"|"done";
+type Phase="profile"|"operations"|"analyzing"|"results";
 type Evaluation={opportunity:"low"|"medium"|"high";score:number;categoryScores:{customerSupport:number;leadFollowUp:number;operations:number;marketing:number;automationReadiness:number};bottlenecks:string[];recommendedAgents:string[];channels:string[];integrations:string[];opportunities:{title:string;description:string;impact:"high"|"medium";potential:number}[];recommendedSystem:string;estimatedAutomationPotential:string;voiceAgent:"recommended"|"optional"|"not_recommended";voiceReason:string;recommendedPlan:"basic"|"plus"|"business"|"business_plus";pricingType:"standard"|"custom";customReason:string|null;recommendationReason:string;summary:string;nextStep:string};
 
 const industries=["Real Estate","Hospitality","Beauty & Salon","Restaurant","Professional Services","E-commerce","Healthcare","Education","Construction","Other"];
@@ -32,8 +32,6 @@ export default function EvaluationClient(){
   {phase==="operations"&&<Operations ops={ops} setOps={setOps} back={()=>setPhase("profile")} run={runEvaluation} valid={opsValid()}/>}
   {phase==="analyzing"&&<Analyzing/>}
   {phase==="results"&&evaluation&&<Results evaluation={evaluation} sessionId={sessionId} onRefine={()=>setPhase("operations")}/>}
-  {phase==="contact"&&<Contact contact={contact} setContact={setContact} submit={submitApproval} loading={loading} error={error}/>}
-  {phase==="done"&&<div className={styles.card}><div className={styles.analysis}><div><CheckCircle size={60} color="#7c3aed"/><h2>Implementation opportunity created</h2><p>Fluxknight now has your approved evaluation and can prepare the implementation conversation.</p><Link className={styles.primary} href="/">Back to Fluxknight <ArrowRight size={15}/></Link></div></div></div>}
   {error&&<div className={styles.error}>{error}</div>}
  </div></div></main>
 }
