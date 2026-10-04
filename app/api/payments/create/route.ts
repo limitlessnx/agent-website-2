@@ -39,6 +39,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
     const planSlug = typeof body?.planSlug === "string" ? body.planSlug.trim() : "";
+    const evaluationSessionId = typeof body?.evaluationSessionId === "string" ? body.evaluationSessionId.trim() : "";
     const billingType = body?.billingType === "subscription" ? "subscription" : "setup";
     const prepaidTerm = isPrepaidTerm(body?.term) ? body.term : legacyDurationToTerm(body?.durationMonths);
     const clientSession = await getClientSession();
@@ -91,8 +92,10 @@ export async function POST(request: Request) {
           prepaid_term: prepaidTerm,
           prepaid_months: termPrice?.months ?? null,
           discount_percent: termPrice?.discountPercent ?? 0,
+        evaluation_session_id: evaluationSessionId || null,
           undiscounted_total: termPrice?.subtotal ?? plan.installationFee,
           discount_amount: termPrice?.discount ?? 0,
+          evaluation_session_id: evaluationSessionId || null,
         },
       }),
     });
