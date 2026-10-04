@@ -42,3 +42,5 @@ test("Customer profile exposes expandable conversation history", () => {
   assert.match(route, /human_handoffs/);
   assert.match(route, /Open conversation/);
 });
+
+// Draft guardrail suite: external supervisor handoff only.
