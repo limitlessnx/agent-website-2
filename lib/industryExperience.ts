@@ -7,8 +7,18 @@ export type IndustryExperience = {
   appointmentLabel: string;
   leadLabel: string;
   dashboardDescription: string;
+  features: {
+    propertyCatalog: boolean;
+    serviceCatalog: boolean;
+    inventory: boolean;
+    appointments: boolean;
+    memberships: boolean;
+    orders: boolean;
+    vehicles: boolean;
+  };
 };
 
+const DEFAULT_FEATURES = { propertyCatalog:false, serviceCatalog:true, inventory:false, appointments:true, memberships:false, orders:false, vehicles:false } as const;
 const DEFAULT_EXPERIENCE: IndustryExperience = {
   slug: "general",
   name: "Business",
@@ -18,6 +28,7 @@ const DEFAULT_EXPERIENCE: IndustryExperience = {
   appointmentLabel: "Appointments",
   leadLabel: "Leads",
   dashboardDescription: "Your business command center.",
+  features: { ...DEFAULT_FEATURES },
 };
 
 const EXPERIENCES: Record<string, IndustryExperience> = {
@@ -30,6 +41,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Inspections & appointments",
     leadLabel: "Leads",
     dashboardDescription: "Your property, lead and customer operations command center.",
+    features: { propertyCatalog:true, serviceCatalog:false, inventory:false, appointments:true, memberships:false, orders:false, vehicles:false },
   },
   "hotels": {
     slug: "hotels",
@@ -40,6 +52,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Bookings",
     leadLabel: "Booking enquiries",
     dashboardDescription: "Your guest, booking and service operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:true, appointments:true, memberships:false, orders:false, vehicles:false },
   },
   "restaurants": {
     slug: "restaurants",
@@ -50,6 +63,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Reservations",
     leadLabel: "Enquiries",
     dashboardDescription: "Your customer, reservation and service operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:true, appointments:true, memberships:false, orders:true, vehicles:false },
   },
   "beauty-salons": {
     slug: "beauty-salons",
@@ -60,6 +74,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Appointments",
     leadLabel: "Enquiries",
     dashboardDescription: "Your customer, service, appointment and campaign command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:false, appointments:true, memberships:false, orders:false, vehicles:false },
   },
   "auto-shops": {
     slug: "auto-shops",
@@ -70,6 +85,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Service bookings",
     leadLabel: "Service enquiries",
     dashboardDescription: "Your customer, vehicle and service operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:true, appointments:true, memberships:false, orders:false, vehicles:true },
   },
   "gyms": {
     slug: "gyms",
@@ -80,6 +96,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Bookings",
     leadLabel: "Membership enquiries",
     dashboardDescription: "Your member, booking and membership operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:false, appointments:true, memberships:true, orders:false, vehicles:false },
   },
   "clinics": {
     slug: "clinics",
@@ -90,6 +107,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Appointments",
     leadLabel: "Enquiries",
     dashboardDescription: "Your approved administrative and appointment operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:false, appointments:true, memberships:false, orders:false, vehicles:false },
   },
   "ecommerce": {
     slug: "ecommerce",
@@ -100,6 +118,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Orders & delivery",
     leadLabel: "Buying enquiries",
     dashboardDescription: "Your customer, product and commerce operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:true, appointments:false, memberships:false, orders:true, vehicles:false },
   },
   "sales-companies": {
     slug: "sales-companies",
@@ -110,6 +129,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Sales meetings",
     leadLabel: "Leads",
     dashboardDescription: "Your prospect, opportunity and sales operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:false, appointments:true, memberships:false, orders:false, vehicles:false },
   },
   "professional-services": {
     slug: "professional-services",
@@ -120,6 +140,7 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Consultations",
     leadLabel: "Prospects",
     dashboardDescription: "Your client, consultation and service operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:false, appointments:true, memberships:false, orders:false, vehicles:false },
   },
   "service-businesses": {
     slug: "service-businesses",
@@ -130,9 +151,17 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
     appointmentLabel: "Bookings",
     leadLabel: "Service enquiries",
     dashboardDescription: "Your customer, job and service operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:true, appointments:true, memberships:false, orders:false, vehicles:false },
   },
 };
 
 export function getIndustryExperience(industry?: string | null): IndustryExperience {
   return EXPERIENCES[String(industry || "").trim().toLowerCase()] || DEFAULT_EXPERIENCE;
+}
+
+
+export type IndustryFeature = keyof IndustryExperience["features"];
+
+export function industryAllows(industry: string | null | undefined, feature: IndustryFeature) {
+  return getIndustryExperience(industry).features[feature];
 }
