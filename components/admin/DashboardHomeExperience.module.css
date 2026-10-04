@@ -60,10 +60,11 @@
   .maiaCard{grid-column:2;grid-row:1 / span 3;align-self:start;width:152px;min-width:152px;padding:9px;border-radius:16px}
   .maiaAvatar{width:38px;height:38px}
   .financeHero{padding:14px;border-radius:18px}
+  .financePeriodSwitch{top:14px;right:14px}
   .financeHeader{position:relative;grid-template-columns:minmax(0,1fr) 126px;min-height:108px;align-items:end}
   .cardKicker{font-size:9px}
   .financeHeader>div:first-child>strong{font-size:36px}
-  .financePeriod{position:absolute;top:0;right:0;margin:0;padding:6px 9px;border:1px solid color-mix(in srgb,var(--fk-brand) 28%,var(--fk-border));border-radius:999px;background:var(--fk-brand-soft);color:var(--fk-brand-hover)}
+  .financePeriod{display:inline-flex;margin-top:7px;color:var(--fk-text-muted);font-size:9px}
   .financeChart{height:76px;gap:4px}
   .financeChart span{width:8px}
   .financeMeta{display:flex;flex-wrap:wrap;flex-direction:row;justify-content:flex-start;gap:6px;margin-top:4px}
