@@ -4,7 +4,7 @@ import {
   CalendarCheck2,
   CheckCircle2,
   MessageSquareText,
-  TrendingUp,
+  BarChart2,
 } from "@/components/admin/ServerIcons";
 import styles from "./MaiaCaseStudyTeaser.module.css";
 
@@ -41,7 +41,7 @@ export default function MaiaCaseStudyTeaser() {
           />
           <div className={styles.visualShade} aria-hidden="true" />
           <div className={styles.growthBadge}>
-            <span className={styles.growthIcon}><TrendingUp size={15} /></span>
+            <span className={styles.growthIcon}><BarChart2 size={15} /></span>
             <span>
               <small>Customer growth</small>
               <strong>More opportunities in motion</strong>
