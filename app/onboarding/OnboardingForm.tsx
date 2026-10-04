@@ -96,7 +96,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
       <p className="knowledge-note">Website sources and documents can be connected by the Fluxknight team during setup.</p>
     </section>}
 
-    {step===4&&<section><div className="setup-card"><div className="setup-card-icon"><ShieldCheck size={20}/></div><div><strong>WhatsApp AI agent is included in your trial.</strong><p>We handle the technical setup. You only need to tell us which starting path applies to you.</p></div></div>
+    {step===4&&<section><div className="setup-card"><div className="setup-card-icon"><ShieldCheck size={20}/></div><div><strong>WhatsApp AI is available when you activate a plan or free trial.</strong><p>We handle the technical setup. You can explore your workspace first and activate customer-facing AI when you are ready.</p></div></div>
       <h1>Connect your WhatsApp.</h1><p>We handle the connection and technical setup for you.</p>
       <div className="choice-grid whatsapp-choice">
         <button type="button" className={form.whatsapp_preferences.connection_path==="already_have_whatsapp_business"?"selected":""} onClick={()=>setForm({...form,whatsapp_preferences:{...form.whatsapp_preferences,connection_path:"already_have_whatsapp_business"}})}><Check size={16}/><span><strong>I already have WhatsApp Business</strong><small>Use my existing business number during setup.</small></span></button>
@@ -110,7 +110,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
         <article><span>Business</span><strong>{form.business_name||"Not provided"}</strong><p>{form.business_description||"No description provided"}</p></article>
         <article><span>AI responsibilities</span><strong>{form.business_goals.length} selected outcomes</strong><p>{form.ai_requirements}</p></article>
         <article><span>Business knowledge</span><strong>{Object.values(form.business_knowledge).filter(Boolean).length} knowledge sections</strong><p>Services, FAQs, pricing, hours, policies and booking information are included where provided.</p></article>
-        <article><span>WhatsApp</span><strong>Included with trial</strong><p>{form.whatsapp_preferences.connection_path==="already_have_whatsapp_business"?"Existing WhatsApp Business number":"Needs setup assistance"}</p></article>
+        <article><span>WhatsApp</span><strong>Available after activation</strong><p>{form.whatsapp_preferences.connection_path==="already_have_whatsapp_business"?"Existing WhatsApp Business number":"Needs setup assistance"}</p></article>
       </div>
       <div className="submission-note"><ShieldCheck size={18}/><div><strong>What happens next</strong><p>Fluxknight reviews your brief, configures your AI agent, prepares its knowledge and handles the WhatsApp setup. You will see the activation status in your workspace.</p></div></div>
     </section>}
