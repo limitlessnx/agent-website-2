@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMembershipForOrganization, getPrimaryMembership, setClientSession, setPendingClientSetupSession, signUpClient } from "@/lib/client-auth";
+import { getMembershipForOrganization, setClientSession, setPendingClientSetupSession, signUpClient } from "@/lib/client-auth";
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
 import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
@@ -15,7 +15,7 @@ export async function POST(request:NextRequest){
   if(password.length<8)return NextResponse.json({error:"Password must contain at least 8 characters."},{status:400});
   if(password!==passwordConfirmation)return NextResponse.json({error:"Passwords do not match."},{status:400});
 
-  const auth=await signUpClient(email,password,fullName,{companyName:joiningOrganization?undefined:companyName,companySlug:joiningOrganization?undefined:companySlug,templateSlug:joiningOrganization?undefined:templateSlug,agentFamilyName:joiningOrganization?undefined:agentFamilyName});
+  const auth=await signUpClient(email,password,fullName);
   if(!auth.access_token){
    if(auth.user?.id)await setPendingClientSetupSession({userId:auth.user.id,email:auth.user.email||email,invitationToken:joiningOrganization?invitationToken:undefined,nextPath:joiningOrganization?String(body.post_signup_path||"/portal"):"/onboarding",trialPlan:"",issuedAt:Date.now()});
    return NextResponse.json({ok:true,signed_in:false,account_mode:joiningOrganization?"organization-member":"organization-owner",requires_email_confirmation:true,message:"Account created. Verify your email, then sign in to continue."},{status:201});
