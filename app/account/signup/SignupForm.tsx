@@ -46,7 +46,6 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: data.get("full_name"),
-          company_name: data.get("company_name"),
           email,
           password,
           password_confirmation: passwordConfirmation,
@@ -91,10 +90,9 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
       {isBasicTrial ? <p className="admin-form-message">Basic free trial · no payment is collected on this screen.</p> : null}
-      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" txRef={txRef} trialPlan={trialPlan} invitationToken={invitationToken} />
+      <GoogleAuthButton nextPath={invitationToken ? safeNext : "/onboarding"} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />
       <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
-      <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <PasswordField name="password" label="Password" autoComplete="new-password" minLength={8} />
       <PasswordField name="password_confirmation" label="Confirm password" autoComplete="new-password" minLength={8} />
