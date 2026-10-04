@@ -59,7 +59,7 @@ export async function getReminderTemplates() {
 }
 
 export async function createPaymentPlan(payload: Record<string, unknown>) {
-  const rows = await supabaseServerRequest<PaymentPlan[]>("payment_plans", { method: "POST", body: JSON.stringify({ organization_id: LIMITLESS_REALTY_ORGANIZATION_ID, ...payload }) });
+  const rows = await supabaseServerRequest<PaymentPlan[]>("payment_plans", { method: "POST", body: JSON.stringify({ ...payload, organization_id: LIMITLESS_REALTY_ORGANIZATION_ID }) });
   if (!rows[0]) throw new Error("Payment plan was not created. No record was returned by the database.");
   return rows[0];
 }
@@ -84,7 +84,7 @@ export async function updatePaymentRecord(recordId: string, payload: Record<stri
 }
 
 export async function deletePaymentRecord(recordId: string) {
-  const rows = await supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}`, {
+  const rows = await supabaseServerRequest<PaymentRecord[]>(`payment_records?id=eq.${encodeURIComponent(recordId)}&organization_id=eq.${encodeURIComponent(LIMITLESS_REALTY_ORGANIZATION_ID)}`, {
     method: "DELETE",
   });
   if (rows.length !== 1) {
