@@ -58,9 +58,6 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
   }
 
   const mode=String(conversation.metadata?.ai_response_mode||"active");
-  const intent=String(structured.customerIntent||structured.intent||handoff?.reason||"Intent not captured");
-  const propertyContext=String(structured.property||structured.propertyInterest||structured.service||structured.serviceInterest||"Not specified");
-  const summary=handoff?.conversation_summary||String(structured.summary||"Maia has not recorded a structured summary yet.");
   const handoff=handoffRows[0];
   const structured=handoff?.metadata&&typeof handoff.metadata.structured_handoff==="object"&&!Array.isArray(handoff.metadata.structured_handoff)
     ? handoff.metadata.structured_handoff as Record<string,unknown>
@@ -68,6 +65,9 @@ export default async function ConversationDetailPage({params}:{params:Promise<{i
   const listValue=(value:unknown)=>Array.isArray(value)?value.filter((item)=>typeof item==="string"&&item.trim()).map(String):[];
   const keyPoints=listValue(structured.keyPoints);
   const customerQuestions=listValue(structured.customerQuestions);
+  const intent=String(structured.customerIntent||structured.intent||handoff?.reason||"Intent not captured");
+  const propertyContext=String(structured.property||structured.propertyInterest||structured.service||structured.serviceInterest||"Not specified");
+  const summary=handoff?.conversation_summary||String(structured.summary||"Maia has not recorded a structured summary yet.");
   return <main className="portal-page">
     <section className="portal-command-hero"><div>
       <p className="portal-kicker">{conversation.channel.replaceAll("_"," ")} conversation</p>
