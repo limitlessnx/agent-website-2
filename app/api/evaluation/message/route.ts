@@ -13,13 +13,13 @@ const schema={type:"object",additionalProperties:false,properties:{
   opportunities:{type:"array",items:{type:"object",additionalProperties:false,properties:{title:{type:"string"},description:{type:"string"},impact:{type:"string",enum:["high","medium"]},potential:{type:"number",minimum:0,maximum:100}},required:["title","description","impact","potential"]}},
   recommendedSystem:{type:"string"},estimatedAutomationPotential:{type:"string"},
   voiceAgent:{type:"string",enum:["recommended","optional","not_recommended"]},voiceReason:{type:"string"},
-  recommendedPlan:{type:"string",enum:["basic","plus","business","business_plus"]},customReason:{type:["string","null"]},summary:{type:"string"},nextStep:{type:"string"}
- },required:["opportunity","score","categoryScores","bottlenecks","recommendedAgents","channels","integrations","opportunities","recommendedSystem","estimatedAutomationPotential","voiceAgent","voiceReason","recommendedPlan","customReason","summary","nextStep"]}
+  recommendedPlan:{type:"string",enum:["basic","plus","business","business_plus"]},customReason:{type:["string","null"]},recommendationReason:{type:"string"},summary:{type:"string"},nextStep:{type:"string"}
+ },required:["opportunity","score","categoryScores","bottlenecks","recommendedAgents","channels","integrations","opportunities","recommendedSystem","estimatedAutomationPotential","voiceAgent","voiceReason","recommendedPlan","customReason","recommendationReason","summary","nextStep"]}
 }} as const;
 
 function classify(e:any){
  const s=[...(e.recommendedAgents||[]),...(e.integrations||[]),...(e.bottlenecks||[]),String(e.customReason||"")].join(" ").toLowerCase();
- const complex=/(custom integration|multiple departments|multi[- ]channel|database|advanced workflow|erp|api|crm integration|complex|bespoke)/.test(s)||e.recommendedPlan==="business_plus";
+ const complex=/(custom integration|multiple departments|multi[- ]channel|database|advanced workflow|erp|api|crm integration|complex|bespoke)/.test(s);
  return {...e,pricingType:complex?"custom":"standard",customReason:complex?e.customReason||"The workflow and integration scope goes beyond a standard plan.":null};
 }
 
@@ -32,7 +32,7 @@ export async function POST(req:NextRequest){
   const history=Array.isArray(session.messages)?session.messages.slice(-20):[],next=[...history,{role:"user",content:message}];
   const model=await routeRuntimeModel({identity:{scope:"public",channel:"chat"} as any});
   const ai=await generateRuntimeStructuredOutput({model,
-   systemPrompt:"You are Maia, Fluxknight's senior business automation evaluator. The user has completed a structured business profile and operations assessment. Produce a grounded professional evaluation, not generic AI hype. Score the five categories based only on evidence in the submitted profile and operations. Identify exactly 3 highest-value automation opportunities. Recommend concrete agents and integrations. Recommend a voice agent when phone-based interaction, high enquiry volume, appointment booking or support makes it useful; otherwise mark it optional or not_recommended. Treat international voice deployment as feasible when appropriate, while noting that telephony availability and routing can vary by market. Do not use budget as the sole reason for custom pricing. Do not ask for contact details. Return ready=true and the complete evaluation.",
+   systemPrompt:"You are Maia, Fluxknight's senior business automation evaluator. The user has completed a structured business profile and operations assessment. Produce a grounded professional evaluation, not generic AI hype. Score the five categories based only on evidence in the submitted profile and operations. Identify exactly 3 highest-value automation opportunities. Recommend concrete agents and integrations. Recommend a voice agent when phone-based interaction, high enquiry volume, appointment booking or support makes it useful; otherwise mark it optional or not_recommended. Treat international voice deployment as feasible when appropriate, while noting that telephony availability and routing can vary by market. Do not use budget as the sole reason for custom pricing. Recommend exactly one best-fit standard plan when the needs fit Basic, Plus, Business or Business+. Only classify as custom when the workflow truly requires scope outside the standard plans. Explain the recommendation in one concise, specific paragraph tied to the business evidence. Do not ask for contact details. Return ready=true and the complete evaluation.",
    input:{context:session.context,messages:next},outputSchema:schema});
   const messages=[...next,{role:"assistant",content:String(ai.parsed?.reply||"Your evaluation is ready.")}];
   let evaluation=null;
