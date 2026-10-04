@@ -15,10 +15,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string; term?: string }> }) {
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string; term?: string; evaluation?: string }> }) {
   const params = await searchParams;
   const planSlug = typeof params.plan === "string" ? params.plan : "";
   const initialTerm = isPrepaidTerm(params.term) ? params.term : null;
+  const evaluationSessionId = typeof params.evaluation === "string" ? params.evaluation.trim() : "";
   if (!planSlug) notFound();
 
   const [{ region: detectedRegion }, session, cookieStore] = await Promise.all([
@@ -57,6 +58,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
               recurringFee: plan.recurringFee,
             }}
             initialTerm={initialTerm}
+            evaluationSessionId={evaluationSessionId}
             customer={session ? { name: session.organizationSlug, email: session.email } : null}
           />
         </div>
