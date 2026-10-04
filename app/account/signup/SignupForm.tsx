@@ -9,18 +9,16 @@ import PasswordField from "../PasswordField";
 type SignupFormProps = {
   txRef?: string;
   nextPath?: string;
-  trialPlan?: "" | "basic";
   invitationToken?: string;
 };
 
-export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan = "", invitationToken = "" }: SignupFormProps) {
+export default function SignupForm({ txRef = "", nextPath = "/portal", invitationToken = "" }: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const requestedNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
   const safeNext = invitationToken ? requestedNext : "/onboarding";
-  const isBasicTrial = trialPlan === "basic";
   const loginUrl = new URL("/account/login", "https://fluxknight.local");
   if (txRef) loginUrl.searchParams.set("tx_ref", txRef);
   loginUrl.searchParams.set("next", safeNext);
@@ -52,7 +50,6 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
           password_confirmation: passwordConfirmation,
           payment_tx_ref: txRef || undefined,
           post_signup_path: safeNext,
-          trial_plan: isBasicTrial ? "basic" : undefined,
           invitation_token: invitationToken || undefined,
         }),
       });
@@ -86,11 +83,10 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
   return (
     <form onSubmit={submit} className="admin-login-card">
       <div>
-        <h1>{isBasicTrial ? "Start your free trial" : "Create your Fluxknight account"}</h1>
-        <p className="admin-muted">{isBasicTrial ? "Create your account and workspace. No payment is required to start the Basic trial." : "Create your account and set up your Fluxknight workspace."}</p>
+        <h1>Create your Fluxknight account</h1>
+        <p className="admin-muted">Create your account and set up your Fluxknight workspace.</p>
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
-      {isBasicTrial ? <p className="admin-form-message">Basic free trial · no payment is collected on this screen.</p> : null}
       <GoogleAuthButton nextPath={invitationToken ? safeNext : "/onboarding"} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />
       <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
@@ -98,7 +94,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", trialPlan
       <PasswordField name="password" label="Password" autoComplete="new-password" minLength={8} />
       <PasswordField name="password_confirmation" label="Confirm password" autoComplete="new-password" minLength={8} />
       {error ? <p className="admin-error">{error}</p> : null}
-      <button type="submit" disabled={loading}>{loading ? "Creating account..." : isBasicTrial ? "Start Free Trial" : "Create account"}</button>
+      <button type="submit" disabled={loading}>{loading ? "Creating account..." : "Create account"}</button>
       <p className="admin-muted">Already have an account? <Link href={loginHref}>Sign in</Link></p>
     </form>
   );
