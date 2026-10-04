@@ -92,10 +92,9 @@ export async function POST(request: Request) {
           prepaid_term: prepaidTerm,
           prepaid_months: termPrice?.months ?? null,
           discount_percent: termPrice?.discountPercent ?? 0,
-        evaluation_session_id: evaluationSessionId || null,
+          evaluation_session_id: evaluationSessionId || null,
           undiscounted_total: termPrice?.subtotal ?? plan.installationFee,
           discount_amount: termPrice?.discount ?? 0,
-          evaluation_session_id: evaluationSessionId || null,
         },
       }),
     });
