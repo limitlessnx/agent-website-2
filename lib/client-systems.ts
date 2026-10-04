@@ -1,4 +1,5 @@
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 
 export type SystemCategory = "core" | "addon" | "enterprise";
 export type SystemCatalogItem = {
@@ -14,6 +15,7 @@ export type SystemCatalogItem = {
   included_agents: string[];
   setup_requirements: string[];
   display_order: number;
+  metadata: Record<string, unknown>;
 };
 
 export type OrganizationSystem = {
@@ -38,11 +40,16 @@ export async function getMarketplaceSystems() {
   );
 }
 
-export async function getMarketplaceSystem(slug: string) {
+export async function getMarketplaceSystem(slug: string, industry?: string | null) {
   const rows = await supabaseServerRequest<SystemCatalogItem[]>(
     `system_catalog?slug=eq.${encodeURIComponent(slug)}&status=in.(available,coming_soon)&select=*&limit=1`,
   );
-  return rows[0] || null;
+  const system = rows[0] || null;
+  if (!system || !industry) return system;
+  const allowed = Array.isArray(system.metadata?.allowed_industries)
+    ? system.metadata.allowed_industries.filter((value): value is string => typeof value === "string")
+    : [];
+  return allowed.length && !allowed.includes(industry) ? null : system;
 }
 
 export async function getOrganizationSystems(organizationId: string) {
@@ -55,8 +62,17 @@ export async function getOrganizationSystems(organizationId: string) {
 export async function requestOrganizationSystem(
   organizationId: string,
   userId: string,
-  system: Pick<SystemCatalogItem, "id" | "slug" | "name" | "included_agents" | "capabilities">,
+  system: Pick<SystemCatalogItem, "id" | "slug" | "name" | "included_agents" | "capabilities" | "metadata">,
 ) {
+  const onboarding = await getClientOnboardingProfile(organizationId);
+  const industry = onboarding?.industry || null;
+  const allowed = Array.isArray(system.metadata?.allowed_industries)
+    ? system.metadata.allowed_industries.filter((value): value is string => typeof value === "string")
+    : [];
+  if (allowed.length && (!industry || !allowed.includes(industry))) {
+    throw new Error("This system is not available for your organization’s selected industry.");
+  }
+
   const rows = await supabaseServerRequest<OrganizationSystem[]>("organization_systems?on_conflict=organization_id,system_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
