@@ -58,7 +58,10 @@ async function resolveHandoffAssignment(input:{
   if(explicit){
     const {data}=await admin.from("organization_memberships").select("id")
       .eq("organization_id",input.organizationId).eq("id",explicit).eq("status","active").maybeSingle();
-    if(data?.id) return {membershipId:String(data.id),notifyWhatsApp:true,notifyDashboard:true,source:"event_payload"};
+    if(data?.id){
+      const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",explicit).maybeSingle();
+      if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"event_payload"};
+    }
   }
 
   const {data:rules,error:rulesError}=await admin.from("handoff_assignment_rules")
@@ -72,12 +75,15 @@ async function resolveHandoffAssignment(input:{
   if(rule?.assigned_membership_id){
     const {data}=await admin.from("organization_memberships").select("id").eq("organization_id",input.organizationId)
       .eq("id",rule.assigned_membership_id).eq("status","active").maybeSingle();
-    if(data?.id) return {
-      membershipId:String(data.id),
-      notifyWhatsApp:rule.notify_whatsapp!==false,
-      notifyDashboard:rule.notify_dashboard!==false,
-      source:"assignment_rule",
-    };
+    if(data?.id){
+      const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",String(data.id)).maybeSingle();
+      if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {
+        membershipId:String(data.id),
+        notifyWhatsApp:rule.notify_whatsapp!==false && pref?.notify_whatsapp_handoffs!==false,
+        notifyDashboard:rule.notify_dashboard!==false,
+        source:"assignment_rule",
+      };
+    }
   }
 
   if(input.sourceAgentId){
