@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart2,
-    CalendarCheck2,
   CheckCircle2,
   MessageSquareText,
   } from "@/components/admin/ServerIcons";
@@ -48,17 +47,19 @@ export default function AutomationJourney() {
               fetchPriority="low"
             />
             <div className={styles.growthVisualShade} aria-hidden="true" />
-            <div className={styles.growthBadge}>
-              <span className={styles.growthIcon}><BarChart2 size={15} /></span>
-              <span>
-                <small>Customer growth</small>
-                <strong>More opportunities in motion</strong>
-              </span>
-            </div>
-            <div className={styles.signalStack} aria-label="Business growth signals">
-              <span><MessageSquareText size={13} /> Enquiries ↑</span>
-              <span><CalendarCheck2 size={13} /> Bookings ↑</span>
-              <span><CheckCircle2 size={13} /> Follow-ups ↑</span>
+            <div className={styles.growthPanel} aria-label="Customer growth signals">
+              <div className={styles.growthPanelHeader}>
+                <span className={styles.growthIcon}><BarChart2 size={15} /></span>
+                <span>
+                  <small>Customer growth</small>
+                  <strong>More opportunities in motion</strong>
+                </span>
+              </div>
+              <div className={styles.growthMetrics}>
+                <span><MessageSquareText size={13} /> Enquiries <b>↑</b></span>
+                <span><CheckCircle2 size={13} /> Bookings <b>↑</b></span>
+                <span><CheckCircle2 size={13} /> Follow-ups <b>↑</b></span>
+              </div>
             </div>
           </div>
         </div>
