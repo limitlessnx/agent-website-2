@@ -23,17 +23,15 @@ function ActionLink() {
 
 export default function AutomationJourney() {
   return (
-    <section className={styles.section} id="services" aria-labelledby="automation-journey-title">
+    <section
+      className={styles.section}
+      id="services"
+      aria-label="Fluxknight customer operations automation"
+    >
       <div className={styles.frame}>
-        <div className={styles.heading}>
-          <h2 id="automation-journey-title">
-            From customer enquiries to sales, bookings, follow-ups <span>and more.</span>
-          </h2>
-        </div>
-
         <div
           className={styles.visual}
-          aria-label="Fluxknight team collaborating around customer growth and automation"
+          aria-label="Fluxknight team growth and customer operations visual"
         >
           <div className={styles.visualImage}>
             <img
@@ -46,7 +44,10 @@ export default function AutomationJourney() {
         </div>
 
         <div className={styles.supportingCopy}>
-          <p>One system keeping customer operations moving across the channels you already use.</p>
+          <p>
+            One system keeping customer operations moving across the channels you
+            already use.
+          </p>
           <ActionLink />
         </div>
       </div>
