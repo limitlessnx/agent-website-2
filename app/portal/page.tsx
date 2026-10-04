@@ -61,6 +61,11 @@ export default async function ClientPortalPage() {
   const experience = getIndustryExperience(summary.onboarding?.industry);
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
   const recentActivity = summary.runs.slice(0, 6);
+  const industryActions = [
+    experience.features.propertyCatalog ? { href: "/portal/systems", label: experience.inventoryLabel, description: "Manage the resources and records central to this workspace." } : null,
+    experience.features.appointments ? { href: "/portal/appointments", label: experience.appointmentLabel, description: `Manage ${experience.appointmentLabel.toLowerCase()} for your business.` } : null,
+    experience.features.inventory ? { href: "/portal/systems", label: experience.inventoryLabel, description: "Manage the products, services or resources your team operates." } : null,
+  ].filter(Boolean) as Array<{href:string;label:string;description:string}>;
 
   return (
     <main className="portal-page portal-command-center">
@@ -119,6 +124,14 @@ export default async function ClientPortalPage() {
           <Link className="portal-button" href="/portal/integrations">Connect WhatsApp</Link>
         </section>
       ) : null}
+
+      <section className="portal-card portal-industry-context" aria-label={`${experience.name} workspace`}>
+        <div className="portal-card-head"><div><p className="portal-kicker">{experience.name} workspace</p><h2>Built around your business</h2><p>{experience.dashboardDescription}</p></div></div>
+        <div className="portal-action-list">
+          {industryActions.map((action) => <Link href={action.href} key={action.label}><span><Workflow size={17} /></span><div><strong>{action.label}</strong><small>{action.description}</small></div><ChevronRight size={16} /></Link>)}
+          {!industryActions.length ? <div className="portal-empty">Industry-specific modules will appear here as your workspace is configured.</div> : null}
+        </div>
+      </section>
 
       <section className="portal-business-metrics" aria-label="Business system overview">
         <article className="portal-business-metric">
