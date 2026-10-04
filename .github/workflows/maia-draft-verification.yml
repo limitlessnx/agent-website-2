@@ -1,0 +1,22 @@
+name: Maia Draft Verification
+
+on:
+  push:
+    branches:
+      - draft/maia-dashboard-final-pass
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify-maia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:maia
+      - run: npm run build
