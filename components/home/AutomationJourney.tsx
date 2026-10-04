@@ -11,22 +11,22 @@ const activityCards = [
   {
     tone: "whatsapp",
     label: "New enquiry",
-    meta: "2m ago",
-    text: "Hi, I’m interested in the 3 bedroom apartment in Lekki. Is it still available?",
+    meta: "2m",
+    text: "Interested in the 2-bedroom apartment…",
     icon: MessageSquareText,
   },
   {
     tone: "booking",
     label: "Booking confirmed",
-    meta: "15m ago",
-    text: "Property inspection scheduled for Sat, 12 Oct · 10:00 AM",
+    meta: "15m",
+    text: "Inspection · Sat, 10:00 AM",
     icon: CalendarDays,
   },
   {
     tone: "followup",
     label: "Follow-up",
-    meta: "1h ago",
-    text: "Reminder sent to client about document submission.",
+    meta: "1h",
+    text: "Reminder scheduled",
     icon: UserRound,
   },
 ] as const;
@@ -55,7 +55,6 @@ export default function AutomationJourney() {
     <section className={styles.section} id="services" aria-labelledby="automation-journey-title">
       <div className={styles.frame}>
         <div className={styles.heading}>
-          <span className={styles.eyebrow}>Customer operations</span>
           <h2 id="automation-journey-title">
             From customer enquiries to sales, bookings, follow-ups <span>and more.</span>
           </h2>
@@ -75,7 +74,7 @@ export default function AutomationJourney() {
             {activityCards.map(({ tone, label, meta, text, icon: Icon }) => (
               <article className={`${styles.activity} ${styles[tone]}`} key={label}>
                 <span className={styles.activityIcon} aria-hidden="true">
-                  <Icon size={18} />
+                  <Icon size={16} />
                 </span>
                 <div className={styles.activityCopy}>
                   <div className={styles.activityTopline}>
@@ -84,7 +83,7 @@ export default function AutomationJourney() {
                   </div>
                   <p>{text}</p>
                   {tone === "followup" && (
-                    <span className={styles.confirmed}>✓ Follow-up scheduled</span>
+                    <span className={styles.confirmed}>✓ Scheduled</span>
                   )}
                 </div>
               </article>
