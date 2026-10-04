@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { provisionClientOrganization } from "@/lib/client-onboarding";
+import { provisionClientWorkspace } from "@/lib/client-onboarding";
 import {
   getPendingClientSetupSession,
   getPrimaryMembership,
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const companyName = String(body.company_name || "").trim();
+    const industrySlug = String(body.industry_slug || "").trim();
     const companySlug = slugify(String(body.company_slug || companyName));
-    const agentFamilyName = String(body.agent_family_name || companyName).trim();
 
     if (companyName.length < 2) {
       return NextResponse.json({ error: "Company name is required." }, { status: 400 });
@@ -36,12 +36,16 @@ export async function POST(request: NextRequest) {
     if (!companySlug) {
       return NextResponse.json({ error: "A valid company name is required." }, { status: 400 });
     }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(industrySlug)) {
+      return NextResponse.json({ error: "Choose the industry your organization operates in." }, { status: 400 });
+    }
 
-    await provisionClientOrganization({
+    await provisionClientWorkspace({
       userId: pending.userId,
       organizationName: companyName,
       organizationSlug: companySlug,
-      agentFamilyName,
+      industrySlug,
+      businessEmail: pending.email,
     });
 
     const membership = await getPrimaryMembership(pending.userId);
@@ -59,9 +63,11 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
-    const redirectTo=new URL(pending.nextPath&&pending.nextPath.startsWith("/")&&!pending.nextPath.startsWith("//")?pending.nextPath:"/portal","https://fluxknight.local");
+    const preservedTrialPlan = pending.trialPlan;
+    const destination = pending.nextPath && pending.nextPath.startsWith("/") && !pending.nextPath.startsWith("//") ? pending.nextPath : "/onboarding";
+    const redirectTo=new URL(destination,"https://fluxknight.local");
+    void preservedTrialPlan;
     if(pending.txRef&&redirectTo.pathname==="/onboarding") redirectTo.searchParams.set("tx_ref",pending.txRef);
-    if(pending.trialPlan==="basic") redirectTo.searchParams.set("trial","basic");
 
     return NextResponse.json({
       ok: true,

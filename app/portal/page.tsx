@@ -10,17 +10,15 @@ import {
   Workflow,
 } from "@/components/admin/ServerIcons";
 import PlanEntitlementsPanel from "@/components/portal/PlanEntitlementsPanel";
+import TrialActivationButton from "./TrialActivationButton";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientPortalSummary, type PortalAgent, type PortalWorkflow, type PortalWorkflowRun } from "@/lib/client-portal-data";
-import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { getActiveFluxSubscription, getFluxWalletSummary } from "@/lib/flux-credits";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getIndustryExperience } from "@/lib/industryExperience";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
-
-async function safeWalletSummary(organizationId: string) {
-  try { return await getFluxWalletSummary(organizationId); } catch { return null; }
-}
 
 function formatDate(value?: string | null) {
   if (!value) return "Never";
@@ -44,9 +42,10 @@ export default async function ClientPortalPage() {
   if (!session) return null;
 
   const admin = createAdminClient();
-  const [summary, wallet, whatsappBinding] = await Promise.all([
+  const [summary, wallet, subscription, whatsappBinding] = await Promise.all([
     getClientPortalSummary(session.organizationId),
-    safeWalletSummary(session.organizationId),
+    getFluxWalletSummary(session.organizationId).catch(() => null),
+    getActiveFluxSubscription(session.organizationId).catch(() => null),
     (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
@@ -57,17 +56,24 @@ export default async function ClientPortalPage() {
   const attentionAgents = summary.agents.filter((agent) => ["error", "disabled", "paused"].includes(agent.status.toLowerCase()));
   const trialDays = trialDaysRemaining(wallet?.trialEndsAt || null);
   const isTrial = Boolean(wallet && (wallet.trialEndsAt !== null || wallet.trialCreditLimit !== null));
+  const isFreeWorkspace = !subscription && !isTrial;
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
+  const experience = getIndustryExperience(summary.onboarding?.industry);
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
   const recentActivity = summary.runs.slice(0, 6);
+  const industryActions = [
+    experience.features.propertyCatalog ? { href: "/portal/systems", label: experience.inventoryLabel, description: "Manage the resources and records central to this workspace." } : null,
+    experience.features.appointments ? { href: "/portal/appointments", label: experience.appointmentLabel, description: `Manage ${experience.appointmentLabel.toLowerCase()} for your business.` } : null,
+    experience.features.inventory ? { href: "/portal/systems", label: experience.inventoryLabel, description: "Manage the products, services or resources your team operates." } : null,
+  ].filter(Boolean) as Array<{href:string;label:string;description:string}>;
 
   return (
     <main className="portal-page portal-command-center">
       <section className="portal-command-hero">
         <div>
-          <p className="portal-kicker">Business command center</p>
+          <p className="portal-kicker">Business command center · {experience.name}</p>
           <h1>Welcome back, {businessName}.</h1>
-          <p>See what your AI team is handling, what needs your attention, and how your business systems are performing.</p>
+          <p>{experience.dashboardDescription} See what your AI team is handling, what needs your attention, and how your business systems are performing.</p>
         </div>
         <div className={`portal-health-pill ${systemHealthy ? "healthy" : "attention"}`}>
           <span />
@@ -77,6 +83,20 @@ export default async function ClientPortalPage() {
           </div>
         </div>
       </section>
+
+      {isFreeWorkspace ? (
+        <section className="portal-card portal-activation-banner" aria-label="Choose a Fluxknight plan">
+          <div>
+            <p className="portal-kicker">Free workspace</p>
+            <h2>Your workspace is ready. Activate it when you are ready.</h2>
+            <p>Explore your dashboard and complete your business setup without paying or starting a trial. Choose a paid plan or activate the Basic free trial when you want customer-facing AI turned on.</p>
+          </div>
+          <div className="portal-actions">
+            <Link className="portal-button secondary" href="/pricing">Choose a plan</Link>
+            <TrialActivationButton />
+          </div>
+        </section>
+      ) : null}
 
       {isTrial ? (
         <section className="portal-trial-banner" aria-label="Free trial status">
@@ -104,6 +124,14 @@ export default async function ClientPortalPage() {
           <Link className="portal-button" href="/portal/integrations">Connect WhatsApp</Link>
         </section>
       ) : null}
+
+      <section className="portal-card portal-industry-context" aria-label={`${experience.name} workspace`}>
+        <div className="portal-card-head"><div><p className="portal-kicker">{experience.name} workspace</p><h2>Built around your business</h2><p>{experience.dashboardDescription}</p></div></div>
+        <div className="portal-action-list">
+          {industryActions.map((action) => <Link href={action.href} key={action.label}><span><Workflow size={17} /></span><div><strong>{action.label}</strong><small>{action.description}</small></div><ChevronRight size={16} /></Link>)}
+          {!industryActions.length ? <div className="portal-empty">Industry-specific modules will appear here as your workspace is configured.</div> : null}
+        </div>
+      </section>
 
       <section className="portal-business-metrics" aria-label="Business system overview">
         <article className="portal-business-metric">

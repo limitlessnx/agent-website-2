@@ -66,7 +66,6 @@ export default function PricingClient() {
     ? `Prepay ${money(prepaidPrice.total, activePrice.currency)}`
     : "Continue to checkout";
   const customHref = `/evaluation?plan=custom${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
-  const trialHref = "/account/signup?trial=basic&next=%2Fportal";
 
   return (
     <main className="quantix-home pricing-page-shell">
@@ -120,7 +119,7 @@ export default function PricingClient() {
                   <span className="pricing-plan-eyebrow">{plan.eyebrow}</span>
                   <h2>{plan.name}</h2>
                   {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.first}</strong><span> + {planPrice.ongoing}</span></div> : null}
-                  {plan.key === "basic" ? <span className="pricing-trial-pill">14-day free trial available</span> : null}
+                  
                   <p>{plan.summary}</p>
                   <span className="pricing-plan-action">{selected ? "Selected" : "View full explanation"} <ArrowRight size={14} /></span>
                 </button>
@@ -157,15 +156,6 @@ export default function PricingClient() {
                   <div className="pricing-current-price">
                     <div><small>Implementation</small><strong>{activePrice.first}</strong></div>
                     <div><small>Monthly renewal</small><strong>{activePrice.ongoing}</strong></div>
-                  </div>
-                ) : null}
-
-                {active.key === "basic" ? (
-                  <div className="pricing-free-trial-card">
-                    <span>Try Basic first</span>
-                    <strong>Start a 14-day free trial</strong>
-                    <p>250 Flux Credits · Web AI + WhatsApp AI · no card required.</p>
-                    <Link href={trialHref} className="button-primary">Start Free Trial <ArrowRight size={16} /></Link>
                   </div>
                 ) : null}
 

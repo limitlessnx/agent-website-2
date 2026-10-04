@@ -72,3 +72,39 @@ export async function provisionClientOrganization(input: ProvisionClientOrganiza
     },
   );
 }
+
+export async function provisionClientWorkspace(input: {
+  userId: string;
+  organizationName: string;
+  organizationSlug?: string;
+  industrySlug: string;
+  businessEmail?: string;
+}) {
+  const validated = validateProvisionClientInput({
+    userId: input.userId,
+    organizationName: input.organizationName,
+    organizationSlug: input.organizationSlug,
+  });
+  const industrySlug = input.industrySlug.trim();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(industrySlug)) {
+    throw new Error("A valid industry is required.");
+  }
+
+  return supabaseServerRequest<ProvisionClientOrganizationResult & {
+    industry_slug: string;
+    workspace_mode: "free";
+    trial_started: false;
+  }>(
+    "rpc/provision_client_workspace",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_user_id: validated.userId,
+        p_organization_name: validated.organizationName,
+        p_organization_slug: validated.organizationSlug || null,
+        p_industry_slug: industrySlug,
+        p_business_email: input.businessEmail || null,
+      }),
+    },
+  );
+}
