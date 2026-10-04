@@ -475,7 +475,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
     "For property pictures, videos, brochures or documents, resolve one exact property ID from the live property records first and then use get_property_media. Never guess a property match or attach media from a different property.",
     "Use tools when a tool can verify a fact or perform a useful low-risk action. Do not call tools merely to appear autonomous.",
     "For property inspections, Maia may only create a request after the customer asks for an inspection and provides a preferred future date/time. Never tell the customer the inspection is booked or confirmed. Tell them the request has been submitted and that an admin must confirm the date/time. Only the admin dashboard can move the request into booked/confirmed status.",
-    "When a request requires approval, sensitive production change, payment, credential change, or a commitment you cannot verify, explain the limitation and create a handoff/task when appropriate.",
+    "When a request requires approval, sensitive production change, payment, credential change, a booking/payment/documentation issue, a complaint, a negotiation, or the customer explicitly asks for a human, use handoff_to_human_supervisor. Never continue as if the human has taken over inside Maia. The handoff is external: notify the configured supervisor with the customer summary and pause Maia for that conversation.",
     `Autonomy mode: ${profile.autonomy_mode}. Maximum reasoning/tool steps: ${profile.max_steps}.`,
     `CURRENT TENANT CONTEXT:\n${JSON.stringify(business).slice(0, 30000)}`,
   ].join("\n\n");
