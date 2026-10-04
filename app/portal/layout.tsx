@@ -3,6 +3,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { getOrganizationUnreadNotificationCount, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
 import { getPortalCapabilities } from "@/lib/portal-access";
+import { getIndustryExperience } from "@/lib/industryExperience";
 import { LeoConversationProvider } from "@/components/leo/LeoConversationContext";
 import TenantLeoFloatingButton from "@/components/portal/TenantLeoFloatingButton";
 import PortalSidebar from "./PortalSidebar";
@@ -21,6 +22,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
     getPortalCapabilities(session),
   ]);
   if(!profile||profile.status==="in_progress")redirect("/onboarding");
+  const experience=getIndustryExperience(profile.industry);
 
   await syncLifecycleDashboardNotifications(session.organizationId).catch(()=>undefined);
   const unreadNotifications=await getOrganizationUnreadNotificationCount(session.organizationId,session.userId).catch(()=>0);
@@ -40,9 +42,10 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
           team:capabilities.team,
           support:capabilities.support,
         }}
+        experience={experience}
       />
       <section className="portal-main">
-        <header className="portal-topbar"><div><span>Client workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><ClientLogoutButton/></header>
+        <header className="portal-topbar"><div><span>{experience.name} workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><ClientLogoutButton/></header>
         {children}
       </section>
       <TenantLeoFloatingButton/>
