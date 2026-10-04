@@ -20,10 +20,6 @@ import { getIndustryExperience } from "@/lib/industryExperience";
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
 
-async function safeWalletSummary(organizationId: string) {
-  try { return await getFluxWalletSummary(organizationId); } catch { return null; }
-}
-
 function formatDate(value?: string | null) {
   if (!value) return "Never";
   return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
@@ -48,7 +44,7 @@ export default async function ClientPortalPage() {
   const admin = createAdminClient();
   const [summary, wallet, subscription, whatsappBinding] = await Promise.all([
     getClientPortalSummary(session.organizationId),
-    safeWalletSummary(session.organizationId),
+    getFluxWalletSummary(session.organizationId).catch(() => null),
     getActiveFluxSubscription(session.organizationId).catch(() => null),
     (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
   ]);
@@ -70,7 +66,7 @@ export default async function ClientPortalPage() {
     <main className="portal-page portal-command-center">
       <section className="portal-command-hero">
         <div>
-          <p className="portal-kicker">{experience.name} command center</p>
+          <p className="portal-kicker">Business command center · {experience.name}</p>
           <h1>Welcome back, {businessName}.</h1>
           <p>{experience.dashboardDescription} See what your AI team is handling, what needs your attention, and how your business systems are performing.</p>
         </div>
