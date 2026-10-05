@@ -49,7 +49,7 @@ export async function importProgressiveLeadsInBatches(
   }
 
   for (const batch of chunks(valid, BATCH_SIZE)) {
-    const settled = await Promise.allSettled(batch.map((lead) => saveProgressiveLead(lead)));
+    const settled = await Promise.allSettled(batch.map((lead) => saveProgressiveLead(organizationId, lead)));
 
     settled.forEach((outcome, index) => {
       if (outcome.status === "fulfilled") {
