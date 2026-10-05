@@ -137,7 +137,7 @@ export default async function InstallmentsPage() {
 
           <div className="payment-inline-note">
             <strong>No end date</strong>
-            <span>Reminders continue until payment is complete or the plan is manually paused/cancelled.</span>
+            <span>reminders continue until payment is complete or the plan is manually paused/cancelled.</span>
           </div>
 
           <label>
