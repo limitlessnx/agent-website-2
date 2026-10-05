@@ -8,7 +8,7 @@ test("Limitless Realty follow-up API is authenticated, tenant-scoped, and atomic
   const route = read("app/api/limitless/maia/followups/route.ts");
   assert.match(route, /CRON_SECRET/);
   assert.match(route, /verify_maia_scheduler_secret/);
-  assert.match(route, /slug.*limitless-realty/);
+  assert.match(route, /LIMITLESS_REALTY_SLUG = \"limitless-realty\"/);
   assert.match(route, /follow_ups/);
   assert.match(route, /status.*pending/);
   assert.match(route, /status.*processing/);
@@ -108,17 +108,14 @@ test("Vercel cron keeps the safety net daily while high-frequency scheduling rem
   assert.equal(config.crons.find((x) => x.path === "/api/cron/maia-safety-net")?.schedule, "0 10 * * *");
 });
 
-test("Installment reminder path is referenced but not altered by the follow-up implementation", () => {
-  const diffPaths = [
-    "app/api/admin/followups/route.ts",
-    "app/api/limitless/maia/followups/route.ts",
-    "app/dashboard/limitless/followups/page.tsx",
-    "components/admin/FollowupControlCenter.tsx",
-    "lib/followup-control.ts",
-    "src/trigger/maia-runtime.ts",
-    "src/trigger/system-orchestrator.ts",
-  ];
-  const vercel = read("vercel.json");
-  assert.ok(diffPaths.every(Boolean));
-  assert.match(vercel, /limitless-installment-reminders/);
+test("Installment reminder path remains untouched by the follow-up change", () => {
+  const { execFileSync } = require("node:child_process");
+  const changed = execFileSync("git", [
+    "diff", "--name-only",
+    "6a5f061f1ecc253a0703ec4934be6896cb17b5ab",
+    "HEAD",
+  ], { encoding: "utf8" }).trim().split("\\n").filter(Boolean);
+  assert.ok(!changed.some((path) => path.includes("installment-reminder")));
+  const safetyNet = read("app/api/cron/maia-safety-net/route.ts");
+  assert.match(safetyNet, /api\\/cron\\/limitless-installment-reminders/);
 });
