@@ -37,6 +37,6 @@ export default function FollowupControlCenter(props:Props){
    <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Lead</th><th>Stage</th><th>Channel</th><th>Status</th><th>Time</th></tr></thead><tbody>{logs.map(x=><tr key={x.id}><td><strong>{props.enrollments.find(e=>e.lead_id===x.lead_id)?.lead_name||"Unknown lead"}</strong></td><td>{x.step_id}</td><td>{x.channel||"-"}</td><td><span className={"admin-status "+(failureStatuses.has(String(x.status).toLowerCase())||String(x.status).toLowerCase()==="blocked"?"warning":"live")}>{x.status||"unknown"}</span></td><td>{formatDate(x.executed_at||x.created_at)}</td></tr>)}{!logs.length?<tr><td colSpan={5}>No execution records match this view.</td></tr>:null}</tbody></table></div><p className="admin-empty">Showing up to 25 matching records.</p>
   </section>
   {message?<p className="admin-form-message">{message}</p>:null}
-  <style jsx>{\`.followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}\`}
+  <style jsx>{`.followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}`}</style>
  </div>;
 }
