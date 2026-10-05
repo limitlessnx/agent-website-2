@@ -86,6 +86,10 @@ declare
   v_org_id uuid;
   v_request_id uuid;
 begin
+  if auth.uid() is null or auth.uid() <> p_requester_user_id then
+    raise exception 'Authenticated manager session required.';
+  end if;
+
   select id into v_org_id
   from public.organizations
   where upper(manager_access_code) = upper(trim(p_access_code))
@@ -129,6 +133,10 @@ declare
   v_role_id uuid;
   v_membership_id uuid;
 begin
+  if auth.uid() is null or auth.uid() <> p_actor_user_id then
+    raise exception 'Authenticated organization administrator required.';
+  end if;
+
   select * into v_request
   from public.organization_access_requests
   where id = p_request_id and status = 'pending'
@@ -206,6 +214,10 @@ security definer
 set search_path = public
 as $$
 begin
+  if auth.uid() is null or auth.uid() <> p_actor_user_id then
+    raise exception 'Authenticated organization administrator required.';
+  end if;
+
   if not exists (
     select 1
     from public.organization_access_requests ar
