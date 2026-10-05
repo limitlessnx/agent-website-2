@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenterV2";
 import CampaignReportsRefresh from "@/components/admin/CampaignReportsRefresh";
 import { getCampaignGroups } from "@/lib/campaign-groups";
@@ -8,9 +9,10 @@ import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
+  const { organizationId } = await resolveAdminOrganizationScope();
   const [campaigns, leads, properties, groups] = await Promise.all([
     getDetailedCampaignReports(50),
-    getCampaignAudienceLeads(5000),
+    getCampaignAudienceLeads(organizationId, 5000),
     getProperties(500),
     getCampaignGroups(100),
   ]);
