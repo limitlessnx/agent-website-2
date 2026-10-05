@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
@@ -17,9 +18,10 @@ async function requireAdmin() {
 
 export async function createProgressiveLeadAction(formData: FormData) {
   await requireAdmin();
+  const { organizationId } = await resolveAdminOrganizationScope();
   const returnTo = String(formData.get("return_to") || "").trim();
   try {
-    await saveProgressiveLead({
+    await saveProgressiveLead(organizationId, {
       name: String(formData.get("name") || "").trim(),
       phone: String(formData.get("phone") || "").trim(),
       email: String(formData.get("email") || "").trim() || undefined,
@@ -156,13 +158,14 @@ async function parseFile(file: File) {
 
 export async function importProgressiveLeadsAction(formData: FormData) {
   await requireAdmin();
+  const { organizationId } = await resolveAdminOrganizationScope();
   const file = formData.get("contacts_file");
   if (!(file instanceof File) || file.size === 0) throw new Error("Upload a CSV, Excel, or phone contacts (.vcf) file first.");
 
   const leads = await parseFile(file);
   if (!leads.length) throw new Error("No usable contacts were found in this file.");
 
-  const result = await importProgressiveLeadsInBatches(leads);
+  const result = await importProgressiveLeadsInBatches(organizationId, leads);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/limitless/leads");
   revalidatePath("/dashboard/limitless/campaigns");
