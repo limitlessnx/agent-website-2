@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, MessageSquareText, PhoneCall, UserCheck } from "@/components/admin/ServerIcons";
+import { AlertTriangle, CheckCircle2, MessageSquareText, PhoneCall, UserCheck, UserPlus } from "@/components/admin/ServerIcons";
 import { resolveAdminOrganizationScope, organizationHomeHref } from "@/lib/admin-organization-scope";
 import { emptyOrganizationOperationalSnapshot, getOrganizationOperationalSnapshot } from "@/lib/admin-organization-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
@@ -25,6 +25,7 @@ export default async function ConversationsPage() {
           <h1>Conversation Center</h1>
           <p>Conversation evidence, follow-up pressure and handoff signals are restricted to the active organization workspace.</p>
         </div>
+        <a className="admin-button secondary-button" href="/dashboard/limitless/leads?addContact=1&returnTo=/dashboard/conversations"><UserPlus size={14} /> Add contact</a>
         <span className={snapshot.attentionCount ? "admin-status warning" : "admin-status live"}>
           {snapshot.attentionCount ? `${snapshot.attentionCount} need attention` : "Inbox stable"}
         </span>
