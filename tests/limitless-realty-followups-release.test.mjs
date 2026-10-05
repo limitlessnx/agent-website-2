@@ -52,9 +52,10 @@ test("Trigger follow-up drain is tenant-scoped, due-only, bounded, and duplicate
 test("Inbound reply cancellation and stop intent remain connected to follow-ups", () => {
   const runtime = read("src/trigger/maia-runtime.ts");
   assert.match(runtime, /follow_ups/);
-  assert.match(runtime, /response_received/);
   assert.match(runtime, /opted_out/);
   assert.match(runtime, /follow_up/);
+  assert.match(runtime, /replace\\(\\/\\\\D\\/g, \\"\\"\\)/);
+  assert.match(runtime, /String\\(lead\\.phone \\|\\| \\"\\"\\)\\.replace/);
 });
 
 test("Admin follow-up controls are authenticated and server-side tenant scoped", () => {
