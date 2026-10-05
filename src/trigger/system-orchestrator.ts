@@ -26,8 +26,11 @@ async function processDueLimitlessFollowups(limit = 25) {
     try {
       const lead = Array.isArray(row.leads) ? row.leads[0] : row.leads;
       const phone = String((lead as any)?.phone || "").replace(/[^\d]/g, "");
-      if (!phone || Boolean((lead as any)?.opted_out)) {
-        await admin.from("follow_ups").update({ status: "cancelled" }) .eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
+      const { data: handoffConversation } = phone
+        ? await admin.from("agent_conversations").select("id,ai_paused,status").eq("organization_id", organization.id).eq("external_thread_key", phone).maybeSingle()
+        : { data: null };
+      if (!phone || Boolean((lead as any)?.opted_out) || Boolean((handoffConversation as any)?.ai_paused) || String((handoffConversation as any)?.status || "") === "handoff") {
+        await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
         cancelled++;
         continue;
       }
