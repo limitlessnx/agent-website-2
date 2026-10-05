@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
+import { normalizeLeadPhone, saveProgressiveLead } from "@/lib/lead-profile-service";
 import { createPaymentPlan, createPaymentRecord, deletePaymentRecord, updatePaymentRecord, updatePaymentPlan, createReminderTemplate, updateReminderTemplate } from "@/lib/limitless-payments";
 
 async function requireAdmin() {
@@ -18,10 +20,26 @@ function money(value: FormDataEntryValue | null) {
 
 export async function createPaymentPlanAction(formData: FormData) {
   await requireAdmin();
-  const clientName = String(formData.get("client_name") || formData.get("client_name_manual") || "").trim();
-  const clientPhone = String(formData.get("client_phone") || formData.get("client_phone_manual") || "").trim();
+  const organizationId = (await resolveAdminOrganizationScope()).organizationId;
+  const contactId = String(formData.get("contact_id") || "").trim();
+  const manualName = String(formData.get("client_name_manual") || "").trim();
+  const manualPhone = String(formData.get("client_phone_manual") || "").trim();
+  const manualEmail = String(formData.get("client_email_manual") || "").trim();
+  const clientName = String(formData.get("client_name") || manualName).trim();
+  const clientPhone = String(formData.get("client_phone") || manualPhone).trim();
   const propertyTitle = String(formData.get("property_title") || "").trim();
+  if (!organizationId || organizationId.startsWith("unavailable:")) throw new Error("Active organization context is required.");
   if (!clientName || !clientPhone || !propertyTitle) throw new Error("Client name, phone, and property are required.");
+  if (!contactId && manualName && manualPhone) {
+    await saveProgressiveLead(organizationId, {
+      name: manualName,
+      phone: normalizeLeadPhone(manualPhone),
+      email: manualEmail || undefined,
+      status: "new",
+      source: "installment_client_creation",
+      campaign_eligible: true,
+    });
+  }
   await createPaymentPlan({
     client_name: clientName,
     client_phone: clientPhone,
