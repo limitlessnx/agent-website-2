@@ -15,8 +15,7 @@ export default async function FollowupsPage() {
   const dueNow = summary.statusSummary.due;
   const overdue = summary.statusSummary.overdue;
   const logFailures = summary.logs.filter((item) => ["failed", "error", "blocked"].includes(String(item.status).toLowerCase())).length;
-  const n8nFailures = summary.executions.filter((item) => item.status === "error").length;
-  const attention = logFailures + n8nFailures;
+  const attention = logFailures;
 
   return (
     <div className="admin-page">
@@ -24,7 +23,7 @@ export default async function FollowupsPage() {
         <div>
           <p className="admin-kicker">Limitless Realty</p>
           <h1>Follow-up Control</h1>
-          <p>Manage reminders, reusable sequences and enrolled leads from one clean workspace.</p>
+          <p>Manage Maia-managed reminders and follow-up actions from one clean workspace.</p>
         </div>
         <span className={attention ? "admin-status warning" : "admin-status live"}>
           {attention ? `${attention} need attention` : "Automations healthy"}
@@ -36,7 +35,7 @@ export default async function FollowupsPage() {
         <article className="admin-metric-card"><p>Upcoming</p><strong>{scheduled}</strong><span>Waiting for the next action</span></article>
         <article className="admin-metric-card"><p>Due now</p><strong>{dueNow}</strong><span>Ready for today&apos;s step</span></article>
         <article className="admin-metric-card"><p>Overdue</p><strong>{overdue}</strong><span>Missed by more than 24 hours</span></article>
-        <article className="admin-metric-card"><p>Sequences</p><strong>{summary.sequences.length}</strong><span>Reusable follow-up plans</span></article>
+        <article className="admin-metric-card"><p>Built-in cadence</p><strong>6</strong><span>Maia steps: 1, 3, 7, 14, 21, 30 days</span></article>
         <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed or blocked actions requiring review</span></article>
       </div>
 
