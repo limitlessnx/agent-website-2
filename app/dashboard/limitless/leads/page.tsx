@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ imported?: string; skipped?: string; errors?: string; saved?: string }>;
+  searchParams?: Promise<{ imported?: string; skipped?: string; errors?: string; saved?: string; error?: string; addContact?: string; returnTo?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
   const [leads, groups] = await Promise.all([
