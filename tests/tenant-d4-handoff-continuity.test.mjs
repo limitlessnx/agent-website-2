@@ -103,17 +103,15 @@ test("D4 WhatsApp readiness detects coexistence instead of assuming API-only",()
 });
 
 
-test("D4 dashboard shared inbox sends human WhatsApp replies and keeps AI paused",()=>{
-  const route=read("app/api/portal/conversations/[id]/messages/route.ts");
+test("D4 dashboard handoff keeps WhatsApp communication external to Maia",()=>{
   const page=read("app/portal/conversations/[id]/page.tsx");
-  const composer=read("app/portal/conversations/[id]/HumanWhatsAppComposer.tsx");
-  assert.match(route,/conversations\.reply/);
-  assert.match(route,/sendWhatsAppMessage/);
-  assert.match(route,/senderType:"human"/);
-  assert.match(route,/ai_response_mode:"human_takeover"/);
-  assert.match(route,/human_takeover_source:"fluxknight_dashboard"/);
-  assert.match(page,/HumanWhatsAppComposer/);
-  assert.match(composer,/Send on WhatsApp/);
+  const operations=read("lib/human-operations.ts");
+  assert.match(page,/Human communication remains external to Maia after handoff/);
+  assert.match(page,/Human handoff/);
+  assert.match(operations,/notifyHandoffAssignee/);
+  assert.match(operations,/notifyWhatsApp:true/);
+  assert.doesNotMatch(page,/HumanWhatsAppComposer/);
+  assert.doesNotMatch(page,/Send on WhatsApp/);
 });
 
 test("D4 WhatsApp system tools carry canonical conversation context for handoff",()=>{
