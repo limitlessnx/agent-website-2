@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { updateEnrollment } from "@/lib/followup-control";
 
 export async function POST(request:NextRequest){
