@@ -87,7 +87,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
         <p className="admin-muted">Create your account and set up your Fluxknight workspace.</p>
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
-      <GoogleAuthButton nextPath={invitationToken ? safeNext : "/onboarding"} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />
+      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />
       <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
