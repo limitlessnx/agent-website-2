@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { getPaymentPlans, getPaymentRecords, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
@@ -10,7 +11,8 @@ import "../payments.css";
 export const dynamic = "force-dynamic";
 
 export default async function InstallmentsPage() {
-  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(1000)]);
+  const { organizationId } = await resolveAdminOrganizationScope();
+  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   const totalAgreed = plans.reduce((s,p)=>s+Number(p.agreed_price||0),0);
   const totalPaid = plans.reduce((s,p)=>s+Number(p.total_paid||0),0);
   const outstanding = plans.reduce((s,p)=>s+Number(p.outstanding_balance||0),0);
