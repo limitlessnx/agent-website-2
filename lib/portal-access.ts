@@ -43,6 +43,7 @@ export async function getPortalCapabilities(session: ClientSession) {
 
 export async function requirePortalPermission(session: ClientSession, keys: string[]) {
   const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+  if (access.roles.includes("manager")) return access;
   if (!keys.some((key) => access.permissions.has(key))) {
     throw new Error("Portal permission denied.");
   }
