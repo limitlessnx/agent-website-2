@@ -107,7 +107,7 @@ export async function GET(request: Request) {
     const intervalDays = cadenceDays(String(plan.frequency || "biweekly"));
     const nextReminder = plan.next_reminder_at
       ? new Date(String(plan.next_reminder_at))
-      : new Date(new Date(String(plan.start_at || plan.created_at)).getTime() + intervalDays * DAY_MS);
+      : new Date(new Date(String(plan.start_at)).getTime() + intervalDays * DAY_MS);
 
     if (Number.isNaN(nextReminder.getTime()) || nextReminder.getTime() > now.getTime()) {
       results.push({
