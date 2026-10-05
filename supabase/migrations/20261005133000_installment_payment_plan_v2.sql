@@ -25,6 +25,9 @@ alter table public.payment_plans
   references public.reminder_templates (organization_id, id)
   on delete set null;
 
+create unique index if not exists reminder_attempts_schedule_unique
+  on public.reminder_attempts (organization_id, payment_plan_id, reminder_template_id, scheduled_for);
+
 create index if not exists payment_plans_org_reminder_idx
   on public.payment_plans (organization_id, status, reminders_enabled, next_reminder_at)
   where reminders_enabled is true;
