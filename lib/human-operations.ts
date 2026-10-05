@@ -51,20 +51,24 @@ async function deriveHandoffSummary(organizationId:string,conversationId:string,
 }
 
 async function resolveHandoffAssignment(input:{
-  organizationId:string; sourceSystemId:string; sourceAgentId:string|null; category:string; payload:Record<string,unknown>;
+  organizationId:string; sourceSystemId:string|null; sourceAgentId:string|null; category:string; payload:Record<string,unknown>;
 }):Promise<HandoffAssignment>{
   const admin=createAdminClient();
   const explicit=str(input.payload.assignedMembershipId||input.payload.assigned_membership_id);
   if(explicit){
     const {data}=await admin.from("organization_memberships").select("id")
       .eq("organization_id",input.organizationId).eq("id",explicit).eq("status","active").maybeSingle();
-    if(data?.id) return {membershipId:String(data.id),notifyWhatsApp:true,notifyDashboard:true,source:"event_payload"};
+    if(data?.id){
+      const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",explicit).maybeSingle();
+      if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"event_payload"};
+    }
   }
 
-  const {data:rules,error:rulesError}=await admin.from("handoff_assignment_rules")
+  let rulesQuery=admin.from("handoff_assignment_rules")
     .select("assigned_membership_id,category,source_system_id,notify_whatsapp,notify_dashboard,priority")
-    .eq("organization_id",input.organizationId).eq("status","active")
-    .order("priority",{ascending:true}).limit(100);
+    .eq("organization_id",input.organizationId).eq("status","active");
+  if(input.sourceSystemId) rulesQuery=rulesQuery.eq("source_system_id",input.sourceSystemId);
+  const {data:rules,error:rulesError}=await rulesQuery.order("priority",{ascending:true}).limit(100);
   if(rulesError) throw rulesError;
   const rule=(rules||[]).find((item)=>
     (!item.category||item.category===input.category)&&(!item.source_system_id||item.source_system_id===input.sourceSystemId)
@@ -72,12 +76,15 @@ async function resolveHandoffAssignment(input:{
   if(rule?.assigned_membership_id){
     const {data}=await admin.from("organization_memberships").select("id").eq("organization_id",input.organizationId)
       .eq("id",rule.assigned_membership_id).eq("status","active").maybeSingle();
-    if(data?.id) return {
-      membershipId:String(data.id),
-      notifyWhatsApp:rule.notify_whatsapp!==false,
-      notifyDashboard:rule.notify_dashboard!==false,
-      source:"assignment_rule",
-    };
+    if(data?.id){
+      const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",String(data.id)).maybeSingle();
+      if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {
+        membershipId:String(data.id),
+        notifyWhatsApp:rule.notify_whatsapp!==false && pref?.notify_whatsapp_handoffs!==false,
+        notifyDashboard:rule.notify_dashboard!==false,
+        source:"assignment_rule",
+      };
+    }
   }
 
   if(input.sourceAgentId){
@@ -88,7 +95,10 @@ async function resolveHandoffAssignment(input:{
     if(membershipId){
       const {data}=await admin.from("organization_memberships").select("id").eq("organization_id",input.organizationId)
         .eq("id",membershipId).eq("status","active").maybeSingle();
-      if(data?.id) return {membershipId:String(data.id),notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination"};
+      if(data?.id){
+        const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",membershipId).maybeSingle();
+        if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"agent_destination"};
+      }
     }
   }
 
@@ -235,14 +245,7 @@ export async function claimHumanHandoff(session:ClientSession,handoffId:string){
     claimed_at:handoff.claimed_at||new Date().toISOString(),updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("id",handoffId).select().single();
   if(updateError) throw updateError;
-  const {data:conversation}=await admin.from("crm_conversations").select("metadata")
-    .eq("organization_id",session.organizationId).eq("id",handoff.conversation_id).maybeSingle();
-  await admin.from("crm_conversations").update({
-    status:"human_active",
-    metadata:{...((conversation?.metadata||{}) as Record<string,unknown>),active_handoff_id:handoffId,ai_response_mode:"human_takeover"},
-    updated_at:new Date().toISOString(),
-  }).eq("organization_id",session.organizationId).eq("id",handoff.conversation_id);
-  return data;
+  // Claiming a handoff is an internal ownership action only. It never opens a human chat inside Maia.\n  return data;
 }
 
 export async function assignHumanHandoff(session:ClientSession,handoffId:string,membershipId:string){
@@ -525,4 +528,99 @@ export async function createHandoffFromSystemEvent(event:{
     structured,
     duplicate:false,
   };
+}
+
+
+export async function createHumanHandoffFromMaia(input:{
+  organizationId:string;
+  customerId:string;
+  conversationId:string;
+  sourceAgentId:string;
+  reason:string;
+  category?:string;
+  priority?:string;
+  summary?:string|null;
+  nextAction?:string|null;
+  assignedMembershipId?:string|null;
+  correlationId?:string|null;
+}){
+  const admin=createAdminClient();
+  const category=str(input.category)||"general";
+  const priorityRaw=str(input.priority).toLowerCase()||"normal";
+  const priority=["low","normal","high","critical"].includes(priorityRaw)?priorityRaw:"normal";
+  const payload:Record<string,unknown>={
+    assignedMembershipId:input.assignedMembershipId||null,
+  };
+  const assignment=await resolveHandoffAssignment({
+    organizationId:input.organizationId,
+    sourceSystemId:null,
+    sourceAgentId:input.sourceAgentId,
+    category,
+    payload,
+  });
+  const summary=String(input.summary||input.reason||"Human assistance requested").slice(0,4000);
+  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+    p_organization_id:input.organizationId,
+    p_customer_id:input.customerId,
+    p_conversation_id:input.conversationId,
+    p_reason:str(input.reason).slice(0,1000),
+    p_category:category,
+    p_priority:priority,
+    p_source_system_id:null,
+    p_source_agent_id:input.sourceAgentId,
+    p_correlation_id:input.correlationId||null,
+    p_sla_due_at:new Date(Date.now()+60*60*1000).toISOString(),
+    p_created_by_type:"agent",
+    p_created_by_id:input.sourceAgentId,
+    p_metadata:{
+      source:"maia_runtime",
+      assignment_source:assignment.source,
+      structured_handoff:{
+        customerIntent:str(input.reason)||null,
+        keyPoints:[],
+        customerQuestions:[],
+        followUpRequired:true,
+      },
+    },
+  });
+  if(error) throw error;
+  const handoffId=String(data);
+  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,current_stage_id")
+    .eq("organization_id",input.organizationId).eq("id",input.customerId).maybeSingle();
+  let stageName:string|null=null;
+  if(customer?.current_stage_id){
+    const {data:stage}=await admin.from("organization_customer_stages").select("name")
+      .eq("organization_id",input.organizationId).eq("id",customer.current_stage_id).maybeSingle();
+    stageName=stage?.name||null;
+  }
+  await admin.from("human_handoffs").update({
+    conversation_summary:summary,
+    stage_id_at_handoff:customer?.current_stage_id||null,
+    next_action:str(input.nextAction)||null,
+    assigned_membership_id:assignment.membershipId,
+    status:assignment.membershipId?"assigned":"open",
+    updated_at:new Date().toISOString(),
+  }).eq("organization_id",input.organizationId).eq("id",handoffId);
+  if(assignment.membershipId){
+    await notifyHandoffAssignee({
+      organizationId:input.organizationId,
+      handoffId,
+      conversationId:input.conversationId,
+      membershipId:assignment.membershipId,
+      customerName:String(customer?.full_name||customer?.company_name||"Customer"),
+      stageName,
+      summary,
+      nextAction:str(input.nextAction)||null,
+      notifyWhatsApp:assignment.notifyWhatsApp,
+      notifyDashboard:assignment.notifyDashboard,
+    }).catch((error)=>loggerSafeHandoffError(error));
+    await admin.from("human_handoffs").update({notified_at:new Date().toISOString()})
+      .eq("organization_id",input.organizationId).eq("id",handoffId);
+  }
+  return {handoffId,status:assignment.membershipId?"assigned":"open",assignedMembershipId:assignment.membershipId,summary,nextAction:str(input.nextAction)||null};
+}
+
+function loggerSafeHandoffError(error:unknown){
+  // Notification delivery must not roll back the canonical handoff record.
+  return error;
 }

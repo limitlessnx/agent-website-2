@@ -3,6 +3,7 @@ import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { maiaAppointmentTools } from "@/lib/ai/maia-appointment-tools";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 import { requestLimitlessInspection } from "@/lib/limitless-inspections";
+import { createHumanHandoffFromMaia } from "@/lib/human-operations";
 
 export type MaiaRuntimeInput = {
   organizationId: string;
@@ -11,12 +12,15 @@ export type MaiaRuntimeInput = {
   sessionId?: string;
   channel?: string;
   externalConversationId?: string;
+  customerId?: string;
+  conversationId?: string;
+  correlationId?: string;
   autonomous?: boolean;
 };
 
 type Model = { id: string; provider: string; model_key: string; display_name: string; capabilities: Record<string, unknown> };
 type RuntimeProfile = { enabled: boolean; autonomy_mode: "supervised" | "autonomous"; max_steps: number; model_strategy: "best_available" | "fastest" | "reasoning" | "balanced"; memory_enabled: boolean; tool_policy: Record<string, unknown> };
-type ToolContext = { organizationId: string; agentId: string; sessionId: string; externalConversationId?: string };
+type ToolContext = { organizationId: string; agentId: string; sessionId: string; externalConversationId?: string; customerId?: string; conversationId?: string; correlationId?: string };
 type ToolDefinition = { name: string; description: string; parameters: Record<string, unknown>; execute: (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown> };
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
@@ -341,6 +345,35 @@ function toolSet(): ToolDefinition[] {
       },
     },
     {
+      name: "handoff_to_human_supervisor",
+      description: "Hand a customer to a configured human supervisor when the customer asks for a human or the request requires payment, booking, documentation, complaint handling, negotiation or another human-only action. This does not open a human chat inside Maia. It creates the canonical handoff, pauses Maia for this conversation, assigns a configured supervisor when a rule exists, and sends the supervisor a concise WhatsApp summary.",
+      parameters: { type: "object", additionalProperties: false, properties: {
+        reason: { type: "string" },
+        category: { type: "string" },
+        priority: { type: "string", enum: ["low","normal","high","critical"] },
+        summary: { type: "string" },
+        nextAction: { type: "string" },
+        assignedMembershipId: { type: "string" }
+      }, required: ["reason","category","summary"] },
+      execute: async (input, ctx) => {
+        if (!ctx.customerId || !ctx.conversationId) throw new Error("Maia cannot create a human handoff until the canonical customer and conversation are resolved.");
+        const result = await createHumanHandoffFromMaia({
+          organizationId: ctx.organizationId,
+          customerId: ctx.customerId,
+          conversationId: ctx.conversationId,
+          sourceAgentId: ctx.agentId,
+          correlationId: ctx.correlationId || null,
+          reason: text(input.reason),
+          category: text(input.category) || "general",
+          priority: text(input.priority) || "normal",
+          summary: text(input.summary) || null,
+          nextAction: text(input.nextAction) || null,
+          assignedMembershipId: text(input.assignedMembershipId) || null,
+        });
+        return { ...result, mode: "external_supervisor_handoff", maiaChatTakeover: false };
+      },
+    },
+    {
       name: "handoff_to_agent",
       description: "Queue a task for another agent assigned to this tenant. Use only when the other agent is actually assigned.",
       parameters: { type: "object", additionalProperties: false, properties: { targetAgentId: { type: "string" }, title: { type: "string" }, instructions: { type: "string" } }, required: ["targetAgentId", "title", "instructions"] },
@@ -424,7 +457,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const profile = await loadProfile(input.organizationId, input.agentId);
   if (!profile.enabled) throw new Error("This agent's autonomous runtime is disabled.");
   const session = await createSession(input);
-  const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId };
+  const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId, customerId: input.customerId, conversationId: input.conversationId, correlationId: input.correlationId };
   const model = await chooseModel(input.organizationId, profile, input.message);
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
   await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
@@ -442,7 +475,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
     "For property pictures, videos, brochures or documents, resolve one exact property ID from the live property records first and then use get_property_media. Never guess a property match or attach media from a different property.",
     "Use tools when a tool can verify a fact or perform a useful low-risk action. Do not call tools merely to appear autonomous.",
     "For property inspections, Maia may only create a request after the customer asks for an inspection and provides a preferred future date/time. Never tell the customer the inspection is booked or confirmed. Tell them the request has been submitted and that an admin must confirm the date/time. Only the admin dashboard can move the request into booked/confirmed status.",
-    "When a request requires approval, sensitive production change, payment, credential change, or a commitment you cannot verify, explain the limitation and create a handoff/task when appropriate.",
+    "When a request requires approval, sensitive production change, payment, credential change, a booking/payment/documentation issue, a complaint, a negotiation, or the customer explicitly asks for a human, use handoff_to_human_supervisor. Never continue as if the human has taken over inside Maia. The handoff is external: notify the configured supervisor with the customer summary and pause Maia for that conversation.",
     `Autonomy mode: ${profile.autonomy_mode}. Maximum reasoning/tool steps: ${profile.max_steps}.`,
     `CURRENT TENANT CONTEXT:\n${JSON.stringify(business).slice(0, 30000)}`,
   ].join("\n\n");

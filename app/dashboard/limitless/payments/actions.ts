@@ -18,14 +18,14 @@ function money(value: FormDataEntryValue | null) {
 
 export async function createPaymentPlanAction(formData: FormData) {
   await requireAdmin();
-  const clientName = String(formData.get("client_name") || "").trim();
-  const clientPhone = String(formData.get("client_phone") || "").trim();
+  const clientName = String(formData.get("client_name") || formData.get("client_name_manual") || "").trim();
+  const clientPhone = String(formData.get("client_phone") || formData.get("client_phone_manual") || "").trim();
   const propertyTitle = String(formData.get("property_title") || "").trim();
   if (!clientName || !clientPhone || !propertyTitle) throw new Error("Client name, phone, and property are required.");
   await createPaymentPlan({
     client_name: clientName,
     client_phone: clientPhone,
-    client_email: String(formData.get("client_email") || "").trim() || null,
+    client_email: String(formData.get("client_email") || formData.get("client_email_manual") || "").trim() || null,
     property_id: String(formData.get("property_id") || "").trim() || null,
     property_title: propertyTitle,
     agreed_price: money(formData.get("agreed_price")),

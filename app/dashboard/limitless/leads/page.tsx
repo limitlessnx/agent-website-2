@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ imported?: string; skipped?: string; errors?: string; saved?: string }>;
+  searchParams?: Promise<{ imported?: string; skipped?: string; errors?: string; saved?: string; error?: string; addContact?: string; returnTo?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
   const [leads, groups] = await Promise.all([
@@ -29,6 +29,7 @@ export default async function LeadsPage({
   const skipped = Number(params.skipped || 0);
   const errors = Number(params.errors || 0);
   const saved = params.saved === "1";
+  const saveError = params.error || "";
 
   return (
     <div className="admin-page">
@@ -48,6 +49,12 @@ export default async function LeadsPage({
         <a href="#lead-control">Review pipeline</a>
         <a href="#lead-tools">Add or import contacts</a>
       </nav>
+
+      {saveError ? (
+        <section className="admin-panel import-result-panel" role="alert" aria-live="assertive">
+          <div className="admin-panel-header"><div><h2>Contact not saved</h2><p>{saveError}</p></div><span className="admin-status warning">Review</span></div>
+        </section>
+      ) : null}
 
       {saved ? (
         <section className="admin-panel import-result-panel" role="status" aria-live="polite">
@@ -72,10 +79,11 @@ export default async function LeadsPage({
       </div>
 
       <section id="lead-tools" className={styles.toolsGrid}>
-        <details className={styles.toolPanel}>
+        <details className={styles.toolPanel} open={params.addContact === "1"}>
           <summary>Add a contact <span className="admin-status warning">{undocumented} undocumented</span></summary>
           <div className={styles.toolBody}>
             <form action={createProgressiveLeadAction} className="admin-form-grid">
+              <input type="hidden" name="return_to" value={params.returnTo || ""} />
               <input aria-label="Lead name" name="name" placeholder="Name" required />
               <input aria-label="WhatsApp phone" name="phone" placeholder="WhatsApp phone e.g. +234..." required />
               <input aria-label="Email" name="email" type="email" placeholder="Email (optional)" />

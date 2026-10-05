@@ -17,24 +17,30 @@ async function requireAdmin() {
 
 export async function createProgressiveLeadAction(formData: FormData) {
   await requireAdmin();
-
-  await saveProgressiveLead({
-    name: String(formData.get("name") || "").trim(),
-    phone: String(formData.get("phone") || "").trim(),
-    email: String(formData.get("email") || "").trim() || undefined,
-    status: String(formData.get("status") || "new"),
-    score: String(formData.get("score") || "").trim() || undefined,
-    budget: String(formData.get("budget") || "").trim() || undefined,
-    location_preference: String(formData.get("location_preference") || "").trim() || undefined,
-    property_type: String(formData.get("property_type") || "").trim() || undefined,
-    property_interest: String(formData.get("property_interest") || "").trim() || undefined,
-    purpose: String(formData.get("purpose") || "").trim() || undefined,
-    source: "admin_dashboard",
-  });
+  const returnTo = String(formData.get("return_to") || "").trim();
+  try {
+    await saveProgressiveLead({
+      name: String(formData.get("name") || "").trim(),
+      phone: String(formData.get("phone") || "").trim(),
+      email: String(formData.get("email") || "").trim() || undefined,
+      status: String(formData.get("status") || "new"),
+      score: String(formData.get("score") || "").trim() || undefined,
+      budget: String(formData.get("budget") || "").trim() || undefined,
+      location_preference: String(formData.get("location_preference") || "").trim() || undefined,
+      property_type: String(formData.get("property_type") || "").trim() || undefined,
+      property_interest: String(formData.get("property_interest") || "").trim() || undefined,
+      purpose: String(formData.get("purpose") || "").trim() || undefined,
+      source: "admin_dashboard",
+    });
+  } catch (error) {
+    const message = encodeURIComponent(error instanceof Error ? error.message : "Unable to save contact.");
+    redirect(`/dashboard/limitless/leads?error=${message}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`);
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/limitless/leads");
   revalidatePath("/dashboard/limitless/campaigns");
+  if (returnTo.startsWith("/dashboard/")) redirect(returnTo);
   redirect("/dashboard/limitless/leads?saved=1");
 }
 

@@ -2,6 +2,7 @@ import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import {
   queueLimitlessFollowup,
   queueLimitlessPropertyFollowupSequence,
@@ -157,26 +158,31 @@ export const maiaProcessInboundMessage = task({
         });
         return { ok: true, duplicate: false, eventId, suppressedReply: true, reason: "customer_opted_out" };
       }
+      const customerId = payload.customerPhone
+        ? await resolveCanonicalCustomer({ organizationId: payload.organizationId, phone: payload.customerPhone, externalKey: "whatsapp:" + payload.customerPhone, fullName: payload.customerName || "WhatsApp customer", source: "maia-whatsapp-runtime" }).then((result) => result.customerId)
+        : null;
+      const conversationId = customerId
+        ? await getOrCreateCanonicalConversation({ organizationId: payload.organizationId, customerId, channel: "whatsapp", externalThreadId: payload.externalConversationId || ("whatsapp:" + (payload.customerPhone || customerId)), agentId: payload.agentId, metadata: { provider: payload.provider || "meta_whatsapp", source: "maia-whatsapp-runtime" } })
+        : null;
+
+      if (conversationId) {
+        await addCanonicalCrmMessage({ organizationId: payload.organizationId, conversationId, senderType: "customer", direction: "inbound", content: payload.message, externalMessageId: "whatsapp-inbound:" + payload.externalEventId, status: "received", metadata: { provider: payload.provider || "meta_whatsapp", maia_event_id: eventId } });
+        const { data: conversation } = await createAdminClient().from("crm_conversations").select("status,metadata").eq("organization_id", payload.organizationId).eq("id", conversationId).maybeSingle();
+        const metadata = (conversation?.metadata || {}) as Record<string, unknown>;
+        const responseMode = String(metadata.ai_response_mode || "").trim();
+        const humanControlled = ["waiting","human_active","resolved"].includes(String(conversation?.status || "")) || ["paused_for_handoff","human_takeover","stopped"].includes(responseMode);
+        if (humanControlled) {
+          await markMaiaInboundCompleted(eventId);
+          await recordMaiaRuntimeEvent({ organizationId: payload.organizationId, agentId: payload.agentId, eventType: "trigger_inbound_completed", status: "completed", payload: { eventId, conversationId, customerId, suppressedReply: true, reason: "human_handoff_active" } });
+          return { ok: true, duplicate: false, eventId, conversationId, customerId, suppressedReply: true, reason: "human_handoff_active" };
+        }
+      }
+
       const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(payload.message) : null;
       const runtimeMessage = propertyContext
-        ? [
-            payload.message,
-            "",
-            "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:",
-            JSON.stringify(propertyContext),
-            "",
-            "Use the verified property result when answering. Never invent availability, pricing, title, documentation or property media. If the customer asks about a named property, use the exact verified catalog match.",
-            "For a clear property enquiry or buying intent, preserve the property context for follow-up scheduling.",
-          ].join("\n")
+        ? [payload.message, "", "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:", JSON.stringify(propertyContext), "", "Use the verified property result when answering. Never invent availability, pricing, title, documentation or property media. If the customer asks about a named property, use the exact verified catalog match.", "For a clear property enquiry or buying intent, preserve the property context for follow-up scheduling."].join("\n")
         : payload.message;
-      const result = await runMaia({
-        organizationId: payload.organizationId,
-        agentId: payload.agentId,
-        message: runtimeMessage,
-        channel: payload.channel,
-        externalConversationId: payload.externalConversationId,
-        autonomous: true,
-      });
+      const result = await runMaia({ organizationId: payload.organizationId, agentId: payload.agentId, message: runtimeMessage, channel: payload.channel, externalConversationId: payload.externalConversationId, customerId: customerId || undefined, conversationId: conversationId || undefined, correlationId: eventId, autonomous: true });
 
       let followup: unknown = null;
       if (isLimitlessRealty && payload.channel === "whatsapp" && payload.customerPhone) {
@@ -206,7 +212,7 @@ export const maiaProcessInboundMessage = task({
         }
       }
 
-      let delivery: unknown = null;
+      let delivery: Awaited<ReturnType<typeof sendWhatsAppMessage>> | null = null;
       if (payload.channel === "whatsapp" && payload.customerPhone) {
         delivery = await sendWhatsAppMessage({
           organizationId: payload.organizationId,
@@ -215,6 +221,18 @@ export const maiaProcessInboundMessage = task({
           deliveryMode: "direct",
           lastCustomerMessageAt: new Date().toISOString(),
         });
+        if (conversationId) {
+          await addCanonicalCrmMessage({
+            organizationId: payload.organizationId,
+            conversationId,
+            senderType: "agent",
+            direction: "outbound",
+            content: result.reply,
+            externalMessageId: delivery.providerMessageId || ("maia-runtime:" + result.sessionId + ":" + eventId),
+            status: delivery.providerMessageId ? "sent" : "queued",
+            metadata: { provider: payload.provider || "meta_whatsapp", maia_session_id: result.sessionId },
+          });
+        }
       }
 
       await markMaiaInboundCompleted(eventId);
