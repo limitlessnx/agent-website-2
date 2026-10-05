@@ -18,7 +18,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
   const [loading, setLoading] = useState(false);
 
   const requestedNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
-  const safeNext = invitationToken ? requestedNext : "/onboarding";
+  const safeNext = invitationToken ? requestedNext : "/account/choose-mode";
   const loginUrl = new URL("/account/login", "https://fluxknight.local");
   if (txRef) loginUrl.searchParams.set("tx_ref", txRef);
   loginUrl.searchParams.set("next", safeNext);
