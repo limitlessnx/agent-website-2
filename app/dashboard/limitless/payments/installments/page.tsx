@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { getPaymentPlans, getPaymentRecords, formatNaira } from "@/lib/limitless-payments";
-import { recordPaymentAction, updatePlanStatusAction } from "../actions";
+import { getProperties } from "@/lib/limitless-data";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import { createPaymentPlanAction, recordPaymentAction, updatePlanStatusAction } from "../actions";
+import ContactPicker from "@/components/admin/ContactPicker";
 import PaymentSubmitButton from "../PaymentSubmitButton";
 import "../payments.css";
 
 export const dynamic = "force-dynamic";
 
 export default async function InstallmentsPage() {
-  const [plans, records] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500)]);
+  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(1000)]);
   const totalAgreed = plans.reduce((s,p)=>s+Number(p.agreed_price||0),0);
   const totalPaid = plans.reduce((s,p)=>s+Number(p.total_paid||0),0);
   const outstanding = plans.reduce((s,p)=>s+Number(p.outstanding_balance||0),0);
@@ -15,8 +18,32 @@ export default async function InstallmentsPage() {
   return <div className="admin-page payment-page">
     <div className="admin-page-header">
       <div><p className="admin-kicker">Limitless Realty</p><h1>Installment Client Management</h1><p>Manage every installment client, record payments, update status, and control reminder cadence.</p></div>
-      <Link href="/dashboard/limitless/payments" className="admin-button secondary">← Payments overview</Link>
+      <div className="admin-page-actions"><a href="#add-installment-client" className="admin-button">+ Add new installment client</a><Link href="/dashboard/limitless/payments" className="admin-button secondary">← Payments overview</Link></div>
     </div>
+
+    <section className="admin-panel installment-create-panel" id="add-installment-client">
+      <div className="admin-panel-header">
+        <div><h2>Add new installment client</h2><p>Select an existing Lead/contact to avoid re-entering their details, or create a new contact from the Leads directory first.</p></div>
+        <Link href="/dashboard/limitless/leads?addContact=1&returnTo=/dashboard/limitless/payments/installments" className="admin-button secondary">+ Add new contact</Link>
+      </div>
+      <form action={createPaymentPlanAction} className="payment-form">
+        <ContactPicker contacts={contacts} />
+        <input name="client_name_manual" placeholder="New client name (if not in Leads)" />
+        <input name="client_phone_manual" placeholder="New client phone (if not in Leads)" />
+        <input name="client_email_manual" type="email" placeholder="New client email (optional)" />
+        <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
+        <input name="property_title" placeholder="Property title" required />
+        <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
+        <input name="installment_amount" type="number" min="0" placeholder="Installment amount (₦)" />
+        <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom</option></select>
+        <label>Next due date<input name="next_due_date" type="date" /></label>
+        <label>Final due date<input name="final_due_date" type="date" /></label>
+        <input name="assigned_agent" placeholder="Assigned agent" />
+        <textarea name="notes" placeholder="Notes" rows={3} />
+        <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
+        <PaymentSubmitButton>Create installment plan</PaymentSubmitButton>
+      </form>
+    </section>
 
     <div className="admin-metric-grid">
       <article className="admin-metric-card"><p>Clients</p><strong>{plans.length}</strong><span>Installment plans</span></article>
