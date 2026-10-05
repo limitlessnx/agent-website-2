@@ -179,30 +179,37 @@ export async function saveProgressiveLead(input: ProgressiveLeadInput) {
   const payload = buildPayload(input, organizationId);
   const phone = String(payload.phone);
 
-  try {
-    return await adaptiveWrite<ProgressiveLead>(
+  const existing = await request<{ id: string }>(
+    "leads",
+    `?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&phone=eq.${encodeURIComponent(phone)}&limit=1`,
+  ).catch(() => []);
+
+  if (existing[0]?.id) {
+    return adaptiveWrite<ProgressiveLead>(
       "leads",
-      "?on_conflict=phone",
-      "POST",
+      `?id=eq.${encodeURIComponent(existing[0].id)}&organization_id=eq.${encodeURIComponent(organizationId)}`,
+      "PATCH",
       payload,
-      "resolution=merge-duplicates,return=representation",
     );
-  } catch {
-    const existing = await request<{ id: string }>(
+  }
+
+  try {
+    return await adaptiveWrite<ProgressiveLead>("leads", "", "POST", payload);
+  } catch (error) {
+    const duplicate = await request<{ id: string }>(
       "leads",
       `?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&phone=eq.${encodeURIComponent(phone)}&limit=1`,
     ).catch(() => []);
 
-    if (existing[0]?.id) {
+    if (duplicate[0]?.id) {
       return adaptiveWrite<ProgressiveLead>(
         "leads",
-        `?id=eq.${encodeURIComponent(existing[0].id)}`,
+        `?id=eq.${encodeURIComponent(duplicate[0].id)}&organization_id=eq.${encodeURIComponent(organizationId)}`,
         "PATCH",
         payload,
       );
     }
-
-    return adaptiveWrite<ProgressiveLead>("leads", "", "POST", payload);
+    throw error;
   }
 }
 
