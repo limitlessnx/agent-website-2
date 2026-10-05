@@ -69,7 +69,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
         return;
       }
 
-      const destination = new URL(result.redirect_to || safeNext, window.location.origin);
+      const destination = new URL(result.redirect_to || (result.requires_account_mode_selection ? "/account/choose-mode" : safeNext), window.location.origin);
       if (txRef && safeNext === "/onboarding") destination.searchParams.set("tx_ref", txRef);
       router.push(`${destination.pathname}${destination.search}`);
       router.refresh();
