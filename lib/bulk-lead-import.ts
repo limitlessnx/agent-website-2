@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import {
   normalizeLeadPhone,
   saveProgressiveLead,
@@ -21,6 +22,7 @@ function chunks<T>(items: T[], size: number) {
 }
 
 export async function importProgressiveLeadsInBatches(
+  organizationId: string,
   inputs: ProgressiveLeadInput[],
 ): Promise<BulkLeadImportResult> {
   const result: BulkLeadImportResult = { imported: 0, skipped: 0, errors: [] };
