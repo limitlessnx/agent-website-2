@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
 
   const results: Array<Record<string, unknown>> = [];
   for (const row of rows || []) {
+    const claim = await admin.from("follow_ups").update({ status: "processing" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "pending").select("id").maybeSingle();
+    if (claim.error || !claim.data) continue;
     try {
       const lead = Array.isArray(row.leads) ? row.leads[0] : row.leads;
       const phone = String((lead as any)?.phone || "").replace(/[^\d]/g, "");
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest) {
         : { data: null };
 
       if (!phone || Boolean((lead as any)?.opted_out) || Boolean((handoffConversation as any)?.ai_paused) || String((handoffConversation as any)?.status || "") === "handoff") {
-        await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id);
+        await admin.from("follow_ups").update({ status: "cancelled" }) .eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
         results.push({ id: row.id, status: "cancelled", reason: !phone ? "missing_phone" : (lead as any)?.opted_out ? "opted_out" : "human_handoff" });
         continue;
       }
@@ -74,9 +76,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await admin.from("follow_ups").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "pending");
+      await admin.from("follow_ups").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id).eq("organization_id", organization.id) .eq("status", "processing");
       results.push({ id: row.id, status: "sent", provider: delivery.provider, messageType: delivery.messageType, providerMessageId: delivery.providerMessageId });
     } catch (error) {
+      await admin.from("follow_ups").update({ status: "failed" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
       results.push({ id: row.id, status: "failed", error: error instanceof Error ? error.message : "Follow-up failed" });
     }
   }
