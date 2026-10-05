@@ -161,12 +161,15 @@ export const maiaProcessInboundMessage = task({
       if (isLimitlessRealty && payload.customerPhone) {
         const admin = createAdminClient();
         const phone = payload.customerPhone.replace(/\D/g, "");
-        const { data: matchingLeads } = await admin
+        const { data: candidateLeads, error: candidateLeadError } = await admin
           .from("leads")
-          .select("id")
-          .eq("organization_id", payload.organizationId)
-          .eq("phone", phone);
-        const leadIds = (matchingLeads || []).map((lead) => lead.id).filter(Boolean);
+          .select("id,phone")
+          .eq("organization_id", payload.organizationId);
+        if (candidateLeadError) throw candidateLeadError;
+        const leadIds = (candidateLeads || [])
+          .filter((lead) => String(lead.phone || "").replace(/\D/g, "") === phone)
+          .map((lead) => lead.id)
+          .filter(Boolean);
         if (leadIds.length) {
           await admin
             .from("follow_ups")
