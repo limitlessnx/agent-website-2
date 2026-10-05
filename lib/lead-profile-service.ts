@@ -1,5 +1,4 @@
 import type { Lead } from "@/lib/limitless-data";
-import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 export type ProgressiveLead = Lead & {
   profile_status?: "undocumented" | "partial" | "documented";
@@ -99,12 +98,6 @@ function optional(value: unknown) {
   return text ? text : undefined;
 }
 
-async function currentOrganizationId() {
-  const scope = await resolveAdminOrganizationScope();
-  if (!scope.organizationId || scope.organizationId.startsWith("unavailable:")) throw new Error("Active organization context is required.");
-  return scope.organizationId;
-}
-
 function buildPayload(input: ProgressiveLeadInput, organizationId: string) {
   const phone = normalizeLeadPhone(input.phone);
   const name = String(input.name || "").trim();
@@ -174,8 +167,7 @@ async function adaptiveWrite<T>(
   throw new Error(`Unable to save ${table} after removing unsupported optional fields.`);
 }
 
-export async function saveProgressiveLead(input: ProgressiveLeadInput) {
-  const organizationId = await currentOrganizationId();
+export async function saveProgressiveLead(organizationId: string, input: ProgressiveLeadInput) {
   const payload = buildPayload(input, organizationId);
   const phone = String(payload.phone);
 
@@ -213,9 +205,9 @@ export async function saveProgressiveLead(input: ProgressiveLeadInput) {
   }
 }
 
-export async function updateProgressiveLead(id: string, input: ProgressiveLeadInput) {
+export async function updateProgressiveLead(organizationId: string, id: string, input: ProgressiveLeadInput) {
+  if (!organizationId) throw new Error("Organization ID is required.");
   if (!id) throw new Error("Lead ID is required.");
-  const organizationId = await currentOrganizationId();
   const payload = buildPayload(input, organizationId);
   return adaptiveWrite<ProgressiveLead>(
     "leads",
@@ -225,9 +217,9 @@ export async function updateProgressiveLead(id: string, input: ProgressiveLeadIn
   );
 }
 
-export async function deleteProgressiveLead(id: string) {
+export async function deleteProgressiveLead(organizationId: string, id: string) {
+  if (!organizationId) throw new Error("Organization ID is required.");
   if (!id) throw new Error("Lead ID is required.");
-  const organizationId = await currentOrganizationId();
   return request<ProgressiveLead>(
     "leads",
     `?id=eq.${encodeURIComponent(id)}&organization_id=eq.${encodeURIComponent(organizationId)}`,
@@ -238,7 +230,7 @@ export async function deleteProgressiveLead(id: string) {
   );
 }
 
-export async function importProgressiveLeads(inputs: ProgressiveLeadInput[]) {
+export async function importProgressiveLeads(organizationId: string, inputs: ProgressiveLeadInput[]) {
   const result = { imported: 0, skipped: 0, errors: [] as string[] };
   const seen = new Set<string>();
 
@@ -251,7 +243,7 @@ export async function importProgressiveLeads(inputs: ProgressiveLeadInput[]) {
     seen.add(phone);
 
     try {
-      await saveProgressiveLead({ ...input, phone, source: input.source || "admin_dashboard_import" });
+      await saveProgressiveLead(organizationId, { ...input, phone, source: input.source || "admin_dashboard_import" });
       result.imported += 1;
     } catch (error) {
       result.errors.push(`${input.name || phone}: ${error instanceof Error ? error.message : "Save failed"}`);
@@ -261,8 +253,7 @@ export async function importProgressiveLeads(inputs: ProgressiveLeadInput[]) {
   return result;
 }
 
-export async function getCampaignAudienceLeads(limit = 5000): Promise<ProgressiveLead[]> {
-  const organizationId = await currentOrganizationId();
+export async function getCampaignAudienceLeads(organizationId: string, limit = 5000): Promise<ProgressiveLead[]> {
   const rows = await request<Record<string, unknown>>(
     "leads",
     `?select=*&organization_id=eq.${encodeURIComponent(organizationId)}&order=created_at.desc.nullslast&limit=${Math.max(1, Math.min(limit, 10000))}`,
