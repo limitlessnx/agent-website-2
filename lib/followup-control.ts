@@ -31,7 +31,7 @@ export async function getFollowupControlSummary(organizationId="limitless-realty
 }
 export async function createSequence(input:{organization_id:string;name:string;description?:string;steps:Array<{channel:string;delay_value:number;delay_unit:string;title?:string|null;message_template?:string|null;workflow_id?:string|null;enabled:boolean}>}):Promise<FollowupSequence>{void input;throw new Error("Custom follow-up sequences are not enabled for Limitless Realty. Maia owns the built-in 1/3/7/14/21/30-day sequence.");}
 export async function enrollLeads(input:{organization_id:string;sequence_id:string;start_at?:string;leads:Array<{id:string;name:string;phone:string}>}):Promise<FollowupEnrollment[]>{void input;throw new Error("Manual follow-up enrollment is not enabled for Limitless Realty. Maia creates tenant-scoped follow-ups automatically.");}
-export async function updateEnrollment(id:string,action:string,value?:string){
+export async function updateEnrollment(id:string,action:string,value?:string,organizationId?:string){
   const now=new Date().toISOString(),payload:Record<string,unknown>={};
   if(action==="cancel")Object.assign(payload,{status:"cancelled"});
   else if(action==="complete")Object.assign(payload,{status:"sent",sent_at:now});
@@ -40,5 +40,5 @@ export async function updateEnrollment(id:string,action:string,value?:string){
   else if(action==="resume")Object.assign(payload,{status:"pending",scheduled_at:value||now});
   else if(action==="skip")Object.assign(payload,{status:"cancelled"});
   else throw new Error("Unsupported follow-up action.");
-  return supabaseServerRequest<LegacyFollowup[]>(`follow_ups?id=eq.${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
+  const orgFilter=organizationId?`&organization_id=eq.${encodeURIComponent(organizationId)}`:"";return supabaseServerRequest<LegacyFollowup[]>(`follow_ups?id=eq.${encodeURIComponent(id)}${orgFilter}`,{method:"PATCH",body:JSON.stringify(payload)});
 }
