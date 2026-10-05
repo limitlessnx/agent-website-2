@@ -54,8 +54,8 @@ test("Inbound reply cancellation and stop intent remain connected to follow-ups"
   assert.match(runtime, /follow_ups/);
   assert.match(runtime, /opted_out/);
   assert.match(runtime, /follow_up/);
-  assert.match(runtime, /replace\\(\\/\\\\D\\/g, \\"\\"\\)/);
-  assert.match(runtime, /String\\(lead\\.phone \\|\\| \\"\\"\\)\\.replace/);
+  assert.ok(runtime.includes('replace(/\\D/g, "")'));
+  assert.ok(runtime.includes('String(lead.phone || "").replace'));
 });
 
 test("Admin follow-up controls are authenticated and server-side tenant scoped", () => {
