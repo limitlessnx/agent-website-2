@@ -14,6 +14,7 @@ type Session = {
   billing_type?: string;
   organization_id?: string | null;
   customer_email: string;
+  metadata?: Record<string, unknown> | null;
 };
 
 type VerificationResponse = {
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sessions = await supabaseRest<Session[]>(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&limit=1`);
+    const sessions = await supabaseRest<Session[]>(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&select=id,tx_ref,amount,currency,status,billing_type,organization_id,customer_email,metadata&limit=1`);
     const session = sessions[0];
     if (!session) {
       destination.searchParams.set("payment", "not_found");
@@ -80,6 +81,32 @@ export async function GET(request: Request) {
           paid_at: new Date().toISOString(),
         }),
       });
+
+      const evaluationSessionId = typeof session.metadata?.evaluation_session_id === "string" ? session.metadata.evaluation_session_id : "";
+      if (evaluationSessionId) {
+        try {
+          const evaluationRows = await supabaseRest<Array<{ id: string; context: Record<string, unknown> | null; evaluation: Record<string, unknown> | null }>>(
+            `ai_business_evaluation_sessions?id=eq.${encodeURIComponent(evaluationSessionId)}&select=id,context,evaluation&limit=1`,
+          );
+          const evaluationSession = evaluationRows[0];
+          if (evaluationSession) {
+            await supabaseRest(`ai_business_evaluation_sessions?id=eq.${encodeURIComponent(evaluationSessionId)}`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                status: "paid",
+                context: {
+                  ...(evaluationSession.context || {}),
+                  payment: { status: "successful", tx_ref: txRef, organization_id: clientSession?.organizationId || session.organization_id || null },
+                },
+                evaluation: evaluationSession.evaluation ? { ...evaluationSession.evaluation, paymentStatus: "paid", paymentReference: txRef } : evaluationSession.evaluation,
+                updated_at: new Date().toISOString(),
+              }),
+            });
+          }
+        } catch (evaluationError) {
+          console.error("[payments/callback] evaluation handoff update failed", evaluationError);
+        }
+      }
 
       if (session.billing_type === "top_up") {
         await supabaseRest("rpc/apply_flux_credit_topup_from_checkout", {
