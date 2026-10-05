@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import {
   createProgressiveLeadAction,
   importProgressiveLeadsAction,
@@ -14,9 +15,10 @@ export default async function LeadsPage({
 }: {
   searchParams?: Promise<{ imported?: string; skipped?: string; errors?: string; saved?: string; error?: string; addContact?: string; returnTo?: string }>;
 }) {
+  const { organizationId } = await resolveAdminOrganizationScope();
   const params = searchParams ? await searchParams : {};
   const [leads, groups] = await Promise.all([
-    getCampaignAudienceLeads(1000),
+    getCampaignAudienceLeads(organizationId, 1000),
     getCampaignGroups(100),
   ]);
   const hotLeads = leads.filter((lead) => {

@@ -8,3 +8,86 @@
 .contact-picker-result:hover,.contact-picker-result.selected{border-color:rgba(124,58,237,.45);background:rgba(124,58,237,.08)}
 .contact-picker-result strong{font-size:13px}
 .contact-picker-result span{font-size:12px;opacity:.72}
+
+
+/* Installment contact experience */
+.installment-create-panel{padding:clamp(18px,2.2vw,30px)}
+.installment-create-panel>.admin-panel-header{align-items:flex-start;gap:20px}
+.installment-create-panel>.admin-panel-header>div:first-child{max-width:760px}
+.installment-create-panel .payment-form{grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.installment-create-panel .payment-form>.contact-picker{grid-column:1/-1}
+.installment-create-panel .payment-form>select[name="property_id"],
+.installment-create-panel .payment-form>input[name="property_title"]{grid-column:span 6}
+.installment-create-panel .payment-form>input[name="agreed_price"],
+.installment-create-panel .payment-form>input[name="installment_amount"],
+.installment-create-panel .payment-form>select[name="frequency"]{grid-column:span 4}
+.installment-create-panel .payment-form>label:not(.payment-check){grid-column:span 6}
+.installment-create-panel .payment-form>input[name="assigned_agent"]{grid-column:span 6}
+.installment-create-panel .payment-form>textarea[name="notes"]{grid-column:1/-1}
+.installment-create-panel .payment-form>.payment-check{grid-column:1/-1}
+.installment-create-panel .payment-form>button{grid-column:1/-1;justify-self:start;min-width:210px}
+
+.contact-picker{display:grid;gap:16px;padding:0;margin:0 0 2px}
+.contact-picker-heading{display:flex;justify-content:space-between;gap:20px}
+.contact-picker-eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.68rem;font-weight:800;color:#a995d4}
+.contact-picker-heading h3{margin:5px 0 5px;font-size:1.1rem;color:#f7f4ff}
+.contact-picker-heading p{margin:0;color:#9289aa;font-size:.82rem}
+.contact-picker-tabs{display:flex;gap:8px;padding:5px;border:1px solid rgba(180,139,255,.14);border-radius:14px;background:rgba(7,4,15,.42);width:max-content;max-width:100%}
+.contact-picker-tab{border:0;background:transparent;color:#9c94b1;border-radius:10px;padding:10px 14px;font-weight:750;cursor:pointer;transition:.18s ease}
+.contact-picker-tab span{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;margin-left:6px;padding:0 5px;border-radius:99px;background:rgba(255,255,255,.06);font-size:.68rem}
+.contact-picker-tab.active{background:rgba(124,58,237,.18);color:#f4efff;box-shadow:inset 0 0 0 1px rgba(170,130,255,.18)}
+.contact-picker-existing{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.48fr);gap:14px;align-items:start}
+.contact-picker-search{display:grid;gap:7px;grid-column:1/-1;color:#9e96b3;font-size:.76rem;font-weight:700}
+.contact-picker-search input{width:100%;border:1px solid rgba(180,139,255,.2);background:rgba(7,4,15,.72);color:#faf8ff;border-radius:12px;padding:14px 15px;outline:none}
+.contact-picker-search input:focus{border-color:rgba(170,130,255,.62);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.contact-picker-results{display:grid;gap:7px;max-height:246px;overflow:auto;border:1px solid rgba(180,139,255,.12);border-radius:14px;padding:7px;background:rgba(7,4,15,.28);grid-column:1}
+.contact-picker-result{display:grid;grid-template-columns:38px minmax(0,1fr) 24px;align-items:center;gap:10px;width:100%;text-align:left;padding:10px;border:1px solid transparent;border-radius:11px;background:transparent;color:#f7f4ff;cursor:pointer;transition:.16s ease}
+.contact-picker-result:hover{background:rgba(124,58,237,.08);border-color:rgba(180,139,255,.12)}
+.contact-picker-result.selected{background:rgba(124,58,237,.14);border-color:rgba(180,139,255,.35)}
+.contact-picker-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,rgba(124,58,237,.34),rgba(168,85,247,.16));color:#e9ddff;font-weight:850}
+.contact-picker-result-copy{display:grid;gap:3px;min-width:0}
+.contact-picker-result-copy strong{font-size:.84rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-picker-result-copy span{font-size:.72rem;color:#948ba8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-picker-check{color:#cbb0ff;font-weight:900}
+.contact-picker-selected{grid-column:2;grid-row:2;display:grid;gap:3px;padding:13px 15px;border:1px solid rgba(180,139,255,.16);border-radius:14px;background:rgba(124,58,237,.07)}
+.contact-picker-selected span{font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:#a995d4;font-weight:800}
+.contact-picker-selected strong{font-size:.92rem}
+.contact-picker-selected small{color:#9a91ad}
+.contact-picker-empty{grid-column:1;display:grid;gap:5px;padding:20px;border:1px dashed rgba(180,139,255,.2);border-radius:14px;color:#9d95af}
+.contact-picker-empty strong{color:#eee9f7}
+.contact-picker-empty button{justify-self:start;margin-top:7px;border:0;background:transparent;color:#cbb0ff;font-weight:800;cursor:pointer;padding:0}
+.contact-picker-new{display:grid;gap:15px;padding:18px;border:1px solid rgba(180,139,255,.16);border-radius:15px;background:linear-gradient(145deg,rgba(124,58,237,.08),rgba(255,255,255,.015))}
+.contact-picker-new-copy{display:grid;gap:4px}
+.contact-picker-new-copy strong{font-size:.95rem;color:#f6f2ff}
+.contact-picker-new-copy span{font-size:.76rem;color:#9990aa}
+.contact-picker-new-grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px}
+.contact-picker-new-grid input{width:100%;border:1px solid rgba(180,139,255,.2);background:rgba(7,4,15,.72);color:#faf8ff;border-radius:11px;padding:13px 14px;outline:none}
+.contact-picker-new-grid input:focus{border-color:rgba(170,130,255,.62);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+@media(max-width:900px){
+  .installment-create-panel .payment-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .installment-create-panel .payment-form>select[name="property_id"],
+  .installment-create-panel .payment-form>input[name="property_title"],
+  .installment-create-panel .payment-form>input[name="agreed_price"],
+  .installment-create-panel .payment-form>input[name="installment_amount"],
+  .installment-create-panel .payment-form>select[name="frequency"],
+  .installment-create-panel .payment-form>label:not(.payment-check),
+  .installment-create-panel .payment-form>input[name="assigned_agent"]{grid-column:span 1}
+  .contact-picker-existing{grid-template-columns:1fr}
+  .contact-picker-selected{grid-column:1;grid-row:auto}
+  .contact-picker-results{grid-column:1}
+  .contact-picker-new-grid{grid-template-columns:1fr 1fr}
+  .contact-picker-new-grid input:first-child{grid-column:1/-1}
+}
+@media(max-width:640px){
+  .installment-create-panel{padding:16px}
+  .installment-create-panel>.admin-panel-header{display:grid}
+  .installment-create-panel .payment-form{grid-template-columns:1fr;gap:12px}
+  .installment-create-panel .payment-form>*{grid-column:1!important}
+  .contact-picker-tabs{width:100%}
+  .contact-picker-tab{flex:1;padding:10px 8px;font-size:.76rem}
+  .contact-picker-result{grid-template-columns:34px minmax(0,1fr) 18px;padding:9px}
+  .contact-picker-avatar{width:32px;height:32px;border-radius:9px}
+  .contact-picker-new-grid{grid-template-columns:1fr}
+  .contact-picker-new-grid input:first-child{grid-column:auto}
+  .contact-picker-results{max-height:230px}
+}

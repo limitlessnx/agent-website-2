@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import {
   normalizeLeadPhone,
   saveProgressiveLead,
@@ -21,6 +22,7 @@ function chunks<T>(items: T[], size: number) {
 }
 
 export async function importProgressiveLeadsInBatches(
+  organizationId: string,
   inputs: ProgressiveLeadInput[],
 ): Promise<BulkLeadImportResult> {
   const result: BulkLeadImportResult = { imported: 0, skipped: 0, errors: [] };
@@ -47,7 +49,7 @@ export async function importProgressiveLeadsInBatches(
   }
 
   for (const batch of chunks(valid, BATCH_SIZE)) {
-    const settled = await Promise.allSettled(batch.map((lead) => saveProgressiveLead(lead)));
+    const settled = await Promise.allSettled(batch.map((lead) => saveProgressiveLead(organizationId, lead)));
 
     settled.forEach((outcome, index) => {
       if (outcome.status === "fulfilled") {

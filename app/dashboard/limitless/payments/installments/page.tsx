@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { getPaymentPlans, getPaymentRecords, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
@@ -10,7 +11,8 @@ import "../payments.css";
 export const dynamic = "force-dynamic";
 
 export default async function InstallmentsPage() {
-  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(1000)]);
+  const { organizationId } = await resolveAdminOrganizationScope();
+  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   const totalAgreed = plans.reduce((s,p)=>s+Number(p.agreed_price||0),0);
   const totalPaid = plans.reduce((s,p)=>s+Number(p.total_paid||0),0);
   const outstanding = plans.reduce((s,p)=>s+Number(p.outstanding_balance||0),0);
@@ -24,13 +26,9 @@ export default async function InstallmentsPage() {
     <section className="admin-panel installment-create-panel" id="add-installment-client">
       <div className="admin-panel-header">
         <div><h2>Add new installment client</h2><p>Select an existing Lead/contact to avoid re-entering their details, or create a new contact from the Leads directory first.</p></div>
-        <Link href="/dashboard/limitless/leads?addContact=1&returnTo=/dashboard/limitless/payments/installments" className="admin-button secondary">+ Add new contact</Link>
       </div>
       <form action={createPaymentPlanAction} className="payment-form">
         <ContactPicker contacts={contacts} />
-        <input name="client_name_manual" placeholder="New client name (if not in Leads)" />
-        <input name="client_phone_manual" placeholder="New client phone (if not in Leads)" />
-        <input name="client_email_manual" type="email" placeholder="New client email (optional)" />
         <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
         <input name="property_title" placeholder="Property title" required />
         <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
