@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   clearClientOAuthContext,
   getClientOAuthContext,
+  getClientSession,
   getMembershipForOrganization,
   getPrimaryMembership,
   setClientSession,
@@ -87,6 +88,15 @@ export async function GET(request:NextRequest){
       role:membership.role,
       issuedAt:Date.now(),
     });
+
+    // Do not hand the user a dashboard redirect until the Fluxknight
+    // application session is actually readable and backed by a live membership.
+    const clientSession=await getClientSession().catch(()=>null);
+    if(!clientSession||clientSession.userId!==data.user.id||clientSession.membershipId!==membership.membershipId){
+      await clearClientOAuthContext().catch(()=>undefined);
+      return NextResponse.redirect(new URL("/account/login?error=google_session",origin));
+    }
+
     await clearClientOAuthContext().catch(()=>undefined);
     return NextResponse.redirect(destination(origin,nextPath,context?.txRef,context?.trialPlan));
   }
