@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { deleteProgressiveLead, updateProgressiveLead } from "@/lib/lead-profile-service";
@@ -14,9 +15,10 @@ export async function PATCH(
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { organizationId } = await resolveAdminOrganizationScope();
     const { id } = await params;
     const body = await request.json();
-    const lead = await updateProgressiveLead(id, {
+    const lead = await updateProgressiveLead(organizationId, id, {
       name: String(body.name || "").trim(),
       phone: String(body.phone || "").trim(),
       email: String(body.email || "").trim() || undefined,
@@ -48,7 +50,7 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    await deleteProgressiveLead(id);
+    await deleteProgressiveLead(organizationId, id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
