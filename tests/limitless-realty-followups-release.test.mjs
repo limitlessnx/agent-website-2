@@ -117,5 +117,5 @@ test("Installment reminder path remains untouched by the follow-up change", () =
   ], { encoding: "utf8" }).trim().split("\\n").filter(Boolean);
   assert.ok(!changed.some((path) => path.includes("installment-reminder")));
   const safetyNet = read("app/api/cron/maia-safety-net/route.ts");
-  assert.match(safetyNet, /api\\/cron\\/limitless-installment-reminders/);
+  assert.ok(safetyNet.includes("/api/cron/limitless-installment-reminders"));
 });
