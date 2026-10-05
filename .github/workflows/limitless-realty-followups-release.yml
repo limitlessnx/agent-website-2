@@ -1,0 +1,41 @@
+name: Limitless Realty Follow-up Release Tests
+
+on:
+  push:
+    branches:
+      - draft/limitless-realty-followups-fix
+    paths:
+      - "app/api/admin/followups/**"
+      - "app/api/limitless/maia/followups/**"
+      - "app/api/cron/maia-safety-net/**"
+      - "app/dashboard/limitless/followups/**"
+      - "components/admin/FollowupControlCenter.tsx"
+      - "lib/followup-control.ts"
+      - "src/trigger/maia-runtime.ts"
+      - "src/trigger/system-orchestrator.ts"
+      - "tests/limitless-realty-followups-release.test.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "vercel.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Limitless Realty follow-up contracts
+        run: npm run test:maia
+      - name: TypeScript check
+        run: npx tsc --noEmit
