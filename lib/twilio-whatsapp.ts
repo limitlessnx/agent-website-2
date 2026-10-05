@@ -232,3 +232,29 @@ export async function deleteTwilioWhatsAppSender(input:{
   await jsonResponse(response);
   return {ok:true};
 }
+
+export type TwilioParentAccount={
+  sid:string;
+  friendlyName:string;
+  status:string;
+  type:string;
+};
+
+export async function getTwilioParentAccount():Promise<TwilioParentAccount>{
+  const parent=parentCredentials();
+  const response=await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(parent.accountSid)}.json`,
+    {
+      method:"GET",
+      headers:{Authorization:basic(parent.accountSid,parent.authToken),Accept:"application/json"},
+      cache:"no-store",
+    },
+  );
+  const body=await jsonResponse(response);
+  return {
+    sid:String(body.sid||parent.accountSid),
+    friendlyName:String(body.friendly_name||""),
+    status:String(body.status||""),
+    type:String(body.type||""),
+  };
+}
