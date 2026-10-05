@@ -1,11 +1,8 @@
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
-import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
-import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
-import { getProperties } from "@/lib/limitless-data";
-import { createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
-import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
-import ContactPicker from "@/components/admin/ContactPicker";
+import { CreditCard, BellRing, WalletCards } from "@/components/admin/ServerIcons";
+import { getPaymentPlans, getPaymentRecords, formatMoney } from "@/lib/limitless-payments";
+import { recordPaymentAction } from "./actions";
 import PaymentRecordActions from "./PaymentRecordActions";
 import PaymentSubmitButton from "./PaymentSubmitButton";
 import "./payments.css";
@@ -13,14 +10,16 @@ import "./payments.css";
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
-  const { organizationId } = await resolveAdminOrganizationScope();
+  const { organizationId, name } = await resolveAdminOrganizationScope();
   let plans = [] as Awaited<ReturnType<typeof getPaymentPlans>>;
   let records = [] as Awaited<ReturnType<typeof getPaymentRecords>>;
-  let templates = [] as Awaited<ReturnType<typeof getReminderTemplates>>;
   let error = "";
-  const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
+
   try {
-    [plans, records, templates] = await Promise.all([getPaymentPlans(), getPaymentRecords(), getReminderTemplates()]);
+    [plans, records] = await Promise.all([
+      getPaymentPlans(organizationId, 250),
+      getPaymentRecords(organizationId, 500),
+    ]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Payment tables are not ready.";
   }
@@ -28,97 +27,77 @@ export default async function PaymentsPage() {
   const agreed = plans.reduce((sum, plan) => sum + Number(plan.agreed_price || 0), 0);
   const paid = plans.reduce((sum, plan) => sum + Number(plan.total_paid || 0), 0);
   const outstanding = plans.reduce((sum, plan) => sum + Number(plan.outstanding_balance || 0), 0);
-  const overdue = plans.filter((plan) => plan.status === "overdue").length;
+  const active = plans.filter((plan) => plan.status === "active").length;
   const planById = new Map(plans.map((plan) => [plan.id, plan]));
 
   return (
     <div className="admin-page payment-page">
       <div className="admin-page-header">
-        <div><p className="admin-kicker">Limitless Realty</p><h1>Payments & Installments</h1><p>Record client payments, calculate balances, and configure payment reminder cadence and approved message templates.</p></div>
+        <div>
+          <p className="admin-kicker">{name}</p>
+          <h1>Payments & Installments</h1>
+          <p>Track variable client payments, outstanding balances, and recurring reminder plans.</p>
+        </div>
+        <div className="admin-page-actions">
+          <Link href="/dashboard/limitless/payments/installments" className="admin-button">Open installment management →</Link>
+        </div>
       </div>
 
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><WalletCards size={15}/> Installment payments</p><strong>{plans.length}</strong><span>Active and historical client plans</span></article>
-        <Link href="/dashboard/limitless/payments/installments" className="admin-metric-card" style={{ textDecoration: "none" }}><p><WalletCards size={15}/> Revenue amount</p><strong>{formatNaira(agreed)}</strong><span>Open installment client management →</span></Link>
-        <article className="admin-metric-card"><p><CreditCard size={15}/> Total paid</p><strong>{formatNaira(paid)}</strong><span>Recorded payments</span></article>
-        <article className="admin-metric-card"><p><BellRing size={15}/> Outstanding</p><strong>{formatNaira(outstanding)}</strong><span>Pending collection</span></article>
-        <article className="admin-metric-card"><p><AlertTriangle size={15}/> Overdue</p><strong>{overdue}</strong><span>Plans needing attention</span></article>
+        <article className="admin-metric-card"><p><WalletCards size={15}/> Active plans</p><strong>{active}</strong><span>Currently running</span></article>
+        <article className="admin-metric-card"><p><WalletCards size={15}/> Agreed</p><strong>{formatMoney(agreed, plans[0]?.currency || "NGN")}</strong><span>Total agreed value</span></article>
+        <article className="admin-metric-card"><p><CreditCard size={15}/> Paid</p><strong>{formatMoney(paid, plans[0]?.currency || "NGN")}</strong><span>Recorded payments</span></article>
+        <article className="admin-metric-card"><p><BellRing size={15}/> Outstanding</p><strong>{formatMoney(outstanding, plans[0]?.currency || "NGN")}</strong><span>Remaining balance</span></article>
       </div>
 
-      {error ? <section className="admin-panel"><p className="admin-empty">{error} Run migration 005 before using this module.</p></section> : null}
+      {error ? <section className="admin-panel"><p className="admin-empty">{error}</p></section> : null}
 
       <div className="payment-grid">
         <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Create installment plan</h2><p>Add the client, property, pricing, and due dates.</p></div></div>
-          <form action={createPaymentPlanAction} className="payment-form">
-            <ContactPicker contacts={contacts} />
-            <input name="client_name_manual" placeholder="New client name (if not in leads)" />
-            <input name="client_phone_manual" placeholder="New client phone (if not in leads)" />
-            <input name="client_email_manual" type="email" placeholder="New client email (optional)" />
-            <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
-            <input name="property_title" placeholder="Property title" required />
-            <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
-            <input name="installment_amount" type="number" min="0" placeholder="Installment amount (₦)" />
-            <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom</option></select>
-            <label>Next due date<input name="next_due_date" type="date" /></label>
-            <label>Final due date<input name="final_due_date" type="date" /></label>
-            <input name="assigned_agent" placeholder="Assigned agent" />
-            <textarea name="notes" placeholder="Notes" rows={3} />
-            <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
-            <PaymentSubmitButton>Create plan</PaymentSubmitButton>
-          </form>
-        </section>
-
-        <section className="admin-panel">
-          <div className="admin-panel-header"><div><h2>Record payment</h2><p>Balance updates automatically after every entry.</p></div></div>
+          <div className="admin-panel-header"><div><h2>Record payment</h2><p>Every payment updates the plan total and outstanding balance automatically.</p></div></div>
           <form action={recordPaymentAction} className="payment-form">
-            <select name="payment_plan_id" required><option value="">Select client plan</option>{plans.map((plan)=><option key={plan.id} value={plan.id}>{plan.client_name} · {plan.property_title}</option>)}</select>
-            <input name="amount" type="number" min="1" placeholder="Amount paid (₦)" required />
-            <input name="payment_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required />
+            <select name="payment_plan_id" required>
+              <option value="">Select client plan</option>
+              {plans.filter((plan) => Number(plan.outstanding_balance || 0) > 0).map((plan) => (
+                <option key={plan.id} value={plan.id}>{plan.client_name} · {plan.property_title}</option>
+              ))}
+            </select>
+            <input name="amount" type="number" min="0.01" step="0.01" placeholder="Amount paid" required />
+            <input name="payment_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
             <select name="payment_method"><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="other">Other</option></select>
             <input name="payment_reference" placeholder="Payment reference" />
             <textarea name="notes" placeholder="Payment notes" rows={3} />
             <PaymentSubmitButton>Record payment</PaymentSubmitButton>
           </form>
         </section>
+
+        <section className="admin-panel">
+          <div className="admin-panel-header"><div><h2>Installment model</h2><p>No fixed periodic payment amount. Clients can make variable payments until the agreed amount is fully paid.</p></div></div>
+          <div className="payment-inline-note"><strong>Reminder cadence</strong><span>Weekly, bi-weekly, or monthly. No end date. Reminders stop automatically at zero balance or when the plan is paused/cancelled.</span></div>
+          <Link href="/dashboard/limitless/payments/installments" className="admin-button secondary">Manage plans & template</Link>
+        </section>
       </div>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Payment plans</h2><p>Outstanding balance equals agreed price minus all recorded payments.</p></div></div>
+        <div className="admin-panel-header"><div><h2>Payment plans</h2><p>Outstanding balance equals agreed amount minus all recorded payments.</p></div></div>
         <div className="payment-plan-list">
-          {plans.map((plan)=><article key={plan.id} className="payment-plan-card">
-            <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
-            <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
-            <div className="payment-meta"><span>Next due: {plan.next_due_date || "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Enabled" : "Paused"}</span></div>
-            <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select><PaymentSubmitButton className="payment-status-button">Update</PaymentSubmitButton></form>
-          </article>)}
-          {!plans.length && !error ? <p className="admin-empty">No payment plans created yet.</p> : null}
+          {plans.map((plan) => (
+            <article key={plan.id} className="payment-plan-card">
+              <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
+              <div className="payment-figures"><span>Agreed <b>{formatMoney(plan.agreed_price, plan.currency)}</b></span><span>Paid <b>{formatMoney(plan.total_paid, plan.currency)}</b></span><span>Outstanding <b>{formatMoney(plan.outstanding_balance, plan.currency)}</b></span></div>
+              <div className="payment-meta"><span>Status: {plan.status}</span><span>Cadence: {plan.frequency}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Stopped"}</span></div>
+            </article>
+          ))}
+          {!plans.length && !error ? <p className="admin-empty">No installment plans created yet.</p> : null}
         </div>
       </section>
 
       <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Reminder sequence placeholders</h2><p>Configure timing, channel, copy, and escalation later. Nothing is hard-coded.</p></div></div>
-        <div className="reminder-grid">
-          {templates.map((template)=><form key={template.id} action={saveReminderTemplateAction} className="reminder-card">
-            <input type="hidden" name="template_id" value={template.id}/><input name="name" defaultValue={template.name}/><input name="position" type="number" min="1" defaultValue={template.position}/>
-            <select name="timing_direction" defaultValue={template.timing_direction}><option value="before">Before due date</option><option value="on">On due date</option><option value="after">After due date</option></select>
-            <input name="timing_days" type="number" min="0" defaultValue={template.timing_days}/><select name="channel" defaultValue={template.channel}><option value="placeholder">Placeholder</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="sms">SMS</option></select>
-            <textarea name="message_template" rows={4} defaultValue={template.message_template}/><input name="escalation_action" defaultValue={template.escalation_action}/><label className="payment-check"><input name="enabled" type="checkbox" defaultChecked={template.enabled}/> Enabled</label><PaymentSubmitButton className="admin-button secondary">Save placeholder</PaymentSubmitButton>
-          </form>)}
-        </div>
-      </section>
-
-      <section className="admin-panel">
-        <div className="admin-panel-header"><div><h2>Recent payment records</h2><p>Edit or delete an entry when a payment was recorded incorrectly. Totals recalculate automatically.</p></div></div>
+        <div className="admin-panel-header"><div><h2>Recent payment records</h2><p>Edit or delete an entry when a payment was recorded incorrectly.</p></div></div>
         <div className="admin-list">
-          {records.slice(0,20).map((record)=>{
+          {records.slice(0, 20).map((record) => {
             const plan = planById.get(record.payment_plan_id);
-            return (
-              <div key={record.id} className="admin-list-row compact payment-record-row">
-                <PaymentRecordActions record={record} />
-                {plan ? <span className="payment-record-client">{plan.client_name} · {plan.property_title}</span> : null}
-              </div>
-            );
+            return <div key={record.id} className="admin-list-row compact payment-record-row"><PaymentRecordActions record={record} />{plan ? <span className="payment-record-client">{plan.client_name} · {plan.property_title}</span> : null}</div>;
           })}
           {!records.length && !error ? <p className="admin-empty">No payments recorded yet.</p> : null}
         </div>
