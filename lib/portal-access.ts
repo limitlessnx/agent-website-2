@@ -22,7 +22,8 @@ export async function getPortalCapabilities(session: ClientSession) {
     systems.map((row) => one(row.system_catalog)?.slug || "").filter(Boolean),
   );
   const permissions = access.permissions;
-  const hasAny = (...keys: string[]) => keys.some((key) => permissions.has(key));
+  const managerFullAccess = access.roles.includes("manager");
+  const hasAny = (...keys: string[]) => managerFullAccess || keys.some((key) => permissions.has(key));
 
   return {
     role: access.roles[0] || session.role,
@@ -32,11 +33,11 @@ export async function getPortalCapabilities(session: ClientSession) {
     conversations: hasAny("conversations.view", "conversations.reply"),
     systems: hasAny("systems.view", "systems.manage"),
     appointments: hasAny("appointments.view", "appointments.manage") && installedSystems.has("appointment-system"),
-    analytics: permissions.has("analytics.view"),
+    analytics: managerFullAccess || permissions.has("analytics.view"),
     team: hasAny("members.view", "members.manage", "members.invite"),
     integrations: hasAny("integrations.view", "integrations.manage"),
     billing: hasAny("billing.view", "billing.manage"),
-    support: permissions.has("support.escalate") || access.roles.includes("owner"),
+    support: managerFullAccess || permissions.has("support.escalate") || access.roles.includes("owner"),
   };
 }
 
