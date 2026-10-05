@@ -21,11 +21,13 @@ async function processDueLimitlessFollowups(limit = 25) {
 
   let sent = 0, failed = 0, cancelled = 0;
   for (const row of rows || []) {
+    const claim = await admin.from("follow_ups").update({ status: "processing" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "pending").select("id").maybeSingle();
+    if (claim.error || !claim.data) continue;
     try {
       const lead = Array.isArray(row.leads) ? row.leads[0] : row.leads;
       const phone = String((lead as any)?.phone || "").replace(/[^\d]/g, "");
       if (!phone || Boolean((lead as any)?.opted_out)) {
-        await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id);
+        await admin.from("follow_ups").update({ status: "cancelled" }) .eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
         cancelled++;
         continue;
       }
@@ -45,9 +47,10 @@ async function processDueLimitlessFollowups(limit = 25) {
         lastCustomerMessageAt: lastInboundAt,
         variables: { lead_name: String((lead as any)?.name || ""), conversation_summary: String(row.message_sent || "") },
       });
-      await admin.from("follow_ups").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "pending");
+      await admin.from("follow_ups").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id).eq("organization_id", organization.id) .eq("status", "processing");
       sent++;
     } catch {
+      await admin.from("follow_ups").update({ status: "failed" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
       failed++;
     }
   }
