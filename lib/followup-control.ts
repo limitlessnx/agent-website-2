@@ -2,7 +2,7 @@ export type FollowupStep = { id:string; sequence_id:string; position:number; cha
 export type FollowupSequence = { id:string; organization_id:string; name:string; description:string|null; status:string; created_at:string; updated_at:string };
 export type FollowupEnrollment = { id:string; organization_id:string; sequence_id:string; lead_id:string; lead_name:string|null; lead_phone:string|null; status:string; current_step:number; next_run_at:string|null; last_run_at:string|null; n8n_execution_id:string|null; pause_reason:string|null; created_at:string; updated_at:string };
 export type FollowupLog = { id:string; enrollment_id:string; sequence_id:string; step_id:string; organization_id:string; lead_id:string; channel:string|null; status:string|null; n8n_execution_id:string|null; scheduled_for:string|null; executed_at:string|null; error_message:string|null; created_at:string };
-export type LegacyFollowup = { id:string; organization_id:string; lead_id:string; scheduled_at:string; message_sent:string|null; status:string; sent_at:string|null; stage:number; channel:string; agent_key:string; template_name:string|null };
+export type LegacyFollowup = { id:string; organization_id:string; lead_id:string; scheduled_at:string; message_sent:string|null; status:string; sent_at:string|null; stage:number; channel:string; agent_key:string; template_name:string|null; created_at:string|null };
 
 import { isServerSupabaseConfigured, supabaseServerRequest } from "@/lib/supabase-server-rest";
 async function load(org:string,limit=100){return isServerSupabaseConfigured()?supabaseServerRequest<LegacyFollowup[]>(`follow_ups?organization_id=eq.${encodeURIComponent(org)}&select=*&order=scheduled_at.asc&limit=${limit}`):[];}
