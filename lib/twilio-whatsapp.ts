@@ -24,9 +24,10 @@ function env(name:string){
 
 function parentCredentials(){
   const accountSid=env("TWILIO_ACCOUNT_SID");
-  const authToken=env("TWILIO_AUTH_TOKEN");
-  if(!accountSid||!authToken) throw new Error("Twilio parent account credentials are not configured.");
-  return {accountSid,authToken};
+  const apiKey=env("TWILIO_API_KEY");
+  const apiSecret=env("TWILIO_API_SECRET");
+  if(!accountSid||!apiKey||!apiSecret) throw new Error("Twilio parent account API credentials are not configured.");
+  return {accountSid,apiKey,apiSecret};
 }
 
 export function twilioTechProviderConfig(){
@@ -35,7 +36,7 @@ export function twilioTechProviderConfig(){
   const solutionId=env("TWILIO_WHATSAPP_PARTNER_SOLUTION_ID");
   return {
     appId,configId,solutionId,
-    configured:Boolean(appId&&configId&&solutionId&&env("TWILIO_ACCOUNT_SID")&&env("TWILIO_AUTH_TOKEN")),
+    configured:Boolean(appId&&configId&&solutionId&&env("TWILIO_ACCOUNT_SID")&&env("TWILIO_API_KEY")&&env("TWILIO_API_SECRET")),
   };
 }
 
@@ -61,7 +62,7 @@ export async function createTwilioSubaccount(friendlyName:string):Promise<Twilio
   const response=await fetch("https://api.twilio.com/2010-04-01/Accounts.json",{
     method:"POST",
     headers:{
-      Authorization:basic(parent.accountSid,parent.authToken),
+      Authorization:basic(parent.apiKey,parent.apiSecret),
       "Content-Type":"application/x-www-form-urlencoded",
     },
     body:new URLSearchParams({FriendlyName:friendlyName.slice(0,64)}),
@@ -232,3 +233,30 @@ export async function deleteTwilioWhatsAppSender(input:{
   await jsonResponse(response);
   return {ok:true};
 }
+
+
+export type TwilioParentAccount={
+  sid:string;
+  friendlyName:string;
+  status:string;
+  type:string;
+};
+
+export async function getTwilioParentAccount():Promise<TwilioParentAccount>{
+  const parent=parentCredentials();
+  const response=await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(parent.accountSid)}.json`,
+    {
+      method:"GET",
+      headers:{Authorization:basic(parent.apiKey,parent.apiSecret),Accept:"application/json"},
+      cache:"no-store",
+    },
+  );
+  const body=await jsonResponse(response);
+  return {
+    sid:String(body.sid||parent.accountSid),
+    friendlyName:String(body.friendly_name||""),
+    status:String(body.status||""),
+    type:String(body.type||""),
+  };
+};
