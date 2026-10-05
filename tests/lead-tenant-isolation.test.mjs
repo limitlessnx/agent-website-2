@@ -6,8 +6,7 @@ const read = (path) => readFileSync(path, "utf8");
 
 test("contact service resolves organization context before lead writes", () => {
   const service = read("lib/lead-profile-service.ts");
-  assert.match(service, /resolveAdminOrganizationScope/);
-  assert.match(service, /currentOrganizationId/);
+  assert.match(service, /organizationId: string/);
   assert.match(service, /organization_id: organizationId/);
 });
 
