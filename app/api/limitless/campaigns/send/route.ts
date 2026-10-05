@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getCampaignGroup, matchesCampaignGroupRules } from "@/lib/campaign-groups";
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
   const session = await getAdminSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
+    const { organizationId } = await resolveAdminOrganizationScope();
     cleanCache();
     const body = (await request.json()) as RequestBody;
     const requestId = String(body.requestId || "").trim();
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
     const cached = requestCache.get(requestId);
     if (cached) return NextResponse.json({ ...cached.payload, duplicatePrevented: true });
     const originalMessage = String(body.message || "").trim();
-    const [allLeads, properties] = await Promise.all([getCampaignAudienceLeads(10000), getProperties(500)]);
+    const [allLeads, properties] = await Promise.all([getCampaignAudienceLeads(organizationId, 10000), getProperties(500)]);
     const selectedIds = new Set((body.selectedLeadIds || []).map(String));
     const campaignGroup = body.campaignGroupId ? await getCampaignGroup(String(body.campaignGroupId)) : null;
     const groupLeadIds = new Set(campaignGroup?.leadIds || []);
