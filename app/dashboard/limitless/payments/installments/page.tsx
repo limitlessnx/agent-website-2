@@ -26,13 +26,9 @@ export default async function InstallmentsPage() {
     <section className="admin-panel installment-create-panel" id="add-installment-client">
       <div className="admin-panel-header">
         <div><h2>Add new installment client</h2><p>Select an existing Lead/contact to avoid re-entering their details, or create a new contact from the Leads directory first.</p></div>
-        <Link href="/dashboard/limitless/leads?addContact=1&returnTo=/dashboard/limitless/payments/installments" className="admin-button secondary">+ Add new contact</Link>
       </div>
       <form action={createPaymentPlanAction} className="payment-form">
         <ContactPicker contacts={contacts} />
-        <input name="client_name_manual" placeholder="New client name (if not in Leads)" />
-        <input name="client_phone_manual" placeholder="New client phone (if not in Leads)" />
-        <input name="client_email_manual" type="email" placeholder="New client email (optional)" />
         <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
         <input name="property_title" placeholder="Property title" required />
         <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
