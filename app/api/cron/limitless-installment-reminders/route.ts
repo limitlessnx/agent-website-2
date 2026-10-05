@@ -46,7 +46,7 @@ export async function GET(request: Request) {
   const [{ data: plans, error: planError }, { data: organizations, error: orgError }, { data: templates, error: templateError }, { data: whatsappTemplates, error: whatsappTemplateError }] = await Promise.all([
     admin
       .from("payment_plans")
-      .select("id,organization_id,client_name,client_phone,property_title,currency,total_paid,outstanding_balance,frequency,start_at,next_reminder_at,last_reminder_at,reminder_template_id,status,reminders_enabled")
+      .select("id,organization_id,client_name,client_phone,property_title,currency,total_paid,outstanding_balance,frequency,start_at,next_reminder_at,last_reminder_at,reminder_template_id,handover_agent_name,handover_agent_phone,status,reminders_enabled")
       .eq("reminders_enabled", true)
       .eq("status", "active")
       .gt("outstanding_balance", 0)
