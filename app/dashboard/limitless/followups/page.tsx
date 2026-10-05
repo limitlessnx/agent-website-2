@@ -14,7 +14,7 @@ export default async function FollowupsPage() {
   const scheduled = summary.statusSummary.upcoming;
   const dueNow = summary.statusSummary.due;
   const overdue = summary.statusSummary.overdue;
-  const logFailures = summary.logs.filter((item) => ["failed", "error", "blocked"].includes(String(item.status).toLowerCase())).length;
+  const logFailures = summary.logs.filter((item: { status?: string | null }) => ["failed", "error", "blocked"].includes(String(item.status).toLowerCase())).length;
   const attention = logFailures;
 
   return (
