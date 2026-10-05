@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
 import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
@@ -12,11 +13,12 @@ import "./payments.css";
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
+  const { organizationId } = await resolveAdminOrganizationScope();
   let plans = [] as Awaited<ReturnType<typeof getPaymentPlans>>;
   let records = [] as Awaited<ReturnType<typeof getPaymentRecords>>;
   let templates = [] as Awaited<ReturnType<typeof getReminderTemplates>>;
   let error = "";
-  const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(1000)]);
+  const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   try {
     [plans, records, templates] = await Promise.all([getPaymentPlans(), getPaymentRecords(), getReminderTemplates()]);
   } catch (cause) {
