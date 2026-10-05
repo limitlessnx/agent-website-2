@@ -49,6 +49,7 @@ export async function DELETE(
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { organizationId } = await resolveAdminOrganizationScope();
     const { id } = await params;
     await deleteProgressiveLead(organizationId, id);
     return NextResponse.json({ ok: true });
