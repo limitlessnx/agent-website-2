@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getManagerSession, getPrimaryMembership } from "@/lib/client-auth";
+import { getManagerSession, getMembershipForOrganization, setClientSession } from "@/lib/client-auth";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 export async function GET(){
@@ -13,6 +13,15 @@ export async function POST(request:NextRequest){
  const session=await getManagerSession();
  if(!session)return NextResponse.json({error:"Manager session required."},{status:401});
  const body=await request.json().catch(()=>({}));
+ const action=String(body.action||"request");
+ if(action==="enter"){
+  const organizationId=String(body.organization_id||"").trim();
+  if(!organizationId)return NextResponse.json({error:"Organization is required."},{status:400});
+  const membership=await getMembershipForOrganization(session.userId,organizationId);
+  if(!membership)return NextResponse.json({error:"Approved organization membership not found."},{status:403});
+  await setClientSession({userId:session.userId,email:session.email,organizationId:membership.organizationId,organizationSlug:membership.organizationSlug,membershipId:membership.membershipId,role:membership.role,issuedAt:Date.now()});
+  return NextResponse.json({ok:true,redirect_to:"/portal"});
+ }
  const code=String(body.access_code||"").trim();
  if(!code)return NextResponse.json({error:"Enter an Organization Access ID."},{status:400});
  try{
