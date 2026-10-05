@@ -18,7 +18,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
   const [loading, setLoading] = useState(false);
 
   const requestedNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
-  const safeNext = invitationToken ? requestedNext : "/onboarding";
+  const safeNext = invitationToken ? requestedNext : "/account/choose-mode";
   const loginUrl = new URL("/account/login", "https://fluxknight.local");
   if (txRef) loginUrl.searchParams.set("tx_ref", txRef);
   loginUrl.searchParams.set("next", safeNext);
@@ -69,7 +69,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
         return;
       }
 
-      const destination = new URL(result.redirect_to || safeNext, window.location.origin);
+      const destination = new URL(result.redirect_to || (result.requires_account_mode_selection ? "/account/choose-mode" : safeNext), window.location.origin);
       if (txRef && safeNext === "/onboarding") destination.searchParams.set("tx_ref", txRef);
       router.push(`${destination.pathname}${destination.search}`);
       router.refresh();
@@ -87,7 +87,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
         <p className="admin-muted">Create your account and set up your Fluxknight workspace.</p>
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
-      <GoogleAuthButton nextPath={invitationToken ? safeNext : "/onboarding"} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />
+      <GoogleAuthButton nextPath={safeNext} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />
       <p className="admin-muted">or create your account with email</p>
       <label>Full name<input name="full_name" required minLength={2} autoComplete="name" /></label>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>

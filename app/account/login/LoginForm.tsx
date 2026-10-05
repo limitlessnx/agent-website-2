@@ -37,6 +37,11 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
         return;
       }
 
+      if (result.redirect_to) {
+        router.push(String(result.redirect_to));
+        router.refresh();
+        return;
+      }
       if (result.requires_workspace_setup) {
         router.push("/account/setup");
         return;

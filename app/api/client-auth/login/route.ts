@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { provisionClientOrganization } from "@/lib/client-onboarding";
-import { getMembershipForOrganization, getPendingClientSetupSession, getPrimaryMembership, setClientSession, setPendingClientSetupSession, signInClient } from "@/lib/client-auth";
+import { getMembershipForOrganization, getPendingClientSetupSession, getPrimaryMembership, getClientAccountMode, setClientSession, setManagerSession, setPendingClientSetupSession, signInClient } from "@/lib/client-auth";
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
 import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
@@ -19,12 +19,17 @@ export async function POST(request:NextRequest){
   let membership=await getPrimaryMembership(auth.user.id);
   if(!membership&&invitationToken){const accepted=await acceptOrganizationInvitation({userId:auth.user.id,email:auth.user.email||email,token:invitationToken});membership=await getMembershipForOrganization(auth.user.id,accepted.organization_id)}
   if(!membership){
+   const accountMode=await getClientAccountMode(auth.user.id);
+   if(accountMode==="manager"){
+    await setManagerSession({userId:auth.user.id,email:auth.user.email||email,issuedAt:Date.now()});
+    return NextResponse.json({ok:true,requires_workspace_setup:false,account_mode:"manager",redirect_to:"/manage-organizations"});
+   }
    const companySlug=slugify(String(metadata.company_slug||companyName)),templateSlug=String(metadata.template_slug||"").trim()||undefined,agentFamilyName=String(metadata.agent_family_name||companyName).trim()||undefined;
    if(companyName&&companySlug){await provisionClientOrganization({userId:auth.user.id,organizationName:companyName,organizationSlug:companySlug,templateSlug,agentFamilyName});membership=await getPrimaryMembership(auth.user.id)}
   }
   if(!membership){
    await setPendingClientSetupSession({userId:auth.user.id,email:auth.user.email||email,invitationToken:invitationToken||undefined,issuedAt:Date.now()});
-   return NextResponse.json({ok:true,requires_workspace_setup:true,message:invitationToken?"Your invitation could not be activated. Ask the organization owner to issue a new invitation.":"Your email is verified. Finish setting up your company workspace."});
+   return NextResponse.json({ok:true,requires_workspace_setup:false,requires_account_mode_selection:true,redirect_to:"/account/choose-mode",message:invitationToken?"Your invitation could not be activated. Ask the organization owner to issue a new invitation.":"Your email is verified. Finish setting up your company workspace."});
   }
   await setClientSession({userId:auth.user.id,email:auth.user.email||email,organizationId:membership.organizationId,organizationSlug:membership.organizationSlug,membershipId:membership.membershipId,role:membership.role,issuedAt:Date.now()});
   await sendFluxknightLifecycleEvent({eventKey:`welcome:${auth.user.id}:${membership.organizationId}`,event:"fluxknight.user.verified",email:auth.user.email||email,userId:auth.user.id,organizationId:membership.organizationId,payload:{first_name:firstName(fullName,auth.user.email||email),company_name:companyName||membership.organizationSlug||"your business",dashboard_url:fluxknightPortalUrl()}});

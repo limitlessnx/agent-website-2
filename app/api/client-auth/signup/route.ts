@@ -17,8 +17,8 @@ export async function POST(request:NextRequest){
 
   const auth=await signUpClient(email,password,fullName);
   if(!auth.access_token){
-   if(auth.user?.id)await setPendingClientSetupSession({userId:auth.user.id,email:auth.user.email||email,invitationToken:joiningOrganization?invitationToken:undefined,nextPath:joiningOrganization?String(body.post_signup_path||"/portal"):"/onboarding",trialPlan:"",issuedAt:Date.now()});
-   return NextResponse.json({ok:true,signed_in:false,account_mode:joiningOrganization?"organization-member":"organization-owner",requires_email_confirmation:true,message:"Account created. Verify your email, then sign in to continue."},{status:201});
+   if(auth.user?.id)await setPendingClientSetupSession({userId:auth.user.id,email:auth.user.email||email,invitationToken:joiningOrganization?invitationToken:undefined,nextPath:joiningOrganization?String(body.post_signup_path||"/portal"):"/choose-mode",trialPlan:"",issuedAt:Date.now()});
+   return NextResponse.json({ok:true,signed_in:false,account_mode:joiningOrganization?"organization-member":"pending-selection",requires_email_confirmation:true,message:"Account created. Verify your email, then sign in to continue."},{status:201});
   }
   if(!auth.user?.id)throw new Error("The account was authenticated, but the user profile could not be loaded.");
 
@@ -34,10 +34,10 @@ export async function POST(request:NextRequest){
   await setPendingClientSetupSession({
     userId:auth.user.id,
     email:auth.user.email||email,
-    nextPath:"/onboarding",
+    nextPath:"/choose-mode",
     trialPlan:"",
     issuedAt:Date.now(),
   });
-  return NextResponse.json({ok:true,signed_in:true,account_mode:"organization-owner",requires_email_confirmation:false,requires_workspace_setup:true,redirect_to:"/account/setup"},{status:201});
+  return NextResponse.json({ok:true,signed_in:true,account_mode:"organization-owner",requires_email_confirmation:false,requires_account_mode_selection:true,redirect_to:"/account/choose-mode"},{status:201});
  }catch(error){const message=error instanceof Error?error.message:"Unable to create account.";const status=/already|duplicate|exists|registered|seat limit/i.test(message)?409:400;return NextResponse.json({error:message},{status})}
 }

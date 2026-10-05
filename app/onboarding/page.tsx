@@ -19,18 +19,40 @@ type CheckoutSession = {
   status: string;
   customer_email: string;
   organization_id: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 async function claimPaidCheckout(txRef: string, session: Awaited<ReturnType<typeof getClientSession>>) {
   if (!txRef || !session) return;
 
   const rows = await supabaseRest<CheckoutSession[]>(
-    `checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&select=id,tx_ref,status,customer_email,organization_id&limit=1`,
+    `checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&select=id,tx_ref,status,customer_email,organization_id,metadata&limit=1`,
   );
   const checkout = rows[0];
   if (!checkout || checkout.status !== "successful") redirect(`/pricing?payment=pending&tx_ref=${encodeURIComponent(txRef)}`);
   if (checkout.customer_email.toLowerCase() !== session.email.toLowerCase()) {
     redirect(`/pricing?payment=account_mismatch&tx_ref=${encodeURIComponent(txRef)}`);
+  }
+
+  const evaluationSessionId = typeof checkout.metadata?.evaluation_session_id === "string" ? checkout.metadata.evaluation_session_id : "";
+  if (evaluationSessionId) {
+    const evaluationRows = await supabaseRest<Array<{ id: string; context: Record<string, unknown> | null }>>(
+      `ai_business_evaluation_sessions?id=eq.${encodeURIComponent(evaluationSessionId)}&select=id,context&limit=1`,
+    );
+    const evaluationSession = evaluationRows[0];
+    if (evaluationSession) {
+      await supabaseRest(`ai_business_evaluation_sessions?id=eq.${encodeURIComponent(evaluationSessionId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          context: {
+            ...(evaluationSession.context || {}),
+            organization_id: session.organizationId,
+            payment: { status: "successful", tx_ref: txRef, organization_id: session.organizationId },
+          },
+          updated_at: new Date().toISOString(),
+        }),
+      });
+    }
   }
 
   if (!checkout.organization_id || checkout.organization_id !== session.organizationId) {

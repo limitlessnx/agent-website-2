@@ -18,6 +18,7 @@ type Props = {
   plan: Plan;
   initialTerm: PrepaidTerm | null;
   customer: { name: string; email: string } | null;
+  evaluationSessionId: string;
 };
 
 type BillingTerm = "monthly" | PrepaidTerm;
@@ -30,7 +31,7 @@ function money(value: number, currency: "NGN" | "USD") {
   }).format(value);
 }
 
-export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
+export default function CheckoutClient({ plan, initialTerm, customer, evaluationSessionId }: Props) {
   const [name, setName] = useState(customer?.name || "");
   const [email, setEmail] = useState(customer?.email || "");
   const [phone, setPhone] = useState("");
@@ -55,6 +56,7 @@ export default function CheckoutClient({ plan, initialTerm, customer }: Props) {
           billingType: "setup",
           term: term === "monthly" ? null : term,
           customer: { name, email, phone },
+          evaluationSessionId: evaluationSessionId || null,
         }),
       });
       const result = await response.json().catch(() => ({}));
