@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -109,7 +110,6 @@ test("Vercel cron keeps the safety net daily while high-frequency scheduling rem
 });
 
 test("Installment reminder path remains untouched by the follow-up change", () => {
-  const { execFileSync } = require("node:child_process");
   const changed = execFileSync("git", [
     "diff", "--name-only",
     "6a5f061f1ecc253a0703ec4934be6896cb17b5ab",
