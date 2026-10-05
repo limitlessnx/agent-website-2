@@ -3,6 +3,8 @@ import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/a
 import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
 import { createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import ContactPicker from "@/components/admin/ContactPicker";
 import PaymentRecordActions from "./PaymentRecordActions";
 import PaymentSubmitButton from "./PaymentSubmitButton";
 import "./payments.css";
@@ -14,7 +16,7 @@ export default async function PaymentsPage() {
   let records = [] as Awaited<ReturnType<typeof getPaymentRecords>>;
   let templates = [] as Awaited<ReturnType<typeof getReminderTemplates>>;
   let error = "";
-  const properties = await getProperties(200);
+  const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(1000)]);
   try {
     [plans, records, templates] = await Promise.all([getPaymentPlans(), getPaymentRecords(), getReminderTemplates()]);
   } catch (cause) {
@@ -47,9 +49,10 @@ export default async function PaymentsPage() {
         <section className="admin-panel">
           <div className="admin-panel-header"><div><h2>Create installment plan</h2><p>Add the client, property, pricing, and due dates.</p></div></div>
           <form action={createPaymentPlanAction} className="payment-form">
-            <input name="client_name" placeholder="Client name" required />
-            <input name="client_phone" placeholder="Phone number" required />
-            <input name="client_email" type="email" placeholder="Email (optional)" />
+            <ContactPicker contacts={contacts} />
+            <input name="client_name_manual" placeholder="New client name (if not in leads)" />
+            <input name="client_phone_manual" placeholder="New client phone (if not in leads)" />
+            <input name="client_email_manual" type="email" placeholder="New client email (optional)" />
             <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
             <input name="property_title" placeholder="Property title" required />
             <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
