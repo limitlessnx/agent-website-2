@@ -72,3 +72,159 @@ create index if not exists organization_access_requests_requester_idx
 
 create index if not exists organization_access_requests_org_idx
   on public.organization_access_requests(organization_id, status, created_at desc);
+
+create or replace function public.request_organization_access(
+  p_access_code text,
+  p_requester_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org_id uuid;
+  v_request_id uuid;
+begin
+  select id into v_org_id
+  from public.organizations
+  where upper(manager_access_code) = upper(trim(p_access_code))
+    and status = 'active'
+  limit 1;
+
+  if v_org_id is null then
+    raise exception 'Organization access ID is invalid.';
+  end if;
+
+  if exists (
+    select 1 from public.organization_memberships
+    where organization_id = v_org_id
+      and user_id = p_requester_user_id
+      and status = 'active'
+  ) then
+    raise exception 'You already have access to this organization.';
+  end if;
+
+  insert into public.organization_access_requests(organization_id, requester_user_id)
+  values (v_org_id, p_requester_user_id)
+  on conflict (organization_id, requester_user_id) where status = 'pending'
+  do update set updated_at = now()
+  returning id into v_request_id;
+
+  return jsonb_build_object('request_id', v_request_id, 'organization_id', v_org_id, 'status', 'pending');
+end;
+$$;
+
+create or replace function public.approve_organization_access_request(
+  p_request_id uuid,
+  p_actor_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_request public.organization_access_requests%rowtype;
+  v_role_id uuid;
+  v_membership_id uuid;
+begin
+  select * into v_request
+  from public.organization_access_requests
+  where id = p_request_id and status = 'pending'
+  for update;
+
+  if v_request.id is null then
+    raise exception 'Access request is no longer pending.';
+  end if;
+
+  if not exists (
+    select 1
+    from public.organization_memberships m
+    join public.membership_roles mr on mr.membership_id = m.id
+    join public.roles r on r.id = mr.role_id
+    where m.organization_id = v_request.organization_id
+      and m.user_id = p_actor_user_id
+      and m.status = 'active'
+      and r.slug in ('owner','admin')
+  ) then
+    raise exception 'Organization admin access required.';
+  end if;
+
+  select id into v_role_id
+  from public.roles
+  where organization_id = v_request.organization_id
+    and slug = 'manager'
+  limit 1;
+
+  if v_role_id is null then
+    select id into v_role_id
+    from public.roles
+    where organization_id = v_request.organization_id
+      and slug = 'owner'
+    limit 1;
+  end if;
+
+  if v_role_id is null then
+    raise exception 'Manager role is not configured for this organization.';
+  end if;
+
+  insert into public.organization_memberships(organization_id, user_id, status)
+  values (v_request.organization_id, v_request.requester_user_id, 'active')
+  on conflict do nothing
+  returning id into v_membership_id;
+
+  if v_membership_id is null then
+    select id into v_membership_id
+    from public.organization_memberships
+    where organization_id = v_request.organization_id
+      and user_id = v_request.requester_user_id
+    limit 1;
+    update public.organization_memberships set status = 'active', updated_at = now()
+    where id = v_membership_id;
+  end if;
+
+  insert into public.membership_roles(membership_id, role_id)
+  values (v_membership_id, v_role_id)
+  on conflict do nothing;
+
+  update public.organization_access_requests
+  set status = 'approved', reviewed_by = p_actor_user_id, reviewed_at = now(), updated_at = now()
+  where id = v_request.id;
+
+  return jsonb_build_object('organization_id', v_request.organization_id, 'membership_id', v_membership_id, 'status', 'approved');
+end;
+$$;
+
+create or replace function public.reject_organization_access_request(
+  p_request_id uuid,
+  p_actor_user_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+    from public.organization_access_requests ar
+    join public.organization_memberships m on m.organization_id = ar.organization_id
+    join public.membership_roles mr on mr.membership_id = m.id
+    join public.roles r on r.id = mr.role_id
+    where ar.id = p_request_id
+      and ar.status = 'pending'
+      and m.user_id = p_actor_user_id
+      and m.status = 'active'
+      and r.slug in ('owner','admin')
+  ) then
+    raise exception 'Organization admin access required.';
+  end if;
+
+  update public.organization_access_requests
+  set status = 'rejected', reviewed_by = p_actor_user_id, reviewed_at = now(), updated_at = now()
+  where id = p_request_id and status = 'pending';
+
+  return true;
+end;
+$$;
