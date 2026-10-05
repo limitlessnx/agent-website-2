@@ -1,3 +1,4 @@
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getCampaignGroup, matchesCampaignGroupRules } from "@/lib/campaign-groups";
@@ -17,10 +18,11 @@ function contactable(lead: ProgressiveLead) { const status = text(lead.status); 
 export async function POST(request: Request) {
   const session = await getAdminSession(); if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
+    const { organizationId } = await resolveAdminOrganizationScope();
     const body = (await request.json()) as Body; const requestId = String(body.requestId || "").trim(); const message = String(body.message || "").trim();
     if (!requestId) return NextResponse.json({ error: "Direct message request ID is required." }, { status: 400 });
     if (!message) return NextResponse.json({ error: "Direct message is required." }, { status: 400 });
-    const [leads] = await Promise.all([getCampaignAudienceLeads(10000)]);
+    const [leads] = await Promise.all([getCampaignAudienceLeads(organizationId, 10000)]);
     const selected = new Set((body.selectedLeadIds || []).map(String)); const group = body.campaignGroupId ? await getCampaignGroup(String(body.campaignGroupId)) : null; const groupIds = new Set(group?.leadIds || []); const groupPhones = new Set((group?.phones || []).map(normalizeLeadPhone).filter(Boolean));
     const mode = body.audienceMode || "all"; const state = text(body.state); const interest = text(body.interest); const min = money(body.budgetMin); const max = money(body.budgetMax);
     const recipients = leads.filter((lead) => {
