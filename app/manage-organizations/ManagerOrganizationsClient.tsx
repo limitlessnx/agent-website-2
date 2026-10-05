@@ -22,6 +22,14 @@ export default function ManagerOrganizationsClient({email}:{email:string}){
  }
  useEffect(()=>{load()},[]);
 
+ async function enterOrganization(organizationId:string){
+  setError("");
+  try{
+    const r=await fetch("/api/client-auth/manager-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"enter",organization_id:organizationId})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to enter workspace.");
+    router.push(d.redirect_to||"/portal");router.refresh();
+  }catch(e){setError(e instanceof Error?e.message:"Unable to enter workspace.");}
+ }
  async function requestAccess(){
   setRequesting(true);setMessage("");setError("");
   try{
@@ -42,7 +50,7 @@ export default function ManagerOrganizationsClient({email}:{email:string}){
    {message?<p className="admin-form-message">{message}</p>:null}
    {error?<p className="admin-error">{error}</p>:null}
    <h2>Access requests</h2>
-   {loading?<p className="admin-muted">Loading...</p>:requests.length?<div>{requests.map(item=><div key={item.id}><strong>{item.organization_name}</strong><span>{item.status}</span></div>)}</div>:<p className="admin-muted">No organization access requests yet.</p>}
+   {loading?<p className="admin-muted">Loading...</p>:requests.length?<div>{requests.map(item=><div key={item.id}><strong>{item.organization_name}</strong><span>{item.status}</span>{item.status==="approved"?<button type="button" onClick={()=>enterOrganization(item.organization_id)}>Enter Workspace</button>:null}</div>)}</div>:<p className="admin-muted">No organization access requests yet.</p>}
   </section>
  </main>;
 }
