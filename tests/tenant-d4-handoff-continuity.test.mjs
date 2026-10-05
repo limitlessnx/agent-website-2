@@ -80,7 +80,7 @@ test("D4 customer and handoff settings are tenant-managed in existing portal sur
   assert.match(customer,/CustomerStageControl/);
   assert.match(settings,/CustomerStagesPanel/);
   assert.match(settings,/HandoffContinuityPanel/);
-  assert.match(handoffPanel,/Assignment rules/);
+  assert.match(handoffPanel,/Supervisor assignment rules/);
   assert.match(stagePanel,/Customer stages/);
 });
 
@@ -168,6 +168,6 @@ test("D4 staff handoff WhatsApp alerts use direct internal messaging",()=>{
   assert.match(operations,/recipientType:"internal_staff"/);
   assert.match(delivery,/recipientType === "customer" \? outsideCustomerWindow/);
   assert.match(delivery,/Message text is required while the 24-hour service window is open/);
-  assert.ok(settings.includes("direct internal messaging"));
+  assert.ok(settings.includes("internal direct messaging"));
   assert.doesNotMatch(operations,/templatePurpose:"internal_handoff"/);
 });
