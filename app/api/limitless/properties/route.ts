@@ -3,6 +3,7 @@ import { getProperties } from "@/lib/limitless-data";
 import { createPropertyNormalized } from "@/lib/limitless-property-write";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { uploadPublicMedia } from "@/lib/supabase-media";
 
 function value(formData: FormData, key: string) {
@@ -51,8 +52,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Property title is required." }, { status: 400 });
     }
 
-    const scope = session ? await (async () => { try { return await import("@/lib/admin-organization-scope").then(({ resolveAdminOrganizationScope }) => resolveAdminOrganizationScope()); } catch { return null; } })() : null;
-    const created = await createPropertyNormalized(payload, scope?.organizationId);
+    const scope = await resolveAdminOrganizationScope();
+    const created = await createPropertyNormalized(payload, scope.organizationId);
     const property = created[0];
     if (!property?.id) {
       return NextResponse.json({ error: "Property record was not created." }, { status: 502 });
@@ -62,8 +63,8 @@ export async function POST(request: NextRequest) {
       const uploads = [];
       for (const file of files) {
         uploads.push(await uploadPublicMedia(file, {
-          organizationKey: scope?.slug || "limitless-realty",
-          organizationId: scope?.organizationId || undefined,
+          organizationKey: scope.slug || "limitless-realty",
+          organizationId: scope.organizationId,
           propertyId: String(property.id),
           channel: "whatsapp",
         }));
