@@ -23,12 +23,6 @@ function money(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function cadenceDays(frequency: string) {
-  if (frequency === "weekly") return 7;
-  if (frequency === "monthly") return 30;
-  return 14;
-}
-
 function startAtFromForm(value: string) {
   if (!value) return new Date().toISOString();
   const date = new Date(`${value}T08:00:00.000Z`);
