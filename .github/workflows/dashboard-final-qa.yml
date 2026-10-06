@@ -16,6 +16,7 @@ on:
       - "tests/dashboard-*.test.mjs"
       - "tests/client-brief-provisioning.test.mjs"
       - "tests/portal-*.test.mjs"
+      - "tests/installment-payment-lifecycle.test.mjs"
       - "package.json"
       - ".github/workflows/dashboard-final-qa.yml"
   workflow_dispatch:
