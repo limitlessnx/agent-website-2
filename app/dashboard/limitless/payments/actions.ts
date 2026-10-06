@@ -193,6 +193,17 @@ export async function createOutrightPaymentAction(formData: FormData) {
   }
   if (amount <= 0) throw new Error("The outright payment amount must be greater than zero.");
 
+  if (!contactId && manualName && manualPhone) {
+    await saveProgressiveLead(organizationId, {
+      name: manualName,
+      phone: normalizeLeadPhone(manualPhone),
+      email: manualEmail || undefined,
+      status: "new",
+      source: "outright_property_payment",
+      campaign_eligible: true,
+    });
+  }
+
   const plan = await createPaymentPlan({
     organization_id: organizationId,
     contact_id: contactId,
