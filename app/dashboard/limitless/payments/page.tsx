@@ -22,7 +22,7 @@ export default async function PaymentsPage() {
   let error = "";
   const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   try {
-    [plans, records, templates] = await Promise.all([getPaymentPlans(), getPaymentRecords(), getReminderTemplates()]);
+    [plans, records, templates] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getReminderTemplates(organizationId)]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Payment tables are not ready.";
   }
