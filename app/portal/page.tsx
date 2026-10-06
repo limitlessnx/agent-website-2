@@ -37,7 +37,7 @@ function friendlyWorkflowName(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export default async function ClientPortalPage() {
+export default async function ClientPortalPage({ searchParams }: { searchParams?: Promise<{ evaluation?: string }> }) {
   const session = await getClientSession();
   if (!session) return null;
 
@@ -113,6 +113,8 @@ export default async function ClientPortalPage() {
           <Link className="portal-button" href="/pricing">Upgrade plan</Link>
         </section>
       ) : null}
+
+      {latestEvaluation ? (() => { const ev:any = latestEvaluation.evaluation || {}; const ctx:any = latestEvaluation.context || {}; const custom=ev.pricingType==="custom"; return <section className="portal-card" aria-label="Latest AI evaluation"><div className="portal-card-head"><div><p className="portal-kicker">Business AI evaluation</p><h2>Your latest evaluation</h2><p>{ev.summary || "Your Fluxknight evaluation has been saved to this workspace."}</p></div><span className="portal-health-pill healthy"><span /><div><small>Opportunity</small><strong>{typeof ev.score==="number"?`${ev.score}/100`:String(ev.opportunity||"Evaluated")}</strong></div></span></div><div className="portal-business-metrics"><article className="portal-business-metric"><span>Recommended system</span><strong>{ev.recommendedSystem || "Pending"}</strong></article><article className="portal-business-metric"><span>Recommendation</span><strong>{custom ? "Custom" : String(ev.recommendedPlan || "Standard")}</strong></article><article className="portal-business-metric"><span>Requirements</span><strong>{ctx.requirements?.specificity === "custom" ? "Custom requested" : ctx.requirements?.specificity === "specific" ? "Specific workflow" : "Recommendation-led"}</strong></article></div>{ctx.requirements?.details ? <div className="portal-clear-state"><span><Workflow size={19}/></span><div><strong>What you want Fluxknight to do</strong><p>{String(ctx.requirements.details)}</p></div></div> : null}</section>; })() : null}
 
       {summary.onboarding?.status === "submitted" && whatsappBinding?.status !== "connected" ? (
         <section className="portal-card portal-activation-banner" aria-label="WhatsApp setup">
