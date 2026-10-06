@@ -22,7 +22,7 @@ test("Phase 4 manager workspace requires a signed manager session",()=>{
  const route=read("app/api/client-auth/manager-access/route.ts");
  const client=read("app/manage-organizations/ManagerOrganizationsClient.tsx");
  assert.match(page,/getManagerSession/);
- assert.match(page,/redirect\("/account/login")/);
+ assert.ok(page.includes('redirect("/account/login")'));
  assert.match(route,/getManagerSession/);
  assert.match(route,/Manager session required/);
  assert.match(client,/Organization Access ID/);
