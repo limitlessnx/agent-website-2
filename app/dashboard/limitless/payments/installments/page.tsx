@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InstallmentsPage() {
   const { organizationId } = await resolveAdminOrganizationScope();
-  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
+  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   const totalAgreed = plans.reduce((s,p)=>s+Number(p.agreed_price||0),0);
   const totalPaid = plans.reduce((s,p)=>s+Number(p.total_paid||0),0);
   const outstanding = plans.reduce((s,p)=>s+Number(p.outstanding_balance||0),0);
@@ -32,10 +32,10 @@ export default async function InstallmentsPage() {
         <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
         <input name="property_title" placeholder="Property title" required />
         <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
-        <input name="installment_amount" type="number" min="0" placeholder="Installment amount (₦)" />
-        <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom</option></select>
-        <label>Next due date<input name="next_due_date" type="date" /></label>
-        <label>Final due date<input name="final_due_date" type="date" /></label>
+        <label>Amount paid so far<input name="amount_paid" type="number" min="0" step="0.01" placeholder="0" defaultValue="0" /></label>
+        <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
+        <label>Start date<input name="start_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required /></label>
+        <label>End date<input name="end_date" type="date" /></label>
         <input name="assigned_agent" placeholder="Assigned agent" />
         <textarea name="notes" placeholder="Notes" rows={3} />
         <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
@@ -51,12 +51,12 @@ export default async function InstallmentsPage() {
     </div>
 
     <section className="admin-panel">
-      <div className="admin-panel-header"><div><h2>Installment clients</h2><p>Reminders stop automatically when a plan is completed, cancelled, or paused.</p></div></div>
+      <div className="admin-panel-header"><div><h2>Installment clients</h2><p>Variable payments update the outstanding balance automatically. The end date is the expected completion date, while overdue balances remain eligible for follow-up.</p></div></div>
       <div className="payment-plan-list">
         {plans.map(plan => <article key={plan.id} className="payment-plan-card">
           <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
           <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
-          <div className="payment-meta"><span>Next due: {plan.next_due_date || "Not set"}</span><span>Cadence: {plan.frequency || "biweekly"}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Paused"}</span></div>
+          <div className="payment-meta"><span>Type: {plan.payment_type === "outright" ? "Outright" : "Installment"}</span><span>Cadence: {plan.frequency || "biweekly"}</span><span>End date: {plan.end_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeZone: "Africa/Lagos" }).format(new Date(plan.end_at)) : "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Stopped"}</span></div>
           <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><input type="hidden" name="status" value={plan.status}/><select name="frequency" defaultValue={plan.frequency || "biweekly"}><option value="weekly">Weekly</option><option value="biweekly">Bi-weekly</option><option value="monthly">Monthly</option></select><PaymentSubmitButton className="payment-status-button">Set cadence</PaymentSubmitButton></form>
           <form action={updatePlanStatusAction} className="payment-status-form">
             <input type="hidden" name="payment_plan_id" value={plan.id}/>

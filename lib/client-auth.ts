@@ -47,6 +47,26 @@ export async function resendClientVerification(email:string){return authRequest(
 export async function signInClient(email:string,password:string){return authRequest("token?grant_type=password",{email,password})}
 function membershipSnapshot(membership:MembershipRow){const organization=normalizeRelation(membership.organizations);const role=normalizeRelation(membership.membership_roles?.[0]?.roles||null);return{membershipId:membership.id,organizationId:membership.organization_id,organizationSlug:organization?.slug||"",role:role?.slug||"team-member"}}
 export async function getMembershipForOrganization(userId:string,organizationId:string){const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);return rows[0]?membershipSnapshot(rows[0]):null}
+export async function getActiveManagerOrganizations(userId:string){
+ const rows=await supabaseServerRequest<Array<{
+  id:string;
+  organization_id:string;
+  status:string;
+  organizations:{id:string;name:string;slug:string}|{id:string;name:string;slug:string}[]|null;
+  membership_roles:Array<{roles:{slug:string}|{slug:string}[]|null}>;
+ }>>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,organization_id,status,organizations(id,name,slug),membership_roles(roles(slug))&order=created_at.asc`);
+ return rows.map(row=>{
+   const organization=normalizeRelation(row.organizations);
+   const role=normalizeRelation(row.membership_roles?.[0]?.roles||null);
+   return {
+     membershipId:row.id,
+     organizationId:row.organization_id,
+     organizationName:organization?.name||"Organization",
+     organizationSlug:organization?.slug||"",
+     role:role?.slug||"team-member",
+   };
+ });
+}
 export async function getPrimaryMembership(userId:string){const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&order=created_at.asc&limit=1`);return rows[0]?membershipSnapshot(rows[0]):null}
 export function createClientSessionToken(session:ClientSession){return createSignedToken(session)}
 export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId||!session.membershipId)return null;return session}

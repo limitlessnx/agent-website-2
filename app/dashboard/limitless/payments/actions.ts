@@ -5,7 +5,43 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { normalizeLeadPhone, saveProgressiveLead } from "@/lib/lead-profile-service";
-import { createPaymentPlan, createPaymentRecord, deletePaymentRecord, updatePaymentRecord, updatePaymentPlan, createReminderTemplate, updateReminderTemplate } from "@/lib/limitless-payments";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  createPaymentPlan,
+  createPaymentRecord,
+  deletePaymentRecord,
+  updatePaymentRecord,
+  updatePaymentPlan,
+  createReminderTemplate,
+  updateReminderTemplate,
+} from "@/lib/limitless-payments";
+
+const CADENCES = new Set(["weekly", "biweekly", "monthly"]);
+
+function money(value: FormDataEntryValue | null) {
+  const parsed = Number(String(value || "0").replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function cadenceDays(frequency: string) {
+  if (frequency === "weekly") return 7;
+  if (frequency === "monthly") return 30;
+  return 14;
+}
+
+function startAtFromForm(value: string) {
+  if (!value) return new Date().toISOString();
+  const date = new Date(`${value}T08:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid installment start date.");
+  return date.toISOString();
+}
+
+function endAtFromForm(value: string) {
+  if (!value) return null;
+  const date = new Date(value + "T23:59:59.999Z");
+  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid installment end date.");
+  return date.toISOString();
+}
 
 async function requireAdmin() {
   const session = await getAdminSession();
@@ -13,23 +49,59 @@ async function requireAdmin() {
   return session;
 }
 
-function money(value: FormDataEntryValue | null) {
-  const parsed = Number(String(value || "0").replace(/,/g, ""));
-  return Number.isFinite(parsed) ? parsed : 0;
+async function resolveScope() {
+  const { organizationId, name } = await resolveAdminOrganizationScope();
+  if (!organizationId || organizationId.startsWith("unavailable:")) {
+    throw new Error("Active organization context is required.");
+  }
+  return { organizationId, companyName: name };
 }
 
 export async function createPaymentPlanAction(formData: FormData) {
-  await requireAdmin();
-  const organizationId = (await resolveAdminOrganizationScope()).organizationId;
-  const contactId = String(formData.get("contact_id") || "").trim();
+  const session = await requireAdmin();
+  const { organizationId } = await resolveScope();
+
+  const contactId = String(formData.get("contact_id") || "").trim() || null;
   const manualName = String(formData.get("client_name_manual") || "").trim();
   const manualPhone = String(formData.get("client_phone_manual") || "").trim();
   const manualEmail = String(formData.get("client_email_manual") || "").trim();
-  const clientName = String(formData.get("client_name") || manualName).trim();
-  const clientPhone = String(formData.get("client_phone") || manualPhone).trim();
+  let clientName = String(formData.get("client_name") || manualName).trim();
+  let clientPhone = String(formData.get("client_phone") || manualPhone).trim();
+  let clientEmail = String(formData.get("client_email") || manualEmail).trim() || null;
+
+  if (contactId) {
+    const { data: contact, error } = await createAdminClient()
+      .from("leads")
+      .select("id,name,phone,email")
+      .eq("organization_id", organizationId)
+      .eq("id", contactId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!contact) throw new Error("The selected contact is not available in the active organization.");
+    clientName = String(contact.name || "").trim();
+    clientPhone = String(contact.phone || "").trim();
+    clientEmail = contact.email ? String(contact.email) : null;
+  }
+
   const propertyTitle = String(formData.get("property_title") || "").trim();
-  if (!organizationId || organizationId.startsWith("unavailable:")) throw new Error("Active organization context is required.");
-  if (!clientName || !clientPhone || !propertyTitle) throw new Error("Client name, phone, and property are required.");
+  const agreedAmount = money(formData.get("agreed_price"));
+  const initialPaid = money(formData.get("amount_paid"));
+  const frequency = String(formData.get("frequency") || "biweekly").trim();
+  const startAt = startAtFromForm(String(formData.get("start_date") || ""));
+  const endAt = endAtFromForm(String(formData.get("end_date") || ""));
+  const handoverAgentName = String(formData.get("handover_agent_name") || "").trim();
+  const handoverAgentPhone = String(formData.get("handover_agent_phone") || "").trim();
+  const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
+
+  if (endAt && new Date(endAt).getTime() < new Date(startAt).getTime()) {
+    throw new Error("The installment end date cannot be before the start date.");
+  }
+  if (!clientName || !clientPhone || !propertyTitle) throw new Error("Client, phone, and property/service context are required.");
+  if (agreedAmount <= 0) throw new Error("The agreed amount must be greater than zero.");
+  if (initialPaid < 0 || initialPaid > agreedAmount) throw new Error("Amount paid must be between zero and the agreed amount.");
+  if (!CADENCES.has(frequency)) throw new Error("Invalid installment reminder cadence.");
+  if (!handoverAgentName || !handoverAgentPhone) throw new Error("A handover agent name and WhatsApp number are required.");
+
   if (!contactId && manualName && manualPhone) {
     await saveProgressiveLead(organizationId, {
       name: manualName,
@@ -40,30 +112,156 @@ export async function createPaymentPlanAction(formData: FormData) {
       campaign_eligible: true,
     });
   }
-  await createPaymentPlan({
+
+  const startDate = new Date(startAt);
+  const nextReminderAt = new Date(startDate.getTime() + cadenceDays(frequency) * 24 * 60 * 60 * 1000).toISOString();
+
+  const plan = await createPaymentPlan({
+    organization_id: organizationId,
+    contact_id: contactId,
     client_name: clientName,
     client_phone: clientPhone,
-    client_email: String(formData.get("client_email") || formData.get("client_email_manual") || "").trim() || null,
+    client_email: clientEmail,
     property_id: String(formData.get("property_id") || "").trim() || null,
     property_title: propertyTitle,
-    agreed_price: money(formData.get("agreed_price")),
-    installment_amount: money(formData.get("installment_amount")),
-    frequency: String(formData.get("frequency") || "custom"),
-    next_due_date: String(formData.get("next_due_date") || "") || null,
-    final_due_date: String(formData.get("final_due_date") || "") || null,
-    assigned_agent: String(formData.get("assigned_agent") || "").trim() || null,
+    agreed_price: agreedAmount,
+    currency,
+    payment_type: "installment",
+    frequency,
+    start_at: startAt,
+    end_at: endAt,
+    next_reminder_at: nextReminderAt,
+    handover_agent_name: handoverAgentName,
+    handover_agent_phone: handoverAgentPhone,
     notes: String(formData.get("notes") || "").trim() || null,
     reminders_enabled: formData.get("reminders_enabled") === "on",
+    status: initialPaid >= agreedAmount ? "completed" : "active",
   });
+
+  if (initialPaid > 0) {
+    await createPaymentRecord({
+      organization_id: organizationId,
+      payment_plan_id: plan.id,
+      amount: initialPaid,
+      payment_date: String(formData.get("start_date") || new Date().toISOString().slice(0, 10)),
+      payment_method: String(formData.get("payment_method") || "other").trim() || "other",
+      payment_reference: String(formData.get("payment_reference") || "").trim() || null,
+      notes: "Initial amount recorded when the installment plan was created.",
+      created_by: session.email,
+    });
+  }
+
   revalidatePath("/dashboard/limitless/payments");
+  redirect("/dashboard/limitless/payments/installments");
+}
+
+export async function createOutrightPaymentAction(formData: FormData) {
+  const session = await requireAdmin();
+  const { organizationId } = await resolveScope();
+
+  const contactId = String(formData.get("contact_id") || "").trim() || null;
+  const manualName = String(formData.get("client_name_manual") || "").trim();
+  const manualPhone = String(formData.get("client_phone_manual") || "").trim();
+  const manualEmail = String(formData.get("client_email_manual") || "").trim();
+  let clientName = String(formData.get("client_name") || manualName).trim();
+  let clientPhone = String(formData.get("client_phone") || manualPhone).trim();
+  let clientEmail = String(formData.get("client_email") || manualEmail).trim() || null;
+
+  if (contactId) {
+    const { data: contact, error } = await createAdminClient()
+      .from("leads")
+      .select("id,name,phone,email")
+      .eq("organization_id", organizationId)
+      .eq("id", contactId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!contact) throw new Error("The selected contact is not available in the active organization.");
+    clientName = String(contact.name || "").trim();
+    clientPhone = String(contact.phone || "").trim();
+    clientEmail = contact.email ? String(contact.email) : null;
+  }
+
+  const propertyTitle = String(formData.get("property_title") || "").trim();
+  const amount = money(formData.get("amount"));
+  const paymentDateValue = String(formData.get("payment_date") || "").trim();
+  const paymentAt = startAtFromForm(paymentDateValue);
+  const paymentEndAt = endAtFromForm(paymentDateValue);
+  const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
+
+  if (!clientName || !clientPhone || !propertyTitle) {
+    throw new Error("Client, phone, and property are required for an outright payment.");
+  }
+  if (amount <= 0) throw new Error("The outright payment amount must be greater than zero.");
+
+  if (!contactId && manualName && manualPhone) {
+    await saveProgressiveLead(organizationId, {
+      name: manualName,
+      phone: normalizeLeadPhone(manualPhone),
+      email: manualEmail || undefined,
+      status: "new",
+      source: "outright_property_payment",
+      campaign_eligible: true,
+    });
+  }
+
+  const plan = await createPaymentPlan({
+    organization_id: organizationId,
+    contact_id: contactId,
+    client_name: clientName,
+    client_phone: clientPhone,
+    client_email: clientEmail,
+    property_id: String(formData.get("property_id") || "").trim() || null,
+    property_title: propertyTitle,
+    agreed_price: amount,
+    currency,
+    payment_type: "outright",
+    frequency: "monthly",
+    start_at: paymentAt,
+    end_at: paymentEndAt,
+    next_reminder_at: null,
+    handover_agent_name: null,
+    handover_agent_phone: null,
+    notes: String(formData.get("notes") || "").trim() || "Outright property payment recorded.",
+    reminders_enabled: false,
+    status: "completed",
+  });
+
+  await createPaymentRecord({
+    organization_id: organizationId,
+    payment_plan_id: plan.id,
+    amount,
+    payment_date: paymentDateValue || new Date().toISOString().slice(0, 10),
+    payment_method: String(formData.get("payment_method") || "other").trim() || "other",
+    payment_reference: String(formData.get("payment_reference") || "").trim() || null,
+    notes: String(formData.get("notes") || "").trim() || "Outright property payment recorded.",
+    created_by: session.email,
+  });
+
+  revalidatePath("/dashboard/limitless/payments");
+  redirect("/dashboard/limitless/payments");
 }
 
 export async function recordPaymentAction(formData: FormData) {
   const session = await requireAdmin();
+  const { organizationId } = await resolveScope();
   const planId = String(formData.get("payment_plan_id") || "");
   const amount = money(formData.get("amount"));
-  if (!planId || amount <= 0) throw new Error("Select a payment plan and enter a valid amount.");
+  if (!planId || amount <= 0) throw new Error("Select a payment plan and enter a valid payment amount.");
+
+  const { data: plan, error } = await createAdminClient()
+    .from("payment_plans")
+    .select("id,agreed_price,total_paid,status")
+    .eq("organization_id", organizationId)
+    .eq("id", planId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!plan) throw new Error("The installment plan is not available in the active organization.");
+  if (Number(plan.total_paid || 0) + amount > Number(plan.agreed_price || 0)) {
+    throw new Error("Payment cannot exceed the remaining outstanding balance.");
+  }
+
   await createPaymentRecord({
+    organization_id: organizationId,
     payment_plan_id: planId,
     amount,
     payment_date: String(formData.get("payment_date") || new Date().toISOString().slice(0, 10)),
@@ -77,10 +275,11 @@ export async function recordPaymentAction(formData: FormData) {
 
 export async function updatePaymentRecordAction(formData: FormData) {
   await requireAdmin();
+  const { organizationId } = await resolveScope();
   const recordId = String(formData.get("payment_record_id") || "");
   const amount = money(formData.get("amount"));
   if (!recordId || amount <= 0) throw new Error("A valid payment record and amount are required.");
-  await updatePaymentRecord(recordId, {
+  await updatePaymentRecord(organizationId, recordId, {
     amount,
     payment_date: String(formData.get("payment_date") || "").trim() || new Date().toISOString().slice(0, 10),
     payment_method: String(formData.get("payment_method") || "").trim() || null,
@@ -92,38 +291,53 @@ export async function updatePaymentRecordAction(formData: FormData) {
 
 export async function deletePaymentRecordAction(formData: FormData) {
   await requireAdmin();
+  const { organizationId } = await resolveScope();
   const recordId = String(formData.get("payment_record_id") || "");
   if (!recordId) throw new Error("Payment record is required.");
-  await deletePaymentRecord(recordId);
+  await deletePaymentRecord(organizationId, recordId);
   revalidatePath("/dashboard/limitless/payments");
 }
 
 export async function updatePlanStatusAction(formData: FormData) {
   await requireAdmin();
+  const { organizationId } = await resolveScope();
   const planId = String(formData.get("payment_plan_id") || "");
   const status = String(formData.get("status") || "active");
   const frequency = String(formData.get("frequency") || "").trim();
-  if (!["active","due_soon","overdue","completed","paused","cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
-  if (frequency && !["weekly","biweekly","monthly"].includes(frequency)) throw new Error("Invalid installment cadence.");
-  await updatePaymentPlan(planId, { status, ...(frequency ? { frequency } : {}), reminders_enabled: !["completed", "cancelled", "paused"].includes(status) });
+
+  if (!["active", "completed", "paused", "cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
+  if (frequency && !CADENCES.has(frequency)) throw new Error("Invalid installment cadence.");
+
+  const payload: Record<string, unknown> = {
+    status,
+    reminders_enabled: status === "active",
+  };
+  if (frequency) {
+    payload.frequency = frequency;
+    payload.next_reminder_at = new Date(Date.now() + cadenceDays(frequency) * 24 * 60 * 60 * 1000).toISOString();
+  }
+  if (status === "completed") payload.next_reminder_at = null;
+
+  await updatePaymentPlan(organizationId, planId, payload);
   revalidatePath("/dashboard/limitless/payments");
 }
 
 export async function saveReminderTemplateAction(formData: FormData) {
   await requireAdmin();
+  const { organizationId } = await resolveScope();
   const id = String(formData.get("template_id") || "");
   const payload = {
-    name: String(formData.get("name") || "Reminder"),
-    position: Number(formData.get("position") || 1),
-    timing_direction: String(formData.get("timing_direction") || "before"),
-    timing_days: Number(formData.get("timing_days") || 0),
-    channel: String(formData.get("channel") || "placeholder"),
-    message_template: String(formData.get("message_template") || "[Reminder message placeholder]"),
-    escalation_action: String(formData.get("escalation_action") || "[Escalation placeholder]"),
+    name: String(formData.get("name") || "Installment Payment Reminder").trim(),
+    position: 1,
+    timing_direction: "on",
+    timing_days: 0,
+    channel: "whatsapp",
+    message_template: String(formData.get("message_template") || "").trim(),
+    escalation_action: "Routine customer check-in. No escalation.",
     enabled: formData.get("enabled") === "on",
   };
-  if (id) await updateReminderTemplate(id, payload);
-  else await createReminderTemplate(payload);
-  revalidatePath("/dashboard/limitless/payments");
+  if (!payload.message_template) throw new Error("Reminder template content is required.");
+  if (id) await updateReminderTemplate(organizationId, id, payload);
+  else await createReminderTemplate(organizationId, payload);
+  revalidatePath("/dashboard/limitless/payments/installments");
 }
-

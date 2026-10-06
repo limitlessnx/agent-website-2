@@ -51,3 +51,22 @@
 .portal-degraded-state{border-color:rgba(242,180,95,.2);background:linear-gradient(145deg,rgba(53,34,15,.22),rgba(11,6,21,.82))}
 .portal-sidebar a:focus-visible,.portal-sidebar button:focus-visible,.portal-page a:focus-visible,.portal-page button:focus-visible{outline:2px solid #b993ff;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.portal-sidebar,.portal-list-link,.portal-sidebar nav>a,.portal-action-list>a,.portal-ai-team-card{transition:none!important;scroll-behavior:auto!important}}
+
+
+.portal-topbar-actions{display:flex;align-items:center;gap:12px}
+.portal-workspace-switcher{position:relative}
+.portal-workspace-switcher>button{display:flex;align-items:center;gap:16px;min-width:210px;padding:9px 12px;border:1px solid var(--portal-border,#e5e7eb);border-radius:12px;background:var(--portal-card,#fff);color:inherit;text-align:left;cursor:pointer}
+.portal-workspace-switcher>button span:first-child{display:grid;gap:2px}
+.portal-workspace-switcher small{display:block;opacity:.65;font-size:11px}
+.portal-workspace-switcher strong{font-size:13px}
+.portal-workspace-switcher-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:270px;padding:6px;border:1px solid var(--portal-border,#e5e7eb);border-radius:14px;background:var(--portal-card,#fff);box-shadow:0 16px 40px rgba(15,23,42,.14)}
+.portal-workspace-switcher-menu>button{width:100%;display:flex;justify-content:space-between;gap:12px;padding:10px;border:0;border-radius:9px;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.portal-workspace-switcher-menu>button:hover,.portal-workspace-switcher-menu>button.active{background:rgba(99,102,241,.08)}
+.portal-workspace-switcher-menu>button>span:first-child{display:grid;gap:2px}
+.portal-workspace-switcher-menu>button>span:last-child{font-size:11px;opacity:.65;white-space:nowrap}
+@media (max-width:720px){
+ .portal-topbar-actions{gap:6px}
+ .portal-workspace-switcher>button{min-width:0;padding:7px 9px}
+ .portal-workspace-switcher>button strong{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .portal-workspace-switcher-menu{right:-8px}
+}
