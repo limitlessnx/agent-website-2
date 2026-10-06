@@ -2,9 +2,12 @@ import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { CreditCard, BellRing, WalletCards } from "@/components/admin/ServerIcons";
 import { getPaymentPlans, getPaymentRecords, formatMoney } from "@/lib/limitless-payments";
-import { recordPaymentAction } from "./actions";
+import { getProperties } from "@/lib/limitless-data";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import { createOutrightPaymentAction, recordPaymentAction } from "./actions";
 import PaymentRecordActions from "./PaymentRecordActions";
 import PaymentSubmitButton from "./PaymentSubmitButton";
+import ContactPicker from "@/components/admin/ContactPicker";
 import "./payments.css";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +17,10 @@ export default async function PaymentsPage() {
   let plans = [] as Awaited<ReturnType<typeof getPaymentPlans>>;
   let records = [] as Awaited<ReturnType<typeof getPaymentRecords>>;
   let error = "";
+  const [properties, contacts] = await Promise.all([
+    getProperties(200),
+    getCampaignAudienceLeads(organizationId, 1000),
+  ]);
 
   try {
     [plans, records] = await Promise.all([
@@ -39,6 +46,7 @@ export default async function PaymentsPage() {
           <p>Track variable client payments, outstanding balances, and recurring reminder plans.</p>
         </div>
         <div className="admin-page-actions">
+          <a href="#add-outright-payment" className="admin-button secondary">+ Add outright payment</a>
           <Link href="/dashboard/limitless/payments/installments" className="admin-button">Open installment management →</Link>
         </div>
       </div>
@@ -51,6 +59,51 @@ export default async function PaymentsPage() {
       </div>
 
       {error ? <section className="admin-panel"><p className="admin-empty">{error}</p></section> : null}
+
+      <section className="admin-panel outright-payment-panel" id="add-outright-payment">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Record outright property payment</h2>
+            <p>Use this for a property that has already been paid in full. It creates a completed payment record without starting an installment reminder plan.</p>
+          </div>
+        </div>
+        <form action={createOutrightPaymentAction} className="payment-form">
+          <ContactPicker contacts={contacts} />
+          <label>
+            Property
+            <select name="property_id">
+              <option value="">Select property</option>
+              {properties.map((property) => (
+                <option key={property.id} value={property.id}>{property.title}</option>
+              ))}
+            </select>
+          </label>
+          <input name="property_title" placeholder="Property title" required />
+          <label>
+            Amount paid in full
+            <input name="amount" type="number" min="0.01" step="0.01" placeholder="Full property price" required />
+          </label>
+          <label>
+            Currency
+            <select name="currency" defaultValue="NGN">
+              <option value="NGN">NGN · Nigerian Naira</option>
+              <option value="USD">USD · US Dollar</option>
+              <option value="GBP">GBP · British Pound</option>
+              <option value="EUR">EUR · Euro</option>
+              <option value="GHS">GHS · Ghanaian Cedi</option>
+              <option value="KES">KES · Kenyan Shilling</option>
+            </select>
+          </label>
+          <label>
+            Payment date
+            <input name="payment_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+          </label>
+          <select name="payment_method"><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="other">Other</option></select>
+          <input name="payment_reference" placeholder="Payment reference" />
+          <textarea name="notes" placeholder="Notes" rows={3} />
+          <PaymentSubmitButton>Save outright payment</PaymentSubmitButton>
+        </form>
+      </section>
 
       <div className="payment-grid">
         <section className="admin-panel">
@@ -73,7 +126,7 @@ export default async function PaymentsPage() {
 
         <section className="admin-panel">
           <div className="admin-panel-header"><div><h2>Installment model</h2><p>No fixed periodic payment amount. Clients can make variable payments until the agreed amount is fully paid.</p></div></div>
-          <div className="payment-inline-note"><strong>Reminder cadence</strong><span>Weekly, bi-weekly, or monthly. No end date. Reminders stop automatically at zero balance or when the plan is paused/cancelled.</span></div>
+          <div className="payment-inline-note"><strong>Reminder cadence</strong><span>Weekly, bi-weekly, or monthly. Plans now have a defined end date, while overdue balances remain eligible for follow-up. Reminders stop automatically at zero balance or when the plan is paused/cancelled.</span></div>
           <Link href="/dashboard/limitless/payments/installments" className="admin-button secondary">Manage plans & template</Link>
         </section>
       </div>
@@ -85,7 +138,7 @@ export default async function PaymentsPage() {
             <article key={plan.id} className="payment-plan-card">
               <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
               <div className="payment-figures"><span>Agreed <b>{formatMoney(plan.agreed_price, plan.currency)}</b></span><span>Paid <b>{formatMoney(plan.total_paid, plan.currency)}</b></span><span>Outstanding <b>{formatMoney(plan.outstanding_balance, plan.currency)}</b></span></div>
-              <div className="payment-meta"><span>Status: {plan.status}</span><span>Cadence: {plan.frequency}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Stopped"}</span></div>
+              <div className="payment-meta"><span>Type: {plan.payment_type === "outright" ? "Outright" : "Installment"}</span><span>Status: {plan.status}</span><span>End date: {plan.end_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeZone: "Africa/Lagos" }).format(new Date(plan.end_at)) : "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Stopped"}</span></div>
             </article>
           ))}
           {!plans.length && !error ? <p className="admin-empty">No installment plans created yet.</p> : null}
