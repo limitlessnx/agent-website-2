@@ -4,9 +4,7 @@ import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/a
 import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatMoney } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
-import { getProperties } from "@/lib/limitless-data";
 import { createOutrightPaymentAction, createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
-import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import ContactPicker from "@/components/admin/ContactPicker";
 import PaymentRecordActions from "./PaymentRecordActions";
 import PaymentSubmitButton from "./PaymentSubmitButton";
@@ -112,7 +110,7 @@ export default async function PaymentsPage() {
         <div className="payment-plan-list">
           {plans.map((plan)=><article key={plan.id} className="payment-plan-card">
             <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
-            <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
+            <div className="payment-figures"><span>Agreed <b>{formatMoney(plan.agreed_price, plan.currency || "NGN")}</b></span><span>Paid <b>{formatMoney(plan.total_paid, plan.currency || "NGN")}</b></span><span>Outstanding <b>{formatMoney(plan.outstanding_balance, plan.currency || "NGN")}</b></span></div>
             <div className="payment-meta"><span>Type: {plan.payment_type === "outright" ? "Outright" : "Installment"}</span><span>End date: {plan.end_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeZone: "Africa/Lagos" }).format(new Date(plan.end_at)) : "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Enabled" : "Stopped"}</span></div>
             <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select><PaymentSubmitButton className="payment-status-button">Update</PaymentSubmitButton></form>
           </article>)}
