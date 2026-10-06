@@ -80,7 +80,7 @@ test("Phase 4 routes inbound Meta WhatsApp events into Trigger.dev", () => {
 });
 
 test("Phase 4 sends WhatsApp replies from Trigger instead of n8n", () => {
-  assert.match(triggerTask, /sendWhatsAppMessage/);
+  assert.match(triggerTask, /dispatchMaiaOutboundMessage/);
   assert.match(limitlessRuntime, /trigger-dev-meta-cloud-api/);
   assert.doesNotMatch(limitlessRuntime, /N8N|n8n/);
 });
