@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -119,6 +120,7 @@ export default function DashboardHomeExperience({
   const healthy = health === "Operational";
   const limitless = limitlessDashboard;
   const maia = agents.find((agent) => agent.name.toLowerCase() === "maia") || agents[0];
+  const [revenuePeriod, setRevenuePeriod] = useState<"year" | "month">("year");
   const maxBar = Math.max(...(limitless?.financial.recentCollectionSeries || [0]), 1);
 
   return (
@@ -136,8 +138,15 @@ export default function DashboardHomeExperience({
       {limitless ? (
         <>
           <section className={styles.financeHero} aria-labelledby="finance-heading">
+            <label className={styles.financePeriodSwitch}>
+              <span>View</span>
+              <select value={revenuePeriod} onChange={(event) => setRevenuePeriod(event.target.value as "year" | "month")} aria-label="Revenue period">
+                <option value="year">Year</option>
+                <option value="month">Month</option>
+              </select>
+            </label>
             <div className={styles.financeHeader}>
-              <div><span className={styles.cardKicker}><WalletCards size={15} /> REVENUE COLLECTED</span><strong id="finance-heading">{formatNaira(limitless.financial.monthCollected)}</strong><span className={styles.financePeriod}>This month</span></div>
+              <div><span className={styles.cardKicker}><WalletCards size={15} /> REVENUE COLLECTED</span><strong id="finance-heading">{formatNaira(revenuePeriod === "year" ? limitless.financial.yearCollected : limitless.financial.monthCollected)}</strong><span className={styles.financePeriod}>{revenuePeriod === "year" ? "This year" : "This month"}</span></div>
               <div className={styles.financeChart} aria-label="Last seven days of recorded collections">
                 {limitless.financial.recentCollectionSeries.map((value, index) => <span key={index} style={{ height: Math.max(8, (value / maxBar) * 100) + "%" }} />)}
               </div>
@@ -160,7 +169,7 @@ export default function DashboardHomeExperience({
 
           <section className={styles.sectionCard}>
             <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>LIMITLESS REALTY</span><h2>Property Catalog</h2><p>Your active property inventory</p></div><Link href="/dashboard/limitless/properties">View all <ChevronRight size={14} /></Link></header>
-            <div className={styles.propertyTabs}><span className={styles.tabActive}>Active {limitless.properties.active}</span><span>Featured {limitless.properties.featured}</span><span>Sold {limitless.properties.sold}</span><span>Draft {limitless.properties.draft}</span></div>
+            <div className={styles.propertySummary}><span><b>{limitless.properties.active}</b> active</span><span><b>{limitless.properties.featured}</b> featured</span><span><b>{limitless.properties.sold}</b> sold</span><span><b>{limitless.properties.draft}</b> draft</span></div>
             <div className={styles.propertyCarousel}>{limitless.properties.items.map((property) => <PropertyCard property={property} key={property.id} />)}{!limitless.properties.items.length ? <div className={styles.emptyInline}>No properties are currently available in the catalog.</div> : null}</div>
           </section>
 
