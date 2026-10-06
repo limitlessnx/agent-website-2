@@ -42,11 +42,17 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   if (!session) return null;
 
   const admin = createAdminClient();
-  const [summary, wallet, subscription, whatsappBinding] = await Promise.all([
+  const params = searchParams ? await searchParams : {};
+  const evaluationId = typeof params.evaluation === "string" ? params.evaluation.trim() : "";
+  if (evaluationId) {
+    await admin.from("ai_business_evaluation_sessions").update({ organization_id: session.organizationId, user_id: session.userId, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", evaluationId).eq("status", "evaluated").or(`organization_id.is.null,organization_id.eq.${session.organizationId}`);
+  }
+  const [summary, wallet, subscription, whatsappBinding, latestEvaluation] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
     getActiveFluxSubscription(session.organizationId).catch(() => null),
     (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
+    (async () => { try { const { data } = await admin.from("ai_business_evaluation_sessions").select("id,status,context,evaluation,created_at,updated_at").eq("organization_id",session.organizationId).eq("status","evaluated").order("updated_at",{ascending:false}).limit(1).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
   const activeAgents = summary.agents.filter((agent: PortalAgent) => ["published", "testing"].includes(agent.status)).length;
