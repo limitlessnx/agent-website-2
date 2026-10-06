@@ -7,16 +7,12 @@ function safeNext(value:string|null){
 }
 
 export async function GET(request:NextRequest){
-  const url=new URL(request.url);
-
-  // Keep OAuth on one canonical production host so the signed OAuth-context
-  // cookie survives the Google -> callback round trip. Preview deployments
-  // intentionally keep their own host and are not redirected.
-  if(url.hostname==="www.fluxknight.space"){
-    const canonical=new URL(url.toString());
-    canonical.hostname="fluxknight.space";
-    return NextResponse.redirect(canonical);
-  }
+  const requestUrl=new URL(request.url);
+  // Production OAuth must use one host from the very first request. The
+  // context cookie is host-only, so writing it on www and then redirecting
+  // the callback to the apex domain loses the cookie before callback runs.
+  const url=new URL(requestUrl.toString());
+  if(url.hostname==="www.fluxknight.space") url.hostname="fluxknight.space";
   const nextPath=safeNext(url.searchParams.get("next"));
   const txRef=String(url.searchParams.get("tx_ref")||"").trim().slice(0,240);
   const trialPlan=url.searchParams.get("trial")==="basic"?"basic":"";
