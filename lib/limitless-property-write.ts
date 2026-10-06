@@ -54,12 +54,12 @@ export function normalizePropertyPrice(input: unknown): number | null {
   return value;
 }
 
-export async function createPropertyNormalized(payload: Record<string, unknown>): Promise<PropertyRecord[]> {
+export async function createPropertyNormalized(payload: Record<string, unknown>, organizationId?: string): Promise<PropertyRecord[]> {
   const { url, key } = supabaseConfig();
   if (!url || !key) throw new Error("Supabase is not configured.");
 
   const body = {
-    organization_id: LIMITLESS_REALTY_ORGANIZATION_ID,
+    organization_id: String(organizationId || LIMITLESS_REALTY_ORGANIZATION_ID),
     title: String(payload.title || "Untitled property"),
     location_area: String(payload.location_area || ""),
     location_city: String(payload.location_city || ""),
