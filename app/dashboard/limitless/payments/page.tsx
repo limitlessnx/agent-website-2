@@ -113,7 +113,7 @@ export default async function PaymentsPage() {
           {plans.map((plan)=><article key={plan.id} className="payment-plan-card">
             <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
             <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
-            <div className="payment-meta"><span>Next due: {plan.next_due_date || "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Enabled" : "Paused"}</span></div>
+            <div className="payment-meta"><span>Type: {plan.payment_type === "outright" ? "Outright" : "Installment"}</span><span>End date: {plan.end_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeZone: "Africa/Lagos" }).format(new Date(plan.end_at)) : "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Enabled" : "Stopped"}</span></div>
             <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><select name="status" defaultValue={plan.status}><option value="active">Active</option><option value="due_soon">Due soon</option><option value="overdue">Overdue</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select><PaymentSubmitButton className="payment-status-button">Update</PaymentSubmitButton></form>
           </article>)}
           {!plans.length && !error ? <p className="admin-empty">No payment plans created yet.</p> : null}
