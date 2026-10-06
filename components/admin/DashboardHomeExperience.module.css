@@ -119,3 +119,6 @@
   .kpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .twoColumn{grid-template-columns:1fr}
 }
+
+
+.financePeriodSwitch{display:inline-flex;align-items:center;gap:6px;position:absolute;top:17px;right:17px;padding:4px 6px 4px 9px;border:1px solid color-mix(in srgb,var(--fk-brand) 28%,var(--fk-border));border-radius:999px;background:var(--fk-brand-soft);color:var(--fk-brand-hover);font-size:9px;font-weight:700;z-index:2}.financePeriodSwitch select{border:0;outline:0;background:transparent;color:var(--fk-brand-hover);font:inherit;cursor:pointer}.propertySummary{display:flex;align-items:center;gap:8px;overflow:auto;margin:10px 0 9px;padding-bottom:1px;scrollbar-width:none}.propertySummary::-webkit-scrollbar{display:none}.propertySummary span{flex:none;color:var(--fk-text-muted);font-size:8px;white-space:nowrap}.propertySummary b{color:var(--fk-text-secondary);font-size:9px}@media(max-width:900px){.financePeriodSwitch{top:14px;right:14px}}
