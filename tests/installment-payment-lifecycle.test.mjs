@@ -78,7 +78,7 @@ test("Phase 3 supports weekly, bi-weekly and monthly cadence", () => {
 });
 
 test("Phase 3 reminder runtime is tenant independent and installment-only", () => {
-  const cron = read("app/api/cron/limitless-installment-reminders/route.ts");
+  const cron = read("lib/limitless-installment-reminder-runtime.ts");
 
   assert.match(cron, /organization_id/);
   assert.match(cron, /payment_type.*installment/);
@@ -93,4 +93,29 @@ test("Phase 3 payment completion stops reminders", () => {
   assert.match(migration, /paid >= agreed_price/);
   assert.match(migration, /then false/);
   assert.match(migration, /then null/);
+});
+
+
+test("Phase 4 starts the reminder clock on the agreed installment start date", () => {
+  const actions = read("app/dashboard/limitless/payments/actions.ts");
+  const runtime = read("lib/limitless-installment-reminder-runtime.ts");
+
+  assert.match(actions, /const nextReminderAt = startDate\.toISOString\(\)/);
+  assert.match(runtime, /const nextReminder = plan\.next_reminder_at/);
+  assert.match(runtime, /new Date\(String\(plan\.start_at\)\)/);
+});
+
+test("Phase 4 installment reminders have a production scheduler", () => {
+  const task = read("src/trigger/limitless-installment-reminders.ts");
+
+  assert.match(task, /schedules\.task/);
+  assert.match(task, /limitless-installment-reminder-sweep/);
+  assert.match(task, /\*\/15 \* \* \* \*/);
+  assert.match(task, /Africa\/Lagos/);
+});
+
+test("Installment creation does not require an unrelated handover configuration", () => {
+  const actions = read("app/dashboard/limitless/payments/actions.ts");
+  assert.doesNotMatch(actions, /A handover agent name and WhatsApp number are required/);
+  assert.match(actions, /formData\.get\("assigned_agent"\)/);
 });
