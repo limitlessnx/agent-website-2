@@ -1,9 +1,11 @@
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
-import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatNaira } from "@/lib/limitless-payments";
+import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatMoney } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
-import { createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import { getProperties } from "@/lib/limitless-data";
+import { createOutrightPaymentAction, createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import ContactPicker from "@/components/admin/ContactPicker";
 import PaymentRecordActions from "./PaymentRecordActions";
@@ -34,18 +36,40 @@ export default async function PaymentsPage() {
   return (
     <div className="admin-page payment-page">
       <div className="admin-page-header">
-        <div><p className="admin-kicker">Limitless Realty</p><h1>Payments & Installments</h1><p>Record client payments, calculate balances, and configure payment reminder cadence and approved message templates.</p></div>
+        <div><p className="admin-kicker">Limitless Realty</p><h1>Payments & Installments</h1><p>Track outright property payments, installment plans, collections, outstanding balances, and reminder follow-up.</p></div>
+        <div className="admin-page-actions"><a href="#add-outright-payment" className="admin-button secondary">+ Add outright payment</a><Link href="/dashboard/limitless/payments/installments" className="admin-button">Open installment management →</Link></div>
       </div>
 
       <div className="admin-metric-grid">
         <article className="admin-metric-card"><p><WalletCards size={15}/> Installment payments</p><strong>{plans.length}</strong><span>Active and historical client plans</span></article>
-        <Link href="/dashboard/limitless/payments/installments" className="admin-metric-card" style={{ textDecoration: "none" }}><p><WalletCards size={15}/> Revenue amount</p><strong>{formatNaira(agreed)}</strong><span>Open installment client management →</span></Link>
-        <article className="admin-metric-card"><p><CreditCard size={15}/> Total paid</p><strong>{formatNaira(paid)}</strong><span>Recorded payments</span></article>
-        <article className="admin-metric-card"><p><BellRing size={15}/> Outstanding</p><strong>{formatNaira(outstanding)}</strong><span>Pending collection</span></article>
+        <Link href="/dashboard/limitless/payments/installments" className="admin-metric-card" style={{ textDecoration: "none" }}><p><WalletCards size={15}/> Revenue amount</p><strong>{formatMoney(agreed, plans[0]?.currency || "NGN")}</strong><span>Open installment client management →</span></Link>
+        <article className="admin-metric-card"><p><CreditCard size={15}/> Total paid</p><strong>{formatMoney(paid, plans[0]?.currency || "NGN")}</strong><span>Recorded payments</span></article>
+        <article className="admin-metric-card"><p><BellRing size={15}/> Outstanding</p><strong>{formatMoney(outstanding, plans[0]?.currency || "NGN")}</strong><span>Pending collection</span></article>
         <article className="admin-metric-card"><p><AlertTriangle size={15}/> Overdue</p><strong>{overdue}</strong><span>Plans needing attention</span></article>
       </div>
 
       {error ? <section className="admin-panel"><p className="admin-empty">{error} Run migration 005 before using this module.</p></section> : null}
+
+      <section className="admin-panel outright-payment-panel" id="add-outright-payment">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Record outright property payment</h2>
+            <p>Use this when a property has been paid in full. It records the payment as completed and does not create an installment reminder plan.</p>
+          </div>
+        </div>
+        <form action={createOutrightPaymentAction} className="payment-form">
+          <ContactPicker contacts={contacts} />
+          <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
+          <input name="property_title" placeholder="Property title" required />
+          <input name="amount" type="number" min="0.01" step="0.01" placeholder="Full amount paid" required />
+          <select name="currency" defaultValue="NGN"><option value="NGN">NGN · Nigerian Naira</option><option value="USD">USD · US Dollar</option><option value="GBP">GBP · British Pound</option><option value="EUR">EUR · Euro</option><option value="GHS">GHS · Ghanaian Cedi</option><option value="KES">KES · Kenyan Shilling</option></select>
+          <label>Payment date<input name="payment_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required /></label>
+          <select name="payment_method"><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="other">Other</option></select>
+          <input name="payment_reference" placeholder="Payment reference" />
+          <textarea name="notes" placeholder="Notes" rows={3} />
+          <PaymentSubmitButton>Save outright payment</PaymentSubmitButton>
+        </form>
+      </section>
 
       <div className="payment-grid">
         <section className="admin-panel">
