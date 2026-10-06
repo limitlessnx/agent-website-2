@@ -29,13 +29,13 @@ test("Phase 1 has a dedicated outright property payment action", () => {
   assert.match(actions, /Outright property payment recorded/);
 });
 
-test("Phase 2 installment form requires a start and end date", () => {
+test("Phase 2 installment form requires a start date and supports an optional end date", () => {
   const page = read("app/dashboard/limitless/payments/installments/page.tsx");
   const actions = read("app/dashboard/limitless/payments/actions.ts");
 
   assert.match(page, /name="start_date"/);
   assert.match(page, /name="end_date"/);
-  assert.match(actions, /endAtFromForm/);
+  assert.match(page, /name="end_date"/);\n  assert.doesNotMatch(page, /name="end_date"[^>]*required/);\n  assert.match(actions, /function endAtFromForm/);\n  assert.match(actions, /if \(!value\) return null/);
   assert.match(actions, /end_at: endAt/);
   assert.match(actions, /end date cannot be before the start date/);
 });
