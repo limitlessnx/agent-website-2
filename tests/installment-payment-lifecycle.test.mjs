@@ -78,7 +78,7 @@ test("Phase 3 supports weekly, bi-weekly and monthly cadence", () => {
 });
 
 test("Phase 3 reminder runtime is tenant independent and installment-only", () => {
-  const cron = read("app/api/cron/limitless-installment-reminders/route.ts");
+  const cron = read("lib/limitless-installment-reminder-runtime.ts");
 
   assert.match(cron, /organization_id/);
   assert.match(cron, /payment_type.*installment/);
