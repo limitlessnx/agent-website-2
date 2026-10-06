@@ -158,6 +158,36 @@ export const maiaProcessInboundMessage = task({
         });
         return { ok: true, duplicate: false, eventId, suppressedReply: true, reason: "customer_opted_out" };
       }
+      if (isLimitlessRealty && payload.customerPhone) {
+        const admin = createAdminClient();
+        const phone = payload.customerPhone.replace(/\D/g, "");
+        const { data: candidateLeads, error: candidateLeadError } = await admin
+          .from("leads")
+          .select("id,phone")
+          .eq("organization_id", payload.organizationId);
+        if (candidateLeadError) throw candidateLeadError;
+        const leadIds = (candidateLeads || [])
+          .filter((lead) => String(lead.phone || "").replace(/\D/g, "") === phone)
+          .map((lead) => lead.id)
+          .filter(Boolean);
+        if (leadIds.length) {
+          await admin
+            .from("follow_ups")
+            .update({ status: "cancelled" })
+            .eq("organization_id", payload.organizationId)
+            .eq("status", "pending")
+            .in("lead_id", leadIds);
+        }
+        await admin
+          .from("agent_runtime_goals")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("organization_id", payload.organizationId)
+          .eq("agent_id", payload.agentId)
+          .eq("goal_type", "follow_up")
+          .in("status", ["queued", "running"])
+          .filter("input->>customer_phone", "eq", phone);
+      }
+
       const customerId = payload.customerPhone
         ? await resolveCanonicalCustomer({ organizationId: payload.organizationId, phone: payload.customerPhone, externalKey: "whatsapp:" + payload.customerPhone, fullName: payload.customerName || "WhatsApp customer", source: "maia-whatsapp-runtime" }).then((result) => result.customerId)
         : null;
