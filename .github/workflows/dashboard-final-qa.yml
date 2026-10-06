@@ -16,6 +16,8 @@ on:
       - "tests/dashboard-*.test.mjs"
       - "tests/client-brief-provisioning.test.mjs"
       - "tests/portal-*.test.mjs"
+      - "tests/phase2-*.test.mjs"
+      - "supabase/migrations/*.sql"
       - "package.json"
       - ".github/workflows/dashboard-final-qa.yml"
   workflow_dispatch:
