@@ -39,7 +39,7 @@ test("Phase 5 manager approval, removal and entry are organization scoped",()=>{
  assert.match(teamRoute,/p_status:"removed"/);
  assert.match(managerRoute,/getMembershipForOrganization\(session\.userId,organizationId\)/);
  assert.match(sql,/organization_id = v_request\.organization_id/);
- assert.match(sql,/organization_id = p_organization_id/);
+ assert.match(sql,/organization_id = v_request\.organization_id/);
 });
 
 test("Phase 5 removal invalidates workspace entry without deleting the user account",()=>{
