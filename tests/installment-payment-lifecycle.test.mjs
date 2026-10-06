@@ -14,13 +14,16 @@ test("installment UI uses agreed amount plus variable payments, not a fixed peri
   assert.match(page, /name="amount_paid"/);
   assert.match(page, /outstanding_balance/);
   assert.doesNotMatch(page, /name="installment_amount"/);
-  assert.doesNotMatch(page, /name="final_due_date"/);
+  assert.match(page, /name="end_date"/);
+  assert.match(page, /End date is the expected completion date/);
+  assert.match(actions, /endAtFromForm/);
+  assert.match(actions, /end_at: endAt/);
 });
 
-test("installment UI has weekly, bi-weekly and monthly cadence with no end date", () => {
+test("installment UI has weekly, bi-weekly and monthly cadence with a required end date", () => {
   for (const cadence of ["weekly", "biweekly", "monthly"]) assert.match(page, new RegExp(`value="${cadence}"`));
-  assert.match(page, /No end date/);
-  assert.match(page, /reminders continue until payment is complete/);
+  assert.match(page, /name="end_date"/);
+  assert.match(page, /overdue after this date/);
 });
 
 test("installment creation is tenant scoped and records the initial amount as a payment ledger entry", () => {
@@ -77,4 +80,33 @@ test("payment sync completes plans and disables reminders when the balance reach
 test("daily Vercel cron runs the cadence-aware reminder sweep", () => {
   assert.match(vercel, /\/api\/cron\/limitless-installment-reminders/);
   assert.match(vercel, /"0 9 \* \* \*"/);
+});
+
+
+test("outright property payments have a dedicated dashboard action and become completed non-reminding records", () => {
+  const dashboard = readFileSync("app/dashboard/limitless/payments/page.tsx", "utf8");
+  assert.match(dashboard, /\+ Add outright payment/);
+  assert.match(dashboard, /Record outright property payment/);
+  assert.match(dashboard, /createOutrightPaymentAction/);
+  assert.match(actions, /createOutrightPaymentAction/);
+  assert.match(actions, /payment_type: "outright"/);
+  assert.match(actions, /status: "completed"/);
+  assert.match(actions, /reminders_enabled: false/);
+  assert.match(actions, /Outright property payment recorded/);
+});
+
+test("payment schema distinguishes outright and installment plans and enforces end-date ordering", () => {
+  const schema = readFileSync("supabase/migrations/20261006190000_property_payment_phase1_3.sql", "utf8");
+  assert.match(schema, /payment_type text not null default 'installment'/);
+  assert.match(schema, /payment_type in \('installment','outright'\)/);
+  assert.match(schema, /end_at timestamptz/);
+  assert.match(schema, /end_at_after_start/);
+  assert.match(schema, /end_at is null or end_at >= start_at/);
+});
+
+test("payment lifecycle remains tenant scoped for both payment types", () => {
+  assert.match(actions, /resolveAdminOrganizationScope/);
+  assert.match(actions, /\.eq\("organization_id", organizationId\)/);
+  assert.match(payments, /payment_plans\?organization_id=eq/);
+  assert.match(payments, /payment_records\?organization_id=eq/);
 });
