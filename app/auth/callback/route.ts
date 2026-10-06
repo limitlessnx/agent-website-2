@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   clearClientOAuthContext,
+  getClientAccountMode,
   getClientOAuthContext,
+  getClientSession,
   getMembershipForOrganization,
   getPrimaryMembership,
   setClientSession,
+  setManagerSession,
   setPendingClientSetupSession,
 } from "@/lib/client-auth";
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
@@ -87,19 +90,35 @@ export async function GET(request:NextRequest){
       role:membership.role,
       issuedAt:Date.now(),
     });
+
+    // Do not hand the user a dashboard redirect until the Fluxknight
+    // application session is actually readable and backed by a live membership.
+    const clientSession=await getClientSession().catch(()=>null);
+    if(!clientSession||clientSession.userId!==data.user.id||clientSession.membershipId!==membership.membershipId){
+      await clearClientOAuthContext().catch(()=>undefined);
+      return NextResponse.redirect(new URL("/account/login?error=google_session",origin));
+    }
+
     await clearClientOAuthContext().catch(()=>undefined);
     return NextResponse.redirect(destination(origin,nextPath,context?.txRef,context?.trialPlan));
+  }
+
+  const accountMode=await getClientAccountMode(data.user.id);
+  if(accountMode==="manager"){
+    await setManagerSession({userId:data.user.id,email,issuedAt:Date.now()});
+    await clearClientOAuthContext().catch(()=>undefined);
+    return NextResponse.redirect(new URL("/manage-organizations",origin));
   }
 
   await setPendingClientSetupSession({
     userId:data.user.id,
     email,
     invitationToken:context?.invitationToken,
-    nextPath,
+    nextPath:accountMode==="organization"?nextPath:"/account/choose-mode",
     txRef:context?.txRef,
     trialPlan:context?.trialPlan,
     issuedAt:Date.now(),
   });
   await clearClientOAuthContext().catch(()=>undefined);
-  return NextResponse.redirect(new URL("/account/setup",origin));
+  return NextResponse.redirect(new URL(accountMode==="organization"?"/account/setup":"/account/choose-mode",origin));
 }
