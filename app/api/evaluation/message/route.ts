@@ -17,9 +17,10 @@ const schema={type:"object",additionalProperties:false,properties:{
  },required:["opportunity","score","categoryScores","bottlenecks","recommendedAgents","channels","integrations","opportunities","recommendedSystem","estimatedAutomationPotential","voiceAgent","voiceReason","recommendedPlan","customReason","recommendationReason","summary","nextStep"]}
 }} as const;
 
-function classify(e:any){
+function classify(e:any,requirements:any=null){
  const s=[...(e.recommendedAgents||[]),...(e.integrations||[]),...(e.bottlenecks||[]),String(e.customReason||"")].join(" ").toLowerCase();
- const requestedCustom=requirements?.specificity==="custom";\n const complex=requestedCustom||/(custom integration|multiple departments|multi[- ]channel|database|advanced workflow|erp|api|crm integration|complex|bespoke)/.test(s);
+ const requestedCustom=requirements?.specificity==="custom";
+ const complex=requestedCustom||/(custom integration|multiple departments|multi[- ]channel|database|advanced workflow|erp|api|crm integration|complex|bespoke)/.test(s);
  return {...e,pricingType:complex?"custom":"standard",customReason:complex?e.customReason||"The workflow and integration scope goes beyond a standard plan.":null};
 }
 
