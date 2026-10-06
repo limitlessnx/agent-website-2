@@ -9,6 +9,7 @@ export type PaymentPlan = {
   client_email: string | null;
   property_id: string | null;
   property_title: string;
+  payment_type: "installment" | "outright";
   agreed_price: number;
   currency: string;
   total_paid: number;
@@ -16,6 +17,7 @@ export type PaymentPlan = {
   installment_amount?: number;
   frequency: "weekly" | "biweekly" | "monthly" | string;
   start_at: string;
+  end_at: string | null;
   next_reminder_at: string | null;
   last_reminder_at: string | null;
   reminder_template_id: string | null;
