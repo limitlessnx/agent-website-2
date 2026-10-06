@@ -3,6 +3,20 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 
+export type ButtonAction =
+  | "saving"
+  | "creating"
+  | "updating"
+  | "deleting"
+  | "sending"
+  | "recording"
+  | "approving"
+  | "rejecting"
+  | "uploading"
+  | "connecting"
+  | "testing"
+  | "running";
+
 interface ButtonProps {
   href?: string;
   onClick?: () => void;
@@ -12,54 +26,111 @@ interface ButtonProps {
   fullWidth?: boolean;
   type?: "button" | "submit" | "reset";
   disabled?: boolean;
+  loading?: boolean;
+  action?: ButtonAction;
+  loadingLabel?: string;
   ariaLabel?: string;
+  className?: string;
 }
+
+const actionLabels: Record<ButtonAction, string> = {
+  saving: "Saving…",
+  creating: "Creating…",
+  updating: "Updating…",
+  deleting: "Deleting…",
+  sending: "Sending…",
+  recording: "Recording…",
+  approving: "Approving…",
+  rejecting: "Rejecting…",
+  uploading: "Uploading…",
+  connecting: "Connecting…",
+  testing: "Testing…",
+  running: "Running…",
+};
 
 const styles = {
   primary: {
     base: {
-      background: "#00d4ff",
-      color: "#06080f",
-      border: "1px solid #00d4ff",
-      fontWeight: 700,
-      boxShadow: "0 0 20px rgba(0,212,255,0.2)",
+      background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
+      color: "#ffffff",
+      border: "1px solid rgba(167,139,250,.55)",
+      fontWeight: 650,
+      boxShadow: "0 8px 24px rgba(124,58,237,.18)",
     },
     hover: {
-      boxShadow: "0 0 35px rgba(0,212,255,0.4)",
-      opacity: "0.92",
+      background: "linear-gradient(135deg, #9b6cff 0%, #7c3aed 100%)",
+      boxShadow: "0 10px 30px rgba(124,58,237,.26)",
+      transform: "translateY(-1px)",
     },
   },
   ghost: {
     base: {
-      background: "rgba(0,212,255,0.08)",
-      color: "#00d4ff",
-      border: "1px solid rgba(0,212,255,0.25)",
+      background: "rgba(124,58,237,.08)",
+      color: "#d9ccff",
+      border: "1px solid rgba(167,139,250,.22)",
       fontWeight: 600,
+      boxShadow: "none",
     },
     hover: {
-      background: "rgba(0,212,255,0.15)",
-      borderColor: "rgba(0,212,255,0.5)",
+      background: "rgba(124,58,237,.14)",
+      borderColor: "rgba(167,139,250,.42)",
+      color: "#f8f7ff",
     },
   },
   outline: {
     base: {
-      background: "transparent",
-      color: "#f0f6ff",
-      border: "1px solid #1e2d3d",
+      background: "rgba(255,255,255,.015)",
+      color: "#e8e4f5",
+      border: "1px solid rgba(181,166,232,.22)",
       fontWeight: 600,
+      boxShadow: "none",
     },
     hover: {
-      borderColor: "rgba(0,212,255,0.4)",
-      color: "#00d4ff",
+      background: "rgba(124,58,237,.06)",
+      borderColor: "rgba(167,139,250,.38)",
+      color: "#f8f7ff",
     },
   },
 };
 
 const sizes = {
-  sm: { padding: "8px 16px", fontSize: "0.8rem", borderRadius: "7px" },
-  md: { padding: "11px 24px", fontSize: "0.875rem", borderRadius: "8px" },
-  lg: { padding: "14px 32px", fontSize: "1rem", borderRadius: "10px" },
+  sm: { minHeight: "36px", minWidth: "88px", padding: "7px 14px", fontSize: "0.78rem", borderRadius: "9px" },
+  md: { minHeight: "40px", minWidth: "112px", padding: "9px 16px", fontSize: "0.84rem", borderRadius: "10px" },
+  lg: { minHeight: "44px", minWidth: "132px", padding: "11px 20px", fontSize: "0.92rem", borderRadius: "11px" },
 };
+
+const sharedStyle = {
+  boxSizing: "border-box" as const,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  textDecoration: "none",
+  transition: "background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, transform 140ms ease, opacity 160ms ease",
+  whiteSpace: "nowrap" as const,
+  position: "relative" as const,
+  overflow: "hidden" as const,
+  WebkitTapHighlightColor: "transparent",
+};
+
+function ActionContent({
+  loading,
+  label,
+  children,
+}: {
+  loading: boolean;
+  label: string;
+  children: ReactNode;
+}) {
+  if (!loading) return <>{children}</>;
+
+  return (
+    <>
+      <span className="fk-action-spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </>
+  );
+}
 
 export default function Button({
   href,
@@ -70,21 +141,22 @@ export default function Button({
   fullWidth = false,
   type = "button",
   disabled = false,
+  loading = false,
+  action,
+  loadingLabel,
   ariaLabel,
+  className = "",
 }: ButtonProps) {
+  const isBusy = loading || disabled;
+  const label = loadingLabel || (action ? actionLabels[action] : "Processing…");
   const baseStyle = {
     ...styles[variant].base,
     ...sizes[size],
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    cursor: disabled ? "not-allowed" : "pointer",
-    textDecoration: "none",
-    transition: "all 0.2s",
+    ...sharedStyle,
+    cursor: isBusy ? "not-allowed" : "pointer",
     width: fullWidth ? "100%" : "auto",
-    opacity: disabled ? 0.5 : 1,
-    whiteSpace: "nowrap" as const,
+    opacity: disabled && !loading ? 0.48 : 1,
+    pointerEvents: isBusy ? ("none" as const) : ("auto" as const),
   };
 
   const hoverStyle = styles[variant].hover;
@@ -93,19 +165,21 @@ export default function Button({
     return (
       <Link
         href={href}
-        style={baseStyle}
+        className={`fk-action-button ${className}`.trim()}
+        data-size={size}
+        data-variant={variant}
         aria-label={ariaLabel}
-        onMouseEnter={(e) =>
-          Object.assign((e.currentTarget as HTMLElement).style, hoverStyle)
-        }
-        onMouseLeave={(e) =>
-          Object.assign(
-            (e.currentTarget as HTMLElement).style,
-            styles[variant].base
-          )
-        }
+        aria-busy={loading || undefined}
+        aria-disabled={isBusy || undefined}
+        style={baseStyle}
+        onMouseEnter={(e) => {
+          if (!isBusy) Object.assign(e.currentTarget.style, hoverStyle);
+        }}
+        onMouseLeave={(e) => {
+          Object.assign(e.currentTarget.style, styles[variant].base);
+        }}
       >
-        {children}
+        <ActionContent loading={loading} label={label}>{children}</ActionContent>
       </Link>
     );
   }
@@ -114,21 +188,21 @@ export default function Button({
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       aria-label={ariaLabel}
+      aria-busy={loading}
+      className={`fk-action-button ${className}`.trim()}
+      data-size={size}
+      data-variant={variant}
       style={baseStyle}
-      onMouseEnter={(e) =>
-        !disabled &&
-        Object.assign((e.currentTarget as HTMLElement).style, hoverStyle)
-      }
-      onMouseLeave={(e) =>
-        Object.assign(
-          (e.currentTarget as HTMLElement).style,
-          styles[variant].base
-        )
-      }
+      onMouseEnter={(e) => {
+        if (!isBusy) Object.assign(e.currentTarget.style, hoverStyle);
+      }}
+      onMouseLeave={(e) => {
+        Object.assign(e.currentTarget.style, styles[variant].base);
+      }}
     >
-      {children}
+      <ActionContent loading={loading} label={label}>{children}</ActionContent>
     </button>
   );
 }
