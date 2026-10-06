@@ -4,7 +4,7 @@ import { requirePortalPermission } from "@/lib/portal-access";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import AccessRequestsClient from "./AccessRequestsClient";
 
-export const dynamic = "force-dynamic";
+// Phase 2 guardrail path marker.\nexport const dynamic = "force-dynamic";
 export const metadata = { title: "Team | Fluxknight" };
 
 export default async function TeamPage() {
