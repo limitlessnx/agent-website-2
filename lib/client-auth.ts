@@ -6,6 +6,7 @@ import { resolveSupabaseUrl } from "@/lib/supabase/config";
 const CLIENT_COOKIE="fluxknight_client_session";
 const CLIENT_SETUP_COOKIE="fluxknight_client_setup";
 const CLIENT_OAUTH_CONTEXT_COOKIE="fluxknight_oauth_context";
+const CLIENT_MANAGER_COOKIE="fluxknight_manager_session";
 const CLIENT_SESSION_TTL=60*60*24*7;
 const CLIENT_SETUP_TTL=60*60;
 const CLIENT_OAUTH_CONTEXT_TTL=60*10;
@@ -17,6 +18,7 @@ type SupabaseAuthResponse={access_token?:string;refresh_token?:string;expires_in
 export type ClientSession={userId:string;email:string;organizationId:string;organizationSlug:string;membershipId:string;role:string;issuedAt:number};
 export type PendingClientSetupSession={userId:string;email:string;invitationToken?:string;nextPath?:string;txRef?:string;trialPlan?:""|"basic";issuedAt:number};
 export type ClientOAuthContext={nextPath:string;txRef?:string;trialPlan?:""|"basic";invitationToken?:string;issuedAt:number};
+export type ClientManagerSession={userId:string;email:string;issuedAt:number};
 export type PendingPasswordReset={accessToken:string;refreshToken?:string;nextPath?:string;issuedAt:number};
 type MembershipRow={id:string;organization_id:string;status:string;organizations:{slug:string}|{slug:string}[]|null;membership_roles:Array<{roles:{slug:string}|{slug:string}[]|null}>};
 
@@ -53,6 +55,19 @@ export async function setPendingClientSetupSession(session:PendingClientSetupSes
 export async function setClientOAuthContext(context:ClientOAuthContext){const store=await cookies();store.set(CLIENT_OAUTH_CONTEXT_COOKIE,createSignedToken(context),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_OAUTH_CONTEXT_TTL,path:"/"})}
 export async function getClientOAuthContext(){const store=await cookies();const context=readSignedToken<ClientOAuthContext>(store.get(CLIENT_OAUTH_CONTEXT_COOKIE)?.value,CLIENT_OAUTH_CONTEXT_TTL);if(!context?.nextPath)return null;return context}
 export async function clearClientOAuthContext(){const store=await cookies();store.delete(CLIENT_OAUTH_CONTEXT_COOKIE)}
+export async function getClientAccountMode(userId:string):Promise<"organization"|"manager"|null>{
+ const rows=await supabaseServerRequest<Array<{account_mode?:string}>>(`client_account_profiles?user_id=eq.${encodeURIComponent(userId)}&select=account_mode&limit=1`).catch(()=>[]);
+ const mode=rows[0]?.account_mode;
+ return mode==="manager"?"manager":mode==="organization"?"organization":null;
+}
+export async function setClientAccountMode(userId:string,accountMode:"organization"|"manager"){
+ await supabaseServerRequest("client_account_profiles",{method:"POST",body:JSON.stringify({user_id:userId,account_mode:accountMode})}).catch(async()=>{
+   await supabaseServerRequest(`client_account_profiles?user_id=eq.${encodeURIComponent(userId)}`,{method:"PATCH",body:JSON.stringify({account_mode:accountMode,updated_at:new Date().toISOString()})});
+ });
+}
+export async function setManagerSession(session:ClientManagerSession){const store=await cookies();store.set(CLIENT_MANAGER_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
+export async function getManagerSession(){const store=await cookies();const session=readSignedToken<ClientManagerSession>(store.get(CLIENT_MANAGER_COOKIE)?.value,CLIENT_SESSION_TTL);return session?.userId&&session?.email?session:null}
+export async function clearManagerSession(){const store=await cookies();store.delete(CLIENT_MANAGER_COOKIE)}
 export async function setPendingPasswordReset(session:PendingPasswordReset){const store=await cookies();store.set(CLIENT_PASSWORD_RESET_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_PASSWORD_RESET_TTL,path:"/"})}
 export async function getPendingPasswordReset(){const store=await cookies();const session=readSignedToken<PendingPasswordReset>(store.get(CLIENT_PASSWORD_RESET_COOKIE)?.value,CLIENT_PASSWORD_RESET_TTL);if(!session?.accessToken)return null;return session}
 export async function clearPendingPasswordReset(){const store=await cookies();store.delete(CLIENT_PASSWORD_RESET_COOKIE)}
