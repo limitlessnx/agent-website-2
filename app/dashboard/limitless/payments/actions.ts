@@ -36,6 +36,13 @@ function startAtFromForm(value: string) {
   return date.toISOString();
 }
 
+function endAtFromForm(value: string) {
+  if (!value) throw new Error("An installment end date is required.");
+  const date = new Date(`${value}T23:59:59.999Z`);
+  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid installment end date.");
+  return date.toISOString();
+}
+
 async function requireAdmin() {
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard/limitless/payments");
@@ -81,6 +88,10 @@ export async function createPaymentPlanAction(formData: FormData) {
   const initialPaid = money(formData.get("amount_paid"));
   const frequency = String(formData.get("frequency") || "biweekly").trim();
   const startAt = startAtFromForm(String(formData.get("start_date") || ""));
+  const endAt = endAtFromForm(String(formData.get("end_date") || ""));
+  if (new Date(endAt).getTime() < new Date(startAt).getTime()) {
+    throw new Error("The installment end date cannot be before the start date.");
+  }
   const handoverAgentName = String(formData.get("handover_agent_name") || "").trim();
   const handoverAgentPhone = String(formData.get("handover_agent_phone") || "").trim();
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
@@ -115,8 +126,10 @@ export async function createPaymentPlanAction(formData: FormData) {
     property_title: propertyTitle,
     agreed_price: agreedAmount,
     currency,
+    payment_type: "installment",
     frequency,
     start_at: startAt,
+    end_at: endAt,
     next_reminder_at: nextReminderAt,
     handover_agent_name: handoverAgentName,
     handover_agent_phone: handoverAgentPhone,
@@ -140,6 +153,81 @@ export async function createPaymentPlanAction(formData: FormData) {
 
   revalidatePath("/dashboard/limitless/payments");
   redirect("/dashboard/limitless/payments/installments");
+}
+
+export async function createOutrightPaymentAction(formData: FormData) {
+  const session = await requireAdmin();
+  const { organizationId } = await resolveScope();
+
+  const contactId = String(formData.get("contact_id") || "").trim() || null;
+  const manualName = String(formData.get("client_name_manual") || "").trim();
+  const manualPhone = String(formData.get("client_phone_manual") || "").trim();
+  const manualEmail = String(formData.get("client_email_manual") || "").trim();
+  let clientName = String(formData.get("client_name") || manualName).trim();
+  let clientPhone = String(formData.get("client_phone") || manualPhone).trim();
+  let clientEmail = String(formData.get("client_email") || manualEmail).trim() || null;
+
+  if (contactId) {
+    const { data: contact, error } = await createAdminClient()
+      .from("leads")
+      .select("id,name,phone,email")
+      .eq("organization_id", organizationId)
+      .eq("id", contactId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!contact) throw new Error("The selected contact is not available in the active organization.");
+    clientName = String(contact.name || "").trim();
+    clientPhone = String(contact.phone || "").trim();
+    clientEmail = contact.email ? String(contact.email) : null;
+  }
+
+  const propertyTitle = String(formData.get("property_title") || "").trim();
+  const amount = money(formData.get("amount"));
+  const paymentDateValue = String(formData.get("payment_date") || "").trim();
+  const paymentAt = startAtFromForm(paymentDateValue);
+  const paymentEndAt = endAtFromForm(paymentDateValue);
+  const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
+
+  if (!clientName || !clientPhone || !propertyTitle) {
+    throw new Error("Client, phone, and property are required for an outright payment.");
+  }
+  if (amount <= 0) throw new Error("The outright payment amount must be greater than zero.");
+
+  const plan = await createPaymentPlan({
+    organization_id: organizationId,
+    contact_id: contactId,
+    client_name: clientName,
+    client_phone: clientPhone,
+    client_email: clientEmail,
+    property_id: String(formData.get("property_id") || "").trim() || null,
+    property_title: propertyTitle,
+    agreed_price: amount,
+    currency,
+    payment_type: "outright",
+    frequency: "monthly",
+    start_at: paymentAt,
+    end_at: paymentEndAt,
+    next_reminder_at: null,
+    handover_agent_name: null,
+    handover_agent_phone: null,
+    notes: String(formData.get("notes") || "").trim() || "Outright property payment recorded.",
+    reminders_enabled: false,
+    status: "completed",
+  });
+
+  await createPaymentRecord({
+    organization_id: organizationId,
+    payment_plan_id: plan.id,
+    amount,
+    payment_date: paymentDateValue || new Date().toISOString().slice(0, 10),
+    payment_method: String(formData.get("payment_method") || "other").trim() || "other",
+    payment_reference: String(formData.get("payment_reference") || "").trim() || null,
+    notes: String(formData.get("notes") || "").trim() || "Outright property payment recorded.",
+    created_by: session.email,
+  });
+
+  revalidatePath("/dashboard/limitless/payments");
+  redirect("/dashboard/limitless/payments");
 }
 
 export async function recordPaymentAction(formData: FormData) {
