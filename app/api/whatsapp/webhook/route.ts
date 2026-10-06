@@ -318,6 +318,8 @@ export async function POST(request: NextRequest) {
             phoneNumberId,
             waId: String(contacts[0]?.wa_id || from),
             messageType: String(message?.type || "unknown"),
+            mediaId: String(message?.audio?.id || message?.image?.id || message?.video?.id || message?.document?.id || ""),
+            mimeType: String(message?.audio?.mime_type || message?.image?.mime_type || message?.video?.mime_type || message?.document?.mime_type || ""),
             timestamp: String(message?.timestamp || ""),
           },
         };
