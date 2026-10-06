@@ -15,7 +15,7 @@ begin
   end if;
 
   loop
-    v_code := 'FLX-' || upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 8));
+    v_code := 'FLX-' || upper(substr(encode(extensions.gen_random_bytes(6), 'hex'), 1, 8));
     exit when not exists (
       select 1 from public.organizations where manager_access_code = v_code
     );
