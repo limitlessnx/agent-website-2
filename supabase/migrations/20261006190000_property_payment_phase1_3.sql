@@ -22,16 +22,13 @@ alter table public.payment_plans
 alter table public.payment_plans
   drop constraint if exists payment_plans_end_at_after_start_check;
 
-alter table public.payment_plans
-  add constraint payment_plans_end_at_after_start_check
-  check (end_at is null or end_at >= start_at);
-
 update public.payment_plans
 set start_at = coalesce(start_at, created_at),
     end_at = coalesce(
       end_at,
       case
         when final_due_date is not null
+         and final_due_date::timestamptz + interval '23 hours 59 minutes 59.999 seconds' >= coalesce(start_at, created_at)
         then final_due_date::timestamptz + interval '23 hours 59 minutes 59.999 seconds'
         else null
       end
@@ -39,6 +36,10 @@ set start_at = coalesce(start_at, created_at),
     payment_type = coalesce(payment_type, 'installment'),
     currency = coalesce(nullif(currency, ''), 'NGN'),
     updated_at = now();
+
+alter table public.payment_plans
+  add constraint payment_plans_end_at_after_start_check
+  check (end_at is null or end_at >= start_at);
 
 create index if not exists payment_plans_org_type_idx
   on public.payment_plans (organization_id, payment_type, status, created_at desc);
