@@ -89,8 +89,8 @@ export async function createPaymentPlanAction(formData: FormData) {
   const frequency = String(formData.get("frequency") || "biweekly").trim();
   const startAt = startAtFromForm(String(formData.get("start_date") || ""));
   const endAt = endAtFromForm(String(formData.get("end_date") || ""));
-  const handoverAgentName = String(formData.get("handover_agent_name") || "").trim();
-  const handoverAgentPhone = String(formData.get("handover_agent_phone") || "").trim();
+  const handoverAgentName = String(formData.get("handover_agent_name") || formData.get("assigned_agent") || "").trim() || null;
+  const handoverAgentPhone = String(formData.get("handover_agent_phone") || "").trim() || null;
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
 
   if (endAt && new Date(endAt).getTime() < new Date(startAt).getTime()) {
@@ -100,7 +100,6 @@ export async function createPaymentPlanAction(formData: FormData) {
   if (agreedAmount <= 0) throw new Error("The agreed amount must be greater than zero.");
   if (initialPaid < 0 || initialPaid > agreedAmount) throw new Error("Amount paid must be between zero and the agreed amount.");
   if (!CADENCES.has(frequency)) throw new Error("Invalid installment reminder cadence.");
-  if (!handoverAgentName || !handoverAgentPhone) throw new Error("A handover agent name and WhatsApp number are required.");
 
   if (!contactId && manualName && manualPhone) {
     await saveProgressiveLead(organizationId, {
@@ -114,7 +113,8 @@ export async function createPaymentPlanAction(formData: FormData) {
   }
 
   const startDate = new Date(startAt);
-  const nextReminderAt = new Date(startDate.getTime() + cadenceDays(frequency) * 24 * 60 * 60 * 1000).toISOString();
+  // The agreed start date is the first reminder firing point. Cadence controls subsequent reminders.
+  const nextReminderAt = startDate.toISOString();
 
   const plan = await createPaymentPlan({
     organization_id: organizationId,
