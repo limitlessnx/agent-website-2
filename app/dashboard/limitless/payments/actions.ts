@@ -37,8 +37,8 @@ function startAtFromForm(value: string) {
 }
 
 function endAtFromForm(value: string) {
-  if (!value) throw new Error("An installment end date is required.");
-  const date = new Date(`${value}T23:59:59.999Z`);
+  if (!value) return null;
+  const date = new Date(value + "T23:59:59.999Z");
   if (Number.isNaN(date.getTime())) throw new Error("Enter a valid installment end date.");
   return date.toISOString();
 }
@@ -93,7 +93,7 @@ export async function createPaymentPlanAction(formData: FormData) {
   const handoverAgentPhone = String(formData.get("handover_agent_phone") || "").trim();
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
 
-  if (new Date(endAt).getTime() < new Date(startAt).getTime()) {
+  if (endAt && new Date(endAt).getTime() < new Date(startAt).getTime()) {
     throw new Error("The installment end date cannot be before the start date.");
   }
   if (!clientName || !clientPhone || !propertyTitle) throw new Error("Client, phone, and property/service context are required.");
