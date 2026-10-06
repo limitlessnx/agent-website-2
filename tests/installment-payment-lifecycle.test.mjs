@@ -12,7 +12,7 @@ test("Phase 1 payment records are tenant scoped and ledger-backed", () => {
   assert.match(actions, /createPaymentRecord\(\{/);
   assert.match(actions, /organization_id: organizationId/);
   assert.match(payments, /payment_records\?organization_id=eq/);
-  assert.match(payments, /updatePaymentRecord\(organizationId, recordId/);
+  assert.match(payments, /updatePaymentRecord\(organizationId: string, recordId: string/);
   assert.match(payments, /deletePaymentRecord\(organizationId, recordId/);
 });
 
