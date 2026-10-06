@@ -22,6 +22,7 @@ import {
 import type { LimitlessDashboardData, OrganizationOperationalItem } from "@/lib/admin-organization-data";
 import { formatNaira } from "@/lib/limitless-payments";
 import styles from "./DashboardHomeExperience.module.css";
+import RevenueHero from "./RevenueHero";
 
 type Metric = { label: string; value: number | string; detail: string; icon: "leads" | "conversations" | "followups" | "qualified" | "revenue" };
 type Notice = { title: string; detail: string; href: string; type: string };
@@ -119,7 +120,6 @@ export default function DashboardHomeExperience({
   const healthy = health === "Operational";
   const limitless = limitlessDashboard;
   const maia = agents.find((agent) => agent.name.toLowerCase() === "maia") || agents[0];
-  const maxBar = Math.max(...(limitless?.financial.recentCollectionSeries || [0]), 1);
 
   return (
     <section className={styles.home} aria-label={(workspaceName || "Organization") + " dashboard overview"}>
@@ -135,20 +135,13 @@ export default function DashboardHomeExperience({
 
       {limitless ? (
         <>
-          <section className={styles.financeHero} aria-labelledby="finance-heading">
-            <div className={styles.financeHeader}>
-              <div><span className={styles.cardKicker}><WalletCards size={15} /> REVENUE COLLECTED</span><strong id="finance-heading">{formatNaira(limitless.financial.monthCollected)}</strong><span className={styles.financePeriod}>This month</span></div>
-              <div className={styles.financeChart} aria-label="Last seven days of recorded collections">
-                {limitless.financial.recentCollectionSeries.map((value, index) => <span key={index} style={{ height: Math.max(8, (value / maxBar) * 100) + "%" }} />)}
-              </div>
-            </div>
-            <div className={styles.financeMeta}><span><ArrowUpRight size={15} /> {formatNaira(limitless.financial.todayCollected)} today</span><small>{formatNaira(limitless.financial.collected)} collected across recorded installment plans</small></div>
-            <div className={styles.financeActions}>
-              <Link href="/dashboard/limitless/payments"><CreditCard size={16} /><span>Record Payment</span></Link>
-              <Link href="/dashboard/limitless/payments/installments"><CalendarDays size={16} /><span>View Installments</span></Link>
-              <Link href="/dashboard/limitless/payments"><BarChart2 size={16} /><span>View Collections</span></Link>
-            </div>
-          </section>
+          <RevenueHero
+            yearCollected={limitless.financial.yearCollected}
+            monthCollected={limitless.financial.monthCollected}
+            todayCollected={limitless.financial.todayCollected}
+            collected={limitless.financial.collected}
+            recentCollectionSeries={limitless.financial.recentCollectionSeries}
+          />
 
           <section className={styles.kpiGrid} aria-label="Business KPIs">
             {metrics.filter((metric) => metric.icon !== "revenue").slice(0, 4).map((metric) => {
@@ -160,7 +153,7 @@ export default function DashboardHomeExperience({
 
           <section className={styles.sectionCard}>
             <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>LIMITLESS REALTY</span><h2>Property Catalog</h2><p>Your active property inventory</p></div><Link href="/dashboard/limitless/properties">View all <ChevronRight size={14} /></Link></header>
-            <div className={styles.propertyTabs}><span className={styles.tabActive}>Active {limitless.properties.active}</span><span>Featured {limitless.properties.featured}</span><span>Sold {limitless.properties.sold}</span><span>Draft {limitless.properties.draft}</span></div>
+            <div className={styles.propertySummary}><span><b>{limitless.properties.active}</b> active</span><span><b>{limitless.properties.featured}</b> featured</span><span><b>{limitless.properties.sold}</b> sold</span><span><b>{limitless.properties.draft}</b> draft</span></div>
             <div className={styles.propertyCarousel}>{limitless.properties.items.map((property) => <PropertyCard property={property} key={property.id} />)}{!limitless.properties.items.length ? <div className={styles.emptyInline}>No properties are currently available in the catalog.</div> : null}</div>
           </section>
 

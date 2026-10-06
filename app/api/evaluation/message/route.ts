@@ -15,7 +15,7 @@ const schema={type:"object",additionalProperties:false,properties:{
   voiceAgent:{type:"string",enum:["recommended","optional","not_recommended"]},voiceReason:{type:"string"},
   recommendedPlan:{type:"string",enum:["basic","plus","business","business_plus"]},customReason:{type:["string","null"]},recommendationReason:{type:"string"},summary:{type:"string"},nextStep:{type:"string"}
  },required:["opportunity","score","categoryScores","bottlenecks","recommendedAgents","channels","integrations","opportunities","recommendedSystem","estimatedAutomationPotential","voiceAgent","voiceReason","recommendedPlan","customReason","recommendationReason","summary","nextStep"]}
-}} as const;
+},required:["reply","ready","evaluation"]} as const;
 
 function classify(e:any,requirements:any=null){
  const s=[...(e.recommendedAgents||[]),...(e.integrations||[]),...(e.bottlenecks||[]),String(e.customReason||"")].join(" ").toLowerCase();
