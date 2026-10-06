@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InstallmentsPage() {
   const { organizationId } = await resolveAdminOrganizationScope();
-  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(250), getPaymentRecords(500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
+  const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   const totalAgreed = plans.reduce((s,p)=>s+Number(p.agreed_price||0),0);
   const totalPaid = plans.reduce((s,p)=>s+Number(p.total_paid||0),0);
   const outstanding = plans.reduce((s,p)=>s+Number(p.outstanding_balance||0),0);
