@@ -48,6 +48,7 @@ test("installment reminder runtime is tenant independent and has no hardcoded Li
   assert.match(cron, /installment_payment_reminder/);
   assert.match(cron, /reminders_enabled/);
   assert.match(cron, /status.*active/);
+  assert.match(cron, /payment_type.*installment/);
 });
 
 test("reminder cadence is 7, 14 or 30 days and stops at zero balance", () => {
