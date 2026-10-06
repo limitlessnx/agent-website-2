@@ -3,7 +3,7 @@ import { getProperties } from "@/lib/limitless-data";
 import { createPropertyNormalized } from "@/lib/limitless-property-write";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
-import { updatePropertyImages, uploadPublicImages } from "@/lib/supabase-storage";
+import { uploadPublicMedia } from "@/lib/supabase-media";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || "");
@@ -51,16 +51,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Property title is required." }, { status: 400 });
     }
 
-    const created = await createPropertyNormalized(payload);
+    const scope = session ? await (async () => { try { return await import("@/lib/admin-organization-scope").then(({ resolveAdminOrganizationScope }) => resolveAdminOrganizationScope()); } catch { return null; } })() : null;
+    const created = await createPropertyNormalized(payload, scope?.organizationId);
     const property = created[0];
     if (!property?.id) {
       return NextResponse.json({ error: "Property record was not created." }, { status: 502 });
     }
 
     if (files.length) {
-      const uploads = await uploadPublicImages([files[0]], `properties/${property.id}`);
-      await updatePropertyImages(property.id, [uploads[0].url], uploads[0].url);
-      property.drive_photos_link = uploads[0].url;
+      const uploads = [];
+      for (const file of files) {
+        uploads.push(await uploadPublicMedia(file, {
+          organizationKey: scope?.slug || "limitless-realty",
+          organizationId: scope?.organizationId || undefined,
+          propertyId: String(property.id),
+          channel: "whatsapp",
+        }));
+      }
+      const firstImage = uploads.find((item) => item.mediaType === "image");
+      if (firstImage) property.drive_photos_link = firstImage.url;
     }
 
     return NextResponse.json({ property }, { status: 201 });
