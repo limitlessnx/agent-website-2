@@ -48,7 +48,8 @@ export default function NewPropertyForm() {
       <input name="location_city" placeholder="City/state" />
       <input name="type" placeholder="Type" />
       <select name="status" defaultValue="active"><option value="active">active</option><option value="inactive">inactive</option><option value="sold">sold</option></select>
-      <label className="admin-file-field"><span>Property image</span><input name="property_images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" /></label>
+      <label className="admin-file-field"><span>Property images</span><input name="property_images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label>
+      <label className="admin-file-field"><span>Property videos</span><input name="property_images" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" multiple /></label>
       <input name="drive_brochure_link" placeholder="Brochure link" />
       <textarea name="features" placeholder="Title/features" />
       <textarea name="description" placeholder="Brief/description" />
