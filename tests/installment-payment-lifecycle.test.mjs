@@ -94,3 +94,28 @@ test("Phase 3 payment completion stops reminders", () => {
   assert.match(migration, /then false/);
   assert.match(migration, /then null/);
 });
+
+
+test("Phase 4 starts the reminder clock on the agreed installment start date", () => {
+  const actions = read("app/dashboard/limitless/payments/actions.ts");
+  const runtime = read("lib/limitless-installment-reminder-runtime.ts");
+
+  assert.match(actions, /const nextReminderAt = startDate\.toISOString\(\)/);
+  assert.match(runtime, /The agreed start date is the first reminder firing point/);
+  assert.match(runtime, /new Date\(String\(plan\.start_at\)\)/);
+});
+
+test("Phase 4 installment reminders have a production scheduler", () => {
+  const task = read("src/trigger/limitless-installment-reminders.ts");
+
+  assert.match(task, /schedules\.task/);
+  assert.match(task, /limitless-installment-reminder-sweep/);
+  assert.match(task, /\*\/15 \* \* \* \*/);
+  assert.match(task, /Africa\/Lagos/);
+});
+
+test("Installment creation does not require an unrelated handover configuration", () => {
+  const actions = read("app/dashboard/limitless/payments/actions.ts");
+  assert.doesNotMatch(actions, /A handover agent name and WhatsApp number are required/);
+  assert.match(actions, /formData\.get\("assigned_agent"\)/);
+});
