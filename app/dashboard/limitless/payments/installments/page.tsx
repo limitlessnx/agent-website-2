@@ -81,7 +81,7 @@ export default async function InstallmentsPage() {
         <div className="admin-panel-header">
           <div>
             <h2>New installment plan</h2>
-            <p>There is no fixed periodic payment and no end date. The client can pay variable amounts until the outstanding balance reaches zero.</p>
+            <p>There is no fixed periodic payment amount. The plan has a defined start and end date, while reminders continue until the balance reaches zero or the plan is paused/cancelled.</p>
           </div>
         </div>
 
@@ -135,9 +135,14 @@ export default async function InstallmentsPage() {
             <input name="start_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
           </label>
 
+          <label>
+            End date
+            <input name="end_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+          </label>
+
           <div className="payment-inline-note">
-            <strong>No end date</strong>
-            <span>reminders continue until payment is complete or the plan is manually paused/cancelled.</span>
+            <strong>End date is the expected completion date</strong>
+            <span>an outstanding balance can remain overdue after this date and still requires follow-up until payment is complete.</span>
           </div>
 
           <label>
@@ -191,8 +196,10 @@ export default async function InstallmentsPage() {
               </div>
 
               <div className="payment-meta">
+                <span>Type: {plan.payment_type === "outright" ? "Outright" : "Installment"}</span>
                 <span>Status: {plan.status}</span>
                 <span>Cadence: {plan.frequency}</span>
+                <span>End date: {dateLabel(plan.end_at)}</span>
                 <span>Next reminder: {dateLabel(plan.next_reminder_at)}</span>
                 <span>Reminders: {plan.reminders_enabled ? "Active" : "Stopped"}</span>
               </div>
