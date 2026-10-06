@@ -16,7 +16,7 @@ import {
   updateReminderTemplate,
 } from "@/lib/limitless-payments";
 
-const CADENCES = new Set(["weekly", "biweekly", "monthly"]);
+const CADENCES = new Set(["weekly", "biweekly", "monthly"]);\n\nfunction cadenceDays(frequency: string) {\n  if (frequency === "weekly") return 7;\n  if (frequency === "monthly") return 30;\n  return 14;\n}
 
 function money(value: FormDataEntryValue | null) {
   const parsed = Number(String(value || "0").replace(/,/g, ""));
