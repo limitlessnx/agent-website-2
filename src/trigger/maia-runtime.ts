@@ -2,7 +2,7 @@ import { transcribeWhatsAppAudio } from "@/lib/whatsapp-media-transcription";
 import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { dispatchMaiaOutboundMessage } from "@/lib/maia-outbound";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import {
   queueLimitlessFollowup,
@@ -249,9 +249,9 @@ export const maiaProcessInboundMessage = task({
         }
       }
 
-      let delivery: Awaited<ReturnType<typeof sendWhatsAppMessage>> | null = null;
+      let delivery: Awaited<ReturnType<typeof dispatchMaiaOutboundMessage>> | null = null;
       if (payload.channel === "whatsapp" && payload.customerPhone) {
-        delivery = await sendWhatsAppMessage({
+        delivery = await dispatchMaiaOutboundMessage({
           organizationId: payload.organizationId,
           to: payload.customerPhone,
           text: result.reply,
