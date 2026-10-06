@@ -38,3 +38,5 @@ test("Phase 2 approval requires an owner or admin in the requested organization"
   assert.match(sql, /m\.user_id = p_actor_user_id/);
   assert.match(sql, /r\.slug in \('owner','admin'\)/);
 });
+
+// Guardrail suite marker: Phase 2 verification.
