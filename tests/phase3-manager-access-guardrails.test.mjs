@@ -36,10 +36,9 @@ test("Phase 3 rejection is tied to the requested organization", () => {
   assert.match(sql, /r\.slug in \('owner','admin'\)/);
 });
 
-test("Phase 3 removal cannot cross organization boundaries and preserves the account", () => {
+test("Phase 3 removal cannot cross organization boundaries", () => {
   const route = read("app/api/portal/team/access-requests/route.ts");
   const sql = read("supabase/migrations/20261005_manager_account_access_mvp.sql");
-  const memberSql = read("supabase/migrations/202609*.sql");
 
   assert.match(route, /member\.id===membershipId/);
   assert.match(route, /target\.role!==\"manager\"/);
