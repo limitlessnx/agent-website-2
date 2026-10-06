@@ -101,7 +101,7 @@ test("Phase 4 starts the reminder clock on the agreed installment start date", (
   const runtime = read("lib/limitless-installment-reminder-runtime.ts");
 
   assert.match(actions, /const nextReminderAt = startDate\.toISOString\(\)/);
-  assert.match(runtime, /The agreed start date is the first reminder firing point/);
+  assert.match(runtime, /const nextReminder = plan\.next_reminder_at/);
   assert.match(runtime, /new Date\(String\(plan\.start_at\)\)/);
 });
 
