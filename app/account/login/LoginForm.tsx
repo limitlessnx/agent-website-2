@@ -9,6 +9,7 @@ import PasswordField from "../PasswordField";
 export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invitationToken = "" }: { txRef?: string; nextPath?: string; invitationToken?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
@@ -22,6 +23,7 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
     event.preventDefault();
     setLoading(true);
     setError("");
+    setErrorCode("");
 
     try {
       const data = new FormData(event.currentTarget);
@@ -34,6 +36,7 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
 
       if (!response.ok) {
         setError(result.error || "Unable to sign in.");
+        setErrorCode(result.code || "");
         return;
       }
 
@@ -65,7 +68,7 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <PasswordField name="password" label="Password" autoComplete="current-password" />
       <div className="auth-inline-row"><Link href={`/account/forgot-password?next=${encodeURIComponent(safeNext)}`}>Forgot password?</Link></div>
-      {error ? <p className="admin-error">{error}</p> : null}
+      {error ? <div className="admin-error" role="alert"><p>{error}</p>{errorCode === "account_not_found" ? <Link href={signupHref}>Continue to create an account</Link> : null}</div> : null}
       <button type="submit" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</button>
       <p className="admin-muted">New to Fluxknight? <Link href={signupHref}>Create an account</Link></p>
     </form>
