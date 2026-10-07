@@ -45,3 +45,22 @@ test("Maia has a controlled public-web research tool", () => {
   assert.match(runtime, /https:\/\/api\.firecrawl\.dev\/v1\/search/);
   assert.match(runtime, /Never use web research to override the tenant catalog/);
 });
+
+
+test("property creation explains missing required fields before writing", () => {
+  for (const field of ["title", "price", "location_area", "location_city", "type", "features", "description"]) {
+    assert.match(form, new RegExp(`name="${field}"[^>]*required`));
+    assert.match(form, new RegExp(`\\[\"\\${field}\\",`));
+  }
+  assert.match(form, /Please complete:/);
+  assert.match(catalog, /code: "missing_property_fields"/);
+  assert.match(catalog, /fields: missing/);
+  assert.match(catalog, /status: 400/);
+});
+
+test("property creation failures stay on the form instead of redirecting", () => {
+  assert.match(form, /setError\(cause instanceof Error \? cause\.message/);
+  assert.match(form, /role="alert"/);
+  assert.match(form, /router\.refresh\(\)/);
+  assert.doesNotMatch(form, /router\.push\([^)]*error/i);
+});
