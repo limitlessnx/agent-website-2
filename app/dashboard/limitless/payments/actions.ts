@@ -319,7 +319,7 @@ export async function updatePlanStatusAction(formData: FormData) {
   const status = String(formData.get("status") || "active");
   const frequency = String(formData.get("frequency") || "").trim();
 
-  if (!["active", "completed", "paused", "cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
+  if (!["active", "due_soon", "overdue", "completed", "paused", "cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
   if (frequency && !CADENCES.has(frequency)) throw new Error("Invalid installment cadence.");
 
   const payload: Record<string, unknown> = {
