@@ -48,8 +48,23 @@ export async function POST(request: NextRequest) {
       payload = (await request.json()) as Record<string, unknown>;
     }
 
-    if (!String(payload.title || "").trim()) {
-      return NextResponse.json({ error: "Property title is required." }, { status: 400 });
+    const requiredFields = [
+      ["title", "Property title"],
+      ["price", "Price"],
+      ["location_area", "Area/community"],
+      ["location_city", "City/state"],
+      ["type", "Type"],
+      ["features", "Title/features"],
+      ["description", "Brief/description"],
+    ] as const;
+    const missing = requiredFields
+      .filter(([name]) => !String(payload[name] || "").trim())
+      .map(([, label]) => label);
+    if (missing.length) {
+      return NextResponse.json(
+        { error: `Please complete: ${missing.join(", ")}.`, code: "missing_property_fields", fields: missing },
+        { status: 400 },
+      );
     }
 
     const scope = await resolveAdminOrganizationScope();
