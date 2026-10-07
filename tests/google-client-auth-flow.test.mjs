@@ -33,3 +33,24 @@ test("Google OAuth context remains signed and short-lived",()=>{
   assert.match(auth,/getClientOAuthContext/);
   assert.match(auth,/createSignedToken/);
 });
+
+
+test("email login keeps nonexistent accounts on the login screen with a signup path",()=>{
+  const route=read("app/api/client-auth/login/route.ts");
+  const form=read("app/account/login/LoginForm.tsx");
+  const auth=read("lib/client-auth.ts");
+  assert.match(route,/clientAccountExists/);
+  assert.match(route,/code:"account_not_found"/);
+  assert.match(route,/No Fluxknight account exists for this email/);
+  assert.match(route,/The email or password is incorrect/);
+  assert.match(auth,/export async function clientAccountExists/);
+  assert.match(form,/errorCode === "account_not_found"/);
+  assert.match(form,/Continue to create an account/);
+  assert.match(form,/href=\{signupHref\}/);
+});
+
+test("email login still routes successful users to the requested destination",()=>{
+  const form=read("app/account/login/LoginForm.tsx");
+  assert.match(form,/router\\.push/);
+  assert.match(form,/router\\.refresh/);
+});
