@@ -8,8 +8,10 @@ function slugify(value:string){return value.toLowerCase().trim().replace(/[^a-z0
 function firstName(value:string,email:string){return value.trim().split(/\s+/)[0]||email.split("@")[0]||"there"}
 
 export async function POST(request:NextRequest){
+ const body=await request.json().catch(()=>({}));
+ const email=String(body.email||"").trim().toLowerCase();
+ const password=String(body.password||"");
  try{
-  const body=await request.json().catch(()=>({})),email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
   if(!email||!password)return NextResponse.json({error:"Email and password are required."},{status:400});
   const auth=await signInClient(email,password);if(!auth.user?.id)throw new Error("Supabase did not return a user record.");
   const metadata=auth.user.user_metadata||{},fullName=String(metadata.full_name||"").trim(),companyName=String(metadata.company_name||"").trim();
