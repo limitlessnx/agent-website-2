@@ -152,7 +152,8 @@ export async function createPaymentPlanAction(formData: FormData) {
   }
 
   revalidatePath("/dashboard/limitless/payments");
-  redirect("/dashboard/limitless/payments/installments");
+  revalidatePath("/dashboard/limitless/payments/installments");
+  redirect("/dashboard/limitless/payments/installments?success=installment-created");
 }
 
 export async function createOutrightPaymentAction(formData: FormData) {
