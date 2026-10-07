@@ -3,7 +3,7 @@ import { getProperties } from "@/lib/limitless-data";
 import { createPropertyNormalized } from "@/lib/limitless-property-write";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
-import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
+import { requireAdminSystemScope } from "@/lib/admin-organization-scope";
 import { uploadPublicMedia } from "@/lib/supabase-media";
 
 function value(formData: FormData, key: string) {
@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
   const session = await getAdminSession();
   const apiAuth = requireAutomationApiKey(request);
   if (!session && !apiAuth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const properties = await getProperties();
+  const scope = await requireAdminSystemScope("limitless-realty");
+  const properties = await getProperties(150, scope.organizationId);
   return NextResponse.json({ properties });
 }
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const scope = await resolveAdminOrganizationScope();
+    const scope = await requireAdminSystemScope("limitless-realty");
     const created = await createPropertyNormalized(payload, scope.organizationId);
     const property = created[0];
     if (!property?.id) {
