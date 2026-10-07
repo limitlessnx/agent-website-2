@@ -127,6 +127,21 @@ test("Fluxknight errors are user-safe and do not expose technical diagnostics", 
   assert.doesNotMatch(workspaceBoundary, /error\.digest.*<|digest.*error/i);
 });
 
+test("Friendly error boundaries cover global, dashboard, and tenant-scoped workspaces", () => {
+  const globalBoundary = read("app/error.tsx");
+  const rootBoundary = read("app/global-error.tsx");
+  const dashboardBoundary = read("app/dashboard/limitless/error.tsx");
+  const scope = read("lib/admin-organization-scope.ts");
+  for (const boundary of [globalBoundary, rootBoundary, dashboardBoundary]) {
+    assert.match(boundary, /toUserSafeMessage\(error\)/);
+    assert.doesNotMatch(boundary, /\{error\.message\}/);
+    assert.doesNotMatch(boundary, /<[^>]*>.*error\.digest/);
+  }
+  assert.match(scope, /context\.kind === "tenant"/);
+  assert.match(scope, /organizationId: String\(data\.id\)/);
+  assert.match(scope, /organizations/);
+});
+
 test("Phase 3 payment intent has a configured human handover target", () => {
   const migration = read("supabase/migrations/20261007150000_fix_limitless_installment_reminder_template_contract.sql");
   assert.match(migration, /handover_agent_phone.*2348127753308/);
