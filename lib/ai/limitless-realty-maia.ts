@@ -27,7 +27,7 @@ function propertyPrice(property: PropertyRecord) {
 }
 
 function compactProperty(property: PropertyRecord, price: number | null) {
-  return { id: property.id, title: property.title, type: property.type || "Property", area: property.location_area || "", city: property.location_city || "", location: [property.location_area, property.location_city].filter(Boolean).join(", "), price: property.price || "Price on request", priceValue: price, status: property.status || "active", features: property.features || "", description: property.description || "", photos: property.drive_photos_link, brochure: property.drive_brochure_link };
+  return { id: property.id, title: property.title, type: property.type || "Property", location: [property.location_area, property.location_city].filter(Boolean).join(", "), price: property.price || "Price on request", priceValue: price, status: property.status || "active", features: property.features || "", description: property.description || "", photos: property.drive_photos_link, brochure: property.drive_brochure_link };
 }
 
 export async function searchLimitlessProperties(message: string) {
