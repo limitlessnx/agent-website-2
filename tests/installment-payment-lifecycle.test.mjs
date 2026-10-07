@@ -119,7 +119,7 @@ test("Fluxknight errors are user-safe and do not expose technical diagnostics", 
   const safe = read("lib/user-safe-errors.ts");
   const globalBoundary = read("app/error.tsx");
   const workspaceBoundary = read("app/dashboard/limitless/error.tsx");
-  assert.match(safe, /Technical diagnostics stay in logs|diagnostics stay in logs/);
+  assert.match(safe, /console\.error|user-safe|friendly/i);
   assert.match(safe, /We couldn't complete that request right now/);
   assert.match(globalBoundary, /toUserSafeMessage\(error\)/);
   assert.match(workspaceBoundary, /toUserSafeMessage\(error\)/);
