@@ -61,3 +61,13 @@ test("installment layout has explicit desktop, tablet, and mobile guardrails", (
   assert.match(css, /grid-template-columns: 1fr/);
   assert.match(css, /grid-template-columns: minmax\(0,1fr\) auto 24px/);
 });
+
+
+test("installment action buttons expose truthful pending labels while preserving the spinner", () => {
+  const button = fs.readFileSync("app/dashboard/limitless/payments/PaymentSubmitButton.tsx", "utf8");
+  assert.match(button, /Creating…/);
+  assert.match(button, /Saving…/);
+  assert.match(button, /Updating…/);
+  assert.match(button, /payment-button-spinner/);
+  assert.match(button, /aria-busy=\{pending\}/);
+});
