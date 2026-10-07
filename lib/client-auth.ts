@@ -45,6 +45,34 @@ export async function signUpClient(email:string,password:string,fullName:string,
 }
 export async function resendClientVerification(email:string){return authRequest("resend",{type:"signup",email})}
 export async function signInClient(email:string,password:string){return authRequest("token?grant_type=password",{email,password})}
+
+type SupabaseAdminUser={id:string;email?:string;user_metadata?:Record<string,unknown>};
+type SupabaseAdminUsersResponse={users?:SupabaseAdminUser[]};
+
+async function adminAuthUsersRequest(path:string){
+ const{url,anonKey,projectRef}=authConfig();
+ const adminKey=(process.env.FLUXKNIGHT_SUPABASE_SERVICE_ROLE_KEY||process.env.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||"").trim();
+ if(!adminKey) return null;
+ try{
+  const response=await fetch(`${url}/auth/v1/admin/${path}`,{headers:{apikey:adminKey,Authorization:`Bearer ${adminKey}`},cache:"no-store"});
+  if(!response.ok){
+   console.error("Fluxknight Supabase admin auth lookup failed",{projectRef,status:response.status});
+   return null;
+  }
+  return(await response.json()) as SupabaseAdminUsersResponse;
+ }catch(error){
+  console.error("Fluxknight Supabase admin auth lookup connection failed",{projectRef,error:error instanceof Error?error.message:String(error)});
+  return null;
+ }
+}
+
+export async function clientAccountExists(email:string){
+ const normalized=email.trim().toLowerCase();
+ if(!normalized) return null;
+ const result=await adminAuthUsersRequest("users?page=1&per_page=1000");
+ if(!result?.users) return null;
+ return result.users.some(user=>String(user.email||"").trim().toLowerCase()===normalized);
+}
 function membershipSnapshot(membership:MembershipRow){const organization=normalizeRelation(membership.organizations);const role=normalizeRelation(membership.membership_roles?.[0]?.roles||null);return{membershipId:membership.id,organizationId:membership.organization_id,organizationSlug:organization?.slug||"",role:role?.slug||"team-member"}}
 export async function getMembershipForOrganization(userId:string,organizationId:string){const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);return rows[0]?membershipSnapshot(rows[0]):null}
 export async function getActiveManagerOrganizations(userId:string){

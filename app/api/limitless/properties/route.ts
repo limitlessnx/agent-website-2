@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
   const session = await getAdminSession();
   const apiAuth = requireAutomationApiKey(request);
   if (!session && !apiAuth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const properties = await getProperties();
+  const scope = await resolveAdminOrganizationScope();
+  if (scope.kind !== "system" || scope.systemId !== "limitless-realty") {
+    return NextResponse.json(
+      { error: "Switch to the Limitless Realty workspace before accessing this catalog.", code: "wrong_organization_context" },
+      { status: 403 },
+    );
+  }
+  const properties = await getProperties(150, scope.organizationId);
   return NextResponse.json({ properties });
 }
 
@@ -48,11 +55,32 @@ export async function POST(request: NextRequest) {
       payload = (await request.json()) as Record<string, unknown>;
     }
 
-    if (!String(payload.title || "").trim()) {
-      return NextResponse.json({ error: "Property title is required." }, { status: 400 });
+    const requiredFields = [
+      ["title", "Property title"],
+      ["price", "Price"],
+      ["location_area", "Area/community"],
+      ["location_city", "City/state"],
+      ["type", "Type"],
+      ["features", "Title/features"],
+      ["description", "Brief/description"],
+    ] as const;
+    const missing = requiredFields
+      .filter(([name]) => !String(payload[name] || "").trim())
+      .map(([, label]) => label);
+    if (missing.length) {
+      return NextResponse.json(
+        { error: `Please complete: ${missing.join(", ")}.`, code: "missing_property_fields", fields: missing },
+        { status: 400 },
+      );
     }
 
     const scope = await resolveAdminOrganizationScope();
+    if (scope.kind !== "system" || scope.systemId !== "limitless-realty") {
+      return NextResponse.json(
+        { error: "Switch to the Limitless Realty workspace before saving a property.", code: "wrong_organization_context" },
+        { status: 403 },
+      );
+    }
     const created = await createPropertyNormalized(payload, scope.organizationId);
     const property = created[0];
     if (!property?.id) {

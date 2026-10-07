@@ -114,6 +114,15 @@ export async function resolveAdminOrganizationScope(): Promise<AdminOrganization
   );
 }
 
+export async function requireAdminSystemScope(systemId: SystemOrganizationId): Promise<AdminOrganizationScope> {
+  const scope = await resolveAdminOrganizationScope();
+  if (scope.kind !== "system" || scope.systemId !== systemId) {
+    const name = SYSTEM_SLUGS[systemId] === "limitless-realty" ? "Limitless Realty" : SYSTEM_SLUGS[systemId];
+    throw new Error("Switch to the " + name + " workspace before changing this catalog.");
+  }
+  return scope;
+}
+
 export function organizationHomeHref(scope: Pick<AdminOrganizationScope, "kind" | "systemId">) {
   if (scope.kind === "system" && scope.systemId === "limitless-realty") return "/dashboard/limitless/leads";
   if (scope.kind === "system" && scope.systemId === "gencouv") return "/dashboard/gencouv";

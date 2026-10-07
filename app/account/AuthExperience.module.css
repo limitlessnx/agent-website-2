@@ -281,6 +281,13 @@
 }
 
 .card :global(.admin-form-message),
+.card :global(.admin-error) p {
+  margin: 0 0 7px !important;
+}
+.card :global(.admin-error a) {
+  color: #d8b4fe !important;
+  font-weight: 800 !important;
+}
 .card :global(.admin-error) {
   margin: 0 !important;
   padding: 11px 13px !important;
@@ -333,6 +340,22 @@
   border-radius: 50%;
   background: #79d5a5;
   box-shadow: 0 0 0 4px rgba(74,222,128,.045), 0 0 12px rgba(74,222,128,.2);
+}
+
+
+@media (min-width: 900px) {
+  .shell {
+    width: min(100%, 720px);
+  }
+
+  .card {
+    width: min(100%, 560px);
+    padding: 38px 42px;
+  }
+
+  .signupCard {
+    width: min(100%, 620px);
+  }
 }
 
 @media (max-width: 560px) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { provisionClientOrganization } from "@/lib/client-onboarding";
-import { getMembershipForOrganization, getPendingClientSetupSession, getPrimaryMembership, setClientSession, setPendingClientSetupSession, signInClient } from "@/lib/client-auth";
+import { clientAccountExists, getMembershipForOrganization, getPendingClientSetupSession, getPrimaryMembership, setClientSession, setPendingClientSetupSession, signInClient } from "@/lib/client-auth";
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
 import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
@@ -8,8 +8,10 @@ function slugify(value:string){return value.toLowerCase().trim().replace(/[^a-z0
 function firstName(value:string,email:string){return value.trim().split(/\s+/)[0]||email.split("@")[0]||"there"}
 
 export async function POST(request:NextRequest){
+ const body=await request.json().catch(()=>({}));
+ const email=String(body.email||"").trim().toLowerCase();
+ const password=String(body.password||"");
  try{
-  const body=await request.json().catch(()=>({})),email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
   if(!email||!password)return NextResponse.json({error:"Email and password are required."},{status:400});
   const auth=await signInClient(email,password);if(!auth.user?.id)throw new Error("Supabase did not return a user record.");
   const metadata=auth.user.user_metadata||{},fullName=String(metadata.full_name||"").trim(),companyName=String(metadata.company_name||"").trim();
@@ -29,5 +31,13 @@ export async function POST(request:NextRequest){
   await setClientSession({userId:auth.user.id,email:auth.user.email||email,organizationId:membership.organizationId,organizationSlug:membership.organizationSlug,membershipId:membership.membershipId,role:membership.role,issuedAt:Date.now()});
   await sendFluxknightLifecycleEvent({eventKey:`welcome:${auth.user.id}:${membership.organizationId}`,event:"fluxknight.user.verified",email:auth.user.email||email,userId:auth.user.id,organizationId:membership.organizationId,payload:{first_name:firstName(fullName,auth.user.email||email),company_name:companyName||membership.organizationSlug||"your business",dashboard_url:fluxknightPortalUrl()}});
   return NextResponse.json({ok:true,requires_workspace_setup:false,organization_slug:membership.organizationSlug});
- }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to sign in."},{status:401})}
+ }catch(error){
+  const message=error instanceof Error?error.message:"Unable to sign in.";
+  if(message==="Invalid login credentials."){
+   const exists=await clientAccountExists(email);
+   if(exists===false)return NextResponse.json({code:"account_not_found",error:"No Fluxknight account exists for this email."},{status:401});
+   if(exists===true)return NextResponse.json({error:"The email or password is incorrect."},{status:401});
+  }
+  return NextResponse.json({error:message},{status:401});
+}
 }

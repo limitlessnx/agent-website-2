@@ -36,6 +36,15 @@ function startAtFromForm(value: string) {
   return date.toISOString();
 }
 
+function reminderStartAtFromForm(mode: string, dateValue: string, timeValue: string) {
+  if (mode === "immediate") return new Date().toISOString();
+  if (!dateValue || !timeValue) throw new Error("Choose the first reminder date and time, or select Send immediately.");
+  const date = new Date(dateValue + "T" + timeValue + ":00+01:00");
+  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid first reminder date and time.");
+  if (date.getTime() <= Date.now()) throw new Error("The scheduled first reminder must be in the future. Select Send immediately for an immediate reminder.");
+  return date.toISOString();
+}
+
 function endAtFromForm(value: string) {
   if (!value) return null;
   const date = new Date(value + "T23:59:59.999Z");
@@ -89,6 +98,11 @@ export async function createPaymentPlanAction(formData: FormData) {
   const frequency = String(formData.get("frequency") || "biweekly").trim();
   const startAt = startAtFromForm(String(formData.get("start_date") || ""));
   const endAt = endAtFromForm(String(formData.get("end_date") || ""));
+  const reminderStartMode = String(formData.get("reminder_start_mode") || "scheduled").trim();
+  const remindersEnabled = formData.get("reminders_enabled") === "on";
+  const firstReminderAt = remindersEnabled
+    ? reminderStartAtFromForm(reminderStartMode, String(formData.get("reminder_start_date") || ""), String(formData.get("reminder_start_time") || ""))
+    : null;
   const handoverAgentName = String(formData.get("handover_agent_name") || "Limitless Realty Handover").trim();
   const handoverAgentPhone = String(formData.get("handover_agent_phone") || "2348127753308").trim();
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
@@ -113,8 +127,7 @@ export async function createPaymentPlanAction(formData: FormData) {
     });
   }
 
-  const startDate = new Date(startAt);
-  const nextReminderAt = new Date(startDate.getTime() + cadenceDays(frequency) * 24 * 60 * 60 * 1000).toISOString();
+  const nextReminderAt = firstReminderAt;
 
   const plan = await createPaymentPlan({
     organization_id: organizationId,
@@ -134,7 +147,7 @@ export async function createPaymentPlanAction(formData: FormData) {
     handover_agent_name: handoverAgentName,
     handover_agent_phone: handoverAgentPhone,
     notes: String(formData.get("notes") || "").trim() || null,
-    reminders_enabled: formData.get("reminders_enabled") === "on",
+    reminders_enabled: remindersEnabled,
     status: initialPaid >= agreedAmount ? "completed" : "active",
   });
 
@@ -306,7 +319,7 @@ export async function updatePlanStatusAction(formData: FormData) {
   const status = String(formData.get("status") || "active");
   const frequency = String(formData.get("frequency") || "").trim();
 
-  if (!["active", "completed", "paused", "cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
+  if (!["active", "due_soon", "overdue", "completed", "paused", "cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
   if (frequency && !CADENCES.has(frequency)) throw new Error("Invalid installment cadence.");
 
   const payload: Record<string, unknown> = {

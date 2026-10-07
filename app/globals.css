@@ -99,7 +99,8 @@ a[href="/evaluation"] {
 .hero-buttons a::before,
 .production-pricing-route-link a::before,
 .evaluation-conversion-actions a::before,
-a[href="/evaluation"]::before {
+a[href="/evaluation"]::before,
+.admin-button::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -117,7 +118,8 @@ a[href="/evaluation"]::before {
 .hero-buttons a:hover,
 .production-pricing-route-link a:hover,
 .evaluation-conversion-actions a:hover,
-a[href="/evaluation"]:hover {
+a[href="/evaluation"]:hover,
+.admin-button:hover:not(:disabled) {
   transform: translateY(-1px);
   border-color: rgba(191,164,236,.42) !important;
   background:
@@ -138,7 +140,8 @@ a[href="/evaluation"]:hover {
 .hero-buttons a:active,
 .production-pricing-route-link a:active,
 .evaluation-conversion-actions a:active,
-a[href="/evaluation"]:active {
+a[href="/evaluation"]:active,
+.admin-button:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 2px 14px rgba(0,0,0,.2) !important;
 }
@@ -388,6 +391,7 @@ a[href="/evaluation"]:active {
   .production-pricing-route-link a,
   .evaluation-conversion-actions a,
   a[href="/evaluation"],
+  .admin-button,
   .flux-carousel-segment,
   .admin-login-card input,
   .admin-login-card > button[type="submit"] { transition: none !important; }
@@ -402,3 +406,46 @@ a[href="/evaluation"]:active {
 .flux-safe-error-card p{margin:0;color:#aaa0c0;line-height:1.6;font-size:.9rem}
 .flux-safe-error-card button{justify-self:center;margin-top:6px;border:1px solid rgba(180,139,255,.25);border-radius:11px;padding:11px 17px;color:#f7f4ff;background:rgba(124,58,237,.14);font:inherit;font-weight:750;cursor:pointer;transition:transform .16s ease,background .16s ease}
 .flux-safe-error-card button:hover{transform:translateY(-1px);background:rgba(124,58,237,.22)}
+
+
+/* Dashboard action buttons use the same Fluxknight metallic/glass language as the public UI. */
+.admin-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.admin-button:not(.secondary) {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.025)) padding-box,
+    linear-gradient(110deg, #6e29d9 0%, #8b2fe5 48%, #b9438a 100%) border-box !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.2),
+    inset 0 -12px 24px rgba(0,0,0,.12),
+    0 14px 34px rgba(0,0,0,.24),
+    0 0 24px rgba(124,92,246,.12) !important;
+}
+.admin-button.secondary {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.025)) padding-box,
+    linear-gradient(120deg, rgba(234,229,241,.52), rgba(135,112,167,.16) 38%, rgba(142,92,246,.52) 72%, rgba(238,234,245,.3)) border-box !important;
+}
+.admin-button:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+  transform: none !important;
+}
+@media (max-width: 640px) {
+  .admin-button {
+    min-height: 46px;
+    padding: 10px 14px;
+  }
+}

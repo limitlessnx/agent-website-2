@@ -45,3 +45,53 @@ test("Maia has a controlled public-web research tool", () => {
   assert.match(runtime, /https:\/\/api\.firecrawl\.dev\/v1\/search/);
   assert.match(runtime, /Never use web research to override the tenant catalog/);
 });
+
+
+test("property creation explains missing required fields before writing", () => {
+  for (const field of ["title", "price", "location_area", "location_city", "type", "features", "description"]) {
+    assert.match(form, new RegExp(`name="${field}"[^>]*required`));
+    assert.match(form, new RegExp('\\\\["' + field + '",'));
+
+  }
+  assert.match(form, /Please complete:/);
+  assert.match(catalog, /code: "missing_property_fields"/);
+  assert.match(catalog, /fields: missing/);
+  assert.match(catalog, /status: 400/);
+});
+
+test("property creation failures stay on the form instead of redirecting", () => {
+  assert.match(form, /setError\(cause instanceof Error \? cause\.message/);
+  assert.match(form, /role="alert"/);
+  assert.match(form, /router\.refresh\(\)/);
+  assert.doesNotMatch(form, /router\.push\([^)]*error/i);
+});
+
+
+test("Limitless property routes reject non-Limitless organization contexts", async () => {
+  const scope = await readFile(new URL("../lib/admin-organization-scope.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/dashboard/limitless/properties/page.tsx", import.meta.url), "utf8");
+  assert.match(scope, /requireAdminSystemScope/);
+  assert.match(page, /scope\.systemId !== "limitless-realty"/);
+  assert.match(catalog, /code: "wrong_organization_context"/);
+  assert.match(catalog, /status: 403/);
+});
+
+test("Limitless property CRUD uses the resolved organization ID for every mutation", async () => {
+  const data = await readFile(new URL("../lib/limitless-data.ts", import.meta.url), "utf8");
+  assert.match(data, /getProperties\(limit=100,organizationId=LIMITLESS_REALTY_ORGANIZATION_ID\)/);
+  assert.match(data, /createProperty\(payload:Partial<PropertyRecord>,organizationId=LIMITLESS_REALTY_ORGANIZATION_ID\)/);
+  assert.match(data, /updateProperty\(propertyId:string,payload:Partial<PropertyRecord>,organizationId=LIMITLESS_REALTY_ORGANIZATION_ID\)/);
+  assert.match(data, /deleteProperty\(propertyId:string,organizationId=LIMITLESS_REALTY_ORGANIZATION_ID\)/);
+  assert.match(data, /updatePropertyImageLink\(propertyId:string,drivePhotosLink:string,organizationId=LIMITLESS_REALTY_ORGANIZATION_ID\)/);
+  assert.match(actions, /createProperty\([^;]+scope\.organizationId/);
+  assert.match(actions, /updateProperty\([^;]+scope\.organizationId/);
+  assert.match(actions, /deleteProperty\(propertyId,scope\.organizationId\)/);
+  assert.match(actions, /updatePropertyImageLink\(propertyId,uploaded\.url,scope\.organizationId\)/);
+});
+
+test("Maia catalog exposes area and city as explicit property fields", async () => {
+  const maiaCatalog = await readFile(new URL("../lib/ai/limitless-realty-maia.ts", import.meta.url), "utf8");
+  assert.match(maiaCatalog, /area: property\.location_area \|\| ""/);
+  assert.match(maiaCatalog, /city: property\.location_city \|\| ""/);
+  assert.match(maiaCatalog, /location: \[property\.location_area, property\.location_city\]/);
+});

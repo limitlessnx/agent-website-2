@@ -155,3 +155,9 @@ test("Phase 3 payment completion stops reminders", () => {
   assert.match(migration, /then false/);
   assert.match(migration, /then null/);
 });
+
+
+test("installment status controls accept every status exposed by the dashboard",()=>{
+  const actions=read("app/dashboard/limitless/payments/actions.ts");
+  for(const status of ["active","due_soon","overdue","completed","paused","cancelled"]) assert.match(actions,new RegExp('"' + status + '"'));
+});

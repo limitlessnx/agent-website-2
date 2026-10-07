@@ -33,3 +33,35 @@ test("Google OAuth context remains signed and short-lived",()=>{
   assert.match(auth,/getClientOAuthContext/);
   assert.match(auth,/createSignedToken/);
 });
+
+
+test("email login keeps nonexistent accounts on the login screen with a signup path",()=>{
+  const route=read("app/api/client-auth/login/route.ts");
+  const form=read("app/account/login/LoginForm.tsx");
+  const auth=read("lib/client-auth.ts");
+  assert.match(route,/clientAccountExists/);
+  assert.match(route,/code:"account_not_found"/);
+  assert.match(route,/No Fluxknight account exists for this email/);
+  assert.match(route,/The email or password is incorrect/);
+  assert.match(auth,/export async function clientAccountExists/);
+  assert.match(auth,/auth\/v1\/admin/);
+  assert.match(auth,/users\?page=1&per_page=1000/);
+  assert.match(form,/errorCode === "account_not_found"/);
+  assert.match(form,/Continue to create an account/);
+  assert.match(form,/href=\{signupHref\}/);
+});
+
+test("email login still routes successful users to the requested destination",()=>{
+  const form=read("app/account/login/LoginForm.tsx");
+  assert.match(form,/router\\.push/);
+  assert.match(form,/router\\.refresh/);
+});
+
+
+test("desktop auth cards use a shared centered geometry",()=>{
+  const css=read("app/account/AuthExperience.module.css");
+  assert.match(css,/@media \(min-width: 900px\)/);
+  assert.match(css,/\.shell \{[\s\S]*?width: min\(100%, 720px\)/);
+  assert.match(css,/\.card \{[\s\S]*?width: min\(100%, 560px\)/);
+  assert.match(css,/\.signupCard \{[\s\S]*?width: min\(100%, 620px\)/);
+});
