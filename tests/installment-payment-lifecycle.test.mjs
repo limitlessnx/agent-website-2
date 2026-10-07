@@ -110,3 +110,11 @@ test("Phase 3 payment completion stops reminders", () => {
   assert.match(migration, /then false/);
   assert.match(migration, /then null/);
 });
+
+
+test("Phase 3 enforces the exact seven-variable approved Meta template order", () => {
+  const cron = read("app/api/cron/limitless-installment-reminders/route.ts");
+  assert.match(cron, /const expectedVariableKeys = \[\s*"client_name",\s*"property_title",\s*"amount_paid",\s*"outstanding_balance",\s*"handover_agent_name",\s*"handover_agent_phone",\s*"company_name"/s);
+  assert.match(cron, /variableKeys.length !== expectedVariableKeys.length/);
+  assert.match(cron, /variableKeys.some\(\(key, index\) => key !== expectedVariableKeys\[index\]\)/);
+});
