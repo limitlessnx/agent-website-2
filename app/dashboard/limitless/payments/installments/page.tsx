@@ -61,6 +61,21 @@ export default async function InstallmentsPage({ searchParams }: { searchParams?
         <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
         <label>Start date<input name="start_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required /></label>
         <label>End date<input name="end_date" type="date" /></label>
+        <div className="payment-reminder-schedule-card">
+          <strong>First reminder</strong>
+          <span>Choose whether the first reminder goes out immediately or at a specific Lagos date and time.</span>
+          <label>When should the first reminder be sent?
+            <select name="reminder_start_mode" defaultValue="scheduled">
+              <option value="scheduled">Schedule for a date and time</option>
+              <option value="immediate">Send immediately</option>
+            </select>
+          </label>
+          <div className="payment-reminder-schedule-fields">
+            <label>Date<input name="reminder_start_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} /></label>
+            <label>Time<input name="reminder_start_time" type="time" defaultValue="09:00" /></label>
+          </div>
+          <small>Scheduled times use Africa/Lagos time. Repeat cadence advances from the actual reminder delivery.</small>
+        </div>
         <input type="hidden" name="handover_agent_name" value="Limitless Realty Handover" />
         <input type="hidden" name="handover_agent_phone" value="2348127753308" />
         <div className="payment-handover-card"><strong>Assigned agent</strong><span>Limitless Realty Handover</span><small>WhatsApp: 2348127753308</small></div>
