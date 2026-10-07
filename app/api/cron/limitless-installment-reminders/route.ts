@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       .limit(500),
     admin.from("organizations").select("id,name").eq("status", "active"),
     admin.from("reminder_templates").select("id,organization_id,name,channel,message_template,enabled").eq("enabled", true).eq("channel", "whatsapp").order("position", { ascending: true }),
-    admin.from("whatsapp_template_configs").select("organization_id,purpose,template_name,language_code,status").eq("purpose", "installment_payment_reminder").eq("status", "active"),
+    admin.from("whatsapp_template_configs").select("organization_id,purpose,template_name,language_code,status,variable_keys").eq("purpose", "installment_payment_reminder").eq("status", "active"),
   ]);
 
   if (planError || orgError || templateError || whatsappTemplateError) {
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
     if (!templateMap.has(key)) templateMap.set(key, { id: String(template.id), message_template: String(template.message_template || "") });
   }
 
-  const whatsappConfigMap = new Map<string, { template_name: string; language_code: string }>();
+  const whatsappConfigMap = new Map<string, { template_name: string; language_code: string; variable_keys: string[] }>();
   for (const config of whatsappTemplates || []) {
     whatsappConfigMap.set(String(config.organization_id), {
       template_name: String(config.template_name),
