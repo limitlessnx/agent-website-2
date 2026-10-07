@@ -1,12 +1,14 @@
 import EvaluationLeadsManager from "@/components/admin/EvaluationLeadsManager";
 import { getEvaluationLeads } from "@/lib/evaluation-leads";
+import { getFluxknightPlatformOrganizationId } from "@/lib/canonical-customer";
 import { getLeoPublicLeads } from "@/lib/leo-public-leads";
 
 export const dynamic = "force-dynamic";
 
 export default async function EvaluationsPage() {
+  const organizationId = await getFluxknightPlatformOrganizationId();
   const [leads, leoLeads] = await Promise.all([
-    getEvaluationLeads(500),
+    getEvaluationLeads(500, organizationId),
     getLeoPublicLeads(100).catch(() => []),
   ]);
   const total = leads.length;
