@@ -113,6 +113,20 @@ test("Phase 3 installment creation form sends the required handover fields", () 
   assert.match(actions, /formData\.get\("handover_agent_phone"\)/);
 });
 
+test("Fluxknight errors are user-safe and do not expose technical diagnostics", () => {
+  const safe = read("lib/user-safe-errors.ts");
+  const globalBoundary = read("app/error.tsx");
+  const workspaceBoundary = read("app/dashboard/limitless/error.tsx");
+  assert.match(safe, /Technical diagnostics stay in logs|diagnostics stay in logs/);
+  assert.match(safe, /We couldn't complete that request right now/);
+  assert.match(globalBoundary, /toUserSafeMessage\(error\)/);
+  assert.match(workspaceBoundary, /toUserSafeMessage\(error\)/);
+  assert.doesNotMatch(globalBoundary, /error\.message/);
+  assert.doesNotMatch(workspaceBoundary, /error\.message/);
+  assert.doesNotMatch(globalBoundary, /error\.digest.*<|digest.*error/i);
+  assert.doesNotMatch(workspaceBoundary, /error\.digest.*<|digest.*error/i);
+});
+
 test("Phase 3 payment intent has a configured human handover target", () => {
   const migration = read("supabase/migrations/20261007150000_fix_limitless_installment_reminder_template_contract.sql");
   assert.match(migration, /handover_agent_phone.*2348127753308/);
