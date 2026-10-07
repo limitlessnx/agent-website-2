@@ -16,6 +16,8 @@ set
     'provider_status', 'approved',
     'organization_slug', 'limitless-realty',
     'approved_template_scope', 'installment_payment_reminder',
+    'company_name', 'Landsmith Estate',
+    'handover_agent_phone', '2348127753308',
     'approved_variable_order', jsonb_build_array(
       'client_name',
       'property_title',
@@ -46,7 +48,9 @@ begin
         'client_name','property_title','amount_paid','outstanding_balance',
         'handover_agent_name','handover_agent_phone','company_name'
       )
+      and metadata->>'company_name' = 'Landsmith Estate'
+      and metadata->>'handover_agent_phone' = '2348127753308'
   ) then
-    raise exception 'Approved Limitless Realty installment reminder template contract is not active';
+    raise exception 'Approved installment reminder template contract is not configured for Landsmith Estate';
   end if;
 end $$;
