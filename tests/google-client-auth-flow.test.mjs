@@ -54,3 +54,12 @@ test("email login still routes successful users to the requested destination",()
   assert.match(form,/router\\.push/);
   assert.match(form,/router\\.refresh/);
 });
+
+
+test("desktop auth cards use a shared centered geometry",()=>{
+  const css=read("app/account/AuthExperience.module.css");
+  assert.match(css,/@media \(min-width: 900px\)/);
+  assert.match(css,/\.shell \{[\s\S]*?width: min\(100%, 720px\)/);
+  assert.match(css,/\.card \{[\s\S]*?width: min\(100%, 560px\)/);
+  assert.match(css,/\.signupCard \{[\s\S]*?width: min\(100%, 620px\)/);
+});
