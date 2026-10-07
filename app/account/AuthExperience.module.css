@@ -281,6 +281,13 @@
 }
 
 .card :global(.admin-form-message),
+.card :global(.admin-error) p {
+  margin: 0 0 7px !important;
+}
+.card :global(.admin-error a) {
+  color: #d8b4fe !important;
+  font-weight: 800 !important;
+}
 .card :global(.admin-error) {
   margin: 0 !important;
   padding: 11px 13px !important;
