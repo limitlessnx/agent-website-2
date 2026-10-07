@@ -3,7 +3,7 @@ import { getProperties } from "@/lib/limitless-data";
 import { createPropertyNormalized } from "@/lib/limitless-property-write";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
-import { requireAdminSystemScope } from "@/lib/admin-organization-scope";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { uploadPublicMedia } from "@/lib/supabase-media";
 
 function value(formData: FormData, key: string) {
@@ -14,7 +14,13 @@ export async function GET(request: NextRequest) {
   const session = await getAdminSession();
   const apiAuth = requireAutomationApiKey(request);
   if (!session && !apiAuth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const scope = await requireAdminSystemScope("limitless-realty");
+  const scope = await resolveAdminOrganizationScope();
+  if (scope.kind !== "system" || scope.systemId !== "limitless-realty") {
+    return NextResponse.json(
+      { error: "Switch to the Limitless Realty workspace before accessing this catalog.", code: "wrong_organization_context" },
+      { status: 403 },
+    );
+  }
   const properties = await getProperties(150, scope.organizationId);
   return NextResponse.json({ properties });
 }
@@ -68,7 +74,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const scope = await requireAdminSystemScope("limitless-realty");
+    const scope = await resolveAdminOrganizationScope();
+    if (scope.kind !== "system" || scope.systemId !== "limitless-realty") {
+      return NextResponse.json(
+        { error: "Switch to the Limitless Realty workspace before saving a property.", code: "wrong_organization_context" },
+        { status: 403 },
+      );
+    }
     const created = await createPropertyNormalized(payload, scope.organizationId);
     const property = created[0];
     if (!property?.id) {
