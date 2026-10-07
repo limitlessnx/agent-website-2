@@ -85,7 +85,23 @@ test("Phase 3 reminder runtime is tenant independent and installment-only", () =
   assert.match(cron, /installment_payment_reminder/);
   assert.match(cron, /outstanding_balance/);
   assert.match(cron, /reminders_enabled/);
+  assert.match(cron, /property_title/);
   assert.doesNotMatch(cron, /b15f21b4-5697-4d21-9421-8a34eae3476d/);
+});
+
+test("Phase 3 uses the approved installment Meta template variable contract", () => {
+  const cron = read("app/api/cron/limitless-installment-reminders/route.ts");
+  const activation = read("supabase/migrations/20261007120000_activate_limitless_installment_reminders.sql");
+
+  assert.match(cron, /client_name: String\(plan\.client_name/);
+  assert.match(cron, /property_title: String\(plan\.property_title/);
+  assert.match(cron, /outstanding_balance: formatMoney/);
+  assert.match(cron, /templatePurpose: "installment_payment_reminder"/);
+  assert.match(activation, /installment_payment_reminder/);
+  assert.match(activation, /limitless_realty_reminder/);
+  assert.match(activation, /en_US/);
+  assert.match(activation, /\["client_name","property_title","outstanding_balance"\]/);
+  assert.match(activation, /provider_status.*approved/);
 });
 
 test("Phase 3 payment completion stops reminders", () => {
