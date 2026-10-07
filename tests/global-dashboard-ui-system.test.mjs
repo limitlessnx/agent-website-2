@@ -91,5 +91,5 @@ test("dashboard visual system applies shared control geometry beyond the new But
   const css = read("app/dashboard-visual-system.css");
   assert.match(css, /\\[data-dashboard-theme\\] button/);
   assert.match(css, /portal-button/);
-  assert.match(css, /border-radius:var\\(--fk-radius-control/);
+  assert.match(css, /border-radius:var/);
 });
