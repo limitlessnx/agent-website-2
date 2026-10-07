@@ -108,9 +108,11 @@ test("Phase 3 installment creation form sends the required handover fields", () 
   const actions = read("app/dashboard/limitless/payments/actions.ts");
   assert.match(page, /name="handover_agent_name"/);
   assert.match(page, /name="handover_agent_phone"/);
-  assert.match(page, /defaultValue="2348127753308"/);
-  assert.match(actions, /formData\.get\("handover_agent_name"\)/);
-  assert.match(actions, /formData\.get\("handover_agent_phone"\)/);
+  assert.match(page, /value="2348127753308"/);
+  assert.match(page, /payment-handover-card/);
+  assert.match(page, /Limitless Realty Handover/);
+  assert.match(actions, /formData\.get\("handover_agent_name"\) \|\| "Limitless Realty Handover"/);
+  assert.match(actions, /formData\.get\("handover_agent_phone"\) \|\| "2348127753308"/);
 });
 
 test("Fluxknight errors are user-safe and do not expose technical diagnostics", () => {
