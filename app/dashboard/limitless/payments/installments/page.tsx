@@ -36,7 +36,9 @@ export default async function InstallmentsPage() {
         <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
         <label>Start date<input name="start_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required /></label>
         <label>End date<input name="end_date" type="date" /></label>
-        <input name="assigned_agent" placeholder="Assigned agent" />
+        <input type="hidden" name="handover_agent_name" value="Limitless Realty Handover" />
+        <input type="hidden" name="handover_agent_phone" value="2348127753308" />
+        <div className="payment-handover-card"><strong>Assigned agent</strong><span>Limitless Realty Handover</span><small>WhatsApp: 2348127753308</small></div>
         <textarea name="notes" placeholder="Notes" rows={3} />
         <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
         <PaymentSubmitButton>Create installment plan</PaymentSubmitButton>

@@ -89,8 +89,8 @@ export async function createPaymentPlanAction(formData: FormData) {
   const frequency = String(formData.get("frequency") || "biweekly").trim();
   const startAt = startAtFromForm(String(formData.get("start_date") || ""));
   const endAt = endAtFromForm(String(formData.get("end_date") || ""));
-  const handoverAgentName = String(formData.get("handover_agent_name") || "").trim();
-  const handoverAgentPhone = String(formData.get("handover_agent_phone") || "").trim();
+  const handoverAgentName = String(formData.get("handover_agent_name") || "Limitless Realty Handover").trim();
+  const handoverAgentPhone = String(formData.get("handover_agent_phone") || "2348127753308").trim();
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
 
   if (endAt && new Date(endAt).getTime() < new Date(startAt).getTime()) {

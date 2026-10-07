@@ -392,3 +392,13 @@ a[href="/evaluation"]:active {
   .admin-login-card input,
   .admin-login-card > button[type="submit"] { transition: none !important; }
 }
+
+
+/* Human-readable error recovery states. Technical diagnostics stay in logs. */
+.flux-safe-error{min-height:70svh;display:grid;place-items:center;padding:48px 18px;background:radial-gradient(circle at 50% 20%,rgba(124,58,237,.1),transparent 32rem)}
+.flux-safe-error-card{width:min(100%,560px);display:grid;gap:12px;padding:28px;border:1px solid rgba(180,139,255,.18);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));box-shadow:0 24px 70px rgba(0,0,0,.28);text-align:center}
+.flux-safe-error-eyebrow{font-size:.68rem;text-transform:uppercase;letter-spacing:.13em;color:#a995d4;font-weight:800}
+.flux-safe-error-card h1{margin:0;color:#f7f4ff;font-size:clamp(1.35rem,3vw,1.8rem);letter-spacing:-.025em}
+.flux-safe-error-card p{margin:0;color:#aaa0c0;line-height:1.6;font-size:.9rem}
+.flux-safe-error-card button{justify-self:center;margin-top:6px;border:1px solid rgba(180,139,255,.25);border-radius:11px;padding:11px 17px;color:#f7f4ff;background:rgba(124,58,237,.14);font:inherit;font-weight:750;cursor:pointer;transition:transform .16s ease,background .16s ease}
+.flux-safe-error-card button:hover{transform:translateY(-1px);background:rgba(124,58,237,.22)}
