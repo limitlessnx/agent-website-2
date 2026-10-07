@@ -3,9 +3,14 @@ import DeletePropertyButton from "./DeletePropertyButton";
 import NewPropertyForm from "./NewPropertyForm";
 import { isGoogleDriveConfigured } from "@/lib/google-drive";
 import { getProperties } from "@/lib/limitless-data";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 export default async function PropertiesPage() {
-  const properties = await getProperties(150);
+  const scope = await resolveAdminOrganizationScope();
+  if (scope.kind !== "system" || scope.systemId !== "limitless-realty") {
+    return <div className="admin-page"><div className="admin-page-header"><div><p className="admin-kicker">Limitless Realty</p><h1>Properties</h1><p>Switch to the Limitless Realty workspace to access this catalog. Your current workspace does not have access to these property records.</p></div></div></div>;
+  }
+  const properties = await getProperties(150, scope.organizationId);
   const driveReady = isGoogleDriveConfigured();
   return (
     <div className="admin-page">
