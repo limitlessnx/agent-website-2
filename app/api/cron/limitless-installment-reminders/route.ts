@@ -138,9 +138,10 @@ export async function GET(request: Request) {
     const currency = String(plan.currency || "NGN");
     const values = {
       client_name: String(plan.client_name || "there"),
-      property_name: String(plan.property_title || "your service"),
-      amount_paid: formatMoney(Number(plan.total_paid || 0), currency),
+      property_title: String(plan.property_title || "your property"),
       outstanding_balance: formatMoney(outstanding, currency),
+      property_name: String(plan.property_title || "your property"),
+      amount_paid: formatMoney(Number(plan.total_paid || 0), currency),
       handover_agent_name: String((plan as Record<string, unknown>).handover_agent_name || "our team"),
       handover_agent_phone: String((plan as Record<string, unknown>).handover_agent_phone || ""),
       company_name: organizationName,
