@@ -18,6 +18,13 @@ export type EvaluationLead = {
   submitted_at: string;
   created_at: string;
   updated_at: string;
+  organization_id?: string | null;
+  customer_id?: string | null;
+  conversation_id?: string | null;
+  evaluation_session_id?: string | null;
+  ai_evaluation?: { score?: number; opportunity?: string; summary?: string; nextStep?: string; recommendedSystem?: string; estimatedAutomationPotential?: string; recommendedAgents?: string[]; integrations?: string[]; bottlenecks?: string[]; opportunities?: { title: string; description: string; impact: string; potential: number }[]; pricingType?: string; recommendationReason?: string; voiceAgent?: string; voiceReason?: string } | null;
+  pricing_type?: string | null;
+  approval_at?: string | null;
 };
 
 function config() {
