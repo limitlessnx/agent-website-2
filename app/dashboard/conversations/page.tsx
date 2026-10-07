@@ -98,7 +98,7 @@ export default async function ConversationsPage() {
         <div className="admin-list-row compact"><div><strong>{scope.name} client channel</strong><span>{copy.description}</span></div><em>Tenant isolated</em></div>
       </section>
 
-      <style jsx>{`
+      <style>{`
         .conversation-center-fluxknight{--conversation-accent:#a78bfa}.conversation-center-limitless-realty{--conversation-accent:#34d399}.conversation-center-gencouv{--conversation-accent:#38bdf8}
         .conversation-center-fluxknight .conversation-row.is-selected,.conversation-center-limitless-realty .conversation-row.is-selected,.conversation-center-gencouv .conversation-row.is-selected{border-color:var(--conversation-accent)}
         .conversation-thread{display:grid;gap:10px;max-height:620px;overflow:auto;padding:4px}
