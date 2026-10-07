@@ -172,11 +172,14 @@ export default function Button({
         aria-busy={loading || undefined}
         aria-disabled={isBusy || undefined}
         style={baseStyle}
+        onClick={(e) => {
+          if (isBusy) e.preventDefault();
+        }}
         onMouseEnter={(e) => {
           if (!isBusy) Object.assign(e.currentTarget.style, hoverStyle);
         }}
         onMouseLeave={(e) => {
-          Object.assign(e.currentTarget.style, styles[variant].base);
+          Object.assign(e.currentTarget.style, { ...sizes[size], ...sharedStyle, ...styles[variant].base });
         }}
       >
         <ActionContent loading={loading} label={label}>{children}</ActionContent>
