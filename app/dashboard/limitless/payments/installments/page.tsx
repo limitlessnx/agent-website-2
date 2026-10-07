@@ -10,8 +10,9 @@ import "../payments.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function InstallmentsPage() {
+export default async function InstallmentsPage({ searchParams }: { searchParams?: Promise<{ success?: string }> }) {
   const { organizationId } = await resolveAdminOrganizationScope();
+  const params = searchParams ? await searchParams : {};
   const [plans, records, properties, contacts] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   const totalAgreed = plans.reduce((s,p)=>s+Number(p.agreed_price||0),0);
   const totalPaid = plans.reduce((s,p)=>s+Number(p.total_paid||0),0);
@@ -22,6 +23,13 @@ export default async function InstallmentsPage() {
       <div><p className="admin-kicker">Limitless Realty</p><h1>Installment Client Management</h1><p>Manage every installment client, record payments, update status, and control reminder cadence.</p></div>
       <div className="admin-page-actions"><a href="#add-installment-client" className="admin-button">+ Add new installment client</a><Link href="/dashboard/limitless/payments" className="admin-button secondary">← Payments overview</Link></div>
     </div>
+
+    {params.success === "installment-created" && (
+      <div className="payment-success-banner" role="status" aria-live="polite">
+        <span className="payment-success-icon" aria-hidden="true">✓</span>
+        <div><strong>Installment created successfully</strong><span>The installment plan has been saved and is now visible in the Installment clients list below.</span></div>
+      </div>
+    )}
 
     <section className="admin-panel installment-create-panel" id="add-installment-client">
       <div className="admin-panel-header">
@@ -53,10 +61,10 @@ export default async function InstallmentsPage() {
     </div>
 
     <section className="admin-panel">
-      <div className="admin-panel-header"><div><h2>Installment clients</h2><p>Variable payments update the outstanding balance automatically. The end date is the expected completion date, while overdue balances remain eligible for follow-up.</p></div></div>
+      <div className="admin-panel-header"><div><h2>Installment clients <span className="payment-count-badge">{plans.length}</span></h2><p>Variable payments update the outstanding balance automatically. The end date is the expected completion date, while overdue balances remain eligible for follow-up.</p></div></div>
       <div className="payment-plan-list">
-        {plans.map(plan => <article key={plan.id} className="payment-plan-card">
-          <div><strong>{plan.client_name}</strong><span>{plan.client_phone} · {plan.property_title}</span></div>
+        {plans.map((plan, index) => <article key={plan.id} className={"payment-plan-card " + (index === 0 ? "payment-plan-card-new" : "")}>
+          <div><strong>{plan.client_name}</strong>{index === 0 && <span className="payment-new-badge">New</span>}<span>{plan.client_phone} · {plan.property_title}</span></div>
           <div className="payment-figures"><span>Agreed <b>{formatNaira(plan.agreed_price)}</b></span><span>Paid <b>{formatNaira(plan.total_paid)}</b></span><span>Outstanding <b>{formatNaira(plan.outstanding_balance)}</b></span></div>
           <div className="payment-meta"><span>Type: {plan.payment_type === "outright" ? "Outright" : "Installment"}</span><span>Cadence: {plan.frequency || "biweekly"}</span><span>End date: {plan.end_at ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeZone: "Africa/Lagos" }).format(new Date(plan.end_at)) : "Not set"}</span><span>Reminders: {plan.reminders_enabled ? "Active" : "Stopped"}</span></div>
           <form action={updatePlanStatusAction} className="payment-status-form"><input type="hidden" name="payment_plan_id" value={plan.id}/><input type="hidden" name="status" value={plan.status}/><select name="frequency" defaultValue={plan.frequency || "biweekly"}><option value="weekly">Weekly</option><option value="biweekly">Bi-weekly</option><option value="monthly">Monthly</option></select><PaymentSubmitButton className="payment-status-button">Set cadence</PaymentSubmitButton></form>
