@@ -44,6 +44,8 @@ test("email login keeps nonexistent accounts on the login screen with a signup p
   assert.match(route,/No Fluxknight account exists for this email/);
   assert.match(route,/The email or password is incorrect/);
   assert.match(auth,/export async function clientAccountExists/);
+  assert.match(auth,/auth\/v1\/admin/);
+  assert.match(auth,/users\?page=1&per_page=1000/);
   assert.match(form,/errorCode === "account_not_found"/);
   assert.match(form,/Continue to create an account/);
   assert.match(form,/href=\{signupHref\}/);
