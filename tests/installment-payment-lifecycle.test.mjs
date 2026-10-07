@@ -103,6 +103,16 @@ test("Phase 3 uses the approved seven-variable Meta template contract", () => {
   assert.match(activation, /handover_agent_phone/);
 });
 
+test("Phase 3 installment creation form sends the required handover fields", () => {
+  const page = read("app/dashboard/limitless/payments/installments/page.tsx");
+  const actions = read("app/dashboard/limitless/payments/actions.ts");
+  assert.match(page, /name="handover_agent_name"/);
+  assert.match(page, /name="handover_agent_phone"/);
+  assert.match(page, /defaultValue="2348127753308"/);
+  assert.match(actions, /formData\.get\("handover_agent_name"\)/);
+  assert.match(actions, /formData\.get\("handover_agent_phone"\)/);
+});
+
 test("Phase 3 payment intent has a configured human handover target", () => {
   const migration = read("supabase/migrations/20261007150000_fix_limitless_installment_reminder_template_contract.sql");
   assert.match(migration, /handover_agent_phone.*2348127753308/);
