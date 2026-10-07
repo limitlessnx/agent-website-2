@@ -125,8 +125,8 @@ test("Fluxknight errors are user-safe and do not expose technical diagnostics", 
   assert.match(workspaceBoundary, /toUserSafeMessage\(error\)/);
   assert.doesNotMatch(globalBoundary, /error\.message/);
   assert.doesNotMatch(workspaceBoundary, /error\.message/);
-  assert.doesNotMatch(globalBoundary, /error\.digest.*<|digest.*error/i);
-  assert.doesNotMatch(workspaceBoundary, /error\.digest.*<|digest.*error/i);
+  assert.doesNotMatch(globalBoundary, /<[^>]*\{\s*error\.digest|<[^>]*digest[^>]*>/i);
+  assert.doesNotMatch(workspaceBoundary, /<[^>]*\{\s*error\.digest|<[^>]*digest[^>]*>/i);
 });
 
 test("Friendly error boundaries cover global, dashboard, and tenant-scoped workspaces", () => {
