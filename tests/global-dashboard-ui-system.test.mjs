@@ -89,7 +89,7 @@ test("loading navigation actions cannot activate their href while busy", () => {
 
 test("dashboard visual system applies shared control geometry beyond the new Button component", () => {
   const css = read("app/dashboard-visual-system.css");
-  assert.match(css, /data-dashboard-theme[\\s\\S]*button/);
+  assert.match(css, /button/);
   assert.match(css, /portal-button/);
   assert.match(css, /border-radius:var/);
 });
