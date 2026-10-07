@@ -91,3 +91,8 @@
   .contact-picker-new-grid input:first-child{grid-column:auto}
   .contact-picker-results{max-height:230px}
 }
+
+.payment-handover-card{display:grid;gap:4px;padding:14px 16px;border:1px solid rgba(180,139,255,.2);border-radius:14px;background:rgba(124,58,237,.07)}
+.payment-handover-card strong{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#a995d4}
+.payment-handover-card span{font-weight:700;color:#f4f0ff}
+.payment-handover-card small{color:#aaa0c0}
