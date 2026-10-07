@@ -53,3 +53,6 @@ test("conversation center does not read Fluxknight private support conversations
   assert.doesNotMatch(center,/from\("support_conversations"\)/);
   assert.match(center,/from\("leo_public_leads"\)/);
 });
+
+
+test("evaluation session and approval are locked to the Fluxknight organization",()=>{const session=read("app/api/evaluation/session/route.ts");const approve=read("app/api/evaluation/approve/route.ts");assert.match(session,/getFluxknightPlatformOrganizationId/);assert.match(session,/organization_id:organizationId/);assert.match(session,/eq\("organization_id",organizationId\)/);assert.match(approve,/getFluxknightPlatformOrganizationId/);assert.match(approve,/eq\("organization_id",organizationId\)/);assert.match(approve,/organization_id:organizationId/);});
