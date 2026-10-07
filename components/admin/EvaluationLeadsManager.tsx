@@ -75,7 +75,7 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
         {selected ? (
           <>
             <header className="evaluation-detail-header">
-              <div><span>Evaluation request</span><h2>{selected.name}</h2><p>{selected.business_name} · {selected.business_type}</p></div>
+              <div><span>Evaluation request · follow-up center</span><h2>{selected.name}</h2><p>{selected.business_name} · {selected.business_type}</p></div>
               <select disabled={isPending} value={selected.status} onChange={(event) => updateStatus(selected.id, event.target.value)}>
                 {statuses.map((status) => <option key={status} value={status}>{label(status)}</option>)}
               </select>
