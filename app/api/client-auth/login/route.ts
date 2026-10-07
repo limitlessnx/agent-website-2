@@ -33,7 +33,7 @@ export async function POST(request:NextRequest){
   const message=error instanceof Error?error.message:"Unable to sign in.";
   if(message==="Invalid login credentials."){
    const exists=await clientAccountExists(email);
-   if(exists===false)return NextResponse.json({error:"No Fluxknight account exists for this email. Continue by creating an account."},{status:401});
+   if(exists===false)return NextResponse.json({code:"account_not_found",error:"No Fluxknight account exists for this email."},{status:401});
    if(exists===true)return NextResponse.json({error:"The email or password is incorrect."},{status:401});
   }
   return NextResponse.json({error:message},{status:401});
