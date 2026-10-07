@@ -43,3 +43,21 @@ test("newly created installment remains visibly surfaced on page one", () => {
   assert.match(css, /\.payment-plan-card-new/);
   assert.match(css, /\.payment-new-badge/);
 });
+
+
+test("installment controls replicate the Fluxknight metallic/glass button system", () => {
+  const globals = fs.readFileSync("app/globals.css", "utf8");
+  assert.match(globals, /\.admin-button \{/);
+  assert.match(globals, /linear-gradient\(110deg, #6e29d9 0%, #8b2fe5 48%, #b9438a 100%\)/);
+  assert.match(globals, /backdrop-filter: blur\(16px\) saturate\(125%\)/);
+  assert.match(css, /\.payment-page \.payment-status-button/);
+  assert.match(css, /\.payment-page \.payment-reminder-schedule-card/);
+});
+
+test("installment layout has explicit desktop, tablet, and mobile guardrails", () => {
+  assert.match(css, /@media \(max-width: 1100px\)/);
+  assert.match(css, /@media \(max-width: 900px\)/);
+  assert.match(css, /@media \(max-width: 640px\)/);
+  assert.match(css, /grid-template-columns: 1fr/);
+  assert.match(css, /grid-template-columns: minmax\(0,1fr\) auto 24px/);
+});
