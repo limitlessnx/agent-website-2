@@ -79,3 +79,17 @@ test("global action feedback is designed for every mutation class", () => {
     assert.match(button, new RegExp(verb), `Missing semantic action state: ${verb}`);
   }
 });
+
+
+test("loading navigation actions cannot activate their href while busy", () => {
+  const button = read("components/Button.tsx");
+  assert.match(button, /isBusy.*preventDefault|preventDefault.*isBusy/s, "Busy links must block navigation activation");
+  assert.match(button, /aria-disabled={isBusy/, "Busy links must expose disabled semantics");
+});
+
+test("dashboard visual system applies shared control geometry beyond the new Button component", () => {
+  const css = read("app/dashboard-visual-system.css");
+  assert.match(css, /\\[data-dashboard-theme\\] button/);
+  assert.match(css, /portal-button/);
+  assert.match(css, /border-radius:var\\(--fk-radius-control/);
+});
