@@ -88,3 +88,10 @@ test("Limitless property CRUD uses the resolved organization ID for every mutati
   assert.match(actions, /deleteProperty\(propertyId,scope\.organizationId\)/);
   assert.match(actions, /updatePropertyImageLink\(propertyId,uploaded\.url,scope\.organizationId\)/);
 });
+
+test("Maia catalog exposes area and city as explicit property fields", async () => {
+  const maiaCatalog = await readFile(new URL("../lib/ai/limitless-realty-maia.ts", import.meta.url), "utf8");
+  assert.match(maiaCatalog, /area: property\.location_area \|\| ""/);
+  assert.match(maiaCatalog, /city: property\.location_city \|\| ""/);
+  assert.match(maiaCatalog, /location: \[property\.location_area, property\.location_city\]/);
+});
