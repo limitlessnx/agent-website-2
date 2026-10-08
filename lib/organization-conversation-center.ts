@@ -131,10 +131,11 @@ async function limitlessConversations(admin: ReturnType<typeof createAdminClient
   });
 }
 
-async function gencouvConversations(admin: ReturnType<typeof createAdminClient>): Promise<ConversationCenterItem[]> {
+async function gencouvConversations(admin: ReturnType<typeof createAdminClient>, organizationId: string): Promise<ConversationCenterItem[]> {
   const { data } = await admin
     .from("gencouv_support_conversations")
     .select("id,session_id,customer_email,customer_name,page_url,status,last_intent,created_at,updated_at")
+    .eq("organization_id", organizationId)
     .order("updated_at", { ascending: false })
     .limit(100);
   const rows = data || [];
@@ -172,5 +173,5 @@ export async function getOrganizationConversationCenter(systemId: "fluxknight" |
   const admin = createAdminClient();
   if (systemId === "fluxknight") return fluxknightConversations(admin, organizationId);
   if (systemId === "limitless-realty") return limitlessConversations(admin, organizationId);
-  return gencouvConversations(admin);
+  return gencouvConversations(admin, organizationId);
 }
