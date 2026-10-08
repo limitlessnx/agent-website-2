@@ -26,7 +26,7 @@ test("dashboard home conversations and activity are active-organization scoped",
   const activity = read("app/dashboard/activity/page.tsx");
   assert.match(home, /resolveAdminOrganizationScope/);
   assert.match(home, /getOrganizationOperationalSnapshot\(scope\)/);
-  assert.match(conversations, /getOrganizationOperationalSnapshot\(scope\)/);
+  assert.match(conversations, /getOrganizationConversationCenter\(systemId, scope\.organizationId\)/);
   assert.match(activity, /getOrganizationOperationalSnapshot\(scope\)/);
   assert.doesNotMatch(conversations, /getLeads\(/);
   assert.doesNotMatch(activity, /getProperties\(/);
