@@ -36,6 +36,8 @@ jobs:
       - run: npm ci
       - name: Dashboard regression contracts
         run: npm run test:support
+      - name: Evaluation and conversation-center guardrails
+        run: node --test tests/evaluation-and-conversation-center.test.mjs tests/workspace-and-google-auth.test.mjs
       - name: TypeScript
         run: npx tsc --noEmit
       - name: Production build
