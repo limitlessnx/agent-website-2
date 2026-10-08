@@ -29,8 +29,8 @@ test("Dashboard Home Conversations and Activity remain renderable when organizat
 
   assert.match(data, /emptyOrganizationOperationalSnapshot/);
   assert.match(home, /getOrganizationOperationalSnapshot\(scope\)\.catch/);
-  assert.match(conversations, /getOrganizationOperationalSnapshot\(scope\)\.catch/);
-  assert.match(conversations, /getWorkflowRegistrySummary\(scope\)\.catch/);
+  assert.match(conversations, /getOrganizationConversationCenter\(systemId, scope\.organizationId\)\.catch/);
+  assert.match(conversations, /getOrganizationConversationCenter\(systemId, scope\.organizationId\)\.catch/);
   assert.match(activity, /getOrganizationOperationalSnapshot\(scope\)\.catch/);
   assert.match(activity, /getWorkflowRegistrySummary\(scope\)\.catch/);
   assert.match(data, /Live data temporarily unavailable/);
