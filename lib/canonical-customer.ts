@@ -183,6 +183,10 @@ export async function canonicalizePublicLeoLead(input:{
     metadata:{source:"public_leo",public_lead_id:input.leadId},
   });
   const admin=createAdminClient();
+  await admin.from("leo_sessions").update({
+    organization_id: organizationId,
+    updated_at: new Date().toISOString(),
+  }).eq("id", input.sessionId).eq("scope", "public");
   const {error}=await admin.from("leo_public_leads").update({
     organization_id:organizationId,customer_id:customerId,conversation_id:conversationId,updated_at:new Date().toISOString()
   }).eq("id",input.leadId);

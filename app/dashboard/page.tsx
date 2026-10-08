@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   return (
     <main className="admin-page dashboard-v3-home">
       <DashboardHomeExperience
-        name="Limitless"
+        name={snapshot.organizationName || "Fluxknight"}
         workspaceName={snapshot.organizationName}
         health={health}
         metrics={snapshot.metrics}

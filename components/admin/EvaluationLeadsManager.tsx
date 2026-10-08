@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import type { EvaluationLead } from "@/lib/evaluation-leads";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import type { EvaluationLead, EvaluationLeadDetail } from "@/lib/evaluation-leads";
 
 const statuses = ["new", "contacted", "qualified", "converted", "closed"] as const;
 
@@ -15,6 +15,8 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(initialLeads[0]?.id || "");
   const [error, setError] = useState("");
+  const [detail, setDetail] = useState<EvaluationLeadDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -30,6 +32,22 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
   }, [leads, query, statusFilter]);
 
   const selected = leads.find((lead) => lead.id === selectedId) || filtered[0] || null;
+
+  useEffect(() => {
+    if (!selected?.id) { setDetail(null); return; }
+    let cancelled = false;
+    setDetailLoading(true);
+    setError("");
+    fetch("/api/evaluations/" + encodeURIComponent(selected.id), { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to load evaluation details.");
+        if (!cancelled) setDetail(data as EvaluationLeadDetail);
+      })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : "Unable to load evaluation details."); })
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  }, [selected?.id]);
 
   function updateStatus(id: string, status: string) {
     setError("");
@@ -75,7 +93,7 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
         {selected ? (
           <>
             <header className="evaluation-detail-header">
-              <div><span>Evaluation request</span><h2>{selected.name}</h2><p>{selected.business_name} · {selected.business_type}</p></div>
+              <div><span>Evaluation request · follow-up center</span><h2>{selected.name}</h2><p>{selected.business_name} · {selected.business_type}</p></div>
               <select disabled={isPending} value={selected.status} onChange={(event) => updateStatus(selected.id, event.target.value)}>
                 {statuses.map((status) => <option key={status} value={status}>{label(status)}</option>)}
               </select>
@@ -88,15 +106,44 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
               <div>Submitted<br /><strong>{new Date(selected.submitted_at).toLocaleString("en-NG")}</strong></div>
             </div>
 
-            <div className="evaluation-section"><span>Requested agents</span><div className="evaluation-chips">{selected.agent_types.map((type) => <b key={type}>{label(type)}</b>)}</div></div>
-            <div className="evaluation-section"><span>Main goal</span><p>{selected.main_goal}</p></div>
+            <div className="evaluation-section"><span>Lead qualification</span><div className="evaluation-detail-grid"><div><span>Source</span><strong>{label(selected.source || "website")}</strong></div><div><span>Status</span><strong>{label(selected.status)}</strong></div><div><span>Last updated</span><strong>{new Date(selected.updated_at || selected.created_at).toLocaleString("en-NG")}</strong></div><div><span>Consent</span><strong>{selected.consent_given ? "Granted" : "Not recorded"}</strong></div></div></div>\n            {selected.ai_evaluation ? <div className="evaluation-section"><span>AI evaluation</span><div className="evaluation-ai-summary"><div><b>{selected.ai_evaluation.score ?? "—"}<small>/100</small></b><span>{label(selected.ai_evaluation.opportunity || "unrated")} opportunity</span></div><p>{selected.ai_evaluation.summary || "No AI summary was stored."}</p></div><div className="evaluation-detail-grid"><div><span>Recommended system</span><strong>{selected.ai_evaluation.recommendedSystem || "Not specified"}</strong></div><div><span>Automation potential</span><strong>{selected.ai_evaluation.estimatedAutomationPotential || "Not specified"}</strong></div><div><span>Pricing</span><strong>{label(selected.pricing_type || selected.ai_evaluation.pricingType || "standard")}</strong></div><div><span>Next step</span><strong>{selected.ai_evaluation.nextStep || "Follow up with the prospect."}</strong></div></div></div> : null}\n            <div className="evaluation-section"><span>Requested agents</span><div className="evaluation-chips">{selected.agent_types.map((type) => <b key={type}>{label(type)}</b>)}</div></div>
+            <div className="evaluation-section"><span>Main goal</span><p>{selected.main_goal}</p></div>{selected.ai_evaluation?.opportunities?.length ? <div className="evaluation-section"><span>Top AI opportunities</span><div className="evaluation-opportunities">{selected.ai_evaluation.opportunities.slice(0,3).map((item,index)=><article key={`${item.title}-${index}`}><b>0{index+1}</b><div><strong>{item.title}</strong><p>{item.description}</p></div><em>{label(item.impact)} impact · {item.potential}%</em></article>)}</div></div> : null}
             <div className="evaluation-detail-grid">
               <div><span>Lead volume</span><strong>{selected.lead_volume}</strong></div>
               <div><span>Timeline</span><strong>{selected.timeline}</strong></div>
               <div><span>Budget</span><strong>{selected.budget}</strong></div>
               <div><span>Current tools</span><strong>{selected.current_tools || "None specified"}</strong></div>
             </div>
-            <div className="evaluation-section"><span>Consent</span><p>{selected.consent_given ? "Consent granted for contact and AI evaluation call." : "No consent recorded."}</p></div>
+            <div className="evaluation-section"><span>Follow-up</span><div className="evaluation-actions"><a href={`tel:${selected.phone}`}>Call lead</a><a href={`mailto:${selected.email}`}>Email lead</a><button type="button" disabled={isPending || selected.status === "contacted"} onClick={() => updateStatus(selected.id, "contacted")}>Mark contacted</button><button type="button" disabled={isPending || selected.status === "qualified"} onClick={() => updateStatus(selected.id, "qualified")}>Mark qualified</button></div><p>{selected.preferred_contact_time ? `Preferred contact time: ${selected.preferred_contact_time}.` : "No preferred contact time was supplied."}</p></div>\n            <div className="evaluation-section"><span>Linked records</span><div className="evaluation-actions">{selected.customer_id ? <a href="/dashboard/crm">Customer record linked</a> : <span className="evaluation-unlinked">No customer linked</span>}{selected.conversation_id ? <a href="/dashboard/conversations">Conversation linked</a> : <span className="evaluation-unlinked">No conversation linked</span>}</div></div>\n            <div className="evaluation-section"><span>Evaluation evidence</span>
+              {detailLoading ? <p className="evaluation-muted">Loading the complete evaluation record...</p> : detail?.session ? (
+                <>
+                  <div className="evaluation-detail-grid">
+                    <div><span>Session status</span><strong>{label(detail.session.status || "unknown")}</strong></div>
+                    <div><span>Industry</span><strong>{detail.session.industry || selected.business_type || "Not specified"}</strong></div>
+                    <div><span>Session created</span><strong>{detail.session.created_at ? new Date(detail.session.created_at).toLocaleString("en-NG") : "Not recorded"}</strong></div>
+                    <div><span>Approved</span><strong>{detail.session.approved_at ? new Date(detail.session.approved_at).toLocaleString("en-NG") : "Not approved"}</strong></div>
+                  </div>
+                  <div className="evaluation-subsection"><span>Business requirements / context</span><pre>{JSON.stringify(detail.session.context || {}, null, 2)}</pre></div>
+                  <div className="evaluation-subsection"><span>Original evaluation conversation</span>
+                    <div className="evaluation-message-list">
+                      {(detail.session.messages || []).map((message, index) => (
+                        <article key={String(message.id || index) + "-" + index} className={String(message.role || "").toLowerCase() === "user" ? "customer" : "agent"}>
+                          <b>{label(String(message.role || "message"))}</b>
+                          <p>{String(message.content || message.text || "")}</p>
+                        </article>
+                      ))}
+                      {!detail.session.messages?.length ? <p className="evaluation-muted">No raw session messages were stored.</p> : null}
+                    </div>
+                  </div>
+                </>
+              ) : <p className="evaluation-muted">No linked evaluation session is available.</p>}
+            </div>
+            <div className="evaluation-section"><span>Requirements and follow-up history</span>
+              {detail?.timeline?.length ? <div className="evaluation-history">{detail.timeline.map((event) => (
+                <article key={event.id}><div><strong>{event.title}</strong><span>{event.channel || "system"} · {new Date(event.occurred_at).toLocaleString("en-NG")}</span></div><p>{event.summary || "No additional detail recorded."}</p></article>
+              ))}</div> : <p className="evaluation-muted">No follow-up timeline events have been recorded yet.</p>}
+            </div>
+            {detail?.implementation_opportunities?.length ? <div className="evaluation-section"><span>Implementation plan</span><div className="evaluation-opportunities">{detail.implementation_opportunities.map((item) => <article key={item.id}><b>↗</b><div><strong>{item.title}</strong><p>{label(item.status)} · {label(item.pricing_type || "standard")} · {item.contact_channels?.join(", ") || "No contact channels recorded"}</p></div></article>)}</div></div> : null}\n            <div className="evaluation-section"><span>CRM handoff</span><p>Keep this evaluation attached to the prospect when moving them into the CRM and conversation workflow.</p><div className="evaluation-actions"><a href="/dashboard/crm">Open CRM</a><a href="/dashboard/conversations">Open conversations</a></div></div>
             {error ? <p className="evaluation-error">{error}</p> : null}
           </>
         ) : <p className="evaluation-empty">Select an evaluation request to inspect it.</p>}
@@ -117,7 +164,7 @@ export default function EvaluationLeadsManager({ initialLeads }: { initialLeads:
         .evaluation-detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:18px;border-bottom:1px solid rgba(167,139,250,.16)}
         .evaluation-detail-header span,.evaluation-section>span,.evaluation-detail-grid span{color:#8f83a4;font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.evaluation-detail-header h2{margin:5px 0 4px;font-size:1.7rem}.evaluation-detail-header p{margin:0;color:#aaa0b8}.evaluation-detail-header select{width:145px}
         .evaluation-contact-grid,.evaluation-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.evaluation-contact-grid>* ,.evaluation-detail-grid>div{min-width:0;padding:13px;border:1px solid rgba(167,139,250,.14);border-radius:11px;color:#958aa7;background:rgba(255,255,255,.02);font-size:.76rem;line-height:1.5;text-decoration:none}.evaluation-contact-grid strong,.evaluation-detail-grid strong{color:#f8fbff;font-size:.88rem;overflow-wrap:anywhere}
-        .evaluation-section{margin-top:18px;padding-top:16px;border-top:1px solid rgba(167,139,250,.12)}.evaluation-section p{margin:8px 0 0;color:#d7d0e1;line-height:1.65}.evaluation-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.evaluation-chips b{padding:7px 9px;border:1px solid rgba(34,211,238,.22);border-radius:999px;color:#a5f3fc;background:rgba(34,211,238,.06);font-size:.76rem}.evaluation-error{color:#fda4af}.evaluation-empty{color:#93889f;text-align:center;padding:28px 12px}
+        .evaluation-section{margin-top:18px;padding-top:16px;border-top:1px solid rgba(167,139,250,.12)}.evaluation-ai-summary{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px;align-items:start;margin-top:10px}.evaluation-ai-summary>div{padding:12px;border:1px solid rgba(34,211,238,.2);border-radius:11px;background:rgba(34,211,238,.04)}.evaluation-ai-summary b{display:block;font-size:1.55rem}.evaluation-ai-summary b small{font-size:.65rem;color:#8f83a4;margin-left:2px}.evaluation-ai-summary span{display:block;color:#9b91ad;font-size:.72rem;margin-top:4px}.evaluation-ai-summary p{margin:0;color:#d7d0e1;line-height:1.6}.evaluation-opportunities{display:grid;gap:8px;margin-top:10px}.evaluation-opportunities article{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:start;padding:11px;border:1px solid rgba(167,139,250,.13);border-radius:10px;background:rgba(255,255,255,.02)}.evaluation-opportunities article>b{color:#a5f3fc}.evaluation-opportunities strong{display:block}.evaluation-opportunities p{margin:4px 0 0;color:#a9a0b5;line-height:1.5;font-size:.8rem}.evaluation-opportunities em{font-style:normal;color:#6ee7b7;font-size:.68rem;white-space:nowrap}.evaluation-unlinked{color:#766d81;font-size:.76rem}.evaluation-muted{color:#93889f!important}.evaluation-subsection{margin-top:12px}.evaluation-subsection>span{display:block;color:#8f83a4;font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}.evaluation-subsection pre{max-height:260px;overflow:auto;margin:0;padding:12px;border:1px solid rgba(167,139,250,.12);border-radius:10px;background:rgba(0,0,0,.22);color:#bdb4ca;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}.evaluation-message-list{display:grid;gap:8px;max-height:420px;overflow:auto}.evaluation-message-list article{padding:11px;border:1px solid rgba(167,139,250,.12);border-radius:10px;background:rgba(255,255,255,.02)}.evaluation-message-list article.customer{border-color:rgba(34,211,238,.18)}.evaluation-message-list article.agent{border-color:rgba(167,139,250,.16)}.evaluation-message-list b{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:#a5f3fc}.evaluation-message-list article.agent b{color:#c4b5fd}.evaluation-message-list p{margin:5px 0 0!important;color:#d7d0e1!important;font-size:.8rem}.evaluation-history{display:grid;gap:8px}.evaluation-history article{padding:11px;border-left:2px solid rgba(167,139,250,.4);background:rgba(255,255,255,.02)}.evaluation-history strong{display:block}.evaluation-history span{display:block;color:#8f83a4;font-size:.7rem;margin-top:3px}.evaluation-history p{margin:6px 0 0!important;font-size:.8rem}.evaluation-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.evaluation-actions a,.evaluation-actions button{min-height:38px;padding:0 12px;border:1px solid rgba(167,139,250,.24);border-radius:9px;color:#e9e2f3;background:rgba(255,255,255,.03);font:inherit;font-size:.78rem;font-weight:800;text-decoration:none;cursor:pointer}.evaluation-actions button:disabled{opacity:.5;cursor:not-allowed}.evaluation-section p{margin:8px 0 0;color:#d7d0e1;line-height:1.65}.evaluation-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.evaluation-chips b{padding:7px 9px;border:1px solid rgba(34,211,238,.22);border-radius:999px;color:#a5f3fc;background:rgba(34,211,238,.06);font-size:.76rem}.evaluation-error{color:#fda4af}.evaluation-empty{color:#93889f;text-align:center;padding:28px 12px}
         @media(max-width:900px){.evaluation-manager{grid-template-columns:1fr}.evaluation-list{max-height:390px}}
         @media(max-width:620px){.evaluation-list-panel,.evaluation-detail-panel{padding:12px;border-radius:12px}.evaluation-toolbar{grid-template-columns:1fr}.evaluation-detail-header{flex-direction:column}.evaluation-detail-header select{width:100%}.evaluation-contact-grid,.evaluation-detail-grid{grid-template-columns:1fr}.evaluation-list button{grid-template-columns:minmax(0,1fr) auto}.evaluation-detail-panel{min-height:0}}
       `}</style>

@@ -11,6 +11,7 @@ type Stage={id:string;key:string;name:string;category:string;position:number};
 type Timeline={id:string;event_type:string;channel?:string|null;title:string;summary?:string|null;occurred_at:string;source_table?:string|null;correlation_id?:string|null;actor_type?:string|null};
 type Conversation={id:string;channel:string;status:string;started_at:string;updated_at:string};
 type Handoff={id:string;conversation_id:string;reason:string;category:string;priority:string;status:string;conversation_summary?:string|null;next_action?:string|null;created_at:string;updated_at:string};
+type IdentityConflict={id:string;field_name?:string|null;details?:string|null;status?:string|null;created_at:string};
 
 export const dynamic="force-dynamic";
 
@@ -22,12 +23,13 @@ export default async function CustomerTimelinePage({params}:{params:Promise<{id:
   const access=await getOrganizationAccessContext(session.organizationId,session.userId);
   const org=encodeURIComponent(session.organizationId);
   const cid=encodeURIComponent(id);
-  const [customers,timeline,conversations,stages,handoffs]=await Promise.all([
+  const [customers,timeline,conversations,stages,handoffs,identityConflicts]=await Promise.all([
     supabaseServerRequest<Customer[]>("crm_customers?organization_id=eq."+org+"&id=eq."+cid+"&select=id,full_name,email,phone,company_name,status,current_stage_id,stage_updated_at,created_at,updated_at&limit=1").catch(()=>[]),
     supabaseServerRequest<Timeline[]>("customer_timeline_events?organization_id=eq."+org+"&customer_id=eq."+cid+"&select=id,event_type,channel,title,summary,occurred_at,source_table,correlation_id,actor_type&order=occurred_at.desc&limit=200").catch(()=>[]),
     supabaseServerRequest<Conversation[]>("crm_conversations?organization_id=eq."+org+"&customer_id=eq."+cid+"&select=id,channel,status,started_at,updated_at&order=updated_at.desc&limit=50").catch(()=>[]),
     supabaseServerRequest<Stage[]>("organization_customer_stages?organization_id=eq."+org+"&status=eq.active&select=id,key,name,category,position&order=position.asc&limit=100").catch(()=>[]),
     supabaseServerRequest<Handoff[]>("human_handoffs?organization_id=eq."+org+"&customer_id=eq."+cid+"&select=id,conversation_id,reason,category,priority,status,conversation_summary,next_action,created_at,updated_at&order=created_at.desc&limit=50").catch(()=>[]),
+    supabaseServerRequest<IdentityConflict[]>("customer_identity_conflicts?organization_id=eq."+org+"&customer_id=eq."+cid+"&select=id,field_name,details,status,created_at&order=created_at.desc&limit=50").catch(()=>[]),
   ]);
   const customer=customers[0];
   if(!customer) notFound();
@@ -43,6 +45,7 @@ export default async function CustomerTimelinePage({params}:{params:Promise<{id:
       <article className="portal-business-metric"><span>Timeline events</span><strong>{timeline.length}</strong><small>recent activity</small></article>
       <article className="portal-business-metric"><span>Conversations</span><strong>{conversations.length}</strong><small>across channels</small></article>
       <article className="portal-business-metric"><span>Known since</span><strong>{new Date(customer.created_at).toLocaleDateString("en-NG")}</strong><small>canonical CRM record</small></article>
+      <article className="portal-business-metric"><span>Identity conflicts</span><strong>{identityConflicts.length}</strong><small>tenant-scoped checks</small></article>
     </section>
 
     <section className="portal-card">
