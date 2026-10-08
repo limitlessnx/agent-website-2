@@ -58,7 +58,7 @@ test("functional regression anchors remain connected to existing business logic"
   assert.match(settings, /getWorkflowRegistrySummary/);
   assert.match(settings, /WorkflowRegistryClient/);
   assert.match(conversations, /resolveAdminOrganizationScope/);
-  assert.match(conversations, /getOrganizationOperationalSnapshot\(scope\)/);
+  assert.match(conversations, /getOrganizationConversationCenter\(systemId, scope\.organizationId\)/);
   assert.match(conversations, /getWorkflowRegistrySummary\(scope\)/);
 });
 
@@ -98,7 +98,7 @@ test("canonical Fluxknight palette and dashboard home composition are locked", (
   assert.doesNotMatch(fidelity, /data-dashboard-theme="light"/);
   assert.doesNotMatch(fidelity, /--fk-canvas:#F6F7FF/);
   assert.match(dashboard, /DashboardHomeExperience/);
-  assert.match(dashboard, /name="Limitless"/);
+  assert.match(dashboard, /name=\{snapshot\.organizationName \|\| "Fluxknight"\}/);
   assert.match(home, /Needs your attention/);
   assert.match(home, /Your AI Team/);
   assert.match(home, /Business metrics/);
