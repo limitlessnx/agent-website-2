@@ -56,3 +56,5 @@ test("conversation center does not read Fluxknight private support conversations
 
 
 test("evaluation session and approval are locked to the Fluxknight organization",()=>{const session=read("app/api/evaluation/session/route.ts");const approve=read("app/api/evaluation/approve/route.ts");assert.match(session,/getFluxknightPlatformOrganizationId/);assert.match(session,/organization_id:organizationId/);assert.match(session,/eq\("organization_id",organizationId\)/);assert.match(approve,/getFluxknightPlatformOrganizationId/);assert.match(approve,/eq\("organization_id",organizationId\)/);assert.match(approve,/organization_id:organizationId/);});
+
+test("Gencouv conversation center is tenant scoped",()=>{const migration=read("supabase/migrations/20261008_gencouv_conversation_tenant_isolation.sql");const center=read("lib/organization-conversation-center.ts");assert.match(migration,/organization_id uuid/);assert.match(migration,/slug = 'gencouv'/);assert.match(migration,/set not null/);assert.match(center,/gencouvConversations\(admin, organizationId\)/);assert.match(center,/\.eq\("organization_id", organizationId\)/);});
