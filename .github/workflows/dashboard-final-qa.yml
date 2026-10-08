@@ -17,7 +17,8 @@ on:
       - "tests/client-brief-provisioning.test.mjs"
       - "tests/portal-*.test.mjs"
       - "tests/installment-payment-lifecycle.test.mjs"
-      - "tests/phase3-6-manager-workspace-guardrails.test.mjs"
+      - "tests/phase3-6-manager-workspace-guardrails.test.mjs
+      - "tests/phase7-10-manager-operations-guardrails.test.mjs"
       - "package.json"
       - ".github/workflows/dashboard-final-qa.yml"
   workflow_dispatch:

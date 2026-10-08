@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { getMarketplaceSystem, requestOrganizationSystem } from "@/lib/client-systems";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getOrganizationAccessContext, assertAnyOrganizationPermission } from "@/lib/organization-membership";
 
 export async function POST(request: NextRequest) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   try {
+    const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+    assertAnyOrganizationPermission(access, ["systems.manage"]);
     const body = await request.json().catch(() => ({}));
     const slug = String(body.slug || "").trim();
     if (!slug) return NextResponse.json({ error: "System is required." }, { status: 400 });
