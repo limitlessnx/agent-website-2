@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       organization_slug: membership.organizationSlug,
+      trial_plan: pending.trialPlan || "",
       redirect_to: `${redirectTo.pathname}${redirectTo.search}`,
     });
   } catch (error) {
