@@ -43,6 +43,6 @@ test("Phase 3 removal cannot cross organization boundaries", () => {
   assert.match(route, /member\.id===membershipId/);
   assert.match(route, /target\.role!==\"manager\"/);
   assert.match(route, /p_status:\"removed\"/);
-  assert.match(sql, /organization_id = p_organization_id/);
+  assert.match(sql, /organization_id = v_request\.organization_id/);
   assert.match(sql, /set status=p_status/);
 });
