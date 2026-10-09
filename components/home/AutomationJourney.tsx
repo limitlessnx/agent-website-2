@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "@/components/admin/ServerIcons";
+import ChannelAutomationCarousel from "./ChannelAutomationCarousel";
 import styles from "./AutomationJourney.module.css";
 
 function ActionLink() {
@@ -28,6 +29,16 @@ export default function AutomationJourney() {
       id="services"
       aria-label="Fluxknight customer operations automation"
     >
+      <div className={styles.intro} id="how-it-works">
+        <p className={styles.eyebrow}>How it works</p>
+        <h2>From enquiry to follow-through.</h2>
+        <div className={styles.steps}>
+          <article><span>01</span><strong>Tell us the outcome</strong><p>Share where slow replies, missed follow-up or disconnected records cost your team opportunities.</p></article>
+          <article><span>02</span><strong>Connect the work</strong><p>Fluxknight brings conversations, qualification, booking and updates into one operating flow.</p></article>
+          <article><span>03</span><strong>Launch with oversight</strong><p>AI handles the repetitive path while your team keeps control of judgement, approvals and handoffs.</p></article>
+        </div>
+      </div>
+      <ChannelAutomationCarousel />
       <div className={styles.frame}>
         <div
           className={styles.visual}

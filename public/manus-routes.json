@@ -1,0 +1,460 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "title": "Home"
+    },
+    {
+      "path": "/about",
+      "title": "About"
+    },
+    {
+      "path": "/account/choose-mode",
+      "title": "Choose Mode"
+    },
+    {
+      "path": "/account/forgot-password",
+      "title": "Forgot Password"
+    },
+    {
+      "path": "/account/login",
+      "title": "Login"
+    },
+    {
+      "path": "/account/reset-password",
+      "title": "Reset Password"
+    },
+    {
+      "path": "/account/setup",
+      "title": "Setup"
+    },
+    {
+      "path": "/account/signup",
+      "title": "Signup"
+    },
+    {
+      "path": "/account/verify-email",
+      "title": "Verify Email"
+    },
+    {
+      "path": "/case-studies",
+      "title": "Case Studies"
+    },
+    {
+      "path": "/case-studies/maia",
+      "title": "Maia"
+    },
+    {
+      "path": "/checkout",
+      "title": "Checkout"
+    },
+    {
+      "path": "/contact",
+      "title": "Contact"
+    },
+    {
+      "path": "/dashboard",
+      "title": "Dashboard"
+    },
+    {
+      "path": "/dashboard-preview",
+      "title": "Dashboard Preview"
+    },
+    {
+      "path": "/dashboard/activity",
+      "title": "Activity"
+    },
+    {
+      "path": "/dashboard/agent-operations",
+      "title": "Agent Operations"
+    },
+    {
+      "path": "/dashboard/agents",
+      "title": "Agents"
+    },
+    {
+      "path": "/dashboard/agents/maia",
+      "title": "Maia"
+    },
+    {
+      "path": "/dashboard/ai-models",
+      "title": "Ai Models"
+    },
+    {
+      "path": "/dashboard/analytics",
+      "title": "Analytics"
+    },
+    {
+      "path": "/dashboard/automations",
+      "title": "Automations"
+    },
+    {
+      "path": "/dashboard/billing",
+      "title": "Billing"
+    },
+    {
+      "path": "/dashboard/clients",
+      "title": "Clients"
+    },
+    {
+      "path": "/dashboard/clients/:organizationId/setup",
+      "title": "Setup"
+    },
+    {
+      "path": "/dashboard/control-center",
+      "title": "Control Center"
+    },
+    {
+      "path": "/dashboard/conversations",
+      "title": "Conversations"
+    },
+    {
+      "path": "/dashboard/crm",
+      "title": "Crm"
+    },
+    {
+      "path": "/dashboard/evaluations",
+      "title": "Evaluations"
+    },
+    {
+      "path": "/dashboard/expansion",
+      "title": "Expansion"
+    },
+    {
+      "path": "/dashboard/gencouv",
+      "title": "Gencouv"
+    },
+    {
+      "path": "/dashboard/gencouv/acquisition",
+      "title": "Acquisition"
+    },
+    {
+      "path": "/dashboard/gencouv/operations",
+      "title": "Operations"
+    },
+    {
+      "path": "/dashboard/health",
+      "title": "Health"
+    },
+    {
+      "path": "/dashboard/integrations",
+      "title": "Integrations"
+    },
+    {
+      "path": "/dashboard/knowledge",
+      "title": "Knowledge"
+    },
+    {
+      "path": "/dashboard/lifecycle",
+      "title": "Lifecycle"
+    },
+    {
+      "path": "/dashboard/limitless/agentic",
+      "title": "Agentic"
+    },
+    {
+      "path": "/dashboard/limitless/campaigns",
+      "title": "Campaigns"
+    },
+    {
+      "path": "/dashboard/limitless/daily-briefs",
+      "title": "Daily Briefs"
+    },
+    {
+      "path": "/dashboard/limitless/followups",
+      "title": "Followups"
+    },
+    {
+      "path": "/dashboard/limitless/integrations",
+      "title": "Integrations"
+    },
+    {
+      "path": "/dashboard/limitless/leads",
+      "title": "Leads"
+    },
+    {
+      "path": "/dashboard/limitless/media",
+      "title": "Media"
+    },
+    {
+      "path": "/dashboard/limitless/payments",
+      "title": "Payments"
+    },
+    {
+      "path": "/dashboard/limitless/payments/installments",
+      "title": "Installments"
+    },
+    {
+      "path": "/dashboard/limitless/properties",
+      "title": "Properties"
+    },
+    {
+      "path": "/dashboard/memory",
+      "title": "Memory"
+    },
+    {
+      "path": "/dashboard/notifications",
+      "title": "Notifications"
+    },
+    {
+      "path": "/dashboard/onboarding",
+      "title": "Onboarding"
+    },
+    {
+      "path": "/dashboard/onboarding/:id",
+      "title": ":Id"
+    },
+    {
+      "path": "/dashboard/organizations",
+      "title": "Organizations"
+    },
+    {
+      "path": "/dashboard/platform-engine",
+      "title": "Platform Engine"
+    },
+    {
+      "path": "/dashboard/providers",
+      "title": "Providers"
+    },
+    {
+      "path": "/dashboard/retention",
+      "title": "Retention"
+    },
+    {
+      "path": "/dashboard/scale",
+      "title": "Scale"
+    },
+    {
+      "path": "/dashboard/search",
+      "title": "Search"
+    },
+    {
+      "path": "/dashboard/settings",
+      "title": "Settings"
+    },
+    {
+      "path": "/dashboard/settings/integrations",
+      "title": "Integrations"
+    },
+    {
+      "path": "/dashboard/social",
+      "title": "Social"
+    },
+    {
+      "path": "/dashboard/social/analytics",
+      "title": "Analytics"
+    },
+    {
+      "path": "/dashboard/social/assets",
+      "title": "Assets"
+    },
+    {
+      "path": "/dashboard/social/brand",
+      "title": "Brand"
+    },
+    {
+      "path": "/dashboard/social/calendar",
+      "title": "Calendar"
+    },
+    {
+      "path": "/dashboard/social/create",
+      "title": "Create"
+    },
+    {
+      "path": "/dashboard/social/integrations",
+      "title": "Integrations"
+    },
+    {
+      "path": "/dashboard/social/posts",
+      "title": "Posts"
+    },
+    {
+      "path": "/dashboard/social/review",
+      "title": "Review"
+    },
+    {
+      "path": "/dashboard/support",
+      "title": "Support"
+    },
+    {
+      "path": "/dashboard/tenant/analytics",
+      "title": "Analytics"
+    },
+    {
+      "path": "/dashboard/tenants/systems",
+      "title": "Systems"
+    },
+    {
+      "path": "/dashboard/value",
+      "title": "Value"
+    },
+    {
+      "path": "/dashboard/workflows",
+      "title": "Workflows"
+    },
+    {
+      "path": "/dashboard/workflows/:workflow",
+      "title": ":Workflow"
+    },
+    {
+      "path": "/evaluation",
+      "title": "Evaluation"
+    },
+    {
+      "path": "/faq",
+      "title": "Faq"
+    },
+    {
+      "path": "/industries",
+      "title": "Industries"
+    },
+    {
+      "path": "/industries/:slug",
+      "title": ":Slug"
+    },
+    {
+      "path": "/login",
+      "title": "Login"
+    },
+    {
+      "path": "/manage-organizations",
+      "title": "Manage Organizations"
+    },
+    {
+      "path": "/managed-onboarding",
+      "title": "Managed Onboarding"
+    },
+    {
+      "path": "/onboarding",
+      "title": "Onboarding"
+    },
+    {
+      "path": "/portal",
+      "title": "Portal"
+    },
+    {
+      "path": "/portal/agents",
+      "title": "Agents"
+    },
+    {
+      "path": "/portal/agents/:agentId/configure",
+      "title": "Configure"
+    },
+    {
+      "path": "/portal/agents/custom",
+      "title": "Custom"
+    },
+    {
+      "path": "/portal/agents/select",
+      "title": "Select"
+    },
+    {
+      "path": "/portal/agents/setup",
+      "title": "Setup"
+    },
+    {
+      "path": "/portal/agents/workflows",
+      "title": "Workflows"
+    },
+    {
+      "path": "/portal/analytics",
+      "title": "Analytics"
+    },
+    {
+      "path": "/portal/analytics/agents/:id",
+      "title": ":Id"
+    },
+    {
+      "path": "/portal/analytics/systems/:id",
+      "title": ":Id"
+    },
+    {
+      "path": "/portal/appointments",
+      "title": "Appointments"
+    },
+    {
+      "path": "/portal/billing",
+      "title": "Billing"
+    },
+    {
+      "path": "/portal/conversations",
+      "title": "Conversations"
+    },
+    {
+      "path": "/portal/conversations/:id",
+      "title": ":Id"
+    },
+    {
+      "path": "/portal/customers",
+      "title": "Customers"
+    },
+    {
+      "path": "/portal/customers/:id",
+      "title": ":Id"
+    },
+    {
+      "path": "/portal/execution",
+      "title": "Execution"
+    },
+    {
+      "path": "/portal/integrations",
+      "title": "Integrations"
+    },
+    {
+      "path": "/portal/marketplace",
+      "title": "Marketplace"
+    },
+    {
+      "path": "/portal/marketplace/:slug",
+      "title": ":Slug"
+    },
+    {
+      "path": "/portal/notifications",
+      "title": "Notifications"
+    },
+    {
+      "path": "/portal/runtime",
+      "title": "Runtime"
+    },
+    {
+      "path": "/portal/settings",
+      "title": "Settings"
+    },
+    {
+      "path": "/portal/support",
+      "title": "Support"
+    },
+    {
+      "path": "/portal/systems",
+      "title": "Systems"
+    },
+    {
+      "path": "/portal/team",
+      "title": "Team"
+    },
+    {
+      "path": "/portal/workflows",
+      "title": "Workflows"
+    },
+    {
+      "path": "/pricing",
+      "title": "Pricing"
+    },
+    {
+      "path": "/privacy",
+      "title": "Privacy"
+    },
+    {
+      "path": "/services",
+      "title": "Services"
+    },
+    {
+      "path": "/services/:slug",
+      "title": ":Slug"
+    },
+    {
+      "path": "/terms",
+      "title": "Terms"
+    }
+  ]
+}
