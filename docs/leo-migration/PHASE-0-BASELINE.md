@@ -137,3 +137,13 @@ A provider-neutral wrapper is a migration seam, **not** completion of the n8n mi
 - No deletion of n8n files/configuration.
 - No changes to tenant dashboard, onboarding, Maia, reminders or other parallel-workstream features.
 - No claims of green tests or production readiness without actual run evidence.
+
+
+## Phase 3A implementation checkpoint
+
+- Added `lib/leo-execution-dispatcher.ts` as a provider-neutral dispatch contract with a typed result and an explicit provider interface.
+- Added `legacyN8nLeoProvider` as a compatibility adapter around the existing signed-envelope executor. This keeps runtime behavior on the current provider; no Trigger.dev task is selected or invoked by this change.
+- Routed the generic privileged Leo tool path in `app/api/leo/tool/route.ts` through `dispatchLeoExecution`. Special public lead capture, Super Admin inspection/orchestration, and Limitless Realty-specific handlers remain on their existing paths.
+- Added `tests/leo-provider-neutral-dispatch.test.mjs` and included it in `test:support`. It checks the routing seam, compatibility adapter, incomplete-envelope guard, and that Trigger.dev is not selected implicitly.
+- Scope remains intentionally narrow: no n8n files, environment variables, workflows, Maia, CRM, reminder, or tenant UI paths were deleted or redirected.
+- Validation status: source and compare metadata inspected through GitHub. A local Node test run, TypeScript check, production build, and E2E run have **not** been executed in this environment. Do not treat this checkpoint as tested or production-ready until those checks run in an executable checkout.
