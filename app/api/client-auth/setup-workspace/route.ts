@@ -63,16 +63,18 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
-    const preservedTrialPlan = pending.trialPlan;
-    const destination = pending.nextPath && pending.nextPath.startsWith("/") && !pending.nextPath.startsWith("//") ? pending.nextPath : "/onboarding";
-    const redirectTo=new URL(destination,"https://fluxknight.local");
-    void preservedTrialPlan;
-    if(pending.txRef&&redirectTo.pathname==="/onboarding") redirectTo.searchParams.set("tx_ref",pending.txRef);
+    const destination = pending.nextPath && pending.nextPath.startsWith("/") && !pending.nextPath.startsWith("//")
+      ? pending.nextPath
+      : "/portal";
+    const redirectTo = new URL(destination, "https://fluxknight.local");
+    if (pending.txRef && redirectTo.pathname === "/onboarding") {
+      redirectTo.searchParams.set("tx_ref", pending.txRef);
+    }
 
     return NextResponse.json({
       ok: true,
       organization_slug: membership.organizationSlug,
-      redirect_to:`${redirectTo.pathname}${redirectTo.search}`,
+      redirect_to: `${redirectTo.pathname}${redirectTo.search}`,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to finish workspace setup.";
