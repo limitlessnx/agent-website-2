@@ -172,7 +172,7 @@ test("Phase 4 schedules a production installment reminder sweep in Lagos time", 
   const task = read("src/trigger/limitless-installment-reminders.ts");
   assert.match(task, /schedules\.task/);
   assert.match(task, /limitless-installment-reminder-sweep/);
-  assert.match(task, /\*\/15 \* \* \* \*/);
+  assert.ok(task.includes("*/15 * * * *"));
   assert.match(task, /Africa\/Lagos/);
   assert.match(task, /runLimitlessInstallmentReminderSweep/);
 });
