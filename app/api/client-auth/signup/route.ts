@@ -17,7 +17,7 @@ export async function POST(request:NextRequest){
 
   const auth=await signUpClient(email,password,fullName);
   if(!auth.access_token){
-   if(auth.user?.id)await setPendingClientSetupSession({userId:auth.user.id,email:auth.user.email||email,invitationToken:joiningOrganization?invitationToken:undefined,nextPath:joiningOrganization?String(body.post_signup_path||"/portal"):"/onboarding",trialPlan:"",issuedAt:Date.now()});
+   if(auth.user?.id)await setPendingClientSetupSession({userId:auth.user.id,email:auth.user.email||email,invitationToken:joiningOrganization?invitationToken:undefined,nextPath:joiningOrganization?String(body.post_signup_path||"/portal"):"/portal",trialPlan:"",issuedAt:Date.now()});
    return NextResponse.json({ok:true,signed_in:false,account_mode:joiningOrganization?"organization-member":"organization-owner",requires_email_confirmation:true,message:"Account created. Verify your email, then sign in to continue."},{status:201});
   }
   if(!auth.user?.id)throw new Error("The account was authenticated, but the user profile could not be loaded.");
@@ -34,7 +34,7 @@ export async function POST(request:NextRequest){
   await setPendingClientSetupSession({
     userId:auth.user.id,
     email:auth.user.email||email,
-    nextPath:"/onboarding",
+    nextPath:"/portal",
     trialPlan:"",
     issuedAt:Date.now(),
   });
