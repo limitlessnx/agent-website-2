@@ -76,6 +76,32 @@ The GitHub tree endpoint returned 1,181 tracked files with no truncation. The fo
 
 **Important classification rule:** the migration target is Leo's supported execution path, not an indiscriminate repository-wide deletion of n8n. Campaigns, Maia, tenant provisioning, admin discovery and legacy inspection may still have independent dependencies. Each must be proven migrated or intentionally retained before any removal.
 
+## Executor classification from current-main source inspection
+
+| Action family / surface | Current implementation found | Classification / migration decision |
+|---|---|---|
+| Generic Admin/Super Leo tool gateway | `app/api/leo/tool/route.ts` calls `createLeoExecutionEnvelope` then `executeLeoEnvelopeViaN8n` for the generic path. | **Primary Phase 3 cutover point.** Keep direct handlers (public lead capture, orchestration inspect/retry and Limitless-specific paths) intact while migrating the generic path. |
+| Runtime-configured workflow execution | `app/api/leo/runtime/execute/route.ts` loads `config.n8n.workflows`, creates `LeoN8nExecutor`, and registers a workflow-keyed gateway handler. | **Legacy Leo runtime path.** Must be explicitly migrated or retired based on callers and product requirements. |
+| CRM follow-up | `lib/leo-tool-runtime.ts` → `delegateFollowUp` → `LEO_CRM_FOLLOWUP_WEBHOOK_URL` / n8n webhook default. | **Migrate.** Reuse existing tenant/customer validation and idempotency input, but fix the fallback idempotency key design: a fresh random key per retry does not guarantee deduplication across retried requests. |
+| Appointment management | `lib/leo-tool-runtime.ts` → `delegateAppointment` → `LEO_APPOINTMENT_WEBHOOK_URL` / n8n webhook default. | **Migrate.** Preserve organization/agent/customer checks and stable request identity across retries. |
+| Campaign execution | `lib/leo-tool-runtime.ts` uses `LEO_CAMPAIGN_EXECUTOR_WEBHOOK_URL`; separate `lib/limitless-campaign-n8n.ts` imports n8n workflow APIs. | **Split the cases.** Generic Leo campaign executor must be verified and migrated; Limitless Realty's campaign integration is a separate product path and must not be deleted without a dedicated replacement and regression plan. |
+| Workflow activate/deactivate | `lib/leo-tool-runtime.ts` imports `activateN8nWorkflow` / `deactivateN8nWorkflow` from `lib/n8n-api.ts`. | **Provider-specific capability.** Implement only for providers with an explicit lifecycle API; otherwise fail closed as unsupported. Never claim generic Trigger.dev jobs can be activated/deactivated like n8n workflows without a verified equivalent. |
+| Public Leo tools | `app/api/leo/public/tool/route.ts` and `lib/leo-public-tools.ts` contain a separate public path. | **Protect from the initial cutover.** Do not route public lead capture/pricing/recommendation through the new privileged executor. Preserve public scope boundaries. |
+| Operational task execution | `lib/leo-task-executor.ts` invokes the existing `/api/leo/tool` route using a stable task-step request ID. | **Reuse.** Keep task-plan approvals, evidence classification and recovery logic. Validate the end-to-end idempotency behavior when the gateway changes. |
+| Proactive monitoring | `app/api/leo/monitor/route.ts`, `lib/leo-proactive-monitor.ts`, persisted signal store and lifecycle cron routes. | **Preserve.** Monitoring and signal persistence should not be rewritten during dispatcher introduction; only connect eligible action blueprints after the new dispatcher is proven. |
+| Maia Trigger.dev runtime | `src/trigger/maia-runtime.ts` uses Trigger.dev tasks and existing Maia runtime/outbound dispatch functions. | **Existing provider pattern, not a Leo executor.** Reuse patterns where appropriate; do not repurpose Maia tasks for unrelated Leo actions. |
+| Tenant channel runtime | `src/trigger/tenant-channel-runtime.ts` contains a Trigger.dev inbound task and scoped tool handling. | **Potential shared infrastructure.** Inspect the actual tool contracts before reuse; do not duplicate or bypass its organization checks. |
+| System event / appointment / follow-up drains | `src/trigger/system-orchestrator.ts` registers `system-event-dispatch`, `system-event-drain`, `limitless-followup-drain` and `appointment-reminder-drain`. | **Existing tasks to reuse only when semantics match.** The task IDs are real candidates for appointment/follow-up work, but they are not automatically equivalent to the manual Leo tool APIs. |
+| Installment reminder sweep | `src/trigger/limitless-installment-reminders.ts` registers `limitless-installment-reminder-sweep` every 15 minutes in `Africa/Lagos`. | **Out of scope for Leo dispatcher.** Preserve schedule and reminder behavior; include in regression coverage only. |
+| Runtime configuration and signed callback | `lib/leo-runtime-config.ts`, `lib/leo-n8n.ts`, `app/api/leo/n8n/webhook/route.ts`. | **Legacy configuration/protocol.** Remove only after no callers, signatures, callbacks, deployment variables or external workflows depend on them. |
+| Admin n8n management and discovery | Admin sync/status routes and `N8nDiscoveryClient.tsx`. | **Not automatically part of Leo migration.** Keep until separate product-surface decisions and dependency checks authorize removal. |
+
+### Architecture decision for the first code slice
+
+Do not replace the generic n8n call with an unverified Trigger.dev API call in one step. First introduce a small provider-neutral execution contract at the Leo gateway boundary and test it against the existing behavior. The contract must carry authenticated identity/scope, organization ID, canonical tool key, normalized arguments, approval evidence, stable idempotency/request ID, and a typed result with status/evidence. Keep the current n8n implementation behind a clearly named legacy adapter temporarily. Then add Trigger.dev-backed handlers per action family, with an explicit unsupported result for capabilities that have no safe equivalent.
+
+A provider-neutral wrapper is a migration seam, **not** completion of the n8n migration. Phase 3 remains open until the legacy adapter has no required runtime callers and the action-specific end-to-end tests pass.
+
 ## Phase 0 inventory still required
 
 - [ ] Capture current `main` SHA immediately before any implementation batch.
