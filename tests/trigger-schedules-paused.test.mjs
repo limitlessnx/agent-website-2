@@ -7,14 +7,14 @@ function triggerFiles(){
   return readdirSync("src/trigger").filter((name)=>name.endsWith(".ts")||name.endsWith(".tsx")).map((name)=>path.join("src/trigger",name));
 }
 
-test("automatic Trigger schedules are intentionally paused during tenant onboarding buildout",()=>{
+test("only the approved installment reminder sweep is automatically scheduled",()=>{
   const files=triggerFiles();
   const scheduled=[];
   for(const file of files){
     const source=readFileSync(file,"utf8");
     if(source.includes("schedules.task(")) scheduled.push(file);
   }
-  assert.deepEqual(scheduled,[]);
+  assert.deepEqual(scheduled,["src/trigger/limitless-installment-reminders.ts"]);
 });
 
 test("core operational jobs remain callable on demand while automatic schedules are paused",()=>{

@@ -120,5 +120,5 @@ export async function GET(request:NextRequest){
     issuedAt:Date.now(),
   });
   await clearClientOAuthContext().catch(()=>undefined);
-  return NextResponse.redirect(new URL(accountMode==="organization"?"/account/setup":"/account/choose-mode",origin));
+  return NextResponse.redirect(new URL(accountMode==="organization"?"/account/setup":"/account/choose-mode?source=google&new_account=1",origin));
 }

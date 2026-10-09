@@ -65,3 +65,12 @@ test("desktop auth cards use a shared centered geometry",()=>{
   assert.match(css,/\.card \{[\s\S]*?width: min\(100%, 560px\)/);
   assert.match(css,/\.signupCard \{[\s\S]*?width: min\(100%, 620px\)/);
 });
+
+
+test("new Google identities are told to continue account creation instead of being sent to the dashboard",()=>{
+  const route=read("app/auth/callback/route.ts");
+  const mode=read("app/account/choose-mode/AccountModeClient.tsx");
+  assert.match(route,/\/account\/choose-mode\?source=google&new_account=1/);
+  assert.match(mode,/Continue creating your account/);
+  assert.match(mode,/Google identity is verified, but you have not finished creating your Fluxknight account/);
+});
