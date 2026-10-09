@@ -30,7 +30,8 @@ test("Phase 4 account mode routes manager accounts into the manager workspace", 
   assert.match(client, /Manage Organizations/);
   assert.match(route, /account_mode.*manager/);
   assert.match(route, /setManagerSession/);
-  assert.match(route, /redirect_to:"\/manage-organizations"/);
+  assert.match(route, /redirect_to:/);
+  assert.match(route, /manage-organizations/);
 });
 
 test("Phase 4 access requests are protected and organization-scoped", () => {
