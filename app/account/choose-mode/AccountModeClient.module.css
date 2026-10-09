@@ -1,3 +1,39 @@
+.heading {
+  display: grid;
+  gap: 10px;
+}
+
+.heading h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.85rem, 6vw, 2.45rem);
+  line-height: 1.06;
+  letter-spacing: -.045em;
+  font-weight: 720;
+}
+
+.heading :global(.admin-kicker) {
+  display: block !important;
+  margin: 0;
+  color: #bda4ff;
+  font-size: .68rem;
+  letter-spacing: .16em;
+  font-weight: 800;
+}
+
+.heading :global(.admin-muted) {
+  margin: 0;
+  color: #a8a1b5;
+  font-size: .88rem;
+  line-height: 1.65;
+}
+
+.options {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+
 .choiceCard {
   width: 100%;
   display: grid;
@@ -23,19 +59,9 @@
   box-shadow: 0 12px 30px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
 
-.choiceCard:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.choiceCard:focus-visible {
-  outline: 3px solid rgba(196, 181, 253, .85);
-  outline-offset: 3px;
-}
-
-.choiceCard:disabled {
-  cursor: wait;
-  opacity: .68;
-}
+.choiceCard:active:not(:disabled) { transform: translateY(0); }
+.choiceCard:focus-visible { outline: 3px solid rgba(196, 181, 253, .85); outline-offset: 3px; }
+.choiceCard:disabled { cursor: wait; opacity: .68; }
 
 .choiceIcon {
   display: grid;
@@ -48,60 +74,33 @@
   background: rgba(124, 58, 237, .16);
 }
 
-.choiceCopy {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-}
+.choiceCopy { display: grid; gap: 5px; min-width: 0; }
+.choiceTitle { color: #fff; font-size: .96rem; line-height: 1.3; font-weight: 750; }
+.choiceDescription { color: #aaa3b8; font-size: .78rem; line-height: 1.5; font-weight: 450; }
+.choiceArrow { color: #a78bfa; font-size: 1.25rem; text-align: center; }
+.loadingMark { font-size: 1.5rem; line-height: 1; }
 
-.choiceTitle {
-  color: #fff;
-  font-size: .96rem;
-  line-height: 1.3;
-  font-weight: 750;
-}
-
-.choiceDescription {
-  color: #aaa3b8;
-  font-size: .78rem;
+.securityNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 2px 0 0;
+  color: #817a90;
+  font-size: .7rem;
   line-height: 1.5;
-  font-weight: 450;
-}
-
-.choiceArrow {
-  color: #a78bfa;
-  font-size: 1.25rem;
   text-align: center;
 }
 
-.choiceCard:disabled .choiceArrow {
-  color: #c4b5fd;
-}
+.securityNote svg { flex: 0 0 auto; color: #a78bfa; }
 
 @media (max-width: 480px) {
-  .choiceCard {
-    grid-template-columns: 38px minmax(0, 1fr) 16px;
-    gap: 11px;
-    min-height: 88px;
-    padding: 14px;
-  }
-
-  .choiceIcon {
-    width: 38px;
-    height: 38px;
-  }
-
-  .choiceTitle {
-    font-size: .9rem;
-  }
-
-  .choiceDescription {
-    font-size: .75rem;
-  }
+  .choiceCard { grid-template-columns: 38px minmax(0, 1fr) 16px; gap: 11px; min-height: 88px; padding: 14px; }
+  .choiceIcon { width: 38px; height: 38px; }
+  .choiceTitle { font-size: .9rem; }
+  .choiceDescription { font-size: .75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .choiceCard {
-    transition: none;
-  }
+  .choiceCard { transition: none; }
 }
