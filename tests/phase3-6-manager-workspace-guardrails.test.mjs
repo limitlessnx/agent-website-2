@@ -7,7 +7,7 @@ const read=(path)=>readFileSync(path,"utf8");
 test("Phase 3 payment lifecycle remains tenant scoped and installment-only for reminders",()=>{
  const actions=read("app/dashboard/limitless/payments/actions.ts");
  const payments=read("lib/limitless-payments.ts");
- const cron=read("app/api/cron/limitless-installment-reminders/route.ts");
+ const cron=read("lib/limitless-installment-reminder-runtime.ts");
  assert.match(actions,/resolveScope/);
  assert.match(actions,/organization_id: organizationId/);
  assert.match(actions,/\.eq\("organization_id", organizationId\)/);
