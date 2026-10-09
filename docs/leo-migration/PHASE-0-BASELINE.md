@@ -35,6 +35,47 @@ These are observations from files fetched from the branch base, not a complete r
 | Proactive lifecycle tests | `tests/leo-proactive-lifecycle-monitoring.test.mjs` checks lifecycle evidence and dashboard notification synchronization. | Treat this behavior as an existing contract, not a feature to rebuild. |
 | Test commands | `package.json` defines `test:support` with broad Leo/security/runtime/tenant coverage and `test:maia` for Maia/tenant/reminder regression coverage. | Use targeted tests during changes, then run the broader relevant suite and build before handoff. |
 
+## Expanded repository inventory (recursive tree from main)
+
+The GitHub tree endpoint returned 1,181 tracked files with no truncation. The following n8n/Leo/Trigger paths were identified for classification; this is a path inventory, not proof every path is active at runtime.
+
+**Leo execution/runtime candidates**
+- `app/api/leo/tool/route.ts`
+- `app/api/leo/public/tool/route.ts`
+- `app/api/leo/runtime/execute/route.ts`
+- `app/api/leo/runtime/engine/route.ts`
+- `app/api/leo/runtime/engine/stream/route.ts`
+- `app/api/leo/runtime/approvals/route.ts`
+- `app/api/leo/n8n/webhook/route.ts`
+- `lib/leo-n8n-executor.ts`
+- `lib/leo-n8n.ts`
+- `lib/leo-runtime-config.ts`
+- `lib/leo-task-executor.ts`
+- `lib/leo-tool-runtime.ts`
+- `lib/n8n-api.ts`
+
+**Other n8n product surfaces that must not be removed just because Leo is migrating**
+- `app/api/admin/n8n/sync/route.ts`
+- `app/api/admin/organizations/[organizationId]/n8n/sync/route.ts`
+- `app/api/limitless/n8n/status/route.ts`
+- `app/dashboard/automations/N8nDiscoveryClient.tsx`
+- `lib/n8n-organization-provisioning.ts`
+- `lib/limitless-campaign-n8n.ts`
+- `app/api/internal/maintenance/maia-legacy-n8n-inspect/route.ts` and its suffixed maintenance route
+- `n8n/workflows/*` (legacy workflow artifacts and fixtures)
+
+**Existing Trigger.dev implementation candidates**
+- `src/trigger/maia-runtime.ts`
+- `src/trigger/tenant-channel-runtime.ts`
+- `src/trigger/limitless-installment-reminders.ts`
+- `src/trigger/system-orchestrator.ts`
+- `src/trigger/health-check.ts`
+- `trigger.config.ts`
+- `.github/workflows/deploy-trigger.yml`
+- `.github/workflows/sync-trigger-lockfile.yml`
+
+**Important classification rule:** the migration target is Leo's supported execution path, not an indiscriminate repository-wide deletion of n8n. Campaigns, Maia, tenant provisioning, admin discovery and legacy inspection may still have independent dependencies. Each must be proven migrated or intentionally retained before any removal.
+
 ## Phase 0 inventory still required
 
 - [ ] Capture current `main` SHA immediately before any implementation batch.
