@@ -111,7 +111,7 @@ test("dashboard agent cards stack cleanly and keep metric labels readable on mob
   const css = read("components/admin/DashboardHomeExperience.module.css");
   assert.match(css, /@media\(max-width:760px\)[\s\S]*?\.agentGrid\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /\.agentMetrics span\{[^}]*overflow-wrap:anywhere/);
-  assert.match(css, /@media\\(max-width:380px\\)/);
+  assert.match(css, /@media\(max-width:380px\)/);
 });
 
 test("Maia performance workspace stays evidence-backed and responsive", () => {
