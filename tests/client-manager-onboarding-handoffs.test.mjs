@@ -13,22 +13,22 @@ test("sign-in honors an explicit organization invitation before resolving a prim
   assert.ok(invitationBranch < primaryMembership, "invitation acceptance must run before primary-membership fallback");
   assert.match(route, /acceptOrganizationInvitation\(\{userId:auth\.user\.id,email:auth\.user\.email\|\|email,token:invitationToken\}\)/);
   assert.match(route, /getMembershipForOrganization\(auth\.user\.id,accepted\.organization_id\)/);
-  assert.match(route, /if\(!membership\)throw new Error\("Invitation was accepted, but active organization membership could not be loaded\."/);
+  assert.match(route, /if\s*\(\s*!membership\s*\)throw new Error\("Invitation was accepted, but active organization membership could not be loaded\."/);
 });
 
 test("workspace provisioning is not used as a fallback when a sign-in explicitly carries an invitation", () => {
   const route = read("app/api/client-auth/login/route.ts");
-  assert.match(route, /if\(!membership&&!invitationToken\)\{/);
+  assert.match(route, /if\s*\(\s*!membership\s*&&\s*!invitationToken\s*\)/);
   assert.match(route, /provisionClientOrganization\(/);
 });
 
 test("workspace setup requires pending setup context and verifies membership before setting the client session", () => {
   const route = read("app/api/client-auth/setup-workspace/route.ts");
   assert.match(route, /getPendingClientSetupSession\(\)/);
-  assert.match(route, /if\(!pending\)/);
+  assert.match(route, /if\s*\(\s*!pending\s*\)/);
   assert.match(route, /provisionClientWorkspace\(/);
   assert.match(route, /getPrimaryMembership\(pending\.userId\)/);
-  assert.match(route, /if\(!membership\)/);
+  assert.match(route, /if\s*\(\s*!membership\s*\)/);
   assert.match(route, /setClientSession\(/);
 });
 
