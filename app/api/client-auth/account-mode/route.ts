@@ -60,6 +60,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, redirect_to: "/manage-organizations" });
     }
 
+    // Choosing owner mode must replace the callback's temporary
+    // /account/choose-mode destination. Workspace creation should finish at
+    // the organization portal, not send the user back to this choice screen.
+    await setPendingClientSetupSession({
+      ...pending,
+      nextPath: "/portal",
+      issuedAt: Date.now(),
+    });
     return NextResponse.json({ ok: true, redirect_to: "/account/setup" });
   } catch (error) {
     return NextResponse.json(
