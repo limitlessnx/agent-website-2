@@ -72,7 +72,7 @@ test("Phase 3 supports weekly, bi-weekly and monthly cadence", () => {
 });
 
 test("Phase 3 reminder runtime is tenant independent and installment-only", () => {
-  const cron = read("app/api/cron/limitless-installment-reminders/route.ts");
+  const cron = read("lib/limitless-installment-reminder-runtime.ts");
   assert.match(cron, /organization_id/);
   assert.match(cron, /payment_type.*installment/);
   assert.match(cron, /installment_payment_reminder/);
@@ -83,7 +83,7 @@ test("Phase 3 reminder runtime is tenant independent and installment-only", () =
 });
 
 test("Phase 3 uses the approved seven-variable Meta template contract", () => {
-  const cron = read("app/api/cron/limitless-installment-reminders/route.ts");
+  const cron = read("lib/limitless-installment-reminder-runtime.ts");
   const activation = read("supabase/migrations/20261007150000_fix_limitless_installment_reminder_template_contract.sql");
   assert.match(cron, /client_name: String\(plan\.client_name/);
   assert.match(cron, /property_title: String\(plan\.property_title/);
@@ -160,4 +160,26 @@ test("Phase 3 payment completion stops reminders", () => {
 test("installment status controls accept every status exposed by the dashboard",()=>{
   const actions=read("app/dashboard/limitless/payments/actions.ts");
   for(const status of ["active","due_soon","overdue","completed","paused","cancelled"]) assert.match(actions,new RegExp('"' + status + '"'));
+});
+
+
+test("Phase 4 starts reminders at the configured start date when no next reminder is stored", () => {
+  const runtime = read("lib/limitless-installment-reminder-runtime.ts");
+  assert.match(runtime, /plan\.next_reminder_at[\s\S]*new Date\(String\(plan\.start_at\)\)/);
+});
+
+test("Phase 4 schedules a production installment reminder sweep in Lagos time", () => {
+  const task = read("src/trigger/limitless-installment-reminders.ts");
+  assert.match(task, /schedules\.task/);
+  assert.match(task, /limitless-installment-reminder-sweep/);
+  assert.match(task, /\*\/15 \* \* \* \*/);
+  assert.match(task, /Africa\/Lagos/);
+  assert.match(task, /runLimitlessInstallmentReminderSweep/);
+});
+
+test("The cron endpoint retains authorization and delegates to the shared reminder runtime", () => {
+  const route = read("app/api/cron/limitless-installment-reminders/route.ts");
+  assert.match(route, /authorized\(request\)/);
+  assert.match(route, /runLimitlessInstallmentReminderSweep/);
+  assert.match(route, /status: 401/);
 });
