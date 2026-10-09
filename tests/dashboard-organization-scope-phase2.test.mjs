@@ -37,6 +37,7 @@ test("organization operational data isolates Fluxknight Limitless Gencouv and te
   assert.match(data, /leo_public_leads/);
   assert.match(data, /\.eq\("organization_id", scope\.organizationId\)/);
   assert.match(data, /gencouv_qualified_leads/);
+  assert.match(data, /gencouv_support_conversations[\s\S]*?\.eq\("organization_id", scope\.organizationId\)/);
   assert.match(data, /crm_conversations/);
   assert.match(data, /systemId === "limitless-realty"/);
   assert.match(data, /systemId === "gencouv"/);

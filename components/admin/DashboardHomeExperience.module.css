@@ -122,3 +122,26 @@
 
 
 .financePeriodSwitch{display:inline-flex;align-items:center;gap:6px;position:absolute;top:17px;right:17px;padding:4px 6px 4px 9px;border:1px solid color-mix(in srgb,var(--fk-brand) 28%,var(--fk-border));border-radius:999px;background:var(--fk-brand-soft);color:var(--fk-brand-hover);font-size:9px;font-weight:700;z-index:2}.financePeriodSwitch select{border:0;outline:0;background:transparent;color:var(--fk-brand-hover);font:inherit;cursor:pointer}.propertySummary{display:flex;align-items:center;gap:8px;overflow:auto;margin:10px 0 9px;padding-bottom:1px;scrollbar-width:none}.propertySummary::-webkit-scrollbar{display:none}.propertySummary span{flex:none;color:var(--fk-text-muted);font-size:8px;white-space:nowrap}.propertySummary b{color:var(--fk-text-secondary);font-size:9px}@media(max-width:900px){.financePeriodSwitch{top:14px;right:14px}}
+
+/* Mobile dashboard card readability: avoid cramped two-column agent cards. */
+@media(max-width:760px){
+  .agentGrid{grid-template-columns:minmax(0,1fr);gap:10px}
+  .agentCard{padding:14px}
+  .agentHead{grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:start}
+  .agentTitle{flex-wrap:wrap;align-items:flex-start;gap:6px;min-width:0}
+  .agentTitle strong{font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+  .agentHead p,.agentHead small{line-height:1.4;overflow-wrap:anywhere}
+  .agentMetrics{gap:7px;margin-top:12px}
+  .agentMetrics>div{min-width:0;padding:9px 7px}
+  .agentMetrics strong{font-size:clamp(17px,5vw,22px);line-height:1.1}
+  .agentMetrics span{font-size:9px;line-height:1.3;overflow-wrap:anywhere;word-break:normal}
+  .agentNote{font-size:11px!important;line-height:1.45}
+}
+@media(max-width:380px){
+  .agentCard{padding:12px}
+  .agentHead{gap:7px}
+  .avatar{width:36px;height:36px}
+  .agentMetrics{gap:5px}
+  .agentMetrics>div{padding:8px 5px}
+  .agentMetrics span{font-size:8px}
+}
