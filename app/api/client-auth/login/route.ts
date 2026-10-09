@@ -18,9 +18,19 @@ export async function POST(request:NextRequest){
   const pending=await getPendingClientSetupSession();
   const invitationToken=String(body.invitation_token||((pending?.userId===auth.user.id)?pending.invitationToken:"")||"").trim();
 
-  let membership=await getPrimaryMembership(auth.user.id);
-  if(!membership&&invitationToken){const accepted=await acceptOrganizationInvitation({userId:auth.user.id,email:auth.user.email||email,token:invitationToken});membership=await getMembershipForOrganization(auth.user.id,accepted.organization_id)}
-  if(!membership){
+  // An explicit invitation is the user's intent for this sign-in. Resolve it before
+  // the primary membership so existing users join the invited organization, not
+  // whichever organization happens to have been created first.
+  let membership;
+  if(invitationToken){
+   const accepted=await acceptOrganizationInvitation({userId:auth.user.id,email:auth.user.email||email,token:invitationToken});
+   membership=await getMembershipForOrganization(auth.user.id,accepted.organization_id);
+   if(!membership)throw new Error("Invitation was accepted, but active organization membership could not be loaded.");
+  }else{
+   membership=await getPrimaryMembership(auth.user.id);
+  }
+
+  if(!membership&&!invitationToken){
    const companySlug=slugify(String(metadata.company_slug||companyName)),templateSlug=String(metadata.template_slug||"").trim()||undefined,agentFamilyName=String(metadata.agent_family_name||companyName).trim()||undefined;
    if(companyName&&companySlug){await provisionClientOrganization({userId:auth.user.id,organizationName:companyName,organizationSlug:companySlug,templateSlug,agentFamilyName});membership=await getPrimaryMembership(auth.user.id)}
   }
@@ -39,5 +49,5 @@ export async function POST(request:NextRequest){
    if(exists===true)return NextResponse.json({error:"The email or password is incorrect."},{status:401});
   }
   return NextResponse.json({error:message},{status:401});
-}
+ }
 }
