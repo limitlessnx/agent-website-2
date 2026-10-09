@@ -455,7 +455,7 @@ async function gencouvSnapshot(scope: AdminOrganizationScope): Promise<Organizat
   const admin = createAdminClient();
   const [{ data: leads }, { data: conversations }, { data: emails }, { data: enrollments }, notices] = await Promise.all([
     admin.from("gencouv_qualified_leads").select("id,full_name,email,company,quality_score,lifecycle_status,qualification_status,campaign_status,email_sequence_status,next_follow_up_at,reply_status,updated_at").eq("organization_id", scope.organizationId).order("updated_at", { ascending: false }).limit(500),
-    admin.from("gencouv_support_conversations").select("id,customer_name,customer_email,status,last_intent,updated_at").order("updated_at", { ascending: false }).limit(200),
+    admin.from("gencouv_support_conversations").select("id,customer_name,customer_email,status,last_intent,updated_at").eq("organization_id", scope.organizationId).order("updated_at", { ascending: false }).limit(200),
     admin.from("gencouv_email_messages").select("id,recipient_name,recipient_email,status,direction,subject,read_at,created_at,last_event_at").eq("organization_id", scope.organizationId).order("created_at", { ascending: false }).limit(300),
     admin.from("gencouv_campaign_enrollments").select("id,normalized_email,campaign_status,next_follow_up_at,reply_status,do_not_contact,last_event_at").eq("organization_id", scope.organizationId).order("updated_at", { ascending: false }).limit(300),
     notificationNotices(scope.organizationId),
