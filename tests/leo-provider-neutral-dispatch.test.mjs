@@ -9,13 +9,13 @@ const dispatcher = readFileSync(resolve(root, "lib/leo-execution-dispatcher.ts")
 const route = readFileSync(resolve(root, "app/api/leo/tool/route.ts"), "utf8");
 
 test("Leo tool route dispatches through the provider-neutral boundary", () => {
-  assert.match(route, /dispatchLeoExecution\\(envelope\\)/);
+  assert.match(route, /dispatchLeoExecution\(envelope\)/);
   assert.doesNotMatch(route, /executeLeoEnvelopeViaN8n/);
 });
 
 test("legacy adapter preserves the signed-envelope executor during migration", () => {
   assert.match(dispatcher, /id: "legacy_n8n"/);
-  assert.match(dispatcher, /executeLeoEnvelopeViaN8n\\(envelope\\)/);
+  assert.match(dispatcher, /executeLeoEnvelopeViaN8n\(envelope\)/);
   assert.match(dispatcher, /interface LeoExecutionProvider/);
 });
 
