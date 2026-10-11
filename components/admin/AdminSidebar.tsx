@@ -46,6 +46,7 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard/activity": Activity,
   "/dashboard/analytics": LineChart,
   "/dashboard/limitless/leads": Building2,
+  "/dashboard/limitless/campaigns": Megaphone,
   "/dashboard/gencouv": LineChart,
   "/dashboard/workflows": Activity,
   "/dashboard/billing": CreditCard,
@@ -88,7 +89,17 @@ type ActiveOrganization = { kind: "system" | "tenant"; id: string; name: string 
 
 export default function AdminSidebar({ email, tenants, activeOrganization }: { email: string; tenants: TenantNavItem[]; activeOrganization: ActiveOrganization }) {
   const pathname = usePathname();
-  const platformGroups = useMemo<NavGroup[]>(() => ADMIN_NAV_GROUPS.map((group) => withIcons(group)), []);
+  const platformGroups = useMemo<NavGroup[]>(() => {
+    const groups = ADMIN_NAV_GROUPS.map((group) => withIcons(group));
+    if (activeOrganization.kind === "system" && activeOrganization.id === "limitless-realty") {
+      groups.push(withIcons({
+        id: "limitless-realty",
+        label: "Limitless Realty",
+        sections: [{ items: [{ href: "/dashboard/limitless/campaigns", label: "Campaigns" }] }],
+      }));
+    }
+    return groups;
+  }, [activeOrganization.kind, activeOrganization.id]);
   const activeGroupId = getActiveAdminNavGroup(pathname);
   const [openGroups, setOpenGroups] = useState<string[]>(() => (activeGroupId ? [activeGroupId] : ["overview"]));
   const [openSections, setOpenSections] = useState<string[]>([]);
