@@ -39,7 +39,7 @@ export default async function ConversationsPage() {
       </div>
 
       <section className="admin-panel conversation-inbox" aria-label="Client conversation inbox">
-        <header className="conversation-inbox-head"><div><h2>Client inbox</h2><p>Tap a contact's name to open their conversation and summary. Only one conversation stays expanded at a time.</p></div><MessageSquareText size={19} /></header>
+        <header className="conversation-inbox-head"><div><h2>Client inbox</h2><p>Tap a contact's name to expand their summary, contact details, and message history.</p></div><MessageSquareText size={19} /></header>
         {conversations.length ? <div className="conversation-accordion">
           {conversations.map((item) => (
             <details className="conversation-contact" key={item.id}>
