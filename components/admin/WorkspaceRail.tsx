@@ -24,6 +24,7 @@ const fluxknight: Item[] = [
 const limitless: Item[] = [
   { href: "/dashboard", label: "Home", Icon: Home },
   { href: "/dashboard/limitless/leads", label: "Leads", Icon: Users },
+  { href: "/dashboard/limitless/campaigns", label: "Campaigns", Icon: Megaphone },
   { href: "/dashboard/conversations", label: "Conversations", Icon: MessageCircle },
   { href: "/dashboard/activity", label: "Activity", Icon: Activity },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
