@@ -13,6 +13,7 @@ import {
   CreditCard,
   Image as ImageIcon,
   MessageSquareText,
+  Megaphone,
   Play,
   Target,
   Users,
@@ -149,6 +150,17 @@ export default function DashboardHomeExperience({
               const href = metric.icon === "conversations" ? "/dashboard/conversations" : "/dashboard/limitless/leads";
               return <Link href={href} key={metric.label} className={styles.kpiCard}><span className={styles.kpiIcon}><Icon size={16} /></span><strong>{metric.value}</strong><span>{metric.label}</span><small>{metric.detail}</small></Link>;
             })}
+          </section>
+
+          <section className={styles.sectionCard} aria-label="Campaigns quick access">
+            <header className={styles.sectionHeader}>
+              <div>
+                <span className={styles.sectionKicker}>MARKETING</span>
+                <h2>Campaigns</h2>
+                <p>Create, manage and review Limitless Realty campaigns.</p>
+              </div>
+              <Link href="/dashboard/limitless/campaigns"><Megaphone size={14} /> Open campaigns <ChevronRight size={14} /></Link>
+            </header>
           </section>
 
           <section className={styles.sectionCard}>
