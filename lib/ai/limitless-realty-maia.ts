@@ -144,7 +144,15 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
   }
   if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
 
-  await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
+  const { error: cancelPreviousError } = await admin.from("follow_ups")
+    .update({ status: "cancelled" })
+    .eq("organization_id", args.organizationId)
+    .eq("lead_id", leadId)
+    .eq("status", "pending");
+  if (cancelPreviousError) {
+    // Do not queue a new sequence if the old sequence could still be active.
+    throw cancelPreviousError;
+  }
 
   const stages = [1, 3, 7, 14, 21, 30];
   const propertyText = JSON.stringify(args.propertyContext).slice(0, 3500);
