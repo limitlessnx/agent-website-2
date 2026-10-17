@@ -67,6 +67,17 @@ test("Legacy Limitless Maia lead access remains tenant-scoped", () => {
   assert.match(limitlessRuntime, /organization_id: args\.organizationId/);
 });
 
+test("30-day property follow-up stages reuse one tenant-scoped lead", () => {
+  const sequence = limitlessRuntime.slice(
+    limitlessRuntime.indexOf("export async function queueLimitlessPropertyFollowupSequence"),
+    limitlessRuntime.indexOf("export function shouldHandoff"),
+  );
+  assert.match(sequence, /let leadId = existingLead\?\.id \|\| args\.leadId/);
+  assert.match(sequence, /if \(!leadId && phone\)/);
+  assert.match(sequence, /leadId,\s*customerPhone: phone/);
+  assert.match(sequence, /const stages = \[1, 3, 7, 14, 21, 30\]/);
+});
+
 test("Phase 3 does not send WhatsApp directly from the Trigger task", () => {
   assert.doesNotMatch(triggerTask, /graph\.facebook\.com|whatsapp.*send|N8N|n8n/i);
 });
