@@ -76,6 +76,7 @@ test("30-day property follow-up stages reuse one tenant-scoped lead", () => {
   assert.match(sequence, /if \(!leadId && phone\)/);
   assert.match(sequence, /leadId,\s*customerPhone: phone/);
   assert.match(sequence, /const stages = \[1, 3, 7, 14, 21, 30\]/);
+  assert.match(sequence, /if \(cancelPreviousError\)/);
 });
 
 test("Phase 3 does not send WhatsApp directly from the Trigger task", () => {
