@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
-import { AtSign, Mail, MessageCircle, PhoneCall, Send } from "lucide-react";
+import { Mail, MessageCircle, PhoneCall } from "lucide-react";
 import styles from "./ChannelAutomationCarousel.module.css";
 
 type Channel = {
@@ -18,7 +18,7 @@ const channels: Channel[] = [
     name: "Voice call agent",
     label: "VOICE",
     outcome: "Answer, qualify and route calls",
-    description: "Give every caller a useful first response, capture intent and hand urgent moments to your team.",
+    description: "Give callers a useful first response, capture intent and route requests to your team when the connected voice workflow is configured.",
     Icon: PhoneCall,
     accent: "#f59e0b",
   },
@@ -26,33 +26,17 @@ const channels: Channel[] = [
     name: "WhatsApp agent",
     label: "WHATSAPP",
     outcome: "Turn chats into next steps",
-    description: "Respond to enquiries, qualify leads, send reminders and keep the conversation moving.",
+    description: "Respond to enquiries, qualify leads, send reminders and keep the conversation moving through a connected WhatsApp workflow.",
     Icon: MessageCircle,
     accent: "#4ade80",
-  },
-  {
-    name: "Telegram agent",
-    label: "TELEGRAM",
-    outcome: "Support communities and customers",
-    description: "Automate useful replies, collect requests and route conversations without losing context.",
-    Icon: Send,
-    accent: "#60a5fa",
   },
   {
     name: "Automated email",
     label: "EMAIL",
     outcome: "Follow up without forgetting",
-    description: "Send timely sequences, confirmations and internal updates while your team stays in control.",
+    description: "Coordinate timely sequences, confirmations and internal updates around the workflow your business needs.",
     Icon: Mail,
     accent: "#c084fc",
-  },
-  {
-    name: "Instagram automation",
-    label: "INSTAGRAM",
-    outcome: "Capture interest from social",
-    description: "Turn comments and direct messages into organised enquiries, follow-up and handoffs.",
-    Icon: AtSign,
-    accent: "#f472b6",
   },
 ];
 
@@ -83,7 +67,7 @@ export default function ChannelAutomationCarousel() {
   return (
     <section
       className={styles.carousel}
-      aria-label="Channels Fluxknight can automate"
+      aria-label="Examples of automation channels"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -93,7 +77,7 @@ export default function ChannelAutomationCarousel() {
     >
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Channels that can keep moving</p>
+          <p className={styles.eyebrow}>Examples of configurable channels</p>
           <h3>Meet customers where they already are.</h3>
         </div>
         <span className={styles.status}>{paused || reducedMotion ? "Paused" : "Auto-rotating"}</span>
