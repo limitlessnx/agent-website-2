@@ -69,6 +69,11 @@ export default function MeetLeoSection() {
             </div>
 
             <div className="relative z-20 -mt-2 rounded-2xl border border-white/10 bg-[#100d19]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-xl sm:ml-[-16px] sm:mt-0 sm:p-5">
+              <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-purple-300/15 bg-purple-400/[0.06] px-3 py-2">
+                <Image src="/fluxknight-mark.svg" alt="Fluxknight logo" width={26} height={26} className="h-6 w-6 object-contain" />
+                <span className="text-sm font-semibold tracking-wide text-white">Fluxknight</span>
+                <span className="ml-auto text-[10px] font-medium uppercase tracking-[0.14em] text-purple-200/70">Leo assistant</span>
+              </div>
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-xl border border-purple-300/20 bg-purple-400/10 text-purple-200"><Sparkles size={17} /></span>
