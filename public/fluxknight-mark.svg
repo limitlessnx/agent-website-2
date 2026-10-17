@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Fluxknight logo mark">
+  <defs>
+    <linearGradient id="white" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#d9d5ff"/></linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e879f9"/><stop offset=".55" stop-color="#a855f7"/><stop offset="1" stop-color="#6d28d9"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <path d="M28 108 69 29 100 29 58 108Z" fill="url(#white)" stroke="#f5edff" stroke-width="1.5" filter="url(#glow)"/>
+  <path d="M61 131 103 52 134 52 92 131Z" fill="url(#violet)" stroke="#d879ff" stroke-width="1.5" filter="url(#glow)"/>
+</svg>
