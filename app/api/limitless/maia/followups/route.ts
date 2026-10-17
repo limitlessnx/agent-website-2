@@ -58,6 +58,15 @@ export async function POST(request: NextRequest) {
         lastInboundAt = inbound.data?.created_at || null;
       }
 
+      // A new customer message after this follow-up was queued means the old sequence is stale.
+      // Cancel this stage; remaining stages will independently hit the same guard when due.
+      const queuedAt = row.created_at ? new Date(row.created_at).getTime() : 0;
+      if (lastInboundAt && queuedAt > 0 && new Date(lastInboundAt).getTime() > queuedAt) {
+        await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
+        results.push({ id: row.id, status: "cancelled", reason: "customer_replied_after_scheduling" });
+        continue;
+      }
+
       const withinCustomerServiceWindow = Boolean(lastInboundAt && Date.now() - new Date(lastInboundAt).getTime() < 24 * 60 * 60 * 1000);
       const delivery = await sendWhatsAppMessage({
         organizationId: organization.id,
