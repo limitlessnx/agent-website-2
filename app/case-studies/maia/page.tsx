@@ -246,11 +246,11 @@ export default function MaiaCaseStudyPage() {
           />
           <div className={styles.storyStack}>
             <div className={styles.storyBeat}>
-              <div className={styles.storyCopy}><span>Viewing workflow</span><h3>Turn intent into a booked next step.</h3><p>Appointment context, confirmation, reminders and CRM state stay connected so the agent does not have to manually reconstruct the booking later.</p></div>
+              <div className={styles.storyCopy}><span>Viewing workflow</span><h3>Turn intent into an inspection request the team can confirm.</h3><p>Maia records the requested property and time, then routes the request for admin review. The inspection is not booked until the team confirms it.</p></div>
               <AppointmentVisual />
             </div>
             <div className={styles.storyBeat}>
-              <div className={styles.storyCopy}><span>Appointment reminders</span><h3>Keep the viewing moving before the agent has to chase it.</h3><p>The customer and team can receive configured reminders around the appointment while the booking remains connected to the lead and property record.</p></div>
+              <div className={styles.storyCopy}><span>Appointment reminders</span><h3>Keep confirmed viewings visible with configured reminders.</h3><p>Where the reminder workflow is enabled, messages can support a confirmed viewing while its details remain connected to the lead and property record. A reminder does not itself confirm a booking.</p></div>
               <AppointmentReminderVisual />
             </div>
             <div className={styles.storyBeat}>
