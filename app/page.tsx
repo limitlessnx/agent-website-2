@@ -5,6 +5,7 @@ import IndustryCarousel from "@/components/IndustryCarousel";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
 import AutomationJourney from "@/components/home/AutomationJourney";
+import MeetLeoSection from "@/components/home/MeetLeoSection";
 import styles from "./HomepageHeaderRestore.module.css";
 
 export default function HomePage() {
@@ -12,6 +13,7 @@ export default function HomePage() {
     <main className={`quantix-home ${styles.home}`}>
       <ReferenceFluxHeroPhase1 />
       <AutomationJourney />
+      <MeetLeoSection />
       <MaiaCaseStudyTeaser />
       <IndustryCarousel />
       <section className="brand-section evaluation-journey" id="evaluation-journey">
