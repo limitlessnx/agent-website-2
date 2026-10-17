@@ -114,10 +114,45 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
   const admin = createAdminClient();
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
-  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
+  const { data: existingLead, error: leadLookupError } = args.leadId
+    ? await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("id", args.leadId).maybeSingle()
+    : await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
+  if (leadLookupError) throw leadLookupError;
   if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
-  const leadId = existingLead?.id || args.leadId || undefined;
-  if (leadId) await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
+
+  // Resolve or create the lead once before creating all six stages. Passing an
+  // undefined leadId into queueLimitlessFollowup for every stage used to create
+  // a separate lead record for each scheduled message when no lead existed yet.
+  let leadId = existingLead?.id || args.leadId || undefined;
+  if (!leadId && phone) {
+    const { data: createdLead, error: createLeadError } = await admin
+      .from("leads")
+      .insert({
+        organization_id: args.organizationId,
+        name: args.customerName || "Limitless Realty prospect",
+        phone,
+        status: "follow_up_pending",
+        source: "maia",
+        opted_out: false,
+        agent_notified: false,
+        conversation_log: [],
+      })
+      .select("id")
+      .single();
+    if (createLeadError) throw createLeadError;
+    leadId = createdLead.id;
+  }
+  if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
+
+  const { error: cancelPreviousError } = await admin.from("follow_ups")
+    .update({ status: "cancelled" })
+    .eq("organization_id", args.organizationId)
+    .eq("lead_id", leadId)
+    .eq("status", "pending");
+  if (cancelPreviousError) {
+    // Do not queue a new sequence if the old sequence could still be active.
+    throw cancelPreviousError;
+  }
 
   const stages = [1, 3, 7, 14, 21, 30];
   const propertyText = JSON.stringify(args.propertyContext).slice(0, 3500);

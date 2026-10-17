@@ -11,7 +11,7 @@ import styles from "./MaiaCaseStudyTeaser.module.css";
 const outcomes = [
   { icon: MessageSquareText, label: "Replies day and night" },
   { icon: CheckCircle2, label: "Follows up with buyers" },
-  { icon: CalendarCheck2, label: "Books inspections" },
+  { icon: CalendarCheck2, label: "Coordinates inspection requests" },
 ];
 
 const capabilities = [
@@ -20,7 +20,7 @@ const capabilities = [
   "Recommends relevant configured properties",
   "Shares property information and media where configured",
   "Keeps conversation context for follow-up",
-  "Helps schedule inspections and reminders",
+  "Collects inspection requests for admin confirmation",
   "Hands serious prospects to a human with context",
   "Keeps lead stages visible to management",
 ];
@@ -48,7 +48,7 @@ export default function MaiaCaseStudyTeaser() {
         <div className={styles.content}>
           <span className={styles.eyebrow}>A real example · Real estate</span>
           <h2 id="maia-case-study-title">See how Fluxknight works in <span>a real business.</span></h2>
-          <p>Maia helps Limitless Realty reply to property enquiries, collect buyer details, follow up with interested buyers and book inspections.</p>
+          <p>Maia helps Limitless Realty respond to property enquiries, collect buyer details, follow up with interested buyers and submit inspection requests for the team to confirm.</p>
 
           <div className={styles.outcomes} aria-label="Maia case study outcomes">
             {outcomes.map(({ icon: Icon, label }) => (
