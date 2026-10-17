@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   const { data: rows, error } = await admin
     .from("follow_ups")
-    .select("id,organization_id,lead_id,scheduled_at,message_sent,status,template_name,stage,leads!follow_ups_lead_id_fkey(phone,name,opted_out)")
+    .select("id,organization_id,lead_id,created_at,scheduled_at,message_sent,status,template_name,stage,leads!follow_ups_lead_id_fkey(phone,name,opted_out)")
     .eq("organization_id", organization.id)
     .eq("status", "pending")
     .lte("scheduled_at", now)
