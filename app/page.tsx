@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "@/components/admin/ServerIcons";
 import IndustryCarousel from "@/components/IndustryCarousel";
+import ClientReviews from "@/components/ClientReviews";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
 import AutomationJourney from "@/components/home/AutomationJourney";
@@ -16,6 +17,7 @@ export default function HomePage() {
       <MeetLeoSection />
       <MaiaCaseStudyTeaser />
       <IndustryCarousel />
+      <ClientReviews />
       <section className="brand-section evaluation-journey" id="evaluation-journey">
         <div className="brand-shell"><div className="evaluation-conversion-card evaluation-conversion-card--visual evaluation-conversion-card--image">
           <div className="evaluation-conversion-copy"><span className="brand-eyebrow">Where are opportunities slipping through?</span><h3>Evaluate how your business handles leads after they arrive.</h3><p>Show us how you handle enquiries, qualification, follow-up, bookings, support and customer records. We’ll help identify where slow response, missed follow-up or disconnected customer context may be costing you opportunities, then map where Fluxknight can help.</p></div>
