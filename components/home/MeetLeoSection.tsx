@@ -19,7 +19,7 @@ export default function MeetLeoSection() {
         <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(168,85,247,.16)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,.16)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]" />
       </div>
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-2 lg:gap-16 lg:px-10 lg:py-28">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-5 py-12 sm:gap-10 sm:px-8 sm:py-16 lg:grid-cols-2 lg:gap-16 lg:px-10 lg:py-20">
         <div className="relative z-10">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-purple-400/25 bg-purple-400/[0.08] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-purple-200">
             <span className="h-1.5 w-1.5 rounded-full bg-purple-300 shadow-[0_0_12px_rgba(192,132,252,.9)]" />
@@ -61,8 +61,8 @@ export default function MeetLeoSection() {
         <div className="relative mx-auto w-full max-w-[560px] min-w-0">
           <div aria-hidden="true" className="absolute left-1/2 top-[10%] h-56 w-56 -translate-x-1/2 rounded-full bg-purple-500/20 blur-[75px] sm:h-72 sm:w-72" />
           <div className="relative flex min-w-0 flex-col items-center">
-            <div className="relative z-10 mx-auto w-[min(78vw,300px)] sm:w-[min(54vw,360px)] lg:w-[min(100%,390px)]">
-              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} unoptimized priority={false} sizes="(min-width: 1024px) 390px, (min-width: 640px) 360px, 78vw" className="block h-auto max-h-[420px] w-full object-contain drop-shadow-[0_20px_45px_rgba(124,58,237,.22)] sm:max-h-[460px] lg:max-h-[480px]" />
+            <div className="relative z-10 mx-auto w-[min(68vw,270px)] sm:w-[min(44vw,320px)] lg:w-[min(100%,360px)]">
+              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} quality={75} sizes="(min-width: 1024px) 360px, (min-width: 640px) 320px, 68vw" className="block h-auto max-h-[420px] w-full object-contain drop-shadow-[0_20px_45px_rgba(124,58,237,.22)] sm:max-h-[460px] lg:max-h-[480px]" />
               <div className="absolute bottom-[5%] left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-xl border border-purple-300/25 bg-[#100b1c]/90 px-3 py-2 shadow-[0_8px_30px_rgba(0,0,0,.35)] backdrop-blur sm:bottom-[7%] sm:px-4">
                 <div className="flex items-center gap-2 text-xs font-semibold text-white"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Leo <span className="font-normal text-white/45">· assistant preview</span></div>
               </div>
