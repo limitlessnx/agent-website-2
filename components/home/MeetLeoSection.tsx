@@ -62,7 +62,7 @@ export default function MeetLeoSection() {
           <div aria-hidden="true" className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-purple-500/20 blur-[75px]" />
           <div className="relative grid items-end gap-0 sm:grid-cols-[0.8fr_1.2fr]">
             <div className="relative z-10 mx-auto w-[68%] max-w-[250px] sm:mx-0 sm:w-full sm:max-w-none sm:translate-x-4">
-              <Image src="/leo-mascot.svg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={500} priority={false} className="h-auto w-full drop-shadow-[0_20px_45px_rgba(124,58,237,.22)]" />
+              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} unoptimized priority={false} className="h-auto w-full drop-shadow-[0_20px_45px_rgba(124,58,237,.22)]" />
               <div className="absolute bottom-[12%] left-1/2 w-max -translate-x-1/2 rounded-xl border border-purple-300/25 bg-[#100b1c]/90 px-4 py-2 shadow-[0_8px_30px_rgba(0,0,0,.35)] backdrop-blur">
                 <div className="flex items-center gap-2 text-xs font-semibold text-white"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Leo <span className="font-normal text-white/45">· assistant preview</span></div>
               </div>
