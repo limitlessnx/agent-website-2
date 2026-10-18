@@ -58,42 +58,42 @@ export default function MeetLeoSection() {
           <p className="mt-4 text-xs leading-5 text-white/40">Leo’s public chat helps you explore fit and next steps. Workspace-specific answers depend on the data and access available in your signed-in Fluxknight workspace.</p>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[600px]">
-          <div aria-hidden="true" className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-purple-500/20 blur-[75px]" />
-          <div className="relative grid items-end gap-0 sm:grid-cols-[0.8fr_1.2fr]">
-            <div className="relative z-10 mx-auto w-[68%] max-w-[250px] sm:mx-0 sm:w-full sm:max-w-none sm:translate-x-4">
-              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} unoptimized priority={false} className="h-auto w-full drop-shadow-[0_20px_45px_rgba(124,58,237,.22)]" />
-              <div className="absolute bottom-[12%] left-1/2 w-max -translate-x-1/2 rounded-xl border border-purple-300/25 bg-[#100b1c]/90 px-4 py-2 shadow-[0_8px_30px_rgba(0,0,0,.35)] backdrop-blur">
+        <div className="relative mx-auto w-full max-w-[560px] min-w-0">
+          <div aria-hidden="true" className="absolute left-1/2 top-[10%] h-56 w-56 -translate-x-1/2 rounded-full bg-purple-500/20 blur-[75px] sm:h-72 sm:w-72" />
+          <div className="relative flex min-w-0 flex-col items-center">
+            <div className="relative z-10 mx-auto w-[min(78vw,300px)] sm:w-[min(54vw,360px)] lg:w-[min(100%,390px)]">
+              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} unoptimized priority={false} sizes="(min-width: 1024px) 390px, (min-width: 640px) 360px, 78vw" className="block h-auto max-h-[420px] w-full object-contain drop-shadow-[0_20px_45px_rgba(124,58,237,.22)] sm:max-h-[460px] lg:max-h-[480px]" />
+              <div className="absolute bottom-[5%] left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-xl border border-purple-300/25 bg-[#100b1c]/90 px-3 py-2 shadow-[0_8px_30px_rgba(0,0,0,.35)] backdrop-blur sm:bottom-[7%] sm:px-4">
                 <div className="flex items-center gap-2 text-xs font-semibold text-white"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Leo <span className="font-normal text-white/45">· assistant preview</span></div>
               </div>
             </div>
 
-            <div className="relative z-20 -mt-2 rounded-2xl border border-white/10 bg-[#100d19]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-xl sm:ml-[-16px] sm:mt-0 sm:p-5">
-              <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-purple-300/15 bg-purple-400/[0.06] px-3 py-2">
-                <Image src="/fluxknight-mark.svg" alt="Fluxknight logo" width={26} height={26} className="h-6 w-6 object-contain" />
+            <div className="relative z-20 mt-2 w-full min-w-0 rounded-2xl border border-white/10 bg-[#100d19]/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-xl sm:mt-4 sm:p-5">
+              <div className="mb-4 flex min-w-0 items-center gap-2.5 rounded-xl border border-purple-300/15 bg-purple-400/[0.06] px-3 py-2">
+                <Image src="/fluxknight-mark.svg" alt="Fluxknight logo" width={26} height={26} className="h-6 w-6 shrink-0 object-contain" />
                 <span className="text-sm font-semibold tracking-wide text-white">Fluxknight</span>
-                <span className="ml-auto text-[10px] font-medium uppercase tracking-[0.14em] text-purple-200/70">Leo assistant</span>
+                <span className="ml-auto text-right text-[10px] font-medium uppercase tracking-[0.14em] text-purple-200/70">Leo assistant</span>
               </div>
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl border border-purple-300/20 bg-purple-400/10 text-purple-200"><Sparkles size={17} /></span>
-                  <div><p className="text-sm font-semibold">A conversation with Leo</p><p className="mt-0.5 text-xs text-white/45">Illustrative example</p></div>
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-purple-300/20 bg-purple-400/10 text-purple-200"><Sparkles size={17} /></span>
+                  <div className="min-w-0"><p className="text-sm font-semibold">A conversation with Leo</p><p className="mt-0.5 text-xs text-white/45">Illustrative example</p></div>
                 </div>
-                <AudioLines size={18} className="text-purple-300" />
+                <AudioLines size={18} className="shrink-0 text-purple-300" />
               </div>
               <div className="space-y-4 py-5">
-                <div className="ml-auto max-w-[92%] rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
+                <div className="ml-auto max-w-[92%] break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
                   We miss follow-ups after new enquiries come in.
                 </div>
-                <div className="flex items-start gap-2.5">
+                <div className="flex min-w-0 items-start gap-2.5">
                   <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-purple-400/10 text-purple-200"><Sparkles size={14} /></span>
-                  <div className="rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/75">
+                  <div className="min-w-0 break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/75">
                     Let’s map what happens after an enquiry, where the response slows down, and which follow-up steps may be suitable for automation.
                   </div>
                 </div>
               </div>
               <a href="#talk-to-leo" className="flex w-full items-center justify-between gap-3 rounded-xl border border-purple-300/20 bg-purple-400/[0.07] px-3.5 py-3 text-left text-sm text-purple-100 transition hover:bg-purple-400/[0.12]">
-                <span>Start your own conversation</span><ArrowRight size={16} />
+                <span>Start your own conversation</span><ArrowRight size={16} className="shrink-0" />
               </a>
             </div>
           </div>
