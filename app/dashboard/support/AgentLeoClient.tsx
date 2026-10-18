@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bot, Check, ChevronRight, Clock3, MessageCircle, Plus, Radio, Send, ShieldCheck, Sparkles, X } from "@/components/admin/ServerIcons";
 import LeoRealtimeVoice from "@/components/leo/LeoRealtimeVoice";
+import LeoRobot from "@/components/leo/LeoRobot";
 
 type Conversation = { id: string; title: string; status: string; priority: string; updated_at: string };
 type AIState = {
@@ -192,13 +193,9 @@ export default function AgentLeoClient({
         </header>
 
         <section className="leo-intelligence-card">
-          <div className="leo-orb-wrap" aria-hidden="true">
-            <div className={`leo-orb ${busy ? "thinking" : ""}`}>
-              <div className="leo-orb-ring ring-one" />
-              <div className="leo-orb-ring ring-two" />
-              <div className="leo-orb-ring ring-three" />
-              <div className="leo-orb-core"><Radio size={28} /></div>
-            </div>
+          <div className={`leo-robot-stage ${busy ? "thinking" : ""}`} aria-label={busy ? "Leo is thinking" : "Leo is ready"} role="img">
+            <div className="leo-robot-halo" aria-hidden="true" />
+            <LeoRobot size={220} className="leo-robot-art" />
           </div>
           <div className="leo-intelligence-copy">
             <p>{busy ? "Thinking across your workspace" : "AI operations copilot"}</p>
