@@ -146,3 +146,20 @@ test("F7 provisioning does not claim connected before sender ONLINE",()=>{
   assert.match(onboarding,/senderStatus==="ONLINE"\?"connected":"awaiting_sender_online"/);
   assert.match(onboarding,/status:senderStatus==="ONLINE"\?"connected":"configured"/);
 });
+
+
+test("disconnected WhatsApp integrations expose tenant-scoped Meta credential setup in the admin dashboard",()=>{
+  const control=read("app/dashboard/integrations/WhatsAppOnboardingControl.tsx");
+  assert.match(control,/useState\(!integration\.has_credentials \|\| integration\.status !== "connected"\)/);
+  assert.match(control,/Meta access token/);
+  assert.match(control,/Phone number ID/);
+  assert.match(control,/WhatsApp Business Account ID/);
+  assert.ok(control.includes("/api/admin/clients/${integration.organization_id}/whatsapp/configure"));
+  const route=read("app/api/admin/clients/[organizationId]/whatsapp/configure/route.ts");
+  assert.match(route,/getAdminSession/);
+  assert.match(route,/saveWhatsAppCredentials/);
+  assert.match(route,/checkWhatsAppReadiness/);
+  assert.ok(route.includes('.eq("organization_id", organizationId)'));
+  assert.ok(route.includes('.eq("provider", "whatsapp")'));
+  assert.ok(!route.includes('eq("slug", "limitless-realty")'));
+});

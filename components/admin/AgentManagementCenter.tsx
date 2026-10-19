@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import type { AgentManagementSummary, ManagedAgent } from "@/lib/agent-management";
 
 function lines(value: unknown) {
@@ -71,6 +71,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
   const [form, setForm] = useState<FormState>(blank(summary.projects[0]?.id));
   const [result, setResult] = useState("");
   const [isPending, startTransition] = useTransition();
+  const editorRef = useRef<HTMLElement | null>(null);
 
   const projectMap = useMemo(() => new Map(summary.projects.map((project) => [project.id, project])), [summary.projects]);
   const linksByAgent = useMemo(() => {
@@ -138,7 +139,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
             const channels = lines(agent.communication_channels);
             const tone = statusTone(agent.status);
             return (
-              <button key={agent.id} type="button" aria-pressed={form.id === agent.id} className={`agent-card status-${tone} ${form.id === agent.id ? "selected" : ""}`} onClick={() => setForm(fromAgent(agent, connected))}>
+              <button key={agent.id} type="button" aria-pressed={form.id === agent.id} className={`agent-card status-${tone} ${form.id === agent.id ? "selected" : ""}`} onClick={() => { setForm(fromAgent(agent, connected)); editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
                 <span className="agent-card-head">
                   <span>
                     <strong>{agent.name}</strong>
@@ -163,7 +164,7 @@ export default function AgentManagementCenter({ summary }: { summary: AgentManag
         </div>
       </section>
 
-      <section className="admin-panel agent-editor-panel">
+      <section ref={editorRef} className="admin-panel agent-editor-panel" style={{ scrollMarginTop: "24px" }}>
         <div className="admin-panel-header">
           <div>
             <p className="agent-panel-kicker">Configuration</p>

@@ -81,6 +81,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
                   <p>{healthMessage}</p>
                   <IntegrationCredentialControl integration={{
                     id: item.id,
+                    organization_id: item.organization_id,
                     provider: item.provider,
                     status: item.status,
                     has_credentials: item.has_credentials,

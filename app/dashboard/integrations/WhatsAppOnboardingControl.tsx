@@ -9,6 +9,7 @@ type Mode = "twilio_sandbox" | "twilio_production" | "meta_direct";
 type Props = {
   integration: {
     id: string;
+    organization_id: string;
     status: string;
     has_credentials: boolean;
     secret_keys: string[];
@@ -27,18 +28,19 @@ const modeCopy: Record<Mode, { title: string; badge: string; description: string
     description: "Connect a production WhatsApp sender already approved in the client's Twilio account or Fluxknight-managed subaccount.",
   },
   meta_direct: {
-    title: "Meta Direct",
-    badge: "Fallback",
-    description: "Use a direct Meta WhatsApp Cloud API connection when the client is not being routed through Twilio.",
+    title: "Meta WhatsApp Cloud API",
+    badge: "Manual setup for an existing number",
+    description: "Connect a WhatsApp number already registered in Meta using its Phone Number ID, WABA ID and access token.",
   },
 };
 
 export default function WhatsAppOnboardingControl({ integration }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("twilio_sandbox");
-  const [open, setOpen] = useState(!integration.has_credentials);
+  const [mode, setMode] = useState<Mode>("meta_direct");
+  const [open, setOpen] = useState(!integration.has_credentials || integration.status !== "connected");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [readinessChecks, setReadinessChecks] = useState<Array<{ key: string; ok: boolean; detail: string }>>([]);
   const [values, setValues] = useState<Record<string, string>>({});
 
   const fields = useMemo(() => {
@@ -46,7 +48,8 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
       return [
         { key: "access_token", label: "Meta access token", type: "password" },
         { key: "phone_number_id", label: "Phone number ID", type: "text" },
-        { key: "business_account_id", label: "WhatsApp Business Account ID", type: "text" },
+        { key: "business_account_id", label: "WhatsApp Business Account ID (WABA ID)", type: "text" },
+        { key: "graph_version", label: "Meta Graph API version", type: "text", optional: true },
       ];
     }
 
@@ -62,6 +65,7 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
+    setReadinessChecks([]);
     try {
       const credentials = Object.fromEntries(
         fields
@@ -69,23 +73,35 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
           .map((field) => [field.key, values[field.key] || ""]),
       );
 
-      const response = await fetch(`/api/admin/integrations/${integration.id}/credentials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          credentials,
-          configuration: {
-            connection_mode: mode,
-            provider_family: mode.startsWith("twilio") ? "twilio" : "meta",
-            pilot: mode === "twilio_sandbox",
-          },
-        }),
-      });
+      const response = mode === "meta_direct"
+        ? await fetch(`/api/admin/clients/${integration.organization_id}/whatsapp/configure`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accessToken: values.access_token || "",
+              phoneNumberId: values.phone_number_id || "",
+              wabaId: values.business_account_id || "",
+              graphVersion: values.graph_version || "v23.0",
+            }),
+          })
+        : await fetch(`/api/admin/integrations/${integration.id}/credentials`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              credentials,
+              configuration: {
+                connection_mode: mode,
+                provider_family: "twilio",
+                pilot: mode === "twilio_sandbox",
+              },
+            }),
+          });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Unable to save WhatsApp connection.");
       setValues({});
-      setOpen(false);
-      setMessage(mode === "twilio_sandbox" ? "Sandbox connection saved. This tenant can now be prepared as a WhatsApp pilot." : "WhatsApp connection saved securely.");
+      setOpen(true);
+      setReadinessChecks(Array.isArray(payload.readiness?.checks) ? payload.readiness.checks : []);
+      setMessage(payload.message || (mode === "twilio_sandbox" ? "Sandbox credentials saved. Provider verification is still required." : "Credentials saved securely. Provider verification is still required."));
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save WhatsApp connection.");
@@ -128,8 +144,8 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
       {open ? (
         <div style={{ display: "grid", gap: 14, padding: 16, border: "1px solid rgba(168,85,247,.2)", borderRadius: 14, background: "rgba(255,255,255,.02)" }}>
           <div>
-            <strong style={{ display: "block", marginBottom: 5 }}>Choose how this client will use WhatsApp</strong>
-            <span className="muted">Free and pilot clients can start with Twilio Sandbox. Live client senders can move to production without changing the tenant architecture.</span>
+            <strong style={{ display: "block", marginBottom: 5 }}>Configure this tenant's WhatsApp connection</strong>
+            <span className="muted">For an existing WhatsApp Cloud API number, choose Meta Direct and enter its Phone Number ID, a permanent/system-user access token, and WABA ID. Saving stores the credentials in the selected tenant’s secure credential store and checks Meta readiness. It does not mark the channel connected unless the required checks pass.</span>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 8 }}>
@@ -167,6 +183,7 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
             </div>
           </div>
 
+          {mode === "meta_direct" ? <p className="muted">Find the Phone Number ID and WABA ID in Meta WhatsApp Manager or the Meta app dashboard. Use a token with access to that WhatsApp Business Account. Never paste the App Secret here.</p> : null}
           <form onSubmit={save} style={{ display: "grid", gap: 10 }}>
             {fields.map((field) => (
               <label key={field.key} style={{ display: "grid", gap: 5 }}>
@@ -199,6 +216,12 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
         <small className="muted">Stored fields: {integration.secret_keys.join(", ").replaceAll("_", " ")}</small>
       ) : null}
       {message ? <small className="muted">{message}</small> : null}
+      {readinessChecks.length ? <div className="admin-list" style={{ display: "grid", gap: 8, marginTop: 8 }}>
+        {readinessChecks.map((check) => <div className="admin-list-row compact" key={check.key}>
+          <span aria-label={check.ok ? "Passed" : "Needs attention"}>{check.ok ? "✓" : "!"}</span>
+          <div><strong>{check.key.replaceAll("_", " ")}</strong><span>{check.detail}</span></div>
+        </div>)}
+      </div> : null}
     </div>
   );
 }
