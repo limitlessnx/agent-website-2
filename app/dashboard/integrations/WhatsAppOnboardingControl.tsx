@@ -28,15 +28,15 @@ const modeCopy: Record<Mode, { title: string; badge: string; description: string
     description: "Connect a production WhatsApp sender already approved in the client's Twilio account or Fluxknight-managed subaccount.",
   },
   meta_direct: {
-    title: "Meta Direct",
-    badge: "Fallback",
-    description: "Use a direct Meta WhatsApp Cloud API connection when the client is not being routed through Twilio.",
+    title: "Meta WhatsApp Cloud API",
+    badge: "Manual setup for an existing number",
+    description: "Connect a WhatsApp number already registered in Meta using its Phone Number ID, WABA ID and access token.",
   },
 };
 
 export default function WhatsAppOnboardingControl({ integration }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("twilio_sandbox");
+  const [mode, setMode] = useState<Mode>("meta_direct");
   const [open, setOpen] = useState(!integration.has_credentials || integration.status !== "connected");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
