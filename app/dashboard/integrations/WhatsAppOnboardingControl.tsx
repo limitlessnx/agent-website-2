@@ -36,7 +36,7 @@ const modeCopy: Record<Mode, { title: string; badge: string; description: string
 export default function WhatsAppOnboardingControl({ integration }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("twilio_sandbox");
-  const [open, setOpen] = useState(!integration.has_credentials);
+  const [open, setOpen] = useState(!integration.has_credentials || integration.status !== "connected");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
@@ -128,8 +128,8 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
       {open ? (
         <div style={{ display: "grid", gap: 14, padding: 16, border: "1px solid rgba(168,85,247,.2)", borderRadius: 14, background: "rgba(255,255,255,.02)" }}>
           <div>
-            <strong style={{ display: "block", marginBottom: 5 }}>Choose how this client will use WhatsApp</strong>
-            <span className="muted">Free and pilot clients can start with Twilio Sandbox. Live client senders can move to production without changing the tenant architecture.</span>
+            <strong style={{ display: "block", marginBottom: 5 }}>Configure this tenant's WhatsApp connection</strong>
+            <span className="muted">This panel is the manual credential setup for the selected tenant. For Meta Direct, enter the Meta access token, Phone Number ID and WhatsApp Business Account ID. For Twilio, enter the account credentials and sender details. A disconnected integration opens this form automatically so setup is not hidden behind another click.</span>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 8 }}>
