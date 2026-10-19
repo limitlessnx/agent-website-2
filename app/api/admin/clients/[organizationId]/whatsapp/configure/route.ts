@@ -22,7 +22,7 @@ export async function POST(
     if (!phoneNumberId || !accessToken) {
       return NextResponse.json({ error: "Meta Phone Number ID and access token are required." }, { status: 400 });
     }
-    if (!/^v\\d+\\.\\d+$/.test(graphVersion)) {
+    if (!/^v\d+\.\d+$/.test(graphVersion)) {
       return NextResponse.json({ error: "Graph API version must look like v23.0." }, { status: 400 });
     }
 
