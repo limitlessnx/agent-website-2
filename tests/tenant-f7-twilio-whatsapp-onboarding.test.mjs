@@ -154,5 +154,13 @@ test("disconnected WhatsApp integrations expose credential setup in the admin da
   assert.match(control,/Meta access token/);
   assert.match(control,/Phone number ID/);
   assert.match(control,/WhatsApp Business Account ID/);
-  assert.match(control,/manual credential setup for the selected tenant/);
+  assert.match(control,/Meta Phone Number ID|Phone Number ID/);
+  assert.match(control,/api\\/admin\\/clients\\/\\$\\{integration\\.organization_id\\}\\/whatsapp\\/configure/);
+  const route=read("app/api/admin/clients/[organizationId]/whatsapp/configure/route.ts");
+  assert.match(route,/getAdminSession/);
+  assert.match(route,/saveWhatsAppCredentials/);
+  assert.match(route,/checkWhatsAppReadiness/);
+  assert.match(route,/eq\\("organization_id", organizationId\\)/);
+  assert.match(route,/eq\\("provider", "whatsapp"\\)/);
+  assert.doesNotMatch(route,/eq\\("slug", "limitless-realty"\\)/);
 });
