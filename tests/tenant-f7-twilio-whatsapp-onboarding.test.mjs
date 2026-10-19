@@ -146,3 +146,13 @@ test("F7 provisioning does not claim connected before sender ONLINE",()=>{
   assert.match(onboarding,/senderStatus==="ONLINE"\?"connected":"awaiting_sender_online"/);
   assert.match(onboarding,/status:senderStatus==="ONLINE"\?"connected":"configured"/);
 });
+
+
+test("disconnected WhatsApp integrations expose credential setup in the admin dashboard",()=>{
+  const control=read("app/dashboard/integrations/WhatsAppOnboardingControl.tsx");
+  assert.match(control,/useState\(!integration\.has_credentials \|\| integration\.status !== "connected"\)/);
+  assert.match(control,/Meta access token/);
+  assert.match(control,/Phone number ID/);
+  assert.match(control,/WhatsApp Business Account ID/);
+  assert.match(control,/manual credential setup for the selected tenant/);
+});
