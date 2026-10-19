@@ -40,6 +40,7 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
   const [open, setOpen] = useState(!integration.has_credentials || integration.status !== "connected");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [readinessChecks, setReadinessChecks] = useState<Array<{ key: string; ok: boolean; detail: string }>>([]);
   const [values, setValues] = useState<Record<string, string>>({});
 
   const fields = useMemo(() => {
@@ -64,6 +65,7 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
+    setReadinessChecks([]);
     try {
       const credentials = Object.fromEntries(
         fields
@@ -98,6 +100,7 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
       if (!response.ok) throw new Error(payload.error || "Unable to save WhatsApp connection.");
       setValues({});
       setOpen(true);
+      setReadinessChecks(Array.isArray(payload.readiness?.checks) ? payload.readiness.checks : []);
       setMessage(payload.message || (mode === "twilio_sandbox" ? "Sandbox credentials saved. Provider verification is still required." : "Credentials saved securely. Provider verification is still required."));
       router.refresh();
     } catch (error) {
@@ -213,6 +216,12 @@ export default function WhatsAppOnboardingControl({ integration }: Props) {
         <small className="muted">Stored fields: {integration.secret_keys.join(", ").replaceAll("_", " ")}</small>
       ) : null}
       {message ? <small className="muted">{message}</small> : null}
+      {readinessChecks.length ? <div className="admin-list" style={{ display: "grid", gap: 8, marginTop: 8 }}>
+        {readinessChecks.map((check) => <div className="admin-list-row compact" key={check.key}>
+          <span aria-label={check.ok ? "Passed" : "Needs attention"}>{check.ok ? "✓" : "!"}</span>
+          <div><strong>{check.key.replaceAll("_", " ")}</strong><span>{check.detail}</span></div>
+        </div>)}
+      </div> : null}
     </div>
   );
 }
