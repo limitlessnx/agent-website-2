@@ -28,6 +28,7 @@ const providerFields: Record<string, Array<{ key: string; label: string; type?: 
 type Props = {
   integration: {
     id: string;
+    organization_id: string;
     provider: string;
     status: string;
     has_credentials: boolean;
@@ -45,7 +46,7 @@ export default function IntegrationCredentialControl({ integration }: Props) {
 
   if (PLATFORM_MANAGED_PROVIDERS.has(integration.provider)) return null;
   if (integration.provider === "whatsapp") {
-    return <WhatsAppOnboardingControl integration={{ id: integration.id, status: integration.status, has_credentials: integration.has_credentials, secret_keys: integration.secret_keys }} />;
+    return <WhatsAppOnboardingControl integration={{ id: integration.id, organization_id: integration.organization_id, status: integration.status, has_credentials: integration.has_credentials, secret_keys: integration.secret_keys }} />;
   }
 
   async function save(event: FormEvent) {
