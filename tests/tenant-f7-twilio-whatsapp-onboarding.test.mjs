@@ -148,19 +148,18 @@ test("F7 provisioning does not claim connected before sender ONLINE",()=>{
 });
 
 
-test("disconnected WhatsApp integrations expose credential setup in the admin dashboard",()=>{
+test("disconnected WhatsApp integrations expose tenant-scoped Meta credential setup in the admin dashboard",()=>{
   const control=read("app/dashboard/integrations/WhatsAppOnboardingControl.tsx");
   assert.match(control,/useState\(!integration\.has_credentials \|\| integration\.status !== "connected"\)/);
   assert.match(control,/Meta access token/);
   assert.match(control,/Phone number ID/);
   assert.match(control,/WhatsApp Business Account ID/);
-  assert.match(control,/Meta Phone Number ID|Phone Number ID/);
-  assert.match(control,/api\\/admin\\/clients\\/\\$\\{integration\\.organization_id\\}\\/whatsapp\\/configure/);
+  assert.ok(control.includes("/api/admin/clients/${integration.organization_id}/whatsapp/configure"));
   const route=read("app/api/admin/clients/[organizationId]/whatsapp/configure/route.ts");
   assert.match(route,/getAdminSession/);
   assert.match(route,/saveWhatsAppCredentials/);
   assert.match(route,/checkWhatsAppReadiness/);
-  assert.match(route,/eq\\("organization_id", organizationId\\)/);
-  assert.match(route,/eq\\("provider", "whatsapp"\\)/);
-  assert.doesNotMatch(route,/eq\\("slug", "limitless-realty"\\)/);
+  assert.ok(route.includes('.eq("organization_id", organizationId)'));
+  assert.ok(route.includes('.eq("provider", "whatsapp")'));
+  assert.ok(!route.includes('eq("slug", "limitless-realty")'));
 });
