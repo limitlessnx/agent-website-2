@@ -60,32 +60,47 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
 
   if (!organizationId) return null;
 
+  // Resolve published Maia agents inside this tenant before choosing a
+  // runtime route. Some tenants have a named Maia instance (for example,
+  // "maia-xposure") but predate the maia_active configuration flag. Treat a
+  // missing flag as legacy/unset and infer activation only from a published
+  // Maia agent. An explicit false remains an intentional opt-out.
+  const { data: agents, error: agentsError } = await admin
+    .from("agents")
+    .select("id,slug,agent_type,configuration,updated_at")
+    .eq("organization_id", organizationId)
+    .eq("status", "published")
+    .order("updated_at", { ascending: false });
+  if (agentsError) throw agentsError;
+
+  const publishedAgents = agents || [];
+  const maiaAgent =
+    publishedAgents.find((candidate) => candidate.slug === "maia") ||
+    publishedAgents.find((candidate) => {
+      const configuration = (candidate.configuration || {}) as Record<string, unknown>;
+      const agentKey = String(configuration.agent_key || "").toLowerCase();
+      return agentKey === "maia" || (agentKey === "whatsapp_agent" && String(candidate.slug || "").startsWith("maia-"));
+    }) ||
+    publishedAgents.find((candidate) => String(candidate.slug || "").startsWith("maia-"));
+
+  const maiaEnabled = maiaActive || (
+    !matchedIntegration ||
+    !Object.prototype.hasOwnProperty.call(
+      ((integrations || []).find((row) => {
+        const config = (row.configuration || {}) as Record<string, unknown>;
+        return String(config.phone_number_id || config.phoneNumberId || "") === phoneNumberId;
+      })?.configuration || {}) as Record<string, unknown>,
+      "maia_active",
+    )
+  );
+
+  if (maiaEnabled && maiaAgent?.id) {
+    return { organizationId, agentId: String(maiaAgent.id), mode: "maia" as const, sourceSystemId: null };
+  }
+
   if (maiaActive) {
-    // Resolve the dedicated Maia agent within this tenant. Historically this
-    // assumed every tenant used slug "maia", which breaks named instances such
-    // as "maia-xposure". Prefer the canonical slug, then explicit Maia/WhatsApp
-    // agent metadata, without ever searching across organizations.
-    const { data: agents, error: agentsError } = await admin
-      .from("agents")
-      .select("id,slug,agent_type,configuration,updated_at")
-      .eq("organization_id", organizationId)
-      .eq("status", "published")
-      .order("updated_at", { ascending: false });
-    if (agentsError) throw agentsError;
-
-    const publishedAgents = agents || [];
-    const agent =
-      publishedAgents.find((candidate) => candidate.slug === "maia") ||
-      publishedAgents.find((candidate) => {
-        const configuration = (candidate.configuration || {}) as Record<string, unknown>;
-        const agentKey = String(configuration.agent_key || "").toLowerCase();
-        return agentKey === "maia" || (agentKey === "whatsapp_agent" && String(candidate.slug || "").startsWith("maia-"));
-      }) ||
-      publishedAgents.find((candidate) => String(candidate.slug || "").startsWith("maia-"));
-
-    return agent?.id
-      ? { organizationId, agentId: String(agent.id), mode: "maia" as const, sourceSystemId: null }
-      : null;
+    // An explicitly active Maia route without a published agent is not ready.
+    return null;
   }
 
   const { data: catalog } = await admin
