@@ -34,6 +34,7 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
 
   let organizationId = "";
   let maiaActive = false;
+  let maiaFlagConfigured = false;
   let matchedIntegration = false;
 
   for (const row of integrations || []) {
@@ -41,6 +42,7 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
     if (String(config.phone_number_id || config.phoneNumberId || "") !== phoneNumberId) continue;
     matchedIntegration = true;
     organizationId = String(row.organization_id || "");
+    maiaFlagConfigured = Object.prototype.hasOwnProperty.call(config, "maia_active");
     maiaActive = config.maia_active === true;
     break;
   }
@@ -60,32 +62,38 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
 
   if (!organizationId) return null;
 
+  // Resolve published Maia agents inside this tenant before choosing a
+  // runtime route. Some tenants have a named Maia instance (for example,
+  // "maia-xposure") but predate the maia_active configuration flag. Treat a
+  // missing flag as legacy/unset and infer activation only from a published
+  // Maia agent. An explicit false remains an intentional opt-out.
+  const { data: agents, error: agentsError } = await admin
+    .from("agents")
+    .select("id,slug,agent_type,configuration,updated_at")
+    .eq("organization_id", organizationId)
+    .eq("status", "published")
+    .order("updated_at", { ascending: false });
+  if (agentsError) throw agentsError;
+
+  const publishedAgents = agents || [];
+  const maiaAgent =
+    publishedAgents.find((candidate) => candidate.slug === "maia") ||
+    publishedAgents.find((candidate) => {
+      const configuration = (candidate.configuration || {}) as Record<string, unknown>;
+      const agentKey = String(configuration.agent_key || "").toLowerCase();
+      return agentKey === "maia" || (agentKey === "whatsapp_agent" && String(candidate.slug || "").startsWith("maia-"));
+    }) ||
+    publishedAgents.find((candidate) => String(candidate.slug || "").startsWith("maia-"));
+
+  const maiaEnabled = maiaActive || (!maiaFlagConfigured && Boolean(maiaAgent?.id));
+
+  if (maiaEnabled && maiaAgent?.id) {
+    return { organizationId, agentId: String(maiaAgent.id), mode: "maia" as const, sourceSystemId: null };
+  }
+
   if (maiaActive) {
-    // Resolve the dedicated Maia agent within this tenant. Historically this
-    // assumed every tenant used slug "maia", which breaks named instances such
-    // as "maia-xposure". Prefer the canonical slug, then explicit Maia/WhatsApp
-    // agent metadata, without ever searching across organizations.
-    const { data: agents, error: agentsError } = await admin
-      .from("agents")
-      .select("id,slug,agent_type,configuration,updated_at")
-      .eq("organization_id", organizationId)
-      .eq("status", "published")
-      .order("updated_at", { ascending: false });
-    if (agentsError) throw agentsError;
-
-    const publishedAgents = agents || [];
-    const agent =
-      publishedAgents.find((candidate) => candidate.slug === "maia") ||
-      publishedAgents.find((candidate) => {
-        const configuration = (candidate.configuration || {}) as Record<string, unknown>;
-        const agentKey = String(configuration.agent_key || "").toLowerCase();
-        return agentKey === "maia" || (agentKey === "whatsapp_agent" && String(candidate.slug || "").startsWith("maia-"));
-      }) ||
-      publishedAgents.find((candidate) => String(candidate.slug || "").startsWith("maia-"));
-
-    return agent?.id
-      ? { organizationId, agentId: String(agent.id), mode: "maia" as const, sourceSystemId: null }
-      : null;
+    // An explicitly active Maia route without a published agent is not ready.
+    return null;
   }
 
   const { data: catalog } = await admin
@@ -227,7 +235,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"))) {
+  const signature = request.headers.get("x-hub-signature-256");
+  const signatureValid = verifySignature(rawBody, signature);
+  console.info("[whatsapp-webhook] inbound received", { signaturePresent: Boolean(signature), signatureValid, bodyLength: rawBody.length, vercelIdPresent: Boolean(request.headers.get("x-vercel-id")) });
+  if (!signatureValid) {
+    console.warn("[whatsapp-webhook] signature rejected", { signaturePresent: Boolean(signature), bodyLength: rawBody.length });
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
   }
 
@@ -265,7 +277,14 @@ export async function POST(request: NextRequest) {
       }
 
       const phoneNumberId = String(value?.metadata?.phone_number_id || "");
-      const tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+      let tenant = null;
+      try {
+        tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+      } catch (error) {
+        console.error("[whatsapp-webhook] tenant lookup failed", { phoneNumberIdPresent: Boolean(phoneNumberId), errorType: error instanceof Error ? error.name : "unknown" });
+        throw error;
+      }
+      console.info("[whatsapp-webhook] tenant lookup result", { phoneNumberIdPresent: Boolean(phoneNumberId), tenantResolved: Boolean(tenant), organizationId: tenant?.organizationId || null, mode: tenant?.mode || null, agentResolved: Boolean(tenant?.agentId) });
       const contacts = Array.isArray(value.contacts) ? value.contacts : [];
       const contactName = String(contacts[0]?.profile?.name || "");
 
@@ -302,6 +321,7 @@ export async function POST(request: NextRequest) {
         const text = inboundText(message);
         if (!tenant || !messageId || !from || !text) {
           ignoredInbound += 1;
+          console.warn("[whatsapp-webhook] inbound ignored", { tenantResolved: Boolean(tenant), messageIdPresent: Boolean(messageId), senderPresent: Boolean(from), textPresent: Boolean(text), messageType: String(message?.type || "unknown"), phoneNumberIdPresent: Boolean(phoneNumberId) });
           continue;
         }
 
@@ -340,15 +360,21 @@ export async function POST(request: NextRequest) {
           },
         };
 
-        if (tenant.mode === "maia") {
-          await tasks.trigger("maia-process-inbound-message", inboundPayload);
-        } else {
-          await tasks.trigger("tenant-whatsapp-process-inbound-message", {
-            ...inboundPayload,
-            sourceSystemId: tenant.sourceSystemId,
-          });
+        try {
+          if (tenant.mode === "maia") {
+            await tasks.trigger("maia-process-inbound-message", inboundPayload);
+          } else {
+            await tasks.trigger("tenant-whatsapp-process-inbound-message", {
+              ...inboundPayload,
+              sourceSystemId: tenant.sourceSystemId,
+            });
+          }
+          inboundQueued += 1;
+          console.info("[whatsapp-webhook] inbound dispatched", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, messageIdPresent: Boolean(messageId) });
+        } catch (error) {
+          console.error("[whatsapp-webhook] inbound dispatch failed", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, errorType: error instanceof Error ? error.name : "unknown" });
+          throw error;
         }
-        inboundQueued += 1;
       }
     }
   }
