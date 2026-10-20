@@ -34,6 +34,7 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
 
   let organizationId = "";
   let maiaActive = false;
+  let maiaFlagConfigured = false;
   let matchedIntegration = false;
 
   for (const row of integrations || []) {
@@ -41,6 +42,7 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
     if (String(config.phone_number_id || config.phoneNumberId || "") !== phoneNumberId) continue;
     matchedIntegration = true;
     organizationId = String(row.organization_id || "");
+    maiaFlagConfigured = Object.prototype.hasOwnProperty.call(config, "maia_active");
     maiaActive = config.maia_active === true;
     break;
   }
@@ -83,16 +85,7 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
     }) ||
     publishedAgents.find((candidate) => String(candidate.slug || "").startsWith("maia-"));
 
-  const maiaEnabled = maiaActive || (
-    !matchedIntegration ||
-    !Object.prototype.hasOwnProperty.call(
-      ((integrations || []).find((row) => {
-        const config = (row.configuration || {}) as Record<string, unknown>;
-        return String(config.phone_number_id || config.phoneNumberId || "") === phoneNumberId;
-      })?.configuration || {}) as Record<string, unknown>,
-      "maia_active",
-    )
-  );
+  const maiaEnabled = maiaActive || (!maiaFlagConfigured && Boolean(maiaAgent?.id));
 
   if (maiaEnabled && maiaAgent?.id) {
     return { organizationId, agentId: String(maiaAgent.id), mode: "maia" as const, sourceSystemId: null };
