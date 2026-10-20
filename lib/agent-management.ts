@@ -65,6 +65,9 @@ function normalizeAgent(agent: ManagedAgent): ManagedAgent {
   const config = agent.configuration || {};
   return {
     ...agent,
+    // The database lifecycle uses "published" for live agents; the management UI
+    // continues to present that state as "active".
+    status: agent.status === "published" ? "active" : agent.status,
     agent_type: agent.agent_type || String(config.agent_key || "custom_agent"),
     temperature: Number(agent.temperature ?? config.temperature ?? 0.3),
     language: agent.language || String(config.language || "English"),
@@ -122,11 +125,13 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
   const projectId = clean(input.project_id);
   const name = clean(input.name);
   const slug = clean(input.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-  const status = clean(input.status || "draft");
+  const requestedStatus = clean(input.status || "draft");
+  // Keep UI terminology separate from the database lifecycle constraint.
+  const status = requestedStatus === "active" ? "published" : requestedStatus;
   const temperature = Number(input.temperature ?? 0.3);
 
   if (!projectId || !name || !slug) throw new Error("Project, agent name, and slug are required.");
-  if (!statuses.has(status)) throw new Error("Invalid agent status.");
+  if (!statuses.has(requestedStatus)) throw new Error("Invalid agent status.");
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw new Error("Temperature must be between 0 and 2.");
 
   const projects = await supabaseRest<AgentProject[]>(
@@ -135,7 +140,7 @@ export async function saveManagedAgent(input: Record<string, unknown>) {
   const project = projects[0];
   if (!project) throw new Error("Selected project was not found.");
 
-  if (status === "active") await resolveOrganizationAiModel(project.organization_id);
+  if (requestedStatus === "active") await resolveOrganizationAiModel(project.organization_id);
 
   const channels = parseList(input.communication_channels);
   const escalationRules = parseList(input.escalation_rules);
