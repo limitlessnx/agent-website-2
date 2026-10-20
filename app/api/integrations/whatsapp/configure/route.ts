@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   if (!phoneNumberId || !accessToken) {
     return NextResponse.json({ error: "phoneNumberId and accessToken are required." }, { status: 400 });
   }
-  if (!/^v\\d+\\.\\d+$/.test(graphVersion)) {
+  if (!/^v\d+\.\d+$/.test(graphVersion)) {
     return NextResponse.json({ error: "graphVersion must look like v23.0." }, { status: 400 });
   }
 
