@@ -227,7 +227,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"))) {
+  const signature = request.headers.get("x-hub-signature-256");
+  const signatureValid = verifySignature(rawBody, signature);
+  console.info("[whatsapp-webhook] inbound received", { signaturePresent: Boolean(signature), signatureValid, bodyLength: rawBody.length, vercelIdPresent: Boolean(request.headers.get("x-vercel-id")) });
+  if (!signatureValid) {
+    console.warn("[whatsapp-webhook] signature rejected", { signaturePresent: Boolean(signature), bodyLength: rawBody.length });
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
   }
 
@@ -265,7 +269,14 @@ export async function POST(request: NextRequest) {
       }
 
       const phoneNumberId = String(value?.metadata?.phone_number_id || "");
-      const tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+      let tenant = null;
+      try {
+        tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+      } catch (error) {
+        console.error("[whatsapp-webhook] tenant lookup failed", { phoneNumberIdPresent: Boolean(phoneNumberId), errorType: error instanceof Error ? error.name : "unknown" });
+        throw error;
+      }
+      console.info("[whatsapp-webhook] tenant lookup result", { phoneNumberIdPresent: Boolean(phoneNumberId), tenantResolved: Boolean(tenant), organizationId: tenant?.organizationId || null, mode: tenant?.mode || null, agentResolved: Boolean(tenant?.agentId) });
       const contacts = Array.isArray(value.contacts) ? value.contacts : [];
       const contactName = String(contacts[0]?.profile?.name || "");
 
@@ -302,6 +313,7 @@ export async function POST(request: NextRequest) {
         const text = inboundText(message);
         if (!tenant || !messageId || !from || !text) {
           ignoredInbound += 1;
+          console.warn("[whatsapp-webhook] inbound ignored", { tenantResolved: Boolean(tenant), messageIdPresent: Boolean(messageId), senderPresent: Boolean(from), textPresent: Boolean(text), messageType: String(message?.type || "unknown"), phoneNumberIdPresent: Boolean(phoneNumberId) });
           continue;
         }
 
@@ -340,15 +352,21 @@ export async function POST(request: NextRequest) {
           },
         };
 
-        if (tenant.mode === "maia") {
-          await tasks.trigger("maia-process-inbound-message", inboundPayload);
-        } else {
-          await tasks.trigger("tenant-whatsapp-process-inbound-message", {
-            ...inboundPayload,
-            sourceSystemId: tenant.sourceSystemId,
-          });
+        try {
+          if (tenant.mode === "maia") {
+            await tasks.trigger("maia-process-inbound-message", inboundPayload);
+          } else {
+            await tasks.trigger("tenant-whatsapp-process-inbound-message", {
+              ...inboundPayload,
+              sourceSystemId: tenant.sourceSystemId,
+            });
+          }
+          inboundQueued += 1;
+          console.info("[whatsapp-webhook] inbound dispatched", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, messageIdPresent: Boolean(messageId) });
+        } catch (error) {
+          console.error("[whatsapp-webhook] inbound dispatch failed", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, errorType: error instanceof Error ? error.name : "unknown" });
+          throw error;
         }
-        inboundQueued += 1;
       }
     }
   }
