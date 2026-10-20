@@ -81,10 +81,7 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
         const agentKey = String(configuration.agent_key || "").toLowerCase();
         return agentKey === "maia" || (agentKey === "whatsapp_agent" && String(candidate.slug || "").startsWith("maia-"));
       }) ||
-      publishedAgents.find((candidate) =>
-        String(candidate.slug || "").startsWith("maia-") &&
-        String(candidate.agent_type || "").toLowerCase().includes("whatsapp")
-      );
+      publishedAgents.find((candidate) => String(candidate.slug || "").startsWith("maia-"));
 
     return agent?.id
       ? { organizationId, agentId: String(agent.id), mode: "maia" as const, sourceSystemId: null }
