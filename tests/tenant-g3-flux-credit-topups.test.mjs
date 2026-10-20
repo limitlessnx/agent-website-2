@@ -57,18 +57,33 @@ test("G3 Flutterwave callback and webhook both apply the same idempotent top-up 
   assert.match(webhook,/rpc\/apply_flux_credit_topup_from_checkout/);
 });
 
-test("G3 tenant billing displays pricing and supports direct top-up checkout",()=>{
+test("G3 tenant billing displays pricing, starts checkout, and shows tenant-scoped transaction history",()=>{
   const page=read("app/portal/billing/page.tsx");
   const form=read("app/portal/billing/FluxCreditTopUpForm.tsx");
   assert.match(page,/1 Flux Credit = \$0\.01/);
   assert.match(page,/Minimum top-up: \$10 = 1,000 credits/);
   assert.match(form,/\/api\/portal\/billing\/top-up/);
   assert.match(form,/Buy Flux Credits/);
+  assert.match(page,/\.eq\("organization_id", session\.organizationId\)/);
+  assert.match(page,/Recent credit transactions/);
 });
 
-
-test("G3 Super Admin billing displays the canonical top-up price",()=>{
+test("G3 Super Admin billing shows all tenant wallet balances and selected tenant ledger",()=>{
   const page=read("app/dashboard/billing/page.tsx");
   assert.match(page,/1 Flux Credit = \$0\.01/);
   assert.match(page,/minimum customer top-up is \$10 = 1,000 credits/);
+  assert.match(page,/from\("flux_credit_wallets"\)/);
+  assert.match(page,/Tenant wallets/);
+  assert.match(page,/Credit ledger/);
+  assert.match(page,/created_by/);
+});
+
+test("G3 manual credit changes are admin-attributed and require a reason",()=>{
+  const route=read("app/api/admin/billing/route.ts");
+  const form=read("app/dashboard/billing/CreditAdjustmentForm.tsx");
+  assert.match(route,/getAdminSession\(\)/);
+  assert.match(route,/adminEmail: session\.email/);
+  assert.match(route,/!reason/);
+  assert.match(form,/placeholder="Reason"/);
+  assert.match(form,/\/api\/admin\/billing/);
 });
