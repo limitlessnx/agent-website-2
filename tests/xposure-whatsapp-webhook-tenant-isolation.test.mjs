@@ -38,3 +38,17 @@ test("Tenant dashboard configures WhatsApp through the selected tenant's scoped 
   const dashboard = read("app/dashboard/integrations/WhatsAppOnboardingControl.tsx");
   assert.match(dashboard, /\/api\/admin\/clients\/\$\{integration\.organization_id\}\/whatsapp\/configure/);
 });
+
+test("Published tenant Maia can handle inbound when the legacy activation flag is unset", () => {
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  assert.match(webhook, /maiaFlagConfigured = Object\.prototype\.hasOwnProperty\.call\(config, "maia_active"\)/);
+  assert.match(webhook, /!maiaFlagConfigured && Boolean\(maiaAgent\?\.id\)/);
+  assert.match(webhook, /\.eq\("organization_id", organizationId\)/);
+});
+
+test("An explicit maia_active false prevents fallback to the Maia runtime", () => {
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  assert.match(webhook, /maiaActive = config\.maia_active === true/);
+  assert.match(webhook, /if \(maiaEnabled && maiaAgent\?\.id\)/);
+  assert.match(webhook, /if \(maiaActive\) \{[\s\S]*?return null;/);
+});
