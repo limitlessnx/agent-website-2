@@ -180,3 +180,16 @@ test("Tenant WhatsApp UI never renders stored access tokens", () => {
   assert.match(whatsappIntegrationPanel, /type="password"/);
 });
 
+
+test("Agent management maps UI active status to the database published lifecycle", async () => {
+  const management = await readFile(new URL("../lib/agent-management.ts", import.meta.url), "utf8");
+  assert.match(management, /requestedStatus === "active" \? "published" : requestedStatus/);
+  assert.match(management, /status: agent\.status === "published" \? "active" : agent\.status/);
+});
+
+test("Dedicated Maia webhook routing supports tenant-specific Maia slugs without crossing organizations", () => {
+  assert.match(whatsappWebhook, /\.eq\("organization_id", organizationId\)/);
+  assert.match(whatsappWebhook, /candidate\.slug === "maia"/);
+  assert.match(whatsappWebhook, /candidate\.slug \|\| ""\)\.startsWith\("maia-"\)/);
+  assert.match(whatsappWebhook, /\.eq\("status", "published"\)/);
+});
