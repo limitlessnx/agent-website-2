@@ -61,15 +61,34 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
   if (!organizationId) return null;
 
   if (maiaActive) {
-    const { data: agent } = await admin
+    // Resolve the dedicated Maia agent within this tenant. Historically this
+    // assumed every tenant used slug "maia", which breaks named instances such
+    // as "maia-xposure". Prefer the canonical slug, then explicit Maia/WhatsApp
+    // agent metadata, without ever searching across organizations.
+    const { data: agents, error: agentsError } = await admin
       .from("agents")
-      .select("id")
+      .select("id,slug,agent_type,configuration,updated_at")
       .eq("organization_id", organizationId)
-      .eq("slug", "maia")
-      .in("status", ["published", "active"])
-      .limit(1)
-      .maybeSingle();
-    return agent?.id ? { organizationId, agentId: String(agent.id), mode: "maia" as const, sourceSystemId: null } : null;
+      .eq("status", "published")
+      .order("updated_at", { ascending: false });
+    if (agentsError) throw agentsError;
+
+    const publishedAgents = agents || [];
+    const agent =
+      publishedAgents.find((candidate) => candidate.slug === "maia") ||
+      publishedAgents.find((candidate) => {
+        const configuration = (candidate.configuration || {}) as Record<string, unknown>;
+        const agentKey = String(configuration.agent_key || "").toLowerCase();
+        return agentKey === "maia" || (agentKey === "whatsapp_agent" && String(candidate.slug || "").startsWith("maia-"));
+      }) ||
+      publishedAgents.find((candidate) =>
+        String(candidate.slug || "").startsWith("maia-") &&
+        String(candidate.agent_type || "").toLowerCase().includes("whatsapp")
+      );
+
+    return agent?.id
+      ? { organizationId, agentId: String(agent.id), mode: "maia" as const, sourceSystemId: null }
+      : null;
   }
 
   const { data: catalog } = await admin
