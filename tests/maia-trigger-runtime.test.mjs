@@ -183,8 +183,8 @@ test("Tenant WhatsApp UI never renders stored access tokens", () => {
 
 test("Agent management maps UI active status to the database published lifecycle", async () => {
   const management = await readFile(new URL("../lib/agent-management.ts", import.meta.url), "utf8");
-  assert.match(management, /requestedStatus === "active" \\? "published" : requestedStatus/);
-  assert.match(management, /status: agent\\.status === "published" \\? "active" : agent\.status/);
+  assert.ok(management.includes('requestedStatus === "active" ? "published" : requestedStatus'));
+  assert.ok(management.includes('status: agent.status === "published" ? "active" : agent.status'));
 });
 
 test("Dedicated Maia webhook routing supports tenant-specific Maia slugs without crossing organizations", () => {
