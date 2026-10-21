@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProperties } from "@/lib/limitless-data";
 import { createPropertyNormalized } from "@/lib/limitless-property-write";
-import { updatePropertyImageLink } from "@/lib/limitless-data";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
-import { uploadPublicMedia } from "@/lib/supabase-media";
+import { addPropertyImageUrl, uploadPublicMedia } from "@/lib/supabase-media";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || "");
@@ -100,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
     const firstImage = uploads.find(item => item.mediaType === "image");
     if (firstImage) {
-      await updatePropertyImageLink(String(property.id), firstImage.url, scope.organizationId);
+      await addPropertyImageUrl(String(property.id), firstImage.url);
       property.drive_photos_link = firstImage.url;
     }
 
