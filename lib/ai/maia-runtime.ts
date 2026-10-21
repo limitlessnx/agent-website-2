@@ -131,7 +131,7 @@ async function loadBoundKnowledgeSources(organizationId: string, agentId: string
     .order("updated_at", { ascending: false })
     .limit(Math.max(1, Math.min(limit, 50)));
 
-  const needle = query?.trim().replace(/[%_]/g, "").slice(0, 160);
+  const needle = query?.trim().replace(/[%,_().\\":]/g, " ").replace(/\s+/g, " ").slice(0, 160).trim();
   if (needle) sourceQuery = sourceQuery.or(`title.ilike.%${needle}%,content.ilike.%${needle}%`);
 
   const { data: sources, error: sourceError } = await sourceQuery;
