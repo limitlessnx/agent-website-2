@@ -82,14 +82,88 @@ async function loadProfile(organizationId: string, agentId: string): Promise<Run
   return (data || { enabled: true, autonomy_mode: "autonomous", max_steps: 8, model_strategy: "best_available", memory_enabled: true, tool_policy: {} }) as RuntimeProfile;
 }
 
-async function loadBusinessContext(organizationId: string) {
+type BoundKnowledgeResult = {
+  sources: Array<Record<string, unknown>>;
+  collectionIds: string[];
+  collectionNames: string[];
+  requiredBindingCount: number;
+  scopeStatus: "bound" | "missing_binding" | "empty_collection";
+};
+
+async function loadBoundKnowledgeSources(organizationId: string, agentId: string, query?: string, limit = 20): Promise<BoundKnowledgeResult> {
+  const admin = createAdminClient();
+  const { data: bindings, error: bindingError } = await admin
+    .from("agent_knowledge_bindings")
+    .select("collection_id,required")
+    .eq("organization_id", organizationId)
+    .eq("agent_id", agentId)
+    .eq("status", "active");
+  if (bindingError) throw bindingError;
+
+  const activeBindings = bindings || [];
+  const requiredBindingCount = activeBindings.filter((binding) => binding.required).length;
+  const candidateIds = [...new Set(activeBindings.map((binding) => binding.collection_id).filter(Boolean))];
+  if (!candidateIds.length) {
+    return { sources: [], collectionIds: [], collectionNames: [], requiredBindingCount, scopeStatus: "missing_binding" };
+  }
+
+  const { data: collections, error: collectionError } = await admin
+    .from("knowledge_collections")
+    .select("id,name")
+    .eq("organization_id", organizationId)
+    .eq("status", "active")
+    .in("id", candidateIds);
+  if (collectionError) throw collectionError;
+
+  const activeCollections = collections || [];
+  const collectionIds = activeCollections.map((collection) => collection.id);
+  const collectionNames = activeCollections.map((collection) => collection.name);
+  if (!collectionIds.length) {
+    return { sources: [], collectionIds: [], collectionNames: [], requiredBindingCount, scopeStatus: "empty_collection" };
+  }
+
+  let sourceQuery = admin
+    .from("knowledge_sources")
+    .select("id,title,source_type,content,metadata,collection_id")
+    .eq("organization_id", organizationId)
+    .eq("status", "ready")
+    .in("collection_id", collectionIds)
+    .order("updated_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 50)));
+
+  const needle = query?.trim().replace(/[%,_().\\":]/g, " ").replace(/\s+/g, " ").slice(0, 160).trim();
+  if (needle) sourceQuery = sourceQuery.or(`title.ilike.%${needle}%,content.ilike.%${needle}%`);
+
+  const { data: sources, error: sourceError } = await sourceQuery;
+  if (sourceError) throw sourceError;
+  return {
+    sources: (sources || []) as Array<Record<string, unknown>>,
+    collectionIds,
+    collectionNames,
+    requiredBindingCount,
+    scopeStatus: sources?.length ? "bound" : "empty_collection",
+  };
+}
+
+async function loadBusinessContext(organizationId: string, agentId: string) {
   const admin = createAdminClient();
   const [profile, submission, knowledge] = await Promise.all([
     admin.from("client_onboarding_profiles").select("business_name,business_email,industry,website,country,timezone,phone,human_contact_name,human_contact_email").eq("organization_id", organizationId).maybeSingle(),
     admin.from("client_onboarding_submissions").select("business_information,business_services,communication_details,automation_requirements,business_resources").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    admin.from("knowledge_sources").select("title,source_type,content,metadata").eq("organization_id", organizationId).eq("status", "ready").order("updated_at", { ascending: false }).limit(20),
+    loadBoundKnowledgeSources(organizationId, agentId, undefined, 20),
   ]);
-  return { profile: profile.data || {}, onboarding: submission.data || {}, approvedKnowledge: knowledge.data || [] };
+  return {
+    profile: profile.data || {},
+    onboarding: submission.data || {},
+    approvedKnowledge: knowledge.sources,
+    knowledgeScope: {
+      status: knowledge.scopeStatus,
+      collectionIds: knowledge.collectionIds,
+      collectionNames: knowledge.collectionNames,
+      requiredBindingCount: knowledge.requiredBindingCount,
+      sourceCount: knowledge.sources.length,
+    },
+  };
 }
 
 async function createSession(input: MaiaRuntimeInput) {
@@ -135,7 +209,7 @@ function toolSet(): ToolDefinition[] {
   return [
     ...maiaPropertyTools(),
     ...maiaAppointmentTools(),
-    { name: "get_business_context", description: "Read the current tenant's approved business profile, onboarding submission and approved knowledge sources. Property-specific facts must come from the live property dashboard/search tool.", parameters: { type: "object", additionalProperties: false, properties: {} }, execute: async (_input, ctx) => loadBusinessContext(ctx.organizationId) },
+    { name: "get_business_context", description: "Read the current tenant's approved business profile, onboarding submission and approved knowledge sources. Property-specific facts must come from the live property dashboard/search tool.", parameters: { type: "object", additionalProperties: false, properties: {} }, execute: async (_input, ctx) => loadBusinessContext(ctx.organizationId, ctx.agentId) },
     {
       name: "search_knowledge",
       description: "Search only this tenant's approved knowledge base for business rules, services, FAQs and guidance. Do not use it as the source of truth for Limitless Realty property price, availability, size, location, documentation status or media.",
@@ -143,10 +217,16 @@ function toolSet(): ToolDefinition[] {
       execute: async (input, ctx) => {
         const query = text(input.query).slice(0, 160);
         if (!query) return { results: [] };
-        const admin = createAdminClient();
-        const needle = query.replace(/[%_]/g, "");
-        const { data } = await admin.from("knowledge_sources").select("id,title,source_type,content,metadata").eq("organization_id", ctx.organizationId).eq("status", "ready").or(`title.ilike.%${needle}%,content.ilike.%${needle}%`).limit(8);
-        return { results: data || [] };
+        const knowledge = await loadBoundKnowledgeSources(ctx.organizationId, ctx.agentId, query, 8);
+        return {
+          results: knowledge.sources,
+          scope: {
+            status: knowledge.scopeStatus,
+            collectionIds: knowledge.collectionIds,
+            collectionNames: knowledge.collectionNames,
+            sourceCount: knowledge.sources.length,
+          },
+        };
       },
     },
     {
@@ -462,7 +542,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const model = await chooseModel(input.organizationId, profile, input.message);
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
   await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
-  const business = await loadBusinessContext(input.organizationId);
+  const business = await loadBusinessContext(input.organizationId, input.agentId);
   const admin = createAdminClient();
   const { data: historyRows } = profile.memory_enabled ? await admin.from("agent_runtime_messages").select("role,content,tool_name,tool_call_id,metadata").eq("session_id", session.id).order("created_at", { ascending: false }).limit(16) : { data: [] };
   const history = (historyRows || []).reverse().filter((row) => ["user", "assistant", "tool"].includes(row.role)).map((row) => ({ role: row.role, content: row.content || "", ...(row.tool_name ? { name: row.tool_name } : {}), ...(row.tool_call_id ? { tool_call_id: row.tool_call_id } : {}) }));
