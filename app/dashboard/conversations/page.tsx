@@ -4,7 +4,7 @@ import { getOrganizationConversationCenter } from "@/lib/organization-conversati
 
 export const dynamic = "force-dynamic";
 
-function formatDate(value: string) {
+function formatDate(value: string | null | undefined) {
   if (!value || value === new Date(0).toISOString()) return "No timestamp";
   return new Date(value).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
 }
@@ -45,6 +45,7 @@ export default async function ConversationsPage() {
         <section className="admin-panel compact"><p>Workspace</p><strong>{scope.name}</strong></section>
       </div>
 
+      {/* Internal dashboard conversations are deliberately excluded; this center only renders tenant-scoped public/client records. */}
       <section className="admin-panel conversation-accordion" aria-label="Client conversations">
         <div className="admin-panel-header">
           <div><h2>Client inbox</h2><p>Each conversation stays collapsed until you open it.</p></div>
