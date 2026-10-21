@@ -70,4 +70,5 @@ test("Maia knowledge retrieval is scoped to the active collections bound to the 
   assert.match(runtime, /\.in\("collection_id", collectionIds\)/);
   assert.match(runtime, /loadBoundKnowledgeSources\(ctx\.organizationId, ctx\.agentId, query, 8\)/);
   assert.match(runtime, /knowledgeScope/);
+  assert.match(runtime, /replace\(\/[% ,_().\\\\":]+\/g, " "\)/);
 });
