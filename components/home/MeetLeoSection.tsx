@@ -19,7 +19,7 @@ export default function MeetLeoSection() {
         <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(168,85,247,.16)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,.16)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]" />
       </div>
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 sm:gap-12 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:px-10 lg:py-24">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-6 px-4 py-8 sm:gap-10 sm:px-8 sm:py-14 lg:grid-cols-2 lg:gap-16 lg:px-10 lg:py-20">
         <div className="relative z-10">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-purple-400/25 bg-purple-400/[0.08] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-purple-200">
             <span className="h-1.5 w-1.5 rounded-full bg-purple-300 shadow-[0_0_12px_rgba(192,132,252,.9)]" />
@@ -33,7 +33,7 @@ export default function MeetLeoSection() {
             Meet Leo, Fluxknight’s support and business-evaluation assistant. Talk or type about the way your business works, explore what Fluxknight can help with, and get guidance on where customer conversations and routine follow-through could improve.
           </p>
 
-          <div className="mt-8 grid gap-5 sm:mt-9 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="mt-6 grid gap-4 sm:mt-9 sm:grid-cols-3 lg:grid-cols-1">
             {examples.map(({ icon: Icon, title, description }) => (
               <div key={title} className="flex gap-3.5">
                 <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-purple-300/15 bg-purple-400/[0.08] text-purple-200">
@@ -47,7 +47,7 @@ export default function MeetLeoSection() {
             ))}
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:mt-9 sm:flex-row">
             <a href="#talk-to-leo" className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-purple-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_35px_rgba(124,58,237,.25)] transition hover:bg-purple-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-purple-300">
               Talk to Leo <MessageCircle size={17} /> <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
             </a>
