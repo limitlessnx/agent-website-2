@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/dashboard",
+    path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
   return response;
