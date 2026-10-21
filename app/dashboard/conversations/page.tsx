@@ -9,7 +9,7 @@ function formatDate(value: string | null | undefined) {
   return new Date(value).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
 }
 
-function sourceCopy(systemId: string) {
+function sourceCopy(systemId: string | null | undefined) {
   if (systemId === "limitless-realty") return { kicker: "LIMITLESS REALTY", title: "Maia client conversations", description: "Client-facing WhatsApp conversations handled by Maia." };
   if (systemId === "gencouv") return { kicker: "GENCOUV", title: "Gencouv website conversations", description: "Conversations started on the public Gencouv website." };
   return { kicker: "FLUXKNIGHT", title: "Leo public conversations", description: "Conversations started through the public Leo website flow." };
