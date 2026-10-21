@@ -46,5 +46,5 @@ test("organization selection persists through the admin context endpoint", () =>
   assert.match(context, /tenant:/);
   assert.match(route, /getAdminSession/);
   assert.match(route, /httpOnly: true/);
-  assert.match(route, /path: "\/dashboard"/);
+  assert.match(route, /path: "\/"/);
 });
