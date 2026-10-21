@@ -70,5 +70,6 @@ test("Maia knowledge retrieval is scoped to the active collections bound to the 
   assert.match(runtime, /\.in\("collection_id", collectionIds\)/);
   assert.match(runtime, /loadBoundKnowledgeSources\(ctx\.organizationId, ctx\.agentId, query, 8\)/);
   assert.match(runtime, /knowledgeScope/);
-  assert.ok(runtime.includes(String.raw\`replace(/[%,_().\\":]/g, " ").replace(/\s+/g, " ").slice(0, 160).trim()\`), "knowledge search must neutralize PostgREST filter punctuation and cap the query length");
+  assert.ok(runtime.includes("replace(/[%,_().\\\\\":]/g, \" \")"), "knowledge search must neutralize PostgREST filter punctuation");
+  assert.ok(runtime.includes("replace(/\\s+/g, \" \").slice(0, 160).trim()"), "knowledge search must normalize whitespace and cap query length");
 });
