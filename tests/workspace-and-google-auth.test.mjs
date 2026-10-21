@@ -29,3 +29,30 @@ test("Google OAuth preserves a safe next path and validates the application sess
   assert.match(callback,/google_session/);
   assert.match(callback,/destination\(origin,nextPath/);
 });
+
+test("account-mode endpoint can recover pending setup from the verified Supabase session",()=>{
+  const route=read("app/api/client-auth/account-mode/route.ts");
+  assert.match(route,/supabase\.auth\.getUser\(\)/);
+  assert.match(route,/setPendingClientSetupSession/);
+  assert.doesNotMatch(route,/body\.userId|body\.email/);
+});
+
+test("new organization owner choice preserves setup state and sends workspace creation to portal",()=>{
+  const choice=read("app/api/client-auth/account-mode/route.ts");
+  const setup=read("app/api/client-auth/setup-workspace/route.ts");
+  const signup=read("app/api/client-auth/signup/route.ts");
+  assert.match(choice,/nextPath:\s*"\/portal"/);
+  assert.match(setup,/:\s*"\/portal"/);
+  assert.match(signup,/nextPath:"\/portal"/);
+});
+
+test("organization choice UI uses explicit accessible action cards and pending/error states",()=>{
+  const ui=read("app/account/choose-mode/AccountModeClient.tsx");
+  const css=read("app/account/choose-mode/AccountModeClient.module.css");
+  assert.match(ui,/Start an Organization/);
+  assert.match(ui,/Manage Organizations/);
+  assert.match(ui,/aria-busy=/);
+  assert.match(ui,/role="alert"/);
+  assert.match(css,/\.choiceCard:focus-visible/);
+  assert.match(css,/prefers-reduced-motion/);
+});
