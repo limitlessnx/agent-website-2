@@ -59,3 +59,15 @@ test("Inbound WhatsApp dispatch uses tenant-and-agent scoped Trigger idempotency
   assert.match(webhook, /tasks\.trigger\("maia-process-inbound-message", inboundPayload, \{ idempotencyKey \}\)/);
   assert.match(webhook, /tasks\.trigger\("tenant-whatsapp-process-inbound-message",[\s\S]*?\{ idempotencyKey \}\)/);
 });
+
+
+test("Maia knowledge retrieval is scoped to the active collections bound to the agent", () => {
+  const runtime = read("lib/ai/maia-runtime.ts");
+  assert.match(runtime, /from\("agent_knowledge_bindings"\)/);
+  assert.match(runtime, /\.eq\("organization_id", organizationId\)/);
+  assert.match(runtime, /\.eq\("agent_id", agentId\)/);
+  assert.match(runtime, /from\("knowledge_collections"\)/);
+  assert.match(runtime, /\.in\("collection_id", collectionIds\)/);
+  assert.match(runtime, /loadBoundKnowledgeSources\(ctx\.organizationId, ctx\.agentId, query, 8\)/);
+  assert.match(runtime, /knowledgeScope/);
+});
