@@ -12,6 +12,10 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 10;
 
+function defaultReminderDate() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date(Date.now() + 24 * 60 * 60 * 1000));
+}
+
 export default async function InstallmentsPage({ searchParams }: { searchParams?: Promise<{ success?: string; page?: string }> }) {
   const { organizationId } = await resolveAdminOrganizationScope();
   const params = searchParams ? await searchParams : {};
