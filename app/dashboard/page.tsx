@@ -1,4 +1,5 @@
 import DashboardHomeExperience from "@/components/admin/DashboardHomeExperience";
+import XposureDashboardHome from "@/components/admin/XposureDashboardHome";
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { emptyOrganizationOperationalSnapshot, getOrganizationOperationalSnapshot } from "@/lib/admin-organization-data";
 import { getSupabaseReadiness } from "@/lib/limitless-data";
@@ -7,6 +8,11 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const scope = await resolveAdminOrganizationScope();
+
+  if (scope.kind === "tenant" && scope.slug.toLowerCase().includes("xposure")) {
+    return <XposureDashboardHome />;
+  }
+
   const [snapshot, supabase] = await Promise.all([
     getOrganizationOperationalSnapshot(scope).catch(() => emptyOrganizationOperationalSnapshot(scope.name)),
     getSupabaseReadiness().catch(() => ({ configured: false, ready: false, tables: [] })),
