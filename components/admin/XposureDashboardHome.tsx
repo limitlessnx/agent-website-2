@@ -2,8 +2,8 @@ import Link from "next/link";
 import styles from "./XposureDashboardHome.module.css";
 
 const modules = [
-  { label: "Studio Catalogue", detail: "Manage bookable studio services and packages", href: "/dashboard/clients", mark: "01" },
-  { label: "Bookings", detail: "Appointments, schedules and customer details", href: "/dashboard/clients", mark: "02" },
+  { label: "Studio Catalogue", detail: "Manage bookable studio services and packages", href: "/dashboard/catalog", mark: "01" },
+  { label: "Bookings", detail: "Appointments, schedules and customer details", href: "/dashboard/catalog", mark: "02" },
   { label: "Conversations", detail: "Customer messages and Maia handoffs", href: "/dashboard/conversations", mark: "03" },
   { label: "AI Agents", detail: "Agent status, knowledge and behaviour", href: "/dashboard/agents", mark: "04" },
   { label: "Automations", detail: "Follow-ups, reminders and workflows", href: "/dashboard/automations", mark: "05" },
@@ -19,7 +19,7 @@ export default function XposureDashboardHome() {
           <h1>Your studio.<br /><span>In focus.</span></h1>
           <p>Bookings, client conversations and studio operations, together in one workspace.</p>
           <div className={styles.actions}>
-            <Link className={styles.primaryAction} href="/dashboard/clients">View bookings <span aria-hidden="true">↗</span></Link>
+            <Link className={styles.primaryAction} href="/dashboard/appointments">View bookings <span aria-hidden="true">↗</span></Link>
             <Link className={styles.secondaryAction} href="/dashboard/clients">Studio catalogue</Link>
           </div>
         </div>
