@@ -71,3 +71,12 @@ test("installment action buttons expose truthful pending labels while preserving
   assert.match(button, /payment-button-spinner/);
   assert.match(button, /aria-busy=\{pending\}/);
 });
+
+
+test("new installment form defaults the first scheduled reminder to a future Lagos date", () => {
+  assert.match(page, /function defaultReminderDate\(\)/);
+  assert.match(page, /timeZone: "Africa\/Lagos"/);
+  assert.match(page, /Date\.now\(\) \+ 24 \* 60 \* 60 \* 1000/);
+  assert.match(page, /name="reminder_start_date" type="date" defaultValue=\{defaultReminderDate\(\)\}/);
+  assert.match(actions, /The scheduled first reminder must be in the future/);
+});
