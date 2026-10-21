@@ -52,3 +52,10 @@ test("An explicit maia_active false prevents fallback to the Maia runtime", () =
   assert.match(webhook, /if \(maiaEnabled && maiaAgent\?\.id\)/);
   assert.match(webhook, /if \(maiaActive\) \{[\s\S]*?return null;/);
 });
+
+test("Inbound WhatsApp dispatch uses tenant-and-agent scoped Trigger idempotency", () => {
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  assert.match(webhook, /const idempotencyKey = `whatsapp-inbound:\$\{tenant\.organizationId\}:\$\{tenant\.agentId\}:\$\{messageId\}`/);
+  assert.match(webhook, /tasks\.trigger\("maia-process-inbound-message", inboundPayload, \{ idempotencyKey \}\)/);
+  assert.match(webhook, /tasks\.trigger\("tenant-whatsapp-process-inbound-message",[\s\S]*?\{ idempotencyKey \}\)/);
+});

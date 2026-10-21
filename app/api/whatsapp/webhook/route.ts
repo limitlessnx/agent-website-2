@@ -361,13 +361,17 @@ export async function POST(request: NextRequest) {
         };
 
         try {
+          // Use the provider message ID as a queue-level idempotency key as well as
+          // the runtime's durable event ledger. Meta may redeliver the same webhook;
+          // this prevents needless duplicate Trigger runs before the ledger is reached.
+          const idempotencyKey = `whatsapp-inbound:${tenant.organizationId}:${tenant.agentId}:${messageId}`;
           if (tenant.mode === "maia") {
-            await tasks.trigger("maia-process-inbound-message", inboundPayload);
+            await tasks.trigger("maia-process-inbound-message", inboundPayload, { idempotencyKey });
           } else {
             await tasks.trigger("tenant-whatsapp-process-inbound-message", {
               ...inboundPayload,
               sourceSystemId: tenant.sourceSystemId,
-            });
+            }, { idempotencyKey });
           }
           inboundQueued += 1;
           console.info("[whatsapp-webhook] inbound dispatched", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, messageIdPresent: Boolean(messageId) });
