@@ -33,13 +33,18 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") || "";
     let payload: Record<string, unknown>;
-    let files: File[] = [];
+    let imageFiles: File[] = [];
+    let videoFiles: File[] = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
-      files = formData
-        .getAll("property_images")
-        .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+      const nonEmptyFiles = (key: string) => formData.getAll(key).filter((entry): entry is File => entry instanceof File && entry.size > 0);
+      imageFiles = nonEmptyFiles("property_images");
+      videoFiles = nonEmptyFiles("property_videos");
+      // Backwards compatibility with older clients that used one shared field.
+      const legacyFiles = nonEmptyFiles("property_media");
+      imageFiles.push(...legacyFiles.filter(file => file.type.startsWith("image/")));
+      videoFiles.push(...legacyFiles.filter(file => file.type.startsWith("video/")));
       payload = {
         title: value(formData, "title"),
         price: value(formData, "price"),
@@ -64,9 +69,7 @@ export async function POST(request: NextRequest) {
       ["features", "Title/features"],
       ["description", "Brief/description"],
     ] as const;
-    const missing = requiredFields
-      .filter(([name]) => !String(payload[name] || "").trim())
-      .map(([, label]) => label);
+    const missing = requiredFields.filter(([name]) => !String(payload[name] || "").trim()).map(([, label]) => label);
     if (missing.length) {
       return NextResponse.json(
         { error: `Please complete: ${missing.join(", ")}.`, code: "missing_property_fields", fields: missing },
@@ -83,30 +86,27 @@ export async function POST(request: NextRequest) {
     }
     const created = await createPropertyNormalized(payload, scope.organizationId);
     const property = created[0];
-    if (!property?.id) {
-      return NextResponse.json({ error: "Property record was not created." }, { status: 502 });
-    }
+    if (!property?.id) return NextResponse.json({ error: "Property record was not created." }, { status: 502 });
 
-    if (files.length) {
-      const uploads = [];
-      for (const file of files) {
-        uploads.push(await uploadPublicMedia(file, {
-          organizationKey: scope.slug || "limitless-realty",
-          organizationId: scope.organizationId,
-          propertyId: String(property.id),
-          channel: "whatsapp",
-        }));
-      }
-      const firstImage = uploads.find((item) => item.mediaType === "image");
-      if (firstImage) property.drive_photos_link = firstImage.url;
+    const uploads = [];
+    for (const file of [...imageFiles, ...videoFiles]) {
+      uploads.push(await uploadPublicMedia(file, {
+        organizationKey: scope.slug || "limitless-realty",
+        organizationId: scope.organizationId,
+        propertyId: String(property.id),
+        channel: "whatsapp",
+      }));
     }
+    const firstImage = uploads.find(item => item.mediaType === "image");
+    if (firstImage) property.drive_photos_link = firstImage.url;
 
-    return NextResponse.json({ property }, { status: 201 });
+    return NextResponse.json({
+      property,
+      media: uploads.map(({ url, fileName, mimeType, size, mediaType }) => ({ url, fileName, mimeType, size, mediaType })),
+      message: uploads.length ? `Property saved with ${uploads.length} media file(s).` : "Property saved without media.",
+    }, { status: 201 });
   } catch (error) {
     console.error("Limitless property create failed", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Property could not be saved." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Property could not be saved." }, { status: 500 });
   }
 }
