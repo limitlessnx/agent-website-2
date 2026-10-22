@@ -42,6 +42,14 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   if (!session) return null;
 
   const admin = createAdminClient();
+  const { data: organization } = await admin
+    .from("organizations")
+    .select("metadata")
+    .eq("id", session.organizationId)
+    .maybeSingle();
+  const workspaceMode = organization?.metadata && typeof organization.metadata === "object"
+    ? String((organization.metadata as Record<string, unknown>).workspace_mode || "")
+    : "";
   const params = searchParams ? await searchParams : {};
   const evaluationId = typeof params.evaluation === "string" ? params.evaluation.trim() : "";
   if (evaluationId) {
@@ -62,7 +70,10 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   const attentionAgents = summary.agents.filter((agent) => ["error", "disabled", "paused"].includes(agent.status.toLowerCase()));
   const trialDays = trialDaysRemaining(wallet?.trialEndsAt || null);
   const isTrial = Boolean(wallet && (wallet.trialEndsAt !== null || wallet.trialCreditLimit !== null));
-  const isFreeWorkspace = !subscription && !isTrial;
+  // A missing subscription row alone must not downgrade an existing Basic workspace
+  // into the activation/onboarding screen. Only explicitly provisioned free workspaces
+  // should see the trial prompt; plan and trial banners are handled independently.
+  const isFreeWorkspace = workspaceMode === "free" && !subscription && !isTrial;
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
   const experience = getIndustryExperience(summary.onboarding?.industry);
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
