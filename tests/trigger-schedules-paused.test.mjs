@@ -7,14 +7,14 @@ function triggerFiles(){
   return readdirSync("src/trigger").filter((name)=>name.endsWith(".ts")||name.endsWith(".tsx")).map((name)=>path.join("src/trigger",name));
 }
 
-test("only the approved installment reminder sweep is automatically scheduled",()=>{
+test("only approved reminder sweeps and tenant reminder drains are automatically scheduled",()=>{
   const files=triggerFiles();
   const scheduled=[];
   for(const file of files){
     const source=readFileSync(file,"utf8");
     if(source.includes("schedules.task(")) scheduled.push(file);
   }
-  assert.deepEqual(scheduled,["src/trigger/limitless-installment-reminders.ts"]);
+  assert.deepEqual(scheduled.sort(),["src/trigger/limitless-installment-reminders.ts","src/trigger/tenant-reminder-sweep.ts","src/trigger/tenant-reminder-execution-drain.ts","src/trigger/tenant-appointment-reminder-drain.ts"].sort());
 });
 
 test("core operational jobs remain callable on demand while automatic schedules are paused",()=>{

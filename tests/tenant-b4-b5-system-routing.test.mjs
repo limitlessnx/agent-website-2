@@ -47,7 +47,8 @@ test("B5 calendar provider resolves tenant Vault credentials and invites the cus
   const provider=read("lib/calendar-provider.ts");
   assert.match(provider,/get_organization_integration_credentials/);
   assert.match(provider,/oauth2\.googleapis\.com\/token/);
-  assert.match(provider,/calendar\/v3\/freeBusy/);
+  assert.match(provider,/calendar\/v3\/calendars/);
+  assert.match(provider,/\/events/);
   assert.match(provider,/sendUpdates/);
   assert.match(provider,/attendees/);
   assert.match(provider,/fluxknightAppointmentId/);

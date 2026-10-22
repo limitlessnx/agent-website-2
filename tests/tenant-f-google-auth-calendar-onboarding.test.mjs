@@ -326,7 +326,7 @@ test("F5 availability is timezone aware and supports service durations",()=>{
 
 test("F5 blocks overlapping Fluxknight appointments in addition to provider free busy",()=>{
   const scheduling=read("lib/appointment-scheduling.ts");
-  assert.match(scheduling,/hasFluxknightOverlap/);
+  assert.match(scheduling,/countTenantOverlaps/);
   assert.match(scheduling,/pending_availability/);
   assert.match(scheduling,/confirmed/);
   assert.match(scheduling,/rescheduled/);

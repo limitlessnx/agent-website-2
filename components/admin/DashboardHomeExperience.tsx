@@ -23,6 +23,7 @@ import type { LimitlessDashboardData, OrganizationOperationalItem } from "@/lib/
 import { formatNaira } from "@/lib/limitless-payments";
 import styles from "./DashboardHomeExperience.module.css";
 import RevenueHero from "./RevenueHero";
+import XposureStudioOverview from "./XposureStudioOverview";
 
 type Metric = { label: string; value: number | string; detail: string; icon: "leads" | "conversations" | "followups" | "qualified" | "revenue" };
 type Notice = { title: string; detail: string; href: string; type: string };
@@ -106,7 +107,7 @@ function LegacyOrganizationView({ metrics, notices, agents }: { metrics: Metric[
 }
 
 export default function DashboardHomeExperience({
-  name, workspaceName, health, metrics, notices, agents, activity, limitlessDashboard,
+  name, workspaceName, health, metrics, notices, agents, activity, conversations, limitlessDashboard, xposureDashboard,
 }: {
   name: string;
   workspaceName?: string;
@@ -115,7 +116,9 @@ export default function DashboardHomeExperience({
   notices: Notice[];
   agents: Agent[];
   activity: OrganizationOperationalItem[];
+  conversations?: OrganizationOperationalItem[];
   limitlessDashboard?: LimitlessDashboardData;
+  xposureDashboard?: boolean;
 }) {
   const healthy = health === "Operational";
   const limitless = limitlessDashboard;
@@ -128,12 +131,14 @@ export default function DashboardHomeExperience({
           <span className={styles.eyebrow}>{limitless ? "LIMITLESS REALTY · COMMAND CENTER" : workspaceName ? workspaceName.toUpperCase() + " · COMMAND CENTER" : "COMMAND CENTER"}</span>
           <h1>{greeting()}, {name} <span aria-hidden="true">👋</span></h1>
           <p>{healthy ? "Here’s what’s happening across your business today." : "Your workspace is active, with a few items that need your attention."}</p>
-          <div className={styles.heroStatus}><span className={healthy ? styles.statusDot : styles.statusDotWarning} />{healthy ? "All systems active" : health}</div>
+          <div className={styles.heroStatus}><span className={healthy ? styles.statusDot : styles.statusDotWarning} />{xposureDashboard ? (healthy ? "Workspace data connected" : "Workspace data needs attention") : healthy ? "All systems active" : health}</div>
         </div>
         {maia ? <Link href={maia.href} className={styles.maiaCard}><span className={styles.maiaAvatar}><Bot size={20} /></span><span><strong>{maia.name}</strong><small>{limitless ? "Limitless Realty assistant · " : ""}{maia.status === "live" ? "Online" : maia.status}</small></span><ChevronRight size={18} /></Link> : null}
       </header>
 
-      {limitless ? (
+      {xposureDashboard ? (
+        <XposureStudioOverview workspaceName={workspaceName || name} metrics={metrics} notices={notices} agents={agents} conversations={conversations || []} activity={activity} />
+      ) : limitless ? (
         <>
           <RevenueHero
             yearCollected={limitless.financial.yearCollected}
