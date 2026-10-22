@@ -75,25 +75,45 @@ export async function GET() {
       }, { status: 409 });
     }
 
-    const url = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
-    url.searchParams.set("fields", "name,status,language,category,components");
-    url.searchParams.set("limit", "100");
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: "no-store",
-    });
-    const payload = await response.json().catch(() => ({})) as MetaTemplatesResponse;
-    if (!response.ok) {
-      return NextResponse.json({
-        error: "Meta could not return the WhatsApp template inventory.",
-        provider_status: response.status,
-        provider_error_code: payload.error?.code ?? null,
-        provider_error: payload.error?.message ?? null,
-      }, { status: response.status >= 400 && response.status < 500 ? 502 : 503 });
-    }
+    let nextUrl: URL | null = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
+    nextUrl.searchParams.set("fields", "name,status,language,category,components");
+    nextUrl.searchParams.set("limit", "100");
+    const rawTemplates: MetaTemplate[] = [];
+    let hasMore = false;
+    let pageCount = 0;
 
-    const templates = (payload.data || []).map((template) => {
+    while (nextUrl && pageCount < 10) {
+      const response = await fetch(nextUrl, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => ({})) as MetaTemplatesResponse;
+      if (!response.ok) {
+        return NextResponse.json({
+          error: "Meta could not return the WhatsApp template inventory.",
+          provider_status: response.status,
+          provider_error_code: payload.error?.code ?? null,
+          provider_error: payload.error?.message ?? null,
+        }, { status: response.status >= 400 && response.status < 500 ? 502 : 503 });
+      }
+      rawTemplates.push(...(payload.data || []));
+      const next = payload.paging?.next;
+      if (!next) {
+        nextUrl = null;
+      } else {
+        const candidate = new URL(next);
+        if (candidate.protocol !== "https:" || candidate.hostname !== "graph.facebook.com" || !candidate.pathname.includes(`/${wabaId}/message_templates`)) {
+          throw new Error("Meta returned an unexpected pagination URL.");
+        }
+        nextUrl = candidate;
+        hasMore = true;
+      }
+      pageCount += 1;
+    }
+    if (nextUrl) hasMore = true;
+
+    const templates = rawTemplates.map((template) => {
       const componentTypes = (template.components || []).map((component) => String(component.type || "unknown"));
       const placeholders = placeholderIndexes(template);
       return {
@@ -114,7 +134,7 @@ export async function GET() {
       graph_version: graphVersion,
       count: templates.length,
       templates,
-      has_more: Boolean(payload.paging?.next),
+      has_more: hasMore,
       note: "Only template metadata and placeholder indexes are returned. Access tokens and full template copy are never returned.",
     }, {
       headers: { "Cache-Control": "no-store, max-age=0" },
