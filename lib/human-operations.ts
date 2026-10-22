@@ -129,7 +129,7 @@ async function notifyHandoffAssignee(input:{
   const {data:notification,error:notificationError}=await admin.from("handoff_notifications").insert({
     organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
     channel:"whatsapp",recipient:str(pref.whatsapp_phone),status:"pending",
-    metadata:{customer_name:input.customerName,stage_name:input.stageName,next_action:input.nextAction},
+    metadata:{customer_name:input.customerName,customer_phone:input.customerPhone,stage_name:input.stageName,next_action:input.nextAction},
   }).select("id").single();
   if(notificationError) throw notificationError;
 
