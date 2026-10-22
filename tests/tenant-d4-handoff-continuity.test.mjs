@@ -37,6 +37,9 @@ test("D4 handoff assignment resolves rules agent destination and staff notificat
   assert.match(operations,/organization_member_notification_preferences/);
   assert.match(operations,/deliveryMode:"direct"/);
   assert.match(operations,/recipientType:"internal_staff"/);
+  assert.match(operations,/\.select\("full_name,company_name,phone,current_stage_id"\)/);
+  assert.match(operations,/Customer WhatsApp: \$\{input\.customerPhone\|\|"Not recorded"\}/);
+  assert.match(operations,/customer_phone:input\.customerPhone/);
   assert.doesNotMatch(operations,/templatePurpose:"internal_handoff"/);
   assert.doesNotMatch(operations,/templatePurpose:"follow_up_outside_24h"/);
   assert.match(operations,/conversation_summary/);
