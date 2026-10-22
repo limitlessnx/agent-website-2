@@ -1,26 +1,26 @@
 import Link from "next/link";
 import { Activity, ArrowUpRight, Bot, CircleAlert, Gauge, Network, Play, ShieldCheck, Target } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 
 export const dynamic = "force-dynamic";
 
-const ORG = "b15f21b4-5697-4d21-9421-8a34eae3476d";
-
-async function getOperations() {
+async function getOperations(organizationId: string) {
   const admin = createAdminClient();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const [events, goals, tools, sessions, readiness] = await Promise.all([
-    admin.from("agent_runtime_events").select("id,agent_id,event_type,status,payload,created_at").eq("organization_id", ORG).gte("created_at", since).order("created_at", { ascending: false }).limit(100),
-    admin.from("agent_runtime_goals").select("id,agent_id,title,goal_type,priority,status,input,output,next_run_at,created_at,updated_at").eq("organization_id", ORG).order("updated_at", { ascending: false }).limit(100),
-    admin.from("agent_runtime_tool_runs").select("id,agent_id,session_id,tool_name,status,approval_required,started_at,finished_at").eq("organization_id", ORG).gte("started_at", since).order("started_at", { ascending: false }).limit(100),
-    admin.from("agent_runtime_sessions").select("id,agent_id,channel,status,step_count,updated_at").eq("organization_id", ORG).order("updated_at", { ascending: false }).limit(50),
-    admin.from("agent_runtime_readiness").select("agent_id,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready,readiness_score,blockers,refreshed_at").eq("organization_id", ORG),
+    admin.from("agent_runtime_events").select("id,agent_id,event_type,status,payload,created_at").eq("organization_id", organizationId).gte("created_at", since).order("created_at", { ascending: false }).limit(100),
+    admin.from("agent_runtime_goals").select("id,agent_id,title,goal_type,priority,status,input,output,next_run_at,created_at,updated_at").eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(100),
+    admin.from("agent_runtime_tool_runs").select("id,agent_id,session_id,tool_name,status,approval_required,started_at,finished_at").eq("organization_id", organizationId).gte("started_at", since).order("started_at", { ascending: false }).limit(100),
+    admin.from("agent_runtime_sessions").select("id,agent_id,channel,status,step_count,updated_at").eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(50),
+    admin.from("agent_runtime_readiness").select("agent_id,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready,readiness_score,blockers,refreshed_at").eq("organization_id", organizationId),
   ]);
   return { events: events.data || [], goals: goals.data || [], tools: tools.data || [], sessions: sessions.data || [], readiness: readiness.data || [] };
 }
 
 export default async function AgentOperationsPage() {
-  const data = await getOperations();
+  const scope = await resolveAdminOrganizationScope();
+  const data = await getOperations(scope.organizationId);
   const runs = data.tools.length;
   const failures = data.tools.filter((x) => ["error", "failed", "timeout"].includes(String(x.status).toLowerCase())).length;
   const activeGoals = data.goals.filter((x) => ["queued", "running", "active"].includes(String(x.status).toLowerCase())).length;

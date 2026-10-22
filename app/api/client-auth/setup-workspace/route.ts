@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const companyName = String(body.company_name || "").trim();
-    const industrySlug = String(body.industry_slug || "").trim();
+    // Industry is intentionally deferred: clients should reach their workspace
+    // after identity setup and can complete business context from the dashboard.
+    const industrySlug = String(body.industry_slug || "service-businesses").trim();
     const companySlug = slugify(String(body.company_slug || companyName));
 
     if (companyName.length < 2) {
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "A valid company name is required." }, { status: 400 });
     }
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(industrySlug)) {
-      return NextResponse.json({ error: "Choose the industry your organization operates in." }, { status: 400 });
+      return NextResponse.json({ error: "Workspace details could not be prepared." }, { status: 400 });
     }
 
     await provisionClientWorkspace({
@@ -63,19 +65,16 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
-    const destination = pending.nextPath && pending.nextPath.startsWith("/") && !pending.nextPath.startsWith("//")
-      ? pending.nextPath
-      : "/portal";
-    const redirectTo = new URL(destination, "https://fluxknight.local");
-    if (pending.txRef && redirectTo.pathname === "/onboarding") {
-      redirectTo.searchParams.set("tx_ref", pending.txRef);
-    }
+    const preservedTrialPlan = pending.trialPlan;
+    const destination = pending.nextPath && pending.nextPath.startsWith("/") && !pending.nextPath.startsWith("//") ? pending.nextPath : "/portal";
+    const redirectTo=new URL(destination,"https://fluxknight.local");
+    void preservedTrialPlan;
+    if(pending.txRef&&redirectTo.pathname==="/onboarding") redirectTo.searchParams.set("tx_ref",pending.txRef);
 
     return NextResponse.json({
       ok: true,
       organization_slug: membership.organizationSlug,
-      trial_plan: pending.trialPlan || "",
-      redirect_to: `${redirectTo.pathname}${redirectTo.search}`,
+      redirect_to:`${redirectTo.pathname}${redirectTo.search}`,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to finish workspace setup.";

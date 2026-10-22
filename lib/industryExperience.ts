@@ -32,6 +32,17 @@ const DEFAULT_EXPERIENCE: IndustryExperience = {
 };
 
 const EXPERIENCES: Record<string, IndustryExperience> = {
+  "photography-studio": {
+    slug: "photography-studio",
+    name: "Photography Studio",
+    customerLabel: "Clients",
+    inventoryLabel: "Studio Catalogue",
+    inventorySingular: "Studio item",
+    appointmentLabel: "Bookings & shoots",
+    leadLabel: "Enquiries",
+    dashboardDescription: "Your client, booking, catalogue and studio operations command center.",
+    features: { propertyCatalog:false, serviceCatalog:true, inventory:true, appointments:true, memberships:false, orders:false, vehicles:false },
+  },
   "real-estate": {
     slug: "real-estate",
     name: "Real Estate",

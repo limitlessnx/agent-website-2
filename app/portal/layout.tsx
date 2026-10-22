@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getClientSession, getActiveManagerOrganizations } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { getOrganizationUnreadNotificationCount, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
@@ -47,7 +48,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
         experience={experience}
       />
       <section className="portal-main">
-        <header className="portal-topbar"><div><span>{experience.name} workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><div className="portal-topbar-actions">{session.role === "manager" ? <ManagerWorkspaceSwitcher organizations={managerOrganizations} currentOrganizationId={session.organizationId}/> : null}<ClientLogoutButton/></div></header>
+        <header className="portal-topbar"><div><span>{experience.name} workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><div className="portal-topbar-actions">{session.isAdminPreview ? <Link className="portal-button secondary" href="/dashboard/preview/exit">Exit tenant preview</Link> : null}{session.role === "manager" ? <ManagerWorkspaceSwitcher organizations={managerOrganizations} currentOrganizationId={session.organizationId}/> : null}{session.isAdminPreview ? null : <ClientLogoutButton/>}</div></header>
         {children}
       </section>
       <TenantLeoFloatingButton/>

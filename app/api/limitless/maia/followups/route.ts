@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { assertFluxFeatureAccess, reserveFluxCredits } from "@/lib/flux-credits";
 
 export const dynamic = "force-dynamic";
 const LIMITLESS_REALTY_SLUG = "limitless-realty";
+type FollowupLead = { phone?: string | null; name?: string | null; opted_out?: boolean | null } | null;
+type HandoffConversation = { ai_paused?: boolean | null; status?: string | null } | null;
 
 async function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -21,11 +24,16 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
   const { data: organization } = await admin.from("organizations").select("id").eq("slug", LIMITLESS_REALTY_SLUG).maybeSingle();
   if (!organization) return NextResponse.json({ error: "Limitless Realty organization is not configured." }, { status: 500 });
+  try {
+    await assertFluxFeatureAccess(organization.id, "follow_ups");
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Follow-up automation is not included in this plan." }, { status: 409 });
+  }
 
   const now = new Date().toISOString();
   const { data: rows, error } = await admin
     .from("follow_ups")
-    .select("id,organization_id,lead_id,created_at,scheduled_at,message_sent,status,template_name,stage,leads!follow_ups_lead_id_fkey(phone,name,opted_out)")
+    .select("id,organization_id,lead_id,scheduled_at,message_sent,status,template_name,stage,leads!follow_ups_lead_id_fkey(phone,name,opted_out)")
     .eq("organization_id", organization.id)
     .eq("status", "pending")
     .lte("scheduled_at", now)
@@ -39,15 +47,17 @@ export async function POST(request: NextRequest) {
     const claim = await admin.from("follow_ups").update({ status: "processing" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "pending").select("id").maybeSingle();
     if (claim.error || !claim.data) continue;
     try {
-      const lead = Array.isArray(row.leads) ? row.leads[0] : row.leads;
-      const phone = String((lead as any)?.phone || "").replace(/[^\d]/g, "");
-      const { data: handoffConversation } = phone
+      const leadValue = (row as unknown as { leads?: FollowupLead | FollowupLead[] }).leads;
+      const lead: FollowupLead = Array.isArray(leadValue) ? leadValue[0] || null : leadValue || null;
+      const phone = String(lead?.phone || "").replace(/[^\d]/g, "");
+      const { data: handoffConversationData } = phone
         ? await admin.from("agent_conversations").select("id,ai_paused,status").eq("organization_id", organization.id).eq("external_thread_key", phone).maybeSingle()
         : { data: null };
+      const handoffConversation = handoffConversationData as HandoffConversation;
 
-      if (!phone || Boolean((lead as any)?.opted_out) || Boolean((handoffConversation as any)?.ai_paused) || String((handoffConversation as any)?.status || "") === "handoff") {
+      if (!phone || Boolean(lead?.opted_out) || Boolean(handoffConversation?.ai_paused) || String(handoffConversation?.status || "") === "handoff") {
         await admin.from("follow_ups").update({ status: "cancelled" }) .eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
-        results.push({ id: row.id, status: "cancelled", reason: !phone ? "missing_phone" : (lead as any)?.opted_out ? "opted_out" : "human_handoff" });
+        results.push({ id: row.id, status: "cancelled", reason: !phone ? "missing_phone" : lead?.opted_out ? "opted_out" : "human_handoff" });
         continue;
       }
 
@@ -58,18 +68,14 @@ export async function POST(request: NextRequest) {
         lastInboundAt = inbound.data?.created_at || null;
       }
 
-      // A new customer message after this follow-up was queued means the old sequence is stale.
-      // Cancel this stage; remaining stages will independently hit the same guard when due.
-      const queuedAt = row.created_at ? new Date(row.created_at).getTime() : 0;
-      if (lastInboundAt && queuedAt > 0 && new Date(lastInboundAt).getTime() > queuedAt) {
-        const cancellation = await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing").select("id").maybeSingle();
-        if (cancellation.error) throw cancellation.error;
-        if (!cancellation.data) throw new Error("Could not confirm cancellation of the stale follow-up.");
-        results.push({ id: row.id, status: "cancelled", reason: "customer_replied_after_scheduling" });
-        continue;
-      }
-
       const withinCustomerServiceWindow = Boolean(lastInboundAt && Date.now() - new Date(lastInboundAt).getTime() < 24 * 60 * 60 * 1000);
+      const metering = await reserveFluxCredits({
+        organizationId: organization.id,
+        action: "whatsapp_follow_up_reminder",
+        source: "whatsapp_follow_up",
+        provider: "twilio",
+        metadata: { followup_id: row.id, stage: row.stage || null },
+      });
       const delivery = await sendWhatsAppMessage({
         organizationId: organization.id,
         to: phone,
@@ -78,7 +84,7 @@ export async function POST(request: NextRequest) {
         templatePurpose: "follow_up_outside_24h",
         lastCustomerMessageAt: lastInboundAt,
         variables: {
-          lead_name: String((lead as any)?.name || ""),
+          lead_name: String(lead?.name || ""),
           property_interest: "",
           last_customer_message: "",
           conversation_summary: String(row.message_sent || ""),
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
       });
 
       await admin.from("follow_ups").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", row.id).eq("organization_id", organization.id) .eq("status", "processing");
-      results.push({ id: row.id, status: "sent", provider: delivery.provider, messageType: delivery.messageType, providerMessageId: delivery.providerMessageId });
+      results.push({ id: row.id, status: "sent", credits: metering.credits, provider: delivery.provider, messageType: delivery.messageType, providerMessageId: delivery.providerMessageId });
     } catch (error) {
       await admin.from("follow_ups").update({ status: "failed" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
       results.push({ id: row.id, status: "failed", error: error instanceof Error ? error.message : "Follow-up failed" });

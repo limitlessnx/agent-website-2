@@ -33,20 +33,14 @@ export async function checkMaiaLiveCutoverReadiness(organizationId: string) {
     admin.from("reminder_templates").select("id", { count: "exact", head: true }).eq("organization_id", organizationId),
   ]);
 
-  // Keep readiness aligned with webhook routing: tenants may name their Maia
-  // instance (for example, "maia-xposure") instead of using the canonical slug.
-  // This query is already tenant-scoped and only includes published agents.
-  const eligibleAgents = agents.data || [];
-  const maia =
-    eligibleAgents.find((agent) => String(agent.slug || "").toLowerCase() === "maia") ||
-    eligibleAgents.find((agent) => String(agent.slug || "").toLowerCase().startsWith("maia-"));
+  const maia = (agents.data || []).find((agent) => String(agent.slug || "").toLowerCase() === "maia");
   const maiaChannels = Array.isArray(maia?.communication_channels) ? maia.communication_channels.map(String) : [];
   const followPolicy = (followUpPolicies.data || [])[0];
   const checks: Check[] = [
     {
       key: "maia_agent",
       ok: Boolean(maia?.id),
-      detail: maia ? `A published Maia agent exists for this tenant (${maia.slug}).` : "No published Maia agent is assigned to this tenant.",
+      detail: maia ? "A published Maia agent exists for this tenant." : "No published Maia agent is assigned to this tenant.",
     },
     {
       key: "maia_whatsapp_channel",

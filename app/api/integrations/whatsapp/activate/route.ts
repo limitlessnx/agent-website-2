@@ -4,6 +4,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkMaiaLiveCutoverReadiness } from "@/lib/maia-cutover-readiness";
 import { getWhatsAppIntegration } from "@/lib/whatsapp-integration";
+import { getWhatsAppActivationGate, whatsappActivationError } from "@/lib/whatsapp-activation-gate";
 
 async function resolveAuthorizedOrganization() {
   const client = await getClientSession();
@@ -28,6 +29,10 @@ export async function POST() {
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
+    const activationGate = await getWhatsAppActivationGate(auth.organizationId);
+    if (!activationGate.ready) {
+      return NextResponse.json({ error: whatsappActivationError(activationGate), activationGate }, { status: 409 });
+    }
     const readiness = await checkMaiaLiveCutoverReadiness(auth.organizationId);
     if (!readiness.readyForLiveTraffic) {
       return NextResponse.json(

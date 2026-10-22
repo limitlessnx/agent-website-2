@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2 } from "@/components/admin/ServerIcons";
-import { industries } from "@/lib/industryCatalog";
 
 export default function SetupForm() {
   const router = useRouter();
@@ -20,7 +19,7 @@ export default function SetupForm() {
       const response = await fetch("/api/client-auth/setup-workspace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company_name: data.get("company_name"), industry_slug: data.get("industry_slug") }),
+        body: JSON.stringify({ company_name: data.get("company_name") }),
       });
       const result = await response.json().catch(() => ({}));
 
@@ -43,13 +42,13 @@ export default function SetupForm() {
       <div className="admin-login-icon"><Building2 size={22} /></div>
       <div>
         <p className="admin-kicker">Fluxknight Client Portal</p>
-        <h1>Finish your workspace</h1>
-        <p className="admin-muted">Your account is ready. Choose your industry and create the workspace that will shape your dashboard.</p>
+        <h1>Welcome to your workspace</h1>
+        <p className="admin-muted">Tell us who you are and what your organization is called. You can complete business details, knowledge, and WhatsApp setup from the dashboard.</p>
       </div>
-      <label>Company name<input name="company_name" required minLength={2} autoComplete="organization" /></label>
-      <label>Industry<select name="industry_slug" required defaultValue=""><option value="" disabled>Select your industry</option>{industries.map((industry) => <option key={industry.slug} value={industry.slug}>{industry.name}</option>)}</select></label>
+      <label>Your name<input name="full_name" required minLength={2} autoComplete="name" placeholder="e.g. Ada Okafor" /></label>
+      <label>Organization name<input name="company_name" required minLength={2} autoComplete="organization" placeholder="e.g. Haven Homes" /></label>
       {error ? <p className="admin-error">{error}</p> : null}
-      <button type="submit" disabled={loading}>{loading ? "Creating workspace..." : "Create workspace & continue"}</button>
+      <button type="submit" disabled={loading}>{loading ? "Opening workspace..." : "Create workspace & open dashboard"}</button>
     </form>
   );
 }

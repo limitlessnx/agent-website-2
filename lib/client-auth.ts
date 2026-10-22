@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { getAdminSession } from "@/lib/admin-auth";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { resolveSupabaseUrl } from "@/lib/supabase/config";
 
@@ -12,10 +13,12 @@ const CLIENT_SETUP_TTL=60*60;
 const CLIENT_OAUTH_CONTEXT_TTL=60*10;
 const CLIENT_PASSWORD_RESET_COOKIE="fluxknight_password_reset";
 const CLIENT_PASSWORD_RESET_TTL=60*10;
+const CLIENT_ADMIN_PREVIEW_COOKIE="fluxknight_admin_tenant_preview";
+const CLIENT_ADMIN_PREVIEW_TTL=60*60;
 
 type SupabaseAuthUser={id:string;email?:string;user_metadata?:Record<string,unknown>};
 type SupabaseAuthResponse={access_token?:string;refresh_token?:string;expires_in?:number;user?:SupabaseAuthUser;error?:string;error_description?:string;msg?:string};
-export type ClientSession={userId:string;email:string;organizationId:string;organizationSlug:string;membershipId:string;role:string;issuedAt:number};
+export type ClientSession={userId:string;email:string;organizationId:string;organizationSlug:string;membershipId:string;role:string;issuedAt:number;isAdminPreview?:boolean};
 export type PendingClientSetupSession={userId:string;email:string;invitationToken?:string;nextPath?:string;txRef?:string;trialPlan?:""|"basic";issuedAt:number};
 export type ClientOAuthContext={nextPath:string;txRef?:string;trialPlan?:""|"basic";invitationToken?:string;issuedAt:number};
 export type ClientManagerSession={userId:string;email:string;issuedAt:number};
@@ -98,6 +101,10 @@ export async function getActiveManagerOrganizations(userId:string){
 export async function getPrimaryMembership(userId:string){const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&order=created_at.asc&limit=1`);return rows[0]?membershipSnapshot(rows[0]):null}
 export function createClientSessionToken(session:ClientSession){return createSignedToken(session)}
 export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId||!session.membershipId)return null;return session}
+export function createAdminTenantPreviewToken(organizationId:string){return createSignedToken({organizationId,issuedAt:Date.now(),isAdminPreview:true})}
+function verifyAdminTenantPreviewToken(token?:string){const preview=readSignedToken<{organizationId:string;issuedAt:number;isAdminPreview:true}>(token,CLIENT_ADMIN_PREVIEW_TTL);return preview?.isAdminPreview&&preview.organizationId?preview:null}
+export async function setAdminTenantPreview(organizationId:string){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,createAdminTenantPreviewToken(organizationId),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_ADMIN_PREVIEW_TTL,path:"/portal"})}
+export async function clearAdminTenantPreview(){const store=await cookies();store.delete(CLIENT_ADMIN_PREVIEW_COOKIE)}
 export async function setClientSession(session:ClientSession){const store=await cookies();store.set(CLIENT_COOKIE,createClientSessionToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
 export async function setPendingClientSetupSession(session:PendingClientSetupSession){const store=await cookies();store.set(CLIENT_SETUP_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SETUP_TTL,path:"/"})}
 export async function setClientOAuthContext(context:ClientOAuthContext){const store=await cookies();store.set(CLIENT_OAUTH_CONTEXT_COOKIE,createSignedToken(context),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_OAUTH_CONTEXT_TTL,path:"/"})}
@@ -124,7 +131,16 @@ export async function clearPendingClientSetupSession(){const store=await cookies
 export async function getClientSession(){
  const store=await cookies();
  const signed=verifyClientSessionToken(store.get(CLIENT_COOKIE)?.value);
- if(!signed)return null;
+ if(!signed){
+  const preview=verifyAdminTenantPreviewToken(store.get(CLIENT_ADMIN_PREVIEW_COOKIE)?.value);
+  const admin=preview?await getAdminSession():null;
+  if(preview&&admin){
+   const organizations=await supabaseServerRequest<Array<{id:string;slug:string}>>(`organizations?id=eq.${encodeURIComponent(preview.organizationId)}&select=id,slug&limit=1`).catch(()=>[]);
+   const organization=organizations[0];
+   if(organization)return {userId:`admin-preview:${admin.email}`,email:admin.email,organizationId:organization.id,organizationSlug:organization.slug,membershipId:`admin-preview:${organization.id}`,role:"super-admin-preview",issuedAt:preview.issuedAt,isAdminPreview:true};
+  }
+  return null;
+ }
  const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?id=eq.${encodeURIComponent(signed.membershipId)}&user_id=eq.${encodeURIComponent(signed.userId)}&organization_id=eq.${encodeURIComponent(signed.organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);
  const live=rows[0]?membershipSnapshot(rows[0]):null;
  if(!live)return null;

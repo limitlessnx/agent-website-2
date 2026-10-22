@@ -64,6 +64,7 @@ function zonedLocalToUtcIso(localValue: string, timeZone: string) {
 }
 
 export async function createSocialPostAction(formData: FormData) {
+  await requireTenant();
   const title = String(formData.get("title") || "").trim();
   const caption = String(formData.get("caption") || "").trim();
   const format = String(formData.get("format") || "text") as SocialPostFormat;
@@ -177,6 +178,7 @@ export async function generateWeeklySocialPlanAction() {
 }
 
 export async function transitionSocialPostAction(formData: FormData) {
+  const tenant = await requireTenant();
   const postId = String(formData.get("post_id") || "");
   const nextStatus = String(formData.get("next_status") || "") as SocialPostStatus;
   if (!postId) throw new Error("Post ID is missing.");
@@ -185,7 +187,7 @@ export async function transitionSocialPostAction(formData: FormData) {
   await transitionSocialPost(postId, nextStatus);
 
   if (nextStatus === "approved") {
-    const { supabase, organizationId } = await requireTenant();
+    const { supabase, organizationId } = tenant;
     const { error } = await supabase
       .from("social_schedules")
       .update({ status: "cancelled", claimed_at: null, last_error: null })
@@ -201,6 +203,7 @@ export async function transitionSocialPostAction(formData: FormData) {
 }
 
 export async function scheduleSocialPostAction(formData: FormData) {
+  await requireTenant();
   const postId = String(formData.get("post_id") || "");
   const scheduledForLocal = String(formData.get("scheduled_for") || "");
   const timezone = String(formData.get("timezone") || "Africa/Lagos");
@@ -233,6 +236,7 @@ export async function scheduleSocialPostAction(formData: FormData) {
 }
 
 export async function updateSocialBrandAction(formData: FormData) {
+  await requireTenant();
   await updateSocialBrand({
     tone: String(formData.get("tone") || "").trim(),
     audience: String(formData.get("audience") || "").trim(),

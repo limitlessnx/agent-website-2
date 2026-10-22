@@ -7,6 +7,8 @@ import { getTenantAnalyticsDrilldown } from "@/lib/tenant-analytics-drilldown";
 import { listOrganizationMembers } from "@/lib/organization-membership";
 import AnalyticsTrendChart from "./AnalyticsTrendChart";
 import { getTenantBusinessValueAnalytics, getTenantFunnelAnalytics } from "@/lib/analytics-phase-e";
+import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Analytics | Fluxknight" };
@@ -45,13 +47,28 @@ export default async function AnalyticsPage({
   const params=await searchParams;
   const requested=Number(params.period||30);
   const periodDays=[7,30,90].includes(requested)?requested:30;
-  const [analytics,drilldown,funnel,businessValue,members]=await Promise.all([
+  const [analytics,drilldown,funnel,businessValue,members,profile]=await Promise.all([
     getTenantOperationalAnalytics(session.organizationId,periodDays),
     getTenantAnalyticsDrilldown(session.organizationId,periodDays),
     getTenantFunnelAnalytics(session.organizationId,periodDays),
     getTenantBusinessValueAnalytics(session.organizationId,periodDays),
     listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]),
+    getClientOnboardingProfile(session.organizationId).catch(()=>null),
   ]);
+  const photography=profile?.industry==="photography-studio";
+  const photographySnapshot=photography?await (async()=>{
+    const admin=createAdminClient();
+    const cutoff=new Date();
+    cutoff.setDate(cutoff.getDate()-periodDays);
+    const [{data:bookings},{data:metadata}]=await Promise.all([
+      admin.from("appointments").select("id,status").eq("organization_id",session.organizationId).gte("created_at",cutoff.toISOString()).limit(2000),
+      admin.from("photography_booking_metadata").select("appointment_id,assigned_photographer_id,delivery_status").eq("organization_id",session.organizationId).limit(2000),
+    ]);
+    const rows=(bookings||[]) as Array<{id:string;status:string}>;
+    const meta=(metadata||[]) as Array<{appointment_id:string;assigned_photographer_id:string|null;delivery_status:string}>;
+    const confirmed=rows.filter((row)=>["confirmed","rescheduled"].includes(row.status)).length;
+    return {total:rows.length,confirmed,cancelled:rows.filter((row)=>row.status==="cancelled").length,assigned:meta.filter((row)=>Boolean(row.assigned_photographer_id)).length,delivered:meta.filter((row)=>row.delivery_status==="delivered").length,conversion:rows.length?(confirmed/rows.length)*100:null};
+  })():null;
   const memberById=new Map(members.map((member)=>[member.id,member]));
 
   const stageMax=Math.max(1,...analytics.stageDistribution.map((item)=>item.count));
@@ -115,6 +132,13 @@ export default async function AnalyticsPage({
         <small>{number(analytics.messages.ai)} AI · {number(analytics.messages.human)} human · {number(analytics.messages.customer)} customer</small>
       </article>
     </section>
+
+    {photography&&photographySnapshot?<section className="portal-business-metrics exposure-analytics-metrics" aria-label="Photography studio KPIs">
+      <article className="portal-business-metric"><span>Studio bookings</span><strong>{number(photographySnapshot.total)}</strong><small>Created in selected period</small></article>
+      <article className="portal-business-metric"><span>Booking conversion</span><strong>{rate(photographySnapshot.conversion)}</strong><small>Confirmed or rescheduled</small></article>
+      <article className="portal-business-metric"><span>Photographer assignment</span><strong>{number(photographySnapshot.assigned)}</strong><small>Bookings with an assignee</small></article>
+      <article className="portal-business-metric"><span>Delivered shoots</span><strong>{number(photographySnapshot.delivered)}</strong><small>{number(photographySnapshot.cancelled)} cancelled in period</small></article>
+    </section>:null}
 
     <section className="portal-grid">
       <AnalyticsTrendChart
@@ -211,7 +235,7 @@ export default async function AnalyticsPage({
       <article className="portal-card">
         <div className="portal-card-head"><div>
           <h2>Customer stages</h2>
-          <p>Current distribution across this organization's configured customer journey.</p>
+          <p>Current distribution across this organization&apos;s configured customer journey.</p>
         </div></div>
         <div className="portal-list">
           {analytics.stageDistribution.map((item)=><div className="portal-list-row" key={item.stageId}>
@@ -297,7 +321,7 @@ export default async function AnalyticsPage({
     <section className="portal-card">
       <div className="portal-card-head"><div>
         <h2>Customer stage movement</h2>
-        <p>Observed transitions through this organization's configured customer journey.</p>
+        <p>Observed transitions through this organization&apos;s configured customer journey.</p>
       </div></div>
       <div className="portal-list">
         {drilldown.stageTransitions.map((item)=><div className="portal-list-row" key={(item.fromStageId||"none")+"-"+item.toStageId}>
@@ -346,7 +370,7 @@ export default async function AnalyticsPage({
         </div>
       </article>
       <article className="portal-card">
-        <div className="portal-card-head"><div><h2>Channel conversion</h2><p>Won outcomes grouped by each customer's first canonical conversation channel.</p></div></div>
+        <div className="portal-card-head"><div><h2>Channel conversion</h2><p>Won outcomes grouped by each customer&apos;s first canonical conversation channel.</p></div></div>
         <div className="portal-list">
           {funnel.channels.map((item)=><div className="portal-list-row" key={item.channel||"unknown"}><div><strong>{item.channel||"unknown"}</strong><span>{number(item.won)} won · {number(item.customers)} customers</span></div><em>{rate(item.wonRate)}</em></div>)}
           {!funnel.channels.length?<p className="portal-empty">No channel-attributed cohort customers yet.</p>:null}

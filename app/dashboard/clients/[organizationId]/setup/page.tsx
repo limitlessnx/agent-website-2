@@ -7,6 +7,7 @@ import AgentConfigurationControl from "../../AgentConfigurationControl";
 import ClientModelAssignmentControl from "../../ClientModelAssignmentControl";
 import ClientStatusControl from "../../ClientStatusControl";
 import ClientTestingApprovalControl from "../../ClientTestingApprovalControl";
+import VoiceConfigurationControl from "../../VoiceConfigurationControl";
 import MaiaRuntimeControl from "../../MaiaRuntimeControl";
 import ProvisionFromBriefControl from "../../ProvisionFromBriefControl";
 
@@ -192,6 +193,11 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
       <section className="admin-panel" id="intelligence">
         <div className="admin-panel-header"><div><p className="admin-kicker">Runtime</p><h2>Agentic capabilities</h2><p>Enable the runtime capabilities required by the assigned agents. Platform credentials remain centralized.</p></div><BrainCircuit size={18} /></div>
         {agents.length ? agents.map((agent) => <div key={agent.id} style={{ marginBottom: 16 }}><MaiaRuntimeControl organizationId={organizationId} agentId={agent.id} agentName={agent.name} /></div>) : <p className="admin-empty">Assign an AI worker first.</p>}
+      </section>
+
+      <section className="admin-panel" id="voice-configuration">
+        <div className="admin-panel-header"><div><p className="admin-kicker">Business Voice</p><h2>Configure the Voice agent</h2><p>Set the identity, call behavior, transfer policy, voicemail behavior, recording policy and duration limit before testing and approval.</p></div><Workflow size={18} /></div>
+        <VoiceConfigurationControl organizationId={organizationId} />
       </section>
 
       <section className="admin-panel" id="models">

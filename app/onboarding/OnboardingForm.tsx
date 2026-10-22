@@ -96,7 +96,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
       <p className="knowledge-note">Website sources and documents can be connected by the Fluxknight team during setup.</p>
     </section>}
 
-    {step===4&&<section><div className="setup-card"><div className="setup-card-icon"><ShieldCheck size={20}/></div><div><strong>WhatsApp AI is available when you activate a plan or free trial.</strong><p>We handle the technical setup. You can explore your workspace first and activate customer-facing AI when you are ready.</p></div></div>
+    {step===4&&<section><div className="setup-card"><div className="setup-card-icon"><ShieldCheck size={20}/></div><div><strong>Your WhatsApp AI agent is included in the Basic trial.</strong><p>Fluxknight handles the technical setup. You can explore your workspace first and activate the customer-facing AI agent when you are ready.</p></div></div>
       <h1>Connect your WhatsApp.</h1><p>We handle the connection and technical setup for you.</p>
       <div className="choice-grid whatsapp-choice">
         <button type="button" className={form.whatsapp_preferences.connection_path==="already_have_whatsapp_business"?"selected":""} onClick={()=>setForm({...form,whatsapp_preferences:{...form.whatsapp_preferences,connection_path:"already_have_whatsapp_business"}})}><Check size={16}/><span><strong>I already have WhatsApp Business</strong><small>Use my existing business number during setup.</small></span></button>

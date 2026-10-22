@@ -64,6 +64,7 @@ export async function resolveAdminOrganizationScope(): Promise<AdminOrganization
         workflowLegacyIds: [],
       };
     }
+    return unavailable("Tenant organization", context.id);
   }
 
   const systemId = context.kind === "system" ? context.id : "fluxknight";

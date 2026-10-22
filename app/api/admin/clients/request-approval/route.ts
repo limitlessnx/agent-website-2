@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
     const [{ data: agent, error: agentError }, { data: tests, error: testError }, { data: integrations, error: integrationError }] = await Promise.all([
-      admin.from("agents").select("id,name,system_prompt,communication_channels,human_handoff_destination,updated_at").eq("organization_id", organizationId).eq("id", agentId).maybeSingle(),
+      admin.from("agents").select("id,name,system_prompt,communication_channels,human_handoff_destination,configuration,updated_at").eq("organization_id", organizationId).eq("id", agentId).maybeSingle(),
       admin.from("agent_test_runs").select("id,status,created_at").eq("organization_id", organizationId).eq("agent_id", agentId).eq("status", "passed").order("created_at", { ascending: false }).limit(1),
       admin.from("organization_integrations").select("provider,status").eq("organization_id", organizationId),
     ]);
@@ -24,6 +24,14 @@ export async function POST(request: NextRequest) {
     if (!agent) return NextResponse.json({ error: "Agent not found in this tenant." }, { status: 404 });
 
     const requiredChannels = Array.isArray(agent.communication_channels) ? agent.communication_channels.map(String) : [];
+    if (requiredChannels.some((channel) => channel.toLowerCase() === "voice")) {
+      const configuration = agent.configuration && typeof agent.configuration === "object" && !Array.isArray(agent.configuration)
+        ? (agent.configuration as Record<string, unknown>).voice
+        : null;
+      const voice = configuration && typeof configuration === "object" && !Array.isArray(configuration) ? configuration as Record<string, unknown> : {};
+      const missingVoiceSettings = ["elevenlabs_agent_id", "identity", "greeting", "language", "voice", "call_summary_format", "recording_policy"].filter((key) => !String(voice[key] || "").trim());
+      if (missingVoiceSettings.length) return NextResponse.json({ error: `Voice configuration is incomplete. Add: ${missingVoiceSettings.join(", ")}.` }, { status: 409 });
+    }
     const connected = new Set((integrations || []).filter((item) => ["connected", "active", "healthy"].includes(String(item.status))).map((item) => String(item.provider).toLowerCase()));
     const whatsappRequired = requiredChannels.some((channel) => channel.toLowerCase() === "whatsapp");
     const whatsappConnected = whatsappRequired ? Boolean((await admin.from("whatsapp_twilio_bindings").select("status").eq("organization_id", organizationId).eq("status", "connected").maybeSingle()).data) : true;

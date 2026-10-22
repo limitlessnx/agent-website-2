@@ -12,10 +12,15 @@ import {
   CircleDollarSign,
   CreditCard,
   Image as ImageIcon,
+  FileText,
+  Megaphone,
+  MessageCircle,
   MessageSquareText,
+  Plus,
   Play,
   Target,
   Users,
+  UserRound,
   WalletCards,
   Workflow,
 } from "@/components/admin/ServerIcons";
@@ -151,11 +156,42 @@ export default function DashboardHomeExperience({
             })}
           </section>
 
+          <nav className={styles.businessActions} aria-label="Limitless Realty quick actions">
+            <Link href="/dashboard/limitless/properties"><Plus size={16} /><span><strong>Add Property</strong><small>Manage catalog</small></span></Link>
+            <Link href="/dashboard/limitless/leads"><UserRound size={16} /><span><strong>Add Lead</strong><small>Capture opportunity</small></span></Link>
+            <Link href="/dashboard/limitless/appointments"><CalendarDays size={16} /><span><strong>Schedule Viewing</strong><small>Book a viewing</small></span></Link>
+            <Link href="/dashboard/conversations"><MessageCircle size={16} /><span><strong>Send Message</strong><small>Open conversations</small></span></Link>
+            <Link href="/dashboard/limitless/properties"><FileText size={16} /><span><strong>Create Listing</strong><small>Prepare a listing</small></span></Link>
+            <Link href="/dashboard/limitless/campaigns"><Megaphone size={16} /><span><strong>Run Campaign</strong><small>Reach eligible leads</small></span></Link>
+          </nav>
+
           <section className={styles.sectionCard}>
             <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>LIMITLESS REALTY</span><h2>Property Catalog</h2><p>Your active property inventory</p></div><Link href="/dashboard/limitless/properties">View all <ChevronRight size={14} /></Link></header>
             <div className={styles.propertySummary}><span><b>{limitless.properties.active}</b> active</span><span><b>{limitless.properties.featured}</b> featured</span><span><b>{limitless.properties.sold}</b> sold</span><span><b>{limitless.properties.draft}</b> draft</span></div>
             <div className={styles.propertyCarousel}>{limitless.properties.items.map((property) => <PropertyCard property={property} key={property.id} />)}{!limitless.properties.items.length ? <div className={styles.emptyInline}>No properties are currently available in the catalog.</div> : null}</div>
           </section>
+
+          <div className={styles.twoColumn}>
+            <section className={styles.compactCard}>
+              <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>LEAD PIPELINE</span><h2>Opportunity movement</h2></div><Link href="/dashboard/limitless/leads">See all <ChevronRight size={14} /></Link></header>
+              <div className={styles.pipelineGrid}>
+                {["New Enquiries", "Qualified", "Viewing Scheduled", "Negotiation"].map((stage) => {
+                  const stageItems = activity.filter((item) => {
+                    const value = `${item.label} ${item.meta}`.toLowerCase();
+                    return stage === "Qualified" ? /qualif|hot|warm/.test(value) : stage === "Viewing Scheduled" ? /view|inspection/.test(value) : stage === "Negotiation" ? /negotiat|offer|deal/.test(value) : !/qualif|hot|warm|view|inspection|negotiat|offer|deal/.test(value);
+                  }).slice(0, 3);
+                  return <div className={styles.pipelineColumn} key={stage}><header><span>{stage}</span><b>{stageItems.length}</b></header>{stageItems.map((item) => <Link href={item.href} key={`${stage}-${item.id}`}><strong>{item.title}</strong><small>{item.meta}</small></Link>)}{!stageItems.length ? <small className={styles.pipelineEmpty}>No records</small> : null}</div>;
+                })}
+              </div>
+            </section>
+            <section className={styles.compactCard}>
+              <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>UPCOMING VIEWINGS</span><h2>Next appointments</h2></div><Link href="/dashboard/limitless/appointments">See all <ChevronRight size={14} /></Link></header>
+              <div className={styles.paymentList}>
+                {limitless.upcomingViewings.map((viewing) => <Link href="/dashboard/limitless/appointments" className={styles.paymentRow} key={viewing.id}><span className={styles.paymentAvatar}><CalendarDays size={16} /></span><span className={styles.paymentCopy}><strong>{viewing.title}</strong><small>{viewing.startAt ? new Date(viewing.startAt).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" }) : "Time pending"}{viewing.customerName ? ` · ${viewing.customerName}` : ""}</small></span><b>{viewing.status.replaceAll("_", " ")}</b><ChevronRight size={15} /></Link>)}
+                {!limitless.upcomingViewings.length ? <div className={styles.emptyInline}>No upcoming viewings are recorded.</div> : null}
+              </div>
+            </section>
+          </div>
 
           <div className={styles.twoColumn}>
             <section className={styles.compactCard}>

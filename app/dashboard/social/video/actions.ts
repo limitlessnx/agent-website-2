@@ -6,6 +6,7 @@ import { generateReelPlanForPost } from "@/lib/social-video-plan";
 import { requireTenant } from "@/lib/tenant";
 
 export async function generateReelPlanAction(formData: FormData) {
+  await requireTenant();
   const postId = String(formData.get("post_id") || "").trim();
   if (!postId) throw new Error("Post ID is missing.");
 

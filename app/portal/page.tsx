@@ -16,9 +16,19 @@ import { getClientPortalSummary, type PortalAgent, type PortalWorkflow, type Por
 import { getActiveFluxSubscription, getFluxWalletSummary } from "@/lib/flux-credits";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getIndustryExperience } from "@/lib/industryExperience";
+import { getProperties } from "@/lib/limitless-data";
+import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import OrganizationDashboard from "@/components/portal/OrganizationDashboard";
+import PhotographyDashboard from "@/components/portal/PhotographyDashboard";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
+type XposureCategoryRow = { id: string; name: string; cover_image_url: string | null; display_order: number };
+type XposureItemRow = { category_id: string };
+type XposureCustomerRow = { id: string; full_name: string | null; phone: string | null; email: string | null; status: string | null; metadata: unknown };
+type XposureBookingRow = { id: string; title: string | null; start_at: string | null; status: string | null; customer_name: string | null; location: string | null };
+type EvaluationDetails = { specificity?: string; details?: string };
+type EvaluationRecord = { pricingType?: string; summary?: string; score?: number; opportunity?: string; recommendedSystem?: string; recommendedPlan?: string; requirements?: EvaluationDetails };
 
 function formatDate(value?: string | null) {
   if (!value) return "Never";
@@ -42,14 +52,6 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   if (!session) return null;
 
   const admin = createAdminClient();
-  const { data: organization } = await admin
-    .from("organizations")
-    .select("metadata")
-    .eq("id", session.organizationId)
-    .maybeSingle();
-  const workspaceMode = organization?.metadata && typeof organization.metadata === "object"
-    ? String((organization.metadata as Record<string, unknown>).workspace_mode || "")
-    : "";
   const params = searchParams ? await searchParams : {};
   const evaluationId = typeof params.evaluation === "string" ? params.evaluation.trim() : "";
   if (evaluationId) {
@@ -63,6 +65,73 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
     (async () => { try { const { data } = await admin.from("ai_business_evaluation_sessions").select("id,status,context,evaluation,created_at,updated_at").eq("organization_id",session.organizationId).eq("status","evaluated").order("updated_at",{ascending:false}).limit(1).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
+  const businessName = summary.onboarding?.business_name || session.organizationSlug;
+  const experience = getIndustryExperience(summary.onboarding?.industry);
+  if (experience.name.toLowerCase().includes("real estate") || experience.name.toLowerCase().includes("realty")) {
+    const [properties, leads, appointments] = await Promise.all([
+      getProperties(100, session.organizationId).catch(() => []),
+      getCampaignAudienceLeads(session.organizationId, 250).catch(() => []),
+      (async () => {
+        const { data } = await admin.from("appointments").select("id,title,start_at,status,customer_name,location").eq("organization_id", session.organizationId).order("start_at", { ascending: true }).limit(50);
+        return (data || []) as Array<{ id: string; title: string; start_at: string | null; status: string; customer_name: string | null; location: string | null }>;
+      })().catch(() => []),
+    ]);
+    return <OrganizationDashboard data={{
+      businessName,
+      industryName: experience.name,
+      description: experience.dashboardDescription,
+      planCode: wallet?.planCode || null,
+      fluxCredits: wallet?.balance ?? null,
+      fluxCreditPercentUsed: wallet?.percentUsed ?? 0,
+      properties,
+      leads,
+      appointments,
+      agents: summary.agents,
+      workflows: summary.workflows,
+      runs: summary.runs,
+      whatsappConnected: whatsappBinding?.status === "connected",
+    }} />;
+  }
+  if (experience.slug === "photography-studio") {
+    const [customers, bookings, catalogueCategories, catalogueItems] = await Promise.all([
+      admin.from("crm_customers").select("id,full_name,phone,email,status,metadata").eq("organization_id", session.organizationId).order("updated_at", { ascending: false }).limit(250),
+      admin.from("appointments").select("id,title,start_at,status,customer_name,location").eq("organization_id", session.organizationId).order("start_at", { ascending: true }).limit(75),
+      (async () => { try { return await admin.from("photography_catalogue_categories").select("id,name,cover_image_url,display_order").eq("organization_id", session.organizationId).eq("status", "active").order("display_order", { ascending: true }) as { data: XposureCategoryRow[] | null }; } catch { return { data: null as XposureCategoryRow[] | null }; } })(),
+      (async () => { try { return await admin.from("photography_catalogue_items").select("category_id").eq("organization_id", session.organizationId).eq("status", "active") as { data: XposureItemRow[] | null }; } catch { return { data: null as XposureItemRow[] | null }; } })(),
+    ]);
+    const categoryCounts = new Map<string, number>();
+    for (const item of catalogueItems.data || []) categoryCounts.set(String(item.category_id), (categoryCounts.get(String(item.category_id)) || 0) + 1);
+    const fallbackCategories = [["Portraits", "/exposure/portraits.jpg"], ["Weddings", "/exposure/weddings.jpg"], ["Maternity", "/exposure/maternity.jpg"], ["Birthdays", "/exposure/birthdays.jpg"], ["Family", "/exposure/family.jpg"], ["Creative sets", "/exposure/creative-sets.jpg"]] as const;
+    const exposureCategories = (catalogueCategories.data || []).map((category) => ({ name: String(category.name), image: String(category.cover_image_url || "/exposure/creative-sets.jpg"), itemCount: categoryCounts.get(String(category.id)) || 0 }));
+    return <PhotographyDashboard data={{
+      businessName,
+      planCode: wallet?.planCode || null,
+      fluxCredits: wallet?.balance ?? null,
+      fluxCreditPercentUsed: wallet?.percentUsed ?? 0,
+      whatsappConnected: whatsappBinding?.status === "connected",
+      customers: (customers.data || [] as XposureCustomerRow[]).map((customer) => ({
+        id: String(customer.id),
+        full_name: String(customer.full_name || "Unnamed client"),
+        phone: customer.phone ? String(customer.phone) : null,
+        email: customer.email ? String(customer.email) : null,
+        status: customer.status ? String(customer.status) : null,
+        metadata: customer.metadata && typeof customer.metadata === "object" ? customer.metadata as Record<string, unknown> : null,
+      })),
+      bookings: (bookings.data || [] as XposureBookingRow[]).map((booking) => ({
+        id: String(booking.id),
+        title: String(booking.title || "Studio session"),
+        start_at: booking.start_at ? String(booking.start_at) : null,
+        status: String(booking.status || "pending"),
+        customer_name: booking.customer_name ? String(booking.customer_name) : null,
+        location: booking.location ? String(booking.location) : null,
+      })),
+      agents: summary.agents,
+      workflows: summary.workflows,
+      runs: summary.runs,
+      catalogueCategories: exposureCategories.length ? exposureCategories : fallbackCategories.map(([name, image]) => ({ name, image, itemCount: 0 })),
+    }} />;
+  }
+
   const activeAgents = summary.agents.filter((agent: PortalAgent) => ["published", "testing"].includes(agent.status)).length;
   const activeWorkflows = summary.workflows.filter((workflow: PortalWorkflow) => workflow.status === "active").length;
   const successfulRuns = summary.runs.filter((run: PortalWorkflowRun) => run.status === "succeeded").length;
@@ -70,12 +139,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   const attentionAgents = summary.agents.filter((agent) => ["error", "disabled", "paused"].includes(agent.status.toLowerCase()));
   const trialDays = trialDaysRemaining(wallet?.trialEndsAt || null);
   const isTrial = Boolean(wallet && (wallet.trialEndsAt !== null || wallet.trialCreditLimit !== null));
-  // A missing subscription row alone must not downgrade an existing Basic workspace
-  // into the activation/onboarding screen. Only explicitly provisioned free workspaces
-  // should see the trial prompt; plan and trial banners are handled independently.
-  const isFreeWorkspace = workspaceMode === "free" && !subscription && !isTrial;
-  const businessName = summary.onboarding?.business_name || session.organizationSlug;
-  const experience = getIndustryExperience(summary.onboarding?.industry);
+  const isFreeWorkspace = !subscription && !isTrial;
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
   const recentActivity = summary.runs.slice(0, 6);
   const industryActions = [
@@ -131,7 +195,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
         </section>
       ) : null}
 
-      {latestEvaluation ? (() => { const ev:any = latestEvaluation.evaluation || {}; const ctx:any = latestEvaluation.context || {}; const custom=ev.pricingType==="custom"; return <section className="portal-card" aria-label="Latest AI evaluation"><div className="portal-card-head"><div><p className="portal-kicker">Business AI evaluation</p><h2>Your latest evaluation</h2><p>{ev.summary || "Your Fluxknight evaluation has been saved to this workspace."}</p></div><span className="portal-health-pill healthy"><span /><div><small>Opportunity</small><strong>{typeof ev.score==="number"?`${ev.score}/100`:String(ev.opportunity||"Evaluated")}</strong></div></span></div><div className="portal-business-metrics"><article className="portal-business-metric"><span>Recommended system</span><strong>{ev.recommendedSystem || "Pending"}</strong></article><article className="portal-business-metric"><span>Recommendation</span><strong>{custom ? "Custom" : String(ev.recommendedPlan || "Standard")}</strong></article><article className="portal-business-metric"><span>Requirements</span><strong>{ctx.requirements?.specificity === "custom" ? "Custom requested" : ctx.requirements?.specificity === "specific" ? "Specific workflow" : "Recommendation-led"}</strong></article></div>{ctx.requirements?.details ? <div className="portal-clear-state"><span><Workflow size={19}/></span><div><strong>What you want Fluxknight to do</strong><p>{String(ctx.requirements.details)}</p></div></div> : null}</section>; })() : null}
+      {latestEvaluation ? (() => { const ev = (latestEvaluation.evaluation || {}) as EvaluationRecord; const ctx = (latestEvaluation.context || {}) as { requirements?: EvaluationDetails }; const custom=ev.pricingType==="custom"; return <section className="portal-card" aria-label="Latest AI evaluation"><div className="portal-card-head"><div><p className="portal-kicker">Business AI evaluation</p><h2>Your latest evaluation</h2><p>{ev.summary || "Your Fluxknight evaluation has been saved to this workspace."}</p></div><span className="portal-health-pill healthy"><span /><div><small>Opportunity</small><strong>{typeof ev.score==="number"?`${ev.score}/100`:String(ev.opportunity||"Evaluated")}</strong></div></span></div><div className="portal-business-metrics"><article className="portal-business-metric"><span>Recommended system</span><strong>{ev.recommendedSystem || "Pending"}</strong></article><article className="portal-business-metric"><span>Recommendation</span><strong>{custom ? "Custom" : String(ev.recommendedPlan || "Standard")}</strong></article><article className="portal-business-metric"><span>Requirements</span><strong>{ctx.requirements?.specificity === "custom" ? "Custom requested" : ctx.requirements?.specificity === "specific" ? "Specific workflow" : "Recommendation-led"}</strong></article></div>{ctx.requirements?.details ? <div className="portal-clear-state"><span><Workflow size={19}/></span><div><strong>What you want Fluxknight to do</strong><p>{String(ctx.requirements.details)}</p></div></div> : null}</section>; })() : null}
 
       {summary.onboarding?.status === "submitted" && whatsappBinding?.status !== "connected" ? (
         <section className="portal-card portal-activation-banner" aria-label="WhatsApp setup">

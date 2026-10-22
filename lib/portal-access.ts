@@ -13,6 +13,22 @@ function one<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export async function getPortalCapabilities(session: ClientSession) {
+  if (session.isAdminPreview) {
+    return {
+      role: "super-admin-preview",
+      permissions: [],
+      installedSystems: [],
+      customers: true,
+      conversations: true,
+      systems: true,
+      appointments: true,
+      analytics: true,
+      team: true,
+      integrations: true,
+      billing: true,
+      support: true,
+    };
+  }
   const access = await getOrganizationAccessContext(session.organizationId, session.userId);
   const systems = await supabaseServerRequest<SystemRow[]>(
     `organization_systems?organization_id=eq.${encodeURIComponent(session.organizationId)}&status=neq.archived&select=status,system_catalog(slug)`,
@@ -41,6 +57,7 @@ export async function getPortalCapabilities(session: ClientSession) {
 }
 
 export async function requirePortalPermission(session: ClientSession, keys: string[]) {
+  if (session.isAdminPreview) throw new Error("Tenant preview is read-only.");
   const access = await getOrganizationAccessContext(session.organizationId, session.userId);
   if (!keys.some((key) => access.permissions.has(key))) {
     throw new Error("Portal permission denied.");

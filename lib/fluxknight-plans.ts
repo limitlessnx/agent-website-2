@@ -1,18 +1,25 @@
 export type FluxPlanCode = "basic" | "plus" | "business" | "business_plus";
 
+export type FluxAgentChannel = "web_chat" | "whatsapp" | "voice" | "email";
+
 export type FluxFeatureKey =
   | "core_ai_support"
-  | "leo_chat"
+  | "human_handoff"
   | "follow_ups"
   | "reminders"
   | "team_admin"
   | "cross_channel"
+  | "voice_automation"
+  | "email_automation"
+  | "web_chat_automation"
+  | "leo_chat"
   | "leo_voice"
   | "industry_database"
   | "client_database"
   | "advanced_workflows"
   | "custom_integrations";
 
+/** Runtime action names are retained for ledger compatibility. */
 export type FluxCreditAction =
   | "web_ai"
   | "whatsapp_ai"
@@ -22,13 +29,24 @@ export type FluxCreditAction =
   | "leo_chat"
   | "leo_voice_minute";
 
+export type FluxAgentAllocation = {
+  key: string;
+  name: string;
+  channel: FluxAgentChannel;
+};
+
 export type FluxPlanDefinition = {
   code: FluxPlanCode;
   legacySlugs: string[];
   name: string;
   monthlyCredits: number;
   configurableMonthlyCredits?: boolean;
+  /** Maximum customer-facing channels/agents this plan may activate. */
+  maxChannels: number;
+  /** Channels available for selection under this plan. */
+  selectableChannels: FluxAgentChannel[];
   includedFeatures: FluxFeatureKey[];
+  availableAgents: FluxAgentAllocation[];
   customerLabel: string;
 };
 
@@ -48,13 +66,24 @@ export const FLUX_CREDIT_ACTION_RATES: Record<FluxCreditAction, number> = {
 
 export const FLUX_USAGE_THRESHOLDS = [70, 90, 100] as const;
 
+const WEB_CHAT_AGENT: FluxAgentAllocation = { key: "web_chat_agent", name: "Web Chat Agent", channel: "web_chat" };
+const WHATSAPP_AGENT: FluxAgentAllocation = { key: "whatsapp_agent", name: "WhatsApp Agent", channel: "whatsapp" };
+const VOICE_AGENT: FluxAgentAllocation = { key: "voice_agent", name: "Voice Agent", channel: "voice" };
+const EMAIL_AGENT: FluxAgentAllocation = { key: "email_agent", name: "Email Agent", channel: "email" };
+const BASIC_CHANNEL_AGENTS = [WHATSAPP_AGENT];
+const BUSINESS_CHANNEL_AGENTS = [WHATSAPP_AGENT, VOICE_AGENT];
+const BUSINESS_PLUS_CHANNEL_AGENTS = [...BUSINESS_CHANNEL_AGENTS, EMAIL_AGENT, WEB_CHAT_AGENT];
+
 export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
   basic: {
     code: "basic",
     legacySlugs: ["basic", "whatsapp-ai-starter"],
     name: "Basic",
     monthlyCredits: 2500,
-    includedFeatures: ["core_ai_support", "leo_chat"],
+    maxChannels: 1,
+    selectableChannels: ["whatsapp"],
+    includedFeatures: ["core_ai_support", "human_handoff"],
+    availableAgents: BASIC_CHANNEL_AGENTS,
     customerLabel: "Basic",
   },
   plus: {
@@ -62,7 +91,10 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
     legacySlugs: ["plus", "starter", "ai-call-receptionist"],
     name: "Plus",
     monthlyCredits: 5000,
-    includedFeatures: ["core_ai_support", "leo_chat", "follow_ups", "reminders"],
+    maxChannels: 1,
+    selectableChannels: ["whatsapp"],
+    includedFeatures: ["core_ai_support", "human_handoff", "follow_ups", "reminders"],
+    availableAgents: BASIC_CHANNEL_AGENTS,
     customerLabel: "Plus",
   },
   business: {
@@ -70,7 +102,19 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
     legacySlugs: ["business", "ai-front-desk-suite"],
     name: "Business",
     monthlyCredits: 12000,
-    includedFeatures: ["core_ai_support", "leo_chat", "follow_ups", "reminders", "team_admin", "cross_channel", "leo_voice"],
+    maxChannels: 2,
+    selectableChannels: ["whatsapp", "voice"],
+    includedFeatures: [
+      "core_ai_support",
+      "human_handoff",
+      "follow_ups",
+      "reminders",
+      "voice_automation",
+      "team_admin",
+      "cross_channel",
+      "leo_voice",
+    ],
+    availableAgents: BUSINESS_CHANNEL_AGENTS,
     customerLabel: "Business",
   },
   business_plus: {
@@ -79,11 +123,16 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
     name: "Business+",
     monthlyCredits: 25000,
     configurableMonthlyCredits: true,
+    maxChannels: 4,
+    selectableChannels: ["web_chat", "whatsapp", "voice", "email"],
     includedFeatures: [
       "core_ai_support",
-      "leo_chat",
+      "human_handoff",
       "follow_ups",
       "reminders",
+      "voice_automation",
+      "email_automation",
+      "web_chat_automation",
       "team_admin",
       "cross_channel",
       "leo_voice",
@@ -92,15 +141,20 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
       "advanced_workflows",
       "custom_integrations",
     ],
+    availableAgents: BUSINESS_PLUS_CHANNEL_AGENTS,
     customerLabel: "Business+",
   },
 };
 
 export const FLUX_FEATURE_LABELS: Record<FluxFeatureKey, string> = {
   core_ai_support: "Core AI support",
-  leo_chat: "Leo Chat",
+  human_handoff: "Human handoff",
   follow_ups: "Follow-up automation",
   reminders: "Reminders",
+  voice_automation: "Voice automation",
+  email_automation: "Email automation",
+  web_chat_automation: "Web chat automation",
+  leo_chat: "Leo Chat",
   team_admin: "Team and admin controls",
   cross_channel: "Cross-channel workflows",
   leo_voice: "Leo Voice",
@@ -132,6 +186,31 @@ export function normalizeFluxPlanCode(value: string | null | undefined): FluxPla
 
 export function getFluxPlanDefinition(value: string | null | undefined): FluxPlanDefinition {
   return FLUX_PLAN_DEFINITIONS[normalizeFluxPlanCode(value)];
+}
+
+export function getPlanAgentAllocation(value: string | null | undefined) {
+  return getFluxPlanDefinition(value).availableAgents.map((agent) => ({ ...agent }));
+}
+
+export function getMaxChannelCount(value: string | null | undefined) {
+  return getFluxPlanDefinition(value).maxChannels;
+}
+
+/** Backward-compatible name for callers that use agents as channel workers. */
+export function getMaxAgentCount(value: string | null | undefined) {
+  return getMaxChannelCount(value);
+}
+
+export function getSelectableChannels(value: string | null | undefined) {
+  return [...getFluxPlanDefinition(value).selectableChannels];
+}
+
+export function planIncludesChannel(plan: string | null | undefined, channel: FluxAgentChannel) {
+  return getFluxPlanDefinition(plan).selectableChannels.includes(channel);
+}
+
+export function getRequiredPlanForChannel(channel: FluxAgentChannel): FluxPlanDefinition {
+  return Object.values(FLUX_PLAN_DEFINITIONS).find((plan) => plan.selectableChannels.includes(channel)) || FLUX_PLAN_DEFINITIONS.business_plus;
 }
 
 export function planIncludesFeature(plan: string | null | undefined, feature: FluxFeatureKey) {

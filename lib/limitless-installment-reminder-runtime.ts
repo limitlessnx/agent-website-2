@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { assertFluxFeatureAccess, reserveFluxCredits } from "@/lib/flux-credits";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPECTED_VARIABLE_KEYS = [
@@ -75,9 +76,22 @@ export async function runLimitlessInstallmentReminderSweep() {
   }
 
   const results: Array<Record<string, unknown>> = [];
+  const reminderEntitlements = new Map<string, boolean>();
 
   for (const plan of plans || []) {
     const organizationId = String(plan.organization_id);
+    if (!reminderEntitlements.has(organizationId)) {
+      try {
+        await assertFluxFeatureAccess(organizationId, "reminders");
+        reminderEntitlements.set(organizationId, true);
+      } catch {
+        reminderEntitlements.set(organizationId, false);
+      }
+    }
+    if (!reminderEntitlements.get(organizationId)) {
+      results.push({ planId: plan.id, status: "skipped", reason: "reminders_not_included_in_plan" });
+      continue;
+    }
     const whatsappConfig = whatsappConfigMap.get(organizationId);
     const organizationName = whatsappConfig?.company_name || orgMap.get(organizationId) || "Your company";
     const localTemplate = plan.reminder_template_id
@@ -162,6 +176,13 @@ export async function runLimitlessInstallmentReminderSweep() {
     }
 
     try {
+      const metering = await reserveFluxCredits({
+        organizationId,
+        action: "whatsapp_follow_up_reminder",
+        source: "installment_reminder",
+        provider: "whatsapp",
+        metadata: { payment_plan_id: plan.id, reminder_attempt_id: attempt.data.id },
+      });
       const delivery = await sendWhatsAppMessage({
         organizationId,
         to: phone,
@@ -188,7 +209,7 @@ export async function runLimitlessInstallmentReminderSweep() {
         .eq("status", "active")
         .gt("outstanding_balance", 0);
 
-      results.push({ planId: plan.id, status: "sent", cadence: plan.frequency, providerMessageId: delivery.providerMessageId || null, nextReminderAt: nextAt });
+      results.push({ planId: plan.id, status: "sent", credits: metering.credits, cadence: plan.frequency, providerMessageId: delivery.providerMessageId || null, nextReminderAt: nextAt });
     } catch (error) {
       await admin
         .from("reminder_attempts")

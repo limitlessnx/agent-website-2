@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getWhatsAppActivationGate, whatsappActivationError } from "@/lib/whatsapp-activation-gate";
+import { getVoiceActivationGate, voiceActivationError } from "@/lib/voice-activation-gate";
+import { planIncludesChannel } from "@/lib/fluxknight-plans";
 
 const allowedStatuses = new Set(["submitted", "configuration", "testing", "awaiting_approval", "live", "paused"]);
 
@@ -53,6 +56,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (status === "live") {
+      const activationGate = await getWhatsAppActivationGate(profile.organization_id);
+      if (!activationGate.ready) {
+        return NextResponse.json({ error: whatsappActivationError(activationGate), activationGate }, { status: 409 });
+      }
+      const voiceGate = await getVoiceActivationGate(profile.organization_id);
+      if (planIncludesChannel(voiceGate.planCode, "voice") && !voiceGate.ready) {
+        return NextResponse.json({ error: voiceActivationError(voiceGate), voiceGate }, { status: 409 });
+      }
       const [{ data: agents, error: agentsError }, { data: readiness, error: readinessError }, { data: models, error: modelsError }, { data: whatsapp, error: whatsappError }, { data: approvals, error: approvalsError }] = await Promise.all([
         admin.from("agents").select("id,system_prompt").eq("organization_id", profile.organization_id),
         admin.from("agent_runtime_readiness").select("agent_id,readiness_score,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,test_ready,approval_ready,workflow_ready").eq("organization_id", profile.organization_id),

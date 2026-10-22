@@ -116,6 +116,36 @@ export const planDefinitions: PlanDefinition[] = [
 
 export const industries: IndustryDefinition[] = [
   {
+    slug: "photography-studio",
+    name: "Photography Studios",
+    hero: "Turn studio enquiries into confirmed shoots, happy clients and repeat bookings.",
+    subhead: "Give clients instant answers about packages, availability and studio services while your team keeps bookings, follow-ups and campaigns organized.",
+    problem: [
+      "Enquiries arrive while photographers are shooting or serving clients.",
+      "Package, availability and pricing questions are repeated across channels.",
+      "Follow-ups and booking reminders depend on staff memory.",
+      "Promotional campaigns are difficult to run consistently from a busy studio."
+    ],
+    outcomes: ["Faster enquiry response", "Cleaner booking intake", "More confirmed shoots", "Consistent follow-up", "Better client continuity"],
+    journey: ["Enquiry", "Package selection", "Booking", "Reminder", "Shoot", "Repeat booking"],
+    basicExample: "Package Q&A, enquiry capture, booking intent and human studio handoff.",
+    starterExample: "Adds booking reminders, missed-enquiry recovery and same-channel follow-up.",
+    businessExample: "Adds promotional campaigns, WhatsApp + email follow-up, admin access, Leo and deeper reporting.",
+    businessPlusExample: "Adds structured client, shoot, catalogue and campaign history for studio operations.",
+    databaseLabel: "Client + studio booking database",
+    channels: ["WhatsApp", "Website support", "Inbound voice", "Email follow-up on Business", "Meta template campaigns on Business"],
+    workflowTitle: "From the first studio enquiry to a repeat client.",
+    workflowIntro: "Fluxknight handles repetitive studio communication while photographers stay focused on the work and client experience.",
+    workflowSteps: [
+      { title: "Answer package questions", description: "Maia responds to approved questions about shoot types, packages, availability, location and preparation." },
+      { title: "Capture the enquiry", description: "The system records the client details, preferred shoot type, timing and request context for the team." },
+      { title: "Move toward a booking", description: "Plus and above can support booking, reminders and follow-up for incomplete enquiries." },
+      { title: "Run a campaign", description: "Business can send approved Meta WhatsApp templates to eligible clients for launches, seasonal shoots and reactivation." },
+      { title: "Hand off complex requests", description: "Complaints, bespoke packages and high-value enquiries reach the studio team with context intact." }
+    ],
+    businessNotes: ["Campaigns must use approved Meta templates and an eligible, consent-aware audience.", "Business+ is designed to connect clients, shoots, catalogue items and campaign history."]
+  },
+  {
     slug: "real-estate",
     name: "Real Estate",
     hero: "Turn more property enquiries into inspections, qualified buyers and closed opportunities.",

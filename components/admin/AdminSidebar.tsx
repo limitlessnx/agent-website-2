@@ -201,7 +201,7 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
           </button>)}
           <div className={extras.workspaceSectionLabel}>Tenant Organizations</div>
           {tenants.length ? tenants.slice(0, 6).map((tenant) => {
-            const href = "/dashboard";
+            const href = `/dashboard/preview/tenant/${encodeURIComponent(tenant.organizationId)}`;
             return <button key={tenant.organizationId} type="button" onClick={() => void switchOrganization("tenant", tenant.organizationId, href)} data-active={activeOrganization.kind === "tenant" && activeOrganization.id === tenant.organizationId}>
               <span><strong>{tenant.name}</strong><small>{tenant.status.replaceAll("_", " ")}</small></span>
             </button>;

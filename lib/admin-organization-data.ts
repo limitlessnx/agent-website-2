@@ -53,6 +53,13 @@ export type LimitlessUpcomingPayment = {
   dueDate: string | null;
   status: string;
 };
+export type LimitlessUpcomingViewing = {
+  id: string;
+  title: string;
+  startAt: string | null;
+  status: string;
+  customerName: string | null;
+};
 
 export type LimitlessDashboardData = {
   financial: {
@@ -75,6 +82,7 @@ export type LimitlessDashboardData = {
     items: LimitlessDashboardProperty[];
   };
   upcomingPayments: LimitlessUpcomingPayment[];
+  upcomingViewings: LimitlessUpcomingViewing[];
 };
 
 export type OrganizationOperationalSnapshot = {
@@ -122,7 +130,7 @@ async function notificationNotices(organizationId: string) {
 
 async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminClient>): Promise<LimitlessDashboardData> {
   const properties = await getProperties(150).catch(() => []);
-  const [{ data: plans }, { data: assets }] = await Promise.all([
+  const [{ data: plans }, { data: assets }, { data: viewings }] = await Promise.all([
     admin
       .from("payment_plans")
       .select("id,client_name,property_title,agreed_price,total_paid,outstanding_balance,installment_amount,next_due_date,status")
@@ -136,6 +144,12 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
       .not("property_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(1000),
+    admin
+      .from("appointments")
+      .select("id,title,start_at,status,customer_name")
+      .eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID)
+      .order("start_at", { ascending: true })
+      .limit(50),
   ]);
 
   const paymentPlans = plans || [];
@@ -213,6 +227,16 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
       dueDate: plan.next_due_date || null,
       status: text(plan.status, "active"),
     }));
+  const upcomingViewings = (viewings || [])
+    .filter((viewing) => !["cancelled", "completed"].includes(lower(viewing.status)))
+    .slice(0, 5)
+    .map((viewing) => ({
+      id: String(viewing.id),
+      title: text(viewing.title, "Property viewing"),
+      startAt: viewing.start_at || null,
+      status: text(viewing.status, "pending"),
+      customerName: viewing.customer_name || null,
+    }));
 
   return {
     financial: {
@@ -242,6 +266,7 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
       items: propertyItems,
     },
     upcomingPayments,
+    upcomingViewings,
   };
 }
 

@@ -3,8 +3,12 @@ import { Cable, CheckCircle2, CircleDashed, LockKeyhole, TriangleAlert } from "@
 import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationAccessContext, listOrganizationMembers } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { getFluxPlanDefinition, planIncludesChannel } from "@/lib/fluxknight-plans";
+import { getVoiceActivationGate } from "@/lib/voice-activation-gate";
 import GoogleCalendarPanel from "./GoogleCalendarPanel";
 import TwilioWhatsAppOnboardingPanel from "./TwilioWhatsAppOnboardingPanel";
+import VoiceOnboardingPanel from "./VoiceOnboardingPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +36,9 @@ export default async function PortalIntegrationsPage() {
   if(!access.permissions.has("integrations.view")&&!access.permissions.has("integrations.manage")) return null;
   const admin=createAdminClient();
   const canViewMembers=access.permissions.has("members.view")||access.permissions.has("members.manage");
+  const wallet = await getFluxWalletSummary(session.organizationId);
+  const plan = getFluxPlanDefinition(wallet.planCode);
+  const voiceGate = await getVoiceActivationGate(session.organizationId);
   const [
     {data:integrations,error:integrationError},
     {data:agents,error:agentError},
@@ -81,6 +88,12 @@ export default async function PortalIntegrationsPage() {
 
       <TwilioWhatsAppOnboardingPanel
         initialBinding={twilioWhatsAppBinding}
+        canManage={access.permissions.has("integrations.manage")}
+      />
+
+      <VoiceOnboardingPanel
+        available={planIncludesChannel(plan.code, "voice")}
+        initialGate={voiceGate}
         canManage={access.permissions.has("integrations.manage")}
       />
 
