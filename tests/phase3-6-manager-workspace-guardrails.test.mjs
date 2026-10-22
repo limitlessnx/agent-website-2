@@ -35,9 +35,12 @@ test("Phase 5 manager approval, removal and entry are organization scoped",()=>{
  const managerRoute=read("app/api/client-auth/manager-access/route.ts");
  const sql=read("supabase/migrations/20261005_manager_account_access_mvp.sql");
  assert.match(teamRoute,/session\.organizationId/);
- assert.match(teamRoute,/p_organization_id:session\.organizationId/);
- assert.match(teamRoute,/p_status:"removed"/);
- assert.match(managerRoute,/getMembershipForOrganization\(session\.userId,organizationId\)/);
+ assert.match(teamRoute,/rpc\/approve_organization_access_request/);
+ assert.match(teamRoute,/rpc\/reject_organization_access_request/);
+ assert.match(teamRoute,/p_actor_user_id:\s*session\.userId/);
+ assert.match(teamRoute,/p_organization_id:\s*session\.organizationId/);
+ assert.match(teamRoute,/p_status:\s*"removed"/);
+ assert.match(managerRoute,/getMembershipForOrganization\(session\.userId,\s*organizationId\)/);
  assert.match(sql,/organization_id = v_request\.organization_id/);
  assert.match(sql,/organization_id = v_request\.organization_id/);
 });
@@ -47,7 +50,7 @@ test("Phase 5 removal invalidates workspace entry without deleting the user acco
  const route=read("app/api/portal/team/access-requests/route.ts");
  assert.match(auth,/status=eq\.active/);
  assert.match(auth,/if\(!live\)return null/);
- assert.match(route,/p_status:"removed"/);
+ assert.match(route,/p_status:\s*"removed"/);
  assert.doesNotMatch(route,/delete.*auth/i);
 });
 
@@ -70,10 +73,10 @@ test("Phase 6 workspace switching cannot bypass membership authorization",()=>{
  const switcher=read("app/portal/ManagerWorkspaceSwitcher.tsx");
  const route=read("app/api/client-auth/manager-access/route.ts");
  assert.match(switcher,/switchWorkspace/);
- assert.match(route,/action==="enter"/);
- assert.match(route,/getMembershipForOrganization\(session\.userId,organizationId\)/);
- assert.match(route,/if\(!membership\)/);
- assert.match(route,/status:403/);
+ assert.match(route,/action\s*===\s*"enter"/);
+ assert.match(route,/getMembershipForOrganization\(session\.userId,\s*organizationId\)/);
+ assert.match(route,/if\s*\(!membership\)/);
+ assert.match(route,/status:\s*403/);
  assert.match(route,/setClientSession/);
 });
 

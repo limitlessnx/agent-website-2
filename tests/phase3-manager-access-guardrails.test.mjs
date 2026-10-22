@@ -10,9 +10,11 @@ test("Phase 3 Team & Access exposes organization-scoped manager controls", () =>
   const client = read("app/portal/team/AccessRequestsClient.tsx");
 
   assert.match(route, /session\.organizationId/);
-  assert.match(route, /action==="approve"\|\|action==="reject"/);
-  assert.match(route, /action==="remove"/);
-  assert.match(route, /p_organization_id:session\.organizationId/);
+  assert.match(route, /action\s*===\s*"approve"\s*\|\|\s*action\s*===\s*"reject"/);
+  assert.match(route, /action\s*===\s*"remove"/);
+  assert.match(route, /rpc\/approve_organization_access_request/);
+  assert.match(route, /rpc\/reject_organization_access_request/);
+  assert.match(route, /p_organization_id:\s*session\.organizationId/);
   assert.match(page, /manager_access_code/);
   assert.match(client, /Organization Access ID/);
   assert.match(client, /Accept/);
@@ -39,9 +41,9 @@ test("Phase 3 rejection is tied to the requested organization", () => {
 test("Phase 3 removal cannot cross organization boundaries", () => {
   const route = read("app/api/portal/team/access-requests/route.ts");
 
-  assert.match(route, /member\.id===membershipId/);
-  assert.match(route, /target\.role!=="manager"/);
-  assert.match(route, /p_organization_id:session\.organizationId/);
-  assert.match(route, /p_membership_id:membershipId/);
-  assert.match(route, /p_status:"removed"/);
+  assert.match(route, /member\.id\s*===\s*membershipId/);
+  assert.match(route, /target\.role\s*!==\s*"manager"/);
+  assert.match(route, /p_organization_id:\s*session\.organizationId/);
+  assert.match(route, /p_membership_id:\s*membershipId/);
+  assert.match(route, /p_status:\s*"removed"/);
 });

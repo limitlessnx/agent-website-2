@@ -3,6 +3,7 @@ import { Database, KeyRound, PlugZap, Settings2, Workflow } from "@/components/a
 import { getSupabaseReadiness } from "@/lib/limitless-data";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 import WorkflowRegistryClient from "@/app/dashboard/automations/WorkflowRegistryClient";
+import AppointmentCapacitySettings from "./AppointmentCapacitySettings";
 
 const settings = [
   { keys: ["LIMITLESS_ADMIN_EMAIL"], label: "Admin login email", display: "ADMIN_EMAIL" },
@@ -70,6 +71,8 @@ export default async function SettingsPage() {
         </aside>
 
         <div className="settings-content">
+          <AppointmentCapacitySettings />
+
           <section className="admin-panel" id="integrations">
             <div className="admin-panel-header">
               <div><h2>Platform Integrations</h2><p>Connect Meta and other platform services from the dedicated integrations workspace.</p></div>

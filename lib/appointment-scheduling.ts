@@ -14,6 +14,7 @@ export type AvailabilityConfiguration={
   bufferBeforeMinutes?:number;
   bufferAfterMinutes?:number;
   serviceDurations?:Record<string,number>;
+  maxConcurrentAppointments?:number;
 };
 
 export type RoutingStrategy="default"|"least_busy"|"round_robin";
@@ -191,9 +192,8 @@ export function evaluateAvailabilityPolicy(input:{
   return {available:true};
 }
 
-async function hasFluxknightOverlap(input:{
+async function countTenantOverlaps(input:{
   organizationId:string;
-  resourceId:string;
   startAt:string;
   endAt:string;
   excludeAppointmentId?:string|null;
@@ -202,14 +202,13 @@ async function hasFluxknightOverlap(input:{
     .from("appointments")
     .select("id",{count:"exact",head:true})
     .eq("organization_id",input.organizationId)
-    .eq("calendar_resource_id",input.resourceId)
     .in("status",["pending_availability","confirmed","rescheduled"])
     .lt("start_at",input.endAt)
     .gt("end_at",input.startAt);
   if(input.excludeAppointmentId) query=query.neq("id",input.excludeAppointmentId);
   const {count,error}=await query;
   if(error) throw error;
-  return (count||0)>0;
+  return count||0;
 }
 
 export async function evaluateResourceAvailability(input:{
@@ -237,14 +236,21 @@ export async function evaluateResourceAvailability(input:{
   const bufferedStart=addMinutes(input.startAt,-Math.max(0,number(config.bufferBeforeMinutes,0)));
   const bufferedEnd=addMinutes(input.endAt,Math.max(0,number(config.bufferAfterMinutes,0)));
 
-  if(await hasFluxknightOverlap({
+  // Capacity is tenant-wide, so resource-level settings cannot override it.
+  const configuredCapacity=Number(organizationConfiguration.maxConcurrentAppointments);
+  const maxConcurrentAppointments=Number.isFinite(configuredCapacity)
+    ?Math.max(1,Math.min(100,Math.floor(configuredCapacity))):1;
+  const overlappingAppointments=await countTenantOverlaps({
     organizationId:input.organizationId,
-    resourceId:input.resource.id,
     startAt:bufferedStart,
     endAt:bufferedEnd,
     excludeAppointmentId:input.excludeAppointmentId,
-  })){
-    return {available:false,reason:"Requested time conflicts with another Fluxknight appointment or buffer."};
+  });
+  if(overlappingAppointments>=maxConcurrentAppointments){
+    return {
+      available:false,
+      reason:`Tenant appointment capacity is full (${maxConcurrentAppointments} simultaneous appointment${maxConcurrentAppointments===1?"":"s"}).`,
+    };
   }
 
   const googleAvailable=await calendarSlotAvailable({
@@ -465,4 +471,39 @@ export async function selectAppointmentResource(request:RoutingRequest):Promise<
     resource:null,startAt:toIso(request.startAt),endAt:null,available:false,status:"unavailable",
     strategy:settings.strategy,reason:lastReason,checkedResourceIds:checked,
   };
+}
+
+/**
+ * Find alternatives on later dates at the same requested local-clock approximation.
+ * Each candidate is verified through the full policy, tenant-capacity and calendar path.
+ */
+export async function findNextAvailableAppointmentSlots(
+  request: RoutingRequest,
+  options: { daysAhead?: number; limit?: number } = {},
+): Promise<Array<{ startAt: string; endAt: string; resourceId: string; resourceName: string }>> {
+  const daysAhead = Math.max(1, Math.min(21, Math.floor(options.daysAhead || 14)));
+  const limit = Math.max(1, Math.min(3, Math.floor(options.limit || 3)));
+  const requestedStart = toIso(request.startAt);
+  const requestedEnd = request.requestedEndAt ? toIso(request.requestedEndAt) : null;
+  const durationMs = requestedEnd ? Date.parse(requestedEnd) - Date.parse(requestedStart) : null;
+  const results: Array<{ startAt: string; endAt: string; resourceId: string; resourceName: string }> = [];
+  for (let day = 1; day <= daysAhead && results.length < limit; day++) {
+    const candidateStart = addMinutes(requestedStart, day * 24 * 60);
+    const candidateEnd = durationMs ? new Date(Date.parse(candidateStart) + durationMs).toISOString() : null;
+    const decision = await selectAppointmentResource({
+      ...request,
+      startAt: candidateStart,
+      requestedEndAt: candidateEnd,
+      excludeAppointmentId: request.excludeAppointmentId || null,
+    });
+    if (decision.available && decision.resource && decision.endAt) {
+      results.push({
+        startAt: decision.startAt,
+        endAt: decision.endAt,
+        resourceId: decision.resource.id,
+        resourceName: decision.resource.display_name,
+      });
+    }
+  }
+  return results;
 }

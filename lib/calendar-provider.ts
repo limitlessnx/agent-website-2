@@ -184,31 +184,35 @@ export async function calendarSlotAvailable(input: {
 }) {
   if (await assertTestCalendarAllowed(input.organizationId, input.resource.provider)) return true;
   assertGoogleProvider(input.resource.provider);
-  const response = await googleFetch(
-    input.organizationId,
-    input.resource.provider,
-    "https://www.googleapis.com/calendar/v3/freeBusy",
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        timeMin: input.startAt,
-        timeMax: input.endAt,
-        timeZone: input.resource.timezone,
-        items: [{ id: input.resource.external_calendar_id }],
-      }),
-    },
+  // Ignore only events that this application created. Unmanaged calendar events
+  // remain conflicts, while capacity is enforced against tenant appointment rows.
+  const url = new URL(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.resource.external_calendar_id)}/events`,
   );
+  url.searchParams.set("timeMin", input.startAt);
+  url.searchParams.set("timeMax", input.endAt);
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("showDeleted", "false");
+  url.searchParams.set("maxResults", "2500");
+  const response = await googleFetch(input.organizationId, input.resource.provider, url.toString(), { method: "GET" });
   const body = await response.json().catch(() => ({})) as Json;
   if (!response.ok) {
     const error = body.error as Json | undefined;
-    throw new Error(text(error?.message) || `Google Calendar free/busy check failed with ${response.status}.`);
+    throw new Error(text(error?.message) || `Google Calendar event availability check failed with ${response.status}.`);
   }
-
-  const calendars = body.calendars as Record<string, Json> | undefined;
-  const calendar = calendars?.[input.resource.external_calendar_id];
-  const busy = Array.isArray(calendar?.busy) ? calendar?.busy as unknown[] : [];
-  return busy.length === 0;
+  const events = Array.isArray(body.items) ? body.items as Json[] : [];
+  return !events.some((event) => {
+    if (text(event.status) === "cancelled") return false;
+    const extended = event.extendedProperties as Json | undefined;
+    const privateProps = extended?.private as Json | undefined;
+    if (text(privateProps?.fluxknightAppointmentId)) return false;
+    const start = event.start as Json | undefined;
+    const end = event.end as Json | undefined;
+    const eventStart = Date.parse(text(start?.dateTime) || text(start?.date));
+    const eventEnd = Date.parse(text(end?.dateTime) || text(end?.date));
+    return Number.isFinite(eventStart) && Number.isFinite(eventEnd)
+      && eventStart < Date.parse(input.endAt) && eventEnd > Date.parse(input.startAt);
+  });
 }
 
 export async function createCalendarEvent(
