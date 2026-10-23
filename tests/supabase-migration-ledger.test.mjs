@@ -25,6 +25,11 @@ test("production migration ledger snapshot has no duplicate versions", () => {
   assert.deepEqual(duplicates, [], "Duplicate local migration versions must be resolved");
 });
 
+test("explicitly draft-only SQL is excluded from the deployable migration directory", () => {
+  const draftOnly = migrationFiles.filter((name) => readFileSync(path.join(migrationDir, name), "utf8").includes("Draft only. Do not execute in production"));
+  assert.deepEqual(draftOnly, [], "Draft-only SQL must live outside supabase/migrations");
+});
+
 test("every migration recorded remotely has a matching local SQL file", () => {
   assert.ok(Array.isArray(ledger.migrations), "Migration ledger snapshot is missing migrations");
   const localVersions = new Set(versions.map((entry) => entry.version));
