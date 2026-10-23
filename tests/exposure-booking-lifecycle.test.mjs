@@ -127,6 +127,10 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(worker, /status: "failed"/);
   assert.match(worker, /manual reconciliation required/);
   assert.match(worker, /status: "uncertain"/);
+  assert.match(worker, /\.eq\("organization_id", row\.organization_id\)/);
+  assert.match(worker, /appointment\.status !== "confirmed"/);
+  assert.match(worker, /appointment\.metadata\?\.source !== "exposure_booking_form"/);
+  assert.match(worker, /status: "cancelled"/);
   assert.match(trigger, /after insert or update of status on public\.appointments/i);
   assert.match(trigger, /coalesce\(new\.metadata->>'source', ''\) <> 'exposure_booking_form'/);
   assert.match(trigger, /new\.status = 'cancelled'/);
