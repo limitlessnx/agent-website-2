@@ -24,7 +24,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!appointment) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   const startAt = Object.prototype.hasOwnProperty.call(body, "startAt") ? iso(body.startAt) : undefined;
   const endAt = Object.prototype.hasOwnProperty.call(body, "endAt") ? iso(body.endAt) : undefined;
-  if (startAt === null || endAt === null) return NextResponse.json({ error: "Booking times must be valid." }, { status: 400 });
+  if (startAt === null || (endAt === null && String(body.endAt || "").trim() !== "")) return NextResponse.json({ error: "Booking times must be valid." }, { status: 400 });
   if (startAt && endAt && new Date(endAt) <= new Date(startAt)) return NextResponse.json({ error: "End time must be after start time." }, { status: 400 });
   const status = Object.prototype.hasOwnProperty.call(body, "status") ? String(body.status || "") : undefined;
   const depositStatus = Object.prototype.hasOwnProperty.call(body, "depositStatus") ? String(body.depositStatus || "") : undefined;
