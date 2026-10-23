@@ -116,10 +116,44 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
   const admin = createAdminClient();
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
-  const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
+
+  let existingLead: { id: string; opted_out: boolean | null } | null = null;
+  if (args.leadId) {
+    const { data, error } = await admin.from("leads")
+      .select("id,opted_out")
+      .eq("organization_id", args.organizationId)
+      .eq("id", args.leadId)
+      .maybeSingle();
+    if (error) throw error;
+    existingLead = data;
+  }
+
   if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
-  const leadId = existingLead?.id || args.leadId || undefined;
-  if (leadId) await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
+  let leadId = existingLead?.id;
+
+  if (!leadId && phone) {
+    const { data: phoneLead, error: phoneLeadError } = await admin.from("leads")
+      .select("id,opted_out")
+      .eq("organization_id", args.organizationId)
+      .eq("phone", phone)
+      .maybeSingle();
+    if (phoneLeadError) throw phoneLeadError;
+    if (phoneLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
+    leadId = phoneLead?.id;
+  }
+
+  if (!leadId && args.leadId && !phone) {
+    throw new Error("The lead was not found in the selected organization.");
+  }
+
+  if (leadId) {
+    const { error: cancelPreviousError } = await admin.from("follow_ups")
+      .update({ status: "cancelled" })
+      .eq("organization_id", args.organizationId)
+      .eq("lead_id", leadId)
+      .eq("status", "pending");
+    if (cancelPreviousError) throw cancelPreviousError;
+  }
 
   const stages = [1, 3, 7, 14, 21, 30];
   const propertyText = JSON.stringify(args.propertyContext).slice(0, 3500);

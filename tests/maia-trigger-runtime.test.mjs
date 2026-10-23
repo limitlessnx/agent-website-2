@@ -72,7 +72,7 @@ test("30-day property follow-up stages reuse one tenant-scoped lead", () => {
     limitlessRuntime.indexOf("export async function queueLimitlessPropertyFollowupSequence"),
     limitlessRuntime.indexOf("export function shouldHandoff"),
   );
-  assert.match(sequence, /let leadId = existingLead\?\.id \|\| args\.leadId/);
+  assert.match(sequence, /let leadId = existingLead\?\.id/);
   assert.match(sequence, /if \(!leadId && phone\)/);
   assert.match(sequence, /leadId,\s*customerPhone: phone/);
   assert.match(sequence, /const stages = \[1, 3, 7, 14, 21, 30\]/);

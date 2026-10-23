@@ -33,7 +33,7 @@ test("Phase 4 manager workspace requires a signed manager session",()=>{
 test("Phase 5 manager approval, removal and entry are organization scoped",()=>{
  const teamRoute=read("app/api/portal/team/access-requests/route.ts");
  const managerRoute=read("app/api/client-auth/manager-access/route.ts");
- const sql=read("supabase/migrations/20261005_manager_account_access_mvp.sql");
+ const sql=read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
  assert.match(teamRoute,/session\.organizationId/);
  assert.match(teamRoute,/p_organization_id:session\.organizationId/);
  assert.match(teamRoute,/p_status:"removed"/);
@@ -46,7 +46,7 @@ test("Phase 5 removal invalidates workspace entry without deleting the user acco
  const auth=read("lib/client-auth.ts");
  const route=read("app/api/portal/team/access-requests/route.ts");
  assert.match(auth,/status=eq\.active/);
- assert.match(auth,/if\(!live\)return null/);
+ assert.match(auth,/organization_memberships\?user_id=eq\..*organization_id=eq\..*status=eq\.active/);
  assert.match(route,/p_status:"removed"/);
  assert.doesNotMatch(route,/delete.*auth/i);
 });

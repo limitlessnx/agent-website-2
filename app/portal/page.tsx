@@ -155,7 +155,12 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   const attentionAgents = summary.agents.filter((agent) => ["error", "disabled", "paused"].includes(agent.status.toLowerCase()));
   const trialDays = trialDaysRemaining(wallet?.trialEndsAt || null);
   const isTrial = Boolean(wallet && (wallet.trialEndsAt !== null || wallet.trialCreditLimit !== null));
-  const isFreeWorkspace = !subscription && !isTrial;
+  const { data: organization } = await admin.from("organizations").select("metadata").eq("id", session.organizationId).maybeSingle();
+  const organizationMetadata = organization?.metadata && typeof organization.metadata === "object"
+    ? organization.metadata as Record<string, unknown>
+    : {};
+  const workspaceMode = String(organizationMetadata.workspace_mode || "");
+  const isFreeWorkspace = workspaceMode === "free" && !subscription && !isTrial;
   const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
   const recentActivity = summary.runs.slice(0, 6);
   const industryActions = [

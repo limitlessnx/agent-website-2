@@ -1,0 +1,751 @@
+{
+  "capturedAt": "2026-10-23",
+  "projectRef": "tacxegmlppngnuvldojy",
+  "purpose": "Read-only snapshot of the remote Supabase migration ledger used to reconcile missing local migration files. Refresh deliberately when the production ledger changes.",
+  "migrations": [
+    {
+      "version": "20260724",
+      "name": "001_platform_domain_foundation"
+    },
+    {
+      "version": "202607240001",
+      "name": "workflow_orchestrator_foundation"
+    },
+    {
+      "version": "20260726104702",
+      "name": "organization_provisioning_engine"
+    },
+    {
+      "version": "20260726105457",
+      "name": "admin_organization_creation"
+    },
+    {
+      "version": "20260726115230",
+      "name": "secure_integration_credentials"
+    },
+    {
+      "version": "20260726134706",
+      "name": "super_admin_ai_model_control"
+    },
+    {
+      "version": "20260726141407",
+      "name": "tenant_security_and_model_resolution"
+    },
+    {
+      "version": "20260726142419",
+      "name": "agent_builder_model_governance"
+    },
+    {
+      "version": "20260726175208",
+      "name": "managed_client_onboarding"
+    },
+    {
+      "version": "20260726181318",
+      "name": "onboarding_business_resources"
+    },
+    {
+      "version": "20260726215257",
+      "name": "onboarding_delivery_preparation"
+    },
+    {
+      "version": "20260731140702",
+      "name": "whatsapp_template_delivery_gateway"
+    },
+    {
+      "version": "20260801142121",
+      "name": "agent_leo_support"
+    },
+    {
+      "version": "20260801194900",
+      "name": "add_tenant_parent_composite_keys"
+    },
+    {
+      "version": "20260801194930",
+      "name": "secure_multitenant_crm_foundation"
+    },
+    {
+      "version": "20260801204131",
+      "name": "client_agent_commerce_flow"
+    },
+    {
+      "version": "20260801204722",
+      "name": "payment_provisioning_engine"
+    },
+    {
+      "version": "20260801205710",
+      "name": "provisioning_worker"
+    },
+    {
+      "version": "20260801205720",
+      "name": "expand_payment_provisioning_queue"
+    },
+    {
+      "version": "20260801215719",
+      "name": "agent_configuration_approval"
+    },
+    {
+      "version": "20260801221754",
+      "name": "agent_approval_composite_key"
+    },
+    {
+      "version": "20260801221816",
+      "name": "shared_workflow_registry"
+    },
+    {
+      "version": "20260801221946",
+      "name": "require_workflow_approval"
+    },
+    {
+      "version": "20260802052748",
+      "name": "super_admin_provider_controls"
+    },
+    {
+      "version": "20260802192532",
+      "name": "phase_10_tenant_runtime"
+    },
+    {
+      "version": "20260802193333",
+      "name": "phase_11_parent_constraints"
+    },
+    {
+      "version": "20260802193405",
+      "name": "phase_11_agent_execution"
+    },
+    {
+      "version": "20260802194635",
+      "name": "phase_12_ai_orchestrator"
+    },
+    {
+      "version": "20260803030933",
+      "name": "option_b_client_automation_clones"
+    },
+    {
+      "version": "20260803034355",
+      "name": "option_b_inbound_template_v2"
+    },
+    {
+      "version": "20260803112947",
+      "name": "client_system_marketplace"
+    },
+    {
+      "version": "20260803120459",
+      "name": "fix_onboarding_before_system_selection"
+    },
+    {
+      "version": "20260803120529",
+      "name": "map_marketplace_systems_to_automation_templates"
+    },
+    {
+      "version": "20260803150546",
+      "name": "phase_14_seed_billing_plans"
+    },
+    {
+      "version": "20260804135339",
+      "name": "create_gencouv_email_and_analytics"
+    },
+    {
+      "version": "20260805124736",
+      "name": "add_leo_control_plane_audit_events"
+    },
+    {
+      "version": "20260809133600",
+      "name": "gencouv_email_event_analytics"
+    },
+    {
+      "version": "20260810064123",
+      "name": "prevent_phone_numbers_as_lead_budget"
+    },
+    {
+      "version": "20260810124712",
+      "name": "create_evaluation_leads"
+    },
+    {
+      "version": "20260810152448",
+      "name": "auto_provision_client_organization_on_signup"
+    },
+    {
+      "version": "20260810152534",
+      "name": "complete_client_signup_registry_provisioning"
+    },
+    {
+      "version": "20260810152630",
+      "name": "fail_closed_client_signup_provisioning"
+    },
+    {
+      "version": "20260810160753",
+      "name": "provision_selected_agent_allocations"
+    },
+    {
+      "version": "20260810161047",
+      "name": "complete_selected_agent_provisioning"
+    },
+    {
+      "version": "20260810162746",
+      "name": "link_onboarding_submissions_to_client_organizations"
+    },
+    {
+      "version": "20260810164440",
+      "name": "fix_onboarding_delivery_preflight_and_model_lookup"
+    },
+    {
+      "version": "20260810172040",
+      "name": "use_marketplace_plan_pricing_for_agent_allocations"
+    },
+    {
+      "version": "20260810213205",
+      "name": "allow_multiple_ai_models_per_organization"
+    },
+    {
+      "version": "20260811063900",
+      "name": "organization_follow_up_policies"
+    },
+    {
+      "version": "20260811130054",
+      "name": "move_agent_selections_to_system_catalog"
+    },
+    {
+      "version": "20260811131537",
+      "name": "add_agent_orchestration_routes"
+    },
+    {
+      "version": "20260813121722",
+      "name": "gencouv_email_inbox_and_campaign_safety"
+    },
+    {
+      "version": "20260814220710",
+      "name": "add_public_media_storage"
+    },
+    {
+      "version": "20260818061348",
+      "name": "create_fluxknight_public_checkout_sessions"
+    },
+    {
+      "version": "20260818061702",
+      "name": "harden_checkout_timestamp_function"
+    },
+    {
+      "version": "20260818065750",
+      "name": "set_fluxknight_usd_catalog_prices"
+    },
+    {
+      "version": "20260818082338",
+      "name": "add_flutterwave_payment_plan_ids"
+    },
+    {
+      "version": "20260819121110",
+      "name": "maia_agentic_runtime"
+    },
+    {
+      "version": "20260819121757",
+      "name": "seed_core_ai_model_catalog"
+    },
+    {
+      "version": "20260819131251",
+      "name": "align_limitless_maia_with_canonical_whatsapp"
+    },
+    {
+      "version": "20260819160011",
+      "name": "add_agent_runtime_observability_indexes"
+    },
+    {
+      "version": "20260820161713",
+      "name": "repair_payment_total_sync_function"
+    },
+    {
+      "version": "20260820163350",
+      "name": "maia_external_scheduler"
+    },
+    {
+      "version": "20260820171740",
+      "name": "add_atomic_maia_goal_claim"
+    },
+    {
+      "version": "20260820191143",
+      "name": "gencouv_email_dashboard_rls"
+    },
+    {
+      "version": "20260820193228",
+      "name": "email_center_integrity_and_lookup_indexes"
+    },
+    {
+      "version": "20260821065938",
+      "name": "restore_maia_autonomous_goal_claim"
+    },
+    {
+      "version": "20260822091650",
+      "name": "route_limitless_maia_whatsapp_followups"
+    },
+    {
+      "version": "20260827221909",
+      "name": "fix_gencouv_raw_lead_deduplication"
+    },
+    {
+      "version": "20260827222155",
+      "name": "add_gencouv_enrollment_preparation_function"
+    },
+    {
+      "version": "20260827222830",
+      "name": "harden_gencouv_enrollment_function_search_path"
+    },
+    {
+      "version": "20260827230831",
+      "name": "add_gencouv_raw_lead_promotion_function"
+    },
+    {
+      "version": "20260827230935",
+      "name": "harden_gencouv_raw_lead_promotion_function"
+    },
+    {
+      "version": "20260828055903",
+      "name": "make_gencouv_enrollment_prepare_retry_safe"
+    },
+    {
+      "version": "20260828152147",
+      "name": "expand_whatsapp_delivery_attempt_statuses"
+    },
+    {
+      "version": "20260828192023",
+      "name": "prevent_duplicate_follow_up_sequence_children"
+    },
+    {
+      "version": "20260828193246",
+      "name": "tenant_scope_limitless_property_media"
+    },
+    {
+      "version": "20260829004435",
+      "name": "schedule_leo_proactive_monitor"
+    },
+    {
+      "version": "20260829004732",
+      "name": "temporarily_accelerate_leo_monitor_verification"
+    },
+    {
+      "version": "20260829005122",
+      "name": "restore_leo_proactive_monitor_interval"
+    },
+    {
+      "version": "20260829045815",
+      "name": "fix_bot_sessions_updated_at_trigger_contract"
+    },
+    {
+      "version": "20260829045936",
+      "name": "dedupe_and_guard_leo_proactive_signals"
+    },
+    {
+      "version": "20260902182810",
+      "name": "add_transactional_email_events"
+    },
+    {
+      "version": "20260902183710",
+      "name": "centralize_fluxknight_resend_lifecycle_dispatch"
+    },
+    {
+      "version": "20260902183838",
+      "name": "harden_fluxknight_resend_event_delivery"
+    },
+    {
+      "version": "20260902183935",
+      "name": "use_resend_send_event_endpoint"
+    },
+    {
+      "version": "20260902185035",
+      "name": "extend_fluxknight_failure_and_onboarding_email_lifecycle"
+    },
+    {
+      "version": "20260902185432",
+      "name": "index_fluxknight_recovery_lifecycle_scans"
+    },
+    {
+      "version": "20260902190019",
+      "name": "schedule_fluxknight_payment_status_verifier"
+    },
+    {
+      "version": "20260902194420",
+      "name": "harden_fluxknight_phase2_customer_notifications"
+    },
+    {
+      "version": "20260903101008",
+      "name": "add_fluxknight_subscription_lifecycle"
+    },
+    {
+      "version": "20260903101413",
+      "name": "enforce_fluxknight_subscription_grace_expiry"
+    },
+    {
+      "version": "20260908114328",
+      "name": "fluxknight_subscription_credits"
+    },
+    {
+      "version": "20260908114430",
+      "name": "flux_credit_policy_hardening"
+    },
+    {
+      "version": "20260908114525",
+      "name": "restrict_flux_credit_rpc_grants"
+    },
+    {
+      "version": "20260909112435",
+      "name": "add_gencouv_web_events"
+    },
+    {
+      "version": "20260909120601",
+      "name": "create_gencouv_telegram_conversations"
+    },
+    {
+      "version": "20260909170206",
+      "name": "free_trial_system_v1"
+    },
+    {
+      "version": "20260910141144",
+      "name": "flux_social_phase_1_core"
+    },
+    {
+      "version": "20260911004640",
+      "name": "flux_social_phase_3_1_content_plans"
+    },
+    {
+      "version": "20260911005822",
+      "name": "flux_social_phase_3_2_asset_infrastructure"
+    },
+    {
+      "version": "20260911060315",
+      "name": "flux_social_brand_assets"
+    },
+    {
+      "version": "20260911074017",
+      "name": "flux_social_phase_3_7_analytics_infrastructure"
+    },
+    {
+      "version": "20260911083711",
+      "name": "flux_social_weekly_runs"
+    },
+    {
+      "version": "20260911102046",
+      "name": "flux_social_weekly_automation"
+    },
+    {
+      "version": "20260914090155",
+      "name": "flux_social_phase_3_9_learning_loop"
+    },
+    {
+      "version": "20260914093507",
+      "name": "flux_social_phase_3_9_metric_ingestion"
+    },
+    {
+      "version": "20260914101850",
+      "name": "meta_integration_status"
+    },
+    {
+      "version": "20260914105524",
+      "name": "flux_social_meta_credentials"
+    },
+    {
+      "version": "20260919130304",
+      "name": "gencouv_marketplace_orders_entitlements"
+    },
+    {
+      "version": "20260920095841",
+      "name": "gencouv_support_ai_foundation"
+    },
+    {
+      "version": "20260920160739",
+      "name": "gencouv_pm_onboarding_handoffs"
+    },
+    {
+      "version": "20260920161336",
+      "name": "pm_onboarding_handoffs"
+    },
+    {
+      "version": "20260920161356",
+      "name": "gencouv_pm_onboarding_handoffs"
+    },
+    {
+      "version": "20260920161750",
+      "name": "gencouv_pm_onboarding_handoffs"
+    },
+    {
+      "version": "20260924115906",
+      "name": "maia_phase2_tenant_hardening"
+    },
+    {
+      "version": "20260924115923",
+      "name": "maia_phase2_cross_tenant_guards"
+    },
+    {
+      "version": "20260924120115",
+      "name": "maia_phase2_installment_tenant_hardening"
+    },
+    {
+      "version": "20260924120152",
+      "name": "maia_phase2_reminder_template_scope"
+    },
+    {
+      "version": "20260924121457",
+      "name": "maia_phase3_trigger_runtime_foundation"
+    },
+    {
+      "version": "20260924121716",
+      "name": "maia_phase3_active_session_uniqueness"
+    },
+    {
+      "version": "20260924135009",
+      "name": "flux_social_metric_conflict_keys"
+    },
+    {
+      "version": "20260926184807",
+      "name": "a2_a3_tenant_membership_permissions"
+    },
+    {
+      "version": "20260926185453",
+      "name": "a2_a3_seed_future_tenant_roles"
+    },
+    {
+      "version": "20260926192153",
+      "name": "a4_tenant_data_isolation_hardening"
+    },
+    {
+      "version": "20260926192406",
+      "name": "a5_service_packages_entitlements"
+    },
+    {
+      "version": "20260926192547",
+      "name": "a6_modular_system_provisioning_lifecycle"
+    },
+    {
+      "version": "20260926201344",
+      "name": "b1_system_event_orchestration_foundation"
+    },
+    {
+      "version": "20260926202046",
+      "name": "b4_automatic_system_event_routes"
+    },
+    {
+      "version": "20260926202633",
+      "name": "b6_generic_channel_inbound_runtime"
+    },
+    {
+      "version": "20260926203120",
+      "name": "b7_restore_runtime_readiness_gate"
+    },
+    {
+      "version": "20260926221603",
+      "name": "b4_b5_appointment_calendar_foundation"
+    },
+    {
+      "version": "20260926221837",
+      "name": "b4_b5_channel_dispatch_alignment"
+    },
+    {
+      "version": "20260926221916",
+      "name": "b4_enforce_system_event_contracts"
+    },
+    {
+      "version": "20260926222444",
+      "name": "b4_route_sync_safe_org_delete"
+    },
+    {
+      "version": "20260926223931",
+      "name": "b6_appointment_reminders_and_whatsapp_delivery"
+    },
+    {
+      "version": "20260926225743",
+      "name": "b8_orchestration_recovery_observability"
+    },
+    {
+      "version": "20260927000230",
+      "name": "c1_c5_unified_customer_conversation_timeline"
+    },
+    {
+      "version": "20260927000632",
+      "name": "c3_c5_customer_task_timeline_identity_review"
+    },
+    {
+      "version": "20260927000829",
+      "name": "c1_c2_identity_backfill_and_message_idempotency"
+    },
+    {
+      "version": "20260927000904",
+      "name": "c3_lead_and_system_event_customer_timeline"
+    },
+    {
+      "version": "20260927003704",
+      "name": "d1_d3_handoffs_assignment_approvals"
+    },
+    {
+      "version": "20260927004201",
+      "name": "d1_handoff_event_contract"
+    },
+    {
+      "version": "20260927004334",
+      "name": "d2_future_role_handoff_approval_permissions"
+    },
+    {
+      "version": "20260927011048",
+      "name": "d4_handoff_continuity_stages_notifications"
+    },
+    {
+      "version": "20260927012333",
+      "name": "d4_future_organization_customer_stages"
+    },
+    {
+      "version": "20260927012456",
+      "name": "d4_stage_history_exact_timeline_link"
+    },
+    {
+      "version": "20260927061815",
+      "name": "e1_tenant_operational_analytics"
+    },
+    {
+      "version": "20260927061931",
+      "name": "e2_analytics_time_series_drilldown"
+    },
+    {
+      "version": "20260927064439",
+      "name": "e3_e6_analytics_completion"
+    },
+    {
+      "version": "20260927064924",
+      "name": "e6_tenant_anomaly_audience"
+    },
+    {
+      "version": "20260927065230",
+      "name": "e3_funnel_window_fix"
+    },
+    {
+      "version": "20260927065351",
+      "name": "e5_evidence_based_ai_handled_value"
+    },
+    {
+      "version": "20260927090355",
+      "name": "g1_flux_commercial_control_plane"
+    },
+    {
+      "version": "20260927090724",
+      "name": "g2_flux_subscription_lifecycle_sweep"
+    },
+    {
+      "version": "20260927091057",
+      "name": "g1_flux_subscription_plan_code_fix"
+    },
+    {
+      "version": "20260927091137",
+      "name": "g1_flux_ledger_allow_parent_cascade"
+    },
+    {
+      "version": "20260927093533",
+      "name": "g3_flux_credit_topup_pricing"
+    },
+    {
+      "version": "20260927113512",
+      "name": "f2_persist_google_calendar_token_refresh"
+    },
+    {
+      "version": "20260927120801",
+      "name": "f3_calendar_staff_resource_settings"
+    },
+    {
+      "version": "20260927120832",
+      "name": "f3_calendar_staff_fk_delete_behavior"
+    },
+    {
+      "version": "20260927120950",
+      "name": "f3_appointment_staff_assignment"
+    },
+    {
+      "version": "20260927123647",
+      "name": "f5_f6_availability_and_intelligent_routing"
+    },
+    {
+      "version": "20260927124511",
+      "name": "f5_organization_business_availability"
+    },
+    {
+      "version": "20260927134301",
+      "name": "f7_twilio_whatsapp_tech_provider_onboarding"
+    },
+    {
+      "version": "20260927153356",
+      "name": "h1_release_security_hardening"
+    },
+    {
+      "version": "20260929205800",
+      "name": "create_whatsapp_webhook_event_logs"
+    },
+    {
+      "version": "20261001215651",
+      "name": "limitless_installment_reminder_runtime"
+    },
+    {
+      "version": "20261004154328",
+      "name": "business_ai_evaluation_runtime"
+    },
+    {
+      "version": "20261005102349",
+      "name": "tenant_scoped_lead_phone_uniqueness"
+    },
+    {
+      "version": "20261006102544",
+      "name": "link_evaluations_to_workspaces"
+    },
+    {
+      "version": "20261006105736",
+      "name": "20261005_manager_account_access_mvp"
+    },
+    {
+      "version": "20261006172615",
+      "name": "phase2_organization_flx_invariant"
+    },
+    {
+      "version": "20261006172630",
+      "name": "phase2_organization_flx_invariant_fix"
+    },
+    {
+      "version": "20261006212905",
+      "name": "property_payment_phase1_3"
+    },
+    {
+      "version": "20261007060405",
+      "name": "activate_limitless_installment_reminders"
+    },
+    {
+      "version": "20261007070222",
+      "name": "activate_limitless_installment_whatsapp_template_20261007"
+    },
+    {
+      "version": "20261008074755",
+      "name": "20261008_gencouv_conversation_tenant_isolation"
+    },
+    {
+      "version": "20261009133223",
+      "name": "free_workspace_industry_provisioning"
+    },
+    {
+      "version": "20261009133738",
+      "name": "add_whatsapp_preferences_to_client_onboarding_profiles"
+    },
+    {
+      "version": "20261009134806",
+      "name": "complete_client_onboarding_profile_fields"
+    },
+    {
+      "version": "20261022195617",
+      "name": "exposure_photography_records"
+    },
+    {
+      "version": "20261023044818",
+      "name": "handoff_phone_destination_notifications"
+    },
+    {
+      "version": "20261023131133",
+      "name": "register_xposure_staff_handoff_template"
+    },
+    {
+      "version": "20261023131517",
+      "name": "register_xposure_customer_follow_up_template"
+    },
+    {
+      "version": "20261023132342",
+      "name": "register_xposure_appointment_reminder_template"
+    }
+  ]
+}

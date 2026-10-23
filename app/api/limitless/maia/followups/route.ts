@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
       const handoffConversation = handoffConversationData as HandoffConversation;
 
       if (!phone || Boolean(lead?.opted_out) || Boolean(handoffConversation?.ai_paused) || String(handoffConversation?.status || "") === "handoff") {
-        await admin.from("follow_ups").update({ status: "cancelled" }) .eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
+        const cancellation = await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing").select("id").maybeSingle();
+        if (cancellation.error) throw cancellation.error;
+        if (!cancellation.data) throw new Error("Could not confirm cancellation of the stale follow-up.");
         results.push({ id: row.id, status: "cancelled", reason: !phone ? "missing_phone" : lead?.opted_out ? "opted_out" : "human_handoff" });
         continue;
       }

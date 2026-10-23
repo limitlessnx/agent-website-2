@@ -21,7 +21,7 @@ test("Phase 3 Team & Access exposes organization-scoped manager controls", () =>
 });
 
 test("Phase 3 approval assigns the organization manager role", () => {
-  const sql = read("supabase/migrations/20261005_manager_account_access_mvp.sql");
+  const sql = read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
   assert.match(sql, /where organization_id = v_request\.organization_id/);
   assert.match(sql, /and slug = 'manager'/);
   assert.match(sql, /insert into public\.membership_roles/);
@@ -29,7 +29,7 @@ test("Phase 3 approval assigns the organization manager role", () => {
 });
 
 test("Phase 3 rejection is tied to the requested organization", () => {
-  const sql = read("supabase/migrations/20261005_manager_account_access_mvp.sql");
+  const sql = read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
   assert.match(sql, /ar\.id = p_request_id/);
   assert.match(sql, /m\.user_id = p_actor_user_id/);
   assert.match(sql, /m\.status = 'active'/);

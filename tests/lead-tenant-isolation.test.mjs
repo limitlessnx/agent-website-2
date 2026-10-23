@@ -22,7 +22,7 @@ test("contact service does not use global phone conflict resolution", () => {
 });
 
 test("tenant scoped phone uniqueness migration exists", () => {
-  const migration = read("supabase/migrations/20261005114500_tenant_scoped_lead_phone_uniqueness.sql");
+  const migration = read("supabase/migrations/20261005102349_tenant_scoped_lead_phone_uniqueness.sql");
   assert.match(migration, /unique index/i);
   assert.match(migration, /organization_id, phone/);
 });

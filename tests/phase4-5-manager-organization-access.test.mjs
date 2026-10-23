@@ -35,7 +35,7 @@ test("Phase 4 account mode routes manager accounts into the manager workspace", 
 });
 
 test("Phase 4 access requests are protected and organization-scoped", () => {
-  const sql = read("supabase/migrations/20261005_manager_account_access_mvp.sql");
+  const sql = read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
   const route = read("app/api/client-auth/manager-access/route.ts");
 
   assert.match(sql, /auth\.uid\(\).*p_requester_user_id/);
@@ -65,7 +65,7 @@ test("Phase 5 organization admin controls remain tenant-scoped", () => {
 test("Phase 5 manager removal preserves the account while blocking workspace access", () => {
   const client = read("app/portal/team/AccessRequestsClient.tsx");
   const route = read("app/api/portal/team/access-requests/route.ts");
-  const sql = read("supabase/migrations/20261005_manager_account_access_mvp.sql");
+  const sql = read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
 
   assert.match(client, /keeps their account and history but blocks workspace access/);
   assert.match(route, /p_status:"removed"/);
