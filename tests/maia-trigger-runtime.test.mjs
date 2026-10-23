@@ -83,8 +83,8 @@ test("Stale Maia follow-ups require confirmed cancellation before skipping deliv
   const apiRoute = await readFile(new URL("../app/api/limitless/maia/followups/route.ts", import.meta.url), "utf8");
   const triggerOrchestrator = await readFile(new URL("../src/trigger/system-orchestrator.ts", import.meta.url), "utf8");
   for (const source of [apiRoute, triggerOrchestrator]) {
-    assert.ok(source.includes("const cancellation = await admin.from(\\"follow_ups\\").update({ status: \\"cancelled\\" })"));
-    assert.ok(source.includes(".select(\\"id\\").maybeSingle()"));
+    assert.ok(source.includes('const cancellation = await admin.from("follow_ups").update({ status: "cancelled" })'));
+    assert.ok(source.includes('.select("id").maybeSingle()'));
     assert.match(source, /if \(cancellation\.error\) throw cancellation\.error/);
     assert.match(source, /if \(!cancellation\.data\) throw new Error\("Could not confirm cancellation of the stale follow-up\."/);
   }
