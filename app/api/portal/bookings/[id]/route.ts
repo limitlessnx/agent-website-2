@@ -59,7 +59,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (status === "confirmed" && appointment.status !== "confirmed") {
     updateQuery = updateQuery.eq("status", appointment.status);
   }
-  const { data: updated, error: updateError } = await updateQuery.select("id,status,start_at,end_at,location,notes").maybeSingle();
+  const { data: updated, error: updateError } = await updateQuery.select("id,status,start_at,end_at,location,notes,title").maybeSingle();
   if (updateError || !updated) {
     if (!updateError && status === "confirmed" && appointment.status !== "confirmed") {
       return NextResponse.json({ error: "Booking status changed in another request. Refresh and review the latest booking before confirming." }, { status: 409 });
