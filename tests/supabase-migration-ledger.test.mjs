@@ -11,7 +11,7 @@ const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
 const migrationFiles = readdirSync(migrationDir).filter((name) => name.endsWith(".sql"));
 const versions = migrationFiles.map((name) => ({
   name,
-  version: name.match(/^(\\d+)_/)?.[1] ?? null,
+  version: name.match(/^(\d+)_/)?.[1] ?? null,
 }));
 
 test("production migration ledger snapshot has no duplicate versions", () => {
