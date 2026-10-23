@@ -19,7 +19,8 @@ test("booking detail UI provides lifecycle controls and is reachable from the ca
   const form = read("app/portal/appointments/BookingLifecycleForm.tsx");
   const list = read("app/portal/appointments/page.tsx");
   assert.match(detail, /Booking lifecycle/);
-  assert.match(form, /Save changes/);\n  assert.match(form, /Booking title/);
+  assert.match(form, /Save changes/);
+  assert.match(form, /Booking title/);
   assert.match(form, /Cancel booking/);
   assert.match(form, /assignedPhotographerId/);
   assert.match(form, /api\/portal\/bookings/);
