@@ -114,6 +114,7 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   const enqueue = read("lib/appointment-notification-outbox.ts");
   const worker = read("lib/appointment-notification-outbox-runtime.ts");
   const task = read("src/trigger/appointment-notification-outbox.ts");
+  const trigger = read("supabase/migrations/20261023080000_appointment_confirmation_outbox_trigger.sql");
   assert.ok(migration.includes("unique (organization_id, event_key)"));
   assert.match(migration, /for update skip locked/i);
   assert.match(migration, /uncertain/);
@@ -124,5 +125,8 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(worker, /status: "sent"/);
   assert.match(worker, /status: "failed"/);
   assert.match(worker, /manual reconciliation required/);
+  assert.match(worker, /status: "uncertain"/);
+  assert.match(trigger, /after insert or update of status on public\.appointments/i);
+  assert.match(trigger, /on conflict \(organization_id, event_key\) do nothing/i);
   assert.match(task, /appointment-notification-outbox-sweep/);
 });
