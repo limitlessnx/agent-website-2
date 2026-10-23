@@ -76,12 +76,14 @@ export async function POST(request: NextRequest) {
         provider: "twilio",
         metadata: { followup_id: row.id, stage: row.stage || null },
       });
+      const stageNumber = Number(row.stage);
+      const templatePurpose = Number.isInteger(stageNumber) && stageNumber >= 1 && stageNumber <= 30 ? `follow_up_day_${stageNumber}` : "follow_up_outside_24h";
       const delivery = await sendWhatsAppMessage({
         organizationId: organization.id,
         to: phone,
         text: String(row.message_sent || ""),
         deliveryMode: withinCustomerServiceWindow ? "direct" : "template",
-        templatePurpose: "follow_up_outside_24h",
+        templatePurpose,
         lastCustomerMessageAt: lastInboundAt,
         variables: {
           lead_name: String(lead?.name || ""),

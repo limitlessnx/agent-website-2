@@ -21,7 +21,9 @@ test("Limitless Realty follow-up API is authenticated, tenant-scoped, and atomic
 test("Follow-up API has both 24-hour delivery paths and never calls n8n", () => {
   const route = read("app/api/limitless/maia/followups/route.ts");
   assert.match(route, /deliveryMode: withinCustomerServiceWindow \? "direct" : "template"/);
-  assert.match(route, /templatePurpose: "follow_up_outside_24h"/);
+  assert.match(route, /templatePurpose/);
+  assert.match(route, /follow_up_day_/);
+  assert.match(route, /follow_up_outside_24h/);
   assert.doesNotMatch(route, /n8n|N8N/);
   assert.match(route, /export async function GET/);
 });
@@ -108,4 +110,3 @@ test("Vercel cron keeps the safety net daily while high-frequency scheduling rem
   const config = JSON.parse(read("vercel.json"));
   assert.equal(config.crons.find((x) => x.path === "/api/cron/maia-safety-net")?.schedule, "0 10 * * *");
 });
-
