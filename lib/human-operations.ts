@@ -123,17 +123,17 @@ async function notifyHandoffAssignee(input:{
     });
   }
 
-  if(!input.notifyWhatsApp) return;
+  if(!input.notifyWhatsApp) return input.notifyDashboard&&input.membershipId ? "dashboard_only" : "disabled";
   let recipient=phone(input.destinationPhone);
   if(input.membershipId){
     const {data:pref,error:prefError}=await admin.from("organization_member_notification_preferences")
       .select("whatsapp_phone,notify_whatsapp_handoffs")
       .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
     if(prefError) throw prefError;
-    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return;
+    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return "not_configured";
     recipient=phone(pref.whatsapp_phone);
   }
-  if(!recipient) return;
+  if(!recipient) return "not_configured";
 
   const {data:notification,error:notificationError}=await admin.from("handoff_notifications").insert({
     organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
@@ -151,13 +151,16 @@ async function notifyHandoffAssignee(input:{
       deliveryMode:"direct",
       recipientType:"internal_staff",
     });
-    await admin.from("handoff_notifications").update({
+    const {error:updateError}=await admin.from("handoff_notifications").update({
       status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
     }).eq("id",notificationId);
+    if(updateError) throw updateError;
+    return "sent";
   }catch(error){
     await admin.from("handoff_notifications").update({
       status:"failed",error_message:(error instanceof Error?error.message:"WhatsApp handoff notification failed.").slice(0,2000),
     }).eq("id",notificationId);
+    return "failed";
   }
 }
 
@@ -614,8 +617,9 @@ export async function createHumanHandoffFromMaia(input:{
     status:assignment.membershipId?"assigned":"open",
     updated_at:new Date().toISOString(),
   }).eq("organization_id",input.organizationId).eq("id",handoffId);
+  let notificationStatus="not_configured";
   if(assignment.membershipId||assignment.destinationPhone){
-    await notifyHandoffAssignee({
+    notificationStatus=await notifyHandoffAssignee({
       organizationId:input.organizationId,
       handoffId,
       conversationId:input.conversationId,
@@ -628,11 +632,22 @@ export async function createHumanHandoffFromMaia(input:{
       nextAction:str(input.nextAction)||null,
       notifyWhatsApp:assignment.notifyWhatsApp,
       notifyDashboard:assignment.notifyDashboard,
-    }).catch((error)=>loggerSafeHandoffError(error));
-    await admin.from("human_handoffs").update({notified_at:new Date().toISOString()})
-      .eq("organization_id",input.organizationId).eq("id",handoffId);
+    });
+    if(notificationStatus==="sent"||notificationStatus==="dashboard_only"){
+      await admin.from("human_handoffs").update({notified_at:new Date().toISOString()})
+        .eq("organization_id",input.organizationId).eq("id",handoffId);
+    }
   }
-  return {handoffId,status:assignment.membershipId?"assigned":"open",assignedMembershipId:assignment.membershipId,summary,nextAction:str(input.nextAction)||null};
+  const forwarded=notificationStatus==="sent"||notificationStatus==="dashboard_only";
+  return {
+    handoffId,
+    status:assignment.membershipId?"assigned":"open",
+    assignedMembershipId:assignment.membershipId,
+    summary,
+    nextAction:str(input.nextAction)||null,
+    notificationStatus,
+    forwarded,
+  };
 }
 
 function loggerSafeHandoffError(error:unknown){
