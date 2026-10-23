@@ -4,6 +4,7 @@ import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findPhotographerConflict } from "@/lib/photography-booking-conflicts";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 const appointmentStatuses = new Set(["requested", "confirmed", "rescheduled", "cancelled"]);
 const depositStatuses = new Set(["not_required", "pending", "partial", "paid", "refunded", "failed"]);
@@ -19,7 +20,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const admin = createAdminClient();
-  const { data: appointment } = await admin.from("appointments").select("id,start_at,end_at,status").eq("organization_id", session.organizationId).eq("id", id).maybeSingle();
+  const { data: appointment } = await admin.from("appointments").select("id,start_at,end_at,status,title,customer_name,customer_phone,metadata").eq("organization_id", session.organizationId).eq("id", id).maybeSingle();
   if (!appointment) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   const startAt = Object.prototype.hasOwnProperty.call(body, "startAt") ? iso(body.startAt) : undefined;
   const endAt = Object.prototype.hasOwnProperty.call(body, "endAt") ? iso(body.endAt) : undefined;
@@ -59,5 +60,33 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (Object.prototype.hasOwnProperty.call(body, "shootType")) metadataPatch.shoot_type = String(body.shootType || "other").trim();
   const { data: metadata, error: metadataError } = await admin.from("photography_booking_metadata").update(metadataPatch).eq("organization_id", session.organizationId).eq("appointment_id", id).select().maybeSingle();
   if (metadataError) return NextResponse.json({ ok: true, appointment: updated, warning: "Booking updated, but photography metadata could not be updated." });
-  return NextResponse.json({ ok: true, appointment: updated, metadata });
+  let whatsappWarning: string | undefined;
+  const becameConfirmed = status === "confirmed" && appointment.status !== "confirmed";
+  const previousMetadata = appointment.metadata && typeof appointment.metadata === "object" ? appointment.metadata as Record<string, unknown> : {};
+  if (becameConfirmed && !previousMetadata.whatsapp_confirmation_submitted_at) {
+    if (!appointment.customer_phone) {
+      whatsappWarning = "Booking confirmed, but client has no phone number for WhatsApp confirmation.";
+    } else {
+      try {
+        const start = new Date(updated.start_at || appointment.start_at || "");
+        if (Number.isNaN(start.getTime())) throw new Error("A valid appointment date is required for WhatsApp confirmation.");
+        const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeZone: "Africa/Lagos" }).format(start);
+        const time = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Lagos" }).format(start);
+        await sendWhatsAppMessage({
+          organizationId: session.organizationId, to: appointment.customer_phone, deliveryMode: "template",
+          templatePurpose: "appointment_reminder", requestedTemplateName: "appointment_reminder",
+          variables: { customer_name: appointment.customer_name || "there", business_name: "Xposure Studios",
+            service_name: updated.title || appointment.title || "Studio session", appointment_date: date,
+            appointment_time: time, booking_reference: appointment.id },
+        });
+        await admin.from("appointments").update({
+          metadata: { ...previousMetadata, whatsapp_confirmation_submitted_at: new Date().toISOString() },
+          updated_at: new Date().toISOString(),
+        }).eq("organization_id", session.organizationId).eq("id", id);
+      } catch (error) {
+        whatsappWarning = error instanceof Error ? error.message : "WhatsApp confirmation could not be submitted.";
+      }
+    }
+  }
+  return NextResponse.json({ ok: true, appointment: updated, metadata, ...(whatsappWarning ? { warning: whatsappWarning } : {}) });
 }
