@@ -20,7 +20,7 @@ create table if not exists public.appointment_notification_outbox (
   template_name text not null,
   variables jsonb not null default '{}'::jsonb,
   status text not null default 'queued'
-    check (status in ('queued','processing','sent','failed','uncertain')),
+    check (status in ('queued','processing','sent','failed','uncertain','cancelled')),
   attempt_count integer not null default 0 check (attempt_count >= 0),
   provider_message_id text,
   last_error text,
