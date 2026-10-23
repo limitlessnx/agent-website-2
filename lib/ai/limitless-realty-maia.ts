@@ -119,7 +119,11 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
   const { data: existingLead } = args.leadId ? await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("id", args.leadId).maybeSingle() : await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
   if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
   const leadId = existingLead?.id || args.leadId || undefined;
-  if (leadId) await admin.from("follow_ups").update({ status: "cancelled" }).eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
+  if (leadId) {
+    const { error: cancelPreviousError } = await admin.from("follow_ups").update({ status: "cancelled" })
+      .eq("organization_id", args.organizationId).eq("lead_id", leadId).eq("status", "pending");
+    if (cancelPreviousError) throw cancelPreviousError;
+  }
 
   const stages = [1, 3, 7, 14, 21, 30];
   const propertyText = JSON.stringify(args.propertyContext).slice(0, 3500);
