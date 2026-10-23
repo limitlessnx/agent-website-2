@@ -80,7 +80,10 @@ export async function GET() {
       }, { status: 409 });
     }
 
-    if (/^\d+$/.test(phoneNumberId)) {
+    // Prefer the explicitly configured WABA ID. A valid phone-number token may
+    // send messages but still cannot expose the whatsapp_business_account field;
+    // deriving it must only be a fallback when no WABA ID was configured.
+    if (!/^\d+$/.test(wabaId) && /^\d+$/.test(phoneNumberId)) {
       const phoneResponse = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}?fields=whatsapp_business_account{id}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
