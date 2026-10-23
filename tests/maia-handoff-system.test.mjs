@@ -16,6 +16,16 @@ test("Maia supervisor handoff is external and canonical", () => {
   assert.match(operations, /recipientType:"internal_staff"/);
 });
 
+test("Maia can notify the configured agent handoff phone before membership linking", () => {
+  const operations = read("lib/human-operations.ts");
+  const migration = read("supabase/migrations/20261023060000_handoff_phone_destination_notifications.sql");
+  assert.match(operations, /agent_destination_phone/);
+  assert.match(operations, /human_handoff_destination/);
+  assert.match(operations, /destinationPhone/);
+  assert.match(operations, /destination_source/);
+  assert.match(migration, /alter column membership_id drop not null/);
+});
+
 test("Maia WhatsApp runtime persists canonical customer conversations and suppresses Maia while handed off", () => {
   const runtime = read("src/trigger/maia-runtime.ts");
   assert.match(runtime, /resolveCanonicalCustomer/);

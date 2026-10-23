@@ -3,7 +3,7 @@ import { getOrganizationAccessContext, assertAnyOrganizationPermission, listOrga
 import type { ClientSession } from "@/lib/client-auth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
-type HandoffAssignment = { membershipId:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean; source:string };
+type HandoffAssignment = { membershipId:string|null; destinationPhone:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean; source:string };
 type StructuredHandoff = {
   customerIntent:string|null;
   property:string|null;
@@ -18,6 +18,7 @@ type StructuredHandoff = {
 
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
+function phone(value:unknown){ const normalized=str(value).replace(/[^0-9]/g,""); return normalized.length>=8?normalized:null; }
 function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
 function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
   return {
@@ -60,7 +61,7 @@ async function resolveHandoffAssignment(input:{
       .eq("organization_id",input.organizationId).eq("id",explicit).eq("status","active").maybeSingle();
     if(data?.id){
       const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",explicit).maybeSingle();
-      if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"event_payload"};
+      if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),destinationPhone:null,notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"event_payload"};
     }
   }
 
@@ -82,7 +83,7 @@ async function resolveHandoffAssignment(input:{
         membershipId:String(data.id),
         notifyWhatsApp:rule.notify_whatsapp!==false && pref?.notify_whatsapp_handoffs!==false,
         notifyDashboard:rule.notify_dashboard!==false,
-        source:"assignment_rule",
+        destinationPhone:null,source:"assignment_rule",
       };
     }
   }
@@ -90,28 +91,31 @@ async function resolveHandoffAssignment(input:{
   if(input.sourceAgentId){
     const {data:agent}=await admin.from("agents").select("human_handoff_destination")
       .eq("organization_id",input.organizationId).eq("id",input.sourceAgentId).maybeSingle();
-    const destination=rec(agent?.human_handoff_destination);
+    const rawDestination=agent?.human_handoff_destination;
+    const destination=rec(rawDestination);
+    const destinationPhone=phone(destination.phone||destination.whatsapp_phone||destination.whatsappPhone||destination.number||destination.destination||rawDestination);
     const membershipId=str(destination.membership_id||destination.membershipId||destination.assigned_membership_id);
     if(membershipId){
       const {data}=await admin.from("organization_memberships").select("id").eq("organization_id",input.organizationId)
         .eq("id",membershipId).eq("status","active").maybeSingle();
       if(data?.id){
         const {data:pref}=await admin.from("organization_member_notification_preferences").select("metadata,notify_whatsapp_handoffs").eq("organization_id",input.organizationId).eq("membership_id",membershipId).maybeSingle();
-        if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"agent_destination"};
+        if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),destinationPhone:null,notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"agent_destination"};
       }
     }
+    if(destinationPhone) return {membershipId:null,destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination_phone"};
   }
 
-  return {membershipId:null,notifyWhatsApp:false,notifyDashboard:true,source:"unassigned_queue"};
+  return {membershipId:null,destinationPhone:null,notifyWhatsApp:false,notifyDashboard:true,source:"unassigned_queue"};
 }
 
 async function notifyHandoffAssignee(input:{
-  organizationId:string; handoffId:string; conversationId:string; membershipId:string; customerName:string; stageName:string|null;
+  organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; customerName:string; stageName:string|null;
   summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
   const now=new Date().toISOString();
-  if(input.notifyDashboard){
+  if(input.notifyDashboard&&input.membershipId){
     await admin.from("handoff_notifications").insert({
       organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
       channel:"dashboard",status:"sent",sent_at:now,
@@ -120,34 +124,40 @@ async function notifyHandoffAssignee(input:{
   }
 
   if(!input.notifyWhatsApp) return;
-  const {data:pref,error:prefError}=await admin.from("organization_member_notification_preferences")
-    .select("whatsapp_phone,notify_whatsapp_handoffs")
-    .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
-  if(prefError) throw prefError;
-  if(!pref?.notify_whatsapp_handoffs||!str(pref.whatsapp_phone)) return;
+  let recipient=phone(input.destinationPhone);
+  if(input.membershipId){
+    const {data:pref,error:prefError}=await admin.from("organization_member_notification_preferences")
+      .select("whatsapp_phone,notify_whatsapp_handoffs")
+      .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
+    if(prefError) throw prefError;
+    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return;
+    recipient=phone(pref.whatsapp_phone);
+  }
+  if(!recipient) return;
 
   const {data:notification,error:notificationError}=await admin.from("handoff_notifications").insert({
     organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
-    channel:"whatsapp",recipient:str(pref.whatsapp_phone),status:"pending",
-    metadata:{customer_name:input.customerName,stage_name:input.stageName,next_action:input.nextAction},
+    channel:"whatsapp",recipient,status:"pending",
+    metadata:{customer_name:input.customerName,stage_name:input.stageName,next_action:input.nextAction,destination_source:input.membershipId?"membership":"agent_configuration"},
   }).select("id").single();
   if(notificationError) throw notificationError;
+  const notificationId=String(notification.id);
 
   try{
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
-      to:str(pref.whatsapp_phone),
+      to:recipient,
       text:`New customer handoff: ${input.customerName}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
       deliveryMode:"direct",
       recipientType:"internal_staff",
     });
     await admin.from("handoff_notifications").update({
       status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
-    }).eq("id",notification.id);
+    }).eq("id",notificationId);
   }catch(error){
     await admin.from("handoff_notifications").update({
       status:"failed",error_message:(error instanceof Error?error.message:"WhatsApp handoff notification failed.").slice(0,2000),
-    }).eq("id",notification.id);
+    }).eq("id",notificationId);
   }
 }
 
@@ -500,12 +510,13 @@ export async function createHandoffFromSystemEvent(event:{
     .eq("organization_id",event.organizationId).eq("id",handoffId);
   if(updateError) throw updateError;
 
-  if(assignment.membershipId){
+  if(assignment.membershipId||assignment.destinationPhone){
     await notifyHandoffAssignee({
       organizationId:event.organizationId,
       handoffId,
       conversationId:event.conversationId,
       membershipId:assignment.membershipId,
+      destinationPhone:assignment.destinationPhone,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
       stageName,
       summary,
@@ -601,12 +612,13 @@ export async function createHumanHandoffFromMaia(input:{
     status:assignment.membershipId?"assigned":"open",
     updated_at:new Date().toISOString(),
   }).eq("organization_id",input.organizationId).eq("id",handoffId);
-  if(assignment.membershipId){
+  if(assignment.membershipId||assignment.destinationPhone){
     await notifyHandoffAssignee({
       organizationId:input.organizationId,
       handoffId,
       conversationId:input.conversationId,
       membershipId:assignment.membershipId,
+      destinationPhone:assignment.destinationPhone,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
       stageName,
       summary,
