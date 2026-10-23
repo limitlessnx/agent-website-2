@@ -6,6 +6,19 @@ Supabase production recorded 186 migration versions, while the repository's `sup
 
 The snapshot in `migration-ledger.production-snapshot.json` records the remote version/name pairs captured on 2026-10-23. The CI regression test verifies that every recorded remote version has a local SQL file and that version prefixes are unique.
 
+## Confirmed Supabase branch failure
+
+The existing Supabase Branches dashboard workflow log identifies the exact failure:
+
+`ERROR Remote migration versions not found in local migrations directory.`
+
+This matches the read-only ledger comparison: production has 186 recorded versions, and the original `main` branch lacked 20 corresponding SQL files. The repair branch restores those filenames and adds CI checks. A rebase of the existing Supabase development branch was attempted after preparing the repair, but the branch replays the GitHub-connected `main` ref, which does not yet contain the repair, so the branch returned to `MIGRATIONS_FAILED`.
+
+The dashboard's current failure log is visible at:
+https://supabase.com/dashboard/project/tacxegmlppngnuvldojy/branches
+
+The repair cannot be validated by that production-connected branch until the repaired migration files are available on its configured Git ref. No production merge has been made, in keeping with the draft-only release gate.
+
 ## Explicitly pending migrations
 
 After reconciliation, these nine local migrations are not present in the captured production ledger. They are intentionally left pending and must not be applied as part of this ledger repair without a separate review and approval:
