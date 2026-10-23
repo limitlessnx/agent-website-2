@@ -90,3 +90,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   return NextResponse.json({ ok: true, appointment: updated, metadata, ...(whatsappWarning ? { warning: whatsappWarning } : {}) });
 }
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getClientSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const profile = await getClientOnboardingProfile(session.organizationId).catch(() => null);
+  if (profile?.industry !== "photography-studio") return NextResponse.json({ error: "Photography bookings are only available to Xposure workspaces." }, { status: 403 });
+  try {
+    const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+    assertAnyOrganizationPermission(access, ["appointments.manage"]);
+  } catch {
+    return NextResponse.json({ error: "appointments.manage permission required." }, { status: 403 });
+  }
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { data: appointment, error: lookupError } = await admin.from("appointments").select("id,external_event_id,provider").eq("organization_id", session.organizationId).eq("id", id).maybeSingle();
+  if (lookupError) return NextResponse.json({ error: lookupError.message }, { status: 400 });
+  if (!appointment) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+  if (appointment.external_event_id && appointment.provider !== "dashboard") {
+    return NextResponse.json({ error: "This booking is linked to an external calendar. Cancel it first so the calendar event can be handled safely." }, { status: 409 });
+  }
+  const { error: metadataError } = await admin.from("photography_booking_metadata").delete().eq("organization_id", session.organizationId).eq("appointment_id", id);
+  if (metadataError) return NextResponse.json({ error: "Unable to remove booking metadata: " + metadataError.message }, { status: 400 });
+  const { error } = await admin.from("appointments").delete().eq("organization_id", session.organizationId).eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true, deleted: true });
+}
