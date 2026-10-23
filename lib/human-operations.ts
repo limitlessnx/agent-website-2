@@ -112,7 +112,7 @@ async function resolveHandoffAssignment(input:{
 
 async function notifyHandoffAssignee(input:{
   organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; customerName:string; customerPhone?:string|null; stageName:string|null;
-  summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
+  summary:string; reason:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
   const now=new Date().toISOString();
@@ -145,12 +145,26 @@ async function notifyHandoffAssignee(input:{
   const notificationId=String(notification.id);
 
   try{
+    const {data:organization,error:organizationError}=await admin.from("organizations").select("name,slug").eq("id",input.organizationId).maybeSingle();
+    if(organizationError) throw organizationError;
+    const useXposureTemplate=organization?.slug==="xposure";
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
       to:recipient,
-      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}${input.customerPhone?`\nOpen customer chat: https://wa.me/${normalizeHandoffPhone(input.customerPhone)}`:""}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
-      deliveryMode:"direct",
+      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}${input.customerPhone?`\nOpen customer chat: https://wa.me/${normalizeHandoffPhone(input.customerPhone)}`:""}\nReason: ${input.reason}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
+      deliveryMode:useXposureTemplate?"template":"direct",
       recipientType:"internal_staff",
+      ...(useXposureTemplate?{
+        templatePurpose:"human_handoff_staff",
+        requestedTemplateName:"hand_over_",
+        variables:{
+          business_name:String(organization?.name||"Xposure Studios"),
+          customer_name:input.customerName,
+          customer_phone:input.customerPhone||"Not recorded",
+          handoff_reason:input.reason,
+          conversation_summary:input.summary,
+        },
+      }:{}),
     });
     const {error:updateError}=await admin.from("handoff_notifications").update({
       status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
@@ -526,6 +540,7 @@ export async function createHandoffFromSystemEvent(event:{
       customerPhone:phone(customer?.phone),
       stageName,
       summary,
+      reason,
       nextAction,
       notifyWhatsApp:assignment.notifyWhatsApp,
       notifyDashboard:assignment.notifyDashboard,
@@ -630,6 +645,7 @@ export async function createHumanHandoffFromMaia(input:{
       customerPhone:phone(customer?.phone),
       stageName,
       summary,
+      reason:str(input.reason).slice(0,1000),
       nextAction:str(input.nextAction)||null,
       notifyWhatsApp:assignment.notifyWhatsApp,
       notifyDashboard:assignment.notifyDashboard,
