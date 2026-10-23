@@ -19,6 +19,7 @@ type StructuredHandoff = {
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
 function phone(value:unknown){ const normalized=str(value).replace(/[^0-9]/g,""); return normalized.length>=8?normalized:null; }
+function normalizeHandoffPhone(value:unknown){ return str(value).replace(/[^0-9]/g,""); }
 function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
 function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
   return {
@@ -147,7 +148,7 @@ async function notifyHandoffAssignee(input:{
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
       to:recipient,
-      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
+      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}${input.customerPhone?`\nOpen customer chat: https://wa.me/${normalizeHandoffPhone(input.customerPhone)}`:""}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
       deliveryMode:"direct",
       recipientType:"internal_staff",
     });
@@ -638,7 +639,43 @@ export async function createHumanHandoffFromMaia(input:{
         .eq("organization_id",input.organizationId).eq("id",handoffId);
     }
   }
-  const forwarded=notificationStatus==="sent"||notificationStatus==="dashboard_only";
+  let customerContactStatus:"sent"|"not_configured"|"not_attempted"|"failed"="not_attempted";
+  let sharedAgentName:string|null=null;
+  if(notificationStatus==="sent" && assignment.membershipId){
+    const {data:pref,error:prefError}=await admin.from("organization_member_notification_preferences")
+      .select("whatsapp_phone,metadata").eq("organization_id",input.organizationId)
+      .eq("membership_id",assignment.membershipId).maybeSingle();
+    if(prefError) throw prefError;
+    const metadata=rec(pref?.metadata);
+    const approvedToShare=metadata.share_contact_with_customers===true;
+    const agentPhone=phone(pref?.whatsapp_phone);
+    sharedAgentName=str(metadata.supervisor_name)||"your assigned support agent";
+    if(approvedToShare&&agentPhone&&phone(customer?.phone)){
+      try{
+        const customerResult=await sendWhatsAppMessage({
+          organizationId:input.organizationId,
+          to:String(customer?.phone),
+          text:`Your Xposure Studios support contact is ${sharedAgentName}. You can contact them directly on WhatsApp at +${agentPhone}: https://wa.me/${agentPhone}. They have also received your enquiry and contact details.`,
+          deliveryMode:"direct",
+          recipientType:"customer",
+        });
+        customerContactStatus=customerResult?"sent":"failed";
+        if(customerContactStatus==="sent"){
+          const {error:recordError}=await admin.from("handoff_notifications").insert({
+            organization_id:input.organizationId,handoff_id:handoffId,membership_id:assignment.membershipId,
+            channel:"customer_whatsapp",recipient:phone(customer.phone),status:"sent",sent_at:new Date().toISOString(),
+            metadata:{agent_name:sharedAgentName,agent_phone:agentPhone,customer_contact_shared:true},
+          });
+          if(recordError) throw recordError;
+        }
+      }catch{
+        customerContactStatus="failed";
+      }
+    }else{
+      customerContactStatus="not_configured";
+    }
+  }
+  const forwarded=notificationStatus==="sent"&&customerContactStatus==="sent";
   return {
     handoffId,
     status:assignment.membershipId?"assigned":"open",
@@ -646,6 +683,8 @@ export async function createHumanHandoffFromMaia(input:{
     summary,
     nextAction:str(input.nextAction)||null,
     notificationStatus,
+    customerContactStatus,
+    sharedAgentName:customerContactStatus==="sent"?sharedAgentName:null,
     forwarded,
   };
 }
