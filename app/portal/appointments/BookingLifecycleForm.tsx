@@ -16,6 +16,7 @@ export default function BookingLifecycleForm({ bookingId, members, initial }: Pr
     event.preventDefault(); setBusy(true); setMessage(""); setError("");
     const form = new FormData(event.currentTarget);
     const payload = {
+      title: String(form.get("title") || initial.title || "Studio session"),
       status: requestedStatus, startAt: String(form.get("startAt") || ""), endAt: String(form.get("endAt") || ""),
       location: String(form.get("location") || ""), clientNotes: String(form.get("clientNotes") || ""),
       depositStatus: String(form.get("depositStatus") || ""), deliveryStatus: String(form.get("deliveryStatus") || ""),
@@ -49,13 +50,14 @@ export default function BookingLifecycleForm({ bookingId, members, initial }: Pr
       const response = await fetch(`/api/portal/bookings/${bookingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled" }) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "Unable to cancel booking.");
-      router.refresh();
+      setRequestedStatus("cancelled"); setMessage(body.warning || "Booking cancelled."); router.refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to cancel booking."); }
     finally { setBusy(false); }
   }
 
   return <form className="portal-form-grid exposure-booking-form" onSubmit={save}>
     <div className="portal-field"><label>Status</label><select name="status" value={requestedStatus} onChange={(event) => setRequestedStatus(event.target.value)}><option value="requested">Requested</option><option value="confirmed">Confirmed</option><option value="rescheduled">Rescheduled</option><option value="cancelled">Cancelled</option></select></div>
+    <div className="portal-field exposure-form-wide"><label>Booking title</label><input name="title" defaultValue={initial.title} required /></div>
     <div className="portal-field"><label>Shoot type</label><select name="shootType" defaultValue={initial.shootType}><option value="portrait">Portrait</option><option value="wedding">Wedding</option><option value="maternity">Maternity</option><option value="birthday">Birthday</option><option value="family">Family</option><option value="creative_set">Creative set</option><option value="other">Other</option></select></div>
     <div className="portal-field"><label>Start</label><input name="startAt" type="datetime-local" defaultValue={initial.startAt} required /></div>
     <div className="portal-field"><label>End</label><input name="endAt" type="datetime-local" defaultValue={initial.endAt} /></div>
