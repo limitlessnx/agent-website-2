@@ -63,10 +63,8 @@ export default function PhotographyDashboard({ data }: Props) {
   return <main className="portal-page exposure-dashboard">
     <section className="exposure-hero">
       <div><p className="portal-kicker">Photography studio workspace</p><h1>Good morning, {data.businessName} <span aria-hidden="true">👋</span></h1><p>Keep today’s shoots, client replies and fulfilment moving.</p></div>
-      <div className={`exposure-connect ${data.whatsappConnected ? "is-live" : "is-pending"}`}><span /><div><small>Maia · WhatsApp Concierge</small><strong>{data.whatsappConnected ? "Online and ready" : "Setup in progress"}</strong></div><Link href="/portal/integrations" aria-label="Configure WhatsApp"><ArrowUpRight size={16} /></Link></div>
+      <div className="exposure-hero-note"><span>Studio command center</span><small>Bookings, clients and fulfilment in one view</small></div>
     </section>
-
-    {!data.whatsappConnected ? <section className="exposure-setup"><div><p className="portal-kicker">Next step</p><strong>Connect WhatsApp to start handling studio enquiries.</strong><span>Fluxknight will configure Maia after your studio brief is reviewed.</span></div><Link className="portal-button" href="/portal/integrations">Connect WhatsApp <ArrowUpRight size={15} /></Link></section> : null}
 
     <section className="exposure-metrics" aria-label="Photography business overview">
       <article><span><Users size={16} /> New enquiries</span><strong>{activeCustomers.length}</strong><small>Client conversations</small></article>
@@ -76,8 +74,8 @@ export default function PhotographyDashboard({ data }: Props) {
     </section>
 
     <section className="exposure-actions" aria-label="Xposure quick actions">
-      <Action href="/portal/appointments/new" label="New booking" description="Schedule a studio shoot" icon={CalendarDays} primary />
-      <Action href="/portal/conversations" label="Open inbox" description="Reply to clients" icon={MessageCircle} primary />
+      <Action href="/portal/appointments/new" label="New booking" description="Schedule a studio shoot" icon={CalendarDays} />
+      <Action href="/portal/conversations" label="Open inbox" description="Reply to clients" icon={MessageCircle} />
       <Action href="/portal/customers" label="Add client" description="Capture a new enquiry" icon={Plus} />
       <Action href="/portal/catalogue" label="Studio catalogue" description="Manage packages and sets" icon={Activity} />
       <Action href="/portal/campaigns" label="Run campaign" description="Send a Meta template" icon={Megaphone} />
