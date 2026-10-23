@@ -79,22 +79,19 @@ export async function POST(request: NextRequest) {
 
   if (leadError || !lead) {
     if (createdCustomer) {
-      const { data: deletedCustomer, error: cleanupError } = await admin
-        .from("crm_customers")
-        .delete()
-        .eq("organization_id", session.organizationId)
-        .eq("id", customerId)
-        .select("id")
-        .maybeSingle();
-
-      if (cleanupError || !deletedCustomer) {
-        return NextResponse.json({
-          error: "Unable to save the enquiry. Cleanup could not be confirmed; a client record may remain and needs review.",
-          customerId,
-        }, { status: 500 });
-      }
+      // Keep the new client record: deleting it could cascade-delete an enquiry created
+      // concurrently by another request. Tell the caller to reuse this record on retry.
+      return NextResponse.json({
+        error: "Unable to save the enquiry. The client record was created, but the enquiry was not saved. Reuse this client record when retrying to avoid duplicates.",
+        customerId,
+        clientCreated: true,
+      }, { status: 500 });
     }
-    return NextResponse.json({ error: "Unable to save the enquiry. The new client record was removed." }, { status: 500 });
+    return NextResponse.json({
+      error: "Unable to save the enquiry. The existing client record was not changed.",
+      customerId,
+      clientCreated: false,
+    }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, lead, customerId, reusedExistingClient: Boolean(existing) }, { status: 201 });

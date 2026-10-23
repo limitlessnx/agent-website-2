@@ -51,10 +51,11 @@ test("client detail page renders the editable profile component with permission 
   assert.match(page, /<CustomerStageControl/);
 });
 
-test("failed enquiry reports cleanup failure instead of falsely claiming rollback succeeded", () => {
+test("failed enquiry preserves client records and reports recoverable partial failure", () => {
   const route = read("app/api/portal/leads/route.ts");
-  assert.match(route, /cleanupError \|\| !deletedCustomer/);
-  assert.match(route, /Cleanup could not be confirmed/);
-  assert.match(route, /customerId,/);
-  assert.match(route, /The new client record was removed/);
+  assert.match(route, /clientCreated: true/);
+  assert.match(route, /clientCreated: false/);
+  assert.match(route, /Reuse this client record when retrying/);
+  assert.match(route, /The existing client record was not changed/);
+  assert.doesNotMatch(route, /\.from\("crm_customers"\)\.delete\(\)/);
 });
