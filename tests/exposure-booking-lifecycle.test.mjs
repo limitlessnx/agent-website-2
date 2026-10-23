@@ -52,3 +52,14 @@ test("booking dashboard offers explicit confirm, cancel, and delete actions", ()
   assert.match(route, /eq\("organization_id", session\.organizationId\)/);
   assert.match(route, /external calendar/);
 });
+
+
+test("new studio bookings can remain requested without sending confirmation", () => {
+  const createRoute = read("app/api/portal/bookings/route.ts");
+  const form = read("app/portal/appointments/NewBookingForm.tsx");
+  assert.match(createRoute, /body\.status === "confirmed" \? "confirmed" : "requested"/);
+  assert.match(createRoute, /if \(status === "confirmed" && customer\.phone\)/);
+  assert.match(form, /Save as requested/);
+  assert.match(form, /Confirm now/);
+  assert.match(form, /status: String\(form\.get\("status"\) \|\| "requested"\)/);
+});
