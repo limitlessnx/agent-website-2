@@ -72,7 +72,7 @@ test("30-day property follow-up stages reuse one tenant-scoped lead", () => {
     limitlessRuntime.indexOf("export async function queueLimitlessPropertyFollowupSequence"),
     limitlessRuntime.indexOf("export function shouldHandoff"),
   );
-  assert.match(sequence, /const leadId = existingLead\\?\\.id \\|\\| args\\.leadId/);
+  assert.ok(sequence.includes("const leadId = existingLead?.id || args.leadId"));
   assert.match(sequence, /if \(!leadId && phone\)/);
   assert.match(sequence, /leadId,\s*customerPhone: phone/);
   assert.match(sequence, /const stages = \[1, 3, 7, 14, 21, 30\]/);
@@ -83,7 +83,8 @@ test("Stale Maia follow-ups require confirmed cancellation before skipping deliv
   const apiRoute = await readFile(new URL("../app/api/limitless/maia/followups/route.ts", import.meta.url), "utf8");
   const triggerOrchestrator = await readFile(new URL("../src/trigger/system-orchestrator.ts", import.meta.url), "utf8");
   for (const source of [apiRoute, triggerOrchestrator]) {
-    assert.match(source, /const cancellation = await admin\\.from\\("follow_ups"\\)[\\s\\S]*?status: "cancelled"[\\s\\S]*?select\\("id"\\)\\.maybeSingle\\(\\)/);
+    assert.ok(source.includes("const cancellation = await admin.from(\\"follow_ups\\").update({ status: \\"cancelled\\" })"));
+    assert.ok(source.includes(".select(\\"id\\").maybeSingle()"));
     assert.match(source, /if \(cancellation\.error\) throw cancellation\.error/);
     assert.match(source, /if \(!cancellation\.data\) throw new Error\("Could not confirm cancellation of the stale follow-up\."/);
   }
