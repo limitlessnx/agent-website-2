@@ -72,13 +72,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (assignedPhotographerId !== undefined) metadataPatch.assigned_photographer_id = assignedPhotographerId;
   if (Object.prototype.hasOwnProperty.call(body, "shootType")) metadataPatch.shoot_type = String(body.shootType || "other").trim();
   const { data: metadata, error: metadataError } = await admin.from("photography_booking_metadata").update(metadataPatch).eq("organization_id", session.organizationId).eq("appointment_id", id).select().maybeSingle();
-  if (metadataError) return NextResponse.json({ ok: true, appointment: updated, warning: "Booking updated, but photography metadata could not be updated." });
-  let whatsappWarning: string | undefined;
+  // A secondary metadata failure must not short-circuit the confirmation message:
+  // the appointment status has already been committed at this point.
+  const warnings: string[] = [];
+  if (metadataError) warnings.push("Booking updated, but photography metadata could not be updated.");
   const becameConfirmed = status === "confirmed" && appointment.status !== "confirmed";
   const previousMetadata = appointment.metadata && typeof appointment.metadata === "object" ? appointment.metadata as Record<string, unknown> : {};
   if (becameConfirmed && !previousMetadata.whatsapp_confirmation_submitted_at) {
     if (!appointment.customer_phone) {
-      whatsappWarning = "Booking confirmed, but client has no phone number for WhatsApp confirmation.";
+      warnings.push("Booking confirmed, but client has no phone number for WhatsApp confirmation.");
     } else {
       try {
         const start = new Date(updated.start_at || appointment.start_at || "");
@@ -97,11 +99,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           updated_at: new Date().toISOString(),
         }).eq("organization_id", session.organizationId).eq("id", id);
       } catch (error) {
-        whatsappWarning = error instanceof Error ? error.message : "WhatsApp confirmation could not be submitted.";
+        warnings.push(error instanceof Error ? error.message : "WhatsApp confirmation could not be submitted.");
       }
     }
   }
-  return NextResponse.json({ ok: true, appointment: updated, metadata, ...(whatsappWarning ? { warning: whatsappWarning } : {}) });
+  return NextResponse.json({ ok: true, appointment: updated, metadata, ...(warnings.length ? { warnings } : {}) });
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
