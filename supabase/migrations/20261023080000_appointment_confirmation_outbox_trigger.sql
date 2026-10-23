@@ -15,13 +15,26 @@ declare
   v_service text;
   v_name text;
 begin
-  if new.status <> 'confirmed' then
+  -- The appointments table is shared across tenant systems. Only process
+  -- bookings created by the Xposure photography workflow.
+  if coalesce(new.metadata->>'source', '') <> 'exposure_booking_form' then
     return new;
   end if;
 
-  -- The appointments table is shared across tenant systems. Only enqueue
-  -- notifications for bookings created by the Xposure photography workflow.
-  if coalesce(new.metadata->>'source', '') <> 'exposure_booking_form' then
+  -- Cancellation prevents any still-queued confirmation from being delivered.
+  -- A processing row is deliberately left untouched because the provider call
+  -- may already be in flight; it must be reconciled rather than blindly retried.
+  if tg_op = 'UPDATE' and new.status = 'cancelled' then
+    update public.appointment_notification_outbox
+      set status = 'cancelled', updated_at = now(),
+          last_error = 'Booking cancelled before notification was claimed.'
+      where organization_id = new.organization_id
+        and appointment_id = new.id
+        and status = 'queued';
+    return new;
+  end if;
+
+  if new.status <> 'confirmed' then
     return new;
   end if;
 
@@ -69,7 +82,7 @@ drop trigger if exists appointments_enqueue_confirmation_outbox on public.appoin
 create trigger appointments_enqueue_confirmation_outbox
 after insert or update of status on public.appointments
 for each row
-when (new.status = 'confirmed')
+when (new.status in ('confirmed', 'cancelled'))
 execute function public.enqueue_appointment_confirmation_outbox();
 
 revoke all on function public.enqueue_appointment_confirmation_outbox() from public, anon, authenticated;
