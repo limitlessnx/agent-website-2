@@ -73,7 +73,7 @@ test("30-day property follow-up stages reuse one tenant-scoped lead", () => {
     limitlessRuntime.indexOf("export function shouldHandoff"),
   );
   assert.ok(sequence.includes("const leadId = existingLead?.id || args.leadId"));
-  assert.match(sequence, /if \(!leadId && phone\)/);
+  assert.match(sequence, /if \(!phone && !args\.leadId\)/);
   assert.match(sequence, /leadId,\s*customerPhone: phone/);
   assert.match(sequence, /const stages = \[1, 3, 7, 14, 21, 30\]/);
   assert.match(sequence, /if \(cancelPreviousError\)/);
