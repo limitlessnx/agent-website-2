@@ -110,7 +110,7 @@ async function resolveHandoffAssignment(input:{
 }
 
 async function notifyHandoffAssignee(input:{
-  organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; customerName:string; stageName:string|null;
+  organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; customerName:string; customerPhone?:string|null; stageName:string|null;
   summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
@@ -119,7 +119,7 @@ async function notifyHandoffAssignee(input:{
     await admin.from("handoff_notifications").insert({
       organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
       channel:"dashboard",status:"sent",sent_at:now,
-      metadata:{customer_name:input.customerName,stage_name:input.stageName,next_action:input.nextAction},
+      metadata:{customer_name:input.customerName,customer_phone:input.customerPhone||null,stage_name:input.stageName,next_action:input.nextAction},
     });
   }
 
@@ -138,7 +138,7 @@ async function notifyHandoffAssignee(input:{
   const {data:notification,error:notificationError}=await admin.from("handoff_notifications").insert({
     organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
     channel:"whatsapp",recipient,status:"pending",
-    metadata:{customer_name:input.customerName,stage_name:input.stageName,next_action:input.nextAction,destination_source:input.membershipId?"membership":"agent_configuration"},
+    metadata:{customer_name:input.customerName,customer_phone:input.customerPhone||null,stage_name:input.stageName,next_action:input.nextAction,destination_source:input.membershipId?"membership":"agent_configuration"},
   }).select("id").single();
   if(notificationError) throw notificationError;
   const notificationId=String(notification.id);
@@ -147,7 +147,7 @@ async function notifyHandoffAssignee(input:{
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
       to:recipient,
-      text:`New customer handoff: ${input.customerName}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
+      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
       deliveryMode:"direct",
       recipientType:"internal_staff",
     });
@@ -270,7 +270,7 @@ export async function assignHumanHandoff(session:ClientSession,handoffId:string,
   }).eq("organization_id",session.organizationId).eq("id",handoffId).not("status","in",'(resolved,closed)').select().maybeSingle();
   if(error) throw error;
   if(!data) throw new Error("Handoff could not be assigned.");
-  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,current_stage_id")
+  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,phone,current_stage_id")
     .eq("organization_id",session.organizationId).eq("id",data.customer_id).maybeSingle();
   let stageName:string|null=null;
   if(customer?.current_stage_id){
@@ -284,6 +284,7 @@ export async function assignHumanHandoff(session:ClientSession,handoffId:string,
     conversationId:String(data.conversation_id),
     membershipId,
     customerName:String(customer?.full_name||customer?.company_name||"Customer"),
+    customerPhone:phone(customer?.phone),
     stageName,
     summary:String(data.conversation_summary||data.reason||"Review customer conversation"),
     nextAction:data.next_action||null,
@@ -433,7 +434,7 @@ export async function createHandoffFromSystemEvent(event:{
   const structured=structuredHandoff(payload);
 
   const {data:customer,error:customerError}=await admin.from("crm_customers")
-    .select("full_name,company_name,current_stage_id")
+    .select("full_name,company_name,phone,current_stage_id")
     .eq("organization_id",event.organizationId).eq("id",event.customerId).maybeSingle();
   if(customerError) throw customerError;
 
@@ -518,6 +519,7 @@ export async function createHandoffFromSystemEvent(event:{
       membershipId:assignment.membershipId,
       destinationPhone:assignment.destinationPhone,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
+      customerPhone:phone(customer?.phone),
       stageName,
       summary,
       nextAction,
@@ -596,7 +598,7 @@ export async function createHumanHandoffFromMaia(input:{
   });
   if(error) throw error;
   const handoffId=String(data);
-  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,current_stage_id")
+  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,phone,current_stage_id")
     .eq("organization_id",input.organizationId).eq("id",input.customerId).maybeSingle();
   let stageName:string|null=null;
   if(customer?.current_stage_id){
@@ -620,6 +622,7 @@ export async function createHumanHandoffFromMaia(input:{
       membershipId:assignment.membershipId,
       destinationPhone:assignment.destinationPhone,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
+      customerPhone:phone(customer?.phone),
       stageName,
       summary,
       nextAction:str(input.nextAction)||null,
