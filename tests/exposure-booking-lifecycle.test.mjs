@@ -25,3 +25,17 @@ test("booking detail UI provides lifecycle controls and is reachable from the ca
   assert.match(form, /api\/portal\/bookings/);
   assert.match(list, /portal\/appointments\/\$\{item\.id\}/);
 });
+
+test("confirmed Xposure bookings submit the configured appointment WhatsApp template", () => {
+  const createRoute = read("app/api/portal/bookings/route.ts");
+  const updateRoute = read("app/api/portal/bookings/[id]/route.ts");
+  for (const route of [createRoute, updateRoute]) {
+    assert.match(route, /sendWhatsAppMessage/);
+    assert.match(route, /templatePurpose: "appointment_reminder"/);
+    assert.match(route, /requestedTemplateName: "appointment_reminder"/);
+    assert.match(route, /booking_reference:/);
+    assert.match(route, /whatsapp_confirmation_submitted_at/);
+  }
+  assert.match(updateRoute, /status === "confirmed" && appointment\.status !== "confirmed"/);
+  assert.match(updateRoute, /eq\("organization_id", session\.organizationId\)/);
+});
