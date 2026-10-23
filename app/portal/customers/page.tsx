@@ -4,6 +4,8 @@ import { getClientSession } from "@/lib/client-auth";
 import { requirePortalPermission } from "@/lib/portal-access";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getOrganizationAccessContext } from "@/lib/organization-membership";
+import LeadStageControl from "./LeadStageControl";
 
 type Customer = { id:string; full_name?:string|null; email?:string|null; phone?:string|null; company_name?:string|null; status?:string|null; updated_at:string };
 type Lead = { id:string; customer_id?:string|null; source?:string|null; stage?:string|null; score?:number|null; summary?:string|null; updated_at:string };
@@ -17,7 +19,11 @@ export default async function CustomersPage() {
   const session = await getClientSession();
   if (!session) redirect("/account/login");
   try { await requirePortalPermission(session, ["customers.view","customers.manage"]); } catch { redirect("/portal"); }
-  const profile = await getClientOnboardingProfile(session.organizationId).catch(() => null);
+  const [profile, access] = await Promise.all([
+    getClientOnboardingProfile(session.organizationId).catch(() => null),
+    getOrganizationAccessContext(session.organizationId, session.userId),
+  ]);
+  const canManage = access.permissions.has("customers.manage");
   const photography = profile?.industry === "photography-studio";
 
   const [customers, leads, identityConflicts] = await Promise.all([
@@ -35,6 +41,16 @@ export default async function CustomersPage() {
     </section>
     <section className="portal-card"><div className="portal-card-head"><div><h2>{photography ? "Recent studio clients" : "Recent customers"}</h2><p>Tenant-scoped CRM records only.</p></div></div>
       {photography ? <div className="exposure-client-grid">{customers.map((customer)=><Link href={`/portal/customers/${customer.id}`} className="exposure-client-card" key={customer.id}><span className="exposure-client-avatar">{initials(customer.full_name || customer.company_name || "Client")}</span><div className="exposure-client-main"><strong>{customer.full_name || customer.company_name || "Unnamed customer"}</strong><small>{customer.email || customer.phone || "No contact detail"}</small><span>{customer.status || "active"} · Updated {new Date(customer.updated_at).toLocaleDateString("en-NG")}</span></div><em>Open profile <span aria-hidden="true">↗</span></em></Link>)}{!customers.length?<p className="portal-empty">No studio clients yet.</p>:null}</div> : <div className="portal-list">{customers.map((customer)=><Link href={`/portal/customers/${customer.id}`} className="portal-list-row" key={customer.id}><div><strong>{customer.full_name || customer.company_name || "Unnamed customer"}</strong><span>{customer.email || customer.phone || "No contact detail"} · {customer.status || "active"}</span></div><em>{new Date(customer.updated_at).toLocaleDateString("en-NG")}</em></Link>)}{!customers.length?<p className="portal-empty">No customer records yet.</p>:null}</div>}
+    </section>
+    <section className="portal-card">
+      <div className="portal-card-head"><div><h2>{photography ? "Studio enquiry pipeline" : "Enquiry pipeline"}</h2><p>Move opportunities through the existing CRM stages. Stage changes are saved to this organization only.</p></div></div>
+      <div className="portal-list">
+        {leads.map((lead) => {
+          const customer = customers.find((item) => item.id === lead.customer_id);
+          return <article className="portal-list-row" key={lead.id}><div><strong>{customer?.full_name || customer?.company_name || "Unlinked client"}</strong><span>{lead.summary || "No enquiry summary"} · {lead.source || "Source not recorded"}{typeof lead.score === "number" ? ` · Score ${lead.score}` : ""}</span>{lead.customer_id ? <Link href={`/portal/customers/${lead.customer_id}`}>Open client profile</Link> : null}</div><div style={{ minWidth: 190 }}><LeadStageControl leadId={lead.id} stage={lead.stage || "new"} canManage={canManage} /></div></article>;
+        })}
+        {!leads.length ? <p className="portal-empty">No enquiries recorded yet.</p> : null}
+      </div>
     </section>
     {identityConflicts.length?<section className="portal-card">
       <div className="portal-card-head"><div><h2>Identity review</h2><p>Possible duplicate customer identities are held for human review. Fluxknight does not silently merge them.</p></div></div>
