@@ -34,7 +34,7 @@ test("enquiry pipeline stage updates are tenant scoped and use the CRM stage con
 test("new enquiries reuse matching tenant clients and guard against conflicting identities", () => {
   const route = read("app/api/portal/leads/route.ts");
   const form = read("app/portal/customers/NewEnquiryForm.tsx");
-  assert.match(route, /customers\\.manage/);
+  assert.match(route, /customers\.manage/);
   assert.match(route, /\.eq\("organization_id", session\.organizationId\)/);
   assert.match(route, /emailMatch\.data && phoneMatch\.data/);
   assert.match(route, /reusedExistingClient/);
