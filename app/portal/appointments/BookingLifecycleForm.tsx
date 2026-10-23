@@ -29,7 +29,7 @@ export default function BookingLifecycleForm({ bookingId, members, initial }: Pr
     finally { setBusy(false); }
   }
 
-  async function cancel() {
+  async function remove() {\n    if (!window.confirm("Permanently delete this booking and its studio metadata? This does not delete the CRM client.")) return;\n    setBusy(true); setError(""); setMessage("");\n    try {\n      const response = await fetch(`/api/portal/bookings/${bookingId}`, { method: "DELETE" });\n      const body = await response.json().catch(() => ({}));\n      if (!response.ok) throw new Error(body.error || "Unable to delete booking.");\n      router.push("/portal/appointments"); router.refresh();\n    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to delete booking."); }\n    finally { setBusy(false); }\n  }\n\n  async function cancel() {
     if (!window.confirm("Cancel this booking?")) return;
     setBusy(true); setError("");
     try {
@@ -51,7 +51,7 @@ export default function BookingLifecycleForm({ bookingId, members, initial }: Pr
     <div className="portal-field"><label>Photographer</label><select name="assignedPhotographerId" defaultValue={initial.assignedPhotographerId}><option value="">Unassigned</option>{members.map((member) => <option key={member.id} value={member.userId}>{member.email || member.userId} · {member.role}</option>)}</select><small>Only active workspace members can be assigned.</small></div>
     <div className="portal-field"><label>Studio location</label><input name="location" defaultValue={initial.location} /></div>
     <div className="portal-field exposure-form-wide"><label>Client notes</label><textarea name="clientNotes" defaultValue={initial.notes} rows={5} /></div>
-    <div className="exposure-form-actions"><button className="portal-button" type="submit" disabled={busy}>{busy ? "Saving…" : "Save booking"}</button><button className="portal-button secondary" type="button" onClick={() => void cancel()} disabled={busy || initial.status === "cancelled"}>Cancel booking</button></div>
+    <div className="exposure-form-actions"><button className="portal-button" type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button><button className="portal-button" type="button" onClick={() => { const select = document.querySelector<HTMLSelectElement>(`form select[name="status"]`); if (select) select.value = "confirmed"; const form = document.querySelector<HTMLFormElement>(".exposure-booking-form"); form?.requestSubmit(); }} disabled={busy || initial.status === "confirmed"}>Confirm booking</button><button className="portal-button secondary" type="button" onClick={() => void cancel()} disabled={busy || initial.status === "cancelled"}>Cancel booking</button><button className="portal-button secondary" type="button" onClick={() => void remove()} disabled={busy}>Delete booking</button></div>
     {message ? <p className="exposure-success" role="status">{message}</p> : null}{error ? <p className="exposure-error" role="alert">{error}</p> : null}
   </form>;
 }
