@@ -11,13 +11,14 @@ export default function BookingLifecycleForm({ bookingId, members, initial }: Pr
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [requestedStatus, setRequestedStatus] = useState(initial.status);
+  function toLagosIso(value: string) { if (!value) return ""; const parsed = new Date(`${value}:00+01:00`); return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString(); }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage(""); setError("");
     const form = new FormData(event.currentTarget);
     const payload = {
       title: String(form.get("title") || initial.title || "Studio session"),
-      status: requestedStatus, startAt: String(form.get("startAt") || ""), endAt: String(form.get("endAt") || ""),
+      status: requestedStatus, startAt: toLagosIso(String(form.get("startAt") || "")), endAt: toLagosIso(String(form.get("endAt") || "")) || null,
       location: String(form.get("location") || ""), clientNotes: String(form.get("clientNotes") || ""),
       depositStatus: String(form.get("depositStatus") || ""), deliveryStatus: String(form.get("deliveryStatus") || ""),
       assignedPhotographerId: String(form.get("assignedPhotographerId") || ""), shootType: String(form.get("shootType") || "other"),
