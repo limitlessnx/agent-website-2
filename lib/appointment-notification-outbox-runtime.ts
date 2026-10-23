@@ -30,7 +30,8 @@ export async function runAppointmentNotificationOutboxSweep() {
         .eq("id", row.appointment_id)
         .maybeSingle();
       if (appointmentError) throw new Error("Unable to verify booking before notification delivery: " + appointmentError.message);
-      if (!appointment || appointment.status !== "confirmed" || appointment.metadata?.source !== "exposure_booking_form") {
+      const bookingSource = (appointment?.metadata as { source?: string } | null)?.source;
+      if (!appointment || appointment.status !== "confirmed" || bookingSource !== "exposure_booking_form") {
         const { error: cancelError } = await admin.from("appointment_notification_outbox").update({
           status: "cancelled",
           last_error: "Booking is missing, no longer confirmed, or outside the Xposure workflow.",
