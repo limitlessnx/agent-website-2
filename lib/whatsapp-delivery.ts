@@ -11,6 +11,7 @@ type SendInput = {
   recipientType?: "customer" | "internal_staff";
   forceTemplate?: boolean;
   templatePurpose?: string;
+  requestedTemplateName?: string;
   variables?: Record<string, string | number | null | undefined>;
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
@@ -152,6 +153,9 @@ export async function sendWhatsAppMessage(input: SendInput) {
     ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h")
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
+  if (useTemplate && input.requestedTemplateName && config?.template_name !== input.requestedTemplateName) {
+    throw new Error(`The requested WhatsApp template is not the active approved template for ${input.templatePurpose || "this message"}.`);
+  }
 
   if(credentials.providerFamily==="twilio"){
     const statusCallback=`${String(process.env.FLUXKNIGHT_APP_URL||process.env.NEXT_PUBLIC_SITE_URL||"https://fluxknight.space").replace(/\/$/,"")}/api/whatsapp/twilio/status`;

@@ -17,6 +17,10 @@ type MetaTemplatesResponse = {
   paging?: { next?: string };
   error?: { message?: string; code?: number };
 };
+type MetaPhoneNumberResponse = {
+  whatsapp_business_account?: { id?: string };
+  error?: { message?: string; code?: number };
+};
 
 function placeholderIndexes(template: MetaTemplate) {
   const found = new Set<number>();
@@ -65,14 +69,34 @@ export async function GET() {
     const configuration = integration.configuration && typeof integration.configuration === "object"
       ? integration.configuration as Record<string, unknown>
       : {};
-    const wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || "").trim();
+    let wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || "").trim();
+    const phoneNumberId = String(credentials.phone_number_id || credentials.phoneNumberId || configuration.phone_number_id || configuration.phoneNumberId || "").trim();
     const accessToken = String(credentials.access_token || credentials.accessToken || "").trim();
     const graphVersion = String(credentials.graph_version || configuration.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v26.0").trim();
 
-    if (!/^\d+$/.test(wabaId) || !accessToken || !/^v\d+\.\d+$/.test(graphVersion)) {
+    if (!accessToken || !/^v\d+\.\d+$/.test(graphVersion) || (!/^\d+$/.test(wabaId) && !/^\d+$/.test(phoneNumberId))) {
       return NextResponse.json({
-        error: "Xposure's WhatsApp Business Account ID or server-side credentials are incomplete.",
+        error: "Xposure's Meta Phone Number ID or server-side credentials are incomplete.",
       }, { status: 409 });
+    }
+
+    if (/^\d+$/.test(phoneNumberId)) {
+      const phoneResponse = await fetch(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(phoneNumberId)}?fields=whatsapp_business_account{id}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+      const phonePayload = await phoneResponse.json().catch(() => ({})) as MetaPhoneNumberResponse;
+      const derivedWabaId = String(phonePayload.whatsapp_business_account?.id || "").trim();
+      if (!phoneResponse.ok || !/^\d+$/.test(derivedWabaId)) {
+        return NextResponse.json({
+          error: "Meta could not resolve Xposure's WhatsApp Business Account from its Phone Number ID.",
+          provider_status: phoneResponse.status,
+          provider_error_code: phonePayload.error?.code ?? null,
+          provider_error: phonePayload.error?.message ?? null,
+        }, { status: phoneResponse.status >= 400 && phoneResponse.status < 500 ? 502 : 503 });
+      }
+      wabaId = derivedWabaId;
     }
 
     let nextUrl: URL | null = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
