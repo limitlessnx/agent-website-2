@@ -25,6 +25,27 @@ test("production migration ledger snapshot has no duplicate versions", () => {
   assert.deepEqual(duplicates, [], "Duplicate local migration versions must be resolved");
 });
 
+const expectedPendingVersions = [
+  "20261001233000",
+  "202610020001",
+  "202610020002",
+  "20261002003000",
+  "20261004150000",
+  "20261007193000",
+  "20261009230000",
+  "20261011143000",
+  "20261012090000",
+];
+
+test("pending local migrations match the explicitly reviewed release gate", () => {
+  const remoteVersions = new Set(ledger.migrations.map((entry) => entry.version));
+  const pending = [...new Set(versions.map((entry) => entry.version))]
+    .filter((version) => !remoteVersions.has(version))
+    .sort();
+  assert.deepEqual(pending, [...expectedPendingVersions].sort(),
+    "Any change to pending production migrations requires explicit review");
+});
+
 test("explicitly draft-only SQL is excluded from the deployable migration directory", () => {
   const draftOnly = migrationFiles.filter((name) => readFileSync(path.join(migrationDir, name), "utf8").includes("Draft only. Do not execute in production"));
   assert.deepEqual(draftOnly, [], "Draft-only SQL must live outside supabase/migrations");
