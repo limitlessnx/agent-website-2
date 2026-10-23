@@ -118,6 +118,7 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.ok(migration.includes("unique (organization_id, event_key)"));
   assert.match(migration, /for update skip locked/i);
   assert.match(migration, /uncertain/);
+  assert.match(migration, /\x27cancelled\x27/);
   assert.ok(migration.toLowerCase().includes("revoke all on public.appointment_notification_outbox from anon, authenticated"));
   assert.match(enqueue, /appointment-confirmed:/);
   assert.match(enqueue, /ignoreDuplicates: true/);
@@ -128,6 +129,9 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(worker, /status: "uncertain"/);
   assert.match(trigger, /after insert or update of status on public\.appointments/i);
   assert.match(trigger, /coalesce\(new\.metadata->>'source', ''\) <> 'exposure_booking_form'/);
+  assert.match(trigger, /new\.status = 'cancelled'/);
+  assert.match(trigger, /status = 'queued'/);
+  assert.match(trigger, /new\.status in \('confirmed', 'cancelled'\)/);
   assert.match(trigger, /on conflict \(organization_id, event_key\) do nothing/i);
   assert.match(task, /appointment-notification-outbox-sweep/);
 });
