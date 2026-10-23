@@ -127,6 +127,7 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(worker, /manual reconciliation required/);
   assert.match(worker, /status: "uncertain"/);
   assert.match(trigger, /after insert or update of status on public\.appointments/i);
+  assert.match(trigger, /coalesce\(new\.metadata->>'source', ''\) <> 'exposure_booking_form'/);
   assert.match(trigger, /on conflict \(organization_id, event_key\) do nothing/i);
   assert.match(task, /appointment-notification-outbox-sweep/);
 });
