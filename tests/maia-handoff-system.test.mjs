@@ -18,7 +18,7 @@ test("Maia supervisor handoff is external and canonical", () => {
 
 test("Maia can notify the configured agent handoff phone before membership linking", () => {
   const operations = read("lib/human-operations.ts");
-  const migration = read("supabase/migrations/20261023060000_handoff_phone_destination_notifications.sql");
+  const migration = read("supabase/migrations/20261023044818_handoff_phone_destination_notifications.sql");
   assert.match(operations, /agent_destination_phone/);
   assert.match(operations, /human_handoff_destination/);
   assert.match(operations, /destinationPhone/);
