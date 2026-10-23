@@ -19,6 +19,12 @@ begin
     return new;
   end if;
 
+  -- The appointments table is shared across tenant systems. Only enqueue
+  -- notifications for bookings created by the Xposure photography workflow.
+  if coalesce(new.metadata->>'source', '') <> 'exposure_booking_form' then
+    return new;
+  end if;
+
   if tg_op = 'UPDATE' and old.status = 'confirmed' then
     return new;
   end if;
