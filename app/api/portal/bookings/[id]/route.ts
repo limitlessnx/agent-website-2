@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
@@ -45,7 +46,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: effectivePhotographerId, startAt: effectiveStartAt, endAt: effectiveEndAt, excludeAppointmentId: id });
     if (conflict) return NextResponse.json({ error: `Photographer is already assigned to “${conflict.title || "another session"}” during this time.`, conflict: { appointmentId: conflict.id, startAt: conflict.start_at, endAt: conflict.end_at } }, { status: 409 });
   }
+  const becameConfirmed = status === "confirmed" && appointment.status !== "confirmed";
+  const previousMetadata = appointment.metadata && typeof appointment.metadata === "object" ? appointment.metadata as Record<string, unknown> : {};
+  const confirmationEventId = becameConfirmed ? randomUUID() : null;
   const appointmentPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (confirmationEventId) appointmentPatch.metadata = { ...previousMetadata, confirmation_event_id: confirmationEventId };
   if (status) appointmentPatch.status = status;
   if (Object.prototype.hasOwnProperty.call(body, "title")) { const title = String(body.title || "").trim().slice(0, 180); if (!title) return NextResponse.json({ error: "Booking title is required." }, { status: 400 }); appointmentPatch.title = title; }
   if (startAt !== undefined) appointmentPatch.start_at = startAt;
@@ -76,9 +81,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // the appointment status has already been committed at this point.
   const warnings: string[] = [];
   if (metadataError) warnings.push("Booking updated, but photography metadata could not be updated.");
-  const becameConfirmed = status === "confirmed" && appointment.status !== "confirmed";
-  const previousMetadata = appointment.metadata && typeof appointment.metadata === "object" ? appointment.metadata as Record<string, unknown> : {};
-  if (becameConfirmed && !previousMetadata.whatsapp_confirmation_submitted_at) {
+  if (becameConfirmed) {
     if (!appointment.customer_phone) {
       warnings.push("Booking confirmed, but client has no phone number for WhatsApp confirmation.");
     } else {
@@ -90,6 +93,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         await enqueueAppointmentConfirmation({
           organizationId: session.organizationId,
           appointmentId: id,
+          confirmationEventId: confirmationEventId || id,
           recipient: appointment.customer_phone,
           variables: {
             customer_name: appointment.customer_name || "there", business_name: "Xposure Studios",
@@ -98,7 +102,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           },
         });
         await admin.from("appointments").update({
-          metadata: { ...previousMetadata, whatsapp_confirmation_submitted_at: new Date().toISOString() },
+          metadata: { ...previousMetadata, confirmation_event_id: confirmationEventId, whatsapp_confirmation_submitted_at: new Date().toISOString() },
           updated_at: new Date().toISOString(),
         }).eq("organization_id", session.organizationId).eq("id", id);
       } catch (error) {
