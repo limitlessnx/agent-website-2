@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertLeoToolAllowed, leoApprovalFor, resolveLeoIdentity, type LeoChannel } from "@/lib/leo-core";
 import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
-import { dispatchLeoExecution } from "@/lib/leo-execution-dispatcher";
+import { dispatchLeoExecution } from "@/lib/leo-execution/dispatcher";
 import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState, updateLeoVoiceWorkingContext, type LeoSessionState, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { createAdminClient } from "@/lib/supabase/admin";
