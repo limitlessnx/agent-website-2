@@ -50,6 +50,11 @@ export default async function CustomerTimelinePage({params}:{params:Promise<{id:
     </section>
 
     <section className="portal-card">
+      <div className="portal-card-head"><div><h2>Client profile</h2><p>Maintain contact details, preferences, service interest and internal notes for this organization.</p></div></div>
+      <CustomerProfileForm customer={customer} canManage={access.permissions.has("customers.manage")} />
+    </section>
+
+    <section className="portal-card">
       <div className="portal-card-head"><div><h2>Customer stage</h2><p>AI and human teammates use the same organization-defined stage.</p></div></div>
       <CustomerStageControl customerId={customer.id} currentStageId={customer.current_stage_id} stages={stages} canManage={access.permissions.has("customers.manage")} />
     </section>

@@ -78,8 +78,23 @@ export async function POST(request: NextRequest) {
   }).select("id,customer_id,stage,source,summary,created_at").single();
 
   if (leadError || !lead) {
-    if (createdCustomer) await admin.from("crm_customers").delete().eq("organization_id", session.organizationId).eq("id", customerId);
-    return NextResponse.json({ error: "Unable to save the enquiry. No new client record was retained." }, { status: 500 });
+    if (createdCustomer) {
+      const { data: deletedCustomer, error: cleanupError } = await admin
+        .from("crm_customers")
+        .delete()
+        .eq("organization_id", session.organizationId)
+        .eq("id", customerId)
+        .select("id")
+        .maybeSingle();
+
+      if (cleanupError || !deletedCustomer) {
+        return NextResponse.json({
+          error: "Unable to save the enquiry. Cleanup could not be confirmed; a client record may remain and needs review.",
+          customerId,
+        }, { status: 500 });
+      }
+    }
+    return NextResponse.json({ error: "Unable to save the enquiry. The new client record was removed." }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, lead, customerId, reusedExistingClient: Boolean(existing) }, { status: 201 });

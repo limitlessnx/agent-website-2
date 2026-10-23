@@ -43,3 +43,18 @@ test("new enquiries reuse matching tenant clients and guard against conflicting 
   assert.match(form, /serviceInterest/);
   assert.match(form, /source/);
 });
+
+
+test("client detail page renders the editable profile component with permission gating", () => {
+  const page = read("app/portal/customers/[id]/page.tsx");
+  assert.match(page, /<CustomerProfileForm customer=\{customer\} canManage=\{access\.permissions\.has\("customers\.manage"\)\} \/>/);
+  assert.match(page, /<CustomerStageControl/);
+});
+
+test("failed enquiry reports cleanup failure instead of falsely claiming rollback succeeded", () => {
+  const route = read("app/api/portal/leads/route.ts");
+  assert.match(route, /cleanupError \|\| !deletedCustomer/);
+  assert.match(route, /Cleanup could not be confirmed/);
+  assert.match(route, /customerId,/);
+  assert.match(route, /The new client record was removed/);
+});
