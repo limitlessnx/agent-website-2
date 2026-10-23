@@ -655,11 +655,18 @@ export async function createHumanHandoffFromMaia(input:{
         const customerResult=await sendWhatsAppMessage({
           organizationId:input.organizationId,
           to:String(customer?.phone),
-          text:`Your Xposure Studios support contact is ${sharedAgentName}. You can contact them directly on WhatsApp at +${agentPhone}: https://wa.me/${agentPhone}. They have also received your enquiry and contact details.`,
-          deliveryMode:"direct",
+          deliveryMode:"template",
           recipientType:"customer",
+          templatePurpose:"human_handoff_customer_contact",
+          variables:{
+            agent_name:sharedAgentName,
+            agent_phone:`+${agentPhone}`,
+            agent_link:`https://wa.me/${agentPhone}`,
+          },
         });
-        customerContactStatus=customerResult?"sent":"failed";
+        // "sent" here means the provider accepted the template request, not that
+        // WhatsApp has confirmed final delivery. Delivery receipts remain authoritative.
+        customerContactStatus=customerResult.ok&&customerResult.providerMessageId?"sent":"failed";
         if(customerContactStatus==="sent"){
           const {error:recordError}=await admin.from("handoff_notifications").insert({
             organization_id:input.organizationId,handoff_id:handoffId,membership_id:assignment.membershipId,
