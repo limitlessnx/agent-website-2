@@ -166,6 +166,9 @@ test("D4 staff handoff WhatsApp alerts use direct internal messaging",()=>{
   const settings=read("app/portal/settings/HandoffContinuityPanel.tsx");
   assert.match(operations,/deliveryMode:"direct"/);
   assert.match(operations,/recipientType:"internal_staff"/);
+  assert.match(operations,/\.select\("full_name,company_name,phone,current_stage_id"\)/);
+  assert.ok(operations.includes('Customer WhatsApp: ${input.customerPhone||"Not recorded"}'));
+  assert.match(operations,/customer_phone:input\.customerPhone/);
   assert.match(delivery,/recipientType === "customer" \? outsideCustomerWindow/);
   assert.match(delivery,/Message text is required while the 24-hour service window is open/);
   assert.ok(settings.includes("internal direct messaging"));
