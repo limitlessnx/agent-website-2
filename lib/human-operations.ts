@@ -619,6 +619,7 @@ export async function createHumanHandoffFromMaia(input:{
       handoffId,
       conversationId:input.conversationId,
       membershipId:assignment.membershipId,
+      destinationPhone:assignment.destinationPhone,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
       customerPhone:str(customer?.phone)||null,
       stageName,
