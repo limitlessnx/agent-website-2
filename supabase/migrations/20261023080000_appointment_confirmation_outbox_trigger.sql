@@ -72,7 +72,18 @@ begin
     ),
     'queued'
   )
-  on conflict (organization_id, event_key) do nothing;
+  on conflict (organization_id, event_key) do update
+    set status = 'queued',
+        recipient = excluded.recipient,
+        template_name = excluded.template_name,
+        variables = excluded.variables,
+        queued_at = now(),
+        processing_at = null,
+        sent_at = null,
+        provider_message_id = null,
+        last_error = null,
+        updated_at = now()
+    where public.appointment_notification_outbox.status in ('cancelled', 'failed');
 
   return new;
 end;
