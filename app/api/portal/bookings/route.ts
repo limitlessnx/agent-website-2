@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   const endAt = iso(body.endAt);
   if (!customerId || !startAt) return NextResponse.json({ error: "Client and booking start time are required." }, { status: 400 });
   if (endAt && new Date(endAt) <= new Date(startAt)) return NextResponse.json({ error: "End time must be after start time." }, { status: 400 });
+  if (body.status !== undefined && !["requested", "confirmed"].includes(body.status)) return NextResponse.json({ error: "New bookings must be requested or confirmed." }, { status: 400 });
   const status = body.status === "confirmed" ? "confirmed" : "requested";
   const shootType = shootTypes.has(String(body.shootType)) ? String(body.shootType) : "other";
   const depositStatus = depositStatuses.has(String(body.depositStatus)) ? String(body.depositStatus) : "not_required";
