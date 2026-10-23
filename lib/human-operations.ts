@@ -274,7 +274,7 @@ export async function assignHumanHandoff(session:ClientSession,handoffId:string,
     conversationId:String(data.conversation_id),
     membershipId,
     customerName:String(customer?.full_name||customer?.company_name||"Customer"),
-    customerPhone:str(customer?.phone)||null,
+    customerPhone:str((customer as Record<string,unknown>|null)?.phone)||null,
     stageName,
     summary:String(data.conversation_summary||data.reason||"Review customer conversation"),
     nextAction:data.next_action||null,
@@ -501,7 +501,7 @@ export async function createHandoffFromSystemEvent(event:{
     .eq("organization_id",event.organizationId).eq("id",handoffId);
   if(updateError) throw updateError;
 
-  if(assignment.membershipId){
+  if(assignment.membershipId||assignment.destinationPhone){
     await notifyHandoffAssignee({
       organizationId:event.organizationId,
       handoffId,
@@ -587,7 +587,7 @@ export async function createHumanHandoffFromMaia(input:{
   });
   if(error) throw error;
   const handoffId=String(data);
-  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,current_stage_id")
+  const {data:customer}=await admin.from("crm_customers").select("full_name,company_name,phone,current_stage_id")
     .eq("organization_id",input.organizationId).eq("id",input.customerId).maybeSingle();
   let stageName:string|null=null;
   if(customer?.current_stage_id){
@@ -610,6 +610,7 @@ export async function createHumanHandoffFromMaia(input:{
       conversationId:input.conversationId,
       membershipId:assignment.membershipId,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
+      customerPhone:str(customer?.phone)||null,
       stageName,
       summary,
       nextAction:str(input.nextAction)||null,
