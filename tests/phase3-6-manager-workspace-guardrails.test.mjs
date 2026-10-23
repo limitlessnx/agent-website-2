@@ -46,7 +46,7 @@ test("Phase 5 removal invalidates workspace entry without deleting the user acco
  const auth=read("lib/client-auth.ts");
  const route=read("app/api/portal/team/access-requests/route.ts");
  assert.match(auth,/status=eq\.active/);
- assert.match(auth,/if\(!live\)return null/);
+ assert.match(auth,/if\s*\(!live\)\s*\{?\s*return null/);
  assert.match(route,/p_status:"removed"/);
  assert.doesNotMatch(route,/delete.*auth/i);
 });
