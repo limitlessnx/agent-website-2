@@ -114,10 +114,10 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   const enqueue = read("lib/appointment-notification-outbox.ts");
   const worker = read("lib/appointment-notification-outbox-runtime.ts");
   const task = read("src/trigger/appointment-notification-outbox.ts");
-  assert.match(migration, /unique \\(organization_id, event_key\\)/);
+  assert.ok(migration.includes("unique (organization_id, event_key)"));
   assert.match(migration, /for update skip locked/i);
   assert.match(migration, /uncertain/);
-  assert.match(migration, /revoke all on public\\.appointment_notification_outbox from anon, authenticated/i);
+  assert.ok(migration.toLowerCase().includes("revoke all on public.appointment_notification_outbox from anon, authenticated"));
   assert.match(enqueue, /appointment-confirmed:/);
   assert.match(enqueue, /ignoreDuplicates: true/);
   assert.match(worker, /claim_appointment_notification_outbox/);
