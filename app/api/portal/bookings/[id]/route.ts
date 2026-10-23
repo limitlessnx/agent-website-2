@@ -46,7 +46,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (conflict) return NextResponse.json({ error: `Photographer is already assigned to “${conflict.title || "another session"}” during this time.`, conflict: { appointmentId: conflict.id, startAt: conflict.start_at, endAt: conflict.end_at } }, { status: 409 });
   }
   const appointmentPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (status) appointmentPatch.status = status;
+  if (status) appointmentPatch.status = status;\n  if (Object.prototype.hasOwnProperty.call(body, "title")) { const title = String(body.title || "").trim().slice(0, 180); if (!title) return NextResponse.json({ error: "Booking title is required." }, { status: 400 }); appointmentPatch.title = title; }
   if (startAt !== undefined) appointmentPatch.start_at = startAt;
   if (endAt !== undefined) appointmentPatch.end_at = endAt;
   if (Object.prototype.hasOwnProperty.call(body, "location")) appointmentPatch.location = String(body.location || "").trim().slice(0, 240) || null;
