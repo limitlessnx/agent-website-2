@@ -60,7 +60,7 @@ test("Maia handoff reports notification truth and never marks unnotified handoff
   const operations = read("lib/human-operations.ts");
   const runtime = read("lib/ai/maia-runtime.ts");
   assert.match(operations, /let notificationStatus="not_configured"/);
-  assert.match(operations, /const forwarded=notificationStatus==="sent"\|\|notificationStatus==="dashboard_only"/);
+  assert.match(operations, /const forwarded=notificationStatus==="sent"&&customerContactStatus==="sent"/);
   assert.match(operations, /if\(notificationStatus==="sent"\|\|notificationStatus==="dashboard_only"\)/);
   assert.match(operations, /return "failed"/);
   assert.match(runtime, /Never tell the customer the request was forwarded unless forwarded is true/);
