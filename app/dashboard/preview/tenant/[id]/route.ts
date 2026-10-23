@@ -17,6 +17,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!organization) return NextResponse.redirect(new URL("/dashboard/clients", request.url));
 
   const response = NextResponse.redirect(new URL("/portal", request.url));
+  response.cookies.set("fluxknight_admin_tenant_preview", "", {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/portal",
+    maxAge: 0,
+  });
   response.cookies.set(ADMIN_ORGANIZATION_COOKIE, serializeAdminOrganizationContext({ kind: "tenant", id: organizationId }), {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -30,13 +37,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60,
-  });
-  response.cookies.set("fluxknight_admin_tenant_preview", "", {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/portal",
-    maxAge: 0,
   });
   return response;
 }
