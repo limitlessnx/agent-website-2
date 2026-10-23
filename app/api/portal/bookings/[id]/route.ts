@@ -4,7 +4,7 @@ import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findPhotographerConflict } from "@/lib/photography-booking-conflicts";
-import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { enqueueAppointmentConfirmation } from "@/lib/appointment-notification-outbox";
 
 const appointmentStatuses = new Set(["requested", "confirmed", "rescheduled", "cancelled"]);
 const depositStatuses = new Set(["not_required", "pending", "partial", "paid", "refunded", "failed"]);
@@ -87,19 +87,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         if (Number.isNaN(start.getTime())) throw new Error("A valid appointment date is required for WhatsApp confirmation.");
         const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeZone: "Africa/Lagos" }).format(start);
         const time = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Lagos" }).format(start);
-        await sendWhatsAppMessage({
-          organizationId: session.organizationId, to: appointment.customer_phone, deliveryMode: "template",
-          templatePurpose: "appointment_reminder", requestedTemplateName: "appointment_reminder",
-          variables: { customer_name: appointment.customer_name || "there", business_name: "Xposure Studios",
+        await enqueueAppointmentConfirmation({
+          organizationId: session.organizationId,
+          appointmentId: id,
+          recipient: appointment.customer_phone,
+          variables: {
+            customer_name: appointment.customer_name || "there", business_name: "Xposure Studios",
             service_name: updated.title || appointment.title || "Studio session", appointment_date: date,
-            appointment_time: time, booking_reference: appointment.id },
+            appointment_time: time, booking_reference: id,
+          },
         });
         await admin.from("appointments").update({
           metadata: { ...previousMetadata, whatsapp_confirmation_submitted_at: new Date().toISOString() },
           updated_at: new Date().toISOString(),
         }).eq("organization_id", session.organizationId).eq("id", id);
       } catch (error) {
-        warnings.push(error instanceof Error ? error.message : "WhatsApp confirmation could not be submitted.");
+        warnings.push(error instanceof Error ? error.message : "WhatsApp confirmation could not be queued.");
       }
     }
   }
