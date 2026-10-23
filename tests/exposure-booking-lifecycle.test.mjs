@@ -39,3 +39,15 @@ test("confirmed Xposure bookings submit the configured appointment WhatsApp temp
   assert.match(updateRoute, /status === "confirmed" && appointment\.status !== "confirmed"/);
   assert.match(updateRoute, /eq\("organization_id", session\.organizationId\)/);
 });
+
+test("booking dashboard offers explicit confirm, cancel, and delete actions", () => {
+  const form = read("app/portal/appointments/BookingLifecycleForm.tsx");
+  const route = read("app/api/portal/bookings/[id]/route.ts");
+  assert.match(form, /Confirm booking/);
+  assert.match(form, /Cancel booking/);
+  assert.match(form, /Delete booking/);
+  assert.match(form, /method: "DELETE"/);
+  assert.match(route, /export async function DELETE/);
+  assert.match(route, /eq\("organization_id", session\.organizationId\)/);
+  assert.match(route, /external calendar/);
+});
