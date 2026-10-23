@@ -4,6 +4,7 @@ import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findPhotographerConflict } from "@/lib/photography-booking-conflicts";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -55,5 +56,29 @@ export async function POST(request: Request) {
   if (appointmentError || !appointment) return NextResponse.json({ error: appointmentError?.message || "Unable to create booking." }, { status: 400 });
   const { error: metadataError } = await admin.from("photography_booking_metadata").insert({ organization_id: session.organizationId, appointment_id: appointment.id, shoot_type: shootType, catalogue_item_id: catalogueItemId, assigned_photographer_id: assignedPhotographerId, studio_location: String(body.location || "").trim().slice(0, 240) || null, deposit_status: depositStatus, delivery_status: deliveryStatus, client_notes: String(body.clientNotes || "").trim().slice(0, 2000) });
   if (metadataError) return NextResponse.json({ ok: true, appointment, warning: "Booking created, but photography metadata could not be attached." });
-  return NextResponse.json({ ok: true, appointment }, { status: 201 });
+  let whatsappWarning: string | undefined;
+  if (customer.phone) {
+    try {
+      const start = new Date(startAt);
+      const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeZone: "Africa/Lagos" }).format(start);
+      const time = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Lagos" }).format(start);
+      await sendWhatsAppMessage({
+        organizationId: session.organizationId, to: customer.phone, deliveryMode: "template",
+        templatePurpose: "appointment_reminder", requestedTemplateName: "appointment_reminder",
+        variables: { customer_name: customer.full_name || "there", business_name: "Xposure Studios",
+          service_name: packageName || title || "Studio session", appointment_date: date, appointment_time: time,
+          booking_reference: appointment.id },
+      });
+      await admin.from("appointments").update({
+        metadata: { source: "exposure_booking_form", catalogue_item_id: catalogueItemId, shoot_type: shootType,
+          whatsapp_confirmation_submitted_at: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      }).eq("organization_id", session.organizationId).eq("id", appointment.id);
+    } catch (error) {
+      whatsappWarning = error instanceof Error ? error.message : "WhatsApp confirmation could not be submitted.";
+    }
+  } else {
+    whatsappWarning = "Client has no phone number for WhatsApp confirmation.";
+  }
+  return NextResponse.json({ ok: true, appointment, ...(whatsappWarning ? { warning: "Booking saved, but WhatsApp confirmation was not sent: " + whatsappWarning } : {}) }, { status: 201 });
 }
