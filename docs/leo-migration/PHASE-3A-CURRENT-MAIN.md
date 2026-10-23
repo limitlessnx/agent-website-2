@@ -15,9 +15,13 @@ Introduce one provider-neutral dispatch seam for the privileged Leo tool gateway
 - Do not describe the migration as complete while the compatibility adapter remains in use.
 - Reconcile this branch against current `main` before every further code batch and before merge.
 
+## New implementation folder
+
+Migration-owned execution boundary code now lives under `lib/leo-execution/` so provider adapters and contract tests can be added without scattering migration code through the shared `lib/` root. This folder is not a separate deployable service.
+
 ## Current implementation delta
 1. Generic privileged Leo tool execution calls `dispatchLeoExecution(envelope)`.
-2. `lib/leo-execution-dispatcher.ts` defines a typed provider interface and dispatch result.
+2. `lib/leo-execution/dispatcher.ts` defines a typed provider interface and dispatch result.
 3. `legacyN8nLeoProvider` retains current behavior as the default, deliberately avoiding an unverified provider cutover.
 4. A static regression contract is added to `test:support`.
 
