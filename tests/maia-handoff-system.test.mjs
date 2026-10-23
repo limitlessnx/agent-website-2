@@ -65,3 +65,15 @@ test("Maia handoff reports notification truth and never marks unnotified handoff
   assert.match(operations, /return "failed"/);
   assert.match(runtime, /Never tell the customer the request was forwarded unless forwarded is true/);
 });
+
+test("Two-way handoff requires approved customer contact sharing", () => {
+  const operations = read("lib/human-operations.ts");
+  const api = read("app/api/portal/settings/handoffs/route.ts");
+  const panel = read("app/portal/settings/HandoffContinuityPanel.tsx");
+  assert.ok(operations.includes("share_contact_with_customers===true"));
+  assert.ok(operations.includes('channel:"customer_whatsapp"'));
+  assert.ok(operations.includes("customerContactStatus"));
+  assert.ok(api.includes("share_contact_with_customers:Boolean(body.shareContactWithCustomers)"));
+  assert.ok(panel.includes("Share this WhatsApp number with customers during handoff"));
+  assert.ok(operations.includes('notificationStatus==="sent"&&customerContactStatus==="sent"'));
+});
