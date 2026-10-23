@@ -121,6 +121,7 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(migration, /\x27cancelled\x27/);
   assert.ok(migration.toLowerCase().includes("revoke all on public.appointment_notification_outbox from anon, authenticated"));
   assert.match(enqueue, /appointment-confirmed:/);
+  assert.match(enqueue, /input\.confirmationEventId/);
   assert.match(enqueue, /ignoreDuplicates: true/);
   assert.match(worker, /claim_appointment_notification_outbox/);
   assert.match(worker, /status: "sent"/);
@@ -136,6 +137,7 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(trigger, /new\.status = 'cancelled'/);
   assert.match(trigger, /status = 'queued'/);
   assert.match(trigger, /new\.status in \('confirmed', 'cancelled'\)/);
+  assert.match(trigger, /confirmation_event_id/);
   assert.match(trigger, /on conflict \(organization_id, event_key\) do update/i);
   assert.match(trigger, /status in \('cancelled', 'failed'\)/i);
   assert.match(task, /appointment-notification-outbox-sweep/);
