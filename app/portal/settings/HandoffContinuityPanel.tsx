@@ -41,6 +41,7 @@ export default function HandoffContinuityPanel({members,preferences,rules,canMan
       whatsappPhone:String(form.get("whatsappPhone")||""),
       supervisorName:String(form.get("supervisorName")||""),
       isSupervisor:form.get("isSupervisor")==="on",
+      shareContactWithCustomers:form.get("shareContactWithCustomers")==="on",
       notifyWhatsAppHandoffs:form.get("notifyWhatsAppHandoffs")==="on",
     });
   }
@@ -77,6 +78,7 @@ export default function HandoffContinuityPanel({members,preferences,rules,canMan
             <input name="supervisorName" defaultValue={String(pref?.metadata?.supervisor_name||"")} placeholder="Supervisor name" disabled={!canManage||busy} />
             <input name="whatsappPhone" defaultValue={pref?.whatsapp_phone||""} placeholder="+234..." disabled={!canManage||busy} />
             <label><input name="isSupervisor" type="checkbox" defaultChecked={pref?.metadata?.supervisor===true} disabled={!canManage||busy} /> Supervisor</label>
+            <label><input name="shareContactWithCustomers" type="checkbox" defaultChecked={pref?.metadata?.share_contact_with_customers===true} disabled={!canManage||busy} /> Share this WhatsApp number with customers during handoff</label>
             <label><input name="notifyWhatsAppHandoffs" type="checkbox" defaultChecked={pref?.notify_whatsapp_handoffs||false} disabled={!canManage||busy} /> WhatsApp alerts</label>
             {canManage?<button type="submit" disabled={busy}>Save</button>:null}
           </div>
