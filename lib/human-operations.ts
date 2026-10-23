@@ -603,7 +603,7 @@ export async function createHumanHandoffFromMaia(input:{
     status:assignment.membershipId?"assigned":"open",
     updated_at:new Date().toISOString(),
   }).eq("organization_id",input.organizationId).eq("id",handoffId);
-  if(assignment.membershipId){
+  if(assignment.membershipId||assignment.destinationPhone){
     await notifyHandoffAssignee({
       organizationId:input.organizationId,
       handoffId,
