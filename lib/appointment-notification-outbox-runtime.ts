@@ -20,6 +20,26 @@ export async function runAppointmentNotificationOutboxSweep() {
 
   for (const row of rows) {
     try {
+      // Recheck the tenant-scoped booking immediately before provider delivery.
+      // A cancellation can race with a claim; never send a queued confirmation
+      // when the booking is already cancelled, deleted, or no longer Xposure-owned.
+      const { data: appointment, error: appointmentError } = await admin
+        .from("appointments")
+        .select("status,metadata")
+        .eq("organization_id", row.organization_id)
+        .eq("id", row.appointment_id)
+        .maybeSingle();
+      if (appointmentError) throw new Error("Unable to verify booking before notification delivery: " + appointmentError.message);
+      if (!appointment || appointment.status !== "confirmed" || appointment.metadata?.source !== "exposure_booking_form") {
+        const { error: cancelError } = await admin.from("appointment_notification_outbox").update({
+          status: "cancelled",
+          last_error: "Booking is missing, no longer confirmed, or outside the Xposure workflow.",
+          updated_at: new Date().toISOString(),
+        }).eq("id", row.id).eq("organization_id", row.organization_id).eq("status", "processing");
+        if (cancelError) throw new Error("Unable to cancel stale booking notification: " + cancelError.message);
+        results.push({ id: row.id, status: "failed", error: "Booking was not eligible for confirmation delivery." });
+        continue;
+      }
       const result = await sendWhatsAppMessage({
         organizationId: row.organization_id,
         to: row.recipient,
