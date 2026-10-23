@@ -52,8 +52,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (endAt !== undefined) appointmentPatch.end_at = endAt;
   if (Object.prototype.hasOwnProperty.call(body, "location")) appointmentPatch.location = String(body.location || "").trim().slice(0, 240) || null;
   if (Object.prototype.hasOwnProperty.call(body, "clientNotes")) appointmentPatch.notes = String(body.clientNotes || "").trim().slice(0, 2000) || null;
-  const { data: updated, error: updateError } = await admin.from("appointments").update(appointmentPatch).eq("organization_id", session.organizationId).eq("id", id).select("id,status,start_at,end_at,location,notes").single();
-  if (updateError || !updated) return NextResponse.json({ error: updateError?.message || "Unable to update booking." }, { status: 400 });
+  let updateQuery = admin.from("appointments").update(appointmentPatch).eq("organization_id", session.organizationId).eq("id", id);
+  // Confirmation is a one-way transition for this request: only the request that
+  // observes the previous status may claim it, preventing parallel PATCH calls
+  // from both submitting the initial WhatsApp confirmation.
+  if (status === "confirmed" && appointment.status !== "confirmed") {
+    updateQuery = updateQuery.eq("status", appointment.status);
+  }
+  const { data: updated, error: updateError } = await updateQuery.select("id,status,start_at,end_at,location,notes").maybeSingle();
+  if (updateError || !updated) {
+    if (!updateError && status === "confirmed" && appointment.status !== "confirmed") {
+      return NextResponse.json({ error: "Booking status changed in another request. Refresh and review the latest booking before confirming." }, { status: 409 });
+    }
+    return NextResponse.json({ error: updateError?.message || "Unable to update booking." }, { status: 400 });
+  }
   const metadataPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (depositStatus) metadataPatch.deposit_status = depositStatus;
   if (deliveryStatus) metadataPatch.delivery_status = deliveryStatus;
