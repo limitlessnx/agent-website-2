@@ -8,7 +8,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export const dynamic = "force-dynamic";
 
-type Body = { customerId?: string; catalogueItemId?: string; title?: string; startAt?: string; endAt?: string; shootType?: string; location?: string; depositStatus?: string; deliveryStatus?: string; assignedPhotographerId?: string; clientNotes?: string };
+type Body = { status?: string; customerId?: string; catalogueItemId?: string; title?: string; startAt?: string; endAt?: string; shootType?: string; location?: string; depositStatus?: string; deliveryStatus?: string; assignedPhotographerId?: string; clientNotes?: string };
 const shootTypes = new Set(["portrait", "wedding", "maternity", "birthday", "family", "creative_set", "other"]);
 const depositStatuses = new Set(["not_required", "pending", "partial", "paid", "refunded", "failed"]);
 const deliveryStatuses = new Set(["not_started", "in_progress", "delivered", "cancelled"]);
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   const endAt = iso(body.endAt);
   if (!customerId || !startAt) return NextResponse.json({ error: "Client and booking start time are required." }, { status: 400 });
   if (endAt && new Date(endAt) <= new Date(startAt)) return NextResponse.json({ error: "End time must be after start time." }, { status: 400 });
+  const status = body.status === "confirmed" ? "confirmed" : "requested";
   const shootType = shootTypes.has(String(body.shootType)) ? String(body.shootType) : "other";
   const depositStatus = depositStatuses.has(String(body.depositStatus)) ? String(body.depositStatus) : "not_required";
   const deliveryStatus = deliveryStatuses.has(String(body.deliveryStatus)) ? String(body.deliveryStatus) : "not_started";
@@ -52,12 +53,12 @@ export async function POST(request: Request) {
     const conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: assignedPhotographerId, startAt, endAt: effectiveEndAt });
     if (conflict) return NextResponse.json({ error: `Photographer is already assigned to “${conflict.title || "another session"}” during this time.`, conflict: { appointmentId: conflict.id, startAt: conflict.start_at, endAt: conflict.end_at } }, { status: 409 });
   }
-  const { data: appointment, error: appointmentError } = await admin.from("appointments").insert({ organization_id: session.organizationId, customer_id: customerId, appointment_system_id: appointmentSystem.id, status: "confirmed", title: title || packageName || "Studio session", start_at: startAt, end_at: endAt, customer_name: customer.full_name, customer_email: customer.email, customer_phone: customer.phone, location: String(body.location || "").trim().slice(0, 240) || null, notes: String(body.clientNotes || "").trim().slice(0, 2000) || null, provider: "dashboard", metadata: { source: "exposure_booking_form", catalogue_item_id: catalogueItemId, shoot_type: shootType } }).select("id,metadata").single();
+  const { data: appointment, error: appointmentError } = await admin.from("appointments").insert({ organization_id: session.organizationId, customer_id: customerId, appointment_system_id: appointmentSystem.id, status, title: title || packageName || "Studio session", start_at: startAt, end_at: endAt, customer_name: customer.full_name, customer_email: customer.email, customer_phone: customer.phone, location: String(body.location || "").trim().slice(0, 240) || null, notes: String(body.clientNotes || "").trim().slice(0, 2000) || null, provider: "dashboard", metadata: { source: "exposure_booking_form", catalogue_item_id: catalogueItemId, shoot_type: shootType } }).select("id,metadata").single();
   if (appointmentError || !appointment) return NextResponse.json({ error: appointmentError?.message || "Unable to create booking." }, { status: 400 });
   const { error: metadataError } = await admin.from("photography_booking_metadata").insert({ organization_id: session.organizationId, appointment_id: appointment.id, shoot_type: shootType, catalogue_item_id: catalogueItemId, assigned_photographer_id: assignedPhotographerId, studio_location: String(body.location || "").trim().slice(0, 240) || null, deposit_status: depositStatus, delivery_status: deliveryStatus, client_notes: String(body.clientNotes || "").trim().slice(0, 2000) });
   if (metadataError) return NextResponse.json({ ok: true, appointment, warning: "Booking created, but photography metadata could not be attached." });
   let whatsappWarning: string | undefined;
-  if (customer.phone) {
+  if (status === "confirmed" && customer.phone) {
     try {
       const start = new Date(startAt);
       const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeZone: "Africa/Lagos" }).format(start);
@@ -77,8 +78,8 @@ export async function POST(request: Request) {
     } catch (error) {
       whatsappWarning = error instanceof Error ? error.message : "WhatsApp confirmation could not be submitted.";
     }
-  } else {
-    whatsappWarning = "Client has no phone number for WhatsApp confirmation.";
+  } else if (status === "confirmed" && !customer.phone) {
+    whatsappWarning = "Booking confirmed, but client has no phone number for WhatsApp confirmation.";
   }
   return NextResponse.json({ ok: true, appointment, ...(whatsappWarning ? { warning: "Booking saved, but WhatsApp confirmation was not sent: " + whatsappWarning } : {}) }, { status: 201 });
 }
