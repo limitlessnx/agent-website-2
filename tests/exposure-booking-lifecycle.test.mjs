@@ -30,13 +30,15 @@ test("booking detail UI provides lifecycle controls and is reachable from the ca
 test("confirmed Xposure bookings submit the configured appointment WhatsApp template", () => {
   const createRoute = read("app/api/portal/bookings/route.ts");
   const updateRoute = read("app/api/portal/bookings/[id]/route.ts");
-  for (const route of [createRoute, updateRoute]) {
-    assert.match(route, /sendWhatsAppMessage/);
-    assert.match(route, /templatePurpose: "appointment_reminder"/);
-    assert.match(route, /requestedTemplateName: "appointment_reminder"/);
-    assert.match(route, /booking_reference:/);
-    assert.match(route, /whatsapp_confirmation_submitted_at/);
-  }
+  assert.match(createRoute, /enqueueAppointmentConfirmation/);
+  assert.match(updateRoute, /enqueueAppointmentConfirmation/);
+  assert.match(createRoute, /booking_reference:/);
+  assert.match(updateRoute, /booking_reference:/);
+  assert.match(updateRoute, /whatsapp_confirmation_submitted_at/);
+  const worker = read("lib/appointment-notification-outbox-runtime.ts");
+  assert.match(worker, /sendWhatsAppMessage/);
+  assert.match(worker, /templatePurpose: row\.purpose/);
+  assert.match(worker, /requestedTemplateName: row\.template_name/);
   assert.match(updateRoute, /status === "confirmed" && appointment\.status !== "confirmed"/);
   assert.match(updateRoute, /eq\("organization_id", session\.organizationId\)/);
 });
@@ -97,11 +99,30 @@ test("photography metadata failure does not short-circuit booking WhatsApp confi
   const metadataUpdate = route.indexOf('const { data: metadata, error: metadataError }');
   const metadataFailure = route.indexOf('if (metadataError) return NextResponse.json', metadataUpdate);
   const deleteHandler = route.indexOf('export async function DELETE');
-  const confirmationSend = route.indexOf('await sendWhatsAppMessage({', metadataUpdate);
+  const confirmationSend = route.indexOf('await enqueueAppointmentConfirmation({', metadataUpdate);
   assert.ok(metadataUpdate >= 0);
   assert.ok(metadataFailure === -1 || metadataFailure > deleteHandler);
   assert.ok(confirmationSend > metadataUpdate);
   assert.match(route, /const warnings: string\[\] = \[\]/);
   assert.match(route, /warnings\.push\("Booking updated, but photography metadata could not be updated\."/);
   assert.match(route, /warnings\.length \? \{ warnings \} : \{\}/);
+});
+
+
+test("appointment notification outbox is tenant-scoped and avoids automatic resend after interrupted processing", () => {
+  const migration = read("supabase/migrations/20261023070000_appointment_notification_outbox.sql");
+  const enqueue = read("lib/appointment-notification-outbox.ts");
+  const worker = read("lib/appointment-notification-outbox-runtime.ts");
+  const task = read("src/trigger/appointment-notification-outbox.ts");
+  assert.match(migration, /unique \\(organization_id, event_key\\)/);
+  assert.match(migration, /for update skip locked/i);
+  assert.match(migration, /uncertain/);
+  assert.match(migration, /revoke all on public\\.appointment_notification_outbox from anon, authenticated/i);
+  assert.match(enqueue, /appointment-confirmed:/);
+  assert.match(enqueue, /ignoreDuplicates: true/);
+  assert.match(worker, /claim_appointment_notification_outbox/);
+  assert.match(worker, /status: "sent"/);
+  assert.match(worker, /status: "failed"/);
+  assert.match(worker, /manual reconciliation required/);
+  assert.match(task, /appointment-notification-outbox-sweep/);
 });
