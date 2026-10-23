@@ -4,10 +4,8 @@ begin;
 -- A unique event key makes enqueue idempotent. Processing rows are not silently
 -- reclaimed after a crash because the provider may already have accepted a send.
 -- The outbox's composite FK intentionally enforces matching tenant ownership.
--- PostgreSQL requires a unique referenced key; add a non-invasive unique index
--- on the existing appointment tenant/id pair before creating the outbox table.
-create unique index if not exists appointments_organization_id_id_uidx
-  on public.appointments(organization_id, id);
+-- The appointment foundation migration already declares UNIQUE (organization_id, id),
+-- which provides the referenced key required by PostgreSQL. Do not add a duplicate index.
 
 create table if not exists public.appointment_notification_outbox (
   id uuid primary key default gen_random_uuid(),
