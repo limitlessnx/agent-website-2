@@ -23,8 +23,11 @@ create table if not exists public.appointment_notification_outbox (
   sent_at timestamptz,
   updated_at timestamptz not null default now(),
   unique (organization_id, event_key),
-  foreign key (organization_id, appointment_id)
-    references public.appointments(organization_id, id) on delete cascade
+  -- Reference the globally unique appointment primary key. Tenant ownership is
+  -- still enforced in all application reads/writes; avoid requiring a composite
+  -- unique constraint on appointments that may not exist in older deployments.
+  foreign key (appointment_id)
+    references public.appointments(id) on delete cascade
 );
 
 create index if not exists appointment_notification_outbox_queue_idx
