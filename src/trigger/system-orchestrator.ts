@@ -46,7 +46,9 @@ async function processDueLimitlessFollowups(limit = 25) {
       // Cancel this stage; remaining stages will independently hit the same guard when due.
       const queuedAt = row.created_at ? new Date(row.created_at).getTime() : 0;
       if (lastInboundAt && queuedAt > 0 && new Date(lastInboundAt).getTime() > queuedAt) {
-        await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing");
+        const cancellation = await admin.from("follow_ups").update({ status: "cancelled" }).eq("id", row.id).eq("organization_id", organization.id).eq("status", "processing").select("id").maybeSingle();
+        if (cancellation.error) throw cancellation.error;
+        if (!cancellation.data) throw new Error("Could not confirm cancellation of the stale follow-up.");
         cancelled++;
         continue;
       }
