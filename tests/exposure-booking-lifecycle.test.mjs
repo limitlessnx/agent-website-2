@@ -94,10 +94,12 @@ test("booking confirmation action submits its own form without a global DOM quer
 
 test("photography metadata failure does not short-circuit booking WhatsApp confirmation", () => {
   const route = read("app/api/portal/bookings/[id]/route.ts");
-  const metadataFailure = route.indexOf('if (metadataError) return NextResponse.json');
-  const confirmationSend = route.indexOf('await sendWhatsAppMessage({');
+  const metadataUpdate = route.indexOf('const { data: metadata, error: metadataError }');
+  const metadataFailure = route.indexOf('if (metadataError) return NextResponse.json', metadataUpdate);
+  const confirmationSend = route.indexOf('await sendWhatsAppMessage({', metadataUpdate);
+  assert.ok(metadataUpdate >= 0);
   assert.equal(metadataFailure, -1);
-  assert.ok(confirmationSend > route.indexOf('const { data: metadata, error: metadataError }'));
+  assert.ok(confirmationSend > metadataUpdate);
   assert.match(route, /const warnings: string\[\] = \[\]/);
   assert.match(route, /warnings\.push\("Booking updated, but photography metadata could not be updated\."/);
   assert.match(route, /warnings\.length \? \{ warnings \} : \{\}/);
