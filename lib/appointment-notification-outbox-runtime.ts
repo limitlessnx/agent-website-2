@@ -16,7 +16,7 @@ export async function runAppointmentNotificationOutboxSweep() {
   const { data, error } = await admin.rpc("claim_appointment_notification_outbox", { p_limit: 20 });
   if (error) throw new Error("Unable to claim appointment notifications: " + error.message);
   const rows = (data || []) as OutboxRow[];
-  const results: Array<{ id: string; status: "sent" | "failed"; error?: string }> = [];
+  const results: Array<{ id: string; status: "sent" | "failed" | "uncertain"; error?: string }> = [];
 
   for (const row of rows) {
     try {
@@ -45,11 +45,11 @@ export async function runAppointmentNotificationOutboxSweep() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "WhatsApp confirmation failed.";
       await admin.from("appointment_notification_outbox").update({
-        status: "failed",
+        status: "uncertain",
         last_error: message.slice(0, 2000),
         updated_at: new Date().toISOString(),
       }).eq("id", row.id).eq("organization_id", row.organization_id).eq("status", "processing");
-      results.push({ id: row.id, status: "failed", error: message });
+      results.push({ id: row.id, status: "uncertain", error: message });
     }
   }
   return { claimed: rows.length, results };
