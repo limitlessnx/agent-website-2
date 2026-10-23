@@ -16,7 +16,7 @@ export async function runAppointmentNotificationOutboxSweep() {
   const { data, error } = await admin.rpc("claim_appointment_notification_outbox", { p_limit: 20 });
   if (error) throw new Error("Unable to claim appointment notifications: " + error.message);
   const rows = (data || []) as OutboxRow[];
-  const results: Array<{ id: string; status: "sent" | "failed" | "uncertain"; error?: string }> = [];
+  const results: Array<{ id: string; status: "sent" | "failed" | "uncertain" | "cancelled"; error?: string }> = [];
 
   for (const row of rows) {
     try {
@@ -37,7 +37,7 @@ export async function runAppointmentNotificationOutboxSweep() {
           updated_at: new Date().toISOString(),
         }).eq("id", row.id).eq("organization_id", row.organization_id).eq("status", "processing");
         if (cancelError) throw new Error("Unable to cancel stale booking notification: " + cancelError.message);
-        results.push({ id: row.id, status: "failed", error: "Booking was not eligible for confirmation delivery." });
+        results.push({ id: row.id, status: "cancelled", error: "Booking was not eligible for confirmation delivery." });
         continue;
       }
       const result = await sendWhatsAppMessage({
