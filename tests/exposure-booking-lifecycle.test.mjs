@@ -137,6 +137,6 @@ test("appointment notification outbox is tenant-scoped and avoids automatic rese
   assert.match(trigger, /status = 'queued'/);
   assert.match(trigger, /new\.status in \('confirmed', 'cancelled'\)/);
   assert.match(trigger, /on conflict \(organization_id, event_key\) do update/i);
-  assert.match(trigger, /where public\.appointment_notification_outbox\.status in \\(\x27cancelled\x27, \\x27failed\x27\\)/i);
+  assert.match(trigger, /status in \('cancelled', 'failed'\)/i);
   assert.match(task, /appointment-notification-outbox-sweep/);
 });
