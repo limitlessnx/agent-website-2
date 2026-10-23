@@ -57,8 +57,8 @@ export async function POST(request: Request) {
   const { data: appointment, error: appointmentError } = await admin.from("appointments").insert({ organization_id: session.organizationId, customer_id: customerId, appointment_system_id: appointmentSystem.id, status, title: title || packageName || "Studio session", start_at: startAt, end_at: endAt, customer_name: customer.full_name, customer_email: customer.email, customer_phone: customer.phone, location: String(body.location || "").trim().slice(0, 240) || null, notes: String(body.clientNotes || "").trim().slice(0, 2000) || null, provider: "dashboard", metadata: { source: "exposure_booking_form", catalogue_item_id: catalogueItemId, shoot_type: shootType } }).select("id,metadata").single();
   if (appointmentError || !appointment) return NextResponse.json({ error: appointmentError?.message || "Unable to create booking." }, { status: 400 });
   const { error: metadataError } = await admin.from("photography_booking_metadata").insert({ organization_id: session.organizationId, appointment_id: appointment.id, shoot_type: shootType, catalogue_item_id: catalogueItemId, assigned_photographer_id: assignedPhotographerId, studio_location: String(body.location || "").trim().slice(0, 240) || null, deposit_status: depositStatus, delivery_status: deliveryStatus, client_notes: String(body.clientNotes || "").trim().slice(0, 2000) });
-  if (metadataError) return NextResponse.json({ ok: true, appointment, warning: "Booking created, but photography metadata could not be attached." });
   let whatsappWarning: string | undefined;
+  if (metadataError) whatsappWarning = "Booking created, but photography metadata could not be attached.";
   if (status === "confirmed" && customer.phone) {
     try {
       const start = new Date(startAt);
@@ -80,5 +80,5 @@ export async function POST(request: Request) {
   } else if (status === "confirmed" && !customer.phone) {
     whatsappWarning = "Booking confirmed, but client has no phone number for WhatsApp confirmation.";
   }
-  return NextResponse.json({ ok: true, appointment, ...(whatsappWarning ? { warning: "Booking saved, but WhatsApp confirmation was not sent: " + whatsappWarning } : {}) }, { status: 201 });
+  return NextResponse.json({ ok: true, appointment, ...(whatsappWarning ? { warning: whatsappWarning } : {}) }, { status: 201 });
 }
