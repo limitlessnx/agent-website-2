@@ -3,7 +3,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Member = { id: string; userId: string; email: string | null; role: string };
-type Props = { bookingId: string; members: Member[]; initial: { status: string; startAt: string; endAt: string; location: string; notes: string; depositStatus: string; deliveryStatus: string; assignedPhotographerId: string; shootType: string } };
+type Props = { bookingId: string; members: Member[]; initial: { title: string; status: string; startAt: string; endAt: string; location: string; notes: string; depositStatus: string; deliveryStatus: string; assignedPhotographerId: string; shootType: string } };
 
 export default function BookingLifecycleForm({ bookingId, members, initial }: Props) {
   const router = useRouter();
@@ -51,7 +51,7 @@ export default function BookingLifecycleForm({ bookingId, members, initial }: Pr
     <div className="portal-field"><label>Photographer</label><select name="assignedPhotographerId" defaultValue={initial.assignedPhotographerId}><option value="">Unassigned</option>{members.map((member) => <option key={member.id} value={member.userId}>{member.email || member.userId} · {member.role}</option>)}</select><small>Only active workspace members can be assigned.</small></div>
     <div className="portal-field"><label>Studio location</label><input name="location" defaultValue={initial.location} /></div>
     <div className="portal-field exposure-form-wide"><label>Client notes</label><textarea name="clientNotes" defaultValue={initial.notes} rows={5} /></div>
-    <div className="exposure-form-actions"><button className="portal-button" type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button><button className="portal-button" type="button" onClick={() => { const select = document.querySelector<HTMLSelectElement>(`form select[name="status"]`); if (select) select.value = "confirmed"; const form = document.querySelector<HTMLFormElement>(".exposure-booking-form"); form?.requestSubmit(); }} disabled={busy || initial.status === "confirmed"}>Confirm booking</button><button className="portal-button secondary" type="button" onClick={() => void cancel()} disabled={busy || initial.status === "cancelled"}>Cancel booking</button><button className="portal-button secondary" type="button" onClick={() => void remove()} disabled={busy}>Delete booking</button></div>
+    <div className="exposure-form-actions"><button className="portal-button" type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button><button className="portal-button" type="button" onClick={() => { const select = document.querySelector<HTMLSelectElement>(`.exposure-booking-form select[name="status"]`); if (select) select.value = "confirmed"; const form = document.querySelector<HTMLFormElement>(".exposure-booking-form"); form?.requestSubmit(); }} disabled={busy || initial.status === "confirmed"}>Confirm booking</button><button className="portal-button secondary" type="button" onClick={() => void cancel()} disabled={busy || initial.status === "cancelled"}>Cancel booking</button><button className="portal-button secondary" type="button" onClick={() => void remove()} disabled={busy}>Delete booking</button></div>
     {message ? <p className="exposure-success" role="status">{message}</p> : null}{error ? <p className="exposure-error" role="alert">{error}</p> : null}
   </form>;
 }
