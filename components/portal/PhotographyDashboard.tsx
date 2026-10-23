@@ -67,10 +67,10 @@ export default function PhotographyDashboard({ data }: Props) {
     </section>
 
     <section className="exposure-metrics" aria-label="Photography business overview">
-      <article><span><Users size={16} /> New enquiries</span><strong>{activeCustomers.length}</strong><small>Client conversations</small></article>
-      <article><span><CalendarDays size={16} /> Bookings confirmed</span><strong>{confirmedBookings.length}</strong><small>Calendar records</small></article>
-      <article className={followUps.length ? "is-attention" : ""}><span><Activity size={16} /> Follow-ups due</span><strong>{followUps.length}</strong><small>{followUps.length ? "Needs attention" : "No follow-ups due"}</small></article>
-      <article><span><Bot size={16} /> Shoots this week</span><strong>{upcoming.length}</strong><small>{data.fluxCredits === null ? "Flux Credits unavailable" : `${data.fluxCredits.toLocaleString("en-NG")} credits left`}</small></article>
+      <article className="exposure-metric-card metric-enquiries"><span className="exposure-metric-icon"><Users size={17} /></span><div><small>New enquiries</small><strong>{activeCustomers.length}</strong><em>Client conversations</em></div></article>
+      <article className="exposure-metric-card metric-bookings"><span className="exposure-metric-icon"><CalendarDays size={17} /></span><div><small>Bookings confirmed</small><strong>{confirmedBookings.length}</strong><em>Calendar records</em></div></article>
+      <article className={`exposure-metric-card metric-followups${followUps.length ? " is-attention" : ""}`}><span className="exposure-metric-icon"><Activity size={17} /></span><div><small>Follow-ups due</small><strong>{followUps.length}</strong><em>{followUps.length ? "Needs attention" : "No follow-ups due"}</em></div></article>
+      <article className="exposure-metric-card metric-shoots"><span className="exposure-metric-icon"><Bot size={17} /></span><div><small>Shoots this week</small><strong>{upcoming.length}</strong><em>{data.fluxCredits === null ? "Flux Credits unavailable" : `${data.fluxCredits.toLocaleString("en-NG")} credits left`}</em></div></article>
     </section>
 
     <section className="exposure-actions" aria-label="Xposure quick actions">

@@ -233,3 +233,25 @@
   .exposure-action small{font-size:.58rem;white-space:normal;line-height:1.25}
   .exposure-catalogue-grid>a{flex-basis:82%;min-width:240px;}
 }
+
+
+/* Reference-style Xposure KPI cards */
+.exposure-metric-card{display:flex!important;align-items:center;gap:12px;min-width:0;padding:15px!important;border-color:rgba(183,145,247,.1)!important;background:linear-gradient(145deg,rgba(20,18,40,.92),rgba(9,11,20,.96))!important}
+.exposure-metric-card .exposure-metric-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:11px;color:#d8c5ff;background:rgba(139,92,246,.18)}
+.exposure-metric-card>div{display:grid;min-width:0;gap:3px}
+.exposure-metric-card small{order:0;margin:0;color:#a79bb7;font-size:.68rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exposure-metric-card strong{order:1;font-size:1.7rem;line-height:1;letter-spacing:-.06em}
+.exposure-metric-card em{order:2;margin:0;color:#7f758d;font-size:.61rem;font-style:normal;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exposure-metric-card.metric-enquiries .exposure-metric-icon{color:#d0b6ff;background:rgba(139,92,246,.2)}
+.exposure-metric-card.metric-bookings .exposure-metric-icon{color:#b8a7ff;background:rgba(83,70,200,.24)}
+.exposure-metric-card.metric-followups .exposure-metric-icon{color:#ffd078;background:rgba(184,122,26,.2)}
+.exposure-metric-card.metric-shoots .exposure-metric-icon{color:#83e2b4;background:rgba(32,139,94,.2)}
+.exposure-metric-card.metric-followups.is-attention{border-color:rgba(240,163,78,.38)!important;background:linear-gradient(145deg,rgba(56,35,17,.45),rgba(17,15,32,.9))!important}
+.exposure-metric-card.metric-followups.is-attention strong{color:#ffd08a}
+@media(max-width:430px){
+  .exposure-metric-card{gap:8px;padding:11px 9px!important}
+  .exposure-metric-card .exposure-metric-icon{width:31px;height:31px;flex-basis:31px;border-radius:9px}
+  .exposure-metric-card strong{font-size:1.4rem}
+  .exposure-metric-card small{font-size:.61rem}
+  .exposure-metric-card em{font-size:.56rem}
+}
