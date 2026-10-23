@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 type AppointmentConfirmationInput = {
   organizationId: string;
   appointmentId: string;
+  confirmationEventId: string;
   recipient: string;
   variables: Record<string, string | number | null | undefined>;
 };
@@ -15,7 +16,7 @@ export async function enqueueAppointmentConfirmation(input: AppointmentConfirmat
   const { error } = await admin.from("appointment_notification_outbox").upsert({
     organization_id: input.organizationId,
     appointment_id: input.appointmentId,
-    event_key: `appointment-confirmed:${input.appointmentId}`,
+    event_key: `appointment-confirmed:${input.appointmentId}:${input.confirmationEventId}`,
     channel: "whatsapp",
     purpose: "appointment_reminder",
     recipient: input.recipient,
