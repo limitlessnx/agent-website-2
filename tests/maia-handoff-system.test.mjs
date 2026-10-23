@@ -77,3 +77,15 @@ test("Two-way handoff requires approved customer contact sharing", () => {
   assert.ok(panel.includes("Share this WhatsApp number with customers during handoff"));
   assert.ok(operations.includes('notificationStatus==="sent"&&customerContactStatus==="sent"'));
 });
+
+test("Xposure Maia shares agent contact through the approved handoff template", () => {
+  const operations = read("lib/human-operations.ts");
+  const delivery = read("lib/whatsapp-delivery.ts");
+  assert.match(operations, /deliveryMode:"template"/);
+  assert.match(operations, /templatePurpose:"human_handoff_customer_contact"/);
+  assert.match(operations, /agent_name:sharedAgentName/);
+  assert.match(operations, /agent_phone:/);
+  assert.match(operations, /agent_link:/);
+  assert.match(delivery, /getTemplateConfig\(input\.organizationId,input\.templatePurpose\|\|"follow_up_outside_24h"\)/);
+  assert.match(operations, /customerResult\.ok&&customerResult\.providerMessageId/);
+});
