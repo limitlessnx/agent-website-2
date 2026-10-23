@@ -114,7 +114,7 @@ export async function queueLimitlessFollowup(args: { organizationId: string; age
 
 export async function queueLimitlessPropertyFollowupSequence(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; propertyContext: unknown }) {
   const admin = createAdminClient();
-  const phone = String(args.customerPhone || "").replace(/[^\\d]/g, "");
+  const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
   if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
 
   let existingLead: { id: string; opted_out: boolean | null } | null = null;
