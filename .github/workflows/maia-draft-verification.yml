@@ -18,5 +18,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: node --test tests/supabase-migration-ledger.test.mjs
       - run: npm run test:maia
       - run: npm run build
