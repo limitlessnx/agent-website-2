@@ -8,16 +8,18 @@ The snapshot in `migration-ledger.production-snapshot.json` records the remote v
 
 ## Confirmed Supabase branch failure
 
-The existing Supabase Branches dashboard workflow log identifies the exact failure:
+The Supabase Branches dashboard workflow log recorded:
 
 `ERROR Remote migration versions not found in local migrations directory.`
 
-This matches the read-only ledger comparison: production has 186 recorded versions, and the original `main` branch lacked 20 corresponding SQL files. The repair branch restores those filenames and adds CI checks. A rebase of the existing Supabase development branch was attempted after preparing the repair, but the branch replays the GitHub-connected `main` ref, which does not yet contain the repair, so the branch returned to `MIGRATIONS_FAILED`.
+This matches the read-only ledger comparison: production has 186 recorded versions, and the original `main` branch lacked 20 corresponding SQL files. The repair was merged to `main` on 2026-10-23 in commit `f20a11134f76e8b3861623f11922df37b9e79073`.
 
-The dashboard's current failure log is visible at:
+After the merge, a rebase was requested for the existing Supabase development branch (`eb49549a-3e7f-4f5d-a225-2502290f6816`). The rebase API returned success, but subsequent branch status checks continued to show `CREATING_PROJECT` and then `MIGRATIONS_FAILED`, with a stale update timestamp from 2026-07-23. The branch replay is therefore **not verified as successful**.
+
+At the time of this check, the Supabase dashboard displayed a technical-issue banner, and the public status page reported elevated Management API error rates across multiple regions. This may be affecting branch operations, but it is not proof of the branch's specific failure cause. The old workflow log predates the repair merge, so a fresh branch workflow log is still needed to establish whether the original missing-version error is gone or a different migration now fails.
+
+Dashboard:
 https://supabase.com/dashboard/project/tacxegmlppngnuvldojy/branches
-
-The repair cannot be validated by that production-connected branch until the repaired migration files are available on its configured Git ref. No production merge has been made, in keeping with the draft-only release gate.
 
 ## Explicitly pending migrations
 
@@ -39,4 +41,4 @@ The explicitly draft-only `20261003_limitless_maia_knowledge_source_of_truth.sql
 
 ## Safety boundary
 
-This branch only changes GitHub files and tests. No Supabase migration was applied, no database branch was created, and no production deployment or merge was performed. The ledger mismatch is reconciled in the draft branch; applying any of the nine pending migrations is a separate release decision.
+The ledger repair is now present on `main`, and automated regression checks were added. The development branch's replay remains unverified. No production migration was applied as part of this repair, no database branch was created, and no production schema merge was performed. Applying any of the nine pending migrations remains a separate release decision.
