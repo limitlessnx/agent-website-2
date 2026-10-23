@@ -33,7 +33,10 @@ export async function checkMaiaLiveCutoverReadiness(organizationId: string) {
     admin.from("reminder_templates").select("id", { count: "exact", head: true }).eq("organization_id", organizationId),
   ]);
 
-  const maia = (agents.data || []).find((agent) => String(agent.slug || "").toLowerCase() === "maia");
+  const eligibleAgents = agents.data || [];
+  const maia =
+    eligibleAgents.find((agent) => String(agent.slug || "").toLowerCase().startsWith("maia-")) ||
+    eligibleAgents.find((agent) => String(agent.slug || "").toLowerCase() === "maia");
   const maiaChannels = Array.isArray(maia?.communication_channels) ? maia.communication_channels.map(String) : [];
   const followPolicy = (followUpPolicies.data || [])[0];
   const checks: Check[] = [
