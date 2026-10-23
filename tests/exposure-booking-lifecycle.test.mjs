@@ -76,3 +76,18 @@ test("new booking status rejects unsupported values and booking form pins Lagos 
   assert.match(newForm, /formElement\.reset\(\)/);
   assert.match(detail, /timeZone: "Africa\/Lagos"/);
 });
+
+test("concurrent confirmation uses a conditional status update and returns conflict for stale requests", () => {
+  const route = read("app/api/portal/bookings/[id]/route.ts");
+  assert.match(route, /updateQuery = updateQuery\.eq\("status", appointment\.status\)/);
+  assert.match(route, /status changed in another request/);
+  assert.match(route, /status === "confirmed" && appointment\.status !== "confirmed"/);
+});
+
+test("booking confirmation action submits its own form without a global DOM query or timer", () => {
+  const form = read("app/portal/appointments/BookingLifecycleForm.tsx");
+  assert.match(form, /useRef<HTMLFormElement>\(null\)/);
+  assert.match(form, /formRef\.current\.requestSubmit\(\)/);
+  assert.doesNotMatch(form, /document\.querySelector<HTMLFormElement>/);
+  assert.doesNotMatch(form, /setTimeout\(/);
+});
