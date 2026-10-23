@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - draft/maia-dashboard-final-pass
+      - draft/xposure-phase-2-client-profiles
   pull_request:
     branches:
       - main
@@ -19,4 +20,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:maia
+      - run: node --test tests/exposure-phase-2-client-profiles.test.mjs
       - run: npm run build
