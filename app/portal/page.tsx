@@ -27,6 +27,8 @@ type XposureCategoryRow = { id: string; name: string; cover_image_url: string | 
 type XposureItemRow = { category_id: string };
 type XposureCustomerRow = { id: string; full_name: string | null; phone: string | null; email: string | null; status: string | null; metadata: unknown };
 type XposureBookingRow = { id: string; title: string | null; start_at: string | null; status: string | null; customer_name: string | null; location: string | null };
+type XposureBookingMetadataRow = { appointment_id: string; assigned_photographer_id: string | null; deposit_status: string | null; delivery_status: string | null };
+type WhatsAppStatus = { status?: string | null; sender_phone_e164?: string | null };
 type EvaluationDetails = { specificity?: string; details?: string };
 type EvaluationRecord = { pricingType?: string; summary?: string; score?: number; opportunity?: string; recommendedSystem?: string; recommendedPlan?: string; requirements?: EvaluationDetails };
 
@@ -57,11 +59,19 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   if (evaluationId) {
     await admin.from("ai_business_evaluation_sessions").update({ organization_id: session.organizationId, user_id: session.userId, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", evaluationId).eq("status", "evaluated").or(`organization_id.is.null,organization_id.eq.${session.organizationId}`);
   }
-  const [summary, wallet, subscription, whatsappBinding, latestEvaluation] = await Promise.all([
+  const [summary, wallet, subscription, whatsappStatus, latestEvaluation] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
     getActiveFluxSubscription(session.organizationId).catch(() => null),
-    (async () => { try { const { data } = await admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id",session.organizationId).maybeSingle(); return data; } catch { return null; } })(),
+    (async (): Promise<WhatsAppStatus | null> => {
+      try {
+        const [{ data: binding }, { data: integration }] = await Promise.all([
+          admin.from("whatsapp_twilio_bindings").select("status,sender_phone_e164").eq("organization_id", session.organizationId).maybeSingle(),
+          admin.from("organization_integrations").select("provider,status").eq("organization_id", session.organizationId).in("provider", ["whatsapp", "whatsapp_business"]).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        ]);
+        return { status: binding?.status === "connected" || integration?.status === "connected" ? "connected" : binding?.status || integration?.status || null, sender_phone_e164: binding?.sender_phone_e164 || null };
+      } catch { return null; }
+    })(),
     (async () => { try { const { data } = await admin.from("ai_business_evaluation_sessions").select("id,status,context,evaluation,created_at,updated_at").eq("organization_id",session.organizationId).eq("status","evaluated").order("updated_at",{ascending:false}).limit(1).maybeSingle(); return data; } catch { return null; } })(),
   ]);
 
@@ -89,16 +99,18 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
       agents: summary.agents,
       workflows: summary.workflows,
       runs: summary.runs,
-      whatsappConnected: whatsappBinding?.status === "connected",
+      whatsappConnected: whatsappStatus?.status === "connected",
     }} />;
   }
   if (experience.slug === "photography-studio") {
-    const [customers, bookings, catalogueCategories, catalogueItems] = await Promise.all([
+    const [customers, bookings, bookingMetadata, catalogueCategories, catalogueItems] = await Promise.all([
       admin.from("crm_customers").select("id,full_name,phone,email,status,metadata").eq("organization_id", session.organizationId).order("updated_at", { ascending: false }).limit(250),
       admin.from("appointments").select("id,title,start_at,status,customer_name,location").eq("organization_id", session.organizationId).order("start_at", { ascending: true }).limit(75),
+      (async () => { try { return await admin.from("photography_booking_metadata").select("appointment_id,assigned_photographer_id,deposit_status,delivery_status").eq("organization_id", session.organizationId).limit(75) as { data: XposureBookingMetadataRow[] | null }; } catch { return { data: null as XposureBookingMetadataRow[] | null }; } })(),
       (async () => { try { return await admin.from("photography_catalogue_categories").select("id,name,cover_image_url,display_order").eq("organization_id", session.organizationId).eq("status", "active").order("display_order", { ascending: true }) as { data: XposureCategoryRow[] | null }; } catch { return { data: null as XposureCategoryRow[] | null }; } })(),
       (async () => { try { return await admin.from("photography_catalogue_items").select("category_id").eq("organization_id", session.organizationId).eq("status", "active") as { data: XposureItemRow[] | null }; } catch { return { data: null as XposureItemRow[] | null }; } })(),
     ]);
+    const bookingMetadataById = new Map((bookingMetadata.data || []).map((item) => [String(item.appointment_id), item]));
     const categoryCounts = new Map<string, number>();
     for (const item of catalogueItems.data || []) categoryCounts.set(String(item.category_id), (categoryCounts.get(String(item.category_id)) || 0) + 1);
     const fallbackCategories = [["Portraits", "/exposure/portraits.jpg"], ["Weddings", "/exposure/weddings.jpg"], ["Maternity", "/exposure/maternity.jpg"], ["Birthdays", "/exposure/birthdays.jpg"], ["Family", "/exposure/family.jpg"], ["Creative sets", "/exposure/creative-sets.jpg"]] as const;
@@ -108,7 +120,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
       planCode: wallet?.planCode || null,
       fluxCredits: wallet?.balance ?? null,
       fluxCreditPercentUsed: wallet?.percentUsed ?? 0,
-      whatsappConnected: whatsappBinding?.status === "connected",
+      whatsappConnected: whatsappStatus?.status === "connected",
       customers: (customers.data || [] as XposureCustomerRow[]).map((customer) => ({
         id: String(customer.id),
         full_name: String(customer.full_name || "Unnamed client"),
@@ -124,6 +136,10 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
         status: String(booking.status || "pending"),
         customer_name: booking.customer_name ? String(booking.customer_name) : null,
         location: booking.location ? String(booking.location) : null,
+        assigned_photographer_id: bookingMetadataById.get(String(booking.id))?.assigned_photographer_id || null,
+        deposit_status: bookingMetadataById.get(String(booking.id))?.deposit_status || null,
+        delivery_status: bookingMetadataById.get(String(booking.id))?.delivery_status || null,
+        metadataLoaded: bookingMetadataById.has(String(booking.id)),
       })),
       agents: summary.agents,
       workflows: summary.workflows,
@@ -197,7 +213,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
 
       {latestEvaluation ? (() => { const ev = (latestEvaluation.evaluation || {}) as EvaluationRecord; const ctx = (latestEvaluation.context || {}) as { requirements?: EvaluationDetails }; const custom=ev.pricingType==="custom"; return <section className="portal-card" aria-label="Latest AI evaluation"><div className="portal-card-head"><div><p className="portal-kicker">Business AI evaluation</p><h2>Your latest evaluation</h2><p>{ev.summary || "Your Fluxknight evaluation has been saved to this workspace."}</p></div><span className="portal-health-pill healthy"><span /><div><small>Opportunity</small><strong>{typeof ev.score==="number"?`${ev.score}/100`:String(ev.opportunity||"Evaluated")}</strong></div></span></div><div className="portal-business-metrics"><article className="portal-business-metric"><span>Recommended system</span><strong>{ev.recommendedSystem || "Pending"}</strong></article><article className="portal-business-metric"><span>Recommendation</span><strong>{custom ? "Custom" : String(ev.recommendedPlan || "Standard")}</strong></article><article className="portal-business-metric"><span>Requirements</span><strong>{ctx.requirements?.specificity === "custom" ? "Custom requested" : ctx.requirements?.specificity === "specific" ? "Specific workflow" : "Recommendation-led"}</strong></article></div>{ctx.requirements?.details ? <div className="portal-clear-state"><span><Workflow size={19}/></span><div><strong>What you want Fluxknight to do</strong><p>{String(ctx.requirements.details)}</p></div></div> : null}</section>; })() : null}
 
-      {summary.onboarding?.status === "submitted" && whatsappBinding?.status !== "connected" ? (
+      {summary.onboarding?.status === "submitted" && whatsappStatus?.status !== "connected" ? (
         <section className="portal-card portal-activation-banner" aria-label="WhatsApp setup">
           <div>
             <p className="portal-kicker">Next step</p>

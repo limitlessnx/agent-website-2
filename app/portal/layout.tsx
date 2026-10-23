@@ -51,7 +51,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
         <header className="portal-topbar"><div><span>{experience.name} workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><div className="portal-topbar-actions">{session.isAdminPreview ? <Link className="portal-button secondary" href="/dashboard/preview/exit">Exit tenant preview</Link> : null}{session.role === "manager" ? <ManagerWorkspaceSwitcher organizations={managerOrganizations} currentOrganizationId={session.organizationId}/> : null}{session.isAdminPreview ? null : <ClientLogoutButton/>}</div></header>
         {children}
       </section>
-      <TenantLeoFloatingButton/>
+      {session.isAdminPreview ? null : <TenantLeoFloatingButton/>}
     </div>
   </LeoConversationProvider>;
 }

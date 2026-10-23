@@ -78,7 +78,7 @@ export async function setAdminSession(session: AdminSession) {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, createSessionToken(session), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: SESSION_TTL_SECONDS,
     path: "/",

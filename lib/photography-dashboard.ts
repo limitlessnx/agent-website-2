@@ -16,6 +16,10 @@ export type PhotographyBooking = {
   status: string;
   customer_name: string | null;
   location: string | null;
+  assigned_photographer_id?: string | null;
+  deposit_status?: string | null;
+  delivery_status?: string | null;
+  metadataLoaded?: boolean;
 };
 
 export type PhotographyDashboardData = {

@@ -91,3 +91,115 @@
 .exposure-booking-form select,.exposure-booking-form input,.exposure-booking-form textarea{width:100%;padding:12px 13px;border-radius:10px;border:1px solid rgba(183,145,247,.15);background:rgba(7,4,15,.7);color:#fff;font:inherit}.exposure-booking-form textarea{resize:vertical}.exposure-booking-form select{appearance:auto}.exposure-calendar-booking>div{display:grid;gap:3px}.exposure-calendar-booking>div small{color:#8b8099;font-size:.7rem}.exposure-calendar-booking>div span{color:#b9aec7;font-size:.78rem}
 
 .exposure-calendar-booking{color:inherit;text-decoration:none;transition:border-color .18s ease,transform .18s ease}.exposure-calendar-booking:hover{border-color:rgba(183,145,247,.35);transform:translateY(-1px)}
+
+/* Xposure mobile polish: keep the preview shell compact and prevent overlays from covering content. */
+@media(max-width:820px){
+  .portal-main{padding:64px 12px 28px}
+  .portal-topbar{min-height:42px;margin-bottom:12px;padding:0 2px}
+  .portal-topbar>div{padding-left:48px;max-width:58%}
+  .portal-topbar span{font-size:.58rem;letter-spacing:.09em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .portal-topbar strong{font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .portal-topbar-actions{max-width:42%}
+  .portal-topbar-actions .portal-button{padding:8px 9px;font-size:.66rem;line-height:1.1;text-align:center}
+  .exposure-dashboard{gap:12px}
+  .exposure-hero{padding:18px;gap:14px;border-radius:17px}
+  .exposure-hero h1{font-size:1.8rem;line-height:1.08}
+  .exposure-hero p:not(.portal-kicker){font-size:.8rem}
+  .exposure-connect{width:100%;min-width:0;padding:11px 12px}
+  .exposure-setup{padding:14px;gap:12px}
+  .exposure-setup .portal-button{width:100%}
+  .exposure-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .exposure-metrics article{min-height:112px;padding:13px;border-radius:13px;gap:7px}
+  .exposure-metrics span{font-size:.68rem;line-height:1.25}
+  .exposure-metrics strong{font-size:1.55rem}
+  .exposure-metrics small{font-size:.65rem}
+  .exposure-actions{grid-template-columns:1fr;gap:8px}
+  .exposure-action{padding:12px 11px}
+  .exposure-grid{grid-template-columns:1fr;gap:12px}
+  .exposure-panel{padding:14px;border-radius:14px}
+  .exposure-panel>header{margin-bottom:12px}
+  .exposure-panel h2{font-size:.98rem}
+  .exposure-panel header p:not(.portal-kicker){font-size:.7rem}
+  .exposure-booking{grid-template-columns:52px minmax(0,1fr);gap:8px;padding:10px}
+  .exposure-booking em{grid-column:2;justify-self:start}
+  .exposure-pipeline{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .exposure-pipeline-column{padding:9px}
+  .exposure-catalogue-grid{grid-template-columns:1fr;gap:8px}
+  .exposure-footer-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+  .exposure-footer-row>div{margin-right:0}
+  .exposure-footer-row .portal-button{grid-column:1/-1;width:100%}
+}
+
+@media(max-width:430px){
+  .portal-mobile-toggle{left:10px;top:10px;width:40px;height:40px}
+  .portal-main{padding-left:10px;padding-right:10px}
+  .portal-topbar>div{padding-left:44px}
+  .portal-topbar-actions .portal-button{max-width:92px}
+  .exposure-hero h1{font-size:1.58rem}
+  .exposure-pipeline{grid-template-columns:1fr}
+}
+
+/* Xposure command-center refinement */
+.exposure-dashboard{max-width:1440px;margin-inline:auto;min-width:0}
+.exposure-dashboard .exposure-hero,.exposure-dashboard .exposure-panel,.exposure-dashboard .exposure-setup,.exposure-dashboard .exposure-footer-row{box-shadow:none}
+.exposure-hero{border-color:rgba(183,145,247,.12);background:linear-gradient(135deg,rgba(24,20,48,.98),rgba(8,10,18,.98))}
+.exposure-hero h1{max-width:760px}
+.exposure-metrics article{border-color:rgba(183,145,247,.1);background:rgba(17,15,32,.82)}
+.exposure-metrics article.is-attention{border-color:rgba(240,163,78,.35);background:linear-gradient(145deg,rgba(56,35,17,.4),rgba(17,15,32,.88))}
+.exposure-metrics article.is-attention span,.exposure-metrics article.is-attention strong{color:#ffd08a}
+.exposure-actions{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.exposure-action{min-height:70px;border-color:rgba(183,145,247,.1);background:rgba(17,15,32,.74);transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.exposure-action.is-primary{border-color:rgba(164,108,255,.48);background:linear-gradient(135deg,rgba(122,64,233,.34),rgba(52,27,112,.3))}
+.exposure-action.is-primary .exposure-action-icon{color:#fff;background:linear-gradient(135deg,#985cff,#6831d4)}
+.exposure-action:focus-visible,.exposure-booking:focus-visible,.exposure-attention-item:focus-visible,.exposure-pipeline-column>a:focus-visible,.exposure-catalogue-grid>a:focus-visible{outline:2px solid #c7a6ff;outline-offset:2px}
+.exposure-priority-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:15px;min-width:0}
+.exposure-priority-grid>.exposure-panel{min-width:0}
+.exposure-booking{color:inherit;text-decoration:none;transition:border-color .18s ease,background .18s ease}
+.exposure-booking:hover{border-color:rgba(183,145,247,.28);background:rgba(139,92,246,.055)}
+.exposure-attention-panel{border-color:rgba(240,163,78,.2)}
+.exposure-attention-list{display:grid;gap:8px}
+.exposure-attention-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 10px;border:1px solid rgba(240,163,78,.16);border-radius:11px;color:#fff;text-decoration:none;background:rgba(240,163,78,.045)}
+.exposure-attention-item:hover{border-color:rgba(240,163,78,.38);background:rgba(240,163,78,.08)}
+.exposure-attention-icon{display:grid;place-items:center;width:31px;height:31px;border-radius:9px;color:#ffd08a;background:rgba(240,163,78,.12)}
+.exposure-attention-item strong,.exposure-attention-item small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exposure-attention-item strong{font-size:.76rem}.exposure-attention-item small{margin-top:3px;color:#b6a797;font-size:.65rem}
+.exposure-empty{display:flex;align-items:center;gap:8px;padding:10px 0;color:#a79cad;font-size:.78rem}
+.exposure-maia{border-color:rgba(183,145,247,.1)}
+.exposure-pipeline-panel{overflow:hidden}
+.exposure-pipeline-column{background:rgba(17,15,32,.62)}
+.exposure-supporting-panel{border-color:rgba(183,145,247,.08);background:rgba(15,13,27,.72)}
+.exposure-footer-row{border-color:rgba(183,145,247,.08)}
+@media(max-width:1100px){
+  .exposure-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .exposure-action.is-primary{min-height:76px}
+}
+@media(max-width:820px){
+  .exposure-priority-grid{grid-template-columns:1fr}
+  .exposure-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .exposure-action{min-height:66px;padding:11px 10px}
+  .exposure-action.is-primary{min-height:72px}
+  .exposure-action strong{font-size:.74rem}
+  .exposure-action small{font-size:.62rem}
+  .exposure-panel>header{align-items:flex-start}
+}
+@media(max-width:600px){
+  .exposure-dashboard{overflow:hidden}
+  .exposure-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .exposure-action{grid-template-columns:auto minmax(0,1fr);min-width:0;min-height:64px;padding:10px 9px}
+  .exposure-action>svg{display:none}
+  .exposure-action-icon{width:29px;height:29px}
+  .exposure-action small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exposure-priority-grid{gap:10px}
+  .exposure-attention-item{padding:11px 8px}
+  .exposure-pipeline{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(235px,82%);grid-template-columns:none;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;padding-bottom:4px}
+  .exposure-pipeline-column{scroll-snap-align:start}
+  .exposure-pipeline::-webkit-scrollbar{height:5px}.exposure-pipeline::-webkit-scrollbar-thumb{background:rgba(183,145,247,.35);border-radius:999px}
+  .exposure-supporting-panel{margin-top:0}
+}
+@media(max-width:430px){
+  .exposure-metrics{grid-template-columns:1fr}
+  .exposure-actions{grid-template-columns:1fr}
+  .exposure-action,.exposure-action.is-primary{min-height:58px}
+  .exposure-action small{white-space:normal}
+  .exposure-hero h1{max-width:100%}
+}

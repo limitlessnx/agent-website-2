@@ -103,11 +103,11 @@ export function createClientSessionToken(session:ClientSession){return createSig
 export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId||!session.membershipId)return null;return session}
 export function createAdminTenantPreviewToken(organizationId:string){return createSignedToken({organizationId,issuedAt:Date.now(),isAdminPreview:true})}
 function verifyAdminTenantPreviewToken(token?:string){const preview=readSignedToken<{organizationId:string;issuedAt:number;isAdminPreview:true}>(token,CLIENT_ADMIN_PREVIEW_TTL);return preview?.isAdminPreview&&preview.organizationId?preview:null}
-export async function setAdminTenantPreview(organizationId:string){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,createAdminTenantPreviewToken(organizationId),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_ADMIN_PREVIEW_TTL,path:"/portal"})}
-export async function clearAdminTenantPreview(){const store=await cookies();store.delete(CLIENT_ADMIN_PREVIEW_COOKIE)}
-export async function setClientSession(session:ClientSession){const store=await cookies();store.set(CLIENT_COOKIE,createClientSessionToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
-export async function setPendingClientSetupSession(session:PendingClientSetupSession){const store=await cookies();store.set(CLIENT_SETUP_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SETUP_TTL,path:"/"})}
-export async function setClientOAuthContext(context:ClientOAuthContext){const store=await cookies();store.set(CLIENT_OAUTH_CONTEXT_COOKIE,createSignedToken(context),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_OAUTH_CONTEXT_TTL,path:"/"})}
+export async function setAdminTenantPreview(organizationId:string){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,createAdminTenantPreviewToken(organizationId),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_ADMIN_PREVIEW_TTL,path:"/"})}
+export async function clearAdminTenantPreview(){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,"",{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:0,path:"/"})}
+export async function setClientSession(session:ClientSession){const store=await cookies();store.set(CLIENT_COOKIE,createClientSessionToken(session),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
+export async function setPendingClientSetupSession(session:PendingClientSetupSession){const store=await cookies();store.set(CLIENT_SETUP_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SETUP_TTL,path:"/"})}
+export async function setClientOAuthContext(context:ClientOAuthContext){const store=await cookies();store.set(CLIENT_OAUTH_CONTEXT_COOKIE,createSignedToken(context),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_OAUTH_CONTEXT_TTL,path:"/"})}
 export async function getClientOAuthContext(){const store=await cookies();const context=readSignedToken<ClientOAuthContext>(store.get(CLIENT_OAUTH_CONTEXT_COOKIE)?.value,CLIENT_OAUTH_CONTEXT_TTL);if(!context?.nextPath)return null;return context}
 export async function clearClientOAuthContext(){const store=await cookies();store.delete(CLIENT_OAUTH_CONTEXT_COOKIE)}
 export async function getClientAccountMode(userId:string):Promise<"organization"|"manager"|null>{
@@ -120,30 +120,36 @@ export async function setClientAccountMode(userId:string,accountMode:"organizati
    await supabaseServerRequest(`client_account_profiles?user_id=eq.${encodeURIComponent(userId)}`,{method:"PATCH",body:JSON.stringify({account_mode:accountMode,updated_at:new Date().toISOString()})});
  });
 }
-export async function setManagerSession(session:ClientManagerSession){const store=await cookies();store.set(CLIENT_MANAGER_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
+export async function setManagerSession(session:ClientManagerSession){const store=await cookies();store.set(CLIENT_MANAGER_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
 export async function getManagerSession(){const store=await cookies();const session=readSignedToken<ClientManagerSession>(store.get(CLIENT_MANAGER_COOKIE)?.value,CLIENT_SESSION_TTL);return session?.userId&&session?.email?session:null}
 export async function clearManagerSession(){const store=await cookies();store.delete(CLIENT_MANAGER_COOKIE)}
-export async function setPendingPasswordReset(session:PendingPasswordReset){const store=await cookies();store.set(CLIENT_PASSWORD_RESET_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_PASSWORD_RESET_TTL,path:"/"})}
+export async function setPendingPasswordReset(session:PendingPasswordReset){const store=await cookies();store.set(CLIENT_PASSWORD_RESET_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_PASSWORD_RESET_TTL,path:"/"})}
 export async function getPendingPasswordReset(){const store=await cookies();const session=readSignedToken<PendingPasswordReset>(store.get(CLIENT_PASSWORD_RESET_COOKIE)?.value,CLIENT_PASSWORD_RESET_TTL);if(!session?.accessToken)return null;return session}
 export async function clearPendingPasswordReset(){const store=await cookies();store.delete(CLIENT_PASSWORD_RESET_COOKIE)}
 export async function getPendingClientSetupSession(){const store=await cookies();const session=readSignedToken<PendingClientSetupSession>(store.get(CLIENT_SETUP_COOKIE)?.value,CLIENT_SETUP_TTL);if(!session?.userId||!session.email)return null;return session}
 export async function clearPendingClientSetupSession(){const store=await cookies();store.delete(CLIENT_SETUP_COOKIE)}
+async function getAdminPreviewSession(store: Awaited<ReturnType<typeof cookies>>): Promise<ClientSession | null> {
+ const preview=verifyAdminTenantPreviewToken(store.get(CLIENT_ADMIN_PREVIEW_COOKIE)?.value);
+ const admin=preview?await getAdminSession():null;
+ if(!preview||!admin)return null;
+ const organizations=await supabaseServerRequest<Array<{id:string;slug:string}>>(`organizations?id=eq.${encodeURIComponent(preview.organizationId)}&select=id,slug&limit=1`).catch(()=>[]);
+ const organization=organizations[0];
+ if(!organization)return null;
+ return {userId:`admin-preview:${admin.email}`,email:admin.email,organizationId:organization.id,organizationSlug:organization.slug,membershipId:`admin-preview:${organization.id}`,role:"super-admin-preview",issuedAt:preview.issuedAt,isAdminPreview:true};
+}
 export async function getClientSession(){
  const store=await cookies();
+ const preview=await getAdminPreviewSession(store);
+ if(preview)return preview;
  const signed=verifyClientSessionToken(store.get(CLIENT_COOKIE)?.value);
  if(!signed){
-  const preview=verifyAdminTenantPreviewToken(store.get(CLIENT_ADMIN_PREVIEW_COOKIE)?.value);
-  const admin=preview?await getAdminSession():null;
-  if(preview&&admin){
-   const organizations=await supabaseServerRequest<Array<{id:string;slug:string}>>(`organizations?id=eq.${encodeURIComponent(preview.organizationId)}&select=id,slug&limit=1`).catch(()=>[]);
-   const organization=organizations[0];
-   if(organization)return {userId:`admin-preview:${admin.email}`,email:admin.email,organizationId:organization.id,organizationSlug:organization.slug,membershipId:`admin-preview:${organization.id}`,role:"super-admin-preview",issuedAt:preview.issuedAt,isAdminPreview:true};
-  }
   return null;
  }
  const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?id=eq.${encodeURIComponent(signed.membershipId)}&user_id=eq.${encodeURIComponent(signed.userId)}&organization_id=eq.${encodeURIComponent(signed.organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);
  const live=rows[0]?membershipSnapshot(rows[0]):null;
- if(!live)return null;
+ if(!live){
+  return null;
+ }
  return {
    ...signed,
    organizationId:live.organizationId,
