@@ -57,7 +57,7 @@ begin
   ) values (
     new.organization_id,
     new.id,
-    'appointment-confirmed:' || new.id::text,
+    'appointment-confirmed:' || new.id::text || ':' || coalesce(nullif(new.metadata->>'confirmation_event_id', ''), new.id::text),
     'whatsapp',
     'appointment_reminder',
     trim(new.customer_phone),
