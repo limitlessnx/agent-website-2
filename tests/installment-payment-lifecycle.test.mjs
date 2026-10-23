@@ -40,7 +40,7 @@ test("Phase 2 installment form requires a start date and supports an optional en
 });
 
 test("Phase 2 schema distinguishes payment type and enforces end-date ordering", () => {
-  const migration = read("supabase/migrations/20261006190000_property_payment_phase1_3.sql");
+  const migration = read("supabase/migrations/20261006212905_property_payment_phase1_3.sql");
   assert.match(migration, /payment_type text not null default 'installment'/);
   assert.match(migration, /payment_type in \('installment','outright'\)/);
   assert.match(migration, /end_at timestamptz/);
@@ -50,7 +50,7 @@ test("Phase 2 schema distinguishes payment type and enforces end-date ordering",
 });
 
 test("Phase 2 balance lifecycle remains payment-ledger authoritative", () => {
-  const migration = read("supabase/migrations/20261006190000_property_payment_phase1_3.sql");
+  const migration = read("supabase/migrations/20261006212905_property_payment_phase1_3.sql");
   assert.match(migration, /create or replace function public\.sync_payment_plan_total/);
   assert.match(migration, /select coalesce\(sum\(amount\), 0\)/);
   assert.match(migration, /status = case/);
@@ -61,7 +61,7 @@ test("Phase 2 balance lifecycle remains payment-ledger authoritative", () => {
 test("Phase 3 supports weekly, bi-weekly and monthly cadence", () => {
   const page = read("app/dashboard/limitless/payments/installments/page.tsx");
   const actions = read("app/dashboard/limitless/payments/actions.ts");
-  const migration = read("supabase/migrations/20261006190000_property_payment_phase1_3.sql");
+  const migration = read("supabase/migrations/20261006212905_property_payment_phase1_3.sql");
   for (const cadence of ["weekly", "biweekly", "monthly"]) {
     assert.match(page, new RegExp(`value="${cadence}"`));
     assert.match(actions, new RegExp(`"${cadence}"`));
@@ -84,7 +84,7 @@ test("Phase 3 reminder runtime is tenant independent and installment-only", () =
 
 test("Phase 3 uses the approved seven-variable Meta template contract", () => {
   const cron = read("lib/limitless-installment-reminder-runtime.ts");
-  const activation = read("supabase/migrations/20261007150000_fix_limitless_installment_reminder_template_contract.sql");
+  const activation = read("supabase/migrations/20261007070222_activate_limitless_installment_whatsapp_template_20261007.sql");
   assert.match(cron, /client_name: String\(plan\.client_name/);
   assert.match(cron, /property_title: String\(plan\.property_title/);
   assert.match(cron, /amount_paid: formatMoney/);
@@ -145,12 +145,12 @@ test("Friendly error boundaries cover global, dashboard, and tenant-scoped works
 });
 
 test("Phase 3 payment intent has a configured human handover target", () => {
-  const migration = read("supabase/migrations/20261007150000_fix_limitless_installment_reminder_template_contract.sql");
+  const migration = read("supabase/migrations/20261007070222_activate_limitless_installment_whatsapp_template_20261007.sql");
   assert.match(migration, /handover_agent_phone.*2348127753308/);
 });
 
 test("Phase 3 payment completion stops reminders", () => {
-  const migration = read("supabase/migrations/20261006190000_property_payment_phase1_3.sql");
+  const migration = read("supabase/migrations/20261006212905_property_payment_phase1_3.sql");
   assert.match(migration, /paid >= agreed_price/);
   assert.match(migration, /then false/);
   assert.match(migration, /then null/);
