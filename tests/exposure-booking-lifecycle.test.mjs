@@ -63,3 +63,16 @@ test("new studio bookings can remain requested without sending confirmation", ()
   assert.match(form, /Confirm now/);
   assert.match(form, /status: String\(form\.get\("status"\) \|\| "requested"\)/);
 });
+
+
+test("new booking status rejects unsupported values and booking form pins Lagos wall time", () => {
+  const createRoute = read("app/api/portal/bookings/route.ts");
+  const newForm = read("app/portal/appointments/NewBookingForm.tsx");
+  const detail = read("app/portal/appointments/[id]/page.tsx");
+  assert.match(createRoute, /New bookings must be requested or confirmed/);
+  assert.match(createRoute, /!\["requested", "confirmed"\]\.includes\(body\.status\)/);
+  assert.match(newForm, /toLagosIso/);
+  assert.match(newForm, /\+01:00/);
+  assert.match(newForm, /formElement\.reset\(\)/);
+  assert.match(detail, /timeZone: "Africa\/Lagos"/);
+});
