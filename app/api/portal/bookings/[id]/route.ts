@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findPhotographerConflict } from "@/lib/photography-booking-conflicts";
+import { enqueueAppointmentConfirmation } from "@/lib/appointment-notification-outbox";
 
 const appointmentStatuses = new Set(["requested", "confirmed", "rescheduled", "cancelled"]);
 const depositStatuses = new Set(["not_required", "pending", "partial", "paid", "refunded", "failed"]);
@@ -19,11 +21,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const admin = createAdminClient();
-  const { data: appointment } = await admin.from("appointments").select("id,start_at,end_at,status").eq("organization_id", session.organizationId).eq("id", id).maybeSingle();
+  const { data: appointment } = await admin.from("appointments").select("id,start_at,end_at,status,title,customer_name,customer_phone,metadata").eq("organization_id", session.organizationId).eq("id", id).maybeSingle();
   if (!appointment) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   const startAt = Object.prototype.hasOwnProperty.call(body, "startAt") ? iso(body.startAt) : undefined;
   const endAt = Object.prototype.hasOwnProperty.call(body, "endAt") ? iso(body.endAt) : undefined;
-  if (startAt === null || endAt === null) return NextResponse.json({ error: "Booking times must be valid." }, { status: 400 });
+  if (startAt === null || (endAt === null && String(body.endAt || "").trim() !== "")) return NextResponse.json({ error: "Booking times must be valid." }, { status: 400 });
   if (startAt && endAt && new Date(endAt) <= new Date(startAt)) return NextResponse.json({ error: "End time must be after start time." }, { status: 400 });
   const status = Object.prototype.hasOwnProperty.call(body, "status") ? String(body.status || "") : undefined;
   const depositStatus = Object.prototype.hasOwnProperty.call(body, "depositStatus") ? String(body.depositStatus || "") : undefined;
@@ -44,20 +46,95 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: effectivePhotographerId, startAt: effectiveStartAt, endAt: effectiveEndAt, excludeAppointmentId: id });
     if (conflict) return NextResponse.json({ error: `Photographer is already assigned to “${conflict.title || "another session"}” during this time.`, conflict: { appointmentId: conflict.id, startAt: conflict.start_at, endAt: conflict.end_at } }, { status: 409 });
   }
+  const becameConfirmed = status === "confirmed" && appointment.status !== "confirmed";
+  const previousMetadata = appointment.metadata && typeof appointment.metadata === "object" ? appointment.metadata as Record<string, unknown> : {};
+  const confirmationEventId = becameConfirmed ? randomUUID() : null;
   const appointmentPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (confirmationEventId) appointmentPatch.metadata = { ...previousMetadata, confirmation_event_id: confirmationEventId };
   if (status) appointmentPatch.status = status;
+  if (Object.prototype.hasOwnProperty.call(body, "title")) { const title = String(body.title || "").trim().slice(0, 180); if (!title) return NextResponse.json({ error: "Booking title is required." }, { status: 400 }); appointmentPatch.title = title; }
   if (startAt !== undefined) appointmentPatch.start_at = startAt;
   if (endAt !== undefined) appointmentPatch.end_at = endAt;
   if (Object.prototype.hasOwnProperty.call(body, "location")) appointmentPatch.location = String(body.location || "").trim().slice(0, 240) || null;
   if (Object.prototype.hasOwnProperty.call(body, "clientNotes")) appointmentPatch.notes = String(body.clientNotes || "").trim().slice(0, 2000) || null;
-  const { data: updated, error: updateError } = await admin.from("appointments").update(appointmentPatch).eq("organization_id", session.organizationId).eq("id", id).select("id,status,start_at,end_at,location,notes").single();
-  if (updateError || !updated) return NextResponse.json({ error: updateError?.message || "Unable to update booking." }, { status: 400 });
+  let updateQuery = admin.from("appointments").update(appointmentPatch).eq("organization_id", session.organizationId).eq("id", id);
+  // Confirmation is a one-way transition for this request: only the request that
+  // observes the previous status may claim it, preventing parallel PATCH calls
+  // from both submitting the initial WhatsApp confirmation.
+  if (status === "confirmed" && appointment.status !== "confirmed") {
+    updateQuery = updateQuery.eq("status", appointment.status);
+  }
+  const { data: updated, error: updateError } = await updateQuery.select("id,status,start_at,end_at,location,notes,title").maybeSingle();
+  if (updateError || !updated) {
+    if (!updateError && status === "confirmed" && appointment.status !== "confirmed") {
+      return NextResponse.json({ error: "Booking status changed in another request. Refresh and review the latest booking before confirming." }, { status: 409 });
+    }
+    return NextResponse.json({ error: updateError?.message || "Unable to update booking." }, { status: 400 });
+  }
   const metadataPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (depositStatus) metadataPatch.deposit_status = depositStatus;
   if (deliveryStatus) metadataPatch.delivery_status = deliveryStatus;
   if (assignedPhotographerId !== undefined) metadataPatch.assigned_photographer_id = assignedPhotographerId;
   if (Object.prototype.hasOwnProperty.call(body, "shootType")) metadataPatch.shoot_type = String(body.shootType || "other").trim();
   const { data: metadata, error: metadataError } = await admin.from("photography_booking_metadata").update(metadataPatch).eq("organization_id", session.organizationId).eq("appointment_id", id).select().maybeSingle();
-  if (metadataError) return NextResponse.json({ ok: true, appointment: updated, warning: "Booking updated, but photography metadata could not be updated." });
-  return NextResponse.json({ ok: true, appointment: updated, metadata });
+  // A secondary metadata failure must not short-circuit the confirmation message:
+  // the appointment status has already been committed at this point.
+  const warnings: string[] = [];
+  if (metadataError) warnings.push("Booking updated, but photography metadata could not be updated.");
+  if (becameConfirmed) {
+    if (!appointment.customer_phone) {
+      warnings.push("Booking confirmed, but client has no phone number for WhatsApp confirmation.");
+    } else {
+      try {
+        const start = new Date(updated.start_at || appointment.start_at || "");
+        if (Number.isNaN(start.getTime())) throw new Error("A valid appointment date is required for WhatsApp confirmation.");
+        const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeZone: "Africa/Lagos" }).format(start);
+        const time = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Lagos" }).format(start);
+        await enqueueAppointmentConfirmation({
+          organizationId: session.organizationId,
+          appointmentId: id,
+          confirmationEventId: confirmationEventId || id,
+          recipient: appointment.customer_phone,
+          variables: {
+            customer_name: appointment.customer_name || "there", business_name: "Xposure Studios",
+            service_name: updated.title || appointment.title || "Studio session", appointment_date: date,
+            appointment_time: time, booking_reference: id,
+          },
+        });
+        await admin.from("appointments").update({
+          metadata: { ...previousMetadata, confirmation_event_id: confirmationEventId, whatsapp_confirmation_submitted_at: new Date().toISOString() },
+          updated_at: new Date().toISOString(),
+        }).eq("organization_id", session.organizationId).eq("id", id);
+      } catch (error) {
+        warnings.push(error instanceof Error ? error.message : "WhatsApp confirmation could not be queued.");
+      }
+    }
+  }
+  return NextResponse.json({ ok: true, appointment: updated, metadata, ...(warnings.length ? { warnings } : {}) });
+}
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getClientSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const profile = await getClientOnboardingProfile(session.organizationId).catch(() => null);
+  if (profile?.industry !== "photography-studio") return NextResponse.json({ error: "Photography bookings are only available to Xposure workspaces." }, { status: 403 });
+  try {
+    const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+    assertAnyOrganizationPermission(access, ["appointments.manage"]);
+  } catch {
+    return NextResponse.json({ error: "appointments.manage permission required." }, { status: 403 });
+  }
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { data: appointment, error: lookupError } = await admin.from("appointments").select("id,external_event_id,provider").eq("organization_id", session.organizationId).eq("id", id).maybeSingle();
+  if (lookupError) return NextResponse.json({ error: lookupError.message }, { status: 400 });
+  if (!appointment) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+  if (appointment.external_event_id && appointment.provider !== "dashboard") {
+    return NextResponse.json({ error: "This booking is linked to an external calendar. Cancel it first so the calendar event can be handled safely." }, { status: 409 });
+  }
+  const { error: metadataError } = await admin.from("photography_booking_metadata").delete().eq("organization_id", session.organizationId).eq("appointment_id", id);
+  if (metadataError) return NextResponse.json({ error: "Unable to remove booking metadata: " + metadataError.message }, { status: 400 });
+  const { error } = await admin.from("appointments").delete().eq("organization_id", session.organizationId).eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true, deleted: true });
 }
