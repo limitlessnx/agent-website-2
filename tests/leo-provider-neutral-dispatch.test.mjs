@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const dispatcher = readFileSync(resolve(root, "lib/leo-execution-dispatcher.ts"), "utf8");
+const dispatcher = readFileSync(resolve(root, "lib/leo-execution/dispatcher.ts"), "utf8");
 const route = readFileSync(resolve(root, "app/api/leo/tool/route.ts"), "utf8");
 test("privileged Leo tool route uses provider-neutral dispatch boundary", () => {
   assert.match(route, /dispatchLeoExecution\(envelope\)/);
