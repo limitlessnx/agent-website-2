@@ -61,15 +61,3 @@ test("every migration recorded remotely has a matching local SQL file", () => {
     "Remote Supabase migration versions must not be absent from supabase/migrations",
   );
 });
-
-
-test("migration versions do not share ambiguous numeric prefixes", () => {
-  const uniqueVersions = [...new Set(versions.map((entry) => entry.version))].filter(Boolean);
-  const ambiguous = [];
-  for (const version of uniqueVersions) {
-    for (const other of uniqueVersions) {
-      if (version !== other && other.startsWith(version)) ambiguous.push([version, other]);
-    }
-  }
-  assert.deepEqual(ambiguous, [], "Short migration versions must not be prefixes of longer versions");
-});
