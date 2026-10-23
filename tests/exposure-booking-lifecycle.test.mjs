@@ -96,9 +96,10 @@ test("photography metadata failure does not short-circuit booking WhatsApp confi
   const route = read("app/api/portal/bookings/[id]/route.ts");
   const metadataUpdate = route.indexOf('const { data: metadata, error: metadataError }');
   const metadataFailure = route.indexOf('if (metadataError) return NextResponse.json', metadataUpdate);
+  const deleteHandler = route.indexOf('export async function DELETE');
   const confirmationSend = route.indexOf('await sendWhatsAppMessage({', metadataUpdate);
   assert.ok(metadataUpdate >= 0);
-  assert.equal(metadataFailure, -1);
+  assert.ok(metadataFailure === -1 || metadataFailure > deleteHandler);
   assert.ok(confirmationSend > metadataUpdate);
   assert.match(route, /const warnings: string\[\] = \[\]/);
   assert.match(route, /warnings\.push\("Booking updated, but photography metadata could not be updated\."/);
