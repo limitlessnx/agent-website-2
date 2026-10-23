@@ -4,7 +4,7 @@
 
 Supabase production recorded 186 migration versions, while the repository's `supabase/migrations` directory was missing 20 of those versions. Eleven migrations had equivalent SQL retained under a different local filename/version. Nine historical migrations had no matching local file and were reconstructed from the current production schema, available branch source, and existing template records.
 
-The snapshot in `migration-ledger.production-snapshot.json` records the remote version/name pairs captured on 2026-10-23. The CI regression test verifies that every recorded remote version has a local SQL file and that version prefixes are unique.
+The snapshot in `migration-ledger.production-snapshot.json` records the remote version/name pairs captured on 2026-10-23. The CI regression test verifies that every recorded remote version has a local SQL file, exact versions are unique, and no shorter numeric version is a prefix of a longer version.
 
 ## Confirmed Supabase branch failure
 
@@ -12,11 +12,11 @@ The Supabase Branches dashboard workflow log recorded:
 
 `ERROR Remote migration versions not found in local migrations directory.`
 
-This matches the read-only ledger comparison: production has 186 recorded versions, and the original `main` branch lacked 20 corresponding SQL files. The repair was merged to `main` on 2026-10-23 in commit `f20a11134f76e8b3861623f11922df37b9e79073`.
+This matches the read-only ledger comparison: production has 186 recorded versions, and the original `main` branch lacked 20 corresponding SQL files. After those missing files were restored, fresh hosted workflow logs exposed a second issue: versions `20260724` and `202607240001` trigger an ordering bug in the Supabase Go migration runner. The workaround renumbers `workflow_orchestrator_foundation` to `202607250001`, avoiding the ambiguous prefix without changing its SQL schema intent.
 
 After the merge, a rebase was requested for the existing Supabase development branch (`eb49549a-3e7f-4f5d-a225-2502290f6816`). The rebase API returned success, but subsequent branch status checks continued to show `CREATING_PROJECT` and then `MIGRATIONS_FAILED`, with a stale update timestamp from 2026-07-23. The branch replay is therefore **not verified as successful**.
 
-At the time of this check, the Supabase dashboard displayed a technical-issue banner, and the public status page reported elevated Management API error rates across multiple regions. This may be affecting branch operations, but it is not proof of the branch's specific failure cause. The old workflow log predates the repair merge, so a fresh branch workflow log is still needed to establish whether the original missing-version error is gone or a different migration now fails.
+Fresh workflow logs on 2026-10-23 continued to report `Remote migration versions not found in local migrations directory` after the file-restoration repair. The numeric-prefix collision above is the identified cause. The workaround requires coordinated migration-ledger metadata reconciliation in production and the existing preview branch; it does not require applying the SQL migration body.
 
 Dashboard:
 https://supabase.com/dashboard/project/tacxegmlppngnuvldojy/branches
@@ -41,4 +41,4 @@ The explicitly draft-only `20261003_limitless_maia_knowledge_source_of_truth.sql
 
 ## Safety boundary
 
-The ledger repair is now present on `main`, and automated regression checks were added. The development branch's replay remains unverified. No production migration was applied as part of this repair, no database branch was created, and no production schema merge was performed. Applying any of the nine pending migrations remains a separate release decision.
+The file-level workaround and regression test are prepared on a repair branch. The production ledger metadata and preview branch state must be reconciled before the hosted workflow can be considered healthy. No SQL schema migration was applied, no database branch was created, and applying any of the nine pending migrations remains a separate release decision.
