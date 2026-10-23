@@ -11,7 +11,12 @@ type Appointment = { id:string; title:string; status:string; start_at:string|nul
 type Meta = { shoot_type:string; catalogue_item_id:string|null; deposit_status:string; delivery_status:string; assigned_photographer_id:string|null; client_notes:string|null };
 type Package = { name:string };
 type Member = { id:string; userId:string; email:string|null; role:string; status:string };
-function localInput(value: string | null) { return value ? new Date(value).toISOString().slice(0, 16) : ""; }
+function localInput(value: string | null) {
+  if (!value) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getClientSession();
   if (!session) redirect("/account/login");
