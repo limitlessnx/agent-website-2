@@ -3,6 +3,12 @@ begin;
 -- Durable, tenant-scoped delivery outbox for appointment WhatsApp confirmations.
 -- A unique event key makes enqueue idempotent. Processing rows are not silently
 -- reclaimed after a crash because the provider may already have accepted a send.
+-- The outbox's composite FK intentionally enforces matching tenant ownership.
+-- PostgreSQL requires a unique referenced key; add a non-invasive unique index
+-- on the existing appointment tenant/id pair before creating the outbox table.
+create unique index if not exists appointments_organization_id_id_uidx
+  on public.appointments(organization_id, id);
+
 create table if not exists public.appointment_notification_outbox (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
