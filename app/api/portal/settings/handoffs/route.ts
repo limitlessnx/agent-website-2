@@ -21,7 +21,7 @@ export async function POST(req:NextRequest){
     const supervisorName=String(body.supervisorName||"").trim().slice(0,160)||null;
     const isSupervisor=Boolean(body.isSupervisor);
     const {data:existingPref}=await admin.from("organization_member_notification_preferences").select("metadata").eq("organization_id",session.organizationId).eq("membership_id",membershipId).maybeSingle();
-    const metadata={...((existingPref?.metadata||{}) as Record<string,unknown>),supervisor:isSupervisor,supervisor_name:supervisorName};
+    const metadata={...((existingPref?.metadata||{}) as Record<string,unknown>),supervisor:isSupervisor,supervisor_name:supervisorName,share_contact_with_customers:Boolean(body.shareContactWithCustomers)};
     const {data,error}=await admin.from("organization_member_notification_preferences").upsert({
       membership_id:membershipId,
       organization_id:session.organizationId,

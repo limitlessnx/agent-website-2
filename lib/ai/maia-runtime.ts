@@ -347,7 +347,7 @@ function toolSet(): ToolDefinition[] {
     },
     {
       name: "handoff_to_human_supervisor",
-      description: "Hand a customer to a configured human supervisor when the customer asks for a human or the request requires payment, booking, documentation, complaint handling, negotiation or another human-only action. This does not open a human chat inside Maia. It creates the canonical handoff, pauses Maia for this conversation, assigns a configured supervisor when a rule exists, and sends the supervisor a concise WhatsApp summary.",
+      description: "Hand a customer to a configured human supervisor when the customer asks for a human or the request requires payment, booking, documentation, complaint handling, negotiation or another human-only action. This does not open a human chat inside Maia. It creates the canonical handoff, pauses Maia for this conversation, assigns a configured supervisor when a rule exists, and attempts to notify the supervisor. IMPORTANT: inspect the returned forwarded and notificationStatus fields. Never tell the customer the request was forwarded unless forwarded is true. If forwarded is false or the tool fails, explain that human follow-up is not yet confirmed and do not imply that a staff member was notified.",
       parameters: { type: "object", additionalProperties: false, properties: {
         reason: { type: "string" },
         category: { type: "string" },

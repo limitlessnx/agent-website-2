@@ -54,3 +54,38 @@ test("Customer profile exposes expandable conversation history", () => {
 });
 
 // Draft guardrail suite: external supervisor handoff only.
+
+
+test("Maia handoff reports notification truth and never marks unnotified handoffs as notified", () => {
+  const operations = read("lib/human-operations.ts");
+  const runtime = read("lib/ai/maia-runtime.ts");
+  assert.match(operations, /let notificationStatus="not_configured"/);
+  assert.match(operations, /const forwarded=notificationStatus==="sent"&&customerContactStatus==="sent"/);
+  assert.match(operations, /if\(notificationStatus==="sent"\|\|notificationStatus==="dashboard_only"\)/);
+  assert.match(operations, /return "failed"/);
+  assert.match(runtime, /Never tell the customer the request was forwarded unless forwarded is true/);
+});
+
+test("Two-way handoff requires approved customer contact sharing", () => {
+  const operations = read("lib/human-operations.ts");
+  const api = read("app/api/portal/settings/handoffs/route.ts");
+  const panel = read("app/portal/settings/HandoffContinuityPanel.tsx");
+  assert.ok(operations.includes("share_contact_with_customers===true"));
+  assert.ok(operations.includes('channel:"customer_whatsapp"'));
+  assert.ok(operations.includes("customerContactStatus"));
+  assert.ok(api.includes("share_contact_with_customers:Boolean(body.shareContactWithCustomers)"));
+  assert.ok(panel.includes("Share this WhatsApp number with customers during handoff"));
+  assert.ok(operations.includes('notificationStatus==="sent"&&customerContactStatus==="sent"'));
+});
+
+test("Xposure Maia shares agent contact through the approved handoff template", () => {
+  const operations = read("lib/human-operations.ts");
+  const delivery = read("lib/whatsapp-delivery.ts");
+  assert.match(operations, /deliveryMode:"template"/);
+  assert.match(operations, /templatePurpose:"human_handoff_customer_contact"/);
+  assert.match(operations, /agent_name:sharedAgentName/);
+  assert.match(operations, /agent_phone:/);
+  assert.match(operations, /agent_link:/);
+  assert.match(delivery, /getTemplateConfig\(input\.organizationId,input\.templatePurpose\|\|"follow_up_outside_24h"\)/);
+  assert.match(operations, /customerResult\.ok&&customerResult\.providerMessageId/);
+});

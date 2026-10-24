@@ -19,6 +19,7 @@ type StructuredHandoff = {
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
 function phone(value:unknown){ const normalized=str(value).replace(/[^0-9]/g,""); return normalized.length>=8?normalized:null; }
+function normalizeHandoffPhone(value:unknown){ return str(value).replace(/[^0-9]/g,""); }
 function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
 function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
   return {
@@ -111,7 +112,7 @@ async function resolveHandoffAssignment(input:{
 
 async function notifyHandoffAssignee(input:{
   organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; customerName:string; customerPhone?:string|null; stageName:string|null;
-  summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
+  summary:string; reason:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
   const now=new Date().toISOString();
@@ -123,17 +124,17 @@ async function notifyHandoffAssignee(input:{
     });
   }
 
-  if(!input.notifyWhatsApp) return;
+  if(!input.notifyWhatsApp) return input.notifyDashboard&&input.membershipId ? "dashboard_only" : "disabled";
   let recipient=phone(input.destinationPhone);
   if(input.membershipId){
     const {data:pref,error:prefError}=await admin.from("organization_member_notification_preferences")
       .select("whatsapp_phone,notify_whatsapp_handoffs")
       .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
     if(prefError) throw prefError;
-    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return;
+    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return "not_configured";
     recipient=phone(pref.whatsapp_phone);
   }
-  if(!recipient) return;
+  if(!recipient) return "not_configured";
 
   const {data:notification,error:notificationError}=await admin.from("handoff_notifications").insert({
     organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
@@ -144,20 +145,37 @@ async function notifyHandoffAssignee(input:{
   const notificationId=String(notification.id);
 
   try{
+    const {data:organization,error:organizationError}=await admin.from("organizations").select("name,slug").eq("id",input.organizationId).maybeSingle();
+    if(organizationError) throw organizationError;
+    const useXposureTemplate=organization?.slug==="xposure";
     const result=await sendWhatsAppMessage({
       organizationId:input.organizationId,
       to:recipient,
-      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
-      deliveryMode:"direct",
+      text:`New customer handoff: ${input.customerName}\nCustomer WhatsApp: ${input.customerPhone||"Not recorded"}${input.customerPhone?`\nOpen customer chat: https://wa.me/${normalizeHandoffPhone(input.customerPhone)}`:""}\nReason: ${input.reason}\nStage: ${input.stageName||"Not set"}\nSummary: ${input.summary}\nNext action: ${input.nextAction||"Review customer conversation"}`,
+      deliveryMode:useXposureTemplate?"template":"direct",
       recipientType:"internal_staff",
+      ...(useXposureTemplate?{
+        templatePurpose:"human_handoff_staff",
+        requestedTemplateName:"hand_over_",
+        variables:{
+          business_name:String(organization?.name||"Xposure Studios"),
+          customer_name:input.customerName,
+          customer_phone:input.customerPhone||"Not recorded",
+          handoff_reason:input.reason,
+          conversation_summary:input.summary,
+        },
+      }:{}),
     });
-    await admin.from("handoff_notifications").update({
+    const {error:updateError}=await admin.from("handoff_notifications").update({
       status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
     }).eq("id",notificationId);
+    if(updateError) throw updateError;
+    return "sent";
   }catch(error){
     await admin.from("handoff_notifications").update({
       status:"failed",error_message:(error instanceof Error?error.message:"WhatsApp handoff notification failed.").slice(0,2000),
     }).eq("id",notificationId);
+    return "failed";
   }
 }
 
@@ -522,6 +540,7 @@ export async function createHandoffFromSystemEvent(event:{
       customerPhone:phone(customer?.phone),
       stageName,
       summary,
+      reason,
       nextAction,
       notifyWhatsApp:assignment.notifyWhatsApp,
       notifyDashboard:assignment.notifyDashboard,
@@ -614,8 +633,9 @@ export async function createHumanHandoffFromMaia(input:{
     status:assignment.membershipId?"assigned":"open",
     updated_at:new Date().toISOString(),
   }).eq("organization_id",input.organizationId).eq("id",handoffId);
+  let notificationStatus="not_configured";
   if(assignment.membershipId||assignment.destinationPhone){
-    await notifyHandoffAssignee({
+    notificationStatus=await notifyHandoffAssignee({
       organizationId:input.organizationId,
       handoffId,
       conversationId:input.conversationId,
@@ -625,14 +645,71 @@ export async function createHumanHandoffFromMaia(input:{
       customerPhone:phone(customer?.phone),
       stageName,
       summary,
+      reason:str(input.reason).slice(0,1000),
       nextAction:str(input.nextAction)||null,
       notifyWhatsApp:assignment.notifyWhatsApp,
       notifyDashboard:assignment.notifyDashboard,
-    }).catch((error)=>loggerSafeHandoffError(error));
-    await admin.from("human_handoffs").update({notified_at:new Date().toISOString()})
-      .eq("organization_id",input.organizationId).eq("id",handoffId);
+    });
+    if(notificationStatus==="sent"||notificationStatus==="dashboard_only"){
+      await admin.from("human_handoffs").update({notified_at:new Date().toISOString()})
+        .eq("organization_id",input.organizationId).eq("id",handoffId);
+    }
   }
-  return {handoffId,status:assignment.membershipId?"assigned":"open",assignedMembershipId:assignment.membershipId,summary,nextAction:str(input.nextAction)||null};
+  let customerContactStatus:"sent"|"not_configured"|"not_attempted"|"failed"="not_attempted";
+  let sharedAgentName:string|null=null;
+  if(notificationStatus==="sent" && assignment.membershipId){
+    const {data:pref,error:prefError}=await admin.from("organization_member_notification_preferences")
+      .select("whatsapp_phone,metadata").eq("organization_id",input.organizationId)
+      .eq("membership_id",assignment.membershipId).maybeSingle();
+    if(prefError) throw prefError;
+    const metadata=rec(pref?.metadata);
+    const approvedToShare=metadata.share_contact_with_customers===true;
+    const agentPhone=phone(pref?.whatsapp_phone);
+    sharedAgentName=str(metadata.supervisor_name)||"your assigned support agent";
+    if(approvedToShare&&agentPhone&&phone(customer?.phone)){
+      try{
+        const customerResult=await sendWhatsAppMessage({
+          organizationId:input.organizationId,
+          to:String(customer?.phone),
+          deliveryMode:"template",
+          recipientType:"customer",
+          templatePurpose:"human_handoff_customer_contact",
+          variables:{
+            agent_name:sharedAgentName,
+            agent_phone:`+${agentPhone}`,
+            agent_link:`https://wa.me/${agentPhone}`,
+          },
+        });
+        // "sent" here means the provider accepted the template request, not that
+        // WhatsApp has confirmed final delivery. Delivery receipts remain authoritative.
+        customerContactStatus=customerResult.ok&&customerResult.providerMessageId?"sent":"failed";
+        if(customerContactStatus==="sent"){
+          const {error:recordError}=await admin.from("handoff_notifications").insert({
+            organization_id:input.organizationId,handoff_id:handoffId,membership_id:assignment.membershipId,
+            channel:"customer_whatsapp",recipient:phone(customer.phone),status:"sent",sent_at:new Date().toISOString(),
+            metadata:{agent_name:sharedAgentName,agent_phone:agentPhone,customer_contact_shared:true},
+          });
+          if(recordError) throw recordError;
+        }
+      }catch{
+        customerContactStatus="failed";
+      }
+    }else{
+      customerContactStatus="not_configured";
+    }
+  }
+  const forwarded=notificationStatus==="sent"&&customerContactStatus==="sent";
+  return {
+    handoffId,
+    status:assignment.membershipId?"assigned":"open",
+    assignedMembershipId:assignment.membershipId,
+    summary,
+    nextAction:str(input.nextAction)||null,
+    notificationStatus,
+    customerContactStatus,
+    sharedAgentName:customerContactStatus==="sent"?sharedAgentName:null,
+    forwarded,
+  };
 }
 
 function loggerSafeHandoffError(error:unknown){
