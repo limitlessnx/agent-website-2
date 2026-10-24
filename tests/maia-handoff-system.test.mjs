@@ -54,3 +54,21 @@ test("Customer profile exposes expandable conversation history", () => {
 });
 
 // Draft guardrail suite: external supervisor handoff only.
+
+test("Meta handoff notifications retry 24-hour-window failures with the approved staff template", () => {
+  const operations = read("lib/human-operations.ts");
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  assert.match(operations, /syncHandoffNotificationStatus/);
+  assert.match(operations, /input\.errorCode!=="131047"/);
+  assert.match(operations, /templatePurpose:"human_handoff_staff"/);
+  assert.match(operations, /fallback_template_attempted:true/);
+  assert.match(webhook, /syncHandoffNotificationStatus/);
+  assert.match(webhook, /errorMessage: firstError\?\.error_data\?\.details/);
+});
+
+test("Handoff dashboard notification status reflects asynchronous provider failures", () => {
+  const operations = read("lib/human-operations.ts");
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  assert.match(operations, /status:"failed",error_message:message/);
+  assert.match(webhook, /handoff notification status sync failed/);
+});
