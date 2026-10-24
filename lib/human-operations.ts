@@ -161,6 +161,91 @@ async function notifyHandoffAssignee(input:{
   }
 }
 
+
+/**
+ * Keep the dashboard's handoff notification state aligned with Meta delivery
+ * callbacks. Meta can accept a text send and later reject it with 131047 when
+ * the recipient's 24-hour service window is closed, so HTTP acceptance alone
+ * must not be treated as successful delivery.
+ */
+export async function syncHandoffNotificationStatus(input:{
+  providerMessageId:string;
+  status:"sent"|"delivered"|"read"|"failed";
+  errorCode?:string|null;
+  errorMessage?:string|null;
+}){
+  const admin=createAdminClient();
+  const {data:notification,error}=await admin.from("handoff_notifications")
+    .select("id,organization_id,handoff_id,recipient,metadata")
+    .eq("provider_message_id",input.providerMessageId).maybeSingle();
+  if(error) throw error;
+  if(!notification) return false;
+
+  const metadata=rec(notification.metadata);
+  if(input.status!=="failed"){
+    const {error:updateError}=await admin.from("handoff_notifications")
+      .update({status:input.status,error_message:null})
+      .eq("organization_id",notification.organization_id).eq("id",notification.id);
+    if(updateError) throw updateError;
+    return true;
+  }
+
+  const failureMessage=str(input.errorMessage)||`WhatsApp notification failed${input.errorCode?` (${input.errorCode})`:""}.`;
+  const markFailed=async(message:string,extra:Record<string,unknown>={})=>{
+    const {error:updateError}=await admin.from("handoff_notifications").update({
+      status:"failed",error_message:message.slice(0,2000),metadata:{...metadata,...extra},
+    }).eq("organization_id",notification.organization_id).eq("id",notification.id);
+    if(updateError) throw updateError;
+  };
+
+  // Retry only the known 24-hour-window failure, and only once. The tenant's
+  // approved human_handoff_staff template is the compliant recovery route.
+  if(input.errorCode!=="131047"||metadata.fallback_template_attempted===true){
+    await markFailed(failureMessage);
+    return true;
+  }
+
+  const {data:handoff,error:handoffError}=await admin.from("human_handoffs")
+    .select("reason,conversation_summary")
+    .eq("organization_id",notification.organization_id).eq("id",notification.handoff_id).maybeSingle();
+  if(handoffError) throw handoffError;
+  const {data:organization,error:organizationError}=await admin.from("organizations")
+    .select("name").eq("id",notification.organization_id).maybeSingle();
+  if(organizationError) throw organizationError;
+
+  const fallbackMetadata={...metadata,fallback_template_attempted:true,fallback_reason:"131047",original_provider_message_id:input.providerMessageId};
+  const {error:claimError}=await admin.from("handoff_notifications").update({
+    status:"pending",error_message:null,metadata:fallbackMetadata,
+  }).eq("organization_id",notification.organization_id).eq("id",notification.id);
+  if(claimError) throw claimError;
+
+  try{
+    const result=await sendWhatsAppMessage({
+      organizationId:String(notification.organization_id),
+      to:String(notification.recipient||""),
+      deliveryMode:"template",
+      recipientType:"internal_staff",
+      templatePurpose:"human_handoff_staff",
+      variables:{
+        business_name:String(organization?.name||"Your business"),
+        customer_name:String(metadata.customer_name||"Customer"),
+        customer_phone:String(metadata.customer_phone||"Not recorded"),
+        handoff_reason:String(handoff?.reason||handoff?.conversation_summary||"Human assistance requested"),
+        conversation_summary:String(handoff?.conversation_summary||handoff?.reason||"Review customer conversation"),
+      },
+    });
+    const {error:updateError}=await admin.from("handoff_notifications").update({
+      status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),
+      error_message:null,metadata:{...fallbackMetadata,fallback_provider_message_id:result.providerMessageId||null},
+    }).eq("organization_id",notification.organization_id).eq("id",notification.id);
+    if(updateError) throw updateError;
+  }catch(error){
+    const message=error instanceof Error?error.message:"Approved WhatsApp handoff template failed.";
+    await markFailed(message,{...fallbackMetadata,fallback_template_failed:true});
+  }
+  return true;
+}
+
 export type HumanHandoffRow={
   id:string; customer_id:string; conversation_id:string; reason:string; category:string; priority:string; status:string;
   assigned_membership_id?:string|null; claimed_by_membership_id?:string|null; sla_due_at?:string|null;

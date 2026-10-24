@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
+import { syncHandoffNotificationStatus } from "@/lib/human-operations";
 
 export const dynamic = "force-dynamic";
 
@@ -274,6 +275,17 @@ export async function POST(request: NextRequest) {
           response_payload: body,
         }).catch(() => false);
         if (ok) statusUpdates += 1;
+        await syncHandoffNotificationStatus({
+          providerMessageId,
+          status: nextStatus as "sent" | "delivered" | "read" | "failed",
+          errorCode: firstError?.code != null ? String(firstError.code) : null,
+          errorMessage: firstError?.error_data?.details || firstError?.title || firstError?.message || null,
+        }).catch((error) => {
+          console.error("[whatsapp-webhook] handoff notification status sync failed", {
+            providerMessageIdPresent: Boolean(providerMessageId),
+            errorType: error instanceof Error ? error.name : "unknown",
+          });
+        });
       }
 
       const phoneNumberId = String(value?.metadata?.phone_number_id || "");

@@ -54,3 +54,29 @@ test("Customer profile exposes expandable conversation history", () => {
 });
 
 // Draft guardrail suite: external supervisor handoff only.
+
+test("Meta handoff notifications retry 24-hour-window failures with the approved staff template", () => {
+  const operations = read("lib/human-operations.ts");
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  const delivery = read("lib/whatsapp-delivery.ts");
+  const templateMigration = read("supabase/migrations/20261023131133_register_xposure_staff_handoff_template.sql");
+  assert.match(operations, /syncHandoffNotificationStatus/);
+  assert.match(operations, /input\.errorCode!=="131047"/);
+  assert.match(operations, /templatePurpose:"human_handoff_staff"/);
+  // Purpose is the tenant-scoped lookup key, not the Meta template name.
+  assert.match(templateMigration, /\x27human_handoff_staff\x27/);
+  assert.match(templateMigration, /\x27hand_over_\x27/);
+  assert.match(templateMigration, /business_name.*customer_name.*customer_phone.*handoff_reason.*conversation_summary/s);
+  assert.match(delivery, /getTemplateConfig\(input\.organizationId,input\.templatePurpose\|\|"follow_up_outside_24h"\)/);
+  assert.match(delivery, /template:\s*\{\s*name:\s*config!\.template_name/);
+  assert.match(operations, /fallback_template_attempted:true/);
+  assert.match(webhook, /syncHandoffNotificationStatus/);
+  assert.match(webhook, /errorMessage: firstError\?\.error_data\?\.details/);
+});
+
+test("Handoff dashboard notification status reflects asynchronous provider failures", () => {
+  const operations = read("lib/human-operations.ts");
+  const webhook = read("app/api/whatsapp/webhook/route.ts");
+  assert.match(operations, /status:"failed",error_message:message/);
+  assert.match(webhook, /handoff notification status sync failed/);
+});
