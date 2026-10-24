@@ -72,7 +72,8 @@ test("voice and chat tool calls share the same server permission gateway", () =>
   assert.match(toolGateway, /resolveLeoIdentity\(/);
   assert.match(toolGateway, /assertLeoToolAllowed\(identity, toolKey\)/);
   assert.match(toolGateway, /createLeoExecutionEnvelope\(/);
-  assert.match(toolGateway, /executeLeoEnvelopeViaN8n\(/);
+  assert.match(toolGateway, /dispatchLeoExecution\(envelope\)/);
+  assert.doesNotMatch(toolGateway, /executeLeoEnvelopeViaN8n\(/);
 });
 
 test("write tools require server-side confirmation enforcement", () => {
