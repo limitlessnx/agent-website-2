@@ -80,3 +80,14 @@ test("Handoff dashboard notification status reflects asynchronous provider failu
   assert.match(operations, /status:"failed",error_message:message/);
   assert.match(webhook, /handoff notification status sync failed/);
 });
+
+test("Configured Maia team phone assigns to the unique active tenant Owner and preserves tenant notification routing", () => {
+  const operations = read("lib/human-operations.ts");
+  assert.match(operations, /eq\("organization_id",input\.organizationId\)\.eq\("slug","owner"\)/);
+  assert.match(operations, /ownerIds\.length===1/);
+  assert.match(operations, /eq\("organization_id",input\.organizationId\)\.eq\("id",ownerIds\[0\]\)\.eq\("status","active"\)/);
+  assert.match(operations, /source:"organization_owner_fallback"/);
+  assert.match(operations, /destinationPhone,notifyWhatsApp:true,notifyDashboard:true/);
+  assert.match(operations, /pref\?\.notify_whatsapp_handoffs===false/);
+  assert.match(operations, /phone\(pref\?\.whatsapp_phone\)\|\|recipient/);
+});
