@@ -19,6 +19,12 @@ type StructuredHandoff = {
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
 function phone(value:unknown){ const normalized=str(value).replace(/[^0-9]/g,""); return normalized.length>=8?normalized:null; }
+type AdminRpcError = { message: string; code?: string; details?: string; hint?: string };
+type AdminRpcResult = { data: unknown; error: AdminRpcError | null };
+function callAdminRpc(admin: ReturnType<typeof createAdminClient>, functionName: string, args: Record<string, unknown>): Promise<AdminRpcResult> {
+  const rpc = admin.rpc.bind(admin) as unknown as (name: string, params: Record<string, unknown>) => Promise<AdminRpcResult>;
+  return rpc(functionName, args);
+}
 function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
 function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
   return {
@@ -103,7 +109,27 @@ async function resolveHandoffAssignment(input:{
         if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),destinationPhone:null,notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"agent_destination"};
       }
     }
-    if(destinationPhone) return {membershipId:null,destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination_phone"};
+    if(destinationPhone){
+      // A configured team phone is a notification route, not an assignee. If
+      // the tenant has exactly one active Owner, assign the handoff to that
+      // tenant-local membership while retaining the configured team phone.
+      const {data:ownerRole,error:ownerRoleError}=await admin.from("roles").select("id")
+        .eq("organization_id",input.organizationId).eq("slug","owner").maybeSingle();
+      if(ownerRoleError) throw ownerRoleError;
+      if(ownerRole?.id){
+        const {data:ownerLinks,error:ownerLinksError}=await admin.from("membership_roles").select("membership_id")
+          .eq("role_id",ownerRole.id);
+        if(ownerLinksError) throw ownerLinksError;
+        const ownerIds=[...new Set((ownerLinks||[]).map((link)=>String(link.membership_id||"")).filter(Boolean))];
+        if(ownerIds.length>0){
+          const {data:activeOwners,error:activeOwnersError}=await admin.from("organization_memberships").select("id")
+            .eq("organization_id",input.organizationId).eq("status","active").in("id",ownerIds);
+          if(activeOwnersError) throw activeOwnersError;
+          if(activeOwners?.length===1) return {membershipId:String(activeOwners[0].id),destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"organization_owner_fallback"};
+        }
+      }
+      return {membershipId:null,destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination_phone"};
+    }
   }
 
   return {membershipId:null,destinationPhone:null,notifyWhatsApp:false,notifyDashboard:true,source:"unassigned_queue"};
@@ -130,8 +156,11 @@ async function notifyHandoffAssignee(input:{
       .select("whatsapp_phone,notify_whatsapp_handoffs")
       .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
     if(prefError) throw prefError;
-    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return;
-    recipient=phone(pref.whatsapp_phone);
+    // The member preference controls personal-number notifications. It must
+    // not suppress the separately configured tenant team destination.
+    if(pref?.notify_whatsapp_handoffs===false) recipient=phone(input.destinationPhone);
+    else recipient=phone(pref?.whatsapp_phone)||recipient;
+    if(!recipient) return;
   }
   if(!recipient) return;
 
@@ -340,7 +369,8 @@ export async function claimHumanHandoff(session:ClientSession,handoffId:string){
     claimed_at:handoff.claimed_at||new Date().toISOString(),updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("id",handoffId).select().single();
   if(updateError) throw updateError;
-  // Claiming a handoff is an internal ownership action only. It never opens a human chat inside Maia.\n  return data;
+  // Claiming a handoff is an internal ownership action only. It never opens a human chat inside Maia.
+  return data;
 }
 
 export async function assignHumanHandoff(session:ClientSession,handoffId:string,membershipId:string){
@@ -413,7 +443,7 @@ export async function resolveHumanHandoff(session:ClientSession,handoffId:string
   }).eq("organization_id",session.organizationId).eq("id",handoff.conversation_id);
 
   if(str(options.stageId)){
-    await (admin as any).rpc("update_customer_stage",{
+    await callAdminRpc(admin,"update_customer_stage",{
       p_organization_id:session.organizationId,
       p_customer_id:handoff.customer_id,
       p_stage_id:str(options.stageId),
@@ -444,7 +474,7 @@ export async function resolveHumanHandoff(session:ClientSession,handoffId:string
     });
   }
 
-  await (admin as any).rpc("add_customer_timeline_event",{
+  await callAdminRpc(admin,"add_customer_timeline_event",{
     p_organization_id:session.organizationId,p_customer_id:handoff.customer_id,
     p_event_type:"handoff.resolved",p_title:"Human handoff resolved",p_summary:resolution.trim()||null,
     p_channel:"internal",p_conversation_id:handoff.conversation_id,p_source_table:"human_handoffs",p_source_id:handoffId,
@@ -532,7 +562,7 @@ export async function createHandoffFromSystemEvent(event:{
     if(stageError) throw stageError;
     if(stage?.id){
       stageId=stage.id;
-      await (admin as any).rpc("update_customer_stage",{
+      await callAdminRpc(admin,"update_customer_stage",{
         p_organization_id:event.organizationId,
         p_customer_id:event.customerId,
         p_stage_id:stage.id,
@@ -560,7 +590,7 @@ export async function createHandoffFromSystemEvent(event:{
     payload,
   });
 
-  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+  const {data,error}=await callAdminRpc(admin,"create_human_handoff",{
     p_organization_id:event.organizationId,
     p_customer_id:event.customerId,
     p_conversation_id:event.conversationId,
@@ -657,7 +687,7 @@ export async function createHumanHandoffFromMaia(input:{
     payload,
   });
   const summary=String(input.summary||input.reason||"Human assistance requested").slice(0,4000);
-  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+  const {data,error}=await callAdminRpc(admin,"create_human_handoff",{
     p_organization_id:input.organizationId,
     p_customer_id:input.customerId,
     p_conversation_id:input.conversationId,
