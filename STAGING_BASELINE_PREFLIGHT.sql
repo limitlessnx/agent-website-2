@@ -124,6 +124,7 @@ required_core_helpers(function_name) AS (
     ('is_organization_member'),
     ('has_organization_permission'),
     ('slugify_identifier'),
+    ('assert_real_estate_mutation_scope'),
     ('create_human_handoff'),
     ('rls_auto_enable'),
     ('sync_payment_plan_total'),
@@ -166,6 +167,14 @@ checks(check_name, object_name) AS (
    AND c.relname = e.table_name
    AND c.relkind = 'r'
   WHERE c.oid IS NULL OR NOT c.relrowsecurity
+  UNION ALL
+  SELECT 'rls_forced_unexpected', e.table_name::text
+  FROM expected_tables e
+  JOIN pg_catalog.pg_class c
+    ON c.relnamespace = 'public'::regnamespace
+   AND c.relname = e.table_name
+   AND c.relkind = 'r'
+  WHERE c.relforcerowsecurity
   UNION ALL
   SELECT 'missing_core_policy', e.table_name || '.' || e.policy_name
   FROM expected_policies e

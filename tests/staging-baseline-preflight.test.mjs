@@ -28,8 +28,12 @@ test('preflight policy allowlist matches all 60 approved metadata policies', () 
 });
 
 test('preflight includes core RLS, provisioning, and trigger-helper requirements', () => {
+  const coreHelpers = valuesIn(/required_core_helpers\(function_name\) AS \(\s*VALUES([\s\S]*?)\n\),\nrequired_trigger_helpers/);
+  const triggerHelpers = valuesIn(/required_trigger_helpers\(function_name\) AS \(\s*VALUES([\s\S]*?)\n\),\nchecks/);
+  assert.equal(coreHelpers.length, 13);
+  assert.equal(triggerHelpers.length, 12);
   for (const helper of [
-    'is_organization_member', 'has_organization_permission', 'create_human_handoff',
+    'is_organization_member', 'has_organization_permission', 'assert_real_estate_mutation_scope', 'create_human_handoff',
     'provision_client_workspace', 'provision_client_organization', 'provision_trial_client_organization',
     'timeline_from_appointment', 'timeline_from_crm_lead', 'sanitize_lead_budget_phone_collision',
     'seed_organization_role_presets_after_membership', 'seed_customer_stages_for_new_organization',
@@ -47,6 +51,7 @@ test('preflight is catalog-only, read-only, and row-bounded', () => {
   assert.match(activeSql, /^\s*WITH\b/i);
   assert.doesNotMatch(activeSql, /^\s*(?:CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|GRANT|REVOKE|TRUNCATE|COPY)\b/im);
   assert.match(activeSql, /\bFROM\s+(?:information_schema\.tables|pg_catalog\.(?:pg_class|pg_policies|pg_proc|pg_namespace))\b/i);
+  assert.match(activeSql, /c\.relforcerowsecurity/i);
   assert.match(activeSql, /LIMIT\s+250\s*;\s*$/i);
   assert.equal((activeSql.match(/LIMIT\s+1\b/gi) ?? []).length, 4);
 });
