@@ -1,9 +1,9 @@
 # Current-main integration and release-readiness review
 
-- **Captured:** 25 October 2026, 20:35 +06:00
+- **Updated:** 25 October 2026 after the migration-sequencing push
 - **Repository:** [`limitlessnx/agent-website-2`](https://github.com/limitlessnx/agent-website-2)
 - **Remote main:** `3521ed4bbfb25f0c57a376ec8b1015a7c58467e9`
-- **Integration branch:** `integration/limitless-realty-production-20261025`; application commit `0af7682b7392b5b32f944ea2cdab91d28ed6ba3f` has a READY isolated Preview; draft PR #280 is closed and no PR is open.
+- **Integration branch:** `integration/limitless-realty-production-20261025`; application commit `0af7682b7392b5b32f944ea2cdab91d28ed6ba3f` has a READY isolated Preview; migration-sequencing commit `e24f31b` is pushed and PR #281 is open against `main`. PR #280 remains closed.
 - **Local workspace:** `/home/ubuntu/Fluxknight/limitless realty`
 
 ## Deployment result
