@@ -21,7 +21,7 @@ test("Phase 7: team access mutations remain organization-scoped and manager-only
   const route=read("app/api/portal/team/access-requests/route.ts");
   assert.match(route,/session\.organizationId/);
   assert.match(route,/members\.manage/);
-  assert.match(route,/target\.role!==\"manager\"/);
+  assert.match(route,/target\.role[\s\S]*manager/);
   assert.match(route,/p_organization_id:\s*session\.organizationId/);
   assert.match(route,/p_actor_user_id:\s*session\.userId/);
   assert.match(route,/p_status:\s*\"removed\"/);

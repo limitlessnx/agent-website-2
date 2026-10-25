@@ -1,0 +1,29 @@
+# Xposure Studios Dashboard Audit and Phase Tracker
+
+Scope: Xposure Studios tenant only (organization slug `xposure`). Do not combine Limitless Realty or Gencouv tenant UI/data.
+
+## Audit baseline
+- Dashboard entry: `app/dashboard/page.tsx`. It resolves the active organization scope, loads `getOrganizationOperationalSnapshot(scope)` and Supabase readiness, then renders `DashboardHomeExperience`.
+- Home UI: `components/admin/DashboardHomeExperience.tsx`. The non-Limitless branch currently renders a generic `LegacyOrganizationView` with business metrics, notices, and AI Team cards. It is not a photography-studio-specific overview.
+- Client inbox: `app/dashboard/conversations/page.tsx`. Tenant-scoped retrieval uses `getTenantConversationCenter(scope.organizationId)`. The current view renders a three-pane inbox, selects the first conversation by default, and renders that selected thread's messages expanded. Collapsible conversation threads are not implemented in this file.
+- Build gate: `prebuild` runs `tsc --noEmit`; `build` runs `next build`; `lint` runs ESLint.
+- Existing regression suites include `test:maia`, `test:support`, `tests/tenant-conversation-center.test.mjs`, and `tests/xposure-whatsapp-webhook-tenant-isolation.test.mjs`. This inventory does not assert they currently pass; run them on the branch before marking a phase complete.
+- This is a code-level audit from repository files. It is not a successful 12UI run or a visual pixel comparison; those require the reference image and rendered screen/CLI to be available.
+
+## Phase inventory
+
+| Phase | Cards/screens | Baseline finding | Required implementation and acceptance tests | Status |
+|---|---|---|---|---|
+| 1. Studio overview | Welcome/status hero; today's bookings; unread client conversations; follow-ups due; Maia connection/runtime status; operational alerts; quick actions | Home route exists, but non-Limitless tenants get generic metrics/team cards. | Add a tenant-specific Xposure overview without entering the Limitless Realty branch. Derive cards from organization-scoped data only. Empty states must be honest; status must not claim WhatsApp/agent is healthy without a real readiness signal. Test tenant routing, empty data, links, and metric scoping. | Audit complete; implementation pending |
+| 2. Clients & Inbox | Client list; searchable/filterable inbox; expandable thread; client context; handoff state | Tenant inbox retrieval exists on this branch. Selected thread is expanded and the page uses anchor links. | Add accessible expand/collapse state, clear selected-client context, empty/loading/error states, and org-scoped queries. Test two-tenant isolation and collapsed/expanded behavior. | Partial; collapse behavior missing |
+| 3. Bookings & Calendar | Booking summary; calendar/list; create/edit booking; availability/resources | Route and data support not yet verified by this audit. | Verify existing route/schema first. Implement only backed operations; tests for timezone, validation, tenant isolation, and empty state. | Needs route audit |
+| 4. Studio Catalogue | Studio spaces; shoot packages; pricing; add-ons; gallery photos/videos | Xposure catalogue route and media persistence not yet verified. | Verify schema/storage paths and current routes. Test upload feedback, file validation, tenant storage scope, and catalogue CRUD. | Needs route audit |
+| 5. Follow-ups & Reminders | Due/overdue queue; schedule; reminder templates; stop-on-reply/escalation | Xposure records/policies were previously observed as absent; recheck before implementing. | Define explicit empty states and org-scoped scheduling; prove idempotency, timezone, opt-out/stop conditions, and retry behavior. | Data/runtime verification required |
+| 6. Campaigns | Campaign list; draft/review/send; delivery metrics | Reusable organization campaign backend not yet verified. | Do not reuse Gencouv-only campaign tables as if tenant-neutral. Verify supported channels and implement only backed actions. Test consent, audience scope, send status, and failure handling. | Needs backend audit |
+| 7. Maia & Knowledge Base | Agent readiness; source/collection bindings; knowledge coverage; test conversation; handoff | Existing Maia/knowledge work is in separate draft PRs; actual source coverage and WhatsApp end-to-end health require fresh verification. | Verify Xposure-specific published agent, source bindings, inbound Trigger.dev execution, response generation, outbound delivery, and receipts. No green status without end-to-end proof. | Blocked on runtime verification |
+| 8. Flux Credits & Billing | Balance/usage; plan/trial; top-up; billing status | Credit and subscription tables exist, but Xposure plan/consumption wiring must be verified. | Confirm source of truth and metering paths; test ledger correctness, insufficient balance, trial state, and tenant isolation. | Needs billing audit |
+| 9. Analytics & Activity | Booking/client/conversion trends; message delivery; agent activity | Existing operational snapshot is generic; Xposure-specific analytics sources not yet verified. | Show only metrics supported by tenant-scoped source data; include date windows and no-data states. Test calculations and isolation. | Needs data audit |
+| 10. Organization Settings | Studio profile; timezone; team/members; integrations; tenant removal | Existing routes/actions and delete safeguards not yet verified. | Audit permissions and destructive action flows. Organization deletion must require confirmation and safe dependency handling. Test access controls and tenant boundary. | Needs route/security audit |
+
+## Phase completion rules
+A phase is complete only after code changes are committed to this branch, targeted regression tests pass, typecheck/build pass where feasible, and the UI is checked against the supplied reference. Production deployment is tracked separately and must not be inferred from a branch commit.

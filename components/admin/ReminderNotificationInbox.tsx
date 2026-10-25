@@ -1,0 +1,9 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+type Notice={id:string;title:string;body:string;status:string;created_at:string};
+export default function ReminderNotificationInbox(){
+ const [items,setItems]=useState<Notice[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
+ const load=useCallback(async()=>{setLoading(true);setError("");try{const r=await fetch("/api/admin/reminder-rules/notifications",{cache:"no-store"});const b=await r.json();if(!r.ok)throw new Error(b.error||"Unable to load notifications.");setItems(b.notifications||[]);}catch(e){setError(e instanceof Error?e.message:"Unable to load notifications.");}finally{setLoading(false);}},[]);
+ useEffect(()=>{void load();},[load]);
+ return <section style={{border:"1px solid var(--fk-border, #ddd)",borderRadius:16,padding:20,gridColumn:"1 / -1"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}><div><h2 style={{marginTop:0,marginBottom:4}}>Internal reminder inbox</h2><p style={{marginTop:0,color:"var(--fk-muted, #777)",fontSize:14}}>Tenant-only notifications created by internal reminder rules.</p></div><button type="button" onClick={()=>void load()} disabled={loading} style={{padding:"8px 12px",border:"1px solid var(--fk-border, #ccc)",borderRadius:8,background:"transparent",color:"inherit"}}>{loading?"Refreshing…":"Refresh inbox"}</button></div>{error?<p role="alert">{error}</p>:null}{loading?<p>Loading inbox…</p>:items.length?<div style={{display:"grid",gap:8}}>{items.map(n=><article key={n.id} style={{border:"1px solid var(--fk-border, #ddd)",borderRadius:10,padding:12}}><div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><strong>{n.title}</strong><span>{n.status}</span></div><p>{n.body}</p><small>{new Date(n.created_at).toLocaleString()}</small></article>)}</div>:<p>No internal notifications yet.</p>}</section>;
+}

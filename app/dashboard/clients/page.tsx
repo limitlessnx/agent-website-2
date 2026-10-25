@@ -50,7 +50,10 @@ export default async function ClientsPage() {
                 <span>Status: {profile.status.replaceAll("_", " ")} · Created {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(profile.created_at))}</span>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <Link className="admin-button primary-button" href={`/dashboard/preview/tenant/${encodeURIComponent(profile.organization_id)}`}>
+<Link className="admin-button primary-button" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/inspect`}>
+                  <Building2 size={15} /> Inspect read-only
+                </Link>
+                <Link className="admin-button secondary" href={`/dashboard/preview/tenant/${encodeURIComponent(profile.organization_id)}`}>
                   <Building2 size={15} /> Open tenant dashboard
                 </Link>
                 <Link className="admin-button secondary" href={`/dashboard/switch/tenant/${encodeURIComponent(profile.organization_id)}`}>

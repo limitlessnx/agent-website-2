@@ -17,7 +17,7 @@ test("Phase 4 manager dashboard requires manager session and exposes organizatio
   assert.match(client, /Access requests/);
   assert.match(client, /Enter Workspace/);
   assert.match(route, /getManagerSession/);
-  assert.match(route, /request_organization_access/);
+  assert.match(route, /organization_access_requests/);
   assert.match(route, /getMembershipForOrganization/);
   assert.match(route, /setClientSession/);
 });
@@ -58,7 +58,7 @@ test("Phase 5 organization admin controls remain tenant-scoped", () => {
   assert.match(client, /Reject/);
   assert.match(client, /Remove Access/);
   assert.match(route, /session\.organizationId/);
-  assert.match(route, /p_organization_id:session\.organizationId/);
+  assert.match(route, /p_organization_id:\s*session\.organizationId/);
   assert.match(settings, /Workspace members/);
 });
 
@@ -68,7 +68,7 @@ test("Phase 5 manager removal preserves the account while blocking workspace acc
   const sql = read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
 
   assert.match(client, /keeps their account and history but blocks workspace access/);
-  assert.match(route, /p_status:"removed"/);
+  assert.match(route, /p_status:\s*"removed"/);
   assert.match(sql, /organization_memberships/);
   assert.match(sql, /set status = 'active'/);
 });
