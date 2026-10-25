@@ -82,6 +82,14 @@ function approvedKnowledge(result: EstateWithRelations) {
     },
   ];
 
+  if (estate.terms_of_service?.trim()) {
+    knowledge.push({
+      kind: "terms_of_service",
+      content: estate.terms_of_service.trim(),
+      provenance: { ...estateProvenance, field: "terms_of_service", interpretation: "Approved estate-specific business terms; not legal advice, contract execution, or transaction authorization." },
+    });
+  }
+
   if (estate.operating_instructions) {
     knowledge.push({
       kind: "operating_instructions",

@@ -18,6 +18,7 @@ export type Estate = {
   cover_image_url: string | null;
   payment_terms: unknown;
   operating_instructions: string | null;
+  terms_of_service: string | null;
   knowledge_status: KnowledgeStatus;
   provenance: JsonObject;
   created_at: string;
@@ -76,6 +77,7 @@ export type EstateSaveInput = {
   cover_image_url?: string | null;
   payment_terms?: unknown;
   operating_instructions?: string | null;
+  terms_of_service?: string | null;
   knowledge_status?: KnowledgeStatus;
   provenance?: JsonObject;
 };
@@ -249,7 +251,7 @@ export async function saveEstate(organizationId: string, input: EstateSaveInput,
   const name = required(input?.name, "name");
   const id = optionalText(input?.id);
   const payload: Record<string, unknown> = { name };
-  const fields = ["description", "location", "address", "contact_name", "contact_email", "contact_phone", "cover_image_url", "operating_instructions"] as const;
+  const fields = ["description", "location", "address", "contact_name", "contact_email", "contact_phone", "cover_image_url", "operating_instructions", "terms_of_service"] as const;
   for (const field of fields) {
     if (Object.prototype.hasOwnProperty.call(input || {}, field)) payload[field] = optionalText(input[field]);
   }

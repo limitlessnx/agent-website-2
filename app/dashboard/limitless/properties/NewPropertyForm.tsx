@@ -1,9 +1,12 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function NewPropertyForm() {
+type EstateOption = { id: string; name: string; status: string };
+
+export default function NewPropertyForm({ estates, estateError = "" }: { estates: EstateOption[]; estateError?: string }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [saving, setSaving] = useState(false);
@@ -36,7 +39,7 @@ export default function NewPropertyForm() {
         .map(([, label]) => label);
       if (missing.length) throw new Error(`Please complete: ${missing.join(", ")}.`);
 
-      const payload = await new Promise<{ ok: boolean; status: number; body: any }>((resolve, reject) => {
+      const payload = await new Promise<{ ok: boolean; status: number; body: unknown }>((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.open("POST", "/api/limitless/properties");
         request.withCredentials = true;
@@ -46,7 +49,7 @@ export default function NewPropertyForm() {
           }
         };
         request.onload = () => {
-          let body: any = {};
+          let body: unknown = {};
           try { body = JSON.parse(request.responseText || "{}"); } catch {}
           resolve({ ok: request.status >= 200 && request.status < 300, status: request.status, body });
         };
@@ -54,7 +57,12 @@ export default function NewPropertyForm() {
         request.onabort = () => reject(new Error("Property save was cancelled."));
         request.send(formData);
       });
-      if (!payload.ok) throw new Error(typeof payload.body?.error === "string" ? payload.body.error : `Property save failed (${payload.status}).`);
+      if (!payload.ok) {
+        const serverError = payload.body && typeof payload.body === "object" && "error" in payload.body && typeof payload.body.error === "string"
+          ? payload.body.error
+          : `Property save failed (${payload.status}).`;
+        throw new Error(serverError);
+      }
 
       setProgress(100);
       setSuccess("Property saved to catalog.");
@@ -76,6 +84,8 @@ export default function NewPropertyForm() {
       <input name="location_city" placeholder="City/state" required aria-required="true" />
       <input name="type" placeholder="Type" required aria-required="true" />
       <select name="status" defaultValue="active"><option value="active">active</option><option value="inactive">inactive</option><option value="sold">sold</option></select>
+      <label className="admin-file-field"><span>Owning estate (optional)</span><select name="estate_id" defaultValue="" disabled={Boolean(estateError)}><option value="">No estate — assign later</option>{estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name} · {estate.status}</option>)}</select></label>
+      {estateError ? <p role="alert" className="wide">Estate options could not load: {estateError}. You may save this property unassigned and associate it later.</p> : estates.length === 0 ? <p className="wide">No estate exists yet. <Link href="/dashboard/real-estate/estates#new-estate">Create an estate, terms of service and FAQs</Link>.</p> : <p className="wide">This classification lets Maia resolve the exact property to its estate-specific approved terms and FAQs.</p>}
       <label className="admin-file-field"><span>Property images</span><input name="property_images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label>
       <label className="admin-file-field"><span>Property videos</span><input name="property_videos" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" multiple /></label>
       <input name="drive_brochure_link" placeholder="Brochure link" />
