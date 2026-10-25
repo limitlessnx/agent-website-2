@@ -53,3 +53,17 @@ Latest local checks: `npm run test:real-estate` **171 passed / 0 failed**; chang
 - Isolated same-organization staging project: https://supabase.com/dashboard/project/rwewcnftxnaynpotbsms
 - Detailed application review: [REAL_ESTATE_REVIEW.md](REAL_ESTATE_REVIEW.md)
 - Staging baseline review: [STAGING_BASELINE_REVIEW.md](STAGING_BASELINE_REVIEW.md)
+
+
+## 2026-10-25 Preview isolation mechanics
+
+Vercel documents that Preview variables may be scoped to a specific Git branch and that branch-specific values override default Preview variables with the same key; other branches retain their default Preview values. Changes apply to new deployments, not existing ones. Source: https://vercel.com/docs/environment-variables
+
+Vercel documents that an Ignore Build Step exits with code 0 to skip a build and code 1 to continue; `commandForIgnoringBuildStep` is a project setting, and `vercel.json` may override it for a deployment. Source: https://vercel.com/docs/project-configuration/vercel-json
+
+The integration branch is not yet present in the connected Git repository. Vercel rejected creation of its branch-scoped environment variables with HTTP 400 and reported no branch match; no Preview variables were created by that attempt. The project has no custom environments. The Supabase MCP provides the staging URL and publishable/anon keys but does not expose a staging service-role key; any Preview server-key alias must therefore remain restricted to the staging anon key until a least-privilege server credential is obtained. A project-wide Preview shutdown was not used. A temporary `vercel.json` guard that skips only this exact branch's first Vercel build is being evaluated; it has not yet been added or pushed.
+
+
+Vercel's Git configuration documentation confirms that `git.deploymentEnabled[branch] = false` suppresses automatic deployments for that branch, while unspecified branches remain enabled; branch patterns are also supported. Source: https://vercel.com/docs/project-configuration/git-configuration
+
+The safe bootstrap is branch-local: add one `false` entry for this integration branch, push it so Vercel indexes the branch without starting a Preview build, create the branch-specific staging overrides, then remove the entry and push again. This sequence changes no shared project setting and leaves every other branch rule unchanged.
