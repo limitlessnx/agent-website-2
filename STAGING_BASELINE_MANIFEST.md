@@ -1,6 +1,6 @@
 # Staging baseline manifest — dependency inventory (not executable)
 
-**Revision:** 0.4, 25 October 2026<br>
+**Revision:** 0.5, 25 October 2026<br>
 **Target:** Supabase staging project `rwewcnftxnaynpotbsms` only.<br>
 **Production target:** none.<br>
 **Status:** Review artifact; do not execute as SQL or treat as an approved migration.
@@ -63,7 +63,7 @@ The baseline must define or safely import exact reviewed versions of these share
 - `has_organization_permission(uuid, text)`
 - `slugify_identifier(text)`
 - `create_human_handoff(...)`
-- Existing trigger helpers identified by trigger metadata (signatures/grants only; bodies not read): `touch_ai_model_updated_at()`, `timeline_from_appointment()`, `timeline_from_crm_lead()`, `timeline_from_crm_message()`, `timeline_from_crm_task()`, `timeline_from_domain_event()`, `sanitize_lead_budget_phone_collision()`, `attach_existing_onboarding_submissions_after_membership()`, `seed_organization_role_presets_after_membership()`, `sync_system_routes_after_installation_change()`, `ensure_organization_manager_access_code()`, `seed_customer_stages_for_new_organization()`
+- Existing trigger helpers identified by trigger metadata: `touch_ai_model_updated_at()`, `timeline_from_appointment()`, `timeline_from_crm_lead()`, `timeline_from_crm_message()`, `timeline_from_crm_task()`, `timeline_from_domain_event()`, `sanitize_lead_budget_phone_collision()`, `attach_existing_onboarding_submissions_after_membership()`, `seed_organization_role_presets_after_membership()`, `sync_system_routes_after_installation_change()`, `ensure_organization_manager_access_code()`, `seed_customer_stages_for_new_organization()`. Their definitions were inspected in the bounded source review, but no Production body was copied or approved as a tenant-neutral implementation.
 - `assert_real_estate_mutation_scope(...)`
 - `rls_auto_enable()`
 - `sync_payment_plan_total()`
@@ -71,7 +71,7 @@ The baseline must define or safely import exact reviewed versions of these share
 - `set_whatsapp_template_config_updated_at()`
 - Provisioning functions required by onboarding: `provision_client_organization(...)`, `provision_client_workspace(...)`, `provision_trial_client_organization(...)`, plus the existing organization-template provisioning function(s)
 
-The [routine metadata inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records catalog-only signatures and grants for 24 of 25 named Production routines, `search_path` settings, the RLS event trigger, and 30 attachments on approved tables. `assert_real_estate_mutation_scope(uuid,text)` is absent from FLUXNIT but already defined by unapplied local migration `20261024141800_real_estate_atomic_audit.sql`; its legacy `limitless-realty` slug exception requires explicit replication review. No routine body was copied from Production.
+The [routine metadata inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records signatures and grants for 24 of 25 named Production routines, `search_path` settings, the RLS event trigger, and 30 attachments on approved tables. A bounded source review is recorded in [STAGING_BASELINE_ROUTINE_SOURCE_REVIEW.md](STAGING_BASELINE_ROUTINE_SOURCE_REVIEW.md): it found 17 additional table dependencies outside the 42-table allowlist and several tenant-specific/platform billing defaults. The report contains no copied function bodies or executable DDL. Its companion [dependency preflight](STAGING_BASELINE_DEPENDENCY_PREFLIGHT.sql) checks those 17 tables and 16 direct helper names; the live read-only staging run returned 50 missing-object findings. `assert_real_estate_mutation_scope(uuid,text)` is absent from FLUXNIT but already defined by unapplied local migration `20261024141800_real_estate_atomic_audit.sql`; its legacy `limitless-realty` slug exception requires explicit replication review.
 
 No helper function body may be sourced from the quarantined foundation migration. Review the exact function owner, `SECURITY DEFINER` setting, fixed `search_path`, signature, and role grants. Provisioning RPCs remain service-role-only. Do not invoke them during schema setup. Metadata showed `sanitize_lead_budget_phone_collision()` (a `RETURNS trigger` helper) has `EXECUTE` for `anon` and `authenticated`; it is not callable as an ordinary RPC, but staging should not reproduce that grant. No live change to this helper's ACL was made or authorized.
 
@@ -110,7 +110,7 @@ The phase-10 integration-requirement backfill reads existing agents. On an empty
 ## 5. Known blockers and required resolution
 
 1. The generic-named platform foundation source was quarantined after the scoped review encountered out-of-scope tenant-specific material; it is not part of this manifest.
-2. The metadata preview supplies exact table/constraint/index/policy definitions for the allowlist, but omits function bodies, trigger creation, grants and extension setup. Existing production triggers call helpers whose behavior and additional table dependencies are not known under this scope.
+2. The metadata preview supplies exact table/constraint/index/policy definitions for 42 tables, but omits function bodies, trigger creation, grants and extension setup. The bounded source review found at least 17 additional shared table dependencies plus further helper calls; the 42-table set is not an executable dependency closure. The [routine source review](STAGING_BASELINE_ROUTINE_SOURCE_REVIEW.md) classifies the discovered onboarding, timeline, billing, payment, and system-routing modules without authorizing their addition to the allowlist.
 3. A migration-order/RLS dependency cycle involves `customer_memories`: the preview places its table before policies, which is a possible resolution if the baseline is approved and feature migrations are reconciled. No DDL was applied, and required helper definitions remain unavailable.
 4. Live metadata confirms `agent_readiness_snapshots` is absent while `agent_runtime_readiness` exists; a reviewed function migration uses the absent relation name. Resolve the schema/runtime contract before staging acceptance.
 5. Local migration filenames have been rebased after live ACL version `20261024140349`; staging's MCP-applied ACL smoke migrations have independent versions and are not a synchronized app migration history. Reconcile staging history before any CLI or batch apply.
@@ -123,12 +123,13 @@ The phase-10 integration-requirement backfill reads existing agents. On an empty
 The next artifact should be an executable migration only after:
 
 - Every object in Sections 1–2 has an exact source, signature, and privilege/policy review.
+- The recursive table/routine/trigger closure has been completed, and modules with platform billing, email-claim, system-routing, or payment behavior have explicit scope and least-privilege decisions.
 - The missing core schema and RLS ordering cycle are resolved without reading or using the quarantined source.
 - The readiness relation mismatch is resolved without adding a guessed compatibility table.
 - The migration versions are aligned to staging and the already-applied FLUXNIT ACL migration.
 - The resulting staging-only SQL contains no tenant/customer data and passes local SQL/behavioral checks.
 
-The [read-only staging preflight](STAGING_BASELINE_PREFLIGHT.sql) reports missing allowlisted tables and policies, disabled RLS, missing helper names, and provisioning RPC ACL violations after a reviewed baseline and the 21 feature migrations. It reads catalog metadata only; it does not verify function bodies, exact signatures, trigger attachments, or full privilege semantics, and it does not authorize a database write.
+The [read-only staging preflight](STAGING_BASELINE_PREFLIGHT.sql) reports missing allowlisted tables and policies, disabled RLS, missing helper names, and provisioning RPC ACL violations after a reviewed baseline and the 21 feature migrations. Its supplemental [routine dependency preflight](STAGING_BASELINE_DEPENDENCY_PREFLIGHT.sql) reports missing transitive tables/helpers and risky direct grants. The latter ran read-only against staging and returned 50 findings: 17 missing tables, 17 corresponding RLS-not-enabled findings, and 16 missing helpers; no privilege result was possible for absent relations. Both read catalog metadata only; neither verifies body behavior or authorizes a database write.
 
 The [routine and trigger inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records catalog metadata for 24 of 25 named Production routines and trigger attachments on the 42-table allowlist; it contains no implementation bodies and does not authorize DDL.
 
