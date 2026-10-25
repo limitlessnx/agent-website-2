@@ -75,9 +75,9 @@ No helper function body may be sourced from the quarantined foundation migration
 
 ## 3. Feature-layer migration prerequisites and relative order
 
-The repair branch contains the already-applied ACL migration plus 14 pending application migrations; these are a delta layered on the core allowlist, not a standalone bootstrap:
+The repair branch contains the already-applied ACL migration plus 21 pending application migrations (seven shared current-main migrations and 14 local app migrations); these are a delta layered on the core allowlist, not a standalone bootstrap:
 
-1. **Provisioning:** applied production ACL version is `20261024140349_workspace_provisioning_acl.sql`; pending `20261024141200_client_provisioning_retry_safe.sql` now follows it and still requires the core provisioning schema.
+1. **Provisioning:** applied production ACL version is `20261024140349_workspace_provisioning_acl.sql`; pending `20261024141900_client_provisioning_retry_safe.sql` follows it and still requires the core provisioning schema.
 2. **Handoff idempotency and approvals:** require core conversations, agents, handoffs, organizations, Auth identities, memberships, roles/permissions, and audit structures.
 3. **Inspection/calendar:** require organizations, leads and CRM relations, properties, appointments, domain events, audit logs, membership/permission functions, and update triggers.
 4. **Estate catalog and knowledge links:** require organizations, canonical properties, knowledge sources/collections, membership/permission helpers, and composite tenant keys.
@@ -86,7 +86,7 @@ The repair branch contains the already-applied ACL migration plus 14 pending app
 7. **Campaign groups and customer service windows:** require leads/CRM customers, organizations, audit helpers, update triggers, and service-role RPC boundaries.
 8. **Shared handoff receipt/retry state:** apply receipt-state changes before retry-safety columns and one-time approval/claim objects; review compatibility with the shared `handoff_notifications` contract first.
 
-These are dependency families, not an authorized execution sequence. Exact ordering must be regenerated after core DDL and the two identified schema blockers are resolved. The 14 pending local migration filenames now sort after the recorded production ACL migration; staging's independently recorded smoke-test versions still need reconciliation before any CLI or batch apply.
+These are dependency families, not an authorized execution sequence. Exact ordering must be regenerated after core DDL and the two identified schema blockers are resolved. All 21 pending migration filenames now sort after the recorded production ACL migration as `20261024140400` through `20261024142400`; the SQL bodies are unchanged. Staging's independently recorded smoke-test versions still need reconciliation before any CLI or batch apply.
 
 ## 4. Data, seed, and test-fixture rules
 
@@ -126,4 +126,4 @@ The next artifact should be an executable migration only after:
 - The migration versions are aligned to staging and the already-applied FLUXNIT ACL migration.
 - The resulting staging-only SQL contains no tenant/customer data and passes local SQL/behavioral checks.
 
-Until then, keep staging at its ACL-smoke-only state and do not apply the comment-only preview or the 15 feature migrations.
+Until then, keep staging at its ACL-smoke-only state and do not apply the comment-only preview or the 21 pending feature migrations.
