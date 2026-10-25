@@ -39,7 +39,6 @@ test('payment and booking transitions reject terminal states and prevent confirm
  assert.ok(atomic.includes("Booking is not active and unconfirmed"));
  assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
  assert.ok(route.includes('This time overlaps another confirmed booking.'));
- const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
  assert.ok(atomic.includes('pg_advisory_xact_lock'));
  assert.ok(atomic.includes('requested_start_at < v_booking.requested_end_at'));
  assert.ok(atomic.includes('requested_end_at > v_booking.requested_start_at'));
