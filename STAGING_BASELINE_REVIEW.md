@@ -1,12 +1,12 @@
 # Limitless Realty staging baseline review
 
-**Date:** 24 October 2026
+**Date:** 25 October 2026 (follow-up)
 **Status:** Dependency review complete; no application-baseline DDL has been applied.
 **Staging project:** `Limitless Realty Staging` — `rwewcnftxnaynpotbsms`, same Supabase organization as FLUXNIT, `eu-north-1`, active/healthy, quoted at $0/month.
 
 ## Scope and safety boundary
 
-This review covers the repair branch's generic real-estate feature migrations and specifically named platform dependencies. It does not copy production tenant/customer rows, execute application provisioning RPCs, send messages, or change FLUXNIT beyond the already approved and verified ACL migration. No excluded-tenant records, integrations, workflows, or tenant configuration were accessed or changed.
+This review covers generic real-estate feature migrations and specifically named platform dependencies. It does not copy production tenant/customer rows, execute application provisioning RPCs, send messages, or change FLUXNIT beyond the already approved and verified ACL migration. During an initial local suite run, upstream source-pattern tests loaded some out-of-scope tenant-specific admin-route source; after discovery, those tests were removed from the local safe target, upstream test files were restored unchanged, and local route copies were removed. This was an unintended source-scope access. No tenant data, tenant integration records, workflows or route requests were accessed, and source details are not reproduced. Vercel variable names/target assignments were reviewed read-only with decryption disabled.
 
 During baseline-source triage, one generic-named core migration was opened from the base commit. Inspection stopped when out-of-scope tenant-specific material appeared; its contents are not reproduced, summarized, copied, modified, tested, or used as a staging baseline. No broad migration batch has been applied.
 
@@ -39,7 +39,7 @@ The core source migrations that were safely reviewed still depend on additional 
 3. **Readiness relation mismatch.** The reviewed agent-execution migration refers to `public.agent_readiness_snapshots`; read-only FLUXNIT metadata shows that relation is absent while `public.agent_runtime_readiness` exists. This is a confirmed schema-name/runtime compatibility issue to resolve before staging validation or further deployment.
 4. **Data-dependent migration step.** The phase-10 runtime migration backfills integration requirements from existing agent rows. A clean empty staging project would produce no backfill rows, but this is not a substitute for reviewing the full prerequisite schema and must never be run against copied production tenant data.
 5. **Tenant activation gates.** Several feature RPCs require explicit active real-estate opt-in metadata. Staging tests should use a synthetic organization and fictional identity; do not reuse FLUXNIT identifiers or configuration.
-6. **Migration history ordering.** FLUXNIT records the approved ACL migration as version `20261024140349`. All 14 pending local app migration filenames have now been rebased to sort after that version while preserving their earlier relative order. Staging's three MCP-applied smoke migrations are independently timestamped and have no matching local migration files; reconcile that history before any CLI or bulk migration deployment.
+6. **Migration history ordering.** FLUXNIT records the approved ACL migration as version `20261024140349`. All 14 pending local app migration filenames sort after that version while preserving their earlier relative order. The seven named current-main reminder/provisioning migration versions are absent from both FLUXNIT and staging, as are the queried reminder tables. Staging's three MCP-applied smoke migrations are independently timestamped and have no matching local migration files; reconcile that history before any CLI or bulk migration deployment.
 
 ## Read-only production metadata evidence
 
@@ -51,9 +51,9 @@ The metadata surfaced defaults that must not be copied into a reusable tenant ba
 
 ## Validation performed
 
-- `npm run test:real-estate`: **156 passed, 0 failed** after aligning migration history and adding campaign/proactive-monitor/handoff-claim regressions.
-- TypeScript: **0 diagnostics**; optimized Next.js build: **passed** in the exclusion-preserving sparse worktree using dummy localhost Supabase settings.
-- Changed-source ESLint: **0 errors, 4 external-image warnings**.
+- Tenant-neutral `npm run test:real-estate`: **171 passed, 0 failed** after preserving upstream tenant-specific tests unchanged and moving only shared safe assertions into separate test files; direct real-estate booking is blocked before calendar side effects while non-real-estate tenant validation remains enabled.
+- Scoped TypeScript: **73 safe application sources, 0 diagnostics**. Full TypeScript and both full/compile-only Next builds stop on the shared dashboard's import to a component omitted from the strict sparse checkout; no complete build is claimed.
+- Changed-source ESLint: **0 errors, 0 warnings**.
 - Focused handoff retry/callback/template-fallback tests previously passed **29/29**.
 - PGlite tests exercise feature migrations against fictional fixtures; that does not prove full Supabase baseline compatibility.
 - Staging public-table inventory: empty.
@@ -64,6 +64,6 @@ The metadata surfaced defaults that must not be copied into a reusable tenant ba
 
 The current evidence is **not sufficient to apply the 15 feature migrations to staging**. The metadata-only option was performed, and the exact table/policy DDL is available in [STAGING_BASELINE_DDL_PREVIEW.sql](STAGING_BASELINE_DDL_PREVIEW.sql), but it is deliberately comment-only and incomplete. The [object manifest](STAGING_BASELINE_MANIFEST.md) records the allowlist and dependency findings.
 
-To turn this into a runnable staging baseline, the remaining path is either (a) obtain a tenant-neutral generic core bundle with reviewed helper/trigger bodies, grants and safe defaults, or (b) receive separate authorization to source only named, non-quarantined generic helper definitions and prepare a final executable migration for review. The readiness relation mismatch must also be resolved. No staging write is authorized by the metadata review; any exact executable DDL must be shown and approved before application. Do not copy production data or inspect/use the quarantined source.
+To turn this into a runnable staging baseline, prepare a tenant-neutral generic core bundle from the reviewed allowlist and named safe helper/trigger sources, add grants and tenant-neutral defaults, and resolve the readiness-relation mismatch. Test the resulting executable migration sequence locally before any staging apply; show the exact DDL first. Do not copy production data or inspect/use the quarantined source. Current `main` is already deployed in Vercel, but both checked Supabase projects lack the seven named reminder/provisioning versions and queried reminder tables.
 
-No application-schema migration has been applied to staging or production. No GitHub push, merge, Vercel deployment, Trigger deployment, real message, or n8n change has occurred.
+No application-schema migration has been applied to staging or production, and no push, PR, merge or deployment from this branch occurred. Latest main deployment `3521ed4` is READY. Vercel Preview inherits Production-target Supabase/integration environment assignments, so branch publication remains blocked until Preview is isolated. No Trigger action, real message or n8n change occurred from this work.

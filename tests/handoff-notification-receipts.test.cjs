@@ -1,7 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const { PGlite } = require('@electric-sql/pglite');
+const load = require('./helpers/load-typescript.cjs');
 
 const migration = fs.readFileSync('supabase/migrations/20261024141300_handoff_notification_receipt_states.sql', 'utf8');
 const retryStateMigration = fs.readFileSync('supabase/migrations/20261024141600_handoff_notification_retry_safety.sql', 'utf8');
@@ -129,10 +131,49 @@ test('receipt RPC is service-role-only and shared TypeScript adapter uses the at
     assert.match(body,/rpc\("apply_handoff_notification_receipt"/);
     assert.match(body,/p_organization_id:input\.organizationId/);
     assert.match(body,/p_error_code:input\.errorCode/);
-    assert.match(body,/notification\.applied/);
+    assert.match(body,/parseHandoffNotificationReceipt/);
+    assert.match(body,/receipt\.applied/);
+    assert.match(body,/receipt\.organizationId!==input\.organizationId/);
     assert.match(body,/eq\("status","failed"\)/);
     assert.doesNotMatch(body,/update\(\{status:input\.status/);
   } finally { await db.close(); }
+});
+
+test('receipt adapter rejects arrays, snake-case payloads, and cross-tenant identities', async () => {
+  const moduleFor = (data) => {
+    const calls = [];
+    const admin = {
+      rpc: async () => ({ data, error: null }),
+      from: () => { calls.push('from'); throw new Error('unexpected database write'); },
+    };
+    const operations = load(path.resolve(__dirname, '../lib/human-operations.ts'), {
+      '@/lib/supabase/admin': { createAdminClient: () => admin },
+      '@/lib/organization-membership': {
+        getOrganizationAccessContext: async () => ({}),
+        assertAnyOrganizationPermission() {},
+        listOrganizationMembers: async () => [],
+      },
+      '@/lib/whatsapp-delivery': { sendWhatsAppMessage: async () => { throw new Error('unexpected send'); } },
+      '@/lib/ai/limitless-handoff-policy.mjs': {
+        LIMITLESS_REALTY_ORGANIZATION_ID: 'org-1',
+        createLimitlessHumanHandoff: async () => ({}),
+      },
+    });
+    return { operations, calls };
+  };
+  const input = { organizationId: 'org-1', providerMessageId: 'provider-1', status: 'delivered' };
+
+  const arrayResponse = moduleFor([{ applied: true }]);
+  await assert.rejects(arrayResponse.operations.syncHandoffNotificationStatus(input), /non-object payload/);
+  assert.deepEqual(arrayResponse.calls, []);
+
+  const snakeCaseResponse = moduleFor({ applied: true, status: 'delivered', notification_id: 'notification-1', organization_id: 'org-1', handoff_id: 'handoff-1' });
+  await assert.rejects(snakeCaseResponse.operations.syncHandoffNotificationStatus(input), /tenant-bound identifiers/);
+  assert.deepEqual(snakeCaseResponse.calls, []);
+
+  const otherTenantResponse = moduleFor({ applied: true, status: 'delivered', notificationId: 'notification-1', organizationId: 'org-2', handoffId: 'handoff-1', recipient: '2348000000000', metadata: {} });
+  await assert.rejects(otherTenantResponse.operations.syncHandoffNotificationStatus(input), /organization did not match/);
+  assert.deepEqual(otherTenantResponse.calls, []);
 });
 
 

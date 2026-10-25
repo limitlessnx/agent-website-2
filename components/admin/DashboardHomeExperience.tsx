@@ -109,7 +109,7 @@ function LegacyOrganizationView({ metrics, notices, agents }: { metrics: Metric[
 }
 
 export default function DashboardHomeExperience({
-  name, workspaceName, health, metrics, notices, agents, activity, conversations, limitlessDashboard, xposureDashboard,
+  name, workspaceName, health, metrics, notices, agents, activity, conversations, limitlessDashboard, xposureDashboard, realEstateWorkspace,
 }: {
   name: string;
   workspaceName?: string;

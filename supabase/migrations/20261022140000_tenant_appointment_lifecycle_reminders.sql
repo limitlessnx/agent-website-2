@@ -11,9 +11,10 @@ create table if not exists public.tenant_appointment_reminders (
  result jsonb not null default '{}'::jsonb,
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
- foreign key (organization_id, appointment_id) references public.appointments(organization_id,id) on delete cascade,
- unique (organization_id, appointment_id, reminder_offset_minutes)
-);
+	 foreign key (organization_id, appointment_id) references public.appointments(organization_id,id) on delete cascade,
+	 unique (organization_id, appointment_id, reminder_offset_minutes),
+	 unique (organization_id, id)
+	);
 create index if not exists tenant_appointment_reminders_due_idx on public.tenant_appointment_reminders(status,scheduled_for) where status='queued';
 alter table public.tenant_appointment_reminders enable row level security;
 revoke all on public.tenant_appointment_reminders from public,anon,authenticated;

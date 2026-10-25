@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { listLimitlessInspections } from "@/lib/limitless-inspections";
 import { findNextAvailableAppointmentSlots, selectAppointmentResource } from "@/lib/appointment-scheduling";
 import { createCalendarEvent } from "@/lib/calendar-provider";
+import { isRealEstateOrganizationRecord } from "@/lib/real-estate-organization";
 
 const LIMITLESS_REALTY_ORG_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
@@ -11,7 +12,6 @@ type ToolContext = {
   sessionId: string;
   customerId?: string;
   externalConversationId?: string;
-  customerId?: string;
   conversationId?: string;
   correlationId?: string;
 };
@@ -143,7 +143,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
     },
     {
       name: "create_appointment_booking",
-      description: "Create a real appointment for the current tenant customer. Check availability first, persist a tenant-scoped record, create the connected calendar event, and only then mark the appointment confirmed. Never invent customer details or claim confirmation when calendar creation fails.",
+      description: "Create a real appointment for a current non-real-estate tenant customer. Real-estate organizations must use the operator-confirmed inspection request flow; never use direct booking to bypass human confirmation. Check availability first, persist a tenant-scoped record, create the connected calendar event, and only then mark the appointment confirmed.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -173,6 +173,22 @@ export function maiaAppointmentTools(): ToolDefinition[] {
           return { status: "customer_required", confirmed: false, next_action: "Resolve or create the customer record before booking." };
         }
         const admin = createAdminClient();
+        const { data: organization, error: organizationError } = await admin
+          .from("organizations")
+          .select("slug,status,metadata")
+          .eq("id", ctx.organizationId)
+          .maybeSingle();
+        if (organizationError) throw organizationError;
+        if (!organization || organization.status !== "active") throw new Error("Active tenant organization was not found.");
+        if (isRealEstateOrganizationRecord(organization)) {
+          return {
+            status: "operator_confirmation_required",
+            confirmed: false,
+            requestedStart: startAt,
+            requestedTitle: title,
+            next_action: "Create a real-estate inspection request for staff review. Do not create or confirm a calendar booking from Maia.",
+          };
+        }
         const { data: customer, error: customerError } = await admin
           .from("crm_customers")
           .select("id,email,phone")

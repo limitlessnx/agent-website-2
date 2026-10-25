@@ -288,17 +288,19 @@ export async function syncHandoffNotificationStatus(input:{
     p_error_code:input.errorCode||null,
   });
   if(error) throw error;
-  if(!notification?.notificationId) return false;
-  if(notification.applied!==true) return true;
+  const receipt=parseHandoffNotificationReceipt(notification as unknown);
+  if(!receipt) return false;
+  if(receipt.organizationId!==input.organizationId) throw new Error("Handoff receipt organization did not match the requested tenant.");
+  if(!receipt.applied) return true;
 
-  const metadata=rec(notification.metadata);
+  const metadata=receipt.metadata;
   if(input.status!=="failed") return true;
 
   const failureMessage=str(input.errorMessage)||`WhatsApp notification failed${input.errorCode?` (${input.errorCode})`:""}.`;
   const markFailed=async(message:string,extra:Record<string,unknown>={})=>{
     const {error:updateError}=await admin.from("handoff_notifications").update({
       error_message:message.slice(0,2000),metadata:{...metadata,...extra},
-    }).eq("organization_id",notification.organizationId).eq("id",notification.notificationId).eq("status","failed").eq("provider_message_id",input.providerMessageId);
+    }).eq("organization_id",receipt.organizationId).eq("id",receipt.notificationId).eq("status","failed").eq("provider_message_id",input.providerMessageId);
     if(updateError) throw updateError;
   };
 
@@ -309,13 +311,36 @@ export async function syncHandoffNotificationStatus(input:{
     return true;
   }
 
-  const recipient=phone(notification.recipient);
+  const recipient=phone(receipt.recipient);
   if(!recipient){await markFailed("The approved staff template could not be sent because its destination is missing.",{fallback_template_attempted:true,fallback_template_failed:true});return true;}
   await sendApprovedHandoffTemplateFallback({
-    admin,organizationId:String(notification.organizationId),handoffId:String(notification.handoffId),notificationId:String(notification.notificationId),
+    admin,organizationId:receipt.organizationId,handoffId:receipt.handoffId,notificationId:receipt.notificationId,
     recipient,metadata,providerMessageId:input.providerMessageId,expectedStatus:"failed",
   });
   return true;
+}
+
+type HandoffNotificationReceipt={
+  applied:boolean;status:string;notificationId:string;organizationId:string;handoffId:string;
+  recipient:string|null;metadata:Record<string,unknown>;
+};
+function parseHandoffNotificationReceipt(value:unknown):HandoffNotificationReceipt|null{
+  if(!value||typeof value!=="object"||Array.isArray(value)) throw new Error("Handoff receipt RPC returned a non-object payload.");
+  const row=value as Record<string,unknown>;
+  if(typeof row.applied!=="boolean"||typeof row.status!=="string") throw new Error("Handoff receipt RPC returned an invalid status payload.");
+  if(row.applied===false&&!Object.prototype.hasOwnProperty.call(row,"notificationId")){
+    if(row.status==="unmatched"||row.status==="ambiguous") return null;
+    throw new Error("Handoff receipt RPC omitted the notification identity.");
+  }
+  if(typeof row.notificationId!=="string"||typeof row.organizationId!=="string"||typeof row.handoffId!=="string"){
+    throw new Error("Handoff receipt RPC omitted tenant-bound identifiers.");
+  }
+  if(row.recipient!==null&&typeof row.recipient!=="string") throw new Error("Handoff receipt RPC returned an invalid recipient.");
+  if(row.metadata!==null&&(!row.metadata||typeof row.metadata!=="object"||Array.isArray(row.metadata))){
+    throw new Error("Handoff receipt RPC returned invalid metadata.");
+  }
+  return {applied:row.applied,status:row.status,notificationId:row.notificationId,organizationId:row.organizationId,
+    handoffId:row.handoffId,recipient:row.recipient as string|null,metadata:rec(row.metadata)};
 }
 
 export type HumanHandoffRow={
@@ -326,6 +351,8 @@ export type HumanHandoffRow={
   customer_name?:string|null; stage_name?:string|null; assigned_to_email?:string|null;
   metadata?:Record<string,unknown>|null;
   whatsapp_notification_status?:string|null; whatsapp_notification_error?:string|null;
+  whatsapp_notification_id?:string|null; whatsapp_notification_error_code?:string|null;
+  whatsapp_notification_retry_count?:number; whatsapp_notification_fallback_attempted?:boolean;
   created_at:string; updated_at:string; resolution_summary?:string|null;
 };
 export type OperationApprovalRow={
@@ -410,12 +437,21 @@ export async function claimHumanHandoff(session:ClientSession,handoffId:string){
   if(handoff.assigned_membership_id&&handoff.assigned_membership_id!==access.membershipId&&!access.permissions.has("handoffs.manage")){
     throw new Error("This handoff is assigned to another team member.");
   }
-  const {data,error:updateError}=await admin.from("human_handoffs").update({
+  if(handoff.claimed_by_membership_id&&handoff.claimed_by_membership_id!==access.membershipId){
+    throw new Error("This handoff is already claimed by another team member.");
+  }
+  let claimQuery=admin.from("human_handoffs").update({
     assigned_membership_id:handoff.assigned_membership_id||access.membershipId,
     claimed_by_membership_id:access.membershipId,status:"in_progress",
     claimed_at:handoff.claimed_at||new Date().toISOString(),updated_at:new Date().toISOString(),
-  }).eq("organization_id",session.organizationId).eq("id",handoffId).select().single();
+  }).eq("organization_id",session.organizationId).eq("id",handoffId).not("status","in",'(resolved,closed)')
+    .or(`claimed_by_membership_id.is.null,claimed_by_membership_id.eq.${access.membershipId}`);
+  if(!access.permissions.has("handoffs.manage")){
+    claimQuery=claimQuery.or(`assigned_membership_id.is.null,assigned_membership_id.eq.${access.membershipId}`);
+  }
+  const {data,error:updateError}=await claimQuery.select().maybeSingle();
   if(updateError) throw updateError;
+  if(!data) throw new Error("Handoff was claimed, reassigned, or closed by another operator.");
   // Claiming a handoff is an internal ownership action only. It never opens a human chat inside Maia.
   return data;
 }
@@ -428,7 +464,7 @@ export async function assignHumanHandoff(session:ClientSession,handoffId:string,
   if(memberError) throw memberError;
   if(!member) throw new Error("Assignee must be an active member of this organization.");
   const {data,error}=await admin.from("human_handoffs").update({
-    assigned_membership_id:membershipId,status:"assigned",updated_at:new Date().toISOString(),
+    assigned_membership_id:membershipId,claimed_by_membership_id:null,status:"assigned",updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("id",handoffId).not("status","in",'(resolved,closed)').select().maybeSingle();
   if(error) throw error;
   if(!data) throw new Error("Handoff could not be assigned.");
@@ -462,13 +498,14 @@ export async function resolveHumanHandoff(session:ClientSession,handoffId:string
   const {data:handoff,error}=await admin.from("human_handoffs").select("*").eq("organization_id",session.organizationId).eq("id",handoffId).maybeSingle();
   if(error) throw error;
   if(!handoff) throw new Error("Handoff not found.");
+  if(["resolved","closed"].includes(handoff.status)) throw new Error("Handoff is already closed.");
   const owns=handoff.assigned_membership_id===access.membershipId||handoff.claimed_by_membership_id===access.membershipId;
   if(!owns&&!access.permissions.has("handoffs.manage")) throw new Error("Only the assignee, claimant, or handoff manager can resolve this handoff.");
   const now=new Date().toISOString();
   const followUpRequired=options.followUpRequired!==false;
   const followUpMinutes=Math.max(5,Math.min(10080,Number(options.followUpMinutes||720)));
   const followUpDueAt=followUpRequired?new Date(Date.now()+followUpMinutes*60_000).toISOString():null;
-  const {data,error:updateError}=await admin.from("human_handoffs").update({
+  const resolutionUpdate=admin.from("human_handoffs").update({
     status:"resolved",
     resolved_at:now,
     resolution_summary:resolution.trim()||null,
@@ -478,8 +515,13 @@ export async function resolveHumanHandoff(session:ClientSession,handoffId:string
     follow_up_due_at:followUpDueAt,
     follow_up_status:followUpRequired?"scheduled":"not_required",
     updated_at:now,
-  }).eq("organization_id",session.organizationId).eq("id",handoffId).select().single();
+  }).eq("organization_id",session.organizationId).eq("id",handoffId).not("status","in",'(resolved,closed)');
+  const ownedResolutionUpdate=access.permissions.has("handoffs.manage")
+    ?resolutionUpdate
+    :resolutionUpdate.or(`assigned_membership_id.eq.${access.membershipId},claimed_by_membership_id.eq.${access.membershipId}`);
+  const {data,error:updateError}=await ownedResolutionUpdate.select().maybeSingle();
   if(updateError) throw updateError;
+  if(!data) throw new Error("Handoff ownership changed or the handoff was resolved by another operator.");
 
   const {data:conversation}=await admin.from("crm_conversations").select("metadata").eq("organization_id",session.organizationId).eq("id",handoff.conversation_id).maybeSingle();
   const metadata={...((conversation?.metadata||{}) as Record<string,unknown>)};
