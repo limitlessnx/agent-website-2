@@ -10,7 +10,12 @@ async function database(){
  CREATE TABLE organizations(id uuid PRIMARY KEY,name text,slug text,status text DEFAULT 'active',metadata jsonb DEFAULT '{}');
  INSERT INTO organizations VALUES ('${A}','Fixture A','limitless-realty','active','{}'),('${B}','Fixture B','fixture-b-realty','active','{"industry":"real_estate"}'),('${C}','Fixture C','fixture-c','active','{"industry":"retail"}');
  CREATE TABLE properties(id uuid PRIMARY KEY,organization_id uuid NOT NULL REFERENCES organizations(id),title text,price text,image_urls jsonb,status text DEFAULT 'active',updated_at timestamptz DEFAULT now());
- CREATE TABLE knowledge_sources(id uuid PRIMARY KEY,organization_id uuid NOT NULL REFERENCES organizations(id),title text,status text DEFAULT 'ready',content text);
+ CREATE TABLE knowledge_sources(
+   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid NOT NULL REFERENCES organizations(id),collection_id uuid,
+   title text NOT NULL,source_type text NOT NULL DEFAULT 'manual_note',source_url text,content text,
+   status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','ready','failed','archived')),
+   checksum text,metadata jsonb NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+ );
  CREATE TABLE leads(id uuid PRIMARY KEY,organization_id uuid NOT NULL REFERENCES organizations(id),name text,status text,viewing_booked boolean DEFAULT false,viewing_datetime timestamptz);
  CREATE TABLE follow_ups(id uuid PRIMARY KEY,organization_id uuid NOT NULL REFERENCES organizations(id),status text);
  CREATE TABLE crm_customers(id uuid PRIMARY KEY,organization_id uuid NOT NULL REFERENCES organizations(id),status text DEFAULT 'active',metadata jsonb DEFAULT '{}');
@@ -22,7 +27,7 @@ async function database(){
  CREATE FUNCTION is_organization_member(org uuid) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT org::text=current_setting('test.organization',true)$$;
  CREATE FUNCTION has_organization_permission(org uuid,permission text) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT is_organization_member(org) AND position(permission IN current_setting('test.permissions',true))>0$$;
  `);
- for(const path of ['supabase/migrations/20261025210535_20261024141200_real_estate_action_approvals.sql','supabase/migrations/20261025210604_20261024141300_real_estate_inspections.sql','supabase/migrations/20261025210620_20261024141400_real_estate_estate_catalog.sql','supabase/migrations/20261025210627_20261024141500_real_estate_knowledge_links.sql','supabase/migrations/20261025210639_20261024141600_real_estate_outbound_tracking.sql','supabase/migrations/20261025211219_20261024141700_real_estate_delivery_receipts.sql','supabase/migrations/20261025211249_20261024141800_real_estate_atomic_audit.sql','supabase/migrations/20261025211401_20261024142100_real_estate_campaign_groups.sql','supabase/migrations/20261025211411_20261024142200_real_estate_customer_service_windows.sql','supabase/migrations/20261025221053_20261025215800_real_estate_terms_of_service.sql'])await db.exec(fs.readFileSync(path,'utf8'));
+ for(const path of ['supabase/migrations/20261025210535_20261024141200_real_estate_action_approvals.sql','supabase/migrations/20261025210604_20261024141300_real_estate_inspections.sql','supabase/migrations/20261025210620_20261024141400_real_estate_estate_catalog.sql','supabase/migrations/20261025210627_20261024141500_real_estate_knowledge_links.sql','supabase/migrations/20261025210639_20261024141600_real_estate_outbound_tracking.sql','supabase/migrations/20261025211219_20261024141700_real_estate_delivery_receipts.sql','supabase/migrations/20261025211249_20261024141800_real_estate_atomic_audit.sql','supabase/migrations/20261025211401_20261024142100_real_estate_campaign_groups.sql','supabase/migrations/20261025211411_20261024142200_real_estate_customer_service_windows.sql','supabase/migrations/20261025221053_20261025215800_real_estate_terms_of_service.sql','supabase/migrations/20261025231627_real_estate_website_knowledge.sql'])await db.exec(fs.readFileSync(path,'utf8'));
  return db;
 }
 const digest='a'.repeat(64),token='b'.repeat(64);
@@ -221,6 +226,41 @@ test('real PostgreSQL campaign groups enforce tenant-owned CRM membership, RLS a
   assert.equal(rolledBack,0);
   const audit=(await db.query("select count(*)::integer as n from audit_logs where organization_id=$1 and resource_type='real_estate_campaign_group'",[A])).rows[0].n;
   assert.equal(audit,1);
+ }finally{await db.close();}
+});
+
+test('estate website snapshots are tenant-bound, audited, pending until approval, and service-role-only',async()=>{
+ const db=await database();try{
+  const estate=(await db.query("select * from save_real_estate_estate_with_audit($1,$2,null,$3)",[A,'operator-a',{name:'Website estate',status:'published',knowledge_status:'approved'}])).rows[0];
+  const url='https://estate.example.com/reservations',content='Official estate policy: reservations are confirmed in writing by the estate office. Contact the office for current availability and inspection details.',checksumOne='c'.repeat(64),checksumTwo='d'.repeat(64);
+  const captureSql='select * from capture_real_estate_website_source_with_audit($1,$2,$3,$4,$5,$6,$7)';
+  await assert.rejects(db.query(captureSql,[B,'operator-b',estate.id,'Cross-tenant source',url,content,checksumOne]),/Estate was not found in this organization/);
+  await assert.rejects(db.query(captureSql,[A,'operator-a',estate.id,'Bad URL','http://estate.example.com',content,checksumOne]),/valid HTTPS website source URL/);
+  const captured=(await db.query(captureSql,[A,'operator-a',estate.id,'Official reservations',url,content,checksumOne])).rows[0];
+  assert.equal(captured.organization_id,A);assert.equal(captured.source_type,'website');assert.equal(captured.source_url,url);assert.equal(captured.status,'pending');
+  assert.equal(captured.metadata.capture_type,'real_estate_website_snapshot');assert.equal(captured.metadata.estate_id,estate.id);
+  const linked=(await db.query('select organization_id,estate_id,knowledge_source_id from real_estate_estate_knowledge_links where knowledge_source_id=$1',[captured.id])).rows[0];
+  assert.deepEqual(linked,{organization_id:A,estate_id:estate.id,knowledge_source_id:captured.id});
+  const approveSql='select * from approve_real_estate_website_source_with_audit($1,$2,$3,$4)';
+  await assert.rejects(db.query(approveSql,[B,'operator-b',estate.id,captured.id]),/Website source was not found in this estate and organization/);
+  await assert.rejects(db.query(approveSql,[A,'operator-a','d4000000-0000-4000-8000-000000000001',captured.id]),/Website source was not found in this estate and organization/);
+  const unmarked=(await db.query("insert into knowledge_sources(organization_id,title,source_type,source_url,content,status,metadata) values($1,'Unmarked website','website',$2,$3,'pending','{}'::jsonb) returning id",[A,'https://estate.example.com/unreviewed','untrusted unmarked content'])).rows[0];
+  await db.query('insert into real_estate_estate_knowledge_links(organization_id,estate_id,knowledge_source_id) values($1,$2,$3)',[A,estate.id,unmarked.id]);
+  await assert.rejects(db.query(approveSql,[A,'operator-a',estate.id,unmarked.id]),/Only a captured estate website snapshot can be approved here/);
+  await db.exec('SET ROLE anon');
+  await assert.rejects(db.query(approveSql,[A,'operator-a',estate.id,captured.id]),/permission denied/);
+  await db.exec('RESET ROLE; SET ROLE authenticated');
+  await assert.rejects(db.query(approveSql,[A,'operator-a',estate.id,captured.id]),/permission denied/);
+  await db.exec('RESET ROLE; SET ROLE service_role');
+  const approved=(await db.query(approveSql,[A,'operator-a',estate.id,captured.id])).rows[0];
+  assert.equal(approved.status,'ready');assert.equal(approved.metadata.approved_by,'operator-a');
+  const refreshed=(await db.query(captureSql,[A,'operator-a',estate.id,'Official reservations',url,`${content} Updated hours are published weekly.`,checksumTwo])).rows[0];
+  assert.equal(refreshed.id,captured.id);assert.equal(refreshed.status,'pending');assert.equal(refreshed.checksum,checksumTwo);assert.equal(refreshed.metadata.approved_by,undefined);
+  await assert.rejects(db.query(approveSql,[A,'operator-a',estate.id,'e4000000-0000-4000-8000-000000000001']),/Website source was not found in this estate and organization/);
+  await db.exec('RESET ROLE');
+  const sourceCount=(await db.query('select count(*)::integer as n from knowledge_sources where organization_id=$1 and source_url=$2',[A,url])).rows[0].n;assert.equal(sourceCount,1);
+  const actions=(await db.query("select action from audit_logs where resource_type='real_estate_website_source' and resource_id=$1",[captured.id])).rows.map(row=>row.action).sort();
+  assert.deepEqual(actions,['real_estate.website_source.approved','real_estate.website_source.captured','real_estate.website_source.captured']);
  }finally{await db.close();}
 });
 
