@@ -1,0 +1,28 @@
+name: Limitless Realty safe checks
+
+on:
+  push:
+    branches:
+      - integration/limitless-realty-production-20261025
+
+concurrency:
+  group: real-estate-safe-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  safe-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run tenant-neutral acceptance suite only
+        run: npm run test:real-estate
