@@ -322,6 +322,12 @@ test('dashboard visibly links estate creation, terms and FAQs to owning-estate p
   assert.match(estateDetail, /href="#faqs"/);
   assert.match(estateForm, /name="terms_of_service"/);
   assert.match(propertiesPage, /Add estate/);
+  assert.match(propertiesPage, /<nav className="estate-action-links" aria-label="Estate actions">/);
+  assert.match(propertiesPage, /className="estate-action-button estate-action-button-primary"/);
+  assert.match(propertiesPage, /className="estate-action-button estate-action-button-secondary"/);
+  assert.match(propertiesPage, /min-height:48px/);
+  assert.match(propertiesPage, /\.estate-action-links\{display:flex;flex-direction:column/);
+  assert.match(propertiesPage, /@media\(min-width:701px\)/);
   assert.match(propertyForm, /name="estate_id"/);
   assert.match(propertyApi, /\.eq\("organization_id", scope\.organizationId\)/);
   assert.match(propertyApi, /code: "invalid_estate_id"/);
