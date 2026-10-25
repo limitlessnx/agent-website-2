@@ -21,7 +21,7 @@ export async function saveEstateAction(_previous:ActionResult, form:FormData):Pr
     const status=text(form,"status")||"draft"; const knowledgeStatus=text(form,"knowledge_status")||"draft";
     if(!["draft","published","archived"].includes(status)||!["draft","approved"].includes(knowledgeStatus)) throw new Error("Invalid estate or knowledge status.");
     const email=text(form,"contact_email");if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error("A valid contact email is required.");
-    await saveEstate(scope.organizationId,{id:text(form,"estate_id")||undefined,name,description:text(form,"description"),location:text(form,"location"),address:text(form,"address"),contact_name:text(form,"contact_name"),contact_email:email,contact_phone:text(form,"contact_phone"),status:status as "draft"|"published"|"archived",knowledge_status:knowledgeStatus as "draft"|"approved",payment_terms:text(form,"payment_terms"),operating_instructions:text(form,"operating_instructions")},scope.actorId);
+    await saveEstate(scope.organizationId,{id:text(form,"estate_id")||undefined,name,description:text(form,"description"),location:text(form,"location"),address:text(form,"address"),contact_name:text(form,"contact_name"),contact_email:email,contact_phone:text(form,"contact_phone"),status:status as "draft"|"published"|"archived",knowledge_status:knowledgeStatus as "draft"|"approved",payment_terms:text(form,"payment_terms"),terms_of_service:text(form,"terms_of_service"),operating_instructions:text(form,"operating_instructions")},scope.actorId);
     return "Estate saved. Approved knowledge is retrieved from live records; no code deployment is needed for content updates.";
   });
 }

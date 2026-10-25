@@ -22,7 +22,7 @@ async function database(){
  CREATE FUNCTION is_organization_member(org uuid) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT org::text=current_setting('test.organization',true)$$;
  CREATE FUNCTION has_organization_permission(org uuid,permission text) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT is_organization_member(org) AND position(permission IN current_setting('test.permissions',true))>0$$;
  `);
- for(const path of ['supabase/migrations/20261025210535_20261024141200_real_estate_action_approvals.sql','supabase/migrations/20261025210604_20261024141300_real_estate_inspections.sql','supabase/migrations/20261025210620_20261024141400_real_estate_estate_catalog.sql','supabase/migrations/20261025210627_20261024141500_real_estate_knowledge_links.sql','supabase/migrations/20261025210639_20261024141600_real_estate_outbound_tracking.sql','supabase/migrations/20261025211219_20261024141700_real_estate_delivery_receipts.sql','supabase/migrations/20261025211249_20261024141800_real_estate_atomic_audit.sql','supabase/migrations/20261025211401_20261024142100_real_estate_campaign_groups.sql','supabase/migrations/20261025211411_20261024142200_real_estate_customer_service_windows.sql'])await db.exec(fs.readFileSync(path,'utf8'));
+ for(const path of ['supabase/migrations/20261025210535_20261024141200_real_estate_action_approvals.sql','supabase/migrations/20261025210604_20261024141300_real_estate_inspections.sql','supabase/migrations/20261025210620_20261024141400_real_estate_estate_catalog.sql','supabase/migrations/20261025210627_20261024141500_real_estate_knowledge_links.sql','supabase/migrations/20261025210639_20261024141600_real_estate_outbound_tracking.sql','supabase/migrations/20261025211219_20261024141700_real_estate_delivery_receipts.sql','supabase/migrations/20261025211249_20261024141800_real_estate_atomic_audit.sql','supabase/migrations/20261025211401_20261024142100_real_estate_campaign_groups.sql','supabase/migrations/20261025211411_20261024142200_real_estate_customer_service_windows.sql','supabase/migrations/20261025215800_real_estate_terms_of_service.sql'])await db.exec(fs.readFileSync(path,'utf8'));
  return db;
 }
 const digest='a'.repeat(64),token='b'.repeat(64);
@@ -138,6 +138,23 @@ test('real-estate mutation scope is tenant-bound and exposed only through servic
   const created=(await db.query("select * from public.save_real_estate_estate_with_audit($1,$2,null,$3)",[A,'operator-service',{name:'Service wrapper',status:'draft',knowledge_status:'draft'}])).rows[0];
   assert.equal(created.name,'Service wrapper');
   await db.exec('RESET ROLE');
+ }finally{await db.close();}
+});
+
+test('estate terms of service are tenant-audited, updateable, preservable, and clearable',async()=>{
+ const db=await database();try{
+  const created=(await db.query('select * from save_real_estate_estate_with_audit($1,$2,null,$3)',[A,'operator-a',{name:'Terms estate',status:'draft',knowledge_status:'draft',terms_of_service:'Reservations require written confirmation.'}])).rows[0];
+  assert.equal(created.terms_of_service,'Reservations require written confirmation.');
+  const updated=(await db.query('select * from save_real_estate_estate_with_audit($1,$2,$3,$4)',[A,'operator-a',created.id,{name:'Terms estate',terms_of_service:'Reservations require a signed agreement.'}])).rows[0];
+  assert.equal(updated.terms_of_service,'Reservations require a signed agreement.');
+  const preserved=(await db.query('select * from save_real_estate_estate_with_audit($1,$2,$3,$4)',[A,'operator-a',created.id,{name:'Terms estate renamed'}])).rows[0];
+  assert.equal(preserved.terms_of_service,'Reservations require a signed agreement.');
+  const cleared=(await db.query('select * from save_real_estate_estate_with_audit($1,$2,$3,$4)',[A,'operator-a',created.id,{name:'Terms estate renamed',terms_of_service:'   '}])).rows[0];
+  assert.equal(cleared.terms_of_service,null);
+  const audits=(await db.query("select metadata->'changed_fields' as changed_fields from audit_logs where resource_id=$1 order by created_at",[created.id])).rows;
+  assert.equal(audits.length,4);
+  assert.ok(audits[0].changed_fields.includes('terms_of_service'));
+  assert.ok(audits[1].changed_fields.includes('terms_of_service'));
  }finally{await db.close();}
 });
 

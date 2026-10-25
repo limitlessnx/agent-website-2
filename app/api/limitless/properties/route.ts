@@ -5,6 +5,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { addPropertyImageUrl, uploadPublicMedia } from "@/lib/supabase-media";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || "");
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
         location_city: value(formData, "location_city"),
         type: value(formData, "type"),
         status: value(formData, "status") || "active",
+        estate_id: value(formData, "estate_id"),
         drive_brochure_link: value(formData, "drive_brochure_link"),
         features: value(formData, "features"),
         description: value(formData, "description"),
@@ -84,6 +86,23 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
+    const estateId = String(payload.estate_id || "").trim();
+    if (estateId) {
+      const { data: estate, error: estateError } = await createAdminClient()
+        .from("real_estate_estates")
+        .select("id")
+        .eq("organization_id", scope.organizationId)
+        .eq("id", estateId)
+        .maybeSingle();
+      if (estateError) throw estateError;
+      if (!estate) {
+        return NextResponse.json(
+          { error: "The selected estate is not available in this organization.", code: "invalid_estate_id" },
+          { status: 400 },
+        );
+      }
+    }
+    payload.estate_id = estateId || null;
     const created = await createPropertyNormalized(payload, scope.organizationId);
     const property = created[0];
     if (!property?.id) return NextResponse.json({ error: "Property record was not created." }, { status: 502 });
