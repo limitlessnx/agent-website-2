@@ -24,7 +24,9 @@ test('booking and manual payment status records are tenant scoped and status con
 test('staff actions require manual payment status before booking confirmation', () => {
  const route = read('app/api/admin/xposure/bookings/route.ts');
  assert.ok(route.includes('authorizeXposureTenantAccess("customers.manage")'));
- assert.ok(route.includes('current.payment_status !== "verified"'));
+ assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
+ const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
+ assert.ok(atomic.includes("Payment must be manually verified first"));
  assert.ok(route.includes('staff_approved_quote'));
  assert.ok(route.includes('.eq("organization_id", access.organizationId)'));
 });
@@ -32,7 +34,9 @@ test('staff actions require manual payment status before booking confirmation', 
 test('payment and booking transitions reject terminal states and prevent confirmed-time overlaps', () => {
  const route = read('app/api/admin/xposure/bookings/route.ts');
  assert.ok(route.includes('terminalStatuses.has(current.booking_status)'));
- assert.ok(route.includes('Only an active, unconfirmed booking can be confirmed.'));
+ assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
+ const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
+ assert.ok(atomic.includes("Booking is not active and unconfirmed"));
  assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
  assert.ok(route.includes('This time overlaps another confirmed booking.'));
  const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
