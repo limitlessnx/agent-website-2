@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { authorizeXposureTenantAccess } from "@/lib/xposure-tenant-authorization";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const terminalStatuses = new Set(["completed", "cancelled", "expired"]);
+
 export async function GET() {
   const access = await authorizeXposureTenantAccess("customers.view");
   if (!access.ok) return access.response;
@@ -19,34 +21,54 @@ export async function PATCH(request: Request) {
   if (!body || typeof body.id !== "string") return NextResponse.json({ error: "Booking id is required." }, { status: 400 });
   const admin = createAdminClient();
   const { data: current, error: readError } = await admin.from("xposure_bookings")
-    .select("id,booking_status,payment_status,requested_start_at,requested_end_at,service_type,service_details")
+    .select("id,booking_status,payment_status,requested_start_at,requested_end_at,service_type,service_details,organization_id")
     .eq("organization_id", access.organizationId).eq("id", body.id).maybeSingle();
   if (readError) return NextResponse.json({ error: "Unable to load booking." }, { status: 500 });
   if (!current) return NextResponse.json({ error: "Booking not found in Xposure." }, { status: 404 });
   const action = typeof body.action === "string" ? body.action : "";
   const now = new Date().toISOString();
   let updates: Record<string, unknown> = { updated_at: now };
-  // This action records the human agent's bank check; Fluxknight does not inspect transfers or receipts.
+
   if (action === "payment_received" || action === "verify_payment") {
-    if (["verified", "refunded"].includes(current.payment_status)) return NextResponse.json({ error: "Payment has already been recorded or cannot be marked received." }, { status: 409 });
+    if (terminalStatuses.has(current.booking_status) || ["verified", "refunded"].includes(current.payment_status)) {
+      return NextResponse.json({ error: "Payment cannot be changed for this booking state." }, { status: 409 });
+    }
     updates = { ...updates, payment_status: "verified", payment_verified_by: access.actorUserId, payment_verified_at: now, booking_status: current.booking_status === "pending" ? "awaiting_payment" : current.booking_status };
   } else if (action === "reject_payment") {
+    if (terminalStatuses.has(current.booking_status) || current.payment_status === "verified" || current.payment_status === "refunded") {
+      return NextResponse.json({ error: "Payment cannot be rejected for this booking state." }, { status: 409 });
+    }
     updates = { ...updates, payment_status: "rejected", booking_status: "awaiting_payment", follow_up_state: "awaiting_payment" };
   } else if (action === "confirm_booking") {
     if (current.payment_status !== "verified") return NextResponse.json({ error: "An authorized staff member must record Payment Received first." }, { status: 409 });
+    if (!["pending", "awaiting_payment", "payment_review"].includes(current.booking_status)) return NextResponse.json({ error: "Only an active, unconfirmed booking can be confirmed." }, { status: 409 });
     if (!current.requested_start_at || !current.requested_end_at) return NextResponse.json({ error: "A requested date and time are required before confirmation." }, { status: 409 });
-    if (["wedding", "videography", "custom"].includes(current.service_type) && !(current.service_details as Record<string, unknown>)?.staff_approved_quote) return NextResponse.json({ error: "A staff-approved custom quote is required before confirming this service." }, { status: 409 });
+    if (new Date(current.requested_end_at).getTime() <= new Date(current.requested_start_at).getTime()) return NextResponse.json({ error: "The booking time range is invalid." }, { status: 409 });
+    if (["wedding", "videography", "custom"].includes(current.service_type) && (current.service_details as Record<string, unknown>)?.staff_approved_quote !== true) {
+      return NextResponse.json({ error: "A staff-approved custom quote is required before confirming this service." }, { status: 409 });
+    }
+    const { data: conflicts, error: conflictError } = await admin.from("xposure_bookings")
+      .select("id").eq("organization_id", access.organizationId).eq("booking_status", "confirmed")
+      .lt("requested_start_at", current.requested_end_at).gt("requested_end_at", current.requested_start_at)
+      .neq("id", current.id).limit(1);
+    if (conflictError) return NextResponse.json({ error: "Unable to verify studio availability. Refresh and retry." }, { status: 503 });
+    if (conflicts?.length) return NextResponse.json({ error: "This time overlaps another confirmed booking. Reschedule before confirming." }, { status: 409 });
     updates = { ...updates, booking_status: "confirmed", confirmed_by: access.actorUserId, confirmed_at: now, follow_up_state: "completed" };
   } else if (action === "request_information") {
+    if (terminalStatuses.has(current.booking_status)) return NextResponse.json({ error: "This booking is closed." }, { status: 409 });
     updates = { ...updates, follow_up_state: "paused" };
   } else if (action === "cancel_booking") {
-    if (current.booking_status === "completed") return NextResponse.json({ error: "Completed bookings cannot be cancelled." }, { status: 409 });
+    if (current.booking_status === "completed" || current.booking_status === "cancelled" || current.booking_status === "expired") {
+      return NextResponse.json({ error: "This booking is already closed." }, { status: 409 });
+    }
     updates = { ...updates, booking_status: "cancelled", follow_up_state: "completed" };
   } else if (action === "resume_follow_up") {
+    if (terminalStatuses.has(current.booking_status)) return NextResponse.json({ error: "This booking is closed." }, { status: 409 });
     updates = { ...updates, follow_up_state: current.payment_status === "receipt_submitted" ? "receipt_review" : "awaiting_payment" };
   } else {
     return NextResponse.json({ error: "Unsupported booking action." }, { status: 400 });
   }
+
   const { data, error } = await admin.from("xposure_bookings").update(updates)
     .eq("organization_id", access.organizationId).eq("id", body.id)
     .select("id,booking_status,payment_status,follow_up_state,confirmed_at,payment_verified_at,payment_verified_by").single();
