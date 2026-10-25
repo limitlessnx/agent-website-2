@@ -40,20 +40,22 @@ export async function PATCH(request: Request) {
     }
     updates = { ...updates, payment_status: "rejected", booking_status: "awaiting_payment", follow_up_state: "awaiting_payment" };
   } else if (action === "confirm_booking") {
-    if (current.payment_status !== "verified") return NextResponse.json({ error: "An authorized staff member must record Payment Received first." }, { status: 409 });
-    if (!["pending", "awaiting_payment", "payment_review"].includes(current.booking_status)) return NextResponse.json({ error: "Only an active, unconfirmed booking can be confirmed." }, { status: 409 });
-    if (!current.requested_start_at || !current.requested_end_at) return NextResponse.json({ error: "A requested date and time are required before confirmation." }, { status: 409 });
-    if (new Date(current.requested_end_at).getTime() <= new Date(current.requested_start_at).getTime()) return NextResponse.json({ error: "The booking time range is invalid." }, { status: 409 });
-    if (["wedding", "videography", "custom"].includes(current.service_type) && (current.service_details as Record<string, unknown>)?.staff_approved_quote !== true) {
-      return NextResponse.json({ error: "A staff-approved custom quote is required before confirming this service." }, { status: 409 });
+    const result = await admin.rpc("confirm_xposure_booking", {
+      p_organization_id: access.organizationId,
+      p_booking_id: body.id,
+      p_actor_id: access.actorUserId,
+    });
+    if (result.error) {
+      const code = result.error.code;
+      const message = result.error.message || "";
+      if (code === "23P01" || /overlaps another confirmed booking/i.test(message)) {
+        return NextResponse.json({ error: "This time overlaps another confirmed booking. Reschedule before confirming." }, { status: 409 });
+      }
+      if (code === "P0002") return NextResponse.json({ error: "Booking not found in Xposure." }, { status: 404 });
+      if (code === "P0001" || code === "22023") return NextResponse.json({ error: message || "Booking cannot be confirmed in its current state." }, { status: 409 });
+      return NextResponse.json({ error: "Atomic booking confirmation is unavailable. Ensure its migration is applied before retrying." }, { status: 503 });
     }
-    const { data: conflicts, error: conflictError } = await admin.from("xposure_bookings")
-      .select("id").eq("organization_id", access.organizationId).eq("booking_status", "confirmed")
-      .lt("requested_start_at", current.requested_end_at).gt("requested_end_at", current.requested_start_at)
-      .neq("id", current.id).limit(1);
-    if (conflictError) return NextResponse.json({ error: "Unable to verify studio availability. Refresh and retry." }, { status: 503 });
-    if (conflicts?.length) return NextResponse.json({ error: "This time overlaps another confirmed booking. Reschedule before confirming." }, { status: 409 });
-    updates = { ...updates, booking_status: "confirmed", confirmed_by: access.actorUserId, confirmed_at: now, follow_up_state: "completed" };
+    return NextResponse.json({ updated: true, booking: result.data });
   } else if (action === "request_information") {
     if (terminalStatuses.has(current.booking_status)) return NextResponse.json({ error: "This booking is closed." }, { status: 409 });
     updates = { ...updates, follow_up_state: "paused" };
