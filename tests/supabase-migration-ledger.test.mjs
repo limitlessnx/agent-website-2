@@ -46,6 +46,8 @@ const expectedPendingVersions = [
   "20261022140000",
   "20261022160000",
   "20261024120000",
+  // Atomic Xposure confirmation guard; pending review, not applied to production.
+  "20261025100000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
