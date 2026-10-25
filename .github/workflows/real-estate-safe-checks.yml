@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - integration/limitless-realty-production-20261025
+  pull_request:
+    branches:
+      - main
 
 concurrency:
   group: real-estate-safe-checks-${{ github.ref }}
@@ -14,6 +17,7 @@ permissions:
 
 jobs:
   safe-regression:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.head_ref == 'integration/limitless-realty-production-20261025')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
