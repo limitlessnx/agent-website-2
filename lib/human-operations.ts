@@ -115,11 +115,11 @@ async function resolveHandoffAssignment(input:{
           .eq("role_id",ownerRole.id);
         if(ownerLinksError) throw ownerLinksError;
         const ownerIds=[...new Set((ownerLinks||[]).map((link)=>String(link.membership_id||"")).filter(Boolean))];
-        if(ownerIds.length===1){
-          const {data:owner,error:ownerError}=await admin.from("organization_memberships").select("id")
-            .eq("organization_id",input.organizationId).eq("id",ownerIds[0]).eq("status","active").maybeSingle();
-          if(ownerError) throw ownerError;
-          if(owner?.id) return {membershipId:String(owner.id),destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"organization_owner_fallback"};
+        if(ownerIds.length>0){
+          const {data:activeOwners,error:activeOwnersError}=await admin.from("organization_memberships").select("id")
+            .eq("organization_id",input.organizationId).eq("status","active").in("id",ownerIds);
+          if(activeOwnersError) throw activeOwnersError;
+          if(activeOwners?.length===1) return {membershipId:String(activeOwners[0].id),destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"organization_owner_fallback"};
         }
       }
       return {membershipId:null,destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination_phone"};
@@ -150,10 +150,10 @@ async function notifyHandoffAssignee(input:{
       .select("whatsapp_phone,notify_whatsapp_handoffs")
       .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
     if(prefError) throw prefError;
-    if(pref?.notify_whatsapp_handoffs===false) return;
-    // When the tenant has an explicit team destination but no personal number
-    // configured for its assigned Owner, retain the tenant-configured route.
-    recipient=phone(pref?.whatsapp_phone)||recipient;
+    // The member preference controls personal-number notifications. It must
+    // not suppress the separately configured tenant team destination.
+    if(pref?.notify_whatsapp_handoffs===false) recipient=phone(input.destinationPhone);
+    else recipient=phone(pref?.whatsapp_phone)||recipient;
     if(!recipient) return;
   }
   if(!recipient) return;
