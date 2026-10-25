@@ -4,8 +4,23 @@ import { tasks } from "@trigger.dev/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 import { syncHandoffNotificationStatus } from "@/lib/human-operations";
+import { syncRealEstateProviderStatus } from "@/lib/real-estate-provider-status";
 
 export const dynamic = "force-dynamic";
+
+type WebhookRecord = Record<string, unknown>;
+
+function record(value: unknown): WebhookRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as WebhookRecord : {};
+}
+
+function recordArray(value: unknown): WebhookRecord[] {
+  return Array.isArray(value) ? value.map(record) : [];
+}
+
+function optionalText(value: unknown): string | null {
+  return value == null ? null : String(value);
+}
 
 function verifySignature(rawBody: string, signature: string | null) {
   const appSecret = process.env.WHATSAPP_APP_SECRET || process.env.META_WHATSAPP_APP_SECRET || process.env.META_APP_SECRET || "";
@@ -135,25 +150,33 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
 
 const MAX_PROVIDER_EVENT_AGE_MS = 24 * 60 * 60 * 1000;
 
-function providerEventIsStale(message: Record<string, any>) {
+function providerEventIsStale(message: WebhookRecord) {
   const raw = Number(message?.timestamp);
   if (!Number.isFinite(raw) || raw <= 0) return false;
   const eventMs = raw > 10_000_000_000 ? raw : raw * 1000;
   return Date.now() - eventMs > MAX_PROVIDER_EVENT_AGE_MS;
 }
 
-function inboundText(message: Record<string, any>) {
+function inboundText(message: WebhookRecord) {
   const type = String(message.type || "");
-  if (type === "text") return String(message.text?.body || "").trim();
-  if (type === "image") return String(message.image?.caption || "[Customer sent an image]").trim();
-  if (type === "video") return String(message.video?.caption || "[Customer sent a video]").trim();
-  if (type === "document") return String(message.document?.caption || message.document?.filename || "[Customer sent a document]").trim();
+  const text = record(message.text);
+  const image = record(message.image);
+  const video = record(message.video);
+  const document = record(message.document);
+  const button = record(message.button);
+  const interactive = record(message.interactive);
+  const buttonReply = record(interactive.button_reply);
+  const listReply = record(interactive.list_reply);
+  if (type === "text") return String(text.body || "").trim();
+  if (type === "image") return String(image.caption || "[Customer sent an image]").trim();
+  if (type === "video") return String(video.caption || "[Customer sent a video]").trim();
+  if (type === "document") return String(document.caption || document.filename || "[Customer sent a document]").trim();
   if (type === "audio") return "[Customer sent an audio message]";
-  if (type === "button") return String(message.button?.text || "").trim();
+  if (type === "button") return String(button.text || "").trim();
   if (type === "interactive") {
     return String(
-      message.interactive?.button_reply?.title ||
-      message.interactive?.list_reply?.title ||
+      buttonReply.title ||
+      listReply.title ||
       "",
     ).trim();
   }
@@ -244,8 +267,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
   }
 
-  let body: any;
-  try { body = JSON.parse(rawBody); }
+  let body: WebhookRecord;
+  try { body = record(JSON.parse(rawBody) as unknown); }
   catch { return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 }); }
 
   if (body?.object !== "whatsapp_business_account") {
@@ -257,15 +280,26 @@ export async function POST(request: NextRequest) {
   let ignoredInbound = 0;
   let humanEchoes = 0;
 
-  for (const entry of Array.isArray(body.entry) ? body.entry : []) {
-    for (const change of Array.isArray(entry?.changes) ? entry.changes : []) {
-      const value = change?.value || {};
+  for (const entry of recordArray(body.entry)) {
+    for (const change of recordArray(entry.changes)) {
+      const value = record(change.value);
+      const metadata = record(value.metadata);
+      const phoneNumberId = String(metadata.phone_number_id || "");
+      let tenant = null;
+      try {
+        tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+      } catch (error) {
+        console.error("[whatsapp-webhook] tenant lookup failed", { phoneNumberIdPresent: Boolean(phoneNumberId), errorType: error instanceof Error ? error.name : "unknown" });
+        throw error;
+      }
+      console.info("[whatsapp-webhook] tenant lookup result", { phoneNumberIdPresent: Boolean(phoneNumberId), tenantResolved: Boolean(tenant), organizationId: tenant?.organizationId || null, mode: tenant?.mode || null, agentResolved: Boolean(tenant?.agentId) });
 
-      for (const status of Array.isArray(value.statuses) ? value.statuses : []) {
+      for (const status of recordArray(value.statuses)) {
         const providerMessageId = String(status?.id || "");
         if (!providerMessageId) continue;
         const state = String(status?.status || "").toLowerCase();
-        const firstError = Array.isArray(status?.errors) ? status.errors[0] || {} : {};
+        const firstError = record(recordArray(status.errors)[0]);
+        const errorData = record(firstError.error_data);
         const nextStatus = ["delivered", "read", "sent", "failed"].includes(state) ? state : null;
         if (!nextStatus) continue;
         const ok = await updateAttempt(providerMessageId, {
@@ -275,35 +309,38 @@ export async function POST(request: NextRequest) {
           response_payload: body,
         }).catch(() => false);
         if (ok) statusUpdates += 1;
-        await syncHandoffNotificationStatus({
-          providerMessageId,
-          status: nextStatus as "sent" | "delivered" | "read" | "failed",
-          errorCode: firstError?.code != null ? String(firstError.code) : null,
-          errorMessage: firstError?.error_data?.details || firstError?.title || firstError?.message || null,
-        }).catch((error) => {
-          console.error("[whatsapp-webhook] handoff notification status sync failed", {
-            providerMessageIdPresent: Boolean(providerMessageId),
-            errorType: error instanceof Error ? error.name : "unknown",
+        const providerTimestamp=Number(status?.timestamp);
+        await syncRealEstateProviderStatus({
+          provider:"meta",providerMessageId,status:nextStatus as "sent"|"delivered"|"read"|"failed",organizationId:String(tenant?.organizationId||""),
+          eventAt:Number.isFinite(providerTimestamp)&&providerTimestamp>0?new Date(providerTimestamp*1000).toISOString():new Date().toISOString(),
+          errorCode:firstError?.code!=null?String(firstError.code):null,
+          errorMessage:optionalText(errorData.details || firstError.title || firstError.message),
+        }).catch((error:unknown)=>console.warn("[whatsapp-webhook] real-estate receipt sync unavailable",{providerMessageIdPresent:true,errorType:error instanceof Error?error.name:"unknown"}));
+        if(tenant?.organizationId){
+          await syncHandoffNotificationStatus({
+            organizationId:String(tenant.organizationId),
+            providerMessageId,
+            status: nextStatus as "sent" | "delivered" | "read" | "failed",
+            errorCode: firstError?.code != null ? String(firstError.code) : null,
+            errorMessage: optionalText(errorData.details || firstError.title || firstError.message),
+          }).catch((error) => {
+            console.error("[whatsapp-webhook] handoff notification status sync failed", {
+              providerMessageIdPresent: Boolean(providerMessageId),
+              errorType: error instanceof Error ? error.name : "unknown",
+            });
           });
-        });
+        }
       }
 
-      const phoneNumberId = String(value?.metadata?.phone_number_id || "");
-      let tenant = null;
-      try {
-        tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
-      } catch (error) {
-        console.error("[whatsapp-webhook] tenant lookup failed", { phoneNumberIdPresent: Boolean(phoneNumberId), errorType: error instanceof Error ? error.name : "unknown" });
-        throw error;
-      }
-      console.info("[whatsapp-webhook] tenant lookup result", { phoneNumberIdPresent: Boolean(phoneNumberId), tenantResolved: Boolean(tenant), organizationId: tenant?.organizationId || null, mode: tenant?.mode || null, agentResolved: Boolean(tenant?.agentId) });
-      const contacts = Array.isArray(value.contacts) ? value.contacts : [];
-      const contactName = String(contacts[0]?.profile?.name || "");
+      const contacts = recordArray(value.contacts);
+      const contact = contacts[0] || {};
+      const contactProfile = record(contact.profile);
+      const contactName = String(contactProfile.name || "");
 
-      if (change?.field === "smb_message_echoes" && tenant) {
-        for (const echo of Array.isArray(value.message_echoes) ? value.message_echoes : []) {
-          const messageId=String(echo?.id||"");
-          const to=String(echo?.to||"").replace(/[^0-9]/g,"");
+      if (change.field === "smb_message_echoes" && tenant) {
+        for (const echo of recordArray(value.message_echoes)) {
+          const messageId=String(echo.id||"");
+          const to=String(echo.to||"").replace(/[^0-9]/g,"");
           const text=inboundText(echo);
           if(!messageId||!to||!text) continue;
           await recordWhatsAppBusinessAppEcho({
@@ -314,8 +351,8 @@ export async function POST(request: NextRequest) {
             messageId,
             text,
             phoneNumberId,
-            timestamp:String(echo?.timestamp||"")||null,
-          }).catch((error)=>{
+            timestamp:String(echo.timestamp||"")||null,
+          }).catch((error:unknown)=>{
             console.error("[whatsapp-webhook] coexistence echo failed",{
               organizationId:tenant.organizationId,
               messageId,
@@ -327,13 +364,13 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      for (const message of Array.isArray(value.messages) ? value.messages : []) {
-        const messageId = String(message?.id || "");
-        const from = String(message?.from || "").replace(/[^0-9]/g, "");
+      for (const message of recordArray(value.messages)) {
+        const messageId = String(message.id || "");
+        const from = String(message.from || "").replace(/[^0-9]/g, "");
         const text = inboundText(message);
         if (!tenant || !messageId || !from || !text) {
           ignoredInbound += 1;
-          console.warn("[whatsapp-webhook] inbound ignored", { tenantResolved: Boolean(tenant), messageIdPresent: Boolean(messageId), senderPresent: Boolean(from), textPresent: Boolean(text), messageType: String(message?.type || "unknown"), phoneNumberIdPresent: Boolean(phoneNumberId) });
+          console.warn("[whatsapp-webhook] inbound ignored", { tenantResolved: Boolean(tenant), messageIdPresent: Boolean(messageId), senderPresent: Boolean(from), textPresent: Boolean(text), messageType: String(message.type || "unknown"), phoneNumberIdPresent: Boolean(phoneNumberId) });
           continue;
         }
 
@@ -346,7 +383,7 @@ export async function POST(request: NextRequest) {
             agentId: tenant.agentId,
             externalEventId: messageId,
             customerPhone: from,
-            providerTimestamp: String(message?.timestamp || ""),
+            providerTimestamp: String(message.timestamp || ""),
             maxAgeMs: MAX_PROVIDER_EVENT_AGE_MS,
           });
           continue;
@@ -364,11 +401,11 @@ export async function POST(request: NextRequest) {
           message: text,
           metadata: {
             phoneNumberId,
-            waId: String(contacts[0]?.wa_id || from),
-            messageType: String(message?.type || "unknown"),
-            mediaId: String(message?.audio?.id || message?.image?.id || message?.video?.id || message?.document?.id || ""),
-            mimeType: String(message?.audio?.mime_type || message?.image?.mime_type || message?.video?.mime_type || message?.document?.mime_type || ""),
-            timestamp: String(message?.timestamp || ""),
+            waId: String(contact.wa_id || from),
+            messageType: String(message.type || "unknown"),
+            mediaId: String(record(message.audio).id || record(message.image).id || record(message.video).id || record(message.document).id || ""),
+            mimeType: String(record(message.audio).mime_type || record(message.image).mime_type || record(message.video).mime_type || record(message.document).mime_type || ""),
+            timestamp: String(message.timestamp || ""),
           },
         };
 

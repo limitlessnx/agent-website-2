@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrganizationAccessContext, assertAnyOrganizationPermission, listOrganizationMembers } from "@/lib/organization-membership";
 import type { ClientSession } from "@/lib/client-auth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import { LIMITLESS_REALTY_ORGANIZATION_ID, createLimitlessHumanHandoff } from "@/lib/ai/limitless-handoff-policy.mjs";
 
 type HandoffAssignment = { membershipId:string|null; destinationPhone:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean; source:string };
 type StructuredHandoff = {
@@ -24,6 +25,62 @@ type AdminRpcResult = { data: unknown; error: AdminRpcError | null };
 function callAdminRpc(admin: ReturnType<typeof createAdminClient>, functionName: string, args: Record<string, unknown>): Promise<AdminRpcResult> {
   const rpc = admin.rpc.bind(admin) as unknown as (name: string, params: Record<string, unknown>) => Promise<AdminRpcResult>;
   return rpc(functionName, args);
+}
+function handoffSendFailure(error:unknown){
+  const detail=error&&typeof error==="object"?error as {status?:unknown;code?:unknown}:{};
+  const status=Number(detail.status);
+  const providerCode=String(detail.code||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,64);
+  const code=providerCode||(Number.isInteger(status)?`HTTP_${status}`:null);
+  const definitive=Number.isInteger(status)&&status>=400&&status<500&&![408,409,425].includes(status);
+  return {status:definitive?"failed":"unknown",errorCode:code,errorMessage:definitive
+    ?`WhatsApp provider rejected the notification (HTTP ${status}${code?`, code ${code}`:""}).`
+    :`WhatsApp provider acceptance is uncertain${Number.isInteger(status)?` (HTTP ${status})`:""}. Verify delivery manually before any further attempt.`};
+}
+async function sendApprovedHandoffTemplateFallback(input:{
+  admin:ReturnType<typeof createAdminClient>;organizationId:string;handoffId:string;notificationId:string;recipient:string;
+  metadata:Record<string,unknown>;providerMessageId?:string|null;expectedStatus:"pending"|"failed";
+}){
+  const {data:handoff,error:handoffError}=await input.admin.from("human_handoffs").select("reason,conversation_summary")
+    .eq("organization_id",input.organizationId).eq("id",input.handoffId).maybeSingle();
+  if(handoffError) throw handoffError;
+  const {data:organization,error:organizationError}=await input.admin.from("organizations").select("name")
+    .eq("id",input.organizationId).maybeSingle();
+  if(organizationError) throw organizationError;
+  const now=new Date().toISOString();
+  const fallbackMetadata={...input.metadata,fallback_template_attempted:true,fallback_reason:"131047",fallback_started_at:now,original_provider_message_id:input.providerMessageId||null};
+  let claimQuery=input.admin.from("handoff_notifications").update({status:"pending",error_message:null,error_code:"131047",metadata:fallbackMetadata})
+    .eq("organization_id",input.organizationId).eq("id",input.notificationId).eq("status",input.expectedStatus);
+  if(input.providerMessageId) claimQuery=claimQuery.eq("provider_message_id",input.providerMessageId);
+  const {data:claim,error:claimError}=await claimQuery.select("id").maybeSingle();
+  if(claimError) throw claimError;
+  if(!claim) return false;
+
+  try{
+    const result=await sendWhatsAppMessage({
+      organizationId:input.organizationId,to:input.recipient,deliveryMode:"template",recipientType:"internal_staff",templatePurpose:"human_handoff_staff",
+      variables:{
+        business_name:String(organization?.name||"Your business"),
+        customer_name:String(input.metadata.customer_name||"Customer"),
+        customer_phone:String(input.metadata.customer_phone||"Not recorded"),
+        handoff_reason:String(handoff?.reason||input.metadata.handoff_reason||handoff?.conversation_summary||"Human assistance requested"),
+        conversation_summary:String(handoff?.conversation_summary||input.metadata.conversation_summary||"Review customer conversation"),
+      },
+    });
+    const {data:updated,error:updateError}=await input.admin.from("handoff_notifications").update({
+      status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,error_code:null,
+      metadata:{...fallbackMetadata,fallback_provider_message_id:result.providerMessageId||null},
+    }).eq("organization_id",input.organizationId).eq("id",input.notificationId).eq("status","pending").select("id").maybeSingle();
+    if(updateError||!updated) throw new Error("The approved template may have been accepted but its status could not be verified. Check delivery manually.");
+    return true;
+  }catch(error){
+    const failure=handoffSendFailure(error);
+    const {error:updateError}=await input.admin.from("handoff_notifications").update({
+      status:failure.status,error_code:failure.errorCode,error_message:failure.errorMessage,
+      metadata:{...fallbackMetadata,fallback_template_failed:true,fallback_template_error_code:failure.errorCode},
+    }).eq("organization_id",input.organizationId).eq("id",input.notificationId).eq("status","pending");
+    if(updateError) throw new Error("Approved template result could not be recorded. Verify delivery manually.");
+    return true;
+  }
 }
 function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
 function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
@@ -136,7 +193,7 @@ async function resolveHandoffAssignment(input:{
 }
 
 async function notifyHandoffAssignee(input:{
-  organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; customerName:string; customerPhone?:string|null; stageName:string|null;
+  organizationId:string; handoffId:string; conversationId:string; membershipId:string|null; destinationPhone?:string|null; sourceAgentId?:string|null; customerName:string; customerPhone?:string|null; stageName:string|null;
   summary:string; nextAction:string|null; notifyWhatsApp:boolean; notifyDashboard:boolean;
 }){
   const admin=createAdminClient();
@@ -164,10 +221,12 @@ async function notifyHandoffAssignee(input:{
   }
   if(!recipient) return;
 
+  const notificationMetadata={customer_name:input.customerName,customer_phone:input.customerPhone||null,stage_name:input.stageName,next_action:input.nextAction,
+    handoff_reason:input.summary,conversation_summary:input.summary,destination_source:input.membershipId?"membership":"agent_configuration",source_agent_id:input.sourceAgentId||null};
   const {data:notification,error:notificationError}=await admin.from("handoff_notifications").insert({
     organization_id:input.organizationId,handoff_id:input.handoffId,membership_id:input.membershipId,
     channel:"whatsapp",recipient,status:"pending",
-    metadata:{customer_name:input.customerName,customer_phone:input.customerPhone||null,stage_name:input.stageName,next_action:input.nextAction,destination_source:input.membershipId?"membership":"agent_configuration"},
+    metadata:notificationMetadata,
   }).select("id").single();
   if(notificationError) throw notificationError;
   const notificationId=String(notification.id);
@@ -181,49 +240,65 @@ async function notifyHandoffAssignee(input:{
       recipientType:"internal_staff",
     });
     await admin.from("handoff_notifications").update({
-      status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,
-    }).eq("id",notificationId);
+      status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),error_message:null,error_code:null,
+    }).eq("organization_id",input.organizationId).eq("id",notificationId);
   }catch(error){
+    const failure=handoffSendFailure(error);
+    if(failure.errorCode==="131047"){
+      const {error:updateError}=await admin.from("handoff_notifications").update({
+        status:"failed",error_code:failure.errorCode,error_message:failure.errorMessage,
+      }).eq("organization_id",input.organizationId).eq("id",notificationId).eq("status","pending");
+      if(updateError) throw updateError;
+      try{
+        await sendApprovedHandoffTemplateFallback({admin,organizationId:input.organizationId,handoffId:input.handoffId,notificationId,recipient,metadata:notificationMetadata,expectedStatus:"failed"});
+      }catch(fallbackError){
+        await admin.from("handoff_notifications").update({
+          error_message:"The 24-hour text was rejected and the approved staff template fallback could not be verified. Check delivery manually.",
+        }).eq("organization_id",input.organizationId).eq("id",notificationId).eq("status","failed");
+        console.warn("[human-handoff] template fallback could not be verified",{organizationId:input.organizationId,notificationId,errorType:fallbackError instanceof Error?fallbackError.name:"unknown"});
+      }
+      return;
+    }
     await admin.from("handoff_notifications").update({
-      status:"failed",error_message:(error instanceof Error?error.message:"WhatsApp handoff notification failed.").slice(0,2000),
-    }).eq("id",notificationId);
+      status:failure.status,error_code:failure.errorCode,error_message:failure.errorMessage,
+    }).eq("organization_id",input.organizationId).eq("id",notificationId);
   }
 }
 
 
+
 /**
- * Keep the dashboard's handoff notification state aligned with Meta delivery
- * callbacks. Meta can accept a text send and later reject it with 131047 when
- * the recipient's 24-hour service window is closed, so HTTP acceptance alone
- * must not be treated as successful delivery.
+ * Keep handoff notification state aligned with signed provider callbacks.
+ * Provider acceptance is not proof of delivery, and only provider-confirmed
+ * failure codes can enable the explicit operator retry flow.
  */
 export async function syncHandoffNotificationStatus(input:{
+  organizationId:string;
   providerMessageId:string;
   status:"sent"|"delivered"|"read"|"failed";
   errorCode?:string|null;
   errorMessage?:string|null;
 }){
   const admin=createAdminClient();
-  const {data:notification,error}=await admin.from("handoff_notifications")
-    .select("id,organization_id,handoff_id,recipient,metadata")
-    .eq("provider_message_id",input.providerMessageId).maybeSingle();
+  const {data:notification,error}=await admin.rpc("apply_handoff_notification_receipt",{
+    p_organization_id:input.organizationId,
+    p_provider_message_id:input.providerMessageId,
+    p_status:input.status,
+    p_error_message:input.errorMessage||null,
+    p_error_code:input.errorCode||null,
+  });
   if(error) throw error;
-  if(!notification) return false;
+  if(!notification?.notificationId) return false;
+  if(notification.applied!==true) return true;
 
   const metadata=rec(notification.metadata);
-  if(input.status!=="failed"){
-    const {error:updateError}=await admin.from("handoff_notifications")
-      .update({status:input.status,error_message:null})
-      .eq("organization_id",notification.organization_id).eq("id",notification.id);
-    if(updateError) throw updateError;
-    return true;
-  }
+  if(input.status!=="failed") return true;
 
   const failureMessage=str(input.errorMessage)||`WhatsApp notification failed${input.errorCode?` (${input.errorCode})`:""}.`;
   const markFailed=async(message:string,extra:Record<string,unknown>={})=>{
     const {error:updateError}=await admin.from("handoff_notifications").update({
-      status:"failed",error_message:message.slice(0,2000),metadata:{...metadata,...extra},
-    }).eq("organization_id",notification.organization_id).eq("id",notification.id);
+      error_message:message.slice(0,2000),metadata:{...metadata,...extra},
+    }).eq("organization_id",notification.organizationId).eq("id",notification.notificationId).eq("status","failed").eq("provider_message_id",input.providerMessageId);
     if(updateError) throw updateError;
   };
 
@@ -234,44 +309,12 @@ export async function syncHandoffNotificationStatus(input:{
     return true;
   }
 
-  const {data:handoff,error:handoffError}=await admin.from("human_handoffs")
-    .select("reason,conversation_summary")
-    .eq("organization_id",notification.organization_id).eq("id",notification.handoff_id).maybeSingle();
-  if(handoffError) throw handoffError;
-  const {data:organization,error:organizationError}=await admin.from("organizations")
-    .select("name").eq("id",notification.organization_id).maybeSingle();
-  if(organizationError) throw organizationError;
-
-  const fallbackMetadata={...metadata,fallback_template_attempted:true,fallback_reason:"131047",original_provider_message_id:input.providerMessageId};
-  const {error:claimError}=await admin.from("handoff_notifications").update({
-    status:"pending",error_message:null,metadata:fallbackMetadata,
-  }).eq("organization_id",notification.organization_id).eq("id",notification.id);
-  if(claimError) throw claimError;
-
-  try{
-    const result=await sendWhatsAppMessage({
-      organizationId:String(notification.organization_id),
-      to:String(notification.recipient||""),
-      deliveryMode:"template",
-      recipientType:"internal_staff",
-      templatePurpose:"human_handoff_staff",
-      variables:{
-        business_name:String(organization?.name||"Your business"),
-        customer_name:String(metadata.customer_name||"Customer"),
-        customer_phone:String(metadata.customer_phone||"Not recorded"),
-        handoff_reason:String(handoff?.reason||handoff?.conversation_summary||"Human assistance requested"),
-        conversation_summary:String(handoff?.conversation_summary||handoff?.reason||"Review customer conversation"),
-      },
-    });
-    const {error:updateError}=await admin.from("handoff_notifications").update({
-      status:"sent",provider_message_id:result.providerMessageId||null,sent_at:new Date().toISOString(),
-      error_message:null,metadata:{...fallbackMetadata,fallback_provider_message_id:result.providerMessageId||null},
-    }).eq("organization_id",notification.organization_id).eq("id",notification.id);
-    if(updateError) throw updateError;
-  }catch(error){
-    const message=error instanceof Error?error.message:"Approved WhatsApp handoff template failed.";
-    await markFailed(message,{...fallbackMetadata,fallback_template_failed:true});
-  }
+  const recipient=phone(notification.recipient);
+  if(!recipient){await markFailed("The approved staff template could not be sent because its destination is missing.",{fallback_template_attempted:true,fallback_template_failed:true});return true;}
+  await sendApprovedHandoffTemplateFallback({
+    admin,organizationId:String(notification.organizationId),handoffId:String(notification.handoffId),notificationId:String(notification.notificationId),
+    recipient,metadata,providerMessageId:input.providerMessageId,expectedStatus:"failed",
+  });
   return true;
 }
 
@@ -319,7 +362,7 @@ export async function listHumanOperations(session:ClientSession){
       ? admin.from("organization_customer_stages").select("id,name").eq("organization_id",session.organizationId).in("id",stageIds)
       : Promise.resolve({data:[],error:null}),
     handoffRows.length
-      ? admin.from("handoff_notifications").select("handoff_id,status,error_message,created_at").eq("organization_id",session.organizationId).eq("channel","whatsapp").in("handoff_id",handoffRows.map((item)=>item.id)).order("created_at",{ascending:false}).limit(200)
+      ? admin.from("handoff_notifications").select("id,handoff_id,status,error_code,error_message,retry_count,metadata,created_at").eq("organization_id",session.organizationId).eq("channel","whatsapp").in("handoff_id",handoffRows.map((item)=>item.id)).order("created_at",{ascending:false}).limit(200)
       : Promise.resolve({data:[],error:null}),
   ]);
   if(customersResult.error) throw customersResult.error;
@@ -327,10 +370,10 @@ export async function listHumanOperations(session:ClientSession){
   if(notificationsResult.error) throw notificationsResult.error;
   const customerNameById=new Map((customersResult.data||[]).map((row)=>[row.id,String(row.full_name||row.company_name||"Customer")]));
   const stageNameById=new Map((stagesResult.data||[]).map((row)=>[row.id,String(row.name||"")]));
-  const notificationByHandoff=new Map<string,{status:string;error_message:string|null}>();
+  const notificationByHandoff=new Map<string,{id:string;status:string;error_code:string|null;error_message:string|null;retry_count:number;fallback_template_attempted:boolean}>();
   for(const notification of notificationsResult.data||[]){
     if(!notificationByHandoff.has(String(notification.handoff_id))){
-      notificationByHandoff.set(String(notification.handoff_id),{status:String(notification.status||"unknown"),error_message:notification.error_message?String(notification.error_message):null});
+      notificationByHandoff.set(String(notification.handoff_id),{id:String(notification.id),status:String(notification.status||"unknown"),error_code:notification.error_code?String(notification.error_code):null,error_message:notification.error_message?String(notification.error_message):null,retry_count:Number(notification.retry_count||0),fallback_template_attempted:rec(notification.metadata).fallback_template_attempted===true});
     }
   }
   const memberEmailById=new Map(members.map((member)=>[member.id,member.email||null]));
@@ -340,7 +383,11 @@ export async function listHumanOperations(session:ClientSession){
     stage_name:item.stage_id_at_handoff?stageNameById.get(item.stage_id_at_handoff)||null:null,
     assigned_to_email:item.assigned_membership_id?memberEmailById.get(item.assigned_membership_id)||null:null,
     whatsapp_notification_status:notificationByHandoff.get(item.id)?.status||null,
+    whatsapp_notification_id:notificationByHandoff.get(item.id)?.id||null,
+    whatsapp_notification_error_code:notificationByHandoff.get(item.id)?.error_code||null,
     whatsapp_notification_error:notificationByHandoff.get(item.id)?.error_message||null,
+    whatsapp_notification_retry_count:notificationByHandoff.get(item.id)?.retry_count||0,
+    whatsapp_notification_fallback_attempted:notificationByHandoff.get(item.id)?.fallback_template_attempted||false,
   }));
 
   return {
@@ -673,6 +720,7 @@ export async function createHumanHandoffFromMaia(input:{
   correlationId?:string|null;
 }){
   const admin=createAdminClient();
+  const isLimitlessRealty=input.organizationId===LIMITLESS_REALTY_ORGANIZATION_ID;
   const category=str(input.category)||"general";
   const priorityRaw=str(input.priority).toLowerCase()||"normal";
   const priority=["low","normal","high","critical"].includes(priorityRaw)?priorityRaw:"normal";
@@ -686,6 +734,14 @@ export async function createHumanHandoffFromMaia(input:{
     category,
     payload,
   });
+  if(isLimitlessRealty){
+    return createLimitlessHumanHandoff({
+      admin,
+      input,
+      assignment,
+      sendWhatsAppMessage,
+    });
+  }
   const summary=String(input.summary||input.reason||"Human assistance requested").slice(0,4000);
   const {data,error}=await callAdminRpc(admin,"create_human_handoff",{
     p_organization_id:input.organizationId,
@@ -736,6 +792,7 @@ export async function createHumanHandoffFromMaia(input:{
       conversationId:input.conversationId,
       membershipId:assignment.membershipId,
       destinationPhone:assignment.destinationPhone,
+      sourceAgentId:input.sourceAgentId,
       customerName:String(customer?.full_name||customer?.company_name||"Customer"),
       customerPhone:phone(customer?.phone),
       stageName,

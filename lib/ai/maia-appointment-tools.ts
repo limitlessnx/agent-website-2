@@ -9,6 +9,7 @@ type ToolContext = {
   organizationId: string;
   agentId: string;
   sessionId: string;
+  customerId?: string;
   externalConversationId?: string;
   customerId?: string;
   conversationId?: string;
@@ -360,6 +361,10 @@ export function maiaAppointmentTools(): ToolDefinition[] {
         const admin = createAdminClient();
         const limit = boundedLimit(input.limit);
         let customerId = text(input.customerId);
+        if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID) {
+          if (customerId && customerId !== ctx.customerId) throw new Error("Appointments may only be read for the verified current customer.");
+          customerId = text(ctx.customerId);
+        }
 
         if (!customerId && ctx.externalConversationId) {
           const phone = ctx.externalConversationId.replace(/[^\d+]/g, "");
@@ -371,6 +376,10 @@ export function maiaAppointmentTools(): ToolDefinition[] {
             .maybeSingle();
           if (error) throw error;
           customerId = text(customer?.id);
+        }
+
+        if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID && !customerId) {
+          return { status: "customer_not_resolved", appointments: [], tenant_scoped: true };
         }
 
         let appointmentQuery = admin
@@ -405,7 +414,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
         }));
 
         if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID && text(input.leadId || customerId)) {
-          let leadId = text(input.leadId);
+          let leadId = "";
           if (!leadId && customerId) {
             const { data: customer, error } = await admin
               .from("crm_customers")
@@ -426,6 +435,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
               leadId = text(lead?.id);
             }
           }
+          if (text(input.leadId) && text(input.leadId) !== leadId) throw new Error("The inspection lead is not the verified current customer.");
           if (leadId) {
             const inspections = await listLimitlessInspections({ leadId, limit });
             result.push(...inspections.map((inspection) => ({

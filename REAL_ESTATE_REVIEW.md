@@ -1,0 +1,82 @@
+# Fluxknight / Limitless Realty — local implementation review
+
+**Date:** 24 October 2026
+**Branch:** `fix/real-estate-production-foundation-20261024`
+**Worktree:** `/home/ubuntu/Fluxknight/limitless realty`
+**Release boundary:** application code remains local, uncommitted and unpushed; no Vercel/Trigger app deployment, real-client/staff message or n8n cleanup occurred. A separate same-organization Supabase staging project (`rwewcnftxnaynpotbsms`, $0/month quote) contains only non-functional provisioning stubs and ACL smoke migrations—no app schema or tenant/customer data. A 42-table/60-policy comment-only metadata DDL preview is prepared but nothing was applied. One narrow ACL migration was applied to live FLUXNIT. No excluded-tenant records, integrations, workflows or tenant configuration were accessed or changed. During baseline-source triage, one generic-named core migration was opened from the base commit; inspection stopped when out-of-scope tenant-specific material appeared. It was not summarized, copied, modified, tested or applied.
+
+## Executive status
+
+The scoped `npm run test:real-estate` suite passes **156/156** using mocks and fictional PGlite fixtures. The exclusion-preserving sparse-worktree TypeScript check has **0 diagnostics**, the optimized Next.js build passes with dummy localhost Supabase settings, and ESLint reports **0 errors / 4 external-image warnings** across changed TypeScript/TSX sources. All locally testable phases have been advanced: tenant-safe Maia/Leo controls, calendar/inspection lifecycle, campaigns and delivery tracking, estate catalog, readiness/onboarding, dashboards and a two-step operator handoff-recovery flow. The focused handoff retry/callback/template-fallback subset passes **29/29**. Application changes remain uncommitted and unpushed. The only production database change is the narrowly approved function-ACL migration; no tenant/customer rows were changed.
+
+**Urgent production finding and remediation:** read-only inspection showed `public.provision_client_workspace(p_user_id, ...)` was a `SECURITY DEFINER` RPC executable by `anon` and `authenticated`, accepted a caller-supplied user UUID, and lacked an `auth.uid()` identity guard. On 2026-10-24, after explicit approval, migration `workspace_provisioning_acl` (version `20261024140349`) was applied to FLUXNIT. Read-back verification confirms both `provision_client_workspace` and `provision_trial_client_organization` deny `anon` and `authenticated` and allow `service_role`. No provisioning RPC was invoked and no tenant/customer rows were read or changed; there is no evidence of exploitation or customer impact.
+
+The local ACL migration file is now `20261024140349_workspace_provisioning_acl.sql`, aligned with FLUXNIT's recorded production version. `20261024141200_client_provisioning_retry_safe.sql` (serialized exact-request retry and collision handling) remains PGlite-tested and unapplied. The setup route uses the server-only service-role caller. The separate staging ACL test used non-functional RPC stubs and independently timestamped smoke migrations; it is not a full application-schema baseline.
+
+## What is implemented locally
+
+- **Seamless owner setup:** real-estate-first industry selection, verified pending-session identity, account/email-verification/payment-context recovery, invitation guard, organization provisioning, signed session creation and continuation into the existing five-step onboarding wizard. Provisioning retries return the same workspace only for the same request; changed requests and slug collisions fail safely.
+- **Maia and property safety:** live-only explicit-tenant availability, no demo-property fallback, truthful requested-versus-confirmed inspection language, non-fatal optional follow-up failures, canonical idempotent handoff and stop-after-handoff tool-loop behavior.
+- **Operator handoff queue:** permission-gated claim/assign/resolve controls and a direct link from Real Estate Operations. Maia's acknowledgement reflects persisted notification state, not an unverified model claim.
+- **Safe failed-notification recovery:** a manager prepares a preview and sees the exact staff-only message, masked recipient and short expiry; a separate confirm consumes an organization/user/membership/message/destination-bound one-time approval. SQL atomically locks and claims only a still-open handoff and a definitively failed notification. Retries are capped at three and available only to active real-estate managers. Ambiguous provider acceptance is `unknown` and requires manual delivery verification; it is never automatically retried.
+- **Compliant 24-hour-window fallback:** when a direct WhatsApp staff notification receives provider rejection `131047`, both the synchronous-send path and a later signed receipt use the same approved `human_handoff_staff` template fallback. The attempt is marked before sending and can run once. A failed fallback is visible; the UI and service block another free-form text and direct staff to manual verification. The retry path never treats a timeout or 5xx as safe to repeat.
+- **Tenant-bound Meta/Twilio callbacks:** only signed callbacks are processed. Meta phone-number binding or Twilio account binding supplies the organization ID; the atomic receipt RPC matches both organization and provider message ID, stores sanitized provider failure codes and applies monotonic status updates. Duplicate, stale, unmatched and ambiguous callbacks fail closed.
+- **Shared handoff migrations:** `20261024141300_handoff_notification_receipt_states.sql` fixes the old state constraint and adds the scoped receipt RPC; `20261024141600_handoff_notification_retry_safety.sql` adds retry/error/unknown fields; `20261024141700_handoff_notification_retry_approvals.sql` adds digest-only short-lived approval records and a service-role-only transactional claim. These alter a shared generic notification table, so cross-tenant compatibility review is required before an isolated apply.
+- **Leo safety:** real-estate mutations use server-issued single-use approvals bound to identity, organization, exact arguments, session, channel and expiry; legacy inspection writes use the same approval store. Replay/mismatch and fictional second-tenant tests pass locally.
+- **Calendar and reminders:** intent is retained as a request until a tenant-active property, operator-confirmed slot/timezone/resource, free/busy result and matching external event exist. Reschedules/cancellations, outcomes, revisioned reminders, opt-outs, replies, human handoff, stale slots and entitlements are handled locally. Dispatcher is authenticated and operates only for explicit audit-backed tenant opt-ins through the existing scheduler bridge.
+- **Campaign/CRM:** tenant-relational campaign groups require CRM leads rather than arbitrary phone numbers; standard sends use an exact preview, a second click, one-time approval, stable request IDs and receipt-aware results. Direct sends require a server-verified Meta 24-hour service window; otherwise the compliant template path is required. Unsupported template/media modes are disabled rather than silently misrepresented. n8n send preflight is read-only and does not repair/reactivate workflows.
+- **Estates and dashboards:** reusable estate profile/FAQ/payment/knowledge links and canonical property assignment are tenant-scoped and transactionally audited. Readiness is fail-closed for inactive/non-real-estate tenants and distinguishes missing from unverified/duplicate/paused states. Operations, inspection, Leo approval, campaign and handoff links derive from persisted state rather than seeded counts.
+
+## Remaining by phase
+
+| Phase | Still open |
+|---|---|
+| **0 — Audit** | Authenticated n8n/Trigger execution-level verification remains unavailable; no n8n cleanup or Trigger task was attempted. |
+| **1 — Maia/handover** | Real staff notification, signed live callback, approved template fallback and two-step operator recovery need an isolated test tenant; none were sent or verified here. |
+| **2 — Leo/security** | Local tests pass; complete repository build and live end-to-end acceptance remain unavailable. |
+| **3 — CRM/calendar/campaigns** | Review/apply migrations in isolation, verify the external scheduler cadence/calendar provider, and run controlled CRM-stage, campaign, callback and reminder flows. |
+| **4 — Property assignment** | Migration and live tenant property validation remain unapplied/unverified. |
+| **5 — Estate catalog** | Apply schema in isolation and confirm Maia retrieves approved knowledge in a real tenant. |
+| **6 — Tenant readiness/onboarding** | Live workspace/trial provisioning ACL is fixed and read-back verified. The retry-safe provisioning migration, isolated owner-signup retry test, provider setup and independent second-tenant acceptance remain open. |
+| **7 — n8n cleanup** | No credential or safe dependency proof; no workflows/storage were disabled or deleted. |
+| **8 — Dashboard** | No desktop/mobile browser review or complete full-project build. |
+| **9 — Release** | Staging exists only for ACL smoke testing; it has no application schema or end-to-end tenant setup. The full project build, reviewed migration baseline, application deployment and production acceptance remain open. |
+
+## Calendar booking flow
+
+1. Maia records an inspection request without inventing a property match, event ID or confirmed appointment.
+2. An authorized operator verifies the active listing, reviews the requested local date/time/timezone, selects an available calendar resource and confirms the exact slot.
+3. The service emits the canonical appointment operation. It remains pending until a tenant-matched external event ID and confirmed provider result are present.
+4. Only then are revision-bound reminders scheduled. Reschedule/cancel, reply, opt-out, handoff, stale-time and entitlement checks suppress obsolete or unsafe reminders.
+5. Signed, tenant-bound provider receipts update status; acceptance is not represented as delivery. Operations can inspect queue state and safe retry eligibility.
+
+No calendar booking, reminder, provider callback, staff retry or customer message was executed against production.
+
+## Release blockers
+
+1. **Staging baseline:** the same-org project still contains only non-functional provisioning stubs and ACL smoke migrations. The allowlisted metadata review found a closed FK set, all 42 selected tables RLS-enabled, and 60 shared policies; the [DDL preview](STAGING_BASELINE_DDL_PREVIEW.sql) is fully commented and has not been applied. It omits helper bodies, trigger creation and grants. It also preserves source defaults such as `limitless-realty`, `production`, `n8n`, `Africa/Lagos`, `NGN`, `whatsapp` and `maia`, which must be reviewed before tenant-neutral use. The readiness mismatch remains unresolved (`agent_runtime_readiness` exists; `agent_readiness_snapshots` does not). See [STAGING_BASELINE_REVIEW.md](STAGING_BASELINE_REVIEW.md).
+2. **Migration review:** inspect and sequence provisioning, real-estate and shared handoff migrations against that baseline; receipt/retry migrations change shared infrastructure.
+3. **Build/type/lint validation:** in the exclusion-preserving sparse worktree, `tsc --noEmit` passes with **0 diagnostics**, `npm run build` succeeds using dummy localhost Supabase settings, and changed-source ESLint has **0 errors / 4 `<img>` external-image warnings**. This validates the checked-out build, not Vercel configuration, excluded source, or an application-schema staging environment. No browser/device review was performed.
+4. **Live scheduler/provider tests:** actual trusted scheduler cadence/credential, external calendar callbacks and Meta/Twilio delivery/fallback/retry have not been verified.
+5. **Campaign/CRM end-to-end:** real provider templates, approved test recipients, CRM stage transitions, follow-up delivery and receipt reconciliation still need controlled acceptance.
+6. **n8n:** live access/dependency verification is missing; no workflow or storage was altered.
+7. **Shared application release:** the Vercel production target is shared on `main`, and main also runs the Trigger.dev deployment workflow. The narrow ACL approval does not include a branch push, merge, Vercel deployment or Trigger deployment; keep the app branch local until full validation and separate release approval.
+
+## Validation evidence
+
+- `npm run test:real-estate` — **156 passed, 0 failed**.
+- Focused handoff retry/callback/template-fallback group — **29 passed, 0 failed**.
+- PGlite executes the receipt-state, retry-state and single-use approval migrations, checking tenant scope, monotonic transitions, failure-code persistence, replay rejection, exact digest/recipient binding, active user-membership binding, closed-handoff rejection, retry cap, RLS and service-role-only privileges.
+- Mocked route/service/UI tests verify prepare does not send, confirmation needs the one-time approval, only internal staff can be recipients, provider uncertainty is not called success, 131047 invokes only the approved template fallback, and no free-form retry follows the fallback.
+- Callback tests verify Meta/Twilio signature checks precede reconciliation and that the verified organization ID and provider error code are forwarded.
+- Onboarding and provisioning tests use mock requests and fictional local database records only.
+- Allowlisted metadata audit: 42 tables, 60 policies, zero FK references outside the allowlist plus `auth.users`; no table rows or function bodies queried. The DDL preview is comment-only and no staging schema DDL was applied.
+- `tsc --noEmit` — **0 diagnostics** in the exclusion-preserving sparse worktree; `npm run build` — success with dummy localhost Supabase settings.
+- Changed/new source lint — **0 errors and 4 external-image warnings**; no external image-host configuration was added. No browser/device review or live Vercel preview validation occurred.
+- No messages were sent and no production tenant/customer rows were written. The single production change was migration `workspace_provisioning_acl` (`20261024140349`); no app migration, commit, push, merge, Vercel deployment or Trigger deployment occurred.
+
+## Handover status
+
+**The local handoff path is implemented and code-tested end-to-end:** persist/route → show in a protected staff queue → claim/assign/resolve → truthful Maia response → signed tenant-scoped receipts → compliant 131047 template fallback → preview/confirm a staff-only retry only when eligible. The system deliberately blocks repeated free-form messages after a closed service window or uncertain provider outcome. **Live end-to-end handover is not complete** until an app-schema staging baseline, isolated provider/calendar/scheduler credentials and an approved test tenant are available. Application work remains local; the production ACL fix was a separate narrow database-permission change.
+
+The staging project is still ACL-smoke-only and has no app schema or tenant/customer data. No application workflow has been deployed or exercised there.

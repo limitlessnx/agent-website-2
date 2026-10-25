@@ -7,4 +7,7 @@
 .actions{display:flex;align-content:flex-start;gap:7px;flex-wrap:wrap;min-width:0}
 .actions>*{flex:1 1 100%}
 .actions select,.actions button,.actions a{min-height:38px}
+.retryPreview{grid-column:1/-1;display:grid;gap:10px;padding:14px;border:1px solid rgba(168,85,247,.28);border-radius:14px;background:rgba(168,85,247,.06);min-width:0}
+.retryPreview pre{margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0,.22);color:rgba(255,255,255,.88);font:inherit;font-size:.92rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.retryPreview button{min-height:40px}
 @media (max-width:760px){.handoffCard{grid-template-columns:1fr;padding:14px}.actions>*{flex:1 1 100%}}

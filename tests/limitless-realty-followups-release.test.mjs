@@ -97,12 +97,15 @@ test("Follow-up dashboard exposes only runtime-aligned controls", () => {
   assert.doesNotMatch(component, /Enroll leads/);
 });
 
-test("Maia safety net forwards the same authenticated context to all three runners", () => {
+test("Maia safety net forwards to existing runners and gates inspections behind the verified external scheduler", () => {
   const route = read("app/api/cron/maia-safety-net/route.ts");
   assert.match(route, /verify_maia_scheduler_secret/);
   assert.match(route, /api\/maia\/autonomous/);
   assert.match(route, /api\/limitless\/maia\/followups/);
   assert.match(route, /api\/cron\/limitless-installment-reminders/);
+  assert.match(route, /externalSchedulerAuthorized\) tasks\.push\(\{ task: "real-estate-inspections"/);
+  assert.match(route, /api\/cron\/real-estate-inspections/);
+  assert.match(route, /daily Vercel fallback does not dispatch property-inspection reminders/);
   assert.match(route, /Promise\.allSettled/);
 });
 

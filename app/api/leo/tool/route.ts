@@ -6,11 +6,40 @@ import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
 import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState, updateLeoVoiceWorkingContext, type LeoSessionState, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ensureLimitlessExecutionId, findLimitlessLeads, prepareLimitlessCampaign, prepareLimitlessFollowup, saveLimitlessLead, sendLimitlessFollowup, sendThroughLimitlessCampaignRoute } from "@/lib/leo-limitless-messaging";
+import { resolveActiveRealEstateOrganization } from "@/lib/real-estate-organization";
+import { ensureLimitlessExecutionId, findLimitlessLeads, prepareLimitlessCampaign, prepareLimitlessFollowup, sendLimitlessFollowup, sendThroughLimitlessCampaignRoute } from "@/lib/leo-limitless-messaging";
 import { inspectOrchestrationChain, retryFailedSystemEvent } from "@/lib/orchestration-operations";
+import { consumeLeoActionApproval, createLeoActionApproval, isLimitlessOrganizationId, isRealEstateApprovalTool, LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/leo-action-approval";
 function channel(value: unknown): LeoChannel { return value === "voice" ? "voice" : value === "api" ? "api" : "chat"; }
 function object(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function limitlessWorkspace(args: Record<string, unknown>) { const workspace = String(args.workspace || args.organization || args.organization_name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_"); return ["limitless_realty", "limitless", "limitlessrealty"].includes(workspace); }
+function requestedOrganizationId(args: Record<string, unknown>) { return String(args.organization_id || args.organizationId || "").trim(); }
+function claimsLimitlessTarget(args: Record<string, unknown>) { return isLimitlessOrganizationId(requestedOrganizationId(args)) || limitlessWorkspace(args); }
+function approvalMaterial(body: Record<string, unknown>, args: Record<string, unknown>) {
+ const nested = object(body.approval || body.realEstateApproval || args._real_estate_approval);
+ const approvalId = String(body.approvalId || body.approval_id || nested.approvalId || nested.approval_id || "").trim();
+ const token = String(body.approvalToken || body.approval_token || nested.token || nested.approvalToken || "").trim();
+ return approvalId && token ? { approvalId, token } : null;
+}
+function withoutApprovalMetadata(args: Record<string, unknown>) { const clean = { ...args }; delete clean._real_estate_approval; return clean; }
+function sessionFor(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>, body: Record<string, unknown>, activeVoiceSession: LeoSessionState | null) { return String(body.sessionId || body.session_id || activeVoiceSession?.id || identity.userId || identity.email || `${identity.scope}:${identity.channel}`).trim(); }
+async function resolveLeoRealEstateTarget(args:Record<string,unknown>,identity:NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>,forceLimitless:boolean){
+ const requested=requestedOrganizationId(args);
+ if(identity.scope==="tenant"&&requested&&requested!==identity.organizationId)throw new Error("Leo action organization does not match the authenticated tenant.");
+ if(forceLimitless&&requested&&requested!==LIMITLESS_REALTY_ORGANIZATION_ID)throw new Error("The requested organization is not the verified Limitless Realty workspace.");
+ let organizationId=forceLimitless?LIMITLESS_REALTY_ORGANIZATION_ID:identity.scope==="tenant"?String(identity.organizationId||""):requested;
+ if(!organizationId&&claimsLimitlessTarget(args))organizationId=LIMITLESS_REALTY_ORGANIZATION_ID;
+ if(!organizationId)return {organizationId:null as string|null,limitless:false,args};
+ const organization=await resolveActiveRealEstateOrganization(createAdminClient(),organizationId);
+ if(!organization){if(forceLimitless||claimsLimitlessTarget(args))throw new Error("The active real-estate organization could not be verified.");return {organizationId:null as string|null,limitless:false,args};}
+ if(forceLimitless&&organization.id!==LIMITLESS_REALTY_ORGANIZATION_ID)throw new Error("Limitless-only tools cannot target another organization.");
+ const next={...args,organization_id:organization.id,workspace:organization.slug.replace(/-/g,"_")};
+ return {organizationId:organization.id,limitless:organization.id===LIMITLESS_REALTY_ORGANIZATION_ID,args:next};
+}
+async function issueRealEstateApproval(identity:NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>,organizationId:string,sessionId:string,tool:{key:string;title:string},args:Record<string,unknown>){
+ const issued=await createLeoActionApproval({identity,organizationId,sessionId,channel:identity.channel,toolKey:tool.key,arguments:args,realEstateOptIn:true});
+ return {ok:true,status:"confirmation_required",toolKey:tool.key,title:tool.title,message:`Confirm ${tool.title.toLowerCase()} before Leo executes it.`,approvalId:issued.approvalId,token:issued.token,argumentsDigest:issued.argumentsDigest,expiresAt:issued.expiresAt,sessionId,requestId:issued.approvalId};
+}
 function canonical(value: unknown): unknown { if (Array.isArray(value)) return value.map(canonical); if (!value || typeof value !== "object") return value; const row = value as Record<string, unknown>; return Object.fromEntries(Object.keys(row).sort().map((key) => [key, canonical(row[key])])); }
 function sameAction(a?: Record<string, unknown>, b?: Record<string, unknown>) { return JSON.stringify(canonical(a || {})) === JSON.stringify(canonical(b || {})); }
 function voiceContextFor(toolKey: string, args: Record<string, unknown>, previous?: LeoVoiceWorkingContext): LeoVoiceWorkingContext { const audience = { ...(previous?.audience || {}) }; for (const key of ["state", "location", "location_preference", "interest", "property_interest", "property", "property_name", "status", "lead_status", "budget_min", "budgetMin", "budget_max", "budgetMax"]) if (args[key] !== undefined && args[key] !== "") audience[key] = args[key]; return { ...previous, workspace: limitlessWorkspace(args) || toolKey.startsWith("leo.limitless.") ? "limitless_realty" : previous?.workspace, action: toolKey, leadId: String(args.lead_id || args.id || previous?.leadId || "") || undefined, leadName: String(args.name || args.lead || previous?.leadName || "") || undefined, property: String(args.property_name || args.property || args.property_id || previous?.property || "") || undefined, audience, message: String(args.message || args.update || args.content || previous?.message || "") || undefined }; }
@@ -39,20 +68,39 @@ export async function POST(request: NextRequest) {
  let diagnosticToolKey = "";
  let diagnosticSessionId = "";
  let diagnosticChannel: LeoChannel = "chat";
+ let auditIdentity: Awaited<ReturnType<typeof resolveLeoIdentity>> | null = null;
  try {
   const body = await request.json().catch(() => ({}));
   diagnosticChannel = channel(body.channel);
   diagnosticToolKey = String(body.toolKey || body.tool_key || "").trim();
   diagnosticSessionId = String(body.sessionId || body.session_id || "").trim();
-  const identity = await resolveLeoIdentity({ channel: diagnosticChannel, allowPublic: true }); if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved.", diagnosticId }, { status: 401 }); const toolKey = diagnosticToolKey; if (!toolKey) return NextResponse.json({ error: "toolKey is required.", diagnosticId }, { status: 400 }); const tool = assertLeoToolAllowed(identity, toolKey); const approval = leoApprovalFor(identity, tool.key); const confirmed = body.confirmed === true; let args = object(body.arguments); const activeVoiceSession = await voiceSession(identity, body);
+  const identity = await resolveLeoIdentity({ channel: diagnosticChannel, allowPublic: true });
+  if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved.", diagnosticId }, { status: 401 });
+  auditIdentity = identity;
+  const toolKey = diagnosticToolKey;
+  if (!toolKey) return NextResponse.json({ error: "toolKey is required.", diagnosticId }, { status: 400 });
+  const tool = assertLeoToolAllowed(identity, toolKey);
+  const approval = leoApprovalFor(identity, tool.key);
+  const confirmed = body.confirmed === true;
+  let args = withoutApprovalMetadata(object(body.arguments));
+  const activeVoiceSession = await voiceSession(identity, body);
+  const limitlessTool=identity.scope==="super_admin"&&tool.key.startsWith("leo.limitless.");
+  const target=await resolveLeoRealEstateTarget(args,identity,limitlessTool);
+  args=target.args;
+  let targetedLimitless=target.limitless;
+  let realEstateOrganizationId=target.organizationId;
   if (
     identity.scope === "super_admin"
     && !tool.readOnly
     && !tool.key.startsWith("leo.public.")
     && !tool.key.startsWith("leo.limitless.")
-    && !limitlessWorkspace(args)
+    && !targetedLimitless
   ) {
     args = await requireSuperAdminOrganizationTarget(tool.key, args);
+    const selectedTarget=await resolveLeoRealEstateTarget(args,identity,false);
+    args=selectedTarget.args;
+    targetedLimitless=targetedLimitless||selectedTarget.limitless;
+    realEstateOrganizationId=selectedTarget.organizationId;
     await auditLeoEvent({
       identity,
       session: activeVoiceSession || undefined,
@@ -61,9 +109,34 @@ export async function POST(request: NextRequest) {
       details: { organization_id: String(args.organization_id), channel: identity.channel },
     });
   }
-  if (approval === "confirm" && !confirmed) { await setVoicePending(identity, activeVoiceSession, tool.key, args); return NextResponse.json({ ok: true, status: "confirmation_required", toolKey: tool.key, title: tool.title, message: `Confirm ${tool.title.toLowerCase()} before Leo executes it.` }); }
-  if (approval === "confirm" && confirmed && activeVoiceSession) { const pending = activeVoiceSession.voiceWorkingContext; if (!pending?.pendingToolKey || pending.pendingToolKey !== tool.key || !sameAction(pending.pendingArguments, args)) return NextResponse.json({ error: "The pending voice action changed or is no longer current. Leo must prepare the exact action again before confirmation." }, { status: 409 }); args = pending.pendingArguments || args; }
-  if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.") && /\.send$/.test(tool.key)) { const sessionId = String(body.sessionId || body.session_id || activeVoiceSession?.id || ""); args = { ...args, request_id: ensureLimitlessExecutionId(args, sessionId, tool.key) }; }
+
+  const realEstateMutation = Boolean(realEstateOrganizationId) && !tool.readOnly;
+  if (realEstateMutation && !isRealEstateApprovalTool(tool.key)) {
+    throw new Error(`Unsupported consequential real-estate action: ${tool.key}`);
+  }
+  const approvalSessionId = sessionFor(identity, body, activeVoiceSession);
+  const material = realEstateMutation ? approvalMaterial(body, args) : null;
+  if (realEstateMutation && !material) {
+    await setVoicePending(identity, activeVoiceSession, tool.key, args);
+    return NextResponse.json(await issueRealEstateApproval(identity, realEstateOrganizationId!, approvalSessionId, tool, args), { status: 409 });
+  }
+  if (realEstateMutation && material && activeVoiceSession) {
+    const pending = activeVoiceSession.voiceWorkingContext;
+    if (!pending?.pendingToolKey || pending.pendingToolKey !== tool.key || !sameAction(pending.pendingArguments, args)) {
+      return NextResponse.json({ error: "The pending voice action changed or is no longer current. Leo must prepare the exact action again before confirmation." }, { status: 409 });
+    }
+  }
+  if (realEstateMutation && material && limitlessTool) {
+    const consumed = await consumeLeoActionApproval({ identity, organizationId: realEstateOrganizationId!, sessionId: approvalSessionId, channel: identity.channel, toolKey: tool.key, arguments: args, approvalId: material.approvalId, token: material.token, realEstateOptIn: true });
+    if (!consumed.accepted) return NextResponse.json({ ok: false, status: consumed.status, approvalId: consumed.approvalId, error: "The approval is invalid, expired, already consumed, or does not match this exact action." }, { status: 409 });
+    args = { ...args, request_id: material.approvalId };
+  } else if (realEstateMutation && material) {
+    // Generic Limitless mutations are consumed exactly once by the internal route.
+    args = { ...args, _real_estate_approval: { approvalId: material.approvalId, token: material.token } };
+  }
+  if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.") && /\.send$/.test(tool.key) && !args.request_id) {
+    args = { ...args, request_id: ensureLimitlessExecutionId(args, approvalSessionId, tool.key) };
+  }
 
   if (tool.key === "leo.public.lead.capture") { const sessionId = String(body.sessionId || body.session_id || "").trim(); const session = identity.scope === "public" && sessionId ? await getOrCreateLeoSession({ identity, sessionId }) : null; if (session?.leadCaptured) { await auditLeoEvent({ identity, session, eventType: "tool_execution_skipped", toolKey: tool.key, details: { channel: identity.channel, status: "already_captured", lead_id: session.leadId } }); return NextResponse.json({ ok: true, status: "already_captured", toolKey: tool.key, approval, channel: identity.channel, scope: identity.scope, leadCaptured: true, leadId: session.leadId || null }, { status: 200 }); } const result = await capturePublicLeoLead(args); let updatedSession = session; if (identity.scope === "public" && sessionId && result.ok && session) updatedSession = await updateLeoPublicLeadState({ identity, session, leadProfile: { name: String(args.name || ""), email: String(args.email || "").toLowerCase(), phone: String(args.phone || ""), organization: String(args.organization || args.business_name || ""), business_type: String(args.business_type || ""), main_goal: String(args.main_goal || ""), current_tools: String(args.current_tools || ""), lead_volume: String(args.lead_volume || ""), timeline: String(args.timeline || ""), budget: String(args.budget || ""), preferred_contact_time: String(args.preferred_contact_time || "") }, captured: true, leadId: result.leadId }); await auditLeoEvent({ identity, session: updatedSession || undefined, eventType: result.ok ? "tool_execution_completed" : "tool_execution_failed", toolKey: tool.key, details: { channel: identity.channel, status: result.status, lead_id: result.ok ? result.leadId : undefined } }); return NextResponse.json({ ...result, toolKey: tool.key, approval, channel: identity.channel, scope: identity.scope, leadCaptured: Boolean(updatedSession?.leadCaptured) || result.ok, leadId: updatedSession?.leadId || (result.ok ? result.leadId : null) }, { status: result.ok ? 200 : 400 }); }
   if (tool.key === "leo.tenant.inspect" && identity.scope === "super_admin" && !String(args.organization_id || "").trim()) { const snapshot = await globalSystemSnapshot(); await auditLeoEvent({ identity, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, scope: identity.scope, global: true } }); return NextResponse.json({ ok: true, result: snapshot, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
@@ -123,12 +196,19 @@ export async function POST(request: NextRequest) {
       scope: identity.scope,
     }, { status: 200 });
   }
-  if (identity.scope === "super_admin" && tool.key === "leo.crm.leads.update" && limitlessWorkspace(args)) { const result = await saveLimitlessLead(args); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: "saved" } }); return NextResponse.json({ ok: true, requestId: String(body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: "saved", result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
   if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) { let result: Record<string, unknown>; if (tool.key === "leo.limitless.leads.read") result = await findLimitlessLeads(args); else if (tool.key === "leo.limitless.followup.prepare") result = await prepareLimitlessFollowup(args); else if (tool.key === "leo.limitless.followup.send") result = await sendLimitlessFollowup(request, args) as Record<string, unknown>; else if (tool.key === "leo.limitless.campaign.prepare") result = await prepareLimitlessCampaign(args); else if (tool.key === "leo.limitless.campaign.send") result = await sendThroughLimitlessCampaignRoute(request, args) as Record<string, unknown>; else throw new Error(`Unsupported Limitless Realty Leo tool: ${tool.key}`); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: String(result.status || "completed"), request_id: String(args.request_id || "") } }); return NextResponse.json({ ok: true, requestId: String(args.request_id || body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: String(result.status || "completed"), result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
-  const requestId = String(body.requestId || body.request_id || randomUUID()).trim(); const sessionId = String(body.sessionId || body.session_id || "").trim() || null; const envelope = createLeoExecutionEnvelope({ requestId, sessionId, identity, toolKey: tool.key, arguments: args, approvalGranted: approval === "none" || confirmed }); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_dispatched", toolKey: tool.key, details: { request_id: requestId, channel: identity.channel, approval } }); const result = await executeLeoEnvelopeViaN8n(envelope); if (result.ok) await setVoiceResult(identity, activeVoiceSession, tool.key, args, result as unknown as Record<string, unknown>); return NextResponse.json({ ...result, approval, channel: identity.channel, scope: identity.scope }, { status: result.ok ? 200 : 502 });
+  const forwardedApproval = realEstateMutation && material ? true : approval === "none" || confirmed;
+  const requestId = realEstateMutation && material ? material.approvalId : String(body.requestId || body.request_id || randomUUID()).trim();
+  const sessionId = approvalSessionId || null;
+  const envelope = createLeoExecutionEnvelope({ requestId, sessionId, identity, toolKey: tool.key, arguments: args, approvalGranted: forwardedApproval });
+  await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_dispatched", toolKey: tool.key, details: { request_id: requestId, channel: identity.channel, approval } });
+  const result = await executeLeoEnvelopeViaN8n(envelope);
+  if (result.ok) await setVoiceResult(identity, activeVoiceSession, tool.key, withoutApprovalMetadata(args), result as unknown as Record<string, unknown>);
+  return NextResponse.json({ ...result, approval, channel: identity.channel, scope: identity.scope }, { status: result.ok ? 200 : 502 });
  } catch (error) {
   const message = error instanceof Error ? error.message : "Leo could not execute this action.";
   const status = /not permitted|Cross-tenant|Unauthorized/i.test(message) ? 403 : 500;
+  if (auditIdentity && diagnosticToolKey) await auditLeoEvent({ identity: auditIdentity, eventType: "tool_execution_failed", toolKey: diagnosticToolKey, details: { diagnostic_id: diagnosticId, status: "failed" } }).catch(() => undefined);
   console.error("[leo/tool] execution failed", {
     diagnosticId,
     status,

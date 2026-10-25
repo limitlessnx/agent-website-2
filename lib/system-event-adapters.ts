@@ -65,6 +65,11 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
+type RpcResult = { data: unknown; error: unknown };
+function callAdminRpc(admin: ReturnType<typeof createAdminClient>, functionName: string, args: Record<string, unknown>): Promise<RpcResult> {
+  return (admin as unknown as { rpc: (name: string, params: Record<string, unknown>) => Promise<RpcResult> }).rpc(functionName, args);
+}
+
 function validEmail(value: unknown) {
   const email = text(value).toLowerCase();
   return /^\S+@\S+\.\S+$/.test(email) ? email : "";
@@ -94,8 +99,8 @@ async function emitAppointmentEvent(input: {
   payload: Json;
   idempotencySuffix: string;
 }) {
-  const admin = createAdminClient() as any;
-  const { data, error } = await admin.rpc("publish_system_event", {
+  const admin = createAdminClient();
+  const { data, error } = await callAdminRpc(admin, "publish_system_event", {
     p_organization_id: input.event.organizationId,
     p_source_system_id: input.appointmentSystemId,
     p_event_type: input.eventType,
@@ -712,8 +717,43 @@ async function createTask(input: SystemWorkflowAdapterInput, values: {
   };
 }
 
+async function reconcileFlaggedRealEstateInspection(input: SystemWorkflowAdapterInput) {
+  if (input.event.source !== "real_estate_inspection") return null;
+  if (!(["appointment.booked", "appointment.rescheduled", "appointment.cancelled"].includes(input.event.eventType))) return null;
+  const payload = record(input.event.payload);
+  const appointmentId = text(payload.appointmentId || payload.appointment_id);
+  let inspectionId = text(payload.inspectionId || payload.inspection_id);
+  if (!inspectionId && appointmentId) {
+    const appointment = await createAdminClient()
+      .from("appointments")
+      .select("metadata")
+      .eq("organization_id", input.event.organizationId)
+      .eq("id", appointmentId)
+      .maybeSingle();
+    if (appointment.error) throw appointment.error;
+    inspectionId = text(record(appointment.data?.metadata).inspectionId || record(appointment.data?.metadata).inspection_id);
+  }
+  if (!inspectionId || !appointmentId) return null;
+  const { reconcileRealEstateInspectionFromAppointment } = await import("@/lib/real-estate-inspections");
+  return reconcileRealEstateInspectionFromAppointment({
+    organizationId: input.event.organizationId,
+    inspectionId,
+    appointmentId,
+    eventType: input.event.eventType as "appointment.booked" | "appointment.rescheduled" | "appointment.cancelled",
+    eventId: input.event.id,
+  });
+}
+
 async function followUpAdapter(input: SystemWorkflowAdapterInput) {
   const payload = record(input.event.payload);
+
+  // Real-estate inspections own their 24h/2h durable jobs. The explicit source
+  // flag and inspection id are required so ordinary appointment reminders keep
+  // their existing behavior and cannot be double-scheduled here.
+  const inspectionReconciliation = await reconcileFlaggedRealEstateInspection(input);
+  if (inspectionReconciliation) {
+    return { adapter: "real_estate_inspection", action: "reconcile", ...inspectionReconciliation };
+  }
 
   if (input.event.eventType === "appointment.cancelled") {
     const appointmentId = text(payload.appointmentId || payload.appointment_id);
@@ -970,7 +1010,7 @@ export async function processDueAppointmentReminders(limit = 100) {
     }
 
     try {
-      const { data: eventId, error: publishError } = await (admin as any).rpc("publish_system_event", {
+      const { data: eventId, error: publishError } = await callAdminRpc(admin, "publish_system_event", {
         p_organization_id: task.organization_id,
         p_source_system_id: sourceSystemId,
         p_event_type: "reminder.scheduled",

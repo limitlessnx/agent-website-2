@@ -1,7 +1,7 @@
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import WhatsAppCampaignCenter from "@/components/admin/WhatsAppCampaignCenterV2";
 import CampaignReportsRefresh from "@/components/admin/CampaignReportsRefresh";
-import { getCampaignGroups } from "@/lib/campaign-groups";
+import { getRealEstateCampaignGroups } from "@/lib/real-estate-campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import { getProperties } from "@/lib/limitless-data";
 import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
@@ -10,20 +10,27 @@ export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
   const { organizationId } = await resolveAdminOrganizationScope();
-  const [campaigns, leads, properties, groups] = await Promise.all([
-    getDetailedCampaignReports(50),
+  const [campaigns, leads, allProperties, groups] = await Promise.all([
+    getDetailedCampaignReports(organizationId, 50),
     getCampaignAudienceLeads(organizationId, 5000),
-    getProperties(500),
-    getCampaignGroups(100),
+    getProperties(500, organizationId),
+    getRealEstateCampaignGroups(organizationId),
   ]);
+  const properties = allProperties.filter((property) => property.organization_id === organizationId);
 
   const recentCampaigns = campaigns.slice(0, 5);
-  const eligible = leads.filter((lead) => lead.phone && lead.campaign_eligible !== false).length;
+  const eligible = leads.filter((lead) => {
+    const status = String(lead.status || "").trim().toLowerCase();
+    return Boolean(lead.phone && lead.campaign_eligible !== false && !["opted_out", "do_not_contact", "blocked", "invalid"].includes(status));
+  }).length;
   const undocumented = leads.filter((lead) => lead.profile_status === "undocumented").length;
   const delivered = campaigns.reduce((sum, campaign) => sum + Number(campaign.delivered || 0), 0);
   const failed = campaigns.reduce((sum, campaign) => sum + Number(campaign.failed || 0), 0);
   const attempted = campaigns.reduce((sum, campaign) => sum + Number(campaign.attempted || 0), 0);
   const deliveryRate = attempted ? Math.round((delivered / attempted) * 100) : 0;
+  const eligibleRate = leads.length ? Math.round((eligible / leads.length) * 100) : 0;
+  const undocumentedRate = leads.length ? Math.round((undocumented / leads.length) * 100) : 0;
+  const reportWindowRate = Math.round((Math.min(campaigns.length, 50) / 50) * 100);
 
   return (
     <div className="admin-page console-page">
@@ -34,13 +41,13 @@ export default async function CampaignsPage() {
           <h1>WhatsApp Campaign Center</h1>
           <p>Build audiences, select the correct WhatsApp route, monitor delivery, and inspect provider outcomes from one operating console.</p>
         </div>
-        <div className="console-status-stack"><span className="console-status-pill">LIVE WORKSPACE</span><small>Maia delivery engine · reports refresh every 5s</small></div>
+        <div className="console-status-stack"><span className="console-status-pill">TENANT-SCOPED REPORTS</span><small>Latest 50 stored reports · dashboard refreshes every 5s</small></div>
       </section>
 
       <section className="console-kpi-grid">
-        <article><span>READY LEADS</span><strong>{eligible}</strong><i style={{ "--meter": `${Math.min(100, eligible ? 82 : 0)}%` } as React.CSSProperties} /></article>
-        <article><span>UNDOCUMENTED</span><strong>{undocumented}</strong><i style={{ "--meter": `${Math.min(100, eligible ? Math.round((undocumented / eligible) * 100) : 0)}%` } as React.CSSProperties} /></article>
-        <article><span>CAMPAIGNS</span><strong>{campaigns.length}</strong><i style={{ "--meter": `${Math.min(100, campaigns.length * 8)}%` } as React.CSSProperties} /></article>
+        <article><span>CAMPAIGN-ELIGIBLE LEADS</span><strong>{eligible}</strong><i style={{ "--meter": `${eligibleRate}%` } as React.CSSProperties} /></article>
+        <article><span>UNDOCUMENTED LEADS</span><strong>{undocumented}</strong><i style={{ "--meter": `${undocumentedRate}%` } as React.CSSProperties} /></article>
+        <article><span>REPORTS IN LATEST 50</span><strong>{campaigns.length}</strong><i style={{ "--meter": `${reportWindowRate}%` } as React.CSSProperties} /></article>
         <article><span>DELIVERY RATE</span><strong>{deliveryRate}%</strong><i style={{ "--meter": `${deliveryRate}%` } as React.CSSProperties} /></article>
       </section>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { matchesCampaignGroupRules, type CampaignGroup } from "@/lib/campaign-groups";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
@@ -10,18 +10,20 @@ type Props = { leads: ProgressiveLead[]; properties: PropertyRecord[]; groups: C
 type AudienceMode = "all" | "manual" | "group" | "filters";
 type CampaignType = "new_estate_update" | "limitless_realty_update" | "limitless_realty_reminder" | "direct_message";
 type CampaignResult = { status: string; attempted: number; sent: number; delivered: number; pendingDelivery: number; failed: number; skipped: number; templateName?: string };
+type PendingApproval = { fingerprint: string; requestId: string; approvalId?: string; token?: string; expiresAt?: string; preview?: { attemptedRecipients: number; serviceWindowSkipped?: number; cooldownSkipped: number; messageParts: number; templateName?: string; message: string; propertyName?: string | null; recipientPreview?: Array<{ name: string; phone: string }>; moreRecipients?: number }; unresolved?: boolean };
 
 const CHANNEL_INVITE = "Reply YES if you'd like to join our Limitless Realty WhatsApp Channel for property deals, new estate launches and real estate updates near you.";
-const campaignTypes: Array<{ value: CampaignType; label: string; description: string; template?: string }> = [
-  { value: "new_estate_update", label: "Estate update", template: "estate_brief_update", description: "New properties, estate launches and price updates." },
+const campaignTypes: Array<{ value: CampaignType; label: string; description: string; template?: string; unavailable?: boolean }> = [
+  { value: "new_estate_update", label: "Estate update", template: "estate_brief_update · NOT VERIFIED", description: "Unavailable until the approved Meta template schema is verified.", unavailable: true },
   { value: "limitless_realty_update", label: "Market update", template: "limitless_realty_update_v2", description: "General real-estate campaigns, news and property updates." },
-  { value: "limitless_realty_reminder", label: "Reminder", template: "limitless_realty_reminder", description: "Maia follow-ups for clients who showed property interest." },
+  { value: "limitless_realty_reminder", label: "Reminder", template: "limitless_realty_reminder · NOT VERIFIED", description: "Unavailable until the approved Meta template schema is verified.", unavailable: true },
   { value: "direct_message", label: "Direct message", description: "Send your exact message inside the 24-hour WhatsApp window." },
 ];
 
 function text(value: unknown) { return String(value || "").trim().toLowerCase(); }
 function money(value: unknown) { const parsed = Number(String(value || "").replace(/[^\d.]/g, "")); return Number.isFinite(parsed) ? parsed : 0; }
 function eligible(lead: ProgressiveLead) { const status = text(lead.status); return Boolean(lead.phone && lead.campaign_eligible !== false && !["opted_out", "do_not_contact", "blocked", "invalid"].includes(status)); }
+function approvalIsUnexpired(approval: PendingApproval | null) { return Boolean(approval?.expiresAt && Number.isFinite(Date.parse(approval.expiresAt)) && Date.parse(approval.expiresAt) > Date.now() && !approval.unresolved); }
 
 export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: Props) {
   const params = useSearchParams();
@@ -42,11 +44,22 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const [mainUpdate, setMainUpdate] = useState("");
   const [supportingUpdate, setSupportingUpdate] = useState("");
   const [responsePrompt, setResponsePrompt] = useState("Reply MORE INFO if you'd like more information about this update.");
-  const [mediaUrl, setMediaUrl] = useState("");
   const [result, setResult] = useState<CampaignResult | null>(null);
   const [error, setError] = useState("");
+  const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
+  const [approvalClock, setApprovalClock] = useState<{ expiresAt: string; now: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const sending = useRef(false);
+
+  useEffect(() => {
+    if (!pendingApproval?.expiresAt) return;
+    const approvalExpiry = pendingApproval.expiresAt;
+    const expiresAt = Date.parse(approvalExpiry);
+    const refresh = () => setApprovalClock({ expiresAt: approvalExpiry, now: Date.now() });
+    const initialRefresh = window.setTimeout(refresh, 0);
+    const expiryRefresh = Number.isFinite(expiresAt) ? window.setTimeout(refresh, Math.max(0, expiresAt - Date.now() + 1)) : undefined;
+    return () => { window.clearTimeout(initialRefresh); if (expiryRefresh !== undefined) window.clearTimeout(expiryRefresh); };
+  }, [pendingApproval?.expiresAt]);
 
   const selectedGroup = groups.find((group) => group.id === groupId);
   const selectedProperty = properties.find((property) => property.id === propertyId);
@@ -58,7 +71,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
     const groupLeadIds = new Set(selectedGroup?.leadIds || []);
     const stateNeedle = text(state);
     const interestNeedle = text(interest);
-    const propertyNeedle = text(selectedProperty?.title || "");
+    const propertyNeedle = campaignType === "direct_message" ? "" : text(selectedProperty?.title || "");
     const min = money(budgetMin);
     const max = money(budgetMax);
     return leads.filter((lead) => {
@@ -75,28 +88,43 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
       }
       return true;
     });
-  }, [audienceMode, budgetMax, budgetMin, interest, leads, selectedGroup, selectedLeadIds, selectedProperty, state]);
+  }, [audienceMode, budgetMax, budgetMin, campaignType, interest, leads, selectedGroup, selectedLeadIds, selectedProperty, state]);
 
   const recipientCount = audience.length + (audienceMode === "group" && selectedGroup?.groupType === "manual" ? selectedGroup.phones.length : 0);
   const composedUpdate = [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
-  const canSend = Boolean(recipientCount && (isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId));
+  const outboundMessage = isUpdateTemplate ? composedUpdate : message.trim();
+  const requestPayload = { campaignType, topic, message: outboundMessage, mediaUrl: "", audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId: campaignType === "direct_message" ? "" : propertyId, budgetMin, budgetMax };
+  const fingerprint = JSON.stringify(requestPayload);
+  const approvalMatches = Boolean(pendingApproval && pendingApproval.fingerprint === fingerprint);
+  const approvalUsable = Boolean(approvalMatches && pendingApproval?.approvalId && pendingApproval.token && approvalClock?.expiresAt === pendingApproval?.expiresAt && pendingApproval.expiresAt && Date.parse(pendingApproval.expiresAt) > (approvalClock?.now || 0) && !pendingApproval.unresolved);
+  const blockedByUnknown = Boolean(pendingApproval?.unresolved && pendingApproval.fingerprint !== fingerprint);
+  const canSend = Boolean(recipientCount && (isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !blockedByUnknown);
 
   const sendCampaign = () => {
     if (sending.current || isPending || !canSend) return;
     sending.current = true;
     setError("");
     setResult(null);
-    const requestId = crypto.randomUUID();
-    const outboundMessage = isUpdateTemplate ? composedUpdate : message.trim();
+    const approvalCurrent = approvalUsable && approvalIsUnexpired(pendingApproval);
+    const requestId = approvalMatches && approvalCurrent && pendingApproval ? pendingApproval.requestId : crypto.randomUUID();
+    const approvalStage = approvalCurrent ? "send" : "prepare";
     startTransition(async () => {
       try {
         const endpoint = campaignType === "direct_message" ? "/api/limitless/campaigns/direct" : "/api/limitless/campaigns/send";
-        const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestId }, body: JSON.stringify({ requestId, campaignType, topic, message: outboundMessage, mediaUrl: isUpdateTemplate ? "" : mediaUrl, audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId, budgetMin, budgetMax }) });
+        const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestId }, body: JSON.stringify({ ...requestPayload, requestId, approvalStage, ...(approvalStage === "send" && pendingApproval ? { approvalId: pendingApproval.approvalId, approvalToken: pendingApproval.token } : {}) }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Campaign failed.");
+        if (approvalStage === "prepare") {
+          if (!data.approval?.approvalId || !data.approval?.token || !data.preview) throw new Error("The server did not return a valid confirmation preview.");
+          setPendingApproval({ fingerprint, requestId, approvalId: data.approval.approvalId, token: data.approval.token, expiresAt: data.approval.expiresAt, preview: data.preview });
+          setError("");
+          return;
+        }
         setResult({ status: data.status, attempted: data.attempted || 0, sent: data.sent || 0, delivered: data.delivered || 0, pendingDelivery: data.pendingDelivery || 0, failed: data.failed || 0, skipped: data.skipped || 0, templateName: data.templateName });
+        setPendingApproval(null);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "Campaign failed.");
+        if (approvalStage === "send") setPendingApproval({ fingerprint, requestId, unresolved: true });
       } finally {
         sending.current = false;
       }
@@ -110,14 +138,14 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
           <header><span>AUDIENCE</span><h2>Select recipients</h2><strong>{recipientCount}</strong></header>
           <div className="audience-tabs">{(["all", "manual", "group", "filters"] as AudienceMode[]).map((mode) => <button key={mode} type="button" className={audienceMode === mode ? "active" : ""} onClick={() => setAudienceMode(mode)}>{mode === "all" ? "All leads" : mode === "manual" ? "Manual" : mode === "group" ? "Saved group" : "Smart filters"}</button>)}</div>
           {audienceMode === "group" && <label>Saved group<select value={groupId} onChange={(e) => setGroupId(e.target.value)}><option value="">Choose group</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>}
-          {audienceMode === "filters" && <div className="filters"><label>Location<input value={state} onChange={(e) => setState(e.target.value)} placeholder="Any" /></label><label>Interest<input value={interest} onChange={(e) => setInterest(e.target.value)} placeholder="Any" /></label><label>Property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">Any property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label><label>Min budget<input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} /></label><label>Max budget<input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} /></label></div>}
+          {audienceMode === "filters" && <div className="filters"><label>Location<input value={state} onChange={(e) => setState(e.target.value)} placeholder="Any" /></label><label>Interest<input value={interest} onChange={(e) => setInterest(e.target.value)} placeholder="Any" /></label>{campaignType !== "direct_message" && <label>Property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">Any property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>}<label>Min budget<input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} /></label><label>Max budget<input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} /></label></div>}
           {audienceMode === "manual" && <div className="lead-list">{leads.filter(eligible).slice(0, 300).map((lead) => <label key={lead.id}><input type="checkbox" checked={selectedLeadIds.includes(String(lead.id))} onChange={() => setSelectedLeadIds((current) => current.includes(String(lead.id)) ? current.filter((id) => id !== String(lead.id)) : [...current, String(lead.id)])} /><span>{lead.name}<small>{lead.phone}</small></span></label>)}</div>}
           <p className="audience-note">Only campaign-eligible contacts are included. WhatsApp cooldown and delivery eligibility are checked again before sending.</p>
         </section>
 
         <section className="campaign-card composer">
           <header><span>MESSAGE ENGINE</span><h2>Compose campaign</h2><small className="engine-note">Approved template routing · Maia delivery engine</small></header>
-          <div className="campaign-type-grid">{campaignTypes.map((type) => <button key={type.value} type="button" className={campaignType === type.value ? "active" : ""} onClick={() => setCampaignType(type.value)}><strong>{type.label}</strong><span>{type.description}</span>{type.template && <small>{type.template}</small>}</button>)}</div>
+          <div className="campaign-type-grid">{campaignTypes.map((type) => <button key={type.value} type="button" disabled={type.unavailable} className={`${campaignType === type.value ? "active" : ""} ${type.unavailable ? "unavailable" : ""}`} onClick={() => { if (!type.unavailable) setCampaignType(type.value); }}><strong>{type.label}</strong><span>{type.description}</span>{type.template && <small>{type.template}</small>}</button>)}</div>
 
           {isUpdateTemplate ? (
             <>
@@ -139,12 +167,14 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
             </>
           ) : (
             <>
-              {campaignType === "direct_message" && <div className="direct-notice"><strong>Direct message mode</strong><span>This sends your message exactly as written. It is only valid inside the recipient's 24-hour WhatsApp customer-service window.</span></div>}
-              <div className="form-grid"><label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Campaign title" /></label><label>Featured property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label><label className="wide">Message<textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={campaignType === "direct_message" ? "Write the exact WhatsApp message. Maia will not rewrite it." : "Write the campaign message Maia should deliver using the selected campaign route."} /></label><label className="wide">Image URL (optional)<input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder={selectedProperty?.drive_photos_link || "https://..."} /></label></div>
+              {campaignType === "direct_message" && <div className="direct-notice"><strong>Direct message mode</strong><span>This sends your message exactly as written. It is only valid inside the recipient&apos;s 24-hour WhatsApp customer-service window.</span></div>}
+              <div className="form-grid"><label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Campaign title" /></label>{campaignType !== "direct_message" && <label>Featured property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>}<label className="wide">Message<textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={campaignType === "direct_message" ? "Write the exact WhatsApp message. Maia will not rewrite it." : "Write the campaign message Maia should deliver using the selected campaign route."} /></label><p className="wide audience-note">Media attachments are not enabled by the verified provider template; use text-only copy.</p></div>
             </>
           )}
 
-          <div className="sendbar"><div><strong>{recipientCount} READY</strong><small>{selectedType.template || "DIRECT MESSAGE · 24H WINDOW ONLY"}</small></div><button type="button" disabled={isPending || !canSend} onClick={sendCampaign}>{isPending ? "TRANSMITTING..." : "SEND CAMPAIGN"}</button></div>
+          <div className="sendbar"><div><strong>{recipientCount} SELECTED</strong><small>{selectedType.template || "DIRECT MESSAGE · SERVER-VERIFIED 24H WINDOW"}</small></div><button type="button" disabled={isPending || !canSend} onClick={sendCampaign}>{isPending ? "CHECKING / SENDING..." : approvalUsable ? `CONFIRM & SEND TO ${pendingApproval?.preview?.attemptedRecipients || 0}` : "PREVIEW & PREPARE"}</button></div>
+          {approvalUsable && pendingApproval?.preview && <div className="result"><strong>Review before sending {pendingApproval.preview.propertyName ? `· ${pendingApproval.preview.propertyName}` : ""}</strong><span>{pendingApproval.preview.attemptedRecipients} server-eligible recipients · {pendingApproval.preview.cooldownSkipped} provider cooldown skips · {pendingApproval.preview.messageParts} message part(s)</span>{pendingApproval.preview.serviceWindowSkipped !== undefined && <span>{pendingApproval.preview.serviceWindowSkipped} contacts excluded: no verified inbound message inside 24 hours.</span>}<pre>{pendingApproval.preview.message}</pre>{pendingApproval.preview.recipientPreview?.map((recipient, index) => <small key={`${recipient.phone}-${index}`}>{recipient.name} · {recipient.phone}</small>)}{!!pendingApproval.preview.moreRecipients && <small>+{pendingApproval.preview.moreRecipients} more recipients</small>}<small>Approval expires {new Date(pendingApproval.expiresAt!).toLocaleTimeString()} · changing the audience or message cancels this approval.</small></div>}
+          {blockedByUnknown && <div className="error">A previous send has an uncertain provider result. Reconcile it in Operations before preparing a changed campaign; the server will not automatically resend it.</div>}
           {result && <div className="result"><strong>{result.status.replaceAll("_", " ")}</strong><span>{result.sent} sent · {result.delivered} delivered · {result.pendingDelivery} pending · {result.failed} failed · {result.skipped} skipped</span>{result.templateName && <small>Template: {result.templateName}</small>}</div>}
           {error && <div className="error">{error}</div>}
         </section>

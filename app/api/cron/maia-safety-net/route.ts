@@ -35,14 +35,17 @@ export async function GET(request: Request) {
     ? { authorization: `Bearer ${cronSecret}` }
     : { "x-maia-scheduler-token": schedulerToken as string };
 
-  const results = await Promise.allSettled([
-    fetch(`${baseUrl}/api/maia/autonomous`, { method: "GET", headers, cache: "no-store" }),
-    fetch(`${baseUrl}/api/limitless/maia/followups`, { method: "GET", headers, cache: "no-store" }),
-    fetch(`${baseUrl}/api/cron/limitless-installment-reminders`, { method: "GET", headers, cache: "no-store" }),
-  ]);
-
+  const tasks = [
+    { task: "autonomous", path: "/api/maia/autonomous" },
+    { task: "followups", path: "/api/limitless/maia/followups" },
+    { task: "installment-reminders", path: "/api/cron/limitless-installment-reminders" },
+  ];
+  // The daily Vercel fallback does not dispatch property-inspection reminders.
+  // Only the already-verified high-frequency scheduler can reach that opt-in queue.
+  if (externalSchedulerAuthorized) tasks.push({ task: "real-estate-inspections", path: "/api/cron/real-estate-inspections" });
+  const results = await Promise.allSettled(tasks.map((item) => fetch(`${baseUrl}${item.path}`, { method: "GET", headers, cache: "no-store" })));
   const summary = results.map((result, index) => ({
-    task: index === 0 ? "autonomous" : index === 1 ? "followups" : "installment-reminders",
+    task: tasks[index].task,
     ok: result.status === "fulfilled" && result.value.ok,
     status: result.status === "fulfilled" ? result.value.status : null,
     error: result.status === "rejected" ? String(result.reason) : null,

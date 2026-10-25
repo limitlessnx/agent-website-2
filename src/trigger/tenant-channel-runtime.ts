@@ -5,6 +5,7 @@ import { internalRuntimeIdentity, runPhase12Agent } from "@/lib/ai-runtime/migra
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { recordRealEstateCustomerInboundWindow } from "@/lib/real-estate-customer-service-window";
 
 export type TenantChannelInboundPayload = {
   organizationId: string;
@@ -147,6 +148,24 @@ export const tenantWhatsAppInbound = task({
     await validateRuntimeBinding(payload);
     const customerId = await resolveCustomer(payload);
     const inbound = await claimInbound(payload, customerId);
+    if (payload.customerPhone) {
+      try {
+        await recordRealEstateCustomerInboundWindow({
+          organizationId: payload.organizationId,
+          phone: payload.customerPhone,
+          provider: payload.provider,
+          providerMessageId: payload.externalEventId,
+          occurredAt: payload.metadata?.timestamp,
+        });
+      } catch (error) {
+        // This optional projection must never interrupt inbound conversation handling.
+        logger.warn("Real-estate customer service window could not be recorded", {
+          organizationId: payload.organizationId,
+          inboundEventId: inbound.id,
+          errorType: error instanceof Error ? error.name : "unknown",
+        });
+      }
+    }
     const conversationId=customerId
       ? await getOrCreateCanonicalConversation({
           organizationId:payload.organizationId,

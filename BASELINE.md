@@ -1,0 +1,35 @@
+# Fluxknight real estate — Phase 0 baseline
+
+Date: 24 October 2026. Scope: shared platform and Limitless Realty only. No excluded-tenant records, integrations, workflows or tenant configuration were accessed or changed. During later baseline-source triage, one generic-named core migration was opened from the base commit; inspection stopped when out-of-scope tenant-specific material appeared, and the file was not summarized, copied, modified, tested or applied. At the initial baseline no live writes were performed. Later, after explicit approval, one narrow FLUXNIT function-ACL migration was applied; no tenant/customer rows were changed.
+
+## Verified environment
+
+Repository `limitlessnx/agent-website-2`, main SHA `b123b9c74109c34ebd01d60e668d916cedb5e22c`; Vercel project `prj_FrGwJ3CASajEO9GKOqbrE5QDDA3T` production deployment `dpl_Dn6eWCX9gCnrHLVxTMaRUJAWsuoh` is READY at that SHA. Public homepage returned HTTP 200. The three selected Limitless routes returned no grouped runtime errors over the prior 24 hours; this does not establish end-to-end workflow health. Supabase `tacxegmlppngnuvldojy` is ACTIVE_HEALTHY.
+
+Limitless-only aggregate records: leads 84, properties 18, crm_customers 2; crm_leads, crm_tasks, viewings, follow_ups, viewing_reminders, appointments, calendar resources, human_handoffs and handoff_notifications each 0 at audit time. Wallet is basic/active. No recorded feature-gate events over prior 30 days; this does not exclude failures before event persistence. Workflow registry shows n8n active 2, draft 1, not proof of actual runtime status.
+
+## Confirmed blockers and exact corrections to earlier audit
+
+1. `lib/ai/maia-trigger-runtime.ts` exists. The initial audit used the wrong path; there is no missing-module defect. It deduplicates completed inbound events and uses conversation lock RPCs with a 180-second lease, while task max duration is 300 seconds. Parallel retries for the same event need explicit behavior verification.
+2. `lib/ai/maia-runtime.ts` already exposes `handoff_to_human_supervisor` and `request_property_inspection`. The earlier restricted file review did not include the tool implementation, so its absence inference was incorrect. The legacy helper is not proof of the active route. The real canonical handoff code is `createHumanHandoffFromMaia`; its notifier failures can still be followed by `notified_at` without a truthful notification outcome.
+3. `searchLimitlessProperties` ignores caller organization context and uses a substring availability regex that admits `inactive`. Fix explicit tenant argument and exact status matching. Property catalog reads should fail closed rather than inject seed listings for operational AI.
+4. Live schema contains no `limitless_inspections`, although request/booking code writes it. `crm_tasks.lead_id` references crm_leads while inspection code passes legacy leads IDs. No verified drain handles inspection task types. Rescheduling API drops time/timezone; terminal outcomes wrongly require a future appointment; cancelled/no-show reminders remain active.
+5. `create_followup_task` has a first Limitless branch selecting nonexistent `whatsapp_opted_out` and writing boolean `message_sent` to a text column; a later correct branch is unreachable for Limitless. Follow-up preparation must not be presented as activation.
+6. `list_my_appointments` can query all tenant appointments when customer cannot be resolved and trusts a model-supplied customer ID. Customer-level authorization must fail closed in addition to tenant isolation.
+7. Leo envelope signing binds principal, organization, tool/args and expiry already, but direct public tool route confirmation still relies on a boolean outside voice flow. One-time durable approval consumption and mandatory prepare-token checks need implementation.
+8. Public onboarding wrapper `provision_client_workspace` was SECURITY DEFINER and executable by public/anon/authenticated. Its body lacked auth.uid binding and invoked service-only `provision_client_organization`, whose internal validation only checks that supplied user exists. No exploit was performed. After explicit approval, migration `workspace_provisioning_acl` version `20261024140349` was applied to FLUXNIT; read-back verified anon/authenticated denied and service_role allowed for workspace and trial provisioning. Other flagged organization-access RPCs explicitly validate auth.uid and roles, so grants alone do not prove those functions exploitable.
+9. Read-only schema metadata confirms `agent_readiness_snapshots` is absent from FLUXNIT while `agent_runtime_readiness` exists. A reviewed agent-execution migration references the absent relation; this is a schema/runtime compatibility issue that must be resolved before staging acceptance. No tenant rows or function bodies were queried for this check.
+
+## Existing capabilities to preserve
+
+Signed Meta callback, provider status synchronization and one-time template fallback; canonical CRM customer/conversation; canonical handoffs and tenant destination lookup; resource routing, working hours/buffers/free-busy; calendar event creation and canonical appointment reminders; tenant property catalog and media assets; Flux wallet/ledger metering and subscription gates. No entitlement bypass or parallel credit counter.
+
+## Implementation dependencies and release constraints
+
+Repair Phase 1 and test locally; then secure Leo; then unify request/booking lifecycle and scheduler ownership; then relational estate extension and knowledge retrieval; tenant readiness, dashboard, safe cleanup and release follow. New capabilities use explicit organization scoping and relational tenant guards. No broad campaign/customer messages during testing.
+
+Vercel production and Trigger source are shared. Deploying them redeploys unrelated tenants, so the application branch remains local pending a reviewed, isolated validation path and separate release approval. The narrow workspace/trial RPC ACL change has already been authorized and applied; no broad migration push occurred. No n8n or Trigger.dev execution credentials were available in this shell; live execution histories, schedule state and safe retirement remain blocked. No workflow was disabled/deleted, and no storage savings are claimed.
+
+## Validation boundary
+
+Sparse worktree intentionally excludes unrelated tenant code. Aggregate npm test scripts include excluded tests and must not be run. The safe `test:real-estate` suite now passes 156/156; TypeScript reports 0 diagnostics and the checked-out Next.js build succeeds with dummy localhost Supabase settings. This does not validate excluded source, Vercel configuration, a complete application-schema staging baseline, external integrations or release acceptance.

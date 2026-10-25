@@ -254,15 +254,18 @@ export async function importProgressiveLeads(organizationId: string, inputs: Pro
 }
 
 export async function getCampaignAudienceLeads(organizationId: string, limit = 5000): Promise<ProgressiveLead[]> {
+  const organizationScope = String(organizationId || "").trim();
+  if (!organizationScope) throw new Error("Organization ID is required to read a campaign audience.");
   const rows = await request<Record<string, unknown>>(
     "leads",
-    `?select=*&organization_id=eq.${encodeURIComponent(organizationId)}&order=created_at.desc.nullslast&limit=${Math.max(1, Math.min(limit, 10000))}`,
+    `?select=*&organization_id=eq.${encodeURIComponent(organizationScope)}&order=created_at.desc.nullslast&limit=${Math.max(1, Math.min(limit, 10000))}`,
   );
 
-  return rows.map((row) => {
+  return rows.filter((row) => String(row.organization_id || "") === organizationScope).map((row) => {
     const lead = row as Partial<ProgressiveLead> & Record<string, unknown>;
     return {
-      id: String(lead.id || lead.phone || crypto.randomUUID()),
+      id: String(lead.id || ""),
+      organization_id: organizationScope,
       name: String(lead.name || lead.full_name || lead.client_name || "Unknown"),
       phone: normalizeLeadPhone(String(lead.phone || lead.whatsapp || lead.whatsapp_id || "")),
       status: String(lead.status || lead.lead_status || "new"),

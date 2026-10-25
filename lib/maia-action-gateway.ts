@@ -1,10 +1,8 @@
 import {
-  activateN8nWorkflow,
   findN8nWorkflowByName,
   getN8nBaseUrl,
   getN8nWorkflow,
   listN8nExecutions,
-  updateN8nWorkflow,
 } from "@/lib/n8n-api";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
 import { normalizeLeadPhone } from "@/lib/lead-profile-service";
@@ -46,27 +44,25 @@ async function resolveActionWorkflow() {
   return getN8nWorkflow(summary.id);
 }
 
-export async function ensureMaiaActionWebhook() {
+export async function verifyMaiaActionWebhook() {
   const workflow = await resolveActionWorkflow();
   const nodes = (Array.isArray(workflow.nodes) ? workflow.nodes : []) as WorkflowNode[];
   const connections = (workflow.connections || {}) as Record<string, WorkflowConnection>;
   const entryNode = nodes.find((node) => node.name === ACTION_ENTRY_NODE);
-  if (!entryNode) throw new Error(`${ACTION_WORKFLOW_NAME} is missing ${ACTION_ENTRY_NODE}.`);
   const webhookNode = nodes.find((node) => node.name === ACTION_WEBHOOK_NODE);
   const normalizeNode = nodes.find((node) => node.name === ACTION_NORMALIZE_NODE);
-  const cleanedNodes = nodes.filter((node) => node.name !== ACTION_WEBHOOK_NODE && node.name !== ACTION_NORMALIZE_NODE);
-  const baseX = Number(entryNode.position?.[0] || 0); const baseY = Number(entryNode.position?.[1] || 0);
-  const webhook: WorkflowNode = { id: webhookNode?.id || crypto.randomUUID(), name: ACTION_WEBHOOK_NODE, type: "n8n-nodes-base.webhook", typeVersion: 2, position: [baseX - 440, baseY + 180], webhookId: String(webhookNode?.webhookId || crypto.randomUUID()), parameters: { httpMethod: "POST", path: ACTION_WEBHOOK_PATH, responseMode: "onReceived", options: {} } };
-  const normalize: WorkflowNode = { id: normalizeNode?.id || crypto.randomUUID(), name: ACTION_NORMALIZE_NODE, type: "n8n-nodes-base.code", typeVersion: 2, position: [baseX - 220, baseY + 180], parameters: { mode: "runOnceForEachItem", jsCode: "const value = $json.body && typeof $json.body === 'object' ? $json.body : $json; return { json: value };" } };
-  const webhookConnection: WorkflowConnection = { main: [[{ node: ACTION_NORMALIZE_NODE, type: "main", index: 0 }]] };
-  const normalizeConnection: WorkflowConnection = { main: [[{ node: ACTION_ENTRY_NODE, type: "main", index: 0 }]] };
-  const needsUpdate = !webhookNode || !normalizeNode || webhookNode.parameters?.responseMode !== "onReceived" || JSON.stringify(connections[ACTION_WEBHOOK_NODE] || {}) !== JSON.stringify(webhookConnection) || JSON.stringify(connections[ACTION_NORMALIZE_NODE] || {}) !== JSON.stringify(normalizeConnection);
-  if (needsUpdate) {
-    const nextConnections = { ...connections }; delete nextConnections[ACTION_WEBHOOK_NODE]; delete nextConnections[ACTION_NORMALIZE_NODE];
-    const updated = await updateN8nWorkflow(workflow.id, { name: workflow.name, nodes: [...cleanedNodes, webhook, normalize], connections: { ...nextConnections, [ACTION_WEBHOOK_NODE]: webhookConnection, [ACTION_NORMALIZE_NODE]: normalizeConnection }, settings: { ...(workflow.settings || {}), saveExecutionProgress: true, saveDataSuccessExecution: "all", saveDataErrorExecution: "all" } });
-    if (workflow.active && !updated.active) await activateN8nWorkflow(workflow.id);
-  }
-  return { workflowId: workflow.id, workflowName: workflow.name, webhookPath: ACTION_WEBHOOK_PATH, entryNode: ACTION_ENTRY_NODE, repaired: needsUpdate };
+  const connected = (from: string, to: string) => (connections[from]?.main || []).flat().some((edge) => edge.node === to && edge.type === "main");
+  const configured = Boolean(
+    entryNode && webhookNode && normalizeNode && workflow.active === true
+      && webhookNode.parameters?.httpMethod === "POST"
+      && webhookNode.parameters?.path === ACTION_WEBHOOK_PATH
+      && webhookNode.parameters?.responseMode === "onReceived"
+      && normalizeNode.parameters?.mode === "runOnceForEachItem"
+      && connected(ACTION_WEBHOOK_NODE, ACTION_NORMALIZE_NODE)
+      && connected(ACTION_NORMALIZE_NODE, ACTION_ENTRY_NODE),
+  );
+  if (!configured) throw new Error(`${ACTION_WORKFLOW_NAME} is not configured and active. Workflow changes must be reviewed and deployed separately; a campaign send will not repair or reactivate it.`);
+  return { workflowId: workflow.id, workflowName: workflow.name, webhookPath: ACTION_WEBHOOK_PATH, entryNode: ACTION_ENTRY_NODE, verified: true };
 }
 
 function splitCampaignParagraphs(message: string) { return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean); }
@@ -124,23 +120,33 @@ function buildCampaignInput(command: MaiaCampaignAction) {
 
 function containsCommandId(value: unknown, commandId: string) { try { return JSON.stringify(value).includes(commandId); } catch { return false; } }
 function sleep(ms: number) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-function extractNodeJson(execution: Record<string, any>, nodeName: string) { const runs = execution.data?.resultData?.runData?.[nodeName]; const firstRun = Array.isArray(runs) ? runs[0] : null; const branches = Array.isArray(firstRun?.data?.main) ? firstRun.data.main : []; const firstBranch = Array.isArray(branches[0]) ? branches[0] : []; return (firstBranch[0]?.json || null) as CampaignSummary | null; }
+function record(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
+function extractNodeJson(execution: Record<string, unknown>, nodeName: string): CampaignSummary | null {
+  const resultData = record(record(execution.data).resultData);
+  const runs = record(resultData.runData)[nodeName];
+  const firstRun = Array.isArray(runs) ? record(runs[0]) : {};
+  const branches = Array.isArray(record(firstRun.data).main) ? record(firstRun.data).main as unknown[] : [];
+  const firstBranch = Array.isArray(branches[0]) ? branches[0] as unknown[] : [];
+  const firstItem = record(firstBranch[0]);
+  return firstItem.json ? firstItem.json as CampaignSummary : null;
+}
 async function waitForCampaignExecution(workflowId: string, commandId: string, startedAfter: number) {
   const deadline = Date.now() + EXECUTION_TIMEOUT_MS; let seenId: string | null = null;
   while (Date.now() < deadline) {
-    const executions = (await listN8nExecutions({ workflowId, includeData: true, limit: 50 })) as Array<Record<string, any>>;
-    const execution = executions.find((candidate) => { const startedAt = candidate.startedAt ? new Date(candidate.startedAt).getTime() : 0; return startedAt >= startedAfter - 5000 && containsCommandId(candidate, commandId); });
+    const rawExecutions: unknown = await listN8nExecutions({ workflowId, includeData: true, limit: 50 });
+    const executions = Array.isArray(rawExecutions) ? rawExecutions.map(record) : [];
+    const execution = executions.find((candidate) => { const rawStartedAt = candidate.startedAt; const startedAt = typeof rawStartedAt === "string" || typeof rawStartedAt === "number" ? new Date(rawStartedAt).getTime() : 0; return startedAt >= startedAfter - 5000 && containsCommandId(candidate, commandId); });
     if (!execution) { await sleep(POLL_INTERVAL_MS); continue; }
-    seenId = String(execution.id); const resultData = execution.data?.resultData || {}; const status = String(execution.status || "").toLowerCase(); const error = resultData.error;
-    if (error || ["error", "crashed", "canceled"].includes(status)) { const node = error?.node?.name || resultData.lastNodeExecuted || "unknown node"; const detail = error?.message || error?.description || `Execution ended with status ${status || "error"}.`; throw new Error(`Maia action execution ${execution.id} failed at ${node}: ${detail}`); }
-    if (execution.finished || status === "success") { const path = Object.keys(resultData.runData || {}); const summary = extractNodeJson(execution, CAMPAIGN_SUMMARY_NODE); if (!summary) throw new Error(`Maia action execution ${execution.id} finished without ${CAMPAIGN_SUMMARY_NODE}. Executed: ${path.join(" -> ") || "none"}.`); return { executionId: String(execution.id), path, summary }; }
+    seenId = String(execution.id); const resultData = record(record(execution.data).resultData); const status = String(execution.status || "").toLowerCase(); const rawError = resultData.error; const error = record(rawError);
+    if (rawError || ["error", "crashed", "canceled"].includes(status)) { const node = String(record(error.node).name || resultData.lastNodeExecuted || "unknown node"); const detail = String(error.message || error.description || `Execution ended with status ${status || "error"}.`); throw new Error(`Maia action execution ${execution.id} failed at ${node}: ${detail}`); }
+    if (execution.finished || status === "success") { const path = Object.keys(record(resultData.runData)); const summary = extractNodeJson(execution, CAMPAIGN_SUMMARY_NODE); if (!summary) throw new Error(`Maia action execution ${execution.id} finished without ${CAMPAIGN_SUMMARY_NODE}. Executed: ${path.join(" -> ") || "none"}.`); return { executionId: String(execution.id), path, summary }; }
     await sleep(POLL_INTERVAL_MS);
   }
   throw new Error(seenId ? `Maia action execution ${seenId} did not finish within ${EXECUTION_TIMEOUT_MS / 1000} seconds.` : `No Maia action execution was found for command ${commandId}.`);
 }
 
 async function runMaiaActionPayload(commandId: string, payload: Record<string, unknown>) {
-  const route = await ensureMaiaActionWebhook();
+  const route = await verifyMaiaActionWebhook();
   const startedAt = Date.now();
   const response = await fetch(`${getN8nBaseUrl()}/webhook/${route.webhookPath}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
   const responseText = await response.text().catch(() => "");
