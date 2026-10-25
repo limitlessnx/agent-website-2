@@ -3,7 +3,7 @@
 - **Captured:** 25 October 2026, 20:35 +06:00
 - **Repository:** [`limitlessnx/agent-website-2`](https://github.com/limitlessnx/agent-website-2)
 - **Remote main:** `3521ed4bbfb25f0c57a376ec8b1015a7c58467e9`
-- **Integration branch:** `integration/limitless-realty-production-20261025`; Vercel-validated application commit `0af7682b7392b5b32f944ea2cdab91d28ed6ba3f` is pushed; no PR. A follow-up commit in this task changes only release documentation.
+- **Integration branch:** `integration/limitless-realty-production-20261025`; application commit `0af7682b7392b5b32f944ea2cdab91d28ed6ba3f` has a READY isolated Preview; draft PR #280 is closed and no PR is open.
 - **Local workspace:** `/home/ubuntu/Fluxknight/limitless realty`
 
 ## Deployment result
@@ -18,7 +18,7 @@ The Preview's build-event stream also returned a route inventory containing some
 
 The branch is based on the fetched production `main` SHA above and preserves the shared dashboard, package-script, and Maia runtime changes. Draft PR #280 was closed after the workflow incident described above. Nothing is merged to `main`, and no application code from this branch has been deployed to Production.
 
-A dedicated `Limitless Realty safe checks` workflow runs only `npm run test:real-estate` on branch pushes. A draft PR also triggered a separate workflow that linted out-of-scope source; no further PR will be opened under the current workflow set. The temporary branch-specific routing change is reverted locally, and the safe workflow is being returned to push-only operation. No excluded tests were run by the dedicated safe workflow.
+A dedicated `Limitless Realty safe checks` workflow runs only `npm run test:real-estate` on branch pushes. A draft PR also triggered a separate workflow that linted out-of-scope source; no further PR will be opened under the current workflow set. Commit `f9cdad9` reverts the temporary branch-specific QA routing, and the dedicated safe workflow is push-only. Its run on `f9cdad9` succeeded; no excluded tests were run by the dedicated safe workflow.
 
 ## Supabase and scheduler state
 
