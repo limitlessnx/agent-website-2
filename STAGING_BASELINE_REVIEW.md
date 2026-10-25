@@ -51,7 +51,8 @@ The metadata surfaced defaults that must not be copied into a reusable tenant ba
 
 ## Validation performed
 
-- Tenant-neutral `npm run test:real-estate`: **177 passed, 0 failed** after preserving upstream tenant-specific tests unchanged and moving only shared safe assertions into separate test files; direct real-estate booking is blocked before calendar side effects while non-real-estate tenant validation remains enabled.
+- Tenant-neutral `npm run test:real-estate`: **181 passed, 0 failed** locally after adding four contract checks for the read-only baseline preflight; direct real-estate booking is blocked before calendar side effects while non-real-estate tenant validation remains enabled.
+- [STAGING_BASELINE_PREFLIGHT.sql](STAGING_BASELINE_PREFLIGHT.sql) parses in ephemeral local PGlite, and its four Node contract tests pass. It reads catalogs only, has not been run against staging, does not validate function bodies/trigger attachments/full privilege semantics, and makes no writes.
 - Local sparse TypeScript: one missing import solely for the excluded dashboard component and **0 in-scope diagnostics**. The full-tree Vercel Preview build on `0af7682` passed TypeScript, Next.js production compilation, and static generation of 217 pages.
 - Changed-source ESLint: **77 safe files, 0 errors, 0 warnings**.
 - Focused handoff retry/callback/template-fallback tests previously passed **29/29**.
@@ -62,7 +63,7 @@ The metadata surfaced defaults that must not be copied into a reusable tenant ba
 
 ## Decision before any application-schema apply
 
-The current evidence is **not sufficient to apply the 21 pending feature migrations to staging**. The metadata-only option was performed, and the exact table/policy DDL is available in [STAGING_BASELINE_DDL_PREVIEW.sql](STAGING_BASELINE_DDL_PREVIEW.sql), but it is deliberately comment-only and incomplete. The [object manifest](STAGING_BASELINE_MANIFEST.md) records the allowlist and dependency findings.
+The current evidence is **not sufficient to apply the 21 pending feature migrations to staging**. The metadata-only option was performed, and the exact table/policy DDL is available in [STAGING_BASELINE_DDL_PREVIEW.sql](STAGING_BASELINE_DDL_PREVIEW.sql), but it is deliberately comment-only and incomplete. The read-only [preflight query](STAGING_BASELINE_PREFLIGHT.sql) helps check catalog presence only after a reviewed baseline; it does not supply the missing helper/trigger implementations or authorize a write. The [object manifest](STAGING_BASELINE_MANIFEST.md) records the allowlist and dependency findings.
 
 To turn this into a runnable staging baseline, prepare a tenant-neutral generic core bundle from the reviewed allowlist and named safe helper/trigger sources, add grants and tenant-neutral defaults, and resolve the readiness-relation mismatch. Test the resulting executable migration sequence locally before any staging apply; show the exact DDL first. Do not copy production data or inspect/use the quarantined source. Current `main` is already deployed in Vercel, but both checked Supabase projects lack the seven named reminder/provisioning versions and queried reminder tables.
 

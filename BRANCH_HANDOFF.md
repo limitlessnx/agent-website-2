@@ -2,7 +2,7 @@
 
 ## Branch and CI
 
-The `integration/limitless-realty-production-20261025` branch is based on `origin/main` at `3521ed4`. PR [#281](https://github.com/limitlessnx/agent-website-2/pull/281) is open against `main`; nothing from this branch has been merged. The 21-migration chronology correction is pushed. On branch head `e80355b`, tenant-neutral PR run `40215146743` succeeded, while the broad Dashboard Final QA and Maia Draft Verification jobs were skipped with zero steps by exact-source-branch guards. Recheck the latest tip before merge.
+The `integration/limitless-realty-production-20261025` branch is based on `origin/main` at `3521ed4`. PR [#281](https://github.com/limitlessnx/agent-website-2/pull/281) is open against `main`; nothing from this branch has been merged. The 21-migration chronology correction is pushed. Latest pushed head `ed86419` had successful tenant-neutral safe run `40215319963`; broad Dashboard Final QA and Maia Draft Verification were skipped with zero steps by exact-source-branch guards. The new preflight and its tests are currently local and still need a fresh PR check and isolated Preview after push.
 
 ## Preview and Production
 
@@ -16,7 +16,7 @@ Same-organization staging (`rwewcnftxnaynpotbsms`) contains no public app schema
 
 ## Validation and operational boundaries
 
-The local tenant-neutral `npm run test:real-estate` suite passed **177/177** after migration re-sequencing; focused handoff retry/callback/template-fallback tests passed **29/29**. Changed safe-source ESLint reported **0 errors and 0 warnings across 77 files**. Maia's direct-booking tool requires real-estate operator confirmation before appointment or calendar side effects; non-real-estate tenant validation remains enabled.
+The local tenant-neutral `npm run test:real-estate` suite passed **181/181** after migration re-sequencing, including four new contract tests for the preflight inventory and read-only bounds; focused handoff retry/callback/template-fallback tests passed **29/29**. The [preflight SQL](STAGING_BASELINE_PREFLIGHT.sql) was syntax-checked in ephemeral local PGlite and has not been run against Supabase; it makes no writes and is not a baseline. Changed safe-source ESLint reported **0 errors and 0 warnings across 77 files**. Maia's direct-booking tool requires real-estate operator confirmation before appointment or calendar side effects; non-real-estate tenant validation remains enabled.
 
 No broad FLUXNIT migration, Trigger deployment or execution, n8n change, real provider send, customer-data copy, or Production deployment occurred. The PR #280 workflow scope incident is documented. Preserve the strict excluded/Xposure tenant boundary: do not inspect, modify, test, deploy, or use excluded tenant code, configuration, integrations, workflows, or records.
 

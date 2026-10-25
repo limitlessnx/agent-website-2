@@ -34,7 +34,8 @@ Vercel's default Preview assignments included Production-target database and int
 
 ## Local validation
 
-- Tenant-neutral `npm run test:real-estate`: **177 passed, 0 failed**; fixtures and provider boundaries are mocked or fictional.
+- Tenant-neutral `npm run test:real-estate`: **181 passed, 0 failed**; fixtures and provider boundaries are mocked or fictional.
+- The four new preflight contract tests validate the 42-table/60-policy allowlist, required helper-name checks, service-role-only ACL checks for known provisioning RPCs, and read-only/bounded query shape. `STAGING_BASELINE_PREFLIGHT.sql` was syntax-checked in ephemeral local PGlite only; it has not been run against staging and does not validate runtime semantics.
 - Focused handoff retry/callback/template-fallback tests: **29 passed, 0 failed**.
 - Changed safe-source ESLint: **77 files, 0 errors, 0 warnings**.
 - Full local sparse-worktree TypeScript check has one unresolved missing import only because the intentionally excluded component is absent; it has **zero in-scope diagnostics**. The complete, non-sparse Vercel Preview build passed TypeScript and Next.js production compilation.

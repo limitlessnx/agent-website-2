@@ -126,4 +126,6 @@ The next artifact should be an executable migration only after:
 - The migration versions are aligned to staging and the already-applied FLUXNIT ACL migration.
 - The resulting staging-only SQL contains no tenant/customer data and passes local SQL/behavioral checks.
 
+The [read-only staging preflight](STAGING_BASELINE_PREFLIGHT.sql) reports missing allowlisted tables and policies, disabled RLS, missing helper names, and provisioning RPC ACL violations after a reviewed baseline and the 21 feature migrations. It reads catalog metadata only; it does not verify function bodies, exact signatures, trigger attachments, or full privilege semantics, and it does not authorize a database write.
+
 Until then, keep staging at its ACL-smoke-only state and do not apply the comment-only preview or the 21 pending feature migrations.
