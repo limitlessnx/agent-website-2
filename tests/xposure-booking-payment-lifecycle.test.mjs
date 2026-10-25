@@ -33,10 +33,12 @@ test('payment and booking transitions reject terminal states and prevent confirm
  const route = read('app/api/admin/xposure/bookings/route.ts');
  assert.ok(route.includes('terminalStatuses.has(current.booking_status)'));
  assert.ok(route.includes('Only an active, unconfirmed booking can be confirmed.'));
- assert.ok(route.includes('.eq("booking_status", "confirmed")'));
- assert.ok(route.includes('.lt("requested_start_at", current.requested_end_at)'));
- assert.ok(route.includes('.gt("requested_end_at", current.requested_start_at)'));
+ assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
  assert.ok(route.includes('This time overlaps another confirmed booking.'));
+ const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
+ assert.ok(atomic.includes('pg_advisory_xact_lock'));
+ assert.ok(atomic.includes('requested_start_at < v_booking.requested_end_at'));
+ assert.ok(atomic.includes('requested_end_at > v_booking.requested_start_at'));
 });
 
 test('bookings dashboard exposes payment, confirm, and cancel actions with timezone-aware display', () => {
