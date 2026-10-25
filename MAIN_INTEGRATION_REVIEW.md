@@ -3,12 +3,12 @@
 - **Captured:** 25 October 2026, 20:02 +06:00
 - **Repository:** [`limitlessnx/agent-website-2`](https://github.com/limitlessnx/agent-website-2)
 - **Remote main:** `3521ed4bbfb25f0c57a376ec8b1015a7c58467e9`
-- **Local branch:** `integration/limitless-realty-production-20261025` (based on current main; unpublished)
+- **Integration branch:** `integration/limitless-realty-production-20261025` (pushed at `0da81bf`; based on current main; no PR)
 - **Local workspace:** `/home/ubuntu/Fluxknight/limitless realty`
 
 ## Integration result
 
-The current local branch is based on the fetched `origin/main` SHA above and preserves its shared dashboard, package-script and Maia runtime changes. The repair checkpoint was integrated locally after resolving shared-file conflicts; no force reset or remote update occurred. The latest remote check found no PR for this branch. **Nothing from this branch has been pushed, opened as a PR, merged, or deployed.**
+The integration branch is based on the fetched `origin/main` SHA above and preserves its shared dashboard, package-script and Maia runtime changes. The repair checkpoint was integrated after resolving shared-file conflicts; no force reset or main update occurred. The branch is now pushed to GitHub. **No PR is open, no application Preview has been deployed, and nothing has been merged into main.**
 
 During the first integrated local test attempt, upstream source-pattern tests loaded some out-of-scope tenant-specific admin-route source. This was unintended. After discovering it, those tests were removed from the local safe target, the upstream test files were restored unchanged, and locally materialized route copies were removed. Tenant-neutral replacements now exercise only shared scheduler/schema behavior. No route request, tenant record, tenant integration record, workflow, or customer message was accessed; no source details are repeated. A separate baseline-source triage also stopped when out-of-scope tenant-specific material appeared in a generic-named migration; that content was not copied, summarized, tested, or applied.
 
@@ -24,7 +24,9 @@ The absence of the shared reminder schema from both checked projects is a deploy
 
 ## Vercel Preview safety blocker
 
-A read-only Vercel project/environment inventory with decryption disabled showed that the Preview target shares Production-target Supabase and integration environment-variable assignments, including database and messaging/automation categories. No plaintext values were requested or saved. A branch push or PR could create a preview deployment with access to live services; the current Preview is therefore **not isolated**. No branch is being published until Preview variables are safely separated from production and pointed at a usable staging setup. No Vercel project settings or variables were changed.
+The read-only Vercel inventory showed that default Preview assignments include Production-target database and integration variables. For this repair branch only, 43 branch-specific Preview variables now override those defaults: Supabase URLs/public keys point at the same-organization staging project; every server/service-key alias uses the staging anon key (RLS applies; there is no service-role bypass); database connection variables point to localhost; and AI, payment, email, Google, n8n, workflow and admin credentials are disabled placeholders. Vercel's documented branch-specific precedence leaves Production and other branches unchanged. No plaintext production values were requested or saved.
+
+The initial branch push included a single `git.deploymentEnabled[branch] = false` entry in `vercel.json`. Vercel confirms there is no Preview deployment for the branch, while the latest Production deployment remains READY and unchanged. The entry is temporary and will be removed now that the branch-only overrides exist; the next push should start the isolated Preview build. This branch still lacks a staging service-role key, so privileged server actions are intentionally unavailable. Other branches' default Preview assignments remain unchanged and are a separate shared-project risk.
 
 ## Local changes and validation
 
@@ -39,11 +41,11 @@ Latest local checks: `npm run test:real-estate` **171 passed / 0 failed**; chang
 
 ## Readiness gates before any remote publish or production merge
 
-1. Isolate Vercel Preview from Production database, messaging, automation, payment and other live integration variables; establish safe staging-only assignments.
+1. Remove the temporary branch deployment guard, create the isolated Preview deployment, and confirm its build and runtime use the branch-specific staging variables. Obtain a least-privilege staging server credential before exercising privileged actions; do not reuse a Production service key.
 2. Build a complete tenant-neutral staging schema baseline from explicitly safe sources, resolve the readiness-relation mismatch, and prepare/test an executable migration sequence. Keep the existing DDL preview comment-only; show exact DDL before any staging write.
 3. Apply and validate migrations on staging in order, use fictional tenants/users only, then run end-to-end flows for Maia inspection request → operator confirmation → calendar event → reminders, campaign preview/approval, handoff → receipt → template fallback, and onboarding retry/isolation.
 4. Verify Trigger deployment and scheduled-task status for the intended commit, plus a complete non-sparse build and required CI checks, without inspecting or running tenant-specific code locally.
-5. Only after these gates pass, prepare a reviewed PR. Production merge/deploy and broad FLUXNIT migrations remain not ready.
+5. After these gates pass, open/review a PR and merge only after CI and staging acceptance. Production application deploy and broad FLUXNIT migrations remain not ready.
 
 ## Source links
 
@@ -61,9 +63,9 @@ Vercel documents that Preview variables may be scoped to a specific Git branch a
 
 Vercel documents that an Ignore Build Step exits with code 0 to skip a build and code 1 to continue; `commandForIgnoringBuildStep` is a project setting, and `vercel.json` may override it for a deployment. Source: https://vercel.com/docs/project-configuration/vercel-json
 
-The integration branch is not yet present in the connected Git repository. Vercel rejected creation of its branch-scoped environment variables with HTTP 400 and reported no branch match; no Preview variables were created by that attempt. The project has no custom environments. The Supabase MCP provides the staging URL and publishable/anon keys but does not expose a staging service-role key; any Preview server-key alias must therefore remain restricted to the staging anon key until a least-privilege server credential is obtained. A project-wide Preview shutdown was not used. A temporary `vercel.json` guard that skips only this exact branch's first Vercel build is being evaluated; it has not yet been added or pushed.
+The first attempt to create branch-scoped variables occurred before the branch existed and failed with HTTP 400 without creating any entries. The branch was then pushed with one exact `git.deploymentEnabled[branch] = false` entry; Vercel confirmed zero Preview deployments. After GitHub/Vercel recognized the branch, 43 Preview overrides were created for this branch. The project has no custom environments. The Supabase MCP provides the staging URL and publishable/anon keys but not a staging service-role key, so server/service-key aliases use the staging anon key, retaining RLS and intentionally denying privileged operations. A project-wide Preview shutdown was not used, and no default Preview or Production variable was edited.
 
 
 Vercel's Git configuration documentation confirms that `git.deploymentEnabled[branch] = false` suppresses automatic deployments for that branch, while unspecified branches remain enabled; branch patterns are also supported. Source: https://vercel.com/docs/project-configuration/git-configuration
 
-The safe bootstrap is branch-local: add one `false` entry for this integration branch, push it so Vercel indexes the branch without starting a Preview build, create the branch-specific staging overrides, then remove the entry and push again. This sequence changes no shared project setting and leaves every other branch rule unchanged.
+The safe bootstrap sequence has completed through isolation: the exact branch-only `false` entry is removed in the current local `vercel.json` change, while all 43 branch-specific overrides remain. Pushing the next commit will start the isolated Preview build; this is not yet deployed. Other branches and Production remain unchanged.
