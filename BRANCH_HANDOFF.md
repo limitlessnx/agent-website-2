@@ -2,11 +2,11 @@
 
 ## Branch and CI
 
-The `integration/limitless-realty-production-20261025` branch is based on `origin/main` at `3521ed4`. PR [#281](https://github.com/limitlessnx/agent-website-2/pull/281) is open against `main`; nothing from this branch has been merged. The 21-migration chronology correction and read-only baseline preflight are pushed. Current code head `a0ea24d` passed tenant-neutral PR check `40217496426` and push check `40217492257`; broad Dashboard Final QA and Maia Draft Verification were skipped with zero steps by exact-source-branch guards. The isolated Vercel Preview for `a0ea24d` was still BUILDING at the last status read; check the current state before any merge decision.
+The `integration/limitless-realty-production-20261025` branch is based on `origin/main` at `3521ed4`. PR [#281](https://github.com/limitlessnx/agent-website-2/pull/281) is open against `main`; nothing from this branch has been merged. The latest code-bearing commit is `706bbe8`. Its tenant-neutral PR run `40220211451` and push run `40220207870` both passed; the broad Dashboard Final QA and Maia Draft Verification jobs were skipped for this exact source branch. PR checks were 4 successful, 3 skipped and 0 pending, with merge state CLEAN. The isolated Vercel Preview for code-bearing commit `706bbe8` is READY, but is build-only and does not establish backend/runtime readiness.
 
 ## Preview and Production
 
-The full-tree Vercel Preview for application commit `0af7682` is READY and passed TypeScript, Next.js production compilation, and generation of 217 static pages. The later branch Preview for `a0ea24d` was BUILDING at the last read; it is still build-only and cannot validate privileged runtime flows because staging has no app schema or service-role key. Production remains READY on `main` at `3521ed4`; this work has made no Production deployment. Forty-three branch-specific Preview overrides still point database aliases to same-organization staging and keep external side-effect credentials inert.
+The full-tree Vercel Preview for application commit `0af7682` is READY and passed TypeScript, Next.js production compilation, and generation of 217 static pages. The Preview for code-bearing commit `706bbe8` is also READY; it remains build-only and cannot validate privileged runtime flows because staging has no app schema or service-role key. Production remains READY on `main` at `3521ed4`; this work has made no Production deployment. Forty-three branch-specific Preview overrides still point database aliases to same-organization staging and keep external side-effect credentials inert.
 
 ## Migration and database state
 

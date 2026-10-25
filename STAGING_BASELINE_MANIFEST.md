@@ -130,6 +130,6 @@ The next artifact should be an executable migration only after:
 
 The [read-only staging preflight](STAGING_BASELINE_PREFLIGHT.sql) reports missing allowlisted tables and policies, disabled RLS, missing helper names, and provisioning RPC ACL violations after a reviewed baseline and the 21 feature migrations. It reads catalog metadata only; it does not verify function bodies, exact signatures, trigger attachments, or full privilege semantics, and it does not authorize a database write.
 
-The [routine and trigger inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records exact metadata for the 25 approved helper names and the 42-table trigger allowlist; it contains no implementation bodies and does not authorize DDL.
+The [routine and trigger inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records catalog metadata for 24 of 25 named Production routines and trigger attachments on the 42-table allowlist; it contains no implementation bodies and does not authorize DDL.
 
 Until then, keep staging at its ACL-smoke-only state and do not apply the comment-only preview or the 21 pending feature migrations.
