@@ -51,9 +51,9 @@ The metadata surfaced defaults that must not be copied into a reusable tenant ba
 
 ## Validation performed
 
-- Tenant-neutral `npm run test:real-estate`: **171 passed, 0 failed** after preserving upstream tenant-specific tests unchanged and moving only shared safe assertions into separate test files; direct real-estate booking is blocked before calendar side effects while non-real-estate tenant validation remains enabled.
-- Scoped TypeScript: **73 safe application sources, 0 diagnostics**. Full TypeScript and both full/compile-only Next builds stop on the shared dashboard's import to a component omitted from the strict sparse checkout; no complete build is claimed.
-- Changed-source ESLint: **0 errors, 0 warnings**.
+- Tenant-neutral `npm run test:real-estate`: **177 passed, 0 failed** after preserving upstream tenant-specific tests unchanged and moving only shared safe assertions into separate test files; direct real-estate booking is blocked before calendar side effects while non-real-estate tenant validation remains enabled.
+- Local sparse TypeScript: one missing import solely for the excluded dashboard component and **0 in-scope diagnostics**. The full-tree Vercel Preview build on `0af7682` passed TypeScript, Next.js production compilation, and static generation of 217 pages.
+- Changed-source ESLint: **77 safe files, 0 errors, 0 warnings**.
 - Focused handoff retry/callback/template-fallback tests previously passed **29/29**.
 - PGlite tests exercise feature migrations against fictional fixtures; that does not prove full Supabase baseline compatibility.
 - Staging public-table inventory: empty.
@@ -66,4 +66,4 @@ The current evidence is **not sufficient to apply the 15 feature migrations to s
 
 To turn this into a runnable staging baseline, prepare a tenant-neutral generic core bundle from the reviewed allowlist and named safe helper/trigger sources, add grants and tenant-neutral defaults, and resolve the readiness-relation mismatch. Test the resulting executable migration sequence locally before any staging apply; show the exact DDL first. Do not copy production data or inspect/use the quarantined source. Current `main` is already deployed in Vercel, but both checked Supabase projects lack the seven named reminder/provisioning versions and queried reminder tables.
 
-No application-schema migration has been applied to staging or production. The integration branch is pushed, but no PR, merge or Preview deployment exists yet. Latest main deployment `3521ed4` is READY. Forty-three Vercel Preview variables are scoped only to the integration branch; production/default Preview variables were not edited. A temporary branch-only deployment guard is active until removed on the next push. Preview service-key aliases use the staging anon key only, so privileged actions remain unavailable. No Trigger action, real message or n8n change occurred from this work.
+No application-schema migration has been applied to staging or production. The integration branch is pushed and its isolated Preview is READY on `0af7682`; no PR, merge or Production code deployment exists. Latest main deployment `3521ed4` remains READY and unchanged. Forty-three Vercel Preview variables are scoped only to the integration branch; production/default Preview variables were not edited, and the temporary branch-only deployment guard has been removed. Preview service-key aliases use the staging anon key only, so privileged actions remain unavailable. No Trigger action, real message or n8n change occurred from this work. The pull-request QA workflow includes excluded-tenant tests, so no PR was opened under the strict exclusion boundary.
