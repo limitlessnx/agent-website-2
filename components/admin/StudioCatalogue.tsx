@@ -29,7 +29,6 @@ export default function StudioCatalogue({ initialItems, unavailable }: { initial
   const [notice, setNotice] = useState("");
   const [uploadingId, setUploadingId] = useState("");
   const [mediaMessage, setMediaMessage] = useState("");
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const router = useRouter();
 
   const refresh = useCallback(async () => {
@@ -132,10 +131,8 @@ export default function StudioCatalogue({ initialItems, unavailable }: { initial
         : <div style={{ display: "grid", gap: 10 }}>{items.map(item =>
             <article key={item.id} style={{ border: "1px solid var(--fk-border, #393342)", borderRadius: 12, padding: 15, display: "flex", gap: 12 }}>
               {item.cover_image_url
-                ? <button type="button" onClick={() => setSelectedImage(item.cover_image_url)} aria-label={"Preview image for " + item.title} style={{ width: 104, height: 104, flex: "0 0 104px", padding: 0, border: "1px solid var(--fk-border, #393342)", borderRadius: 9, overflow: "hidden", background: "var(--fk-panel, rgba(255,255,255,.04))", cursor: "zoom-in" }}>
-                    <img src={item.cover_image_url} alt={"Catalogue cover: " + item.title} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
-                  </button>
-                : <div aria-hidden="true" style={{ width: 104, height: 104, flex: "0 0 104px", borderRadius: 9, display: "grid", placeItems: "center", background: "var(--fk-panel, rgba(255,255,255,.04))", fontSize: 11, color: "var(--fk-muted, #a9a1b5)" }}>No media</div>}
+                ? <img src={item.cover_image_url} alt={item.title + " catalogue cover"} loading="lazy" decoding="async" fetchPriority="low" style={{ width: 76, height: 76, flex: "0 0 76px", display: "block", objectFit: "cover", objectPosition: "center", borderRadius: 8, imageRendering: "auto" }} />
+                : <div aria-hidden="true" style={{ width: 76, height: 76, flex: "0 0 76px", borderRadius: 8, display: "grid", placeItems: "center", background: "var(--fk-panel, rgba(255,255,255,.04))", fontSize: 11, color: "var(--fk-muted, #a9a1b5)" }}>No media</div>}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                   <strong>{item.title}</strong>
@@ -155,11 +152,6 @@ export default function StudioCatalogue({ initialItems, unavailable }: { initial
               </div>
             </article>)}</div>}
     </section>
-    {selectedImage ? <div role="presentation" onClick={() => setSelectedImage(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: 20, background: "rgba(8, 6, 12, .88)", backdropFilter: "blur(8px)" }}>
-      <div role="dialog" aria-modal="true" aria-label="Catalogue image preview" onClick={event => event.stopPropagation()} style={{ position: "relative", maxWidth: "min(1100px, 96vw)", maxHeight: "90vh", display: "grid", gap: 10 }}>
-        <button type="button" onClick={() => setSelectedImage(null)} aria-label="Close image preview" style={{ justifySelf: "end", padding: "8px 12px", border: "1px solid rgba(255,255,255,.24)", borderRadius: 8, background: "#17131f", color: "white", cursor: "pointer" }}>Close preview ✕</button>
-        <img src={selectedImage} alt="Full-size catalogue image" decoding="async" style={{ display: "block", maxWidth: "min(1100px, 96vw)", maxHeight: "80vh", width: "auto", height: "auto", objectFit: "contain", borderRadius: 12, background: "#100d16" }} />
-      </div>
-    </div> : null}
+
   </div>;
 }
