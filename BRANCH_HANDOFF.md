@@ -1,23 +1,36 @@
-# Integration branch status
+# Limitless Realty release checkpoint
 
-## Branch and CI
+**Updated:** 25 October 2026 20:18 Europe/London
 
-The `integration/limitless-realty-production-20261025` branch is based on `origin/main` at `3521ed4`. PR [#281](https://github.com/limitlessnx/agent-website-2/pull/281) is open against `main`; nothing from this branch has been merged. The latest code-bearing commit is `706bbe8`. Its tenant-neutral PR run `40220211451` and push run `40220207870` both passed; the broad Dashboard Final QA and Maia Draft Verification jobs were skipped for this exact source branch. PR checks were 4 successful, 3 skipped and 0 pending, with merge state CLEAN. The isolated Vercel Preview for code-bearing commit `706bbe8` is READY, but is build-only and does not establish backend/runtime readiness.
+**Branch:** `integration/limitless-realty-production-20261025`
 
-## Preview and Production
+**PR:** [#281](https://github.com/limitlessnx/agent-website-2/pull/281), open against `main`
 
-The full-tree Vercel Preview for application commit `0af7682` is READY and passed TypeScript, Next.js production compilation, and generation of 217 static pages. The Preview for code-bearing commit `706bbe8` is also READY; it remains build-only and cannot validate privileged runtime flows because staging has no app schema or service-role key. Production remains READY on `main` at `3521ed4`; this work has made no Production deployment. Forty-three branch-specific Preview overrides still point database aliases to same-organization staging and keep external side-effect credentials inert.
+**Latest code-bearing checkpoint:** `4ca3bb4b96c569e3f89c4962e0345150041d0422`
 
-## Migration and database state
+## Branch checks and Preview
 
-The 21 currently unapplied migrations—seven shared current-main migrations plus 14 local app migrations—are ordered after the applied ACL version `20261024140349`, from `20261024140400` through `20261024142400`. The chronology rebase changed no bodies; this follow-up intentionally changes only `20261024141800_real_estate_atomic_audit.sql` from `FOR KEY SHARE` to `FOR SHARE`, with a clarifying comment, to hold organization status/classification stable during guarded mutations. The other 20 migration bodies remain byte-identical to the last pushed pre-hardening revision. None has been applied. The narrowly authorized `workspace_provisioning_acl` migration remains the sole database change made to FLUXNIT; read-back confirmed browser roles cannot execute the workspace/trial provisioning RPCs, while `service_role` can.
+At code-bearing checkpoint `4ca3bb4`, exact-head tenant-neutral PR check `40225114836` and push check `40225112062` passed. Broad Maia `verify-maia` and `regression` jobs were skipped with empty step lists for this branch. Vercel Preview `dpl_8F4BJemCCTmyVH3wtNNWVvr9TA8a` is READY. At that checkpoint, PR checks reported four successful, three skipped, none pending, with merge state CLEAN. This validates branch build/tests only—not Supabase runtime behavior. The handoff/status follow-up itself is documentation-only; verify the actual latest PR head before any merge. PR #281 remains unmerged.
 
-Same-organization staging (`rwewcnftxnaynpotbsms`) contains no public app schema, tenant, or customer data; it has only three ACL smoke migrations and non-functional provisioning stubs. The 42-table/60-policy metadata DDL preview remains comment-only and incomplete. A bounded source review found at least 17 additional table dependencies and transitive helpers; its [read-only dependency preflight](STAGING_BASELINE_DEPENDENCY_PREFLIGHT.sql) returned 50 missing-object findings against staging. Platform billing/locale assumptions and least-privilege grants still need implementation; no Production bodies were copied into a migration. The readiness-relation mismatch and staging migration-history discrepancy remain open. No application-schema DDL has been applied. See [STAGING_BASELINE_REVIEW.md](STAGING_BASELINE_REVIEW.md), [STAGING_BASELINE_MANIFEST.md](STAGING_BASELINE_MANIFEST.md), the [routine metadata inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md), and its [source review](STAGING_BASELINE_ROUTINE_SOURCE_REVIEW.md).
+## Implemented candidate and validation
 
-## Validation and operational boundaries
+The tenant-neutral `npm run test:real-estate` suite passes **190/190**; focused real-estate PGlite tests pass **11/11**, and the new authorization-core draft tests pass **4/4**. ESLint and `git diff --check` are clean. The auth draft has pg_catalog-only definer paths, explicit `postgres` ownership, active-only self visibility, same-organization role checks, immutable membership/role organization IDs, and SELECT-only browser policies; tests pin the policy-drop list to all nine observed policies. It is a post-schema review candidate, **not a migration and not applied**. No true multi-session PostgreSQL concurrency stress test has been run.
 
-The local tenant-neutral `npm run test:real-estate` suite passes **190/190** after adding a fictional PGlite mutation-scope test, both four-test preflight contracts, and four authorization-core tests; the focused database file passes **11/11**, and handoff retry/callback/template-fallback tests pass **29/29**. The [authorization-core draft](STAGING_BASELINE_AUTHZ_CORE_DRAFT.sql) tests active/inactive membership, platform-admin behavior, exact/wildcard permissions, cross-tenant role rejection, browser read/write boundaries, and the tenant-role trigger, but remains an unapproved post-schema candidate—not a migration. The [core preflight SQL](STAGING_BASELINE_PREFLIGHT.sql) parsed in ephemeral local PGlite and returned 166 catalog findings on staging. The supplemental [dependency preflight](STAGING_BASELINE_DEPENDENCY_PREFLIGHT.sql) parsed/executed locally and returned 50 read-only staging findings: 17 missing tables, 17 corresponding no-RLS findings because the tables are absent, and 16 missing helper names. No application rows were read or DDL run; absent dependencies mean its lack of grant findings is not proof of safe grants. The [routine inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records 24 of 25 named Production routines and 30 enabled attachments on the approved 42-table list. No Production function bodies were copied into the branch. The pending mutation-scope helper now locks with `FOR SHARE`. Changed safe-source ESLint reported **0 errors and 0 warnings across 77 files**. Maia's direct-booking tool requires real-estate operator confirmation before appointment or calendar side effects; non-real-estate tenant validation remains enabled.
+The 21 pending application migrations are sequenced after applied ACL `20261024140349` as `20261024140400`–`20261024142400`; only the atomic-audit helper migration has a later body change (`FOR KEY SHARE` to `FOR SHARE`). None has been applied.
 
-No broad FLUXNIT migration, Trigger deployment or execution, n8n change, real provider send, customer-data copy, or Production deployment occurred. The PR #280 workflow scope incident is documented. Preserve the strict excluded/Xposure tenant boundary: do not inspect, modify, test, deploy, or use excluded tenant code, configuration, integrations, workflows, or records.
+## Staging and Production gate
 
-See [REAL_ESTATE_REVIEW.md](REAL_ESTATE_REVIEW.md), [REAL_ESTATE_PLAN.md](REAL_ESTATE_PLAN.md), [TODO.md](TODO.md), [MAIN_INTEGRATION_REVIEW.md](MAIN_INTEGRATION_REVIEW.md), and [STAGING_BASELINE_DDL_PREVIEW.sql](STAGING_BASELINE_DDL_PREVIEW.sql) for detail.
+Same-organization staging project `rwewcnftxnaynpotbsms` still has no public app schema and only non-functional ACL smoke stubs. The bounded read-only preflights returned 166 findings for the original 42-table/60-policy baseline and 50 for 17 transitive tables/16 helpers; no application rows were read and no DDL was applied. The 17-table metadata preview is separate, comment-only, and outside the original allowlist. A dependency-complete baseline, locale/tenant-default decisions, least-privilege grants, readiness-table reconciliation, and privileged staging E2E remain open.
+
+Production remains READY on `main` at `3521ed4`; no merge, Production deployment, broad FLUXNIT migration, Trigger deployment, n8n edit, real provider send, or customer-data copy occurred. The previously authorized FLUXNIT ACL hotfix remains the only database change. Preserve the strict excluded/Xposure tenant boundary.
+
+## Evidence files
+
+- [Staging baseline review](STAGING_BASELINE_REVIEW.md)
+- [Staging allowlist manifest](STAGING_BASELINE_MANIFEST.md)
+- [Authorization-core draft](STAGING_BASELINE_AUTHZ_CORE_DRAFT.sql)
+- [Authorization PGlite tests](tests/staging-core-authorization-pglite.test.mjs)
+- [Routine and trigger source review](STAGING_BASELINE_ROUTINE_SOURCE_REVIEW.md)
+- [Routine metadata inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md)
+- [Read-only dependency preflight](STAGING_BASELINE_DEPENDENCY_PREFLIGHT.sql)
+- [17-table comment-only metadata preview](STAGING_BASELINE_DEPENDENCY_METADATA_PREVIEW.sql)
