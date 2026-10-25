@@ -148,7 +148,7 @@ test('reconciliation does not confirm until canonical appointment has an externa
 });
 
 test('migration contains tenant composite references, row locking, RLS, and external-event booking guard', () => {
-  const sql = fs.readFileSync('supabase/migrations/20261024140600_real_estate_inspections.sql', 'utf8');
+  const sql = fs.readFileSync('supabase/migrations/20261024141300_real_estate_inspections.sql', 'utf8');
   assert.match(sql, /foreign key \(organization_id,legacy_lead_id\)\s+references public\.leads\(organization_id,id\)/i);
   assert.match(sql, /foreign key \(organization_id,crm_lead_id\)\s+references public\.crm_leads\(organization_id,id\)/i);
   assert.match(sql, /foreign key \(organization_id,customer_id\)\s+references public\.crm_customers\(organization_id,id\)/i);

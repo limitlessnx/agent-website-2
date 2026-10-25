@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const sourcePath = resolve(root, "lib/leo-action-approval.ts");
-const migrationPath = resolve(root, "supabase/migrations/20261024140500_real_estate_action_approvals.sql");
+const migrationPath = resolve(root, "supabase/migrations/20261024141200_real_estate_action_approvals.sql");
 
 function loadApprovalModule(request) {
   const require = createRequire(import.meta.url);

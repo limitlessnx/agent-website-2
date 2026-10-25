@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(path, "utf8");
 test("reminder API is authenticated and scoped to the active organization", () => { const route=read("app/api/admin/reminder-rules/route.ts"); assert.match(route,/getAdminSession/); assert.match(route,/resolveAdminOrganizationScope/); assert.match(route,/\.eq\("organization_id", scope\.organizationId\)/); });
-test("reminder execution ledger links rules within the same tenant and prevents duplicate occurrences", () => { const sql=read("supabase/migrations/20261022100000_tenant_reminder_executions.sql"); assert.match(sql,/foreign key \(organization_id, rule_id\)/); assert.match(sql,/unique \(organization_id, rule_id, recipient_key, scheduled_for\)/); assert.match(sql,/enable row level security/); });
+test("reminder execution ledger links rules within the same tenant and prevents duplicate occurrences", () => { const sql=read("supabase/migrations/20261024140600_tenant_reminder_executions.sql"); assert.match(sql,/foreign key \(organization_id, rule_id\)/); assert.match(sql,/unique \(organization_id, rule_id, recipient_key, scheduled_for\)/); assert.match(sql,/enable row level security/); });
 test("scheduled reminder evaluator never attempts external delivery before consent-aware adapters are ready", () => { const task=read("src/trigger/tenant-reminder-sweep.ts"); assert.match(task,/schedules\.task/); assert.match(task,/tenant_reminder_rules/); assert.match(task,/tenant_reminder_executions/); assert.match(task,/delivery_adapter_not_ready/); assert.doesNotMatch(task,/sendWhatsAppMessage/); });
 test("execution history is restricted to the active tenant", () => { const route=read("app/api/admin/reminder-rules/executions/route.ts"); assert.match(route,/getAdminSession/); assert.match(route,/\.eq\("organization_id", scope\.organizationId\)/); });
 
@@ -39,7 +39,7 @@ test("contact API requires an active organization and preserves unknown consent 
  assert.match(route,/"unknown"/);
 });
 test("contact schema keeps consent explicit and unique within each tenant", () => {
- const sql=read("supabase/migrations/20261022130000_tenant_customer_contacts.sql");
+ const sql=read("supabase/migrations/20261024140800_tenant_customer_contacts.sql");
  assert.match(sql,/whatsapp_consent text not null default 'unknown'/);
  assert.match(sql,/email_consent text not null default 'unknown'/);
  assert.match(sql,/unique index if not exists tenant_customer_contacts_org_phone_unique/);
@@ -60,7 +60,7 @@ test("Maia captures explicitly stated birthdays and anniversaries into tenant co
 });
 
 test("confirmed appointments receive tenant-scoped 24-hour and 2-hour reminder schedules", () => {
- const migration=read("supabase/migrations/20261022140000_tenant_appointment_lifecycle_reminders.sql");
+ const migration=read("supabase/migrations/20261024140900_tenant_appointment_lifecycle_reminders.sql");
  const drain=read("src/trigger/tenant-appointment-reminder-drain.ts");
  assert.match(migration,/create table if not exists public\.tenant_appointment_reminders/);
  assert.match(migration,/foreign key \(organization_id, appointment_id\)/);

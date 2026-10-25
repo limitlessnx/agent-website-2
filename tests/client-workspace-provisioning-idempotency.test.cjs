@@ -6,7 +6,7 @@ const { PGlite } = require('@electric-sql/pglite');
 const USER_A = '10000000-0000-4000-8000-000000000001';
 const USER_B = '10000000-0000-4000-8000-000000000002';
 const TEMPLATE = '20000000-0000-4000-8000-000000000001';
-const retryMigration = fs.readFileSync('supabase/migrations/20261024141200_client_provisioning_retry_safe.sql', 'utf8');
+const retryMigration = fs.readFileSync('supabase/migrations/20261024141900_client_provisioning_retry_safe.sql', 'utf8');
 const aclMigration = fs.readFileSync('supabase/migrations/20261024140349_workspace_provisioning_acl.sql', 'utf8');
 
 async function database() {

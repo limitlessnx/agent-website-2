@@ -4,13 +4,13 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
 const migrations = [
-  "20261021180000_secure_workspace_provisioning_rpc.sql",
-  "20261022090000_tenant_reminder_rules.sql",
-  "20261022100000_tenant_reminder_executions.sql",
-  "20261022120000_tenant_reminder_notifications.sql",
-  "20261022130000_tenant_customer_contacts.sql",
-  "20261022140000_tenant_appointment_lifecycle_reminders.sql",
-  "20261022160000_appointment_capacity_guard.sql",
+  "20261024140400_secure_workspace_provisioning_rpc.sql",
+  "20261024140500_tenant_reminder_rules.sql",
+  "20261024140600_tenant_reminder_executions.sql",
+  "20261024140700_tenant_reminder_notifications.sql",
+  "20261024140800_tenant_customer_contacts.sql",
+  "20261024140900_tenant_appointment_lifecycle_reminders.sql",
+  "20261024141000_appointment_capacity_guard.sql",
 ];
 
 async function createFixtureDatabase() {
