@@ -748,6 +748,10 @@
       "name": "register_xposure_appointment_reminder_template"
     },
     {
+      "version": "20261024140349",
+      "name": "workspace_provisioning_acl"
+    },
+    {
       "version": "20261025092354",
       "name": "xposure_booking_payment_lifecycle"
     },
