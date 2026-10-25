@@ -1,6 +1,6 @@
 # Staging baseline manifest — dependency inventory (not executable)
 
-**Revision:** 0.2, 24 October 2026
+**Revision:** 0.3, 25 October 2026
 **Target:** Supabase staging project `rwewcnftxnaynpotbsms` only.
 **Production target:** none.
 **Status:** Review artifact; do not execute as SQL or treat as an approved migration.
