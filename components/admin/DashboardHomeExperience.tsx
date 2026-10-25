@@ -2,15 +2,12 @@
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowUpRight,
-  BarChart2,
   Bot,
   Building2,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
   CircleDollarSign,
-  CreditCard,
   Image as ImageIcon,
   FileText,
   Megaphone,
@@ -112,7 +109,7 @@ function LegacyOrganizationView({ metrics, notices, agents }: { metrics: Metric[
 }
 
 export default function DashboardHomeExperience({
-  name, workspaceName, health, metrics, notices, agents, activity, conversations, limitlessDashboard, xposureDashboard,
+  name, workspaceName, health, metrics, notices, agents, activity, conversations, limitlessDashboard, xposureDashboard, realEstateWorkspace,
 }: {
   name: string;
   workspaceName?: string;
@@ -124,6 +121,7 @@ export default function DashboardHomeExperience({
   conversations?: OrganizationOperationalItem[];
   limitlessDashboard?: LimitlessDashboardData;
   xposureDashboard?: boolean;
+  realEstateWorkspace?: boolean;
 }) {
   const healthy = health === "Operational";
   const limitless = limitlessDashboard;
@@ -233,6 +231,15 @@ export default function DashboardHomeExperience({
           </section>
         </>
       ) : <LegacyOrganizationView metrics={metrics} notices={notices} agents={agents} />}
+      {realEstateWorkspace && !xposureDashboard && !limitless ? <section className={styles.sectionCard} aria-label="Real estate management">
+        <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>REAL ESTATE OPERATIONS</span><h2>Estate Catalog & Operations</h2><p>Tenant-scoped listings, viewing requests, human handover, Leo approvals and delivery status.</p></div><Link href="/dashboard/real-estate">Open operations hub <ChevronRight size={14} /></Link></header>
+        <div className={styles.businessActions}>
+          <Link href="/dashboard/real-estate/estates"><Building2 size={16}/><span><strong>Estate Catalog</strong><small>Profiles, FAQs & policies</small></span></Link>
+          <Link href="/dashboard/real-estate/inspections"><CalendarDays size={16}/><span><strong>Leads & Inspections</strong><small>Requests are not bookings</small></span></Link>
+          <Link href="/dashboard/real-estate/operations"><Workflow size={16}/><span><strong>Operations</strong><small>Reminders & handovers</small></span></Link>
+          <Link href="/dashboard/real-estate/leo"><Bot size={16}/><span><strong>Leo Approvals</strong><small>Activity & execution status</small></span></Link>
+        </div>
+      </section> : null}
     </section>
   );
 }

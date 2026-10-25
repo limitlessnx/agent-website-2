@@ -1,32 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getCampaignGroups, saveCampaignGroup } from "@/lib/campaign-groups";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
+import { getRealEstateCampaignGroups, saveRealEstateCampaignGroup } from "@/lib/real-estate-campaign-groups";
 
-async function requireAdmin() {
+async function scope() {
   const session = await getAdminSession();
-  return Boolean(session);
+  if (!session) return null;
+  const target = await resolveAdminOrganizationScope();
+  return { session, organizationId: target.organizationId };
 }
 
 function parsePhones(value: unknown) {
   if (Array.isArray(value)) return value.map(String);
-  return String(value || "")
-    .split(/[\s,;\n]+/)
-    .map((phone) => phone.trim())
-    .filter(Boolean);
+  return String(value || "").split(/[\s,;\n]+/).map((phone) => phone.trim()).filter(Boolean);
 }
 
 export async function GET() {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const groups = await getCampaignGroups(100);
-  return NextResponse.json({ groups });
+  const current = await scope();
+  if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const groups = await getRealEstateCampaignGroups(current.organizationId);
+    return NextResponse.json({ groups }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load campaign groups." }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  const current = await scope();
+  if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await request.json();
-    const group = await saveCampaignGroup({
+    const group = await saveRealEstateCampaignGroup({
+      organizationId: current.organizationId,
+      actorId: current.session.email,
       id: String(body.id || "").trim() || undefined,
       name: String(body.name || "").trim(),
       groupType: body.groupType === "smart" ? "smart" : "manual",
@@ -37,9 +44,6 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ group });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to save campaign group." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to save campaign group." }, { status: 400 });
   }
 }

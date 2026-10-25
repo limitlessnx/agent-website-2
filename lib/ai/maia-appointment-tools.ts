@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { listLimitlessInspections } from "@/lib/limitless-inspections";
 import { findNextAvailableAppointmentSlots, selectAppointmentResource } from "@/lib/appointment-scheduling";
 import { createCalendarEvent } from "@/lib/calendar-provider";
+import { isRealEstateOrganizationRecord } from "@/lib/real-estate-organization";
 
 const LIMITLESS_REALTY_ORG_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
@@ -9,8 +10,8 @@ type ToolContext = {
   organizationId: string;
   agentId: string;
   sessionId: string;
-  externalConversationId?: string;
   customerId?: string;
+  externalConversationId?: string;
   conversationId?: string;
   correlationId?: string;
 };
@@ -142,7 +143,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
     },
     {
       name: "create_appointment_booking",
-      description: "Create a real appointment for the current tenant customer. Check availability first, persist a tenant-scoped record, create the connected calendar event, and only then mark the appointment confirmed. Never invent customer details or claim confirmation when calendar creation fails.",
+      description: "Create a real appointment for a current non-real-estate tenant customer. Real-estate organizations must use the operator-confirmed inspection request flow; never use direct booking to bypass human confirmation. Check availability first, persist a tenant-scoped record, create the connected calendar event, and only then mark the appointment confirmed.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -172,6 +173,22 @@ export function maiaAppointmentTools(): ToolDefinition[] {
           return { status: "customer_required", confirmed: false, next_action: "Resolve or create the customer record before booking." };
         }
         const admin = createAdminClient();
+        const { data: organization, error: organizationError } = await admin
+          .from("organizations")
+          .select("slug,status,metadata")
+          .eq("id", ctx.organizationId)
+          .maybeSingle();
+        if (organizationError) throw organizationError;
+        if (!organization || organization.status !== "active") throw new Error("Active tenant organization was not found.");
+        if (isRealEstateOrganizationRecord(organization)) {
+          return {
+            status: "operator_confirmation_required",
+            confirmed: false,
+            requestedStart: startAt,
+            requestedTitle: title,
+            next_action: "Create a real-estate inspection request for staff review. Do not create or confirm a calendar booking from Maia.",
+          };
+        }
         const { data: customer, error: customerError } = await admin
           .from("crm_customers")
           .select("id,email,phone")
@@ -360,6 +377,10 @@ export function maiaAppointmentTools(): ToolDefinition[] {
         const admin = createAdminClient();
         const limit = boundedLimit(input.limit);
         let customerId = text(input.customerId);
+        if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID) {
+          if (customerId && customerId !== ctx.customerId) throw new Error("Appointments may only be read for the verified current customer.");
+          customerId = text(ctx.customerId);
+        }
 
         if (!customerId && ctx.externalConversationId) {
           const phone = ctx.externalConversationId.replace(/[^\d+]/g, "");
@@ -371,6 +392,10 @@ export function maiaAppointmentTools(): ToolDefinition[] {
             .maybeSingle();
           if (error) throw error;
           customerId = text(customer?.id);
+        }
+
+        if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID && !customerId) {
+          return { status: "customer_not_resolved", appointments: [], tenant_scoped: true };
         }
 
         let appointmentQuery = admin
@@ -405,7 +430,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
         }));
 
         if (ctx.organizationId === LIMITLESS_REALTY_ORG_ID && text(input.leadId || customerId)) {
-          let leadId = text(input.leadId);
+          let leadId = "";
           if (!leadId && customerId) {
             const { data: customer, error } = await admin
               .from("crm_customers")
@@ -426,6 +451,7 @@ export function maiaAppointmentTools(): ToolDefinition[] {
               leadId = text(lead?.id);
             }
           }
+          if (text(input.leadId) && text(input.leadId) !== leadId) throw new Error("The inspection lead is not the verified current customer.");
           if (leadId) {
             const inspections = await listLimitlessInspections({ leadId, limit });
             result.push(...inspections.map((inspection) => ({

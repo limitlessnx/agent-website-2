@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDetailedCampaignReports } from "@/lib/campaign-report-reader";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
-import { getLeads } from "@/lib/limitless-data";
+import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 import { getWorkflowRuns, getWorkflows } from "@/lib/workflow-registry";
 import { scanLifecycleProactiveSignals } from "@/lib/leo-lifecycle-proactive-monitor";
 
@@ -24,6 +24,7 @@ export type LeoProactiveSignal = {
 
 const severityRank: Record<LeoSignalSeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 const HOUR = 60 * 60 * 1000;
+type ProactiveLead = { id: string; organization_id: string; name?: string | null; phone?: string | null; status?: string | null; score?: string | null; last_contacted_at?: string | null; last_follow_up_at?: string | null; created_at?: string | null };
 
 function ageMs(value?: string | null, now = Date.now()) {
   if (!value) return Number.POSITIVE_INFINITY;
@@ -47,18 +48,37 @@ async function getIntegrationHealth() {
   return result.data || [];
 }
 
+async function getTenantLeads(organizationIds: string[]) {
+  if (!organizationIds.length) return [] as ProactiveLead[];
+  const admin = createAdminClient();
+  const result = await admin.from("leads").select("id,organization_id,name,phone,status,score,last_contacted_at,last_follow_up_at,created_at").in("organization_id", organizationIds).limit(1000);
+  if (result.error) return [] as ProactiveLead[];
+  return (result.data || []) as ProactiveLead[];
+}
+
+async function getTenantCampaignReports(clients: Awaited<ReturnType<typeof listClientOnboardingProfiles>>) {
+  const organizations = [...new Map<string, string>(clients.filter((client) => client.organization_id).map((client) => [client.organization_id, client.business_name || client.organization_id])).entries()];
+  const reports: Awaited<ReturnType<typeof getDetailedCampaignReports>> = [];
+  for (let index = 0; index < organizations.length; index += 5) {
+    const batch = organizations.slice(index, index + 5);
+    const results = await Promise.all(batch.map(async ([organizationId]) => getDetailedCampaignReports(organizationId, 40).catch(() => [])));
+    reports.push(...results.flat());
+  }
+  return { reports, workspaceNames: new Map(organizations) };
+}
+
 export async function scanLeoProactiveSignals(options: { now?: Date; limit?: number } = {}) {
   const now = options.now || new Date();
   const nowMs = now.getTime();
-  const [workflows, runs, campaigns, leads, clients, integrations, lifecycle] = await Promise.all([
+  const [workflows, runs, clients, integrations, lifecycle] = await Promise.all([
     getWorkflows(150, true).catch(() => []),
     getWorkflowRuns(300).catch(() => []),
-    getDetailedCampaignReports(40).catch(() => []),
-    getLeads(250).catch(() => []),
     listClientOnboardingProfiles(100).catch(() => []),
     getIntegrationHealth().catch(() => []),
     scanLifecycleProactiveSignals(now).catch(() => ({ generatedAt: now.toISOString(), organizations: 0, signals: [] as LeoProactiveSignal[] })),
   ]);
+  const organizationIds = [...new Set(clients.map((client) => client.organization_id).filter(Boolean))];
+  const [{ reports: campaigns, workspaceNames }, leads] = await Promise.all([getTenantCampaignReports(clients), getTenantLeads(organizationIds)]);
 
   const signals: LeoProactiveSignal[] = [...lifecycle.signals];
 
@@ -85,9 +105,9 @@ export async function scanLeoProactiveSignals(options: { now?: Date; limit?: num
     if (ageMs(campaign.created_at, nowMs) > 48 * HOUR) continue;
     if (campaign.failed > 0) {
       const severity: LeoSignalSeverity = campaign.accepted > 0 && campaign.failed >= campaign.accepted ? "critical" : "high";
-      signals.push(signal({ category: "campaign", severity, title: `${campaign.failed} WhatsApp campaign failure${campaign.failed === 1 ? "" : "s"}`, summary: `${campaign.campaign_topic}: ${campaign.accepted} accepted, ${campaign.delivered} delivered, ${campaign.read} read, ${campaign.failed} failed, ${campaign.unresolved} unresolved.`, recommendation: "Review provider failure evidence and isolate affected recipients before considering any resend.", href: "/dashboard/limitless/campaigns", sourceId: campaign.id, workspace: "limitless_realty", evidence: { execution_id: campaign.execution_id || null, status: campaign.status, accepted: campaign.accepted, delivered: campaign.delivered, read: campaign.read, failed: campaign.failed, unresolved: campaign.unresolved, note: campaign.final_status_note || null } }));
+      signals.push(signal({ category: "campaign", severity, title: `${campaign.failed} WhatsApp campaign failure${campaign.failed === 1 ? "" : "s"}`, summary: `${campaign.campaign_topic}: ${campaign.accepted} accepted, ${campaign.delivered} delivered, ${campaign.read} read, ${campaign.failed} failed, ${campaign.unresolved} unresolved.`, recommendation: "Review provider failure evidence and isolate affected recipients before considering any resend.", href: campaign.organization_id === LIMITLESS_REALTY_ORGANIZATION_ID ? "/dashboard/limitless/campaigns" : "/dashboard/clients", sourceId: campaign.id, workspace: workspaceNames.get(campaign.organization_id) || campaign.organization_id, evidence: { organization_id: campaign.organization_id, execution_id: campaign.execution_id || null, status: campaign.status, accepted: campaign.accepted, delivered: campaign.delivered, read: campaign.read, failed: campaign.failed, unresolved: campaign.unresolved, note: campaign.final_status_note || null } }));
     } else if ((campaign.unresolved > 0 || campaign.pending_delivery > 0) && ageMs(campaign.created_at, nowMs) > 30 * 60 * 1000) {
-      signals.push(signal({ category: "campaign", severity: "medium", title: "Campaign delivery evidence is still unresolved", summary: `${campaign.campaign_topic} still has ${campaign.unresolved || campaign.pending_delivery} unresolved delivery outcome${(campaign.unresolved || campaign.pending_delivery) === 1 ? "" : "s"}.`, recommendation: "Re-check delivery evidence before reporting the campaign as complete or attempting another send.", href: "/dashboard/limitless/campaigns", sourceId: campaign.id, workspace: "limitless_realty", evidence: { execution_id: campaign.execution_id || null, status: campaign.status, unresolved: campaign.unresolved, pending_delivery: campaign.pending_delivery, created_at: campaign.created_at } }));
+      signals.push(signal({ category: "campaign", severity: "medium", title: "Campaign delivery evidence is still unresolved", summary: `${campaign.campaign_topic} still has ${campaign.unresolved || campaign.pending_delivery} unresolved delivery outcome${(campaign.unresolved || campaign.pending_delivery) === 1 ? "" : "s"}.`, recommendation: "Re-check delivery evidence before reporting the campaign as complete or attempting another send.", href: campaign.organization_id === LIMITLESS_REALTY_ORGANIZATION_ID ? "/dashboard/limitless/campaigns" : "/dashboard/clients", sourceId: campaign.id, workspace: workspaceNames.get(campaign.organization_id) || campaign.organization_id, evidence: { organization_id: campaign.organization_id, execution_id: campaign.execution_id || null, status: campaign.status, unresolved: campaign.unresolved, pending_delivery: campaign.pending_delivery, created_at: campaign.created_at } }));
     }
   }
 
@@ -97,7 +117,7 @@ export async function scanLeoProactiveSignals(options: { now?: Date; limit?: num
     const qualified = ["qualified", "hot", "ready", "ready_to_buy"].includes(status) || score === "hot";
     const reference = lead.last_contacted_at || lead.last_follow_up_at || lead.created_at;
     const age = ageMs(reference, nowMs);
-    if (qualified && age > 24 * HOUR) signals.push(signal({ category: "lead", severity: age > 72 * HOUR ? "high" : "medium", title: "Qualified lead may be going untouched", summary: `${lead.name || lead.phone || "A Limitless Realty lead"} is marked ${status || score || "qualified"} and has no recorded contact activity within the last ${Math.floor(age / HOUR)} hours.`, recommendation: "Review the lead history and prepare the appropriate next follow-up rather than sending blindly.", href: "/dashboard/limitless/leads", sourceId: lead.id, workspace: "limitless_realty", evidence: { lead_id: lead.id, status, score, last_contacted_at: lead.last_contacted_at || null, last_follow_up_at: lead.last_follow_up_at || null, created_at: lead.created_at || null } }));
+    if (qualified && age > 24 * HOUR) signals.push(signal({ category: "lead", severity: age > 72 * HOUR ? "high" : "medium", title: "Qualified lead may be going untouched", summary: `${lead.name || lead.phone || "A qualified lead"} is marked ${status || score || "qualified"} and has no recorded contact activity within the last ${Math.floor(age / HOUR)} hours.`, recommendation: "Review the lead history and prepare the appropriate next follow-up rather than sending blindly.", href: lead.organization_id === LIMITLESS_REALTY_ORGANIZATION_ID ? "/dashboard/limitless/leads" : "/dashboard/clients", sourceId: lead.id, workspace: workspaceNames.get(lead.organization_id) || lead.organization_id, evidence: { organization_id: lead.organization_id, lead_id: lead.id, status, score, last_contacted_at: lead.last_contacted_at || null, last_follow_up_at: lead.last_follow_up_at || null, created_at: lead.created_at || null } }));
   }
 
   for (const client of clients) {

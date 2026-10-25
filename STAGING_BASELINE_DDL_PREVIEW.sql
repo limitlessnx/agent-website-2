@@ -1,0 +1,1547 @@
+-- REVIEW ONLY. Every DDL line below is commented out and cannot execute as-is.
+-- Target if separately approved: Supabase staging project rwewcnftxnaynpotbsms only.
+-- This is a schema snapshot from the approved shared-object allowlist; no data rows were read.
+-- Includes table, constraint, non-constraint index, RLS enablement, and policy DDL.
+-- Omits function bodies, trigger creation, grants, extensions, seeds, and all data.
+-- Policy DDL requires approved helper functions; trigger behavior is not represented.
+-- Review tenant defaults before reuse: organization_id='limitless-realty'; environment='production'; provider='n8n'; timezone='Africa/Lagos'; currency='NGN'; channel='whatsapp'; agent_key='maia'.
+-- Do not uncomment or apply until the missing helper/trigger sources, grants, and tenant-neutral defaults are reviewed.
+
+-- -- REVIEW-ONLY SCHEMA DDL PREVIEW; intentionally commented and not executable.
+-- -- Source: allowlisted FLUXNIT schema metadata only; no table rows or function bodies read.
+-- -- Target if separately approved: Limitless Realty Staging (rwewcnftxnaynpotbsms).
+-- -- Includes tables, constraints, non-constraint indexes, RLS enablement, and policy expressions.
+-- -- Omits helper function bodies, triggers, role/table grants, extensions, seeds, and data.
+-- -- The policy statements require matching approved helper functions before they could be applied.
+-- -- Review region/tenant defaults before reuse: Africa/Lagos, NGN, limitless-realty, production, n8n, and maia appear in the current schema.
+--
+-- CREATE TABLE public.agent_approval_requests (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- agent_id uuid NOT NULL,
+-- requested_by uuid,
+-- reviewed_by uuid,
+-- status text DEFAULT 'draft'::text NOT NULL,
+-- readiness_snapshot jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- client_notes text,
+-- reviewer_notes text,
+-- submitted_at timestamp with time zone,
+-- reviewed_at timestamp with time zone,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.agent_families (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- template_id uuid,
+-- branch_id uuid,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- description text,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.agent_runtime_readiness (
+-- organization_id uuid NOT NULL,
+-- agent_id uuid NOT NULL,
+-- business_profile_ready boolean DEFAULT false NOT NULL,
+-- prompt_ready boolean DEFAULT false NOT NULL,
+-- knowledge_ready boolean DEFAULT false NOT NULL,
+-- integrations_ready boolean DEFAULT false NOT NULL,
+-- test_ready boolean DEFAULT false NOT NULL,
+-- approval_ready boolean DEFAULT false NOT NULL,
+-- workflow_ready boolean DEFAULT false NOT NULL,
+-- readiness_score integer DEFAULT 0 NOT NULL,
+-- blockers jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- refreshed_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.agent_templates (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- industry text,
+-- description text,
+-- status text DEFAULT 'draft'::text NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.agent_test_runs (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- agent_id uuid NOT NULL,
+-- initiated_by uuid,
+-- test_type text DEFAULT 'conversation'::text NOT NULL,
+-- input jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- output jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- score numeric,
+-- notes text,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- completed_at timestamp with time zone
+-- );
+--
+-- CREATE TABLE public.agent_workflow_assignments (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- agent_id uuid NOT NULL,
+-- workflow_definition_id uuid NOT NULL,
+-- approval_request_id uuid,
+-- role text DEFAULT 'primary'::text NOT NULL,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- readiness jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- assigned_at timestamp with time zone,
+-- verified_at timestamp with time zone,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.agents (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- agent_family_id uuid NOT NULL,
+-- project_id uuid NOT NULL,
+-- branch_id uuid,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- description text,
+-- system_prompt text,
+-- status text DEFAULT 'draft'::text NOT NULL,
+-- current_version integer DEFAULT 1 NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- agent_type text,
+-- ai_model text,
+-- temperature numeric(3,2) DEFAULT 0.30 NOT NULL,
+-- language text DEFAULT 'English'::text NOT NULL,
+-- voice_provider text,
+-- communication_channels jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- escalation_rules jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- human_handoff_destination jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- knowledge_sources jsonb DEFAULT '[]'::jsonb NOT NULL
+-- );
+--
+-- CREATE TABLE public.ai_model_catalog (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- provider text NOT NULL,
+-- model_key text NOT NULL,
+-- display_name text NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- capabilities jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.appointment_calendar_resources (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- integration_id uuid NOT NULL,
+-- provider text NOT NULL,
+-- external_calendar_id text NOT NULL,
+-- display_name text NOT NULL,
+-- organizer_email text,
+-- assigned_membership_id uuid,
+-- timezone text DEFAULT 'Africa/Lagos'::text NOT NULL,
+-- default_duration_minutes integer DEFAULT 60 NOT NULL,
+-- is_default boolean DEFAULT false NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- availability_configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- service_keys text[] DEFAULT '{}'::text[] NOT NULL,
+-- branch_key text,
+-- department_key text,
+-- routing_priority integer DEFAULT 100 NOT NULL
+-- );
+--
+-- CREATE TABLE public.appointments (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_id uuid NOT NULL,
+-- conversation_id uuid,
+-- source_system_id uuid,
+-- appointment_system_id uuid NOT NULL,
+-- calendar_resource_id uuid,
+-- source_event_id uuid,
+-- correlation_id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- status text DEFAULT 'requested'::text NOT NULL,
+-- title text DEFAULT 'Appointment'::text NOT NULL,
+-- start_at timestamp with time zone,
+-- end_at timestamp with time zone,
+-- timezone text DEFAULT 'Africa/Lagos'::text NOT NULL,
+-- customer_name text,
+-- customer_email text,
+-- customer_phone text,
+-- organizer_email text,
+-- provider text,
+-- external_calendar_id text,
+-- external_event_id text,
+-- external_html_link text,
+-- location text,
+-- notes text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- assigned_membership_id uuid
+-- );
+--
+-- CREATE TABLE public.audit_logs (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid,
+-- branch_id uuid,
+-- actor_user_id uuid,
+-- impersonated_user_id uuid,
+-- action text NOT NULL,
+-- resource_type text NOT NULL,
+-- resource_id text,
+-- reason text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.branches (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.crm_conversations (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_id uuid NOT NULL,
+-- agent_id uuid,
+-- channel text NOT NULL,
+-- external_thread_id text,
+-- status text DEFAULT 'open'::text NOT NULL,
+-- started_at timestamp with time zone DEFAULT now() NOT NULL,
+-- ended_at timestamp with time zone,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.crm_customers (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- external_key text,
+-- full_name text,
+-- email text,
+-- phone text,
+-- company_name text,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- profile jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- current_stage_id uuid,
+-- stage_updated_at timestamp with time zone
+-- );
+--
+-- CREATE TABLE public.crm_leads (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_id uuid NOT NULL,
+-- assigned_agent_id uuid,
+-- source text,
+-- stage text DEFAULT 'new'::text NOT NULL,
+-- score numeric,
+-- value_estimate numeric,
+-- currency text DEFAULT 'NGN'::text NOT NULL,
+-- summary text,
+-- details jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.crm_messages (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- conversation_id uuid NOT NULL,
+-- agent_id uuid,
+-- sender_type text NOT NULL,
+-- direction text NOT NULL,
+-- content_type text DEFAULT 'text'::text NOT NULL,
+-- content text,
+-- external_message_id text,
+-- status text DEFAULT 'received'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.crm_tasks (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_id uuid,
+-- lead_id uuid,
+-- assigned_agent_id uuid,
+-- task_type text NOT NULL,
+-- title text NOT NULL,
+-- description text,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- due_at timestamp with time zone,
+-- completed_at timestamp with time zone,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.customer_memories (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_key text NOT NULL,
+-- memory_type text NOT NULL,
+-- summary text NOT NULL,
+-- confidence numeric(5,4) DEFAULT 1 NOT NULL,
+-- source_type text,
+-- source_id text,
+-- expires_at timestamp with time zone,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.domain_events (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- request_id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- agent_id uuid,
+-- event_type text NOT NULL,
+-- source text NOT NULL,
+-- payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- attempts integer DEFAULT 0 NOT NULL,
+-- available_at timestamp with time zone DEFAULT now() NOT NULL,
+-- published_at timestamp with time zone,
+-- last_error text,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- correlation_id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- causation_id uuid,
+-- source_system_id uuid,
+-- target_system_id uuid,
+-- customer_id uuid,
+-- conversation_id uuid,
+-- idempotency_key text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+-- );
+--
+-- CREATE TABLE public.follow_ups (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- lead_id uuid,
+-- stage integer,
+-- scheduled_at timestamp with time zone,
+-- sent_at timestamp with time zone,
+-- message_sent text,
+-- response_received text,
+-- status text DEFAULT 'pending'::text,
+-- created_at timestamp with time zone DEFAULT now(),
+-- organization_id uuid NOT NULL,
+-- channel text DEFAULT 'whatsapp'::text NOT NULL,
+-- agent_key text DEFAULT 'maia'::text NOT NULL,
+-- template_name text
+-- );
+--
+-- CREATE TABLE public.handoff_notifications (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- handoff_id uuid NOT NULL,
+-- membership_id uuid,
+-- channel text NOT NULL,
+-- recipient text,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- provider_message_id text,
+-- error_message text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- sent_at timestamp with time zone
+-- );
+--
+-- CREATE TABLE public.human_handoffs (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_id uuid NOT NULL,
+-- conversation_id uuid NOT NULL,
+-- source_system_id uuid,
+-- source_agent_id uuid,
+-- correlation_id uuid,
+-- reason text NOT NULL,
+-- category text DEFAULT 'general'::text NOT NULL,
+-- priority text DEFAULT 'normal'::text NOT NULL,
+-- status text DEFAULT 'open'::text NOT NULL,
+-- assigned_membership_id uuid,
+-- claimed_by_membership_id uuid,
+-- created_by_type text DEFAULT 'system'::text NOT NULL,
+-- created_by_id text,
+-- sla_due_at timestamp with time zone,
+-- claimed_at timestamp with time zone,
+-- resolved_at timestamp with time zone,
+-- closed_at timestamp with time zone,
+-- resolution_summary text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- conversation_summary text,
+-- stage_id_at_handoff uuid,
+-- next_action text,
+-- outcome text,
+-- follow_up_required boolean DEFAULT true NOT NULL,
+-- follow_up_due_at timestamp with time zone,
+-- follow_up_status text DEFAULT 'pending'::text NOT NULL,
+-- notified_at timestamp with time zone
+-- );
+--
+-- CREATE TABLE public.knowledge_collections (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- description text,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- source_count integer DEFAULT 0 NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.knowledge_sources (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- collection_id uuid,
+-- title text NOT NULL,
+-- source_type text DEFAULT 'text'::text NOT NULL,
+-- source_url text,
+-- content text,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- checksum text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.leads (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- name text,
+-- phone text,
+-- email text,
+-- source text,
+-- status text DEFAULT 'new'::text,
+-- score text DEFAULT 'unscored'::text,
+-- budget text,
+-- timeline text,
+-- location_preference text,
+-- property_type text,
+-- purpose text,
+-- pre_approved boolean DEFAULT false,
+-- conversation_log jsonb DEFAULT '[]'::jsonb,
+-- follow_up_stage integer DEFAULT 0,
+-- last_follow_up_at timestamp with time zone,
+-- viewing_booked boolean DEFAULT false,
+-- viewing_datetime timestamp with time zone,
+-- opted_out boolean DEFAULT false,
+-- agent_notified boolean DEFAULT false,
+-- created_at timestamp with time zone DEFAULT now(),
+-- last_contacted_at timestamp with time zone DEFAULT now(),
+-- updated_at timestamp with time zone DEFAULT now(),
+-- profile_status text DEFAULT 'undocumented'::text NOT NULL,
+-- campaign_eligible boolean DEFAULT true NOT NULL,
+-- property_interest text,
+-- notes text,
+-- organization_id uuid NOT NULL
+-- );
+--
+-- CREATE TABLE public.membership_roles (
+-- membership_id uuid NOT NULL,
+-- role_id uuid NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_ai_model_assignments (
+-- organization_id uuid NOT NULL,
+-- model_id uuid NOT NULL,
+-- assigned_by uuid,
+-- settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- assigned_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_customer_stages (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- key text NOT NULL,
+-- name text NOT NULL,
+-- category text DEFAULT 'active'::text NOT NULL,
+-- "position" integer DEFAULT 0 NOT NULL,
+-- is_terminal boolean DEFAULT false NOT NULL,
+-- follow_up_default_minutes integer,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_integrations (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- provider text NOT NULL,
+-- display_name text NOT NULL,
+-- status text DEFAULT 'disconnected'::text NOT NULL,
+-- credential_reference text,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- health jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- last_checked_at timestamp with time zone,
+-- last_connected_at timestamp with time zone,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_memberships (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- branch_id uuid,
+-- user_id uuid NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_systems (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- system_id uuid NOT NULL,
+-- status text DEFAULT 'setup_required'::text NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- requested_by uuid,
+-- requested_at timestamp with time zone DEFAULT now() NOT NULL,
+-- approved_at timestamp with time zone,
+-- activated_at timestamp with time zone,
+-- last_error text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_template_assignments (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- template_id uuid NOT NULL,
+-- status text DEFAULT 'provisioning'::text NOT NULL,
+-- provisioned_at timestamp with time zone,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organization_templates (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- industry text NOT NULL,
+-- description text,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- modules jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- agents jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- workflows jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- knowledge_structure jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- integration_requirements jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.organizations (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- manager_access_code text NOT NULL
+-- );
+--
+-- CREATE TABLE public.permissions (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- key text NOT NULL,
+-- description text,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.projects (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- agent_family_id uuid NOT NULL,
+-- branch_id uuid,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- description text,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.properties (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- title text,
+-- type text,
+-- location_city text,
+-- location_area text,
+-- price numeric,
+-- bedrooms integer,
+-- bathrooms integer,
+-- size_sqm numeric,
+-- status text DEFAULT 'available'::text,
+-- features text,
+-- description text,
+-- drive_photos_link text,
+-- drive_brochure_link text,
+-- created_at timestamp with time zone DEFAULT now(),
+-- updated_at timestamp with time zone DEFAULT now(),
+-- image_urls jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- cover_image_url text,
+-- organization_id uuid NOT NULL
+-- );
+--
+-- CREATE TABLE public.role_permissions (
+-- role_id uuid NOT NULL,
+-- permission_id uuid NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.roles (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- description text,
+-- is_system boolean DEFAULT false NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.system_catalog (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- slug text NOT NULL,
+-- name text NOT NULL,
+-- summary text NOT NULL,
+-- description text,
+-- category text NOT NULL,
+-- status text DEFAULT 'available'::text NOT NULL,
+-- featured boolean DEFAULT false NOT NULL,
+-- capabilities jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- included_agents jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- setup_requirements jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- display_order integer DEFAULT 100 NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.workflow_definitions (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- workflow_key text NOT NULL,
+-- name text NOT NULL,
+-- description text,
+-- provider text DEFAULT 'n8n'::text NOT NULL,
+-- agent_type text NOT NULL,
+-- channel text NOT NULL,
+-- role text DEFAULT 'primary'::text NOT NULL,
+-- trigger_type text DEFAULT 'webhook'::text NOT NULL,
+-- environment text DEFAULT 'production'::text NOT NULL,
+-- external_workflow_id text,
+-- endpoint_reference text,
+-- contract_version integer DEFAULT 1 NOT NULL,
+-- input_contract jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- output_contract jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- default_configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- status text DEFAULT 'draft'::text NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- CREATE TABLE public.workflow_registry (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id text DEFAULT 'limitless-realty'::text NOT NULL,
+-- project_id text NOT NULL,
+-- workflow_key text NOT NULL,
+-- name text NOT NULL,
+-- description text,
+-- provider text DEFAULT 'n8n'::text NOT NULL,
+-- external_workflow_id text,
+-- endpoint_url text,
+-- status text DEFAULT 'draft'::text NOT NULL,
+-- current_version integer DEFAULT 1 NOT NULL,
+-- timeout_seconds integer DEFAULT 60 NOT NULL,
+-- max_retries integer DEFAULT 2 NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- last_run_at timestamp with time zone,
+-- last_success_at timestamp with time zone,
+-- last_error_at timestamp with time zone,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- organization_uuid uuid,
+-- branch_id uuid,
+-- agent_family_id uuid,
+-- project_uuid uuid,
+-- agent_id uuid,
+-- trigger_type text DEFAULT 'webhook'::text NOT NULL,
+-- environment text DEFAULT 'production'::text NOT NULL
+-- );
+--
+-- ALTER TABLE public.agent_approval_requests ADD CONSTRAINT agent_approval_requests_org_id_unique UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.agent_approval_requests ADD CONSTRAINT agent_approval_requests_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_approval_requests ADD CONSTRAINT agent_approval_requests_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_approval_requests ADD CONSTRAINT agent_approval_requests_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.agent_approval_requests ADD CONSTRAINT agent_approval_requests_status_check CHECK (status = ANY (ARRAY['draft'::text, 'submitted'::text, 'changes_requested'::text, 'approved'::text, 'rejected'::text]));
+--
+-- ALTER TABLE public.agent_families ADD CONSTRAINT agent_families_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.agent_families ADD CONSTRAINT agent_families_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_families ADD CONSTRAINT agent_families_organization_id_slug_key UNIQUE (organization_id, slug);
+--
+-- ALTER TABLE public.agent_families ADD CONSTRAINT agent_families_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.agent_families ADD CONSTRAINT agent_families_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'paused'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.agent_families ADD CONSTRAINT agent_families_template_id_fkey FOREIGN KEY (template_id) REFERENCES agent_templates(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.agent_runtime_readiness ADD CONSTRAINT agent_runtime_readiness_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_runtime_readiness ADD CONSTRAINT agent_runtime_readiness_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_runtime_readiness ADD CONSTRAINT agent_runtime_readiness_pkey PRIMARY KEY (organization_id, agent_id);
+--
+-- ALTER TABLE public.agent_runtime_readiness ADD CONSTRAINT agent_runtime_readiness_readiness_score_check CHECK (readiness_score >= 0 AND readiness_score <= 100);
+--
+-- ALTER TABLE public.agent_templates ADD CONSTRAINT agent_templates_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.agent_templates ADD CONSTRAINT agent_templates_slug_key UNIQUE (slug);
+--
+-- ALTER TABLE public.agent_templates ADD CONSTRAINT agent_templates_status_check CHECK (status = ANY (ARRAY['draft'::text, 'published'::text, 'deprecated'::text]));
+--
+-- ALTER TABLE public.agent_test_runs ADD CONSTRAINT agent_test_runs_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_test_runs ADD CONSTRAINT agent_test_runs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_test_runs ADD CONSTRAINT agent_test_runs_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.agent_test_runs ADD CONSTRAINT agent_test_runs_status_check CHECK (status = ANY (ARRAY['pending'::text, 'running'::text, 'passed'::text, 'failed'::text, 'cancelled'::text]));
+--
+-- ALTER TABLE public.agent_test_runs ADD CONSTRAINT agent_test_runs_test_type_check CHECK (test_type = ANY (ARRAY['conversation'::text, 'integration'::text, 'handoff'::text, 'policy'::text]));
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_organization_id_agent_id_workflo_key UNIQUE (organization_id, agent_id, workflow_definition_id);
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_organization_id_approval_reques_fkey FOREIGN KEY (organization_id, approval_request_id) REFERENCES agent_approval_requests(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_status_check CHECK (status = ANY (ARRAY['pending'::text, 'assigned'::text, 'ready'::text, 'disabled'::text, 'error'::text]));
+--
+-- ALTER TABLE public.agent_workflow_assignments ADD CONSTRAINT agent_workflow_assignments_workflow_definition_id_fkey FOREIGN KEY (workflow_definition_id) REFERENCES workflow_definitions(id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_agent_family_id_fkey FOREIGN KEY (agent_family_id) REFERENCES agent_families(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_project_id_slug_key UNIQUE (project_id, slug);
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_status_check CHECK (status = ANY (ARRAY['draft'::text, 'testing'::text, 'published'::text, 'paused'::text, 'deprecated'::text]));
+--
+-- ALTER TABLE public.agents ADD CONSTRAINT agents_temperature_check CHECK (temperature >= 0::numeric AND temperature <= 2::numeric);
+--
+-- ALTER TABLE public.ai_model_catalog ADD CONSTRAINT ai_model_catalog_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.ai_model_catalog ADD CONSTRAINT ai_model_catalog_provider_model_key_key UNIQUE (provider, model_key);
+--
+-- ALTER TABLE public.ai_model_catalog ADD CONSTRAINT ai_model_catalog_status_check CHECK (status = ANY (ARRAY['active'::text, 'disabled'::text]));
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resource_organization_id_integration__fkey FOREIGN KEY (organization_id, integration_id) REFERENCES organization_integrations(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resource_organization_id_integration_i_key UNIQUE (organization_id, integration_id, external_calendar_id);
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_assigned_membership_org_fkey FOREIGN KEY (organization_id, assigned_membership_id) REFERENCES organization_memberships(organization_id, id) ON DELETE SET NULL (assigned_membership_id);
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_default_duration_minutes_check CHECK (default_duration_minutes >= 5 AND default_duration_minutes <= 1440);
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_routing_priority_check CHECK (routing_priority >= 0 AND routing_priority <= 10000);
+--
+-- ALTER TABLE public.appointment_calendar_resources ADD CONSTRAINT appointment_calendar_resources_status_check CHECK (status = ANY (ARRAY['active'::text, 'paused'::text, 'disabled'::text]));
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_assigned_membership_org_fkey FOREIGN KEY (organization_id, assigned_membership_id) REFERENCES organization_memberships(organization_id, id) ON DELETE SET NULL (assigned_membership_id);
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_appointment_system_id_fkey FOREIGN KEY (organization_id, appointment_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_calendar_resource_id_fkey FOREIGN KEY (organization_id, calendar_resource_id) REFERENCES appointment_calendar_resources(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_conversation_id_fkey FOREIGN KEY (organization_id, conversation_id) REFERENCES crm_conversations(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_customer_id_fkey FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_source_event_id_key UNIQUE (organization_id, source_event_id);
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_organization_id_source_system_id_fkey FOREIGN KEY (organization_id, source_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_source_event_id_fkey FOREIGN KEY (source_event_id) REFERENCES domain_events(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.appointments ADD CONSTRAINT appointments_status_check CHECK (status = ANY (ARRAY['requested'::text, 'email_required'::text, 'calendar_required'::text, 'pending_availability'::text, 'confirmed'::text, 'rescheduled'::text, 'cancelled'::text, 'failed'::text]));
+--
+-- ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_actor_user_id_fkey FOREIGN KEY (actor_user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_impersonated_user_id_fkey FOREIGN KEY (impersonated_user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.branches ADD CONSTRAINT branches_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.branches ADD CONSTRAINT branches_organization_id_slug_key UNIQUE (organization_id, slug);
+--
+-- ALTER TABLE public.branches ADD CONSTRAINT branches_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.branches ADD CONSTRAINT branches_status_check CHECK (status = ANY (ARRAY['active'::text, 'inactive'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_channel_check CHECK (channel = ANY (ARRAY['whatsapp'::text, 'email'::text, 'web'::text, 'telegram'::text, 'voice'::text, 'sms'::text, 'internal'::text]));
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_organization_id_customer_id_fkey FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.crm_conversations ADD CONSTRAINT crm_conversations_status_check CHECK (status = ANY (ARRAY['open'::text, 'ai_active'::text, 'human_active'::text, 'waiting'::text, 'resolved'::text, 'closed'::text]));
+--
+-- ALTER TABLE public.crm_customers ADD CONSTRAINT crm_customers_organization_id_external_key_key UNIQUE (organization_id, external_key);
+--
+-- ALTER TABLE public.crm_customers ADD CONSTRAINT crm_customers_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_customers ADD CONSTRAINT crm_customers_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.crm_customers ADD CONSTRAINT crm_customers_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.crm_customers ADD CONSTRAINT crm_customers_stage_tenant_fk FOREIGN KEY (organization_id, current_stage_id) REFERENCES organization_customer_stages(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.crm_customers ADD CONSTRAINT crm_customers_status_check CHECK (status = ANY (ARRAY['active'::text, 'inactive'::text, 'blocked'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_organization_id_assigned_agent_id_fkey FOREIGN KEY (organization_id, assigned_agent_id) REFERENCES agents(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_organization_id_customer_id_fkey FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.crm_leads ADD CONSTRAINT crm_leads_stage_check CHECK (stage = ANY (ARRAY['new'::text, 'qualified'::text, 'contacted'::text, 'nurturing'::text, 'appointment'::text, 'won'::text, 'lost'::text, 'disqualified'::text]));
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_direction_check CHECK (direction = ANY (ARRAY['inbound'::text, 'outbound'::text, 'internal'::text]));
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_organization_id_conversation_id_fkey FOREIGN KEY (organization_id, conversation_id) REFERENCES crm_conversations(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_sender_type_check CHECK (sender_type = ANY (ARRAY['customer'::text, 'agent'::text, 'human'::text, 'system'::text, 'tool'::text]));
+--
+-- ALTER TABLE public.crm_messages ADD CONSTRAINT crm_messages_status_check CHECK (status = ANY (ARRAY['received'::text, 'queued'::text, 'sent'::text, 'delivered'::text, 'read'::text, 'failed'::text]));
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_organization_id_assigned_agent_id_fkey FOREIGN KEY (organization_id, assigned_agent_id) REFERENCES agents(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_organization_id_customer_id_fkey FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_organization_id_lead_id_fkey FOREIGN KEY (organization_id, lead_id) REFERENCES crm_leads(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.crm_tasks ADD CONSTRAINT crm_tasks_status_check CHECK (status = ANY (ARRAY['pending'::text, 'scheduled'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text, 'failed'::text]));
+--
+-- ALTER TABLE public.customer_memories ADD CONSTRAINT customer_memories_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.customer_memories ADD CONSTRAINT customer_memories_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_conversation_tenant_fk FOREIGN KEY (organization_id, conversation_id) REFERENCES crm_conversations(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_customer_tenant_fk FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_organization_id_agent_id_fkey FOREIGN KEY (organization_id, agent_id) REFERENCES agents(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_request_id_key UNIQUE (request_id);
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_source_system_tenant_fk FOREIGN KEY (organization_id, source_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_status_check CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'published'::text, 'failed'::text]));
+--
+-- ALTER TABLE public.domain_events ADD CONSTRAINT domain_events_target_system_tenant_fk FOREIGN KEY (organization_id, target_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.follow_ups ADD CONSTRAINT follow_ups_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES leads(id);
+--
+-- ALTER TABLE public.follow_ups ADD CONSTRAINT follow_ups_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id);
+--
+-- ALTER TABLE public.follow_ups ADD CONSTRAINT follow_ups_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.follow_ups ADD CONSTRAINT follow_ups_tenant_lead_fkey FOREIGN KEY (organization_id, lead_id) REFERENCES leads(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.handoff_notifications ADD CONSTRAINT handoff_notifications_channel_check CHECK (channel = ANY (ARRAY['dashboard'::text, 'whatsapp'::text, 'email'::text]));
+--
+-- ALTER TABLE public.handoff_notifications ADD CONSTRAINT handoff_notifications_membership_id_fkey FOREIGN KEY (membership_id) REFERENCES organization_memberships(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.handoff_notifications ADD CONSTRAINT handoff_notifications_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.handoff_notifications ADD CONSTRAINT handoff_notifications_organization_id_handoff_id_fkey FOREIGN KEY (organization_id, handoff_id) REFERENCES human_handoffs(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.handoff_notifications ADD CONSTRAINT handoff_notifications_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.handoff_notifications ADD CONSTRAINT handoff_notifications_status_check CHECK (status = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text, 'skipped'::text]));
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_assigned_membership_fk FOREIGN KEY (assigned_membership_id) REFERENCES organization_memberships(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_claimed_membership_fk FOREIGN KEY (claimed_by_membership_id) REFERENCES organization_memberships(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_created_by_type_check CHECK (created_by_type = ANY (ARRAY['system'::text, 'agent'::text, 'human'::text]));
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_follow_up_status_check CHECK (follow_up_status = ANY (ARRAY['pending'::text, 'scheduled'::text, 'completed'::text, 'not_required'::text, 'failed'::text]));
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_organization_id_conversation_id_fkey FOREIGN KEY (organization_id, conversation_id) REFERENCES crm_conversations(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_organization_id_customer_id_fkey FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_organization_id_source_agent_id_fkey FOREIGN KEY (organization_id, source_agent_id) REFERENCES agents(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_organization_id_source_system_id_fkey FOREIGN KEY (organization_id, source_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_priority_check CHECK (priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'critical'::text]));
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_stage_tenant_fk FOREIGN KEY (organization_id, stage_id_at_handoff) REFERENCES organization_customer_stages(organization_id, id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.human_handoffs ADD CONSTRAINT human_handoffs_status_check CHECK (status = ANY (ARRAY['open'::text, 'assigned'::text, 'in_progress'::text, 'waiting_customer'::text, 'resolved'::text, 'closed'::text]));
+--
+-- ALTER TABLE public.knowledge_collections ADD CONSTRAINT knowledge_collections_org_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.knowledge_collections ADD CONSTRAINT knowledge_collections_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.knowledge_collections ADD CONSTRAINT knowledge_collections_organization_id_slug_key UNIQUE (organization_id, slug);
+--
+-- ALTER TABLE public.knowledge_collections ADD CONSTRAINT knowledge_collections_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.knowledge_collections ADD CONSTRAINT knowledge_collections_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_collection_id_fkey FOREIGN KEY (collection_id) REFERENCES knowledge_collections(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_status_check CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'ready'::text, 'failed'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.leads ADD CONSTRAINT leads_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.leads ADD CONSTRAINT leads_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.leads ADD CONSTRAINT leads_profile_status_check CHECK (profile_status = ANY (ARRAY['undocumented'::text, 'partial'::text, 'documented'::text]));
+--
+-- ALTER TABLE public.membership_roles ADD CONSTRAINT membership_roles_membership_id_fkey FOREIGN KEY (membership_id) REFERENCES organization_memberships(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.membership_roles ADD CONSTRAINT membership_roles_pkey PRIMARY KEY (membership_id, role_id);
+--
+-- ALTER TABLE public.membership_roles ADD CONSTRAINT membership_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_ai_model_assignments ADD CONSTRAINT organization_ai_model_assignments_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.organization_ai_model_assignments ADD CONSTRAINT organization_ai_model_assignments_model_id_fkey FOREIGN KEY (model_id) REFERENCES ai_model_catalog(id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE public.organization_ai_model_assignments ADD CONSTRAINT organization_ai_model_assignments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_ai_model_assignments ADD CONSTRAINT organization_ai_model_assignments_pkey PRIMARY KEY (organization_id, model_id);
+--
+-- ALTER TABLE public.organization_customer_stages ADD CONSTRAINT organization_customer_stages_category_check CHECK (category = ANY (ARRAY['active'::text, 'follow_up'::text, 'won'::text, 'lost'::text, 'closed'::text]));
+--
+-- ALTER TABLE public.organization_customer_stages ADD CONSTRAINT organization_customer_stages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_customer_stages ADD CONSTRAINT organization_customer_stages_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.organization_customer_stages ADD CONSTRAINT organization_customer_stages_organization_id_key_key UNIQUE (organization_id, key);
+--
+-- ALTER TABLE public.organization_customer_stages ADD CONSTRAINT organization_customer_stages_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organization_customer_stages ADD CONSTRAINT organization_customer_stages_status_check CHECK (status = ANY (ARRAY['active'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.organization_integrations ADD CONSTRAINT organization_integrations_org_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.organization_integrations ADD CONSTRAINT organization_integrations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_integrations ADD CONSTRAINT organization_integrations_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.organization_integrations ADD CONSTRAINT organization_integrations_organization_id_provider_key UNIQUE (organization_id, provider);
+--
+-- ALTER TABLE public.organization_integrations ADD CONSTRAINT organization_integrations_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organization_integrations ADD CONSTRAINT organization_integrations_status_check CHECK (status = ANY (ARRAY['disconnected'::text, 'configured'::text, 'connected'::text, 'degraded'::text, 'error'::text, 'paused'::text]));
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_organization_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_organization_id_user_id_key UNIQUE (organization_id, user_id);
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_status_check CHECK (status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'removed'::text]));
+--
+-- ALTER TABLE public.organization_memberships ADD CONSTRAINT organization_memberships_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_systems ADD CONSTRAINT organization_systems_org_id_id_key UNIQUE (organization_id, id);
+--
+-- ALTER TABLE public.organization_systems ADD CONSTRAINT organization_systems_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_systems ADD CONSTRAINT organization_systems_organization_id_system_id_key UNIQUE (organization_id, system_id);
+--
+-- ALTER TABLE public.organization_systems ADD CONSTRAINT organization_systems_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organization_systems ADD CONSTRAINT organization_systems_status_check CHECK (status = ANY (ARRAY['setup_required'::text, 'awaiting_approval'::text, 'provisioning'::text, 'testing'::text, 'active'::text, 'paused'::text, 'needs_attention'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.organization_systems ADD CONSTRAINT organization_systems_system_id_fkey FOREIGN KEY (system_id) REFERENCES system_catalog(id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE public.organization_template_assignments ADD CONSTRAINT organization_template_assignmen_organization_id_template_id_key UNIQUE (organization_id, template_id);
+--
+-- ALTER TABLE public.organization_template_assignments ADD CONSTRAINT organization_template_assignments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.organization_template_assignments ADD CONSTRAINT organization_template_assignments_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organization_template_assignments ADD CONSTRAINT organization_template_assignments_status_check CHECK (status = ANY (ARRAY['provisioning'::text, 'active'::text, 'paused'::text, 'failed'::text]));
+--
+-- ALTER TABLE public.organization_template_assignments ADD CONSTRAINT organization_template_assignments_template_id_fkey FOREIGN KEY (template_id) REFERENCES organization_templates(id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE public.organization_templates ADD CONSTRAINT organization_templates_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organization_templates ADD CONSTRAINT organization_templates_slug_key UNIQUE (slug);
+--
+-- ALTER TABLE public.organization_templates ADD CONSTRAINT organization_templates_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.organizations ADD CONSTRAINT organizations_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.organizations ADD CONSTRAINT organizations_slug_key UNIQUE (slug);
+--
+-- ALTER TABLE public.organizations ADD CONSTRAINT organizations_status_check CHECK (status = ANY (ARRAY['active'::text, 'suspended'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.permissions ADD CONSTRAINT permissions_key_key UNIQUE (key);
+--
+-- ALTER TABLE public.permissions ADD CONSTRAINT permissions_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.projects ADD CONSTRAINT projects_agent_family_id_fkey FOREIGN KEY (agent_family_id) REFERENCES agent_families(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.projects ADD CONSTRAINT projects_agent_family_id_slug_key UNIQUE (agent_family_id, slug);
+--
+-- ALTER TABLE public.projects ADD CONSTRAINT projects_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.projects ADD CONSTRAINT projects_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.projects ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.projects ADD CONSTRAINT projects_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'paused'::text, 'archived'::text]));
+--
+-- ALTER TABLE public.properties ADD CONSTRAINT properties_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.properties ADD CONSTRAINT properties_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.role_permissions ADD CONSTRAINT role_permissions_permission_id_fkey FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.role_permissions ADD CONSTRAINT role_permissions_pkey PRIMARY KEY (role_id, permission_id);
+--
+-- ALTER TABLE public.role_permissions ADD CONSTRAINT role_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.roles ADD CONSTRAINT roles_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.roles ADD CONSTRAINT roles_organization_id_slug_key UNIQUE (organization_id, slug);
+--
+-- ALTER TABLE public.roles ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.system_catalog ADD CONSTRAINT system_catalog_category_check CHECK (category = ANY (ARRAY['core'::text, 'addon'::text, 'enterprise'::text]));
+--
+-- ALTER TABLE public.system_catalog ADD CONSTRAINT system_catalog_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.system_catalog ADD CONSTRAINT system_catalog_slug_key UNIQUE (slug);
+--
+-- ALTER TABLE public.system_catalog ADD CONSTRAINT system_catalog_status_check CHECK (status = ANY (ARRAY['draft'::text, 'available'::text, 'coming_soon'::text, 'hidden'::text, 'retired'::text]));
+--
+-- ALTER TABLE public.workflow_definitions ADD CONSTRAINT workflow_definitions_id_key UNIQUE (id);
+--
+-- ALTER TABLE public.workflow_definitions ADD CONSTRAINT workflow_definitions_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.workflow_definitions ADD CONSTRAINT workflow_definitions_status_check CHECK (status = ANY (ARRAY['draft'::text, 'ready'::text, 'disabled'::text, 'retired'::text]));
+--
+-- ALTER TABLE public.workflow_definitions ADD CONSTRAINT workflow_definitions_workflow_key_contract_version_environm_key UNIQUE (workflow_key, contract_version, environment);
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_agent_family_id_fkey FOREIGN KEY (agent_family_id) REFERENCES agent_families(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_current_version_check CHECK (current_version > 0);
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_environment_check CHECK (environment = ANY (ARRAY['development'::text, 'preview'::text, 'staging'::text, 'production'::text]));
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_max_retries_check CHECK (max_retries >= 0 AND max_retries <= 10);
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_organization_id_workflow_key_key UNIQUE (organization_id, workflow_key);
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_organization_uuid_fkey FOREIGN KEY (organization_uuid) REFERENCES organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_project_uuid_fkey FOREIGN KEY (project_uuid) REFERENCES projects(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'paused'::text, 'disabled'::text, 'error'::text]));
+--
+-- ALTER TABLE public.workflow_registry ADD CONSTRAINT workflow_registry_timeout_seconds_check CHECK (timeout_seconds >= 5 AND timeout_seconds <= 3600);
+--
+-- CREATE UNIQUE INDEX agent_approval_one_open_request ON public.agent_approval_requests USING btree (organization_id, agent_id) WHERE (status = ANY (ARRAY['draft'::text, 'submitted'::text, 'changes_requested'::text]));
+--
+-- CREATE INDEX agent_families_org_idx ON public.agent_families USING btree (organization_id, status);
+--
+-- CREATE INDEX agent_workflow_assignments_org_agent_idx ON public.agent_workflow_assignments USING btree (organization_id, agent_id);
+--
+-- CREATE INDEX agents_agent_type_idx ON public.agents USING btree (agent_type);
+--
+-- CREATE INDEX agents_project_idx ON public.agents USING btree (project_id, status);
+--
+-- CREATE INDEX agents_project_status_idx ON public.agents USING btree (project_id, status);
+--
+-- CREATE UNIQUE INDEX appointment_calendar_resources_default_uidx ON public.appointment_calendar_resources USING btree (organization_id) WHERE ((is_default = true) AND (status = 'active'::text));
+--
+-- CREATE INDEX appointment_calendar_resources_routing_idx ON public.appointment_calendar_resources USING btree (organization_id, status, branch_key, department_key, routing_priority);
+--
+-- CREATE INDEX appointment_calendar_resources_service_keys_gin ON public.appointment_calendar_resources USING gin (service_keys);
+--
+-- CREATE INDEX appointment_calendar_resources_staff_idx ON public.appointment_calendar_resources USING btree (organization_id, assigned_membership_id, status);
+--
+-- CREATE INDEX appointments_org_assigned_staff_idx ON public.appointments USING btree (organization_id, assigned_membership_id, start_at) WHERE (assigned_membership_id IS NOT NULL);
+--
+-- CREATE INDEX appointments_org_correlation_idx ON public.appointments USING btree (organization_id, correlation_id, created_at);
+--
+-- CREATE INDEX appointments_org_created_idx ON public.appointments USING btree (organization_id, created_at DESC);
+--
+-- CREATE INDEX appointments_org_customer_idx ON public.appointments USING btree (organization_id, customer_id, created_at DESC);
+--
+-- CREATE INDEX appointments_org_status_start_idx ON public.appointments USING btree (organization_id, status, start_at);
+--
+-- CREATE INDEX audit_logs_org_created_idx ON public.audit_logs USING btree (organization_id, created_at DESC);
+--
+-- CREATE INDEX branches_org_idx ON public.branches USING btree (organization_id, status);
+--
+-- CREATE UNIQUE INDEX crm_conversations_external_thread_unique ON public.crm_conversations USING btree (organization_id, channel, external_thread_id) WHERE (external_thread_id IS NOT NULL);
+--
+-- CREATE INDEX crm_conversations_org_agent_created_idx ON public.crm_conversations USING btree (organization_id, agent_id, created_at DESC) WHERE (agent_id IS NOT NULL);
+--
+-- CREATE UNIQUE INDEX crm_conversations_org_channel_external_uidx ON public.crm_conversations USING btree (organization_id, channel, external_thread_id) WHERE (external_thread_id IS NOT NULL);
+--
+-- CREATE INDEX crm_conversations_org_created_idx ON public.crm_conversations USING btree (organization_id, created_at DESC);
+--
+-- CREATE INDEX crm_customers_org_created_idx ON public.crm_customers USING btree (organization_id, created_at DESC);
+--
+-- CREATE UNIQUE INDEX crm_customers_org_email_unique ON public.crm_customers USING btree (organization_id, lower(email)) WHERE (email IS NOT NULL);
+--
+-- CREATE UNIQUE INDEX crm_customers_org_phone_unique ON public.crm_customers USING btree (organization_id, phone) WHERE (phone IS NOT NULL);
+--
+-- CREATE INDEX crm_leads_org_created_idx ON public.crm_leads USING btree (organization_id, created_at DESC);
+--
+-- CREATE INDEX crm_leads_org_source_created_idx ON public.crm_leads USING btree (organization_id, source, created_at DESC);
+--
+-- CREATE UNIQUE INDEX crm_messages_external_message_unique ON public.crm_messages USING btree (organization_id, external_message_id) WHERE (external_message_id IS NOT NULL);
+--
+-- CREATE INDEX crm_messages_org_created_idx ON public.crm_messages USING btree (organization_id, created_at DESC);
+--
+-- CREATE UNIQUE INDEX crm_messages_org_external_message_uidx ON public.crm_messages USING btree (organization_id, external_message_id) WHERE (external_message_id IS NOT NULL);
+--
+-- CREATE INDEX crm_tasks_appointment_reminder_due_idx ON public.crm_tasks USING btree (organization_id, due_at) WHERE ((task_type = 'appointment_reminder'::text) AND (status = 'scheduled'::text));
+--
+-- CREATE UNIQUE INDEX crm_tasks_follow_up_sequence_child_unique ON public.crm_tasks USING btree (organization_id, customer_id, ((metadata ->> 'previous_task_id'::text)), ((metadata ->> 'sequence_step'::text))) WHERE ((task_type = 'sales_follow_up'::text) AND (COALESCE((metadata ->> 'previous_task_id'::text), ''::text) <> ''::text));
+--
+-- CREATE INDEX customer_memories_lookup_idx ON public.customer_memories USING btree (organization_id, customer_key, memory_type);
+--
+-- CREATE INDEX domain_events_dispatch_idx ON public.domain_events USING btree (status, available_at, created_at);
+--
+-- CREATE INDEX domain_events_org_correlation_idx ON public.domain_events USING btree (organization_id, correlation_id, created_at);
+--
+-- CREATE INDEX domain_events_org_created_idx ON public.domain_events USING btree (organization_id, created_at DESC);
+--
+-- CREATE UNIQUE INDEX domain_events_org_idempotency_uidx ON public.domain_events USING btree (organization_id, idempotency_key) WHERE (idempotency_key IS NOT NULL);
+--
+-- CREATE INDEX domain_events_org_source_system_created_idx ON public.domain_events USING btree (organization_id, source_system_id, created_at DESC) WHERE (source_system_id IS NOT NULL);
+--
+-- CREATE INDEX follow_ups_org_schedule_idx ON public.follow_ups USING btree (organization_id, status, scheduled_at);
+--
+-- CREATE INDEX follow_ups_organization_scheduled_idx ON public.follow_ups USING btree (organization_id, scheduled_at, status);
+--
+-- CREATE INDEX idx_follow_ups_lead ON public.follow_ups USING btree (lead_id);
+--
+-- CREATE INDEX idx_follow_ups_limitless_due ON public.follow_ups USING btree (organization_id, status, scheduled_at) WHERE (status = ANY (ARRAY['pending'::text, 'scheduled'::text, 'queued'::text]));
+--
+-- CREATE INDEX human_handoffs_assignee_idx ON public.human_handoffs USING btree (organization_id, assigned_membership_id, status);
+--
+-- CREATE INDEX human_handoffs_org_source_agent_created_idx ON public.human_handoffs USING btree (organization_id, source_agent_id, created_at DESC) WHERE (source_agent_id IS NOT NULL);
+--
+-- CREATE INDEX human_handoffs_org_source_system_created_idx ON public.human_handoffs USING btree (organization_id, source_system_id, created_at DESC) WHERE (source_system_id IS NOT NULL);
+--
+-- CREATE INDEX human_handoffs_queue_idx ON public.human_handoffs USING btree (organization_id, status, priority, created_at);
+--
+-- CREATE INDEX human_handoffs_sla_idx ON public.human_handoffs USING btree (organization_id, sla_due_at) WHERE ((status <> ALL (ARRAY['resolved'::text, 'closed'::text])) AND (sla_due_at IS NOT NULL));
+--
+-- CREATE INDEX knowledge_collections_org_idx ON public.knowledge_collections USING btree (organization_id, status);
+--
+-- CREATE INDEX knowledge_sources_org_idx ON public.knowledge_sources USING btree (organization_id, status);
+--
+-- CREATE INDEX idx_leads_created ON public.leads USING btree (created_at);
+--
+-- CREATE INDEX idx_leads_location ON public.leads USING btree (location_preference);
+--
+-- CREATE INDEX idx_leads_opted_out ON public.leads USING btree (opted_out);
+--
+-- CREATE INDEX idx_leads_phone ON public.leads USING btree (phone);
+--
+-- CREATE INDEX idx_leads_score ON public.leads USING btree (score);
+--
+-- CREATE INDEX idx_leads_source ON public.leads USING btree (source);
+--
+-- CREATE INDEX idx_leads_status ON public.leads USING btree (status);
+--
+-- CREATE INDEX idx_leads_updated ON public.leads USING btree (updated_at);
+--
+-- CREATE INDEX leads_campaign_eligible_idx ON public.leads USING btree (campaign_eligible, status);
+--
+-- CREATE INDEX leads_follow_up_stage_idx ON public.leads USING btree (follow_up_stage);
+--
+-- CREATE INDEX leads_location_preference_idx ON public.leads USING btree (location_preference);
+--
+-- CREATE INDEX leads_org_last_contacted_idx ON public.leads USING btree (organization_id, last_contacted_at DESC);
+--
+-- CREATE UNIQUE INDEX leads_org_phone_unique ON public.leads USING btree (organization_id, phone) WHERE (phone IS NOT NULL);
+--
+-- CREATE INDEX leads_org_status_idx ON public.leads USING btree (organization_id, status, updated_at DESC);
+--
+-- CREATE UNIQUE INDEX leads_organization_phone_unique_idx ON public.leads USING btree (organization_id, phone) WHERE ((phone IS NOT NULL) AND (btrim(phone) <> ''::text));
+--
+-- CREATE UNIQUE INDEX leads_phone_unique_not_null ON public.leads USING btree (phone) WHERE ((phone IS NOT NULL) AND (phone <> ''::text));
+--
+-- CREATE INDEX leads_profile_status_idx ON public.leads USING btree (profile_status);
+--
+-- CREATE INDEX leads_property_interest_idx ON public.leads USING btree (property_interest);
+--
+-- CREATE INDEX leads_status_idx ON public.leads USING btree (status);
+--
+-- CREATE INDEX organization_ai_model_assignments_model_idx ON public.organization_ai_model_assignments USING btree (model_id);
+--
+-- CREATE INDEX organization_ai_model_assignments_org_idx ON public.organization_ai_model_assignments USING btree (organization_id, assigned_at DESC);
+--
+-- CREATE INDEX organization_integrations_org_idx ON public.organization_integrations USING btree (organization_id, status);
+--
+-- CREATE INDEX memberships_org_user_idx ON public.organization_memberships USING btree (organization_id, user_id);
+--
+-- CREATE INDEX organization_systems_org_status_idx ON public.organization_systems USING btree (organization_id, status, updated_at DESC);
+--
+-- CREATE UNIQUE INDEX organizations_manager_access_code_key ON public.organizations USING btree (manager_access_code);
+--
+-- CREATE INDEX projects_family_idx ON public.projects USING btree (agent_family_id, status);
+--
+-- CREATE INDEX idx_properties_city ON public.properties USING btree (location_city);
+--
+-- CREATE INDEX idx_properties_status ON public.properties USING btree (status);
+--
+-- CREATE INDEX idx_properties_type ON public.properties USING btree (type);
+--
+-- CREATE UNIQUE INDEX properties_org_id_unique ON public.properties USING btree (organization_id, id);
+--
+-- CREATE INDEX properties_org_status_title_idx ON public.properties USING btree (organization_id, status, title);
+--
+-- CREATE INDEX properties_status_idx ON public.properties USING btree (status);
+--
+-- CREATE INDEX properties_title_idx ON public.properties USING btree (title);
+--
+-- CREATE INDEX system_catalog_category_status_idx ON public.system_catalog USING btree (category, status, display_order);
+--
+-- CREATE INDEX workflow_definitions_match_idx ON public.workflow_definitions USING btree (agent_type, channel, role, environment, status);
+--
+-- CREATE INDEX workflow_registry_family_status_idx ON public.workflow_registry USING btree (agent_family_id, status);
+--
+-- CREATE INDEX workflow_registry_project_idx ON public.workflow_registry USING btree (organization_id, project_id, status);
+--
+-- ALTER TABLE public.agent_approval_requests ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.agent_families ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.agent_runtime_readiness ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.agent_templates ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.agent_test_runs ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.agent_workflow_assignments ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.ai_model_catalog ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.appointment_calendar_resources ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.crm_conversations ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.crm_customers ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.crm_leads ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.crm_messages ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.crm_tasks ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.customer_memories ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.domain_events ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.follow_ups ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.handoff_notifications ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.human_handoffs ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.knowledge_collections ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.knowledge_sources ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.membership_roles ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_ai_model_assignments ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_customer_stages ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_integrations ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_memberships ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_systems ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_template_assignments ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organization_templates ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.system_catalog ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.workflow_definitions ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE public.workflow_registry ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY members_create_agent_approvals ON public.agent_approval_requests AS permissive FOR INSERT TO authenticated WITH CHECK (is_organization_member(organization_id));
+--
+-- CREATE POLICY members_update_agent_approvals ON public.agent_approval_requests AS permissive FOR UPDATE TO authenticated USING (is_organization_member(organization_id)) WITH CHECK (is_organization_member(organization_id));
+--
+-- CREATE POLICY members_view_agent_approvals ON public.agent_approval_requests AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY agent_families_member_select ON public.agent_families AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY "Members read own runtime readiness" ON public.agent_runtime_readiness AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY members_create_agent_tests ON public.agent_test_runs AS permissive FOR INSERT TO authenticated WITH CHECK (is_organization_member(organization_id));
+--
+-- CREATE POLICY members_view_agent_tests ON public.agent_test_runs AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY "Members read own workflow assignments" ON public.agent_workflow_assignments AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY agents_member_manage ON public.agents AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'agents.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'agents.manage'::text));
+--
+-- CREATE POLICY agents_member_select ON public.agents AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'agents.view'::text) OR has_organization_permission(organization_id, 'agents.manage'::text)));
+--
+-- CREATE POLICY appointment_calendar_resources_select ON public.appointment_calendar_resources AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'appointments.view'::text) OR has_organization_permission(organization_id, 'appointments.manage'::text) OR has_organization_permission(organization_id, 'integrations.view'::text) OR has_organization_permission(organization_id, 'integrations.manage'::text)));
+--
+-- CREATE POLICY appointments_select ON public.appointments AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'appointments.view'::text) OR has_organization_permission(organization_id, 'appointments.manage'::text)));
+--
+-- CREATE POLICY audit_logs_member_select ON public.audit_logs AS permissive FOR SELECT TO authenticated USING (((organization_id IS NOT NULL) AND is_organization_member(organization_id)));
+--
+-- CREATE POLICY branches_member_select ON public.branches AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY crm_conversations_delete ON public.crm_conversations AS permissive FOR DELETE TO authenticated USING (has_organization_permission(organization_id, 'organization.manage'::text));
+--
+-- CREATE POLICY crm_conversations_insert ON public.crm_conversations AS permissive FOR INSERT TO authenticated WITH CHECK (has_organization_permission(organization_id, 'conversations.reply'::text));
+--
+-- CREATE POLICY crm_conversations_select ON public.crm_conversations AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'conversations.view'::text) OR has_organization_permission(organization_id, 'conversations.reply'::text)));
+--
+-- CREATE POLICY crm_conversations_update ON public.crm_conversations AS permissive FOR UPDATE TO authenticated USING (has_organization_permission(organization_id, 'conversations.reply'::text)) WITH CHECK (has_organization_permission(organization_id, 'conversations.reply'::text));
+--
+-- CREATE POLICY crm_customers_delete ON public.crm_customers AS permissive FOR DELETE TO authenticated USING (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY crm_customers_insert ON public.crm_customers AS permissive FOR INSERT TO authenticated WITH CHECK (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY crm_customers_select ON public.crm_customers AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'customers.view'::text) OR has_organization_permission(organization_id, 'customers.manage'::text)));
+--
+-- CREATE POLICY crm_customers_update ON public.crm_customers AS permissive FOR UPDATE TO authenticated USING (has_organization_permission(organization_id, 'customers.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY crm_leads_delete ON public.crm_leads AS permissive FOR DELETE TO authenticated USING (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY crm_leads_insert ON public.crm_leads AS permissive FOR INSERT TO authenticated WITH CHECK (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY crm_leads_select ON public.crm_leads AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'customers.view'::text) OR has_organization_permission(organization_id, 'customers.manage'::text)));
+--
+-- CREATE POLICY crm_leads_update ON public.crm_leads AS permissive FOR UPDATE TO authenticated USING (has_organization_permission(organization_id, 'customers.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY crm_messages_delete ON public.crm_messages AS permissive FOR DELETE TO authenticated USING (has_organization_permission(organization_id, 'organization.manage'::text));
+--
+-- CREATE POLICY crm_messages_insert ON public.crm_messages AS permissive FOR INSERT TO authenticated WITH CHECK (has_organization_permission(organization_id, 'conversations.reply'::text));
+--
+-- CREATE POLICY crm_messages_select ON public.crm_messages AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'conversations.view'::text) OR has_organization_permission(organization_id, 'conversations.reply'::text)));
+--
+-- CREATE POLICY crm_messages_update ON public.crm_messages AS permissive FOR UPDATE TO authenticated USING (has_organization_permission(organization_id, 'conversations.reply'::text)) WITH CHECK (has_organization_permission(organization_id, 'conversations.reply'::text));
+--
+-- CREATE POLICY crm_tasks_member_access ON public.crm_tasks AS permissive FOR ALL TO authenticated USING (is_organization_member(organization_id)) WITH CHECK (is_organization_member(organization_id));
+--
+-- CREATE POLICY customer_memories_member_manage ON public.customer_memories AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'memory.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'memory.manage'::text));
+--
+-- CREATE POLICY customer_memories_member_select ON public.customer_memories AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'memory.view'::text) OR has_organization_permission(organization_id, 'memory.manage'::text)));
+--
+-- CREATE POLICY memories_tenant ON public.customer_memories AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY follow_ups_manage ON public.follow_ups AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'customers.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'customers.manage'::text));
+--
+-- CREATE POLICY follow_ups_select ON public.follow_ups AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'customers.view'::text) OR has_organization_permission(organization_id, 'customers.manage'::text)));
+--
+-- CREATE POLICY handoff_notifications_select ON public.handoff_notifications AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'handoffs.view'::text) OR has_organization_permission(organization_id, 'handoffs.manage'::text)));
+--
+-- CREATE POLICY human_handoffs_select ON public.human_handoffs AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'handoffs.view'::text) OR has_organization_permission(organization_id, 'handoffs.manage'::text)));
+--
+-- CREATE POLICY knowledge_collections_member_manage ON public.knowledge_collections AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'knowledge.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'knowledge.manage'::text));
+--
+-- CREATE POLICY knowledge_collections_member_select ON public.knowledge_collections AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'knowledge.view'::text) OR has_organization_permission(organization_id, 'knowledge.manage'::text)));
+--
+-- CREATE POLICY knowledge_sources_member_manage ON public.knowledge_sources AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'knowledge.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'knowledge.manage'::text));
+--
+-- CREATE POLICY knowledge_sources_member_select ON public.knowledge_sources AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'knowledge.view'::text) OR has_organization_permission(organization_id, 'knowledge.manage'::text)));
+--
+-- CREATE POLICY leads_tenant_member_access ON public.leads AS permissive FOR ALL TO authenticated USING (is_organization_member(organization_id)) WITH CHECK (is_organization_member(organization_id));
+--
+-- CREATE POLICY membership_roles_team_view ON public.membership_roles AS permissive FOR SELECT TO authenticated USING ((EXISTS ( SELECT 1
+--    FROM organization_memberships target_membership
+--   WHERE ((target_membership.id = membership_roles.membership_id) AND ((target_membership.user_id = ( SELECT auth.uid() AS uid)) OR has_organization_permission(target_membership.organization_id, 'members.view'::text) OR has_organization_permission(target_membership.organization_id, 'members.manage'::text))))));
+--
+-- CREATE POLICY organization_customer_stages_select ON public.organization_customer_stages AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'customers.view'::text) OR has_organization_permission(organization_id, 'customers.manage'::text)));
+--
+-- CREATE POLICY integrations_member_manage ON public.organization_integrations AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'integrations.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'integrations.manage'::text));
+--
+-- CREATE POLICY integrations_member_select ON public.organization_integrations AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'integrations.view'::text) OR has_organization_permission(organization_id, 'integrations.manage'::text)));
+--
+-- CREATE POLICY memberships_admin_manage ON public.organization_memberships AS permissive FOR ALL TO authenticated USING (has_organization_permission(organization_id, 'members.manage'::text)) WITH CHECK (has_organization_permission(organization_id, 'members.manage'::text));
+--
+-- CREATE POLICY memberships_member_select ON public.organization_memberships AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY memberships_self_select ON public.organization_memberships AS permissive FOR SELECT TO authenticated USING (((user_id = auth.uid()) OR has_organization_permission(organization_id, 'members.manage'::text)));
+--
+-- CREATE POLICY memberships_team_view ON public.organization_memberships AS permissive FOR SELECT TO authenticated USING (((user_id = ( SELECT auth.uid() AS uid)) OR has_organization_permission(organization_id, 'members.view'::text) OR has_organization_permission(organization_id, 'members.manage'::text)));
+--
+-- CREATE POLICY organization_systems_member_select ON public.organization_systems AS permissive FOR SELECT TO authenticated USING ((has_organization_permission(organization_id, 'systems.view'::text) OR has_organization_permission(organization_id, 'systems.manage'::text)));
+--
+-- CREATE POLICY organizations_member_select ON public.organizations AS permissive FOR SELECT TO authenticated USING (is_organization_member(id));
+--
+-- CREATE POLICY permissions_authenticated_select ON public.permissions AS permissive FOR SELECT TO authenticated USING (true);
+--
+-- CREATE POLICY projects_member_select ON public.projects AS permissive FOR SELECT TO authenticated USING (is_organization_member(organization_id));
+--
+-- CREATE POLICY properties_tenant_member_access ON public.properties AS permissive FOR ALL TO authenticated USING (is_organization_member(organization_id)) WITH CHECK (is_organization_member(organization_id));
+--
+-- CREATE POLICY role_permissions_team_view ON public.role_permissions AS permissive FOR SELECT TO authenticated USING ((EXISTS ( SELECT 1
+--    FROM roles r
+--   WHERE ((r.id = role_permissions.role_id) AND (r.organization_id IS NOT NULL) AND is_organization_member(r.organization_id)))));
+--
+-- CREATE POLICY roles_member_select ON public.roles AS permissive FOR SELECT TO authenticated USING (((organization_id IS NULL) OR is_organization_member(organization_id)));
+--
+-- CREATE POLICY "Authenticated users read ready workflow definitions" ON public.workflow_definitions AS permissive FOR SELECT TO authenticated USING ((status = ANY (ARRAY['ready'::text, 'disabled'::text])));
+--
+-- CREATE POLICY workflow_registry_member_select ON public.workflow_registry AS permissive FOR SELECT TO authenticated USING (((organization_uuid IS NOT NULL) AND is_organization_member(organization_uuid)));

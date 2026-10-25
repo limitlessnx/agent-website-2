@@ -1,4 +1,4 @@
-import { ensureMaiaActionWebhook } from "@/lib/maia-action-gateway";
+import { verifyMaiaActionWebhook } from "@/lib/maia-action-gateway";
 import { getN8nBaseUrl, listN8nExecutions } from "@/lib/n8n-api";
 import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 
@@ -40,37 +40,66 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function extractSummary(execution: Record<string, any>) {
-  const runs = execution.data?.resultData?.runData?.[CAMPAIGN_SUMMARY_NODE];
+type JsonRecord = Record<string, unknown>;
+function record(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+function optionalNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+function campaignSummary(value: unknown): CampaignSummary | null {
+  const row = record(value);
+  if (!Object.keys(row).length) return null;
+  return {
+    success: typeof row.success === "boolean" ? row.success : undefined,
+    status: typeof row.status === "string" ? row.status : undefined,
+    submitted: optionalNumber(row.submitted),
+    accepted_by_whatsapp_api: optionalNumber(row.accepted_by_whatsapp_api),
+    immediate_failed: optionalNumber(row.immediate_failed),
+    pending_delivery_confirmation: optionalNumber(row.pending_delivery_confirmation),
+    free_form_sent: optionalNumber(row.free_form_sent),
+    failed_recipients: Array.isArray(row.failed_recipients) ? row.failed_recipients.map(record) : undefined,
+    accepted_recipients: Array.isArray(row.accepted_recipients) ? row.accepted_recipients.map(record) : undefined,
+    message: typeof row.message === "string" ? row.message : undefined,
+  };
+}
+
+function extractSummary(execution: JsonRecord) {
+  const runData = record(record(record(execution.data).resultData).runData);
+  const runs = runData[CAMPAIGN_SUMMARY_NODE];
   const firstRun = Array.isArray(runs) ? runs[0] : null;
-  const branches = Array.isArray(firstRun?.data?.main) ? firstRun.data.main : [];
-  const firstBranch = Array.isArray(branches[0]) ? branches[0] : [];
-  return (firstBranch[0]?.json || null) as CampaignSummary | null;
+  const branches = record(firstRun).data;
+  const main = record(branches).main;
+  const firstBranch = Array.isArray(main) && Array.isArray(main[0]) ? main[0] : [];
+  return campaignSummary(record(firstBranch[0]).json);
 }
 
 async function waitForExecution(workflowId: string, commandId: string, startedAfter: number) {
   const deadline = Date.now() + EXECUTION_TIMEOUT_MS;
   let seenId: string | null = null;
   while (Date.now() < deadline) {
-    const executions = (await listN8nExecutions({ workflowId, includeData: true, limit: 50 })) as Array<Record<string, any>>;
+    const response: unknown = await listN8nExecutions({ workflowId, includeData: true, limit: 50 });
+    const executions = Array.isArray(response) ? response.map((value: unknown) => record(value)) : [];
     const execution = executions.find((candidate) => {
-      const startedAt = candidate.startedAt ? new Date(candidate.startedAt).getTime() : 0;
+      const rawStartedAt = candidate.startedAt;
+      const startedAt = typeof rawStartedAt === "string" || typeof rawStartedAt === "number" ? new Date(rawStartedAt).getTime() : 0;
       return startedAt >= startedAfter - 5000 && containsCommandId(candidate, commandId);
     });
     if (!execution) { await sleep(POLL_INTERVAL_MS); continue; }
-    seenId = String(execution.id);
-    const resultData = execution.data?.resultData || {};
-    const status = String(execution.status || "").toLowerCase();
-    const error = resultData.error;
-    if (error || ["error", "crashed", "canceled"].includes(status)) {
-      const node = error?.node?.name || resultData.lastNodeExecuted || "unknown node";
-      const detail = error?.message || error?.description || `Execution ended with status ${status || "error"}.`;
-      throw new Error(`Maia media execution ${execution.id} failed at ${node}: ${detail}`);
+    seenId = String(execution.id || "unknown");
+    const resultData = record(record(execution.data).resultData);
+    const error = record(resultData.error);
+    const status = typeof execution.status === "string" ? execution.status.toLowerCase() : "";
+    if (Object.keys(error).length || ["error", "crashed", "canceled"].includes(status)) {
+      const node = String(record(error.node).name || resultData.lastNodeExecuted || "unknown node");
+      const detail = String(error.message || error.description || `Execution ended with status ${status || "error"}.`);
+      throw new Error(`Maia media execution ${seenId} failed at ${node}: ${detail}`);
     }
-    if (execution.finished || status === "success") {
+    if (execution.finished === true || status === "success") {
       const summary = extractSummary(execution);
-      if (!summary) throw new Error(`Maia media execution ${execution.id} finished without ${CAMPAIGN_SUMMARY_NODE}.`);
-      return { executionId: String(execution.id), summary };
+      if (!summary) throw new Error(`Maia media execution ${seenId} finished without ${CAMPAIGN_SUMMARY_NODE}.`);
+      return { executionId: seenId, summary };
     }
     await sleep(POLL_INTERVAL_MS);
   }
@@ -85,7 +114,7 @@ export async function dispatchMaiaPropertyMedia(command: MaiaPropertyMediaDispat
   if (!command.mediaUrl.trim()) throw new Error("The approved media asset has no usable URL.");
   if (!command.assetId.trim() || !command.propertyId.trim()) throw new Error("A registered property media asset is required.");
 
-  const route = await ensureMaiaActionWebhook();
+  const route = await verifyMaiaActionWebhook();
   const startedAt = Date.now();
   const caption = String(command.caption || command.propertyTitle || "Property media").trim().slice(0, 900);
   const payload = {

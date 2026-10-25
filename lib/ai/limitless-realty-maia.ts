@@ -1,7 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProperties, type PropertyRecord } from "@/lib/limitless-data";
-import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
+import type { PropertyRecord } from "@/lib/limitless-data";
 import { assertFluxFeatureAccess } from "@/lib/flux-credits";
+import { resolveCanonicalCustomer, getOrCreateCanonicalConversation } from "@/lib/canonical-customer";
+import { createHumanHandoffFromMaia } from "@/lib/human-operations";
 
 export const LIMITLESS_REALTY_HUMAN_WHATSAPP = "2348127753308";
 export const LIMITLESS_REALTY_MAIA_AGENT_SLUG = "maia";
@@ -28,13 +29,20 @@ function propertyPrice(property: PropertyRecord) {
 }
 
 function compactProperty(property: PropertyRecord, price: number | null) {
-  return { id: property.id, title: property.title, type: property.type || "Property", area: property.location_area || "", city: property.location_city || "", location: [property.location_area, property.location_city].filter(Boolean).join(", "), price: property.price || "Price on request", priceValue: price, status: property.status || "active", features: property.features || "", description: property.description || "", photos: property.drive_photos_link, brochure: property.drive_brochure_link };
+  return { id: property.id, title: property.title, type: property.type || "Property", area: property.location_area || "", city: property.location_city || "", location: [property.location_area, property.location_city].filter(Boolean).join(", "), price: property.price || "Price on request", priceValue: price, status: property.status || "unknown", features: property.features || "", description: property.description || "", photos: property.drive_photos_link, brochure: property.drive_brochure_link };
 }
 
-export async function searchLimitlessProperties(message: string) {
+export async function searchLimitlessProperties(message: string, organizationId: string) {
+  if (!organizationId) throw new Error("An explicit organization is required for property retrieval.");
   const budget = extractBudget(message);
-  const properties = await getProperties(500);
-  const active = properties.filter((property) => /active|available|for sale|ready/i.test(String(property.status || "active")));
+  // Operational AI must not substitute sample listings after a failed database read.
+  const { data, error } = await createAdminClient().from("properties")
+    .select("id,organization_id,title,type,location_area,location_city,price,status,features,description,drive_photos_link,drive_brochure_link")
+    .eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(500);
+  if (error) throw error;
+  const properties = (data || []) as PropertyRecord[];
+  const availableStatuses = new Set(["active", "available", "for sale", "ready"]);
+  const active = properties.filter((property) => property.organization_id === organizationId && availableStatuses.has(String(property.status || "").trim().toLowerCase()));
   const locationTokens = message.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 4);
   const scored = active.map((property) => {
     const haystack = `${property.title} ${property.location_area || ""} ${property.location_city || ""} ${property.type || ""} ${property.features || ""} ${property.description || ""}`.toLowerCase();
@@ -54,38 +62,25 @@ export async function searchLimitlessProperties(message: string) {
 
 export async function getLimitlessMaiaContext() {
   const admin = createAdminClient();
-  const { data: organization } = await admin.from("organizations").select("id,name,slug,status").eq("slug", "limitless-realty").maybeSingle();
+  const { data: organization, error: organizationError } = await admin.from("organizations").select("id,name,slug,status").eq("slug", "limitless-realty").maybeSingle();
+  if (organizationError) throw organizationError;
   if (!organization) throw new Error("Limitless Realty organization is not provisioned yet.");
-  const { data: agents } = await admin.from("agents").select("id,name,slug,status,configuration,communication_channels").eq("organization_id", organization.id).eq("slug", LIMITLESS_REALTY_MAIA_AGENT_SLUG).limit(2);
+  if (organization.status !== "active") throw new Error("Limitless Realty organization is not active; Maia inbound processing is paused.");
+  const { data: agents, error: agentError } = await admin.from("agents").select("id,name,slug,status,configuration,communication_channels").eq("organization_id", organization.id).eq("slug", LIMITLESS_REALTY_MAIA_AGENT_SLUG).limit(2);
+  if (agentError) throw agentError;
   if (!agents?.length) throw new Error("Canonical Limitless Realty Maia is not provisioned.");
   if (agents.length > 1) throw new Error("Multiple Maia agents exist for Limitless Realty. Refusing to route ambiguously.");
+  if (agents[0].status !== "active") throw new Error("Canonical Limitless Realty Maia is not active; inbound processing is paused.");
   return { organization, agent: agents[0], canonicalWhatsAppRoute: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE };
 }
 
-async function sendViaCanonicalMaiaWhatsApp(organizationId: string, payload: Record<string, unknown>) {
-  const to = String(payload.to || "");
-  const message = String(payload.message || "");
-  if (!to || !message) return { delivered: false, provider: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, reason: "Recipient and message are required." };
-  const delivery = await sendWhatsAppMessage({
-    organizationId,
-    to,
-    text: message,
-    deliveryMode: "direct",
-    lastCustomerMessageAt: new Date().toISOString(),
-  });
-  return { delivered: true, provider: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, delivery };
-}
-
-export async function handoffToLimitlessHuman(args: { organizationId: string; agentId: string; sessionId: string; customerName?: string; customerPhone?: string; reason: string; summary: string }) {
-  const admin = createAdminClient();
-  const delivery = await sendViaCanonicalMaiaWhatsApp(args.organizationId, { channel: "whatsapp", to: LIMITLESS_REALTY_HUMAN_WHATSAPP, message: args.summary, source: "maia_human_handoff" });
-  if (!delivery.delivered) return { handedOff: false, pending: true, reason: delivery.reason, destination: LIMITLESS_REALTY_HUMAN_WHATSAPP };
-
-  const { data: conversation } = await admin.from("agent_conversations").upsert({ organization_id: args.organizationId, agent_id: args.agentId, channel: "whatsapp", external_thread_key: args.customerPhone || args.sessionId, status: "handoff", ai_paused: true, last_message_at: new Date().toISOString(), metadata: { human_handoff_destination: LIMITLESS_REALTY_HUMAN_WHATSAPP, canonical_route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE, customer_name: args.customerName || null, customer_phone: args.customerPhone || null } }, { onConflict: "organization_id,agent_id,external_thread_key" }).select("id").single();
-  if (!conversation) throw new Error("Human handoff message was delivered, but the conversation record could not be created.");
-  const { data: handoff, error } = await admin.from("handoff_requests").insert({ organization_id: args.organizationId, conversation_id: conversation.id, agent_id: args.agentId, reason: args.reason.slice(0, 500), priority: "high", status: "open", notes: args.summary.slice(0, 5000) }).select("id,status,created_at").single();
-  if (error) throw error;
-  return { handedOff: true, pending: false, destination: LIMITLESS_REALTY_HUMAN_WHATSAPP, delivery, handoff };
+export async function handoffToLimitlessHuman(args: { organizationId: string; agentId: string; sessionId: string; customerName?: string; customerPhone?: string; reason: string; summary: string; correlationId?: string }) {
+  const phone = String(args.customerPhone || "").replace(/\D/g, "");
+  if (!phone) throw new Error("A verified customer contact is required before handover.");
+  const { customerId } = await resolveCanonicalCustomer({ organizationId: args.organizationId, phone, externalKey: "whatsapp:" + phone, fullName: args.customerName || "WhatsApp customer", source: "limitless-maia-handoff" });
+  const conversationId = await getOrCreateCanonicalConversation({ organizationId: args.organizationId, customerId, channel: "whatsapp", externalThreadId: phone, agentId: args.agentId });
+  const handoff = await createHumanHandoffFromMaia({ organizationId: args.organizationId, customerId, conversationId, sourceAgentId: args.agentId, reason: args.reason, category: "general", priority: "high", summary: args.summary, correlationId: args.correlationId || args.sessionId });
+  return { handedOff: true, pending: !["delivered", "read"].includes(String((handoff as Record<string, unknown>).notificationStatus || "")), handoff };
 }
 
 export async function queueLimitlessFollowup(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; when: string; message: string; stage?: number }) {

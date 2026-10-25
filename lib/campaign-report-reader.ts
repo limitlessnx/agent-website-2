@@ -1,6 +1,3 @@
-import { describeWhatsAppFailure, getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
-import { reconcileLimitlessDeliveryLedger } from "@/lib/whatsapp-delivery-ledger";
-
 export type CampaignRecipientStatus = {
   name: string;
   phone: string;
@@ -12,6 +9,7 @@ export type CampaignRecipientStatus = {
 
 export type DetailedCampaignReport = {
   id: string;
+  organization_id: string;
   campaign_type: string;
   template_name: string;
   campaign_topic: string;
@@ -31,114 +29,143 @@ export type DetailedCampaignReport = {
   recipients: CampaignRecipientStatus[];
 };
 
+type TrackingRow = {
+  id: string;
+  organization_id: string;
+  outbound_kind: string;
+  idempotency_key: string;
+  campaign_id?: string | null;
+  recipient?: string | null;
+  provider?: string | null;
+  provider_message_id?: string | null;
+  lifecycle_status?: string | null;
+  delivery_status?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  metadata?: Record<string, unknown> | string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 function config() {
-  const url = (
-    process.env.LIMITLESS_SUPABASE_URL ||
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    ""
-  ).replace(/\/$/, "");
-  const key =
-    process.env.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SECRET_KEY ||
-    "";
+  const url = (process.env.LIMITLESS_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
+  const key = process.env.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+  if (!url || !key) throw new Error("Tenant-scoped campaign report configuration is missing.");
   return { url, key };
 }
 
-function parseContent(value: string | Record<string, unknown> | undefined) {
-  try { return typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : value || {}; }
-  catch { return {}; }
+function object(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try { return JSON.parse(value) as Record<string, unknown>; } catch { return {}; }
+  }
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-export async function getDetailedCampaignReports(limit = 50): Promise<DetailedCampaignReport[]> {
-  const { url, key } = config();
-  if (!url || !key) return [];
+function text(value: unknown) { return String(value ?? "").trim(); }
+function number(value: unknown) { const result = Number(value); return Number.isFinite(result) && result >= 0 ? result : 0; }
+function normalized(value: unknown) { return text(value).toLowerCase(); }
 
-  const [response, statusLogs] = await Promise.all([
-    fetch(`${url}/rest/v1/bot_sessions?select=id,content,created_at&role=eq.whatsapp_campaign_context&order=created_at.desc&limit=${Math.max(200, Math.min(limit * 100, 5000))}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: "application/json" },
-      cache: "no-store",
-    }),
-    getRecentWhatsAppStatuses(5000),
-    reconcileLimitlessDeliveryLedger(5000).catch((error) => console.error("Delivery ledger reconciliation failed.", error)),
-  ]);
-  if (!response.ok) {
-    console.error("Unable to load detailed campaign reports.", await response.text().catch(() => ""));
-    return [];
-  }
+function maskedRecipient(value: unknown) {
+  const digits = text(value).replace(/\D/g, "");
+  return digits.length >= 4 ? `•••${digits.slice(-4)}` : "";
+}
 
-  const statusByMessageId = new Map<string, (typeof statusLogs)[number]>();
-  for (const log of statusLogs) {
-    if (!log.message_id || statusByMessageId.has(log.message_id)) continue;
-    statusByMessageId.set(log.message_id, log);
-  }
-
-  const rows = (await response.json()) as Array<{ id: string; content?: string | Record<string, unknown>; created_at?: string }>;
-  const aggregateRows = rows
-    .map((row) => ({ ...row, parsed: parseContent(row.content) }))
-    .filter((row) => Array.isArray(row.parsed.accepted_recipients) || Array.isArray(row.parsed.failed_recipients) || Boolean(row.parsed.command_id))
+export function projectCampaignReports(organizationId: string, parentRows: TrackingRow[], recipientRows: TrackingRow[], limit = 50): DetailedCampaignReport[] {
+  if (!organizationId) throw new Error("Organization ID is required to read campaign reports.");
+  const parents = parentRows
+    .filter((row) => row.organization_id === organizationId && row.outbound_kind === "campaign")
+    .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
     .slice(0, Math.max(1, Math.min(limit, 100)));
+  const children = recipientRows.filter((row) => row.organization_id === organizationId && row.outbound_kind === "campaign_recipient");
 
-  return aggregateRows.map((row) => {
-    const content = row.parsed;
-    const acceptedRecipients = Array.isArray(content.accepted_recipients) ? content.accepted_recipients : [];
-    const recipientStatuses: CampaignRecipientStatus[] = acceptedRecipients.map((recipient) => {
-      const item = recipient as Record<string, unknown>;
-      const id = String(item.messageId || item.message_id || "");
-      const latest = statusByMessageId.get(id);
-      return {
-        name: String(item.name || "there"),
-        phone: String(item.phone || item.recipient || ""),
-        message_id: id,
-        status: String(latest?.status || "accepted"),
-        error_code: latest?.error_code || undefined,
-        error_message: latest ? describeWhatsAppFailure(latest) : undefined,
-      };
-    });
-    const finalFailed = recipientStatuses.filter((item) => item.status === "failed");
-    const delivered = recipientStatuses.filter((item) => item.status === "delivered" || item.status === "read").length;
-    const read = recipientStatuses.filter((item) => item.status === "read").length;
-    const sent = recipientStatuses.filter((item) => item.status === "sent").length;
-    const accepted = Number(content.accepted || content.sent || acceptedRecipients.length || 0);
-    const immediateFailed = Number(content.failed || 0);
-    const failed = immediateFailed + finalFailed.length;
-    const resolved = recipientStatuses.filter((item) => item.status === "failed" || item.status === "delivered" || item.status === "read").length;
-    const pending = Math.max(0, accepted - resolved);
-    const unresolved = recipientStatuses.filter((item) => item.status === "accepted" || item.status === "sent" || !item.status).length + Math.max(0, accepted - recipientStatuses.length);
-    const failureGroups = finalFailed.reduce((map, item) => {
-      const code = item.error_code || "unknown";
-      map.set(code, (map.get(code) || 0) + 1);
-      return map;
-    }, new Map<string, number>());
-    const failureNote = [...failureGroups.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([code, count]) => {
-      const sample = finalFailed.find((item) => item.error_code === code);
-      return `${count} ${sample?.error_message || describeWhatsAppFailure({ error_code: code })}`;
-    }).join(" ");
-    const status = failed > 0
-      ? accepted > failed ? "partially_failed_after_acceptance" : "failed_after_acceptance"
-      : delivered > 0 && pending === 0 ? "delivered"
-      : unresolved > 0 ? "delivery_pending"
-      : String(content.status || "sent");
+  return parents.map((parent) => {
+    const campaignId = text(parent.campaign_id || parent.id);
+    const rows = children.filter((row) => String(row.campaign_id || "") === campaignId);
+    const metadata = object(parent.metadata);
+    const response = object(metadata.response);
+    const attempted = number(metadata.attempted ?? response.attempted);
+    const acceptedRows = rows.filter((row) => Boolean(text(row.provider_message_id)) || ["accepted", "sent", "delivered", "read"].includes(normalized(row.delivery_status)));
+    const deliveredRows = rows.filter((row) => ["delivered", "read"].includes(normalized(row.delivery_status)));
+    const readRows = rows.filter((row) => normalized(row.delivery_status) === "read");
+    const sentRows = rows.filter((row) => ["sent", "delivered", "read"].includes(normalized(row.delivery_status)));
+    const failedRows = rows.filter((row) => normalized(row.delivery_status) === "failed" || normalized(row.lifecycle_status) === "failed");
+    const providerFailed = number(response.failed);
+    const failed = Math.max(providerFailed, failedRows.length);
+    const accepted = acceptedRows.length || number(response.accepted ?? response.sent);
+    const skipped = number(response.skipped);
+    const delivered = deliveredRows.length;
+    const pending = Math.max(0, accepted - delivered - failedRows.length);
+    const unresolved = rows.filter((row) => ["unknown", "", "accepted", "sent"].includes(normalized(row.delivery_status))).length + Math.max(0, accepted - rows.length);
+    const partial = accepted > 0 && (failed > 0 || unresolved > 0 || (delivered > 0 && delivered < accepted));
+    const status = failed > 0 ? accepted > failed ? "partially_failed_after_acceptance" : "failed_after_acceptance"
+      : accepted > 0 && delivered === accepted ? "delivered"
+      : accepted > 0 ? "delivery_pending"
+      : normalized(parent.lifecycle_status) === "failed" ? "failed"
+      : "unknown";
+    const failureNote = failedRows.map((row) => text(row.error_message)).find(Boolean) || undefined;
+
     return {
-      id: row.id,
-      campaign_type: String(content.campaign_type || content.campaignType || "limitless_realty_update"),
-      template_name: String(content.template_name || content.templateName || ""),
-      campaign_topic: String(content.campaign_topic || content.topic || "WhatsApp campaign"),
-      status,
-      attempted: Number(content.attempted || 0),
+      id: campaignId,
+      organization_id: organizationId,
+      campaign_type: text(response.campaignType || metadata.campaignType) || "real_estate_campaign",
+      template_name: text(response.templateName || metadata.templateName),
+      campaign_topic: text(response.topic || metadata.topic) || "WhatsApp campaign",
+      status: partial && delivered > 0 ? "partially_delivered" : status,
+      attempted: attempted || accepted + failed + skipped,
       accepted,
-      sent,
+      sent: sentRows.length,
       delivered,
-      read,
+      read: readRows.length,
       failed,
-      skipped: Number(content.skipped || 0),
+      skipped,
       pending_delivery: pending,
       unresolved,
-      final_status_note: failureNote || undefined,
-      execution_id: content.execution_id ? String(content.execution_id) : undefined,
-      created_at: row.created_at || String(content.created_at || ""),
-      recipients: recipientStatuses,
+      final_status_note: failureNote,
+      execution_id: text(response.executionId || response.execution_id || "") || undefined,
+      created_at: parent.created_at || String(metadata.created_at || ""),
+      recipients: rows.slice(0, 1000).map((row) => ({
+        name: "Recipient",
+        phone: maskedRecipient(row.recipient),
+        message_id: text(row.provider_message_id),
+        status: text(row.delivery_status || "unknown"),
+        error_code: text(row.error_code) || undefined,
+        error_message: text(row.error_message) || undefined,
+      })),
     };
   });
+}
+
+async function fetchRows(url: string, key: string, rangeStart: number, rangeEnd: number): Promise<TrackingRow[]> {
+  const response = await fetch(url, {
+    headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: "application/json", "Range-Unit": "items", Range: `${rangeStart}-${rangeEnd}` },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Campaign report query failed (${response.status}).`);
+  return await response.json() as TrackingRow[];
+}
+
+async function fetchAllPages(url: string, key: string, pageSize: number, maxRows: number) {
+  const all: TrackingRow[] = [];
+  for (let start = 0; start < maxRows; start += pageSize) {
+    const page = await fetchRows(url, key, start, Math.min(start + pageSize - 1, maxRows - 1));
+    all.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return all;
+}
+
+export async function getDetailedCampaignReports(organizationId: string, limit = 50): Promise<DetailedCampaignReport[]> {
+  if (!organizationId) throw new Error("Organization ID is required to read campaign reports.");
+  const { url, key } = config();
+  const org = encodeURIComponent(organizationId);
+  const columns = "id,organization_id,outbound_kind,idempotency_key,campaign_id,recipient,provider,provider_message_id,lifecycle_status,delivery_status,error_code,error_message,metadata,created_at,updated_at";
+  const parentUrl = `${url}/rest/v1/real_estate_outbound_tracking?select=${columns}&organization_id=eq.${org}&outbound_kind=eq.campaign&order=created_at.desc&limit=${Math.max(1, Math.min(limit, 100))}`;
+  const parentRows = await fetchRows(parentUrl, key, 0, Math.max(1, Math.min(limit, 100)) - 1);
+  if (!parentRows.length) return [];
+  const campaignIds = [...new Set(parentRows.map((row) => String(row.campaign_id || "")).filter((id) => /^[a-zA-Z0-9_-]{1,160}$/.test(id)))];
+  if (!campaignIds.length) return projectCampaignReports(organizationId, parentRows, [], limit);
+  const inFilter = `(${campaignIds.join(",")})`;
+  const childUrl = `${url}/rest/v1/real_estate_outbound_tracking?select=${columns}&organization_id=eq.${org}&outbound_kind=eq.campaign_recipient&campaign_id=in.${encodeURIComponent(inFilter)}&order=created_at.asc&limit=10000`;
+  const recipientRows = await fetchAllPages(childUrl, key, 1000, 10000);
+  return projectCampaignReports(organizationId, parentRows, recipientRows, limit);
 }

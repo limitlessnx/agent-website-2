@@ -9,7 +9,7 @@ create table if not exists public.tenant_reminder_notifications (
   created_at timestamptz not null default now(),
   read_at timestamptz,
   foreign key (organization_id, rule_id) references public.tenant_reminder_rules(organization_id, id) on delete cascade,
-  foreign key (execution_id) references public.tenant_reminder_executions(id) on delete cascade,
+  foreign key (organization_id, execution_id) references public.tenant_reminder_executions(organization_id, id) on delete cascade,
   unique (organization_id, execution_id)
 );
 create index if not exists tenant_reminder_notifications_inbox_idx

@@ -1,0 +1,13 @@
+import Link from "next/link";
+import { requireRealEstateAccess } from "@/lib/real-estate-access";
+import { createAdminClient } from "@/lib/supabase/admin";
+import "../real-estate.css";
+export const dynamic="force-dynamic";
+type ApprovalRow={id:string;principal_kind:string;principal_id:string|null;tool_key:string;session_id:string|null;channel:string;status:string;expires_at:string|null;consumed_at:string|null;created_at:string|null};
+export default async function RealEstateLeo(){
+ const scope=await requireRealEstateAccess("catalog.read"),db=createAdminClient();let rows:ApprovalRow[]=[],error="";
+ try{const result=await db.from("real_estate_action_approvals").select("id,principal_kind,principal_id,tool_key,session_id,channel,status,expires_at,consumed_at,created_at").eq("organization_id",scope.organizationId).order("created_at",{ascending:false}).limit(100);if(result.error)error=String(result.error.message||"Approval records unavailable");else rows=result.data||[];}catch(e){error=e instanceof Error?e.message:"Approval records unavailable";}
+ return <main className="admin-page real-estate-page"><header className="admin-page-header"><div><p className="admin-kicker">{scope.name}</p><h1>Leo Activity & Approvals</h1><p>Server-held approvals bind user, organization, action, session, channel, expiry and one-time use. This view deliberately omits tokens, message contents and full argument digests.</p></div><Link href="/dashboard/real-estate/operations">Operations center</Link></header>
+ <section className="admin-panel"><h2>Consequential action approvals</h2>{error?<p role="status">{error}. Apply the reviewed, unapplied approvals migration before approval records can be displayed.</p>:rows.length?<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Action</th><th>Requested by</th><th>Channel</th><th>Status</th><th>Created</th><th>Expires / consumed</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td><strong>{String(row.tool_key).replaceAll("."," · ")}</strong><small>Session …{String(row.session_id||"").slice(-6)}</small></td><td>{row.principal_kind} · …{String(row.principal_id||"").slice(-6)}</td><td>{row.channel}</td><td><span className="admin-status">{row.status}</span></td><td>{row.created_at?new Date(row.created_at).toLocaleString("en-GB"):"—"}</td><td>{row.consumed_at?`Used ${new Date(row.consumed_at).toLocaleString("en-GB")}`:row.expires_at?`Expires ${new Date(row.expires_at).toLocaleString("en-GB")}`:"—"}</td></tr>)}</tbody></table></div>:<p>No approval records currently exist for this organization.</p>}</section>
+ </main>;
+}

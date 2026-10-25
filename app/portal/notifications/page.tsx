@@ -5,12 +5,16 @@ import { listOrganizationDashboardNotifications, syncLifecycleDashboardNotificat
 import NotificationCenter from "./NotificationCenter";
 import HumanOperationsPanel from "./HumanOperationsPanel";
 import { listHumanOperations } from "@/lib/human-operations";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveActiveRealEstateOrganization } from "@/lib/real-estate-organization";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientNotificationsPage() {
   const session = await getClientSession();
   if (!session) redirect("/account/login");
+  let canRetryHandoffNotifications=false;
+  try{canRetryHandoffNotifications=Boolean(await resolveActiveRealEstateOrganization(createAdminClient(),session.organizationId));}catch{}
 
   await syncLifecycleDashboardNotifications(session.organizationId).catch(() => undefined);
   const [notifications, humanOperations] = await Promise.all([
@@ -26,7 +30,7 @@ export default async function ClientNotificationsPage() {
         <div><span className="portal-kicker">Workspace notifications</span><h1>Notification Center</h1><p>Account, support, integration and lifecycle notices stay here so routine operational updates do not have to become email.</p></div>
         <span className={critical ? "portal-status warning" : "portal-status"}><Bell size={15} /> {critical ? `${critical} critical` : `${unread} unread`}</span>
       </header>
-      <HumanOperationsPanel handoffs={humanOperations.handoffs} approvals={humanOperations.approvals} members={humanOperations.members} permissions={humanOperations.permissions} membershipId={humanOperations.membershipId} />
+      <HumanOperationsPanel handoffs={humanOperations.handoffs} approvals={humanOperations.approvals} members={humanOperations.members} permissions={humanOperations.permissions} membershipId={humanOperations.membershipId} canRetryHandoffNotifications={canRetryHandoffNotifications} />
       <NotificationCenter initialNotifications={notifications} />
     </main>
   );

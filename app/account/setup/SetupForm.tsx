@@ -19,7 +19,10 @@ export default function SetupForm() {
       const response = await fetch("/api/client-auth/setup-workspace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company_name: data.get("company_name") }),
+        body: JSON.stringify({
+          company_name: data.get("company_name"),
+          industry_slug: data.get("industry_slug"),
+        }),
       });
       const result = await response.json().catch(() => ({}));
 
@@ -28,7 +31,7 @@ export default function SetupForm() {
         return;
       }
 
-      router.push(String(result.redirect_to || "/portal"));
+      router.push(String(result.redirect_to || "/onboarding"));
       router.refresh();
     } catch {
       setError("We could not connect to the workspace service. Check your connection and try again.");
@@ -43,12 +46,22 @@ export default function SetupForm() {
       <div>
         <p className="admin-kicker">Fluxknight Client Portal</p>
         <h1>Welcome to your workspace</h1>
-        <p className="admin-muted">Tell us who you are and what your organization is called. You can complete business details, knowledge, and WhatsApp setup from the dashboard.</p>
+        <p className="admin-muted">Choose your business type and name. We will open your private workspace and guide you through the remaining setup.</p>
       </div>
-      <label>Your name<input name="full_name" required minLength={2} autoComplete="name" placeholder="e.g. Ada Okafor" /></label>
-      <label>Organization name<input name="company_name" required minLength={2} autoComplete="organization" placeholder="e.g. Haven Homes" /></label>
-      {error ? <p className="admin-error">{error}</p> : null}
-      <button type="submit" disabled={loading}>{loading ? "Opening workspace..." : "Create workspace & open dashboard"}</button>
+      <label>
+        Organization name
+        <input name="company_name" required minLength={2} maxLength={120} autoComplete="organization" placeholder="e.g. Haven Homes" />
+      </label>
+      <label>
+        Business type
+        <select name="industry_slug" defaultValue="real-estate" required>
+          <option value="real-estate">Real estate</option>
+          <option value="service-businesses">Service business</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      {error ? <p className="admin-error" role="alert">{error}</p> : null}
+      <button type="submit" disabled={loading}>{loading ? "Opening workspace..." : "Create workspace & continue setup"}</button>
     </form>
   );
 }

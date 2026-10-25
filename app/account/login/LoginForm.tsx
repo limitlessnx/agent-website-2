@@ -30,7 +30,13 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
       const response = await fetch("/api/client-auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.get("email"), password: data.get("password"), invitation_token: invitationToken || undefined }),
+        body: JSON.stringify({
+          email: data.get("email"),
+          password: data.get("password"),
+          invitation_token: invitationToken || undefined,
+          payment_tx_ref: txRef || undefined,
+          post_signup_path: safeNext,
+        }),
       });
       const result = await response.json().catch(() => ({}));
 
@@ -63,7 +69,7 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
         <p className="admin-muted">Sign in to your Fluxknight account to continue.</p>
       </div>
       {txRef ? <p className="admin-form-message">Your payment is verified. Sign in to continue to onboarding.</p> : null}
-      <GoogleAuthButton nextPath={safeNext} txRef={txRef} invitationToken={invitationToken} />
+      <GoogleAuthButton nextPath={safeNext} txRef={txRef} trialPlan="" invitationToken={invitationToken} />
       <p className="admin-muted">or continue with email</p>
       <label>Email<input name="email" type="email" required autoComplete="email" /></label>
       <PasswordField name="password" label="Password" autoComplete="current-password" />

@@ -1,8 +1,10 @@
 import { transcribeWhatsAppAudio } from "@/lib/whatsapp-media-transcription";
 import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
+import { runOptionalRealEstateOperation } from "@/lib/ai/optional-real-estate-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureTenantContactDates } from "@/lib/tenant-contact-dates";
+import { recordRealEstateCustomerInboundWindow } from "@/lib/real-estate-customer-service-window";
 import { dispatchMaiaOutboundMessage } from "@/lib/maia-outbound";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import {
@@ -111,6 +113,19 @@ export const maiaProcessInboundMessage = task({
 
     try {
       const isLimitlessRealty = payload.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d";
+      if (payload.channel === "whatsapp" && payload.provider === "meta_whatsapp" && payload.customerPhone) {
+        await recordRealEstateCustomerInboundWindow({
+          organizationId: payload.organizationId,
+          phone: payload.customerPhone,
+          provider: payload.provider,
+          providerMessageId: payload.externalEventId,
+          occurredAt: payload.metadata?.timestamp,
+        }).catch((error) => logger.warn("Unable to record real-estate customer-service window", {
+          organizationId: payload.organizationId,
+          externalEventId: payload.externalEventId,
+          errorType: error instanceof Error ? error.name : "unknown",
+        }));
+      }
       const transcribedAudio = await transcribeWhatsAppAudio(payload);
       const effectiveMessage = transcribedAudio || payload.message;
       if (transcribedAudio) {
@@ -235,14 +250,17 @@ export const maiaProcessInboundMessage = task({
         }
       }
 
-      const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(effectiveMessage) : null;
+      const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(effectiveMessage, payload.organizationId) : null;
       const runtimeMessage = propertyContext
         ? [effectiveMessage, "", "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:", JSON.stringify(propertyContext), "", "Use the verified property result when answering. Never invent availability, pricing, title, documentation or property media. If the customer asks about a named property, use the exact verified catalog match.", "For a clear property enquiry or buying intent, preserve the property context for follow-up scheduling."].join("\n")
         : effectiveMessage;
       const result = await runMaia({ organizationId: payload.organizationId, agentId: payload.agentId, message: runtimeMessage, channel: payload.channel, externalConversationId: payload.externalConversationId, customerId: customerId || undefined, conversationId: conversationId || undefined, correlationId: eventId, autonomous: true });
 
       let followup: unknown = null;
-      if (isLimitlessRealty && payload.channel === "whatsapp" && payload.customerPhone) {
+      const handedOff = result.toolResults.some((item) => ["handoff_to_human_supervisor", "request_property_inspection"].includes(String(item.tool)) && item.ok === true);
+      if (isLimitlessRealty && !handedOff && payload.channel === "whatsapp" && payload.customerPhone) {
+        followup = await runOptionalRealEstateOperation(async () => {
+          let scheduledFollowup: unknown = null;
         const lowerMessage = effectiveMessage.toLowerCase();
         const propertyMentioned = Boolean(propertyContext?.matches?.some((property) => {
           const title = String(property.title || "").trim().toLowerCase();
@@ -250,7 +268,7 @@ export const maiaProcessInboundMessage = task({
         })) || /\b(this|that|the)\s+(property|estate|land|plot|house|apartment)\b/i.test(effectiveMessage);
         const buyingIntent = /\b(interested|interest|like|love|want|looking to buy|looking for|how much|price|payment|installment|inspection|title|documentation|documents|location|availability|reserve|book|pay|purchase)\b/i.test(effectiveMessage);
         if (propertyMentioned && buyingIntent) {
-          followup = await queueLimitlessPropertyFollowupSequence({
+          scheduledFollowup = await queueLimitlessPropertyFollowupSequence({
             organizationId: payload.organizationId,
             agentId: payload.agentId,
             customerPhone: payload.customerPhone,
@@ -258,7 +276,7 @@ export const maiaProcessInboundMessage = task({
             propertyContext,
           });
         } else if (shouldFollowUp(effectiveMessage)) {
-          followup = await queueLimitlessFollowup({
+          scheduledFollowup = await queueLimitlessFollowup({
             organizationId: payload.organizationId,
             agentId: payload.agentId,
             customerPhone: payload.customerPhone,
@@ -267,6 +285,10 @@ export const maiaProcessInboundMessage = task({
             message: `Follow up with ${payload.customerName || "the client"} about the Limitless Realty enquiry. Preserve the verified catalogue context and do not invent availability or pricing.`,
           });
         }
+
+          return scheduledFollowup;
+        });
+        await recordMaiaRuntimeEvent({ organizationId: payload.organizationId, agentId: payload.agentId, eventType: "optional_followup_result", status: String((followup as {status:string}).status), payload: { eventId, result: followup } }).catch(() => undefined);
       }
 
       let delivery: Awaited<ReturnType<typeof dispatchMaiaOutboundMessage>> | null = null;

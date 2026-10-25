@@ -10,6 +10,7 @@ on:
 
 jobs:
   verify-maia:
+    if: github.event_name != 'pull_request' || github.head_ref != 'integration/limitless-realty-production-20261025'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

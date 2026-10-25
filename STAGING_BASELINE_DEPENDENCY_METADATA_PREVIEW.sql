@@ -1,0 +1,592 @@
+-- NON-EXECUTABLE METADATA PREVIEW ONLY — DO NOT APPLY.
+-- This separate review file covers 17 transitive shared tables outside the original approved 42-table allowlist.
+-- Source: bounded FLUXNIT catalog metadata queries only; no application rows or function bodies were read into this artifact.
+-- Every statement below is commented out. The observed Production defaults, constraints, indexes, policies, triggers,
+-- RLS flags, and direct grants are evidence for review, not an approved staging design and not an authorization to apply.
+-- In particular, do NOT carry broad anon/authenticated grants or existing permissive policies into staging unchanged.
+-- Several FKs reference the original core baseline and other shared tables; full dependency closure and locale/default decisions remain open.
+-- A tenant-neutral, least-privilege design and exact review are required before any staging DDL.
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.billing_plans (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- currency text DEFAULT 'NGN'::text NOT NULL,
+-- installation_fee numeric DEFAULT 0 NOT NULL,
+-- recurring_fee numeric DEFAULT 0 NOT NULL,
+-- billing_interval text DEFAULT 'monthly'::text NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT billing_plans_billing_interval_check CHECK (billing_interval = ANY (ARRAY['monthly'::text, 'quarterly'::text, 'yearly'::text, 'custom'::text])),
+-- CONSTRAINT billing_plans_installation_fee_check CHECK (installation_fee >= 0::numeric),
+-- CONSTRAINT billing_plans_pkey PRIMARY KEY (id),
+-- CONSTRAINT billing_plans_recurring_fee_check CHECK (recurring_fee >= 0::numeric),
+-- CONSTRAINT billing_plans_slug_key UNIQUE (slug),
+-- CONSTRAINT billing_plans_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'archived'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX billing_plans_pkey ON public.billing_plans USING btree (id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX billing_plans_slug_key ON public.billing_plans USING btree (slug)
+-- observed policy billing_plans_authenticated_select; roles=authenticated; command=SELECT; mode=PERMISSIVE; using=(status = 'active'::text); check=<none>
+-- observed trigger attachment (body not included): CREATE TRIGGER set_billing_plans_updated_at BEFORE UPDATE ON billing_plans FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+-- observed direct grant: anon -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: authenticated -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.client_onboarding_profiles (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- membership_id uuid,
+-- user_id uuid NOT NULL,
+-- status text DEFAULT 'in_progress'::text NOT NULL,
+-- current_step integer DEFAULT 1 NOT NULL,
+-- business_name text,
+-- industry text,
+-- website text,
+-- country text,
+-- timezone text,
+-- business_email text,
+-- phone text,
+-- staff_size text,
+-- requested_agents jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- business_goals jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- channels jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- existing_tools jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- human_contact_name text,
+-- human_contact_email text,
+-- notes text,
+-- agent_family_id uuid,
+-- project_id uuid,
+-- agent_id uuid,
+-- completed_at timestamp with time zone,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- whatsapp_preferences jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- business_description text,
+-- ai_requirements text,
+-- business_knowledge jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- CONSTRAINT client_onboarding_profiles_agent_family_id_fkey FOREIGN KEY (agent_family_id) REFERENCES agent_families(id) ON DELETE SET NULL,
+-- CONSTRAINT client_onboarding_profiles_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL,
+-- CONSTRAINT client_onboarding_profiles_current_step_check CHECK (current_step >= 1 AND current_step <= 5),
+-- CONSTRAINT client_onboarding_profiles_membership_id_fkey FOREIGN KEY (membership_id) REFERENCES organization_memberships(id) ON DELETE SET NULL,
+-- CONSTRAINT client_onboarding_profiles_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT client_onboarding_profiles_organization_id_key UNIQUE (organization_id),
+-- CONSTRAINT client_onboarding_profiles_pkey PRIMARY KEY (id),
+-- CONSTRAINT client_onboarding_profiles_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+-- CONSTRAINT client_onboarding_profiles_status_check CHECK (status = ANY (ARRAY['in_progress'::text, 'submitted'::text, 'configuration'::text, 'testing'::text, 'awaiting_approval'::text, 'live'::text, 'paused'::text])),
+-- CONSTRAINT client_onboarding_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX client_onboarding_incomplete_updated_idx ON public.client_onboarding_profiles USING btree (updated_at) WHERE ((status = 'in_progress'::text) AND (completed_at IS NULL))
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX client_onboarding_profiles_organization_id_key ON public.client_onboarding_profiles USING btree (organization_id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX client_onboarding_profiles_pkey ON public.client_onboarding_profiles USING btree (id)
+-- observed index definition (may back a table constraint): CREATE INDEX client_onboarding_status_idx ON public.client_onboarding_profiles USING btree (status, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE INDEX client_onboarding_user_idx ON public.client_onboarding_profiles USING btree (user_id, organization_id)
+-- observed policy client_onboarding_member_select; roles=authenticated; command=SELECT; mode=PERMISSIVE; using=is_organization_member(organization_id); check=<none>
+-- observed trigger attachment (body not included): CREATE TRIGGER client_onboarding_profiles_set_updated_at BEFORE UPDATE ON client_onboarding_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+-- observed direct grant: anon -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: authenticated -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.client_onboarding_submissions (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid,
+-- package_id uuid,
+-- purchaser_email text NOT NULL,
+-- payment_provider text,
+-- payment_reference text,
+-- payment_status text DEFAULT 'pending'::text NOT NULL,
+-- payment_confirmed_at timestamp with time zone,
+-- access_token_hash text NOT NULL,
+-- status text DEFAULT 'payment_received'::text NOT NULL,
+-- current_step smallint DEFAULT 1 NOT NULL,
+-- business_information jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- business_services jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- communication_details jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- automation_requirements jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- review_confirmation jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- submitted_at timestamp with time zone,
+-- reviewed_at timestamp with time zone,
+-- activated_at timestamp with time zone,
+-- created_by text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- business_resources jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- CONSTRAINT client_onboarding_submissions_current_step_check CHECK (current_step >= 1 AND current_step <= 6),
+-- CONSTRAINT client_onboarding_submissions_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL,
+-- CONSTRAINT client_onboarding_submissions_package_id_fkey FOREIGN KEY (package_id) REFERENCES service_packages(id) ON DELETE RESTRICT,
+-- CONSTRAINT client_onboarding_submissions_payment_provider_payment_refe_key UNIQUE (payment_provider, payment_reference),
+-- CONSTRAINT client_onboarding_submissions_payment_status_check CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'failed'::text, 'refunded'::text, 'waived'::text])),
+-- CONSTRAINT client_onboarding_submissions_pkey PRIMARY KEY (id),
+-- CONSTRAINT client_onboarding_submissions_status_check CHECK (status = ANY (ARRAY['payment_received'::text, 'draft'::text, 'submitted'::text, 'under_review'::text, 'provisioning'::text, 'internal_testing'::text, 'live'::text, 'maintenance'::text, 'suspended'::text, 'cancelled'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX client_onboarding_payment_idx ON public.client_onboarding_submissions USING btree (payment_status, purchaser_email)
+-- observed index definition (may back a table constraint): CREATE INDEX client_onboarding_queue_idx ON public.client_onboarding_submissions USING btree (status, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX client_onboarding_submissions_payment_provider_payment_refe_key ON public.client_onboarding_submissions USING btree (payment_provider, payment_reference)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX client_onboarding_submissions_pkey ON public.client_onboarding_submissions USING btree (id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- observed trigger attachment (body not included): CREATE TRIGGER client_onboarding_submission_resolve_org BEFORE INSERT OR UPDATE OF purchaser_email, organization_id ON client_onboarding_submissions FOR EACH ROW EXECUTE FUNCTION resolve_onboarding_submission_organization()
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.customer_timeline_events (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- customer_id uuid NOT NULL,
+-- conversation_id uuid,
+-- event_type text NOT NULL,
+-- channel text,
+-- title text NOT NULL,
+-- summary text,
+-- occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+-- source_table text,
+-- source_id uuid,
+-- correlation_id uuid,
+-- actor_type text,
+-- actor_id text,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT customer_timeline_events_organization_id_conversation_id_fkey FOREIGN KEY (organization_id, conversation_id) REFERENCES crm_conversations(organization_id, id) ON DELETE SET NULL,
+-- CONSTRAINT customer_timeline_events_organization_id_customer_id_fkey FOREIGN KEY (organization_id, customer_id) REFERENCES crm_customers(organization_id, id) ON DELETE CASCADE,
+-- CONSTRAINT customer_timeline_events_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT customer_timeline_events_organization_id_id_key UNIQUE (organization_id, id),
+-- CONSTRAINT customer_timeline_events_pkey PRIMARY KEY (id)
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX customer_timeline_customer_time_idx ON public.customer_timeline_events USING btree (organization_id, customer_id, occurred_at DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX customer_timeline_events_organization_id_id_key ON public.customer_timeline_events USING btree (organization_id, id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX customer_timeline_events_pkey ON public.customer_timeline_events USING btree (id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX customer_timeline_source_uidx ON public.customer_timeline_events USING btree (organization_id, source_table, source_id, event_type) WHERE ((source_table IS NOT NULL) AND (source_id IS NOT NULL))
+-- observed policy customer_timeline_select; roles=authenticated; command=SELECT; mode=PERMISSIVE; using=(has_organization_permission(organization_id, 'customers.view'::text) OR has_organization_permission(organization_id, 'customers.manage'::text)); check=<none>
+-- no non-internal trigger attachment returned
+-- observed direct grant: authenticated -> SELECT
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.dashboard_notifications (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- event_key text NOT NULL,
+-- organization_id uuid NOT NULL,
+-- audience text DEFAULT 'customer'::text NOT NULL,
+-- category text NOT NULL,
+-- severity text DEFAULT 'info'::text NOT NULL,
+-- title text NOT NULL,
+-- message text NOT NULL,
+-- action_label text,
+-- action_href text,
+-- source text DEFAULT 'lifecycle'::text NOT NULL,
+-- persistent boolean DEFAULT false NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+-- last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+-- resolved_at timestamp with time zone,
+-- expires_at timestamp with time zone,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT dashboard_notifications_audience_check CHECK (audience = ANY (ARRAY['customer'::text, 'admin'::text, 'both'::text])),
+-- CONSTRAINT dashboard_notifications_event_key_key UNIQUE (event_key),
+-- CONSTRAINT dashboard_notifications_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT dashboard_notifications_pkey PRIMARY KEY (id),
+-- CONSTRAINT dashboard_notifications_severity_check CHECK (severity = ANY (ARRAY['info'::text, 'success'::text, 'warning'::text, 'critical'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX dashboard_notifications_event_key_key ON public.dashboard_notifications USING btree (event_key)
+-- observed index definition (may back a table constraint): CREATE INDEX dashboard_notifications_org_active_idx ON public.dashboard_notifications USING btree (organization_id, resolved_at, expires_at, severity, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE INDEX dashboard_notifications_org_created_idx ON public.dashboard_notifications USING btree (organization_id, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX dashboard_notifications_pkey ON public.dashboard_notifications USING btree (id)
+-- observed index definition (may back a table constraint): CREATE INDEX dashboard_notifications_source_org_idx ON public.dashboard_notifications USING btree (source, organization_id, resolved_at)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- no non-internal trigger attachment returned
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.flux_credit_ledger (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- wallet_organization_id uuid NOT NULL,
+-- transaction_type text NOT NULL,
+-- action_key text DEFAULT 'manual'::text NOT NULL,
+-- credit_delta integer NOT NULL,
+-- balance_after integer NOT NULL,
+-- source text,
+-- provider text,
+-- provider_cost_cents numeric(18,4) DEFAULT 0 NOT NULL,
+-- customer_value_cents numeric(18,4) DEFAULT 0 NOT NULL,
+-- provider_usage jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- reason text,
+-- created_by text,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT flux_credit_ledger_balance_after_check CHECK (balance_after >= 0),
+-- CONSTRAINT flux_credit_ledger_customer_value_cents_check CHECK (customer_value_cents >= 0::numeric),
+-- CONSTRAINT flux_credit_ledger_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT flux_credit_ledger_pkey PRIMARY KEY (id),
+-- CONSTRAINT flux_credit_ledger_provider_cost_cents_check CHECK (provider_cost_cents >= 0::numeric),
+-- CONSTRAINT flux_credit_ledger_transaction_type_check CHECK (transaction_type = ANY (ARRAY['monthly_allowance'::text, 'trial_grant'::text, 'usage'::text, 'bonus'::text, 'top_up'::text, 'adjustment'::text, 'refund'::text, 'expiry'::text])),
+-- CONSTRAINT flux_credit_ledger_wallet_organization_id_fkey FOREIGN KEY (wallet_organization_id) REFERENCES flux_credit_wallets(organization_id) ON DELETE RESTRICT
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX flux_credit_ledger_action_idx ON public.flux_credit_ledger USING btree (action_key, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX flux_credit_ledger_checkout_topup_unique ON public.flux_credit_ledger USING btree (((metadata ->> 'checkout_session_id'::text))) WHERE ((transaction_type = 'top_up'::text) AND (metadata ? 'checkout_session_id'::text))
+-- observed index definition (may back a table constraint): CREATE INDEX flux_credit_ledger_org_created_idx ON public.flux_credit_ledger USING btree (organization_id, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX flux_credit_ledger_pkey ON public.flux_credit_ledger USING btree (id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- observed trigger attachment (body not included): CREATE TRIGGER flux_credit_ledger_prevent_delete BEFORE DELETE ON flux_credit_ledger FOR EACH ROW EXECUTE FUNCTION prevent_flux_credit_ledger_mutation()
+-- observed trigger attachment (body not included): CREATE TRIGGER flux_credit_ledger_prevent_update BEFORE UPDATE ON flux_credit_ledger FOR EACH ROW EXECUTE FUNCTION prevent_flux_credit_ledger_mutation()
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.flux_credit_wallets (
+-- organization_id uuid NOT NULL,
+-- plan_code text DEFAULT 'basic'::text NOT NULL,
+-- monthly_allowance integer DEFAULT 2500 NOT NULL,
+-- balance integer DEFAULT 0 NOT NULL,
+-- bonus_balance integer DEFAULT 0 NOT NULL,
+-- top_up_balance integer DEFAULT 0 NOT NULL,
+-- trial_credit_limit integer,
+-- trial_ends_at timestamp with time zone,
+-- current_period_start timestamp with time zone DEFAULT now() NOT NULL,
+-- current_period_end timestamp with time zone,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT flux_credit_wallets_balance_check CHECK (balance >= 0),
+-- CONSTRAINT flux_credit_wallets_bonus_balance_check CHECK (bonus_balance >= 0),
+-- CONSTRAINT flux_credit_wallets_monthly_allowance_check CHECK (monthly_allowance >= 0),
+-- CONSTRAINT flux_credit_wallets_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT flux_credit_wallets_pkey PRIMARY KEY (organization_id),
+-- CONSTRAINT flux_credit_wallets_plan_code_check CHECK (plan_code = ANY (ARRAY['basic'::text, 'plus'::text, 'business'::text, 'business_plus'::text])),
+-- CONSTRAINT flux_credit_wallets_status_check CHECK (status = ANY (ARRAY['trialing'::text, 'active'::text, 'paused'::text, 'suspended'::text, 'cancelled'::text])),
+-- CONSTRAINT flux_credit_wallets_top_up_balance_check CHECK (top_up_balance >= 0),
+-- CONSTRAINT flux_credit_wallets_trial_credit_limit_check CHECK (trial_credit_limit IS NULL OR trial_credit_limit >= 0)
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX flux_credit_wallets_organization_idx ON public.flux_credit_wallets USING btree (organization_id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX flux_credit_wallets_pkey ON public.flux_credit_wallets USING btree (organization_id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- observed trigger attachment (body not included): CREATE TRIGGER flux_credit_wallet_threshold_notification AFTER INSERT OR UPDATE OF balance, monthly_allowance, status, plan_code ON flux_credit_wallets FOR EACH ROW EXECUTE FUNCTION sync_flux_credit_threshold_notification()
+-- observed trigger attachment (body not included): CREATE TRIGGER flux_credit_wallets_set_updated_at BEFORE UPDATE ON flux_credit_wallets FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.organization_entitlements (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- feature_key text NOT NULL,
+-- enabled boolean DEFAULT true NOT NULL,
+-- limit_value numeric,
+-- source text DEFAULT 'override'::text NOT NULL,
+-- expires_at timestamp with time zone,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT organization_entitlements_organization_id_feature_key_key UNIQUE (organization_id, feature_key),
+-- CONSTRAINT organization_entitlements_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT organization_entitlements_pkey PRIMARY KEY (id),
+-- CONSTRAINT organization_entitlements_source_check CHECK (source = ANY (ARRAY['plan'::text, 'override'::text, 'promotion'::text, 'admin'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_entitlements_organization_id_feature_key_key ON public.organization_entitlements USING btree (organization_id, feature_key)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_entitlements_pkey ON public.organization_entitlements USING btree (id)
+-- observed policy organization_entitlements_member_select; roles=authenticated; command=SELECT; mode=PERMISSIVE; using=is_organization_member(organization_id); check=<none>
+-- observed trigger attachment (body not included): CREATE TRIGGER set_organization_entitlements_updated_at BEFORE UPDATE ON organization_entitlements FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+-- observed direct grant: authenticated -> SELECT
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.organization_service_packages (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- service_package_id uuid NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- source text DEFAULT 'super_admin'::text NOT NULL,
+-- assigned_by uuid,
+-- starts_at timestamp with time zone DEFAULT now() NOT NULL,
+-- ends_at timestamp with time zone,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT organization_service_packages_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES auth.users(id) ON DELETE SET NULL,
+-- CONSTRAINT organization_service_packages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT organization_service_packages_pkey PRIMARY KEY (id),
+-- CONSTRAINT organization_service_packages_service_package_id_fkey FOREIGN KEY (service_package_id) REFERENCES service_packages(id) ON DELETE RESTRICT,
+-- CONSTRAINT organization_service_packages_status_check CHECK (status = ANY (ARRAY['active'::text, 'paused'::text, 'expired'::text, 'cancelled'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_service_packages_one_active_idx ON public.organization_service_packages USING btree (organization_id) WHERE (status = 'active'::text)
+-- observed index definition (may back a table constraint): CREATE INDEX organization_service_packages_org_status_idx ON public.organization_service_packages USING btree (organization_id, status)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_service_packages_pkey ON public.organization_service_packages USING btree (id)
+-- observed policy organization_service_packages_member_select; roles=authenticated; command=SELECT; mode=PERMISSIVE; using=is_organization_member(organization_id); check=<none>
+-- no non-internal trigger attachment returned
+-- observed direct grant: authenticated -> SELECT
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.organization_subscriptions (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- plan_id uuid NOT NULL,
+-- provider text,
+-- provider_customer_id text,
+-- provider_subscription_id text,
+-- status text DEFAULT 'pending'::text NOT NULL,
+-- current_period_start timestamp with time zone,
+-- current_period_end timestamp with time zone,
+-- grace_period_end timestamp with time zone,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- trial_ends_at timestamp with time zone,
+-- CONSTRAINT organization_subscriptions_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT organization_subscriptions_organization_id_id_key UNIQUE (organization_id, id),
+-- CONSTRAINT organization_subscriptions_pkey PRIMARY KEY (id),
+-- CONSTRAINT organization_subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES billing_plans(id),
+-- CONSTRAINT organization_subscriptions_status_check CHECK (status = ANY (ARRAY['pending'::text, 'trialing'::text, 'active'::text, 'past_due'::text, 'grace_period'::text, 'suspended'::text, 'cancelled'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX organization_subscriptions_grace_scan_idx ON public.organization_subscriptions USING btree (status, grace_period_end) WHERE (grace_period_end IS NOT NULL)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_subscriptions_one_basic_free_trial ON public.organization_subscriptions USING btree (organization_id) WHERE ((metadata ->> 'trial_type'::text) = 'basic_free_trial'::text)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_subscriptions_one_current ON public.organization_subscriptions USING btree (organization_id) WHERE (status = ANY (ARRAY['pending'::text, 'trialing'::text, 'active'::text, 'past_due'::text, 'grace_period'::text, 'suspended'::text]))
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_subscriptions_organization_id_id_key ON public.organization_subscriptions USING btree (organization_id, id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_subscriptions_pkey ON public.organization_subscriptions USING btree (id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX organization_subscriptions_provider_unique ON public.organization_subscriptions USING btree (provider, provider_subscription_id) WHERE (provider_subscription_id IS NOT NULL)
+-- observed index definition (may back a table constraint): CREATE INDEX organization_subscriptions_renewal_scan_idx ON public.organization_subscriptions USING btree (status, current_period_end) WHERE (current_period_end IS NOT NULL)
+-- observed policy organization_subscriptions_member_select; roles=authenticated; command=SELECT; mode=PERMISSIVE; using=is_organization_member(organization_id); check=<none>
+-- observed trigger attachment (body not included): CREATE TRIGGER organization_subscriptions_sync_flux_wallet AFTER INSERT OR UPDATE OF plan_id, status, current_period_start, current_period_end, grace_period_end, trial_ends_at, metadata ON organization_subscriptions FOR EACH ROW EXECUTE FUNCTION sync_flux_subscription_wallet_trigger()
+-- observed trigger attachment (body not included): CREATE TRIGGER set_organization_subscriptions_updated_at BEFORE UPDATE ON organization_subscriptions FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+-- observed direct grant: anon -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: authenticated -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.payment_plans (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- client_name text NOT NULL,
+-- client_phone text NOT NULL,
+-- client_email text,
+-- property_id text,
+-- property_title text NOT NULL,
+-- agreed_price numeric(18,2) DEFAULT 0 NOT NULL,
+-- total_paid numeric(18,2) DEFAULT 0 NOT NULL,
+-- outstanding_balance numeric(18,2) GENERATED ALWAYS AS (GREATEST((agreed_price - total_paid), (0)::numeric)) STORED,
+-- installment_amount numeric(18,2) DEFAULT 0 NOT NULL,
+-- frequency text DEFAULT 'custom'::text NOT NULL,
+-- next_due_date date,
+-- final_due_date date,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- assigned_agent text,
+-- notes text,
+-- reminders_enabled boolean DEFAULT true NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- contact_id uuid,
+-- currency text DEFAULT 'NGN'::text NOT NULL,
+-- payment_type text DEFAULT 'installment'::text NOT NULL,
+-- start_at timestamp with time zone DEFAULT now() NOT NULL,
+-- end_at timestamp with time zone,
+-- handover_agent_name text,
+-- handover_agent_phone text,
+-- reminder_template_id uuid,
+-- last_reminder_at timestamp with time zone,
+-- next_reminder_at timestamp with time zone,
+-- CONSTRAINT payment_plans_agreed_price_check CHECK (agreed_price >= 0::numeric),
+-- CONSTRAINT payment_plans_end_at_after_start_check CHECK (end_at IS NULL OR end_at >= start_at),
+-- CONSTRAINT payment_plans_installment_amount_check CHECK (installment_amount >= 0::numeric),
+-- CONSTRAINT payment_plans_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT payment_plans_payment_type_check CHECK (payment_type = ANY (ARRAY['installment'::text, 'outright'::text])),
+-- CONSTRAINT payment_plans_pkey PRIMARY KEY (id),
+-- CONSTRAINT payment_plans_status_check CHECK (status = ANY (ARRAY['active'::text, 'due_soon'::text, 'overdue'::text, 'completed'::text, 'paused'::text, 'cancelled'::text])),
+-- CONSTRAINT payment_plans_total_paid_check CHECK (total_paid >= 0::numeric)
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX payment_plans_org_due_idx ON public.payment_plans USING btree (organization_id, status, next_due_date) WHERE (reminders_enabled IS TRUE)
+-- observed index definition (may back a table constraint): CREATE INDEX payment_plans_org_end_at_idx ON public.payment_plans USING btree (organization_id, end_at) WHERE ((payment_type = 'installment'::text) AND (end_at IS NOT NULL))
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX payment_plans_org_id_unique ON public.payment_plans USING btree (organization_id, id)
+-- observed index definition (may back a table constraint): CREATE INDEX payment_plans_org_type_idx ON public.payment_plans USING btree (organization_id, payment_type, status, created_at DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX payment_plans_pkey ON public.payment_plans USING btree (id)
+-- observed index definition (may back a table constraint): CREATE INDEX payment_plans_status_due_idx ON public.payment_plans USING btree (status, next_due_date)
+-- observed policy payment_plans_tenant_member_access; roles=authenticated; command=ALL; mode=PERMISSIVE; using=is_organization_member(organization_id); check=is_organization_member(organization_id)
+-- observed trigger attachment (body not included): CREATE TRIGGER payment_plans_set_updated_at BEFORE UPDATE ON payment_plans FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+-- observed direct grant: anon -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: authenticated -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.payment_records (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- payment_plan_id uuid NOT NULL,
+-- amount numeric(18,2) NOT NULL,
+-- payment_date date DEFAULT CURRENT_DATE NOT NULL,
+-- payment_method text,
+-- payment_reference text,
+-- notes text,
+-- created_by text,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- CONSTRAINT payment_records_amount_check CHECK (amount > 0::numeric),
+-- CONSTRAINT payment_records_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT payment_records_payment_plan_id_fkey FOREIGN KEY (payment_plan_id) REFERENCES payment_plans(id) ON DELETE CASCADE,
+-- CONSTRAINT payment_records_pkey PRIMARY KEY (id),
+-- CONSTRAINT payment_records_tenant_plan_fkey FOREIGN KEY (organization_id, payment_plan_id) REFERENCES payment_plans(organization_id, id) ON DELETE CASCADE
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX payment_records_org_plan_idx ON public.payment_records USING btree (organization_id, payment_plan_id, payment_date DESC)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX payment_records_pkey ON public.payment_records USING btree (id)
+-- observed index definition (may back a table constraint): CREATE INDEX payment_records_plan_date_idx ON public.payment_records USING btree (payment_plan_id, payment_date DESC)
+-- observed policy payment_records_tenant_member_access; roles=authenticated; command=ALL; mode=PERMISSIVE; using=is_organization_member(organization_id); check=is_organization_member(organization_id)
+-- observed trigger attachment (body not included): CREATE TRIGGER payment_records_sync_total AFTER INSERT OR DELETE OR UPDATE ON payment_records FOR EACH ROW EXECUTE FUNCTION sync_payment_plan_total()
+-- observed direct grant: anon -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: authenticated -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.platform_super_admins (
+-- user_id uuid NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT platform_super_admins_pkey PRIMARY KEY (user_id),
+-- CONSTRAINT platform_super_admins_status_check CHECK (status = ANY (ARRAY['active'::text, 'disabled'::text])),
+-- CONSTRAINT platform_super_admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX platform_super_admins_pkey ON public.platform_super_admins USING btree (user_id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- no non-internal trigger attachment returned
+-- observed direct grant: anon -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: authenticated -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.service_package_systems (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- service_package_id uuid NOT NULL,
+-- system_id uuid NOT NULL,
+-- enabled boolean DEFAULT true NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT service_package_systems_pkey PRIMARY KEY (id),
+-- CONSTRAINT service_package_systems_service_package_id_fkey FOREIGN KEY (service_package_id) REFERENCES service_packages(id) ON DELETE CASCADE,
+-- CONSTRAINT service_package_systems_service_package_id_system_id_key UNIQUE (service_package_id, system_id),
+-- CONSTRAINT service_package_systems_system_id_fkey FOREIGN KEY (system_id) REFERENCES system_catalog(id) ON DELETE CASCADE
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX service_package_systems_package_idx ON public.service_package_systems USING btree (service_package_id, system_id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX service_package_systems_pkey ON public.service_package_systems USING btree (id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX service_package_systems_service_package_id_system_id_key ON public.service_package_systems USING btree (service_package_id, system_id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- no non-internal trigger attachment returned
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.service_packages (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- name text NOT NULL,
+-- slug text NOT NULL,
+-- description text,
+-- installation_fee numeric(14,2) DEFAULT 0 NOT NULL,
+-- recurring_fee numeric(14,2) DEFAULT 0 NOT NULL,
+-- currency text DEFAULT 'NGN'::text NOT NULL,
+-- billing_interval text DEFAULT 'monthly'::text NOT NULL,
+-- included_modules jsonb DEFAULT '[]'::jsonb NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT service_packages_billing_interval_check CHECK (billing_interval = ANY (ARRAY['monthly'::text, 'quarterly'::text, 'yearly'::text, 'custom'::text])),
+-- CONSTRAINT service_packages_pkey PRIMARY KEY (id),
+-- CONSTRAINT service_packages_slug_key UNIQUE (slug),
+-- CONSTRAINT service_packages_status_check CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'archived'::text]))
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX service_packages_pkey ON public.service_packages USING btree (id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX service_packages_slug_key ON public.service_packages USING btree (slug)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- no non-internal trigger attachment returned
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.system_event_route_templates (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- source_system_catalog_id uuid NOT NULL,
+-- event_type text NOT NULL,
+-- target_system_catalog_id uuid NOT NULL,
+-- dispatch_mode text DEFAULT 'auto'::text NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- priority integer DEFAULT 100 NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- CONSTRAINT system_event_route_templates_dispatch_mode_check CHECK (dispatch_mode = ANY (ARRAY['auto'::text, 'agent_runtime'::text, 'workflow_adapter'::text])),
+-- CONSTRAINT system_event_route_templates_pkey PRIMARY KEY (id),
+-- CONSTRAINT system_event_route_templates_priority_check CHECK (priority >= 1 AND priority <= 1000),
+-- CONSTRAINT system_event_route_templates_source_system_catalog_id_event_key UNIQUE (source_system_catalog_id, event_type, target_system_catalog_id),
+-- CONSTRAINT system_event_route_templates_source_system_catalog_id_fkey FOREIGN KEY (source_system_catalog_id) REFERENCES system_catalog(id) ON DELETE CASCADE,
+-- CONSTRAINT system_event_route_templates_status_check CHECK (status = ANY (ARRAY['active'::text, 'disabled'::text])),
+-- CONSTRAINT system_event_route_templates_target_system_catalog_id_fkey FOREIGN KEY (target_system_catalog_id) REFERENCES system_catalog(id) ON DELETE CASCADE
+-- );
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX system_event_route_templates_pkey ON public.system_event_route_templates USING btree (id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX system_event_route_templates_source_system_catalog_id_event_key ON public.system_event_route_templates USING btree (source_system_catalog_id, event_type, target_system_catalog_id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- no non-internal trigger attachment returned
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+
+-- SOURCE: FLUXNIT catalog metadata only. Not approved staging scope; do not execute.
+-- Observed production defaults, constraints, grants and policies are evidence, not an approved policy design.
+-- RLS enabled=true; forced=false
+-- CREATE TABLE public.system_event_routes (
+-- id uuid DEFAULT gen_random_uuid() NOT NULL,
+-- organization_id uuid NOT NULL,
+-- source_system_id uuid NOT NULL,
+-- event_type text NOT NULL,
+-- target_system_id uuid NOT NULL,
+-- status text DEFAULT 'active'::text NOT NULL,
+-- priority integer DEFAULT 100 NOT NULL,
+-- configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
+-- created_at timestamp with time zone DEFAULT now() NOT NULL,
+-- updated_at timestamp with time zone DEFAULT now() NOT NULL,
+-- template_id uuid,
+-- dispatch_mode text DEFAULT 'auto'::text NOT NULL,
+-- CONSTRAINT system_event_routes_dispatch_mode_check CHECK (dispatch_mode = ANY (ARRAY['auto'::text, 'agent_runtime'::text, 'workflow_adapter'::text])),
+-- CONSTRAINT system_event_routes_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+-- CONSTRAINT system_event_routes_organization_id_source_system_id_event__key UNIQUE (organization_id, source_system_id, event_type, target_system_id),
+-- CONSTRAINT system_event_routes_organization_id_source_system_id_fkey FOREIGN KEY (organization_id, source_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE CASCADE,
+-- CONSTRAINT system_event_routes_organization_id_target_system_id_fkey FOREIGN KEY (organization_id, target_system_id) REFERENCES organization_systems(organization_id, id) ON DELETE CASCADE,
+-- CONSTRAINT system_event_routes_pkey PRIMARY KEY (id),
+-- CONSTRAINT system_event_routes_priority_check CHECK (priority >= 1 AND priority <= 1000),
+-- CONSTRAINT system_event_routes_status_check CHECK (status = ANY (ARRAY['active'::text, 'paused'::text, 'disabled'::text])),
+-- CONSTRAINT system_event_routes_template_id_fkey FOREIGN KEY (template_id) REFERENCES system_event_route_templates(id) ON DELETE SET NULL
+-- );
+-- observed index definition (may back a table constraint): CREATE INDEX system_event_routes_lookup_idx ON public.system_event_routes USING btree (organization_id, source_system_id, event_type, status, priority)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX system_event_routes_organization_id_source_system_id_event__key ON public.system_event_routes USING btree (organization_id, source_system_id, event_type, target_system_id)
+-- observed index definition (may back a table constraint): CREATE UNIQUE INDEX system_event_routes_pkey ON public.system_event_routes USING btree (id)
+-- no policy metadata returned; inspect RLS and default-deny intent
+-- no non-internal trigger attachment returned
+-- observed direct grant: service_role -> DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE

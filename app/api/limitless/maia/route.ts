@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runMaia } from "@/lib/ai/maia-runtime";
+import { runOptionalRealEstateOperation } from "@/lib/ai/optional-real-estate-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveCanonicalCustomer, getOrCreateCanonicalConversation } from "@/lib/canonical-customer";
+import { getAdminSession } from "@/lib/admin-auth";
+import { requireAutomationApiKey } from "@/lib/limitless-api-auth";
 import { getLimitlessMaiaContext, searchLimitlessProperties, handoffToLimitlessHuman, queueLimitlessFollowup, queueLimitlessPropertyFollowupSequence, shouldFollowUp, shouldHandoff, LIMITLESS_REALTY_HUMAN_WHATSAPP } from "@/lib/ai/limitless-realty-maia";
 
 export const dynamic = "force-dynamic";
@@ -77,13 +81,15 @@ function buildHandoffSummary(name: string, phone: string, history: Array<{ role:
 }
 
 export async function POST(request: NextRequest) {
+  const adminSession = await getAdminSession();
+  if (!adminSession && !requireAutomationApiKey(request).ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const { organization, agent } = await getLimitlessMaiaContext();
     const message = String(body.message || body.text || "").trim();
     if (!message) return NextResponse.json({ error: "message is required" }, { status: 400 });
 
-    const propertyContext = await searchLimitlessProperties(message);
+    const propertyContext = await searchLimitlessProperties(message, organization.id);
     const customerName = String(body.customerName || body.name || "");
     const customerPhone = extractPhone(body);
     const cancelledOnReply = await cancelPendingFollowupsForInbound(organization.id, customerPhone);
@@ -106,6 +112,14 @@ export async function POST(request: NextRequest) {
       "FOLLOW-UP RULE: automatically qualify specific property interest when the client refers to a specific catalog property or clearly refers to a property Maia showed them and expresses meaningful buying intent. Do not start a sequence for generic browsing or campaign-only contacts. A qualified property sequence uses stages at days 1, 3, 7, 14, 21 and 30. Stop on reply, appointment, purchase, won/lost, opt-out, human handoff or resolution.",
     ].join("\n");
 
+    if (!customerPhone) return NextResponse.json({ error: "A customer phone is required for the controlled WhatsApp runtime." }, { status: 400 });
+    const { customerId } = await resolveCanonicalCustomer({ organizationId: organization.id, phone: customerPhone, externalKey: "whatsapp:" + customerPhone, fullName: customerName || "WhatsApp customer", source: "limitless-maia-api" });
+    const conversationId = await getOrCreateCanonicalConversation({ organizationId: organization.id, customerId, channel: "whatsapp", externalThreadId: customerPhone, agentId: agent.id });
+    const { data: activeConversation } = await createAdminClient().from("crm_conversations").select("status,metadata").eq("organization_id", organization.id).eq("id", conversationId).maybeSingle();
+    const mode = String((activeConversation?.metadata as Record<string, unknown> | null)?.ai_response_mode || "");
+    if (["waiting", "human_active", "resolved"].includes(String(activeConversation?.status || "")) || ["paused_for_handoff", "human_takeover", "stopped"].includes(mode)) {
+      return NextResponse.json({ ok: true, suppressedReply: true, reason: "human_handoff_active" });
+    }
     const result = await runMaia({
       organizationId: organization.id,
       agentId: agent.id,
@@ -113,33 +127,33 @@ export async function POST(request: NextRequest) {
       sessionId: existingSessionId,
       channel: CANONICAL_CHANNEL,
       externalConversationId: customerPhone || undefined,
+      customerId, conversationId,
       autonomous: true,
     });
 
     const explicitFollowup = shouldFollowUp(message);
     const qualifiedPropertyInterest = hasQualifiedPropertyInterest(message, propertyContext, result.reply);
-    let followup: unknown = null;
-    if (qualifiedPropertyInterest) {
-      followup = await queueLimitlessPropertyFollowupSequence({ organizationId: organization.id, agentId: agent.id, customerPhone, customerName, propertyContext });
-    } else if (explicitFollowup) {
-      followup = await queueLimitlessFollowup({
-        organizationId: organization.id,
-        agentId: agent.id,
-        customerPhone,
-        customerName,
-        when: nextFollowupAt(message),
-        message: `Follow up with ${customerName || "the client"} about the Limitless Realty enquiry. Preserve the context discussed, use current verified catalog data, and do not invent availability or pricing.`,
-      });
-    }
-
-    let handoff: unknown = null;
-    if (shouldHandoff(message, result.reply)) {
+    const canonicalHandoff = result.toolResults.some(item => item.tool === "handoff_to_human_supervisor" && item.ok === true);
+    let handoff: unknown = canonicalHandoff ? { recorded: true, source: "canonical_runtime" } : null;
+    if (!canonicalHandoff && shouldHandoff(message, result.reply)) {
       const history = await loadRecentConversation(organization.id, agent.id, result.sessionId);
       const summary = buildHandoffSummary(customerName, customerPhone, history, propertyContext, "Client requested human assistance or Maia determined escalation was appropriate.");
       handoff = await handoffToLimitlessHuman({ organizationId: organization.id, agentId: agent.id, sessionId: result.sessionId, customerName, customerPhone, reason: "Maia human escalation", summary });
     }
+    let followup: unknown = null;
+    if (!handoff && (qualifiedPropertyInterest || explicitFollowup)) {
+      followup = await runOptionalRealEstateOperation(async () => {
+        let scheduledFollowup: unknown = null;
+    if (!handoff && qualifiedPropertyInterest) {
+      scheduledFollowup = await queueLimitlessPropertyFollowupSequence({ organizationId: organization.id, agentId: agent.id, customerPhone, customerName, propertyContext });
+    } else if (!handoff && explicitFollowup) {
+      scheduledFollowup = await queueLimitlessFollowup({ organizationId: organization.id, agentId: agent.id, customerPhone, customerName, when: nextFollowupAt(message), message: `Follow up with ${customerName || "the client"} about the enquiry using current verified catalog data.` });
+    }
+        return scheduledFollowup;
+      });
+    }
 
-    return NextResponse.json({ ok: true, reply: result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest, cancelledOnReply }, handoff, channelUrl: LIMITLESS_REALTY_CHANNEL_URL });
+    return NextResponse.json({ ok: true, reply: handoff && !canonicalHandoff ? "Your human assistance request has been recorded. Staff notification delivery is pending verification." : result.reply, sessionId: result.sessionId, model: result.model, steps: result.steps, autonomous: true, transport: CANONICAL_TRANSPORT, propertyContext, followup, followupQualification: { explicitFollowup, qualifiedPropertyInterest, cancelledOnReply }, handoff, channelUrl: LIMITLESS_REALTY_CHANNEL_URL });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Limitless Maia request failed." }, { status: 500 });
   }

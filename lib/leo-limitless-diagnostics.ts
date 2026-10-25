@@ -1,4 +1,5 @@
 import { getDetailedCampaignReports, type DetailedCampaignReport } from "@/lib/campaign-report-reader";
+import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 import { describeWhatsAppFailure } from "@/lib/whatsapp-status-log";
 
 function text(value: unknown) { return String(value || "").trim(); }
@@ -10,7 +11,7 @@ function matchesRequestedCampaign(report: DetailedCampaignReport, args: Record<s
 }
 
 export async function diagnoseLimitlessCampaign(args: Record<string, unknown> = {}) {
-  const reports = await getDetailedCampaignReports(25);
+  const reports = await getDetailedCampaignReports(LIMITLESS_REALTY_ORGANIZATION_ID, 25);
   const report = reports.find((item) => matchesRequestedCampaign(item, args));
   if (!report) throw new Error("No matching Limitless Realty campaign report was found in the recent delivery history.");
 

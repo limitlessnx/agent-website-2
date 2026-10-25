@@ -3,7 +3,7 @@ import { listLeoWorkspacePortfolio, resolveLeoWorkspaceTarget, type LeoWorkspace
 import { listLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
 import { scanLeoProactiveSignals } from "@/lib/leo-proactive-monitor";
 import { getWorkflowRuns, getWorkflows } from "@/lib/workflow-registry";
-import { getLeads, type Lead } from "@/lib/limitless-data";
+import { getLeads, LIMITLESS_REALTY_ORGANIZATION_ID, type Lead } from "@/lib/limitless-data";
 import { getDetailedCampaignReports, type DetailedCampaignReport } from "@/lib/campaign-report-reader";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -61,6 +61,7 @@ export async function buildLeoUnifiedBusinessState(input: { identity: LeoIdentit
   let target: LeoWorkspaceTarget | null = null;
   if (input.organizationId || input.workspace) target = await resolveLeoWorkspaceTarget(input.identity, input.organizationId || input.workspace || "").catch(() => null);
   const limitless = isLimitless(target, input.workspace);
+  const campaignOrganizationId = target?.organizationId || LIMITLESS_REALTY_ORGANIZATION_ID;
 
   const admin = createAdminClient();
   const [portfolio, goals, signalSnapshot, workflows, runs, integrationsResult, leads, campaigns] = await Promise.all([
@@ -71,7 +72,7 @@ export async function buildLeoUnifiedBusinessState(input: { identity: LeoIdentit
     getWorkflowRuns(500).catch(() => []),
     admin.from("organization_integrations").select("id,organization_id,provider,display_name,status").limit(500),
     limitless || !target ? getLeads(800).catch(() => [] as Lead[]) : Promise.resolve([] as Lead[]),
-    limitless || !target ? getDetailedCampaignReports(150).catch(() => [] as DetailedCampaignReport[]) : Promise.resolve([] as DetailedCampaignReport[]),
+    limitless || !target ? getDetailedCampaignReports(campaignOrganizationId, 150).catch(() => [] as DetailedCampaignReport[]) : Promise.resolve([] as DetailedCampaignReport[]),
   ]);
 
   const organizationId = target?.organizationId;
