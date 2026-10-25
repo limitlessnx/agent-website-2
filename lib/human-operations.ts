@@ -19,6 +19,12 @@ type StructuredHandoff = {
 function str(value:unknown){ return typeof value==="string"?value.trim():""; }
 function rec(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
 function phone(value:unknown){ const normalized=str(value).replace(/[^0-9]/g,""); return normalized.length>=8?normalized:null; }
+type AdminRpcError = { message: string; code?: string; details?: string; hint?: string };
+type AdminRpcResult = { data: unknown; error: AdminRpcError | null };
+function callAdminRpc(admin: ReturnType<typeof createAdminClient>, functionName: string, args: Record<string, unknown>): Promise<AdminRpcResult> {
+  const rpc = admin.rpc.bind(admin) as unknown as (name: string, params: Record<string, unknown>) => Promise<AdminRpcResult>;
+  return rpc(functionName, args);
+}
 function stringList(value:unknown,max=8){ return Array.isArray(value)?value.map(str).filter(Boolean).slice(0,max):[]; }
 function structuredHandoff(payload:Record<string,unknown>):StructuredHandoff{
   return {
@@ -363,7 +369,8 @@ export async function claimHumanHandoff(session:ClientSession,handoffId:string){
     claimed_at:handoff.claimed_at||new Date().toISOString(),updated_at:new Date().toISOString(),
   }).eq("organization_id",session.organizationId).eq("id",handoffId).select().single();
   if(updateError) throw updateError;
-  // Claiming a handoff is an internal ownership action only. It never opens a human chat inside Maia.\n  return data;
+  // Claiming a handoff is an internal ownership action only. It never opens a human chat inside Maia.
+  return data;
 }
 
 export async function assignHumanHandoff(session:ClientSession,handoffId:string,membershipId:string){
@@ -436,7 +443,7 @@ export async function resolveHumanHandoff(session:ClientSession,handoffId:string
   }).eq("organization_id",session.organizationId).eq("id",handoff.conversation_id);
 
   if(str(options.stageId)){
-    await (admin as any).rpc("update_customer_stage",{
+    await callAdminRpc(admin,"update_customer_stage",{
       p_organization_id:session.organizationId,
       p_customer_id:handoff.customer_id,
       p_stage_id:str(options.stageId),
@@ -467,7 +474,7 @@ export async function resolveHumanHandoff(session:ClientSession,handoffId:string
     });
   }
 
-  await (admin as any).rpc("add_customer_timeline_event",{
+  await callAdminRpc(admin,"add_customer_timeline_event",{
     p_organization_id:session.organizationId,p_customer_id:handoff.customer_id,
     p_event_type:"handoff.resolved",p_title:"Human handoff resolved",p_summary:resolution.trim()||null,
     p_channel:"internal",p_conversation_id:handoff.conversation_id,p_source_table:"human_handoffs",p_source_id:handoffId,
@@ -555,7 +562,7 @@ export async function createHandoffFromSystemEvent(event:{
     if(stageError) throw stageError;
     if(stage?.id){
       stageId=stage.id;
-      await (admin as any).rpc("update_customer_stage",{
+      await callAdminRpc(admin,"update_customer_stage",{
         p_organization_id:event.organizationId,
         p_customer_id:event.customerId,
         p_stage_id:stage.id,
@@ -583,7 +590,7 @@ export async function createHandoffFromSystemEvent(event:{
     payload,
   });
 
-  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+  const {data,error}=await callAdminRpc(admin,"create_human_handoff",{
     p_organization_id:event.organizationId,
     p_customer_id:event.customerId,
     p_conversation_id:event.conversationId,
@@ -680,7 +687,7 @@ export async function createHumanHandoffFromMaia(input:{
     payload,
   });
   const summary=String(input.summary||input.reason||"Human assistance requested").slice(0,4000);
-  const {data,error}=await (admin as any).rpc("create_human_handoff",{
+  const {data,error}=await callAdminRpc(admin,"create_human_handoff",{
     p_organization_id:input.organizationId,
     p_customer_id:input.customerId,
     p_conversation_id:input.conversationId,
