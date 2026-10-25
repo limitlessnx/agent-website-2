@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
   if (!toolKey) return NextResponse.json({ error: "toolKey is required.", diagnosticId }, { status: 400 });
   const tool = assertLeoToolAllowed(identity, toolKey);
   const approval = leoApprovalFor(identity, tool.key);
-  const confirmed = body.confirmed === true;
   let args = withoutApprovalMetadata(object(body.arguments));
   const activeVoiceSession = await voiceSession(identity, body);
   const limitlessTool=identity.scope==="super_admin"&&tool.key.startsWith("leo.limitless.");
@@ -133,6 +132,22 @@ export async function POST(request: NextRequest) {
   } else if (realEstateMutation && material) {
     // Generic Limitless mutations are consumed exactly once by the internal route.
     args = { ...args, _real_estate_approval: { approvalId: material.approvalId, token: material.token } };
+  }
+  // A client-supplied `confirmed` boolean is not proof of human/admin approval.
+  // Generic non-none approval modes remain blocked until a server-issued,
+  // one-use approval record exists; real-estate mutations use their own store.
+  if (!realEstateMutation && approval !== "none") {
+    await setVoicePending(identity, activeVoiceSession, tool.key, args);
+    return NextResponse.json({
+      ok: false,
+      status: "confirmation_required",
+      toolKey: tool.key,
+      approval,
+      message: "Please confirm this action before Leo executes it.",
+      channel: identity.channel,
+      scope: identity.scope,
+      sessionId: approvalSessionId,
+    }, { status: 409 });
   }
   if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.") && /\.send$/.test(tool.key) && !args.request_id) {
     args = { ...args, request_id: ensureLimitlessExecutionId(args, approvalSessionId, tool.key) };
@@ -197,7 +212,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
   }
   if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) { let result: Record<string, unknown>; if (tool.key === "leo.limitless.leads.read") result = await findLimitlessLeads(args); else if (tool.key === "leo.limitless.followup.prepare") result = await prepareLimitlessFollowup(args); else if (tool.key === "leo.limitless.followup.send") result = await sendLimitlessFollowup(request, args) as Record<string, unknown>; else if (tool.key === "leo.limitless.campaign.prepare") result = await prepareLimitlessCampaign(args); else if (tool.key === "leo.limitless.campaign.send") result = await sendThroughLimitlessCampaignRoute(request, args) as Record<string, unknown>; else throw new Error(`Unsupported Limitless Realty Leo tool: ${tool.key}`); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: String(result.status || "completed"), request_id: String(args.request_id || "") } }); return NextResponse.json({ ok: true, requestId: String(args.request_id || body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: String(result.status || "completed"), result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
-  const forwardedApproval = realEstateMutation && material ? true : approval === "none" || confirmed;
+  const forwardedApproval = realEstateMutation && material ? true : approval === "none";
   const requestId = realEstateMutation && material ? material.approvalId : String(body.requestId || body.request_id || randomUUID()).trim();
   const sessionId = approvalSessionId || null;
   const envelope = createLeoExecutionEnvelope({ requestId, sessionId, identity, toolKey: tool.key, arguments: args, approvalGranted: forwardedApproval });

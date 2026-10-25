@@ -76,8 +76,16 @@ test("voice and chat tool calls share the same server permission gateway", () =>
 });
 
 test("write tools require server-side confirmation enforcement", () => {
-  assert.match(toolGateway, /approval === "confirm" && !confirmed/);
-  assert.match(internalExecutor, /approval === "confirm" && !envelope\.approvalGranted/);
+  assert.match(toolGateway, /if \(!realEstateMutation && approval !== "none"\)/);
+  assert.doesNotMatch(toolGateway, /body\.confirmed === true/);
+  assert.doesNotMatch(toolGateway, /approval === "none" \|\| confirmed/);
+  const confirmationGate = toolGateway.indexOf('approval !== "none"');
+  const n8nDispatch = toolGateway.lastIndexOf("executeLeoEnvelopeViaN8n(envelope)");
+  assert.ok(confirmationGate >= 0 && n8nDispatch > confirmationGate, "confirmation must be enforced before n8n dispatch");
+  assert.match(internalExecutor, /!requiresRealEstateApproval && approval !== "none"/);
+  const internalGate = internalExecutor.indexOf('approval !== "none"');
+  const authorizedExecution = internalExecutor.indexOf("executeAuthorizedLeoTool(");
+  assert.ok(internalGate >= 0 && authorizedExecution > internalGate, "unconfirmed signed envelopes must be rejected before tool execution");
 });
 
 test("n8n executor receives signed envelopes and cannot mint Leo identities", () => {

@@ -84,6 +84,11 @@ export async function POST(request: NextRequest) {
       throw new Error("Limitless Realty approval metadata is required for this consequential action.");
     }
 
+    if (!requiresRealEstateApproval && approval !== "none") {
+      await auditLeoEvent({ identity, eventType: "tool_execution_failed", toolKey: envelope.toolKey, details: { request_id: envelope.requestId, status: "confirmation_required" } });
+      return NextResponse.json({ ok: false, requestId: envelope.requestId, toolKey: envelope.toolKey, status: "approval_required", error: "This action requires a server-issued, one-use approval before execution." }, { status: 409 });
+    }
+
     await auditLeoEvent({ identity, eventType: "tool_execution_started", toolKey: envelope.toolKey, details: { request_id: envelope.requestId, channel: envelope.channel, approval_id: auditApprovalId || null } });
     const result = await executeAuthorizedLeoTool({ identity, toolKey: envelope.toolKey, arguments: args, actor: identity.email || identity.userId || identity.role });
     await auditLeoEvent({ identity, eventType: "tool_execution_completed", toolKey: envelope.toolKey, details: { request_id: envelope.requestId, latency_ms: Date.now() - startedAt, approval_id: auditApprovalId || null } });
