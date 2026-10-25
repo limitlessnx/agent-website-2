@@ -13,6 +13,9 @@ on:
       - "lib/agent-management.ts"
       - "lib/client-*.ts"
       - "lib/workflow-registry.ts"
+      - "lib/xposure-*.ts"
+      - "lib/appointment-scheduling.ts"
+      - "lib/calendar-provider.ts"
       - "tests/dashboard-*.test.mjs"
       - "tests/client-brief-provisioning.test.mjs"
       - "tests/portal-*.test.mjs"
@@ -23,6 +26,8 @@ on:
       - "tests/phase2-flx-access-invariant.test.mjs"
       - "tests/phase3-manager-access-guardrails.test.mjs"
       - "tests/phase4-5-manager-organization-access.test.mjs"
+      - "tests/xposure-*.test.mjs"
+      - "tests/manager-access-transaction-safety.test.mjs"
       - "supabase/migrations/*.sql"
       - "tests/evaluation-and-conversation-center.test.mjs"
       - "tests/workspace-and-google-auth.test.mjs"
@@ -41,6 +46,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Xposure dashboard and tenant authorization regressions
+        run: npm run test:xposure-dashboard
       - name: Dashboard regression contracts
         run: npm run test:support
       - name: Evaluation and conversation-center guardrails

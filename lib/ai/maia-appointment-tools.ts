@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listLimitlessInspections } from "@/lib/limitless-inspections";
-import { selectAppointmentResource } from "@/lib/appointment-scheduling";
+import { findNextAvailableAppointmentSlots, selectAppointmentResource } from "@/lib/appointment-scheduling";
+import { createCalendarEvent } from "@/lib/calendar-provider";
 
 const LIMITLESS_REALTY_ORG_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
@@ -9,6 +10,9 @@ type ToolContext = {
   agentId: string;
   sessionId: string;
   externalConversationId?: string;
+  customerId?: string;
+  conversationId?: string;
+  correlationId?: string;
 };
 
 type ToolDefinition = {
@@ -80,8 +84,20 @@ export function maiaAppointmentTools(): ToolDefinition[] {
 
         const resource = decision.resource;
         if (!decision.available || !resource || !decision.endAt) {
+          const nextAvailableSlots = await findNextAvailableAppointmentSlots({
+            organizationId: ctx.organizationId,
+            startAt,
+            requestedEndAt: text(input.endAt) || null,
+            requestedDurationMinutes: Number.isFinite(rawDuration) ? rawDuration : null,
+            requestedResourceId: text(input.resourceId) || null,
+            requestedMembershipId: text(input.membershipId) || null,
+            serviceKey: text(input.serviceKey) || null,
+            branchKey: text(input.branchKey) || null,
+            departmentKey: text(input.departmentKey) || null,
+          }, { daysAhead: 14, limit: 3 });
           return {
             status: "unavailable",
+            next_available_slots: nextAvailableSlots,
             provider: resource?.provider || "tenant_calendar",
             resource: resource ? {
               id: resource.id,
@@ -122,6 +138,210 @@ export function maiaAppointmentTools(): ToolDefinition[] {
           checked_resource_ids: decision.checkedResourceIds,
           reason: "The scheduling engine confirmed the requested window against tenant scheduling rules, existing Fluxknight appointments and the connected calendar."
         };
+      }
+    },
+    {
+      name: "create_appointment_booking",
+      description: "Create a real appointment for the current tenant customer. Check availability first, persist a tenant-scoped record, create the connected calendar event, and only then mark the appointment confirmed. Never invent customer details or claim confirmation when calendar creation fails.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          startAt: { type: "string", description: "Requested ISO-8601 appointment start time." },
+          endAt: { type: "string", description: "Optional ISO-8601 appointment end time." },
+          timezone: { type: "string", description: "IANA time zone, such as Africa/Lagos." },
+          title: { type: "string", description: "Appointment title or service requested." },
+          customerName: { type: "string", description: "Customer name if explicitly provided." },
+          customerEmail: { type: "string", description: "Customer email required for calendar invitation." },
+          customerPhone: { type: "string", description: "Customer phone if explicitly provided." },
+          notes: { type: "string", description: "Optional booking notes." },
+          location: { type: "string", description: "Optional appointment location." },
+          resourceId: { type: "string", description: "Optional exact tenant calendar resource ID." },
+          durationMinutes: { type: "integer", minimum: 5, maximum: 1440 },
+          serviceKey: { type: "string" },
+          branchKey: { type: "string" },
+          departmentKey: { type: "string" }
+        },
+        required: ["startAt", "title"]
+      },
+      execute: async (input, ctx) => {
+        const startAt = text(input.startAt);
+        const title = text(input.title).slice(0, 200);
+        if (!startAt || !title) throw new Error("startAt and title are required.");
+        if (!ctx.customerId) {
+          return { status: "customer_required", confirmed: false, next_action: "Resolve or create the customer record before booking." };
+        }
+        const admin = createAdminClient();
+        const { data: customer, error: customerError } = await admin
+          .from("crm_customers")
+          .select("id,email,phone")
+          .eq("organization_id", ctx.organizationId)
+          .eq("id", ctx.customerId)
+          .maybeSingle();
+        if (customerError) throw customerError;
+        if (!customer) throw new Error("Customer record was not found in the active tenant.");
+        const customerEmail = text(input.customerEmail) || text(customer.email);
+        const customerName = text(input.customerName) || "Customer";
+        const customerPhone = text(input.customerPhone) || text(customer.phone) || text(ctx.externalConversationId);
+        if (!customerEmail) {
+          return { status: "email_required", confirmed: false, customerId: customer.id, next_action: "Ask the customer for an email address before creating a calendar invitation." };
+        }
+
+        const rawDuration = Number(input.durationMinutes);
+        const decision = await selectAppointmentResource({
+          organizationId: ctx.organizationId,
+          startAt,
+          requestedEndAt: text(input.endAt) || null,
+          requestedDurationMinutes: Number.isFinite(rawDuration) ? rawDuration : null,
+          requestedResourceId: text(input.resourceId) || null,
+          requestedMembershipId: null,
+          serviceKey: text(input.serviceKey) || null,
+          branchKey: text(input.branchKey) || null,
+          departmentKey: text(input.departmentKey) || null,
+          excludeAppointmentId: null,
+        });
+        if (!decision.available || !decision.resource || !decision.endAt) {
+          const nextAvailableSlots = decision.status === "no_resource" ? [] : await findNextAvailableAppointmentSlots({
+            organizationId: ctx.organizationId,
+            startAt,
+            requestedEndAt: text(input.endAt) || null,
+            requestedDurationMinutes: Number.isFinite(rawDuration) ? rawDuration : null,
+            requestedResourceId: text(input.resourceId) || null,
+            requestedMembershipId: null,
+            serviceKey: text(input.serviceKey) || null,
+            branchKey: text(input.branchKey) || null,
+            departmentKey: text(input.departmentKey) || null,
+          }, { daysAhead: 14, limit: 3 });
+          return {
+            status: decision.status === "no_resource" ? "calendar_required" : "slot_unavailable",
+            confirmed: false,
+            reason: decision.reason || "No available calendar slot.",
+            requestedStart: decision.startAt,
+            requestedEnd: decision.endAt,
+            next_available_slots: nextAvailableSlots,
+            next_action: nextAvailableSlots.length
+              ? "Offer the customer one of the verified next_available_slots and confirm their choice before booking."
+              : "Ask the customer for another preferred date or time; no verified alternative was found in the next 14 days.",
+          };
+        }
+
+        const { data: catalog, error: catalogError } = await admin
+          .from("system_catalog").select("id").eq("slug", "appointment-system").maybeSingle();
+        if (catalogError) throw catalogError;
+        if (!catalog) throw new Error("Appointment system is not installed in Fluxknight.");
+        const { data: installation, error: installationError } = await admin
+          .from("organization_systems").select("id")
+          .eq("organization_id", ctx.organizationId).eq("system_id", catalog.id)
+          .in("status", ["active", "configured", "enabled"]).maybeSingle();
+        if (installationError) throw installationError;
+        if (!installation) throw new Error("Appointment system is not enabled for this tenant.");
+
+        const correlationId = text(ctx.correlationId) || crypto.randomUUID();
+        const { data: existingBooking, error: existingBookingError } = await admin
+          .from("appointments")
+          .select("id,status,start_at,end_at,title,external_html_link,external_event_id")
+          .eq("organization_id", ctx.organizationId)
+          .eq("correlation_id", correlationId)
+          .maybeSingle();
+        if (existingBookingError) throw existingBookingError;
+        if (existingBooking) {
+          return {
+            status: existingBooking.status,
+            confirmed: ["confirmed", "rescheduled"].includes(existingBooking.status),
+            appointment: existingBooking,
+            idempotent: true,
+            next_action: existingBooking.status === "failed" ? "A previous booking attempt failed. Review the appointment before retrying." : undefined,
+          };
+        }
+        const { data: appointment, error: insertError } = await admin
+          .from("appointments")
+          .insert({
+            organization_id: ctx.organizationId,
+            customer_id: customer.id,
+            conversation_id: ctx.conversationId || null,
+            appointment_system_id: installation.id,
+            calendar_resource_id: decision.resource.id,
+            correlation_id: correlationId,
+            status: "pending_availability",
+            title,
+            start_at: decision.startAt,
+            end_at: decision.endAt,
+            timezone: text(input.timezone) || decision.resource.timezone || "Africa/Lagos",
+            customer_name: customerName || null,
+            customer_email: customerEmail,
+            customer_phone: customerPhone || null,
+            organizer_email: decision.resource.organizer_email || null,
+            provider: decision.resource.provider,
+            external_calendar_id: decision.resource.external_calendar_id,
+            location: text(input.location) || null,
+            notes: text(input.notes) || null,
+            metadata: { source: "maia", agent_id: ctx.agentId, session_id: ctx.sessionId },
+          })
+          .select("id,organization_id,status,start_at,end_at,title")
+          .single();
+        if (insertError) {
+          if (String(insertError.code || "") === "23514" && /TENANT_APPOINTMENT_CAPACITY_REACHED/.test(String(insertError.message || ""))) {
+            const nextAvailableSlots = await findNextAvailableAppointmentSlots({
+              organizationId: ctx.organizationId,
+              startAt,
+              requestedEndAt: text(input.endAt) || null,
+              requestedDurationMinutes: Number.isFinite(rawDuration) ? rawDuration : null,
+              requestedResourceId: text(input.resourceId) || null,
+              serviceKey: text(input.serviceKey) || null,
+              branchKey: text(input.branchKey) || null,
+              departmentKey: text(input.departmentKey) || null,
+            }, { daysAhead: 14, limit: 3 });
+            return {
+              status: "slot_unavailable",
+              confirmed: false,
+              reason: "Another booking filled the tenant's available capacity while this request was being processed.",
+              next_available_slots: nextAvailableSlots,
+              next_action: nextAvailableSlots.length
+                ? "Offer the customer one of the verified next_available_slots and confirm their choice before booking."
+                : "Ask the customer for another preferred date or time.",
+            };
+          }
+          throw insertError;
+        }
+
+        try {
+          const event = await createCalendarEvent(ctx.organizationId, decision.resource.provider, {
+            calendarId: decision.resource.external_calendar_id,
+            title,
+            description: text(input.notes) || null,
+            location: text(input.location) || null,
+            startAt: decision.startAt,
+            endAt: decision.endAt,
+            timezone: text(input.timezone) || decision.resource.timezone || "Africa/Lagos",
+            attendeeEmail: customerEmail,
+            attendeeName: customerName || null,
+            appointmentId: appointment.id,
+            correlationId,
+          });
+          const { data: confirmed, error: confirmError } = await admin
+            .from("appointments")
+            .update({
+              status: "confirmed",
+              provider: event.provider,
+              external_calendar_id: event.calendarId,
+              external_event_id: event.eventId,
+              external_html_link: event.htmlLink || null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("organization_id", ctx.organizationId)
+            .eq("id", appointment.id)
+            .eq("status", "pending_availability")
+            .select("id,status,start_at,end_at,title,external_html_link")
+            .single();
+          if (confirmError) throw confirmError;
+          return { status: "confirmed", confirmed: true, appointment: confirmed, customerId: customer.id, calendarEventId: event.eventId, calendarLink: event.htmlLink || null };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          await admin.from("appointments")
+            .update({ status: "failed", notes: [text(input.notes), "Calendar booking failed: " + message].filter(Boolean).join("\n"), updated_at: new Date().toISOString() })
+            .eq("organization_id", ctx.organizationId).eq("id", appointment.id).eq("status", "pending_availability");
+          throw new Error("Appointment could not be confirmed because calendar creation failed: " + message);
+        }
       }
     },
     {

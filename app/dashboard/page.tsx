@@ -25,6 +25,8 @@ export default async function DashboardPage() {
         notices={snapshot.notices}
         agents={snapshot.agents}
         activity={snapshot.activity}
+        conversations={snapshot.conversations}
+        xposureDashboard={scope.kind === "tenant" && scope.slug === "xposure"}
         limitlessDashboard={snapshot.limitlessDashboard}
       />
     </main>

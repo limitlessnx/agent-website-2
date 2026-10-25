@@ -2,6 +2,7 @@ import { transcribeWhatsAppAudio } from "@/lib/whatsapp-media-transcription";
 import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia } from "@/lib/ai/maia-runtime";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { captureTenantContactDates } from "@/lib/tenant-contact-dates";
 import { dispatchMaiaOutboundMessage } from "@/lib/maia-outbound";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import {
@@ -198,6 +199,25 @@ export const maiaProcessInboundMessage = task({
       const customerId = payload.customerPhone
         ? await resolveCanonicalCustomer({ organizationId: payload.organizationId, phone: payload.customerPhone, externalKey: "whatsapp:" + payload.customerPhone, fullName: payload.customerName || "WhatsApp customer", source: "maia-whatsapp-runtime" }).then((result) => result.customerId)
         : null;
+      // Persist only explicitly stated birthday/anniversary dates. The helper
+      // scopes every read/write to this tenant and never overwrites an existing date.
+      if (payload.customerPhone && customerId && payload.channel === "whatsapp") {
+        try {
+          await captureTenantContactDates({
+            organizationId: payload.organizationId,
+            fullName: payload.customerName || "WhatsApp customer",
+            phone: payload.customerPhone,
+            message: effectiveMessage,
+          });
+        } catch (error) {
+          logger.warn("Customer date capture failed; continuing Maia reply", {
+            organizationId: payload.organizationId,
+            agentId: payload.agentId,
+            errorType: error instanceof Error ? error.name : "unknown",
+          });
+        }
+      }
+
       const conversationId = customerId
         ? await getOrCreateCanonicalConversation({ organizationId: payload.organizationId, customerId, channel: "whatsapp", externalThreadId: payload.externalConversationId || ("whatsapp:" + (payload.customerPhone || customerId)), agentId: payload.agentId, metadata: { provider: payload.provider || "meta_whatsapp", source: "maia-whatsapp-runtime" } })
         : null;

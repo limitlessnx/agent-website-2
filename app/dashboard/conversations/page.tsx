@@ -1,6 +1,6 @@
 import { AlertTriangle, MessageSquareText } from "@/components/admin/ServerIcons";
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
-import { getOrganizationConversationCenter } from "@/lib/organization-conversation-center";
+import { getOrganizationConversationCenter, getTenantConversationCenter } from "@/lib/organization-conversation-center";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +19,14 @@ export default async function ConversationsPage() {
   const scope = await resolveAdminOrganizationScope();
   const systemId = scope.systemId;
   const supported = systemId === "fluxknight" || systemId === "limitless-realty" || systemId === "gencouv";
-  const conversations = supported ? await getOrganizationConversationCenter(systemId, scope.organizationId).catch(() => []) : [];
-  const copy = sourceCopy(systemId);
+  const conversations = scope.kind === "tenant"
+    ? await getTenantConversationCenter(scope.organizationId).catch(() => [])
+    : supported
+      ? await getOrganizationConversationCenter(systemId, scope.organizationId).catch(() => [])
+      : [];
+  const copy = scope.kind === "tenant"
+    ? { kicker: scope.name.toUpperCase(), title: "Client conversations", description: "Client conversations and message history for this organization only." }
+    : sourceCopy(systemId);
   const needsAttention = conversations.filter((item) =>
     ["high", "critical", "pending", "handoff"].some((flag) => item.status.toLowerCase().includes(flag)) ||
     item.label.toLowerCase().includes("handoff")

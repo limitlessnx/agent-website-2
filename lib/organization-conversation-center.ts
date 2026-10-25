@@ -175,3 +175,52 @@ export async function getOrganizationConversationCenter(systemId: "fluxknight" |
   if (systemId === "limitless-realty") return limitlessConversations(admin, organizationId);
   return gencouvConversations(admin, organizationId);
 }
+
+
+/**
+ * Tenant workspace conversations are read directly from the tenant-scoped CRM
+ * tables. Do not route tenant organizations through system-only source IDs.
+ */
+export async function getTenantConversationCenter(organizationId: string): Promise<ConversationCenterItem[]> {
+  const admin = createAdminClient();
+  const { data: conversations } = await admin
+    .from("crm_conversations")
+    .select("id,customer_id,channel,status,metadata,updated_at")
+    .eq("organization_id", organizationId)
+    .order("updated_at", { ascending: false })
+    .limit(100);
+
+  const rows = conversations || [];
+  const customerIds = rows.map((row) => text(row.customer_id)).filter(Boolean);
+  const { data: customers } = customerIds.length
+    ? await admin
+        .from("crm_customers")
+        .select("id,full_name,email,phone,company_name")
+        .eq("organization_id", organizationId)
+        .in("id", customerIds)
+    : { data: [] as any[] };
+  const customerMap = new Map((customers || []).map((customer) => [String(customer.id), customer]));
+  const messages = await crmMessages(admin, organizationId, rows.map((row) => String(row.id)));
+
+  return rows.map((row) => {
+    const customer = customerMap.get(String(row.customer_id));
+    const thread = messages.get(String(row.id)) || [];
+    const latest = thread[thread.length - 1];
+    const channel = text(row.channel, "Client channel");
+    const sourceLabel = channel.toLowerCase() === "whatsapp" ? "Maia WhatsApp" : channel;
+    return {
+      id: String(row.id),
+      source: "maia",
+      agent: "Maia",
+      customerName: text(customer?.full_name, "Client"),
+      contact: text(customer?.phone || customer?.email, "Contact not captured"),
+      company: customer?.company_name,
+      channel,
+      status: text(row.status, "open"),
+      label: sourceLabel + " conversation",
+      updatedAt: text(row.updated_at, new Date(0).toISOString()),
+      summary: text(latest?.content, "Client conversation captured in this organization."),
+      messages: thread,
+    };
+  });
+}
