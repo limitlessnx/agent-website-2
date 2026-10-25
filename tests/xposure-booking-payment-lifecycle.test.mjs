@@ -27,7 +27,7 @@ test('staff actions require manual payment status before booking confirmation', 
  assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
  const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
  assert.ok(atomic.includes("Payment must be manually verified first"));
- assert.ok(route.includes('staff_approved_quote'));
+ assert.ok(atomic.includes('staff_approved_quote'));
  assert.ok(route.includes('.eq("organization_id", access.organizationId)'));
 });
 
@@ -37,7 +37,6 @@ test('payment and booking transitions reject terminal states and prevent confirm
  assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
  const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
  assert.ok(atomic.includes("Booking is not active and unconfirmed"));
- assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
  assert.ok(route.includes('This time overlaps another confirmed booking.'));
  assert.ok(atomic.includes('pg_advisory_xact_lock'));
  assert.ok(atomic.includes('requested_start_at < v_booking.requested_end_at'));
