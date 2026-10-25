@@ -21,18 +21,38 @@ export default function XposureBookingsPanel() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/admin/xposure/bookings", { cache: "no-store" });
-      setError("");
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Bookings could not be loaded.");
-      setBookings(Array.isArray(payload.bookings) ? payload.bookings : []);
-    } catch (e) { setError(e instanceof Error ? e.message : "Bookings could not be loaded."); }
-    finally { setLoading(false); }
+  const fetchBookings = useCallback(async () => {
+    const response = await fetch("/api/admin/xposure/bookings", { cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Bookings could not be loaded.");
+    return Array.isArray(payload.bookings) ? payload.bookings as Booking[] : [];
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  const load = useCallback(async () => {
+    try {
+      const rows = await fetchBookings();
+      setError("");
+      setBookings(rows);
+    } catch (e) { setError(e instanceof Error ? e.message : "Bookings could not be loaded."); }
+    finally { setLoading(false); }
+  }, [fetchBookings]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBookings()
+      .then((rows) => {
+        if (cancelled) return;
+        setError("");
+        setBookings(rows);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Bookings could not be loaded.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [fetchBookings]);
 
   async function performAction(booking: Booking, action: "payment_received" | "confirm_booking" | "cancel_booking") {
     const prompt = action === "payment_received"
