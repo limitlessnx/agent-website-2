@@ -5,6 +5,7 @@ import { getWorkflowRuns } from "@/lib/workflow-registry";
 import { scanLeoProactiveSignals } from "@/lib/leo-proactive-monitor";
 import { listLeoAutonomousGoals, summarizeLeoGoalHealth } from "@/lib/leo-autonomous-goals";
 import { listLeoWorkspacePortfolio, resolveLeoWorkspaceTarget, type LeoWorkspaceTarget } from "@/lib/leo-workspace-portfolio";
+import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 
 export type LeoDecisionTrend = "improving" | "degrading" | "stable" | "insufficient_data";
 export type LeoDecisionInsight = {
@@ -54,6 +55,7 @@ export async function buildLeoDecisionIntelligence(input: { identity: LeoIdentit
   let target: LeoWorkspaceTarget | null = null;
   if (input.organizationId || input.workspace) target = await resolveLeoWorkspaceTarget(input.identity, input.organizationId || input.workspace || "").catch(() => null);
   const limitless = isLimitlessTarget(target) || /limitless|realty|maia/i.test(input.workspace || "");
+  const campaignOrganizationId = target?.organizationId || LIMITLESS_REALTY_ORGANIZATION_ID;
 
   const [runs, signalsSnapshot, goals, portfolio, leads, campaigns] = await Promise.all([
     getWorkflowRuns(700).catch(() => []),
@@ -61,7 +63,7 @@ export async function buildLeoDecisionIntelligence(input: { identity: LeoIdentit
     listLeoAutonomousGoals(input.identity).catch(() => []),
     listLeoWorkspacePortfolio(input.identity).catch(() => []),
     limitless || !target ? getLeads(600).catch(() => []) : Promise.resolve([]),
-    limitless || !target ? getDetailedCampaignReports(100).catch(() => []) : Promise.resolve([]),
+    limitless || !target ? getDetailedCampaignReports(campaignOrganizationId, 100).catch(() => []) : Promise.resolve([]),
   ]);
 
   const scopedRuns = target ? runs.filter((run) => run.organization_id === target!.organizationId || run.organization_uuid === target!.organizationId) : runs;
