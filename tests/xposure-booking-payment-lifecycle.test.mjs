@@ -29,6 +29,24 @@ test('staff actions require manual payment status before booking confirmation', 
  assert.ok(route.includes('.eq("organization_id", access.organizationId)'));
 });
 
+test('payment and booking transitions reject terminal states and prevent confirmed-time overlaps', () => {
+ const route = read('app/api/admin/xposure/bookings/route.ts');
+ assert.ok(route.includes('terminalStatuses.has(current.booking_status)'));
+ assert.ok(route.includes('Only an active, unconfirmed booking can be confirmed.'));
+ assert.ok(route.includes('.eq("booking_status", "confirmed")'));
+ assert.ok(route.includes('.lt("requested_start_at", current.requested_end_at)'));
+ assert.ok(route.includes('.gt("requested_end_at", current.requested_start_at)'));
+ assert.ok(route.includes('This time overlaps another confirmed booking.'));
+});
+
+test('bookings dashboard exposes payment, confirm, and cancel actions with timezone-aware display', () => {
+ const ui = read('components/admin/XposureBookingsPanel.tsx');
+ assert.ok(ui.includes('"payment_received" | "confirm_booking" | "cancel_booking"'));
+ assert.ok(ui.includes('Confirm Booking'));
+ assert.ok(ui.includes('Cancel Booking'));
+ assert.ok(ui.includes('timeZone: booking.timezone || "Africa/Lagos"'));
+});
+
 test('Maia runtime booking creation is secret-authenticated, Xposure-only, idempotent, and pending-only', () => {
  const route = read('app/api/internal/runtime/actions/xposure-bookings/route.ts');
  assert.ok(route.includes('assertRuntimeSecret'));
