@@ -84,10 +84,12 @@ test("Handoff dashboard notification status reflects asynchronous provider failu
 test("Configured Maia team phone assigns to the unique active tenant Owner and preserves tenant notification routing", () => {
   const operations = read("lib/human-operations.ts");
   assert.match(operations, /eq\("organization_id",input\.organizationId\)\.eq\("slug","owner"\)/);
-  assert.match(operations, /ownerIds\.length===1/);
-  assert.match(operations, /eq\("organization_id",input\.organizationId\)\.eq\("id",ownerIds\[0\]\)\.eq\("status","active"\)/);
+  assert.match(operations, /activeOwners\?\.length===1/);
+  assert.match(operations, /eq\("organization_id",input\.organizationId\)\.eq\("status","active"\)\.in\("id",ownerIds\)/);
   assert.match(operations, /source:"organization_owner_fallback"/);
   assert.match(operations, /destinationPhone,notifyWhatsApp:true,notifyDashboard:true/);
   assert.match(operations, /pref\?\.notify_whatsapp_handoffs===false/);
-  assert.match(operations, /phone\(pref\?\.whatsapp_phone\)\|\|recipient/);
+  assert.match(operations, /if\(pref\?\.notify_whatsapp_handoffs===false\) recipient=phone\(input\.destinationPhone\)/);
+  assert.match(operations, /else recipient=phone\(pref\?\.whatsapp_phone\)\|\|recipient/);
+  assert.doesNotMatch(operations, /if\(pref\?\.notify_whatsapp_handoffs===false\) return/);
 });
