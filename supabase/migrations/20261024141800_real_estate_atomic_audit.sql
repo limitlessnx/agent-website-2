@@ -5,7 +5,8 @@ returns void language plpgsql security definer set search_path=pg_catalog,public
 declare v_org public.organizations%rowtype;
 begin
   if nullif(btrim(p_actor_id),'') is null then raise exception 'Authenticated audit actor is required'; end if;
-  select * into v_org from public.organizations where id=p_organization_id for key share;
+  -- Hold the classification/status stable until the guarded audit mutation commits.
+  select * into v_org from public.organizations where id=p_organization_id for share;
   if not found or v_org.status<>'active' or not (v_org.slug='limitless-realty' or regexp_replace(lower(coalesce(v_org.metadata->>'industry_slug',v_org.metadata->>'industry','')),'[^a-z]','','g')='realestate') then
     raise exception 'An active real-estate organization is required';
   end if;

@@ -1,8 +1,8 @@
 # Staging baseline manifest — dependency inventory (not executable)
 
-**Revision:** 0.3, 25 October 2026
-**Target:** Supabase staging project `rwewcnftxnaynpotbsms` only.
-**Production target:** none.
+**Revision:** 0.4, 25 October 2026<br>
+**Target:** Supabase staging project `rwewcnftxnaynpotbsms` only.<br>
+**Production target:** none.<br>
 **Status:** Review artifact; do not execute as SQL or treat as an approved migration.
 
 This manifest defines the object allowlist and safety requirements for preparing a tenant-neutral staging baseline. The staging database currently has no public application tables. A comment-only preview now contains metadata-derived DDL for 42 allowlisted tables and 60 policies, but omits function bodies, trigger creation, grants, extensions, seeds and data. The preview and this manifest authorize no database write by themselves.
@@ -71,6 +71,8 @@ The baseline must define or safely import exact reviewed versions of these share
 - `set_whatsapp_template_config_updated_at()`
 - Provisioning functions required by onboarding: `provision_client_organization(...)`, `provision_client_workspace(...)`, `provision_trial_client_organization(...)`, plus the existing organization-template provisioning function(s)
 
+The [routine metadata inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records catalog-only signatures and grants for 24 of 25 named Production routines, `search_path` settings, the RLS event trigger, and 30 attachments on approved tables. `assert_real_estate_mutation_scope(uuid,text)` is absent from FLUXNIT but already defined by unapplied local migration `20261024141800_real_estate_atomic_audit.sql`; its legacy `limitless-realty` slug exception requires explicit replication review. No routine body was copied from Production.
+
 No helper function body may be sourced from the quarantined foundation migration. Review the exact function owner, `SECURITY DEFINER` setting, fixed `search_path`, signature, and role grants. Provisioning RPCs remain service-role-only. Do not invoke them during schema setup. Metadata showed `sanitize_lead_budget_phone_collision()` (a `RETURNS trigger` helper) has `EXECUTE` for `anon` and `authenticated`; it is not callable as an ordinary RPC, but staging should not reproduce that grant. No live change to this helper's ACL was made or authorized.
 
 ## 3. Feature-layer migration prerequisites and relative order
@@ -86,7 +88,7 @@ The repair branch contains the already-applied ACL migration plus 21 pending app
 7. **Campaign groups and customer service windows:** require leads/CRM customers, organizations, audit helpers, update triggers, and service-role RPC boundaries.
 8. **Shared handoff receipt/retry state:** apply receipt-state changes before retry-safety columns and one-time approval/claim objects; review compatibility with the shared `handoff_notifications` contract first.
 
-These are dependency families, not an authorized execution sequence. Exact ordering must be regenerated after core DDL and the two identified schema blockers are resolved. All 21 pending migration filenames now sort after the recorded production ACL migration as `20261024140400` through `20261024142400`; the SQL bodies are unchanged. Staging's independently recorded smoke-test versions still need reconciliation before any CLI or batch apply.
+These are dependency families, not an authorized execution sequence. Exact ordering must be regenerated after core DDL and the two identified schema blockers are resolved. All 21 pending migration filenames sort after the recorded production ACL migration as `20261024140400` through `20261024142400`. The chronology rebase changed no bodies; the current follow-up intentionally changed only `20261024141800_real_estate_atomic_audit.sql` from `FOR KEY SHARE` to `FOR SHARE`, with an explanatory comment. The other 20 bodies remain byte-identical to the prior pushed revision. Staging's independently recorded smoke-test versions still need reconciliation before any CLI or batch apply.
 
 ## 4. Data, seed, and test-fixture rules
 
@@ -127,5 +129,7 @@ The next artifact should be an executable migration only after:
 - The resulting staging-only SQL contains no tenant/customer data and passes local SQL/behavioral checks.
 
 The [read-only staging preflight](STAGING_BASELINE_PREFLIGHT.sql) reports missing allowlisted tables and policies, disabled RLS, missing helper names, and provisioning RPC ACL violations after a reviewed baseline and the 21 feature migrations. It reads catalog metadata only; it does not verify function bodies, exact signatures, trigger attachments, or full privilege semantics, and it does not authorize a database write.
+
+The [routine and trigger inventory](STAGING_BASELINE_ROUTINE_INVENTORY.md) records exact metadata for the 25 approved helper names and the 42-table trigger allowlist; it contains no implementation bodies and does not authorize DDL.
 
 Until then, keep staging at its ACL-smoke-only state and do not apply the comment-only preview or the 21 pending feature migrations.

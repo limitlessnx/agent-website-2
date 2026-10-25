@@ -111,6 +111,36 @@ test('real PostgreSQL delivery callbacks reconcile by provider/message/tenant an
  }finally{await db.close();}
 });
 
+test('real-estate mutation scope is tenant-bound and exposed only through service-role audit wrappers',async()=>{
+ const db=await database();try{
+  const ORG_D='d0000000-0000-4000-8000-000000000001',ORG_E='e0000000-0000-4000-8000-000000000001';
+  await db.exec(`insert into organizations(id,name,slug,status,metadata) values
+   ('${ORG_D}','Fixture D','fixture-d','active','{"industry_slug":"retail","industry":"real_estate"}'),
+   ('${ORG_E}','Fixture E','fixture-e','active','{"industry_slug":"Real_Estate","industry":"retail"}')`);
+  await db.query('select public.assert_real_estate_mutation_scope($1,$2)',[A,'operator-a']);
+  await db.query('select public.assert_real_estate_mutation_scope($1,$2)',[B,'operator-b']);
+  await db.query('select public.assert_real_estate_mutation_scope($1,$2)',[ORG_E,'operator-e']);
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[C,'operator-c']),/active real-estate organization/);
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[ORG_D,'operator-d']),/active real-estate organization/);
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[null,'operator-null-org']),/active real-estate organization/);
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[A,'  ']),/Authenticated audit actor is required/);
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[A,null]),/Authenticated audit actor is required/);
+  await db.query("update organizations set status='inactive' where id=$1",[B]);
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[B,'operator-b']),/active real-estate organization/);
+  await db.exec('SET ROLE anon');
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[A,'operator-a']),/permission denied/);
+  await assert.rejects(db.query("select * from public.save_real_estate_estate_with_audit($1,$2,null,$3)",[A,'anon-actor',{name:'Denied',status:'draft',knowledge_status:'draft'}]),/permission denied/);
+  await db.exec('RESET ROLE; SET ROLE authenticated');
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[A,'operator-a']),/permission denied/);
+  await assert.rejects(db.query("select * from public.save_real_estate_estate_with_audit($1,$2,null,$3)",[A,'auth-actor',{name:'Denied',status:'draft',knowledge_status:'draft'}]),/permission denied/);
+  await db.exec('RESET ROLE; SET ROLE service_role');
+  await assert.rejects(db.query('select public.assert_real_estate_mutation_scope($1,$2)',[A,'operator-a']),/permission denied/);
+  const created=(await db.query("select * from public.save_real_estate_estate_with_audit($1,$2,null,$3)",[A,'operator-service',{name:'Service wrapper',status:'draft',knowledge_status:'draft'}])).rows[0];
+  assert.equal(created.name,'Service wrapper');
+  await db.exec('RESET ROLE');
+ }finally{await db.close();}
+});
+
 test('estate catalog mutations and inspection requests commit their audit record atomically',async()=>{
  const db=await database();try{
   const created=(await db.query("select * from save_real_estate_estate_with_audit($1,$2,null,$3)",[A,'operator-a',{name:'Fixture estate',status:'published',knowledge_status:'approved',operating_instructions:'Call the office'}])).rows[0];assert.equal(created.name,'Fixture estate');const EST=created.id;
