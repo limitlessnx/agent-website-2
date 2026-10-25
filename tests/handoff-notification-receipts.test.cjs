@@ -5,9 +5,9 @@ const path = require('node:path');
 const { PGlite } = require('@electric-sql/pglite');
 const load = require('./helpers/load-typescript.cjs');
 
-const migration = fs.readFileSync('supabase/migrations/20261024142000_handoff_notification_receipt_states.sql', 'utf8');
-const retryStateMigration = fs.readFileSync('supabase/migrations/20261024142300_handoff_notification_retry_safety.sql', 'utf8');
-const retryApprovalMigration = fs.readFileSync('supabase/migrations/20261024142400_handoff_notification_retry_approvals.sql', 'utf8');
+const migration = fs.readFileSync('supabase/migrations/20261025211347_20261024142000_handoff_notification_receipt_states.sql', 'utf8');
+const retryStateMigration = fs.readFileSync('supabase/migrations/20261025211421_20261024142300_handoff_notification_retry_safety.sql', 'utf8');
+const retryApprovalMigration = fs.readFileSync('supabase/migrations/20261025211432_20261024142400_handoff_notification_retry_approvals.sql', 'utf8');
 const adapter = fs.readFileSync('lib/human-operations.ts', 'utf8');
 
 async function database() {

@@ -9,7 +9,7 @@ const CUSTOMER_A = '30000000-0000-4000-8000-000000000001';
 const CONVERSATION_A = '40000000-0000-4000-8000-000000000001';
 const AGENT_A = '50000000-0000-4000-8000-000000000001';
 const AGENT_B = '60000000-0000-4000-8000-000000000001';
-const migration = fs.readFileSync('supabase/migrations/20261024141100_real_estate_handoff_idempotency.sql', 'utf8');
+const migration = fs.readFileSync('supabase/migrations/20261025210504_20261024141100_real_estate_handoff_idempotency.sql', 'utf8');
 
 async function database() {
   const db = new PGlite();

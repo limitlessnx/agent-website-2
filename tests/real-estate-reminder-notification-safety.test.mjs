@@ -12,7 +12,7 @@ test("internal reminder drain claims executions within the tenant and is retry-s
 });
 
 test("reminder notifications are unique per tenant execution",()=>{
-  const sql=read("supabase/migrations/20261024140700_tenant_reminder_notifications.sql");
+  const sql=read("supabase/migrations/20261025210412_20261024140700_tenant_reminder_notifications.sql");
   assert.match(sql,/unique \(organization_id, execution_id\)/);
   assert.match(sql,/foreign key \(organization_id, rule_id\)/);
   assert.match(sql,/foreign key \(organization_id, execution_id\)/);

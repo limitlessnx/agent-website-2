@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(path, "utf8");
 
 test("reminder execution ledger links rules within the same tenant and prevents duplicate occurrences", () => {
-  const sql = read("supabase/migrations/20261024140600_tenant_reminder_executions.sql");
+  const sql = read("supabase/migrations/20261025210407_20261024140600_tenant_reminder_executions.sql");
   assert.match(sql, /foreign key \(organization_id, rule_id\)/);
   assert.match(sql, /recipient_key text not null/);
   assert.match(sql, /unique \(organization_id, rule_id, recipient_key, scheduled_for\)/);
@@ -46,7 +46,7 @@ test("birthday and anniversary reminder audiences are resolved from same-tenant 
 });
 
 test("contact schema keeps consent explicit and unique within each tenant", () => {
-  const sql = read("supabase/migrations/20261024140800_tenant_customer_contacts.sql");
+  const sql = read("supabase/migrations/20261025210424_20261024140800_tenant_customer_contacts.sql");
   assert.match(sql, /whatsapp_consent text not null default 'unknown'/);
   assert.match(sql, /email_consent text not null default 'unknown'/);
   assert.match(sql, /unique index if not exists tenant_customer_contacts_org_phone_unique/);
@@ -67,7 +67,7 @@ test("Maia captures explicitly stated birthdays and anniversaries into tenant co
 });
 
 test("confirmed appointments receive tenant-scoped 24-hour and 2-hour reminder schedules", () => {
-  const migration = read("supabase/migrations/20261024140900_tenant_appointment_lifecycle_reminders.sql");
+  const migration = read("supabase/migrations/20261025210436_20261024140900_tenant_appointment_lifecycle_reminders.sql");
   const drain = read("src/trigger/tenant-appointment-reminder-drain.ts");
   assert.match(migration, /create table if not exists public\.tenant_appointment_reminders/);
   assert.match(migration, /foreign key \(organization_id, appointment_id\)/);
