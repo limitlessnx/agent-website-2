@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-23",
+  "capturedAt": "2026-10-25",
   "projectRef": "tacxegmlppngnuvldojy",
   "purpose": "Read-only snapshot of the remote Supabase migration ledger used to reconcile missing local migration files. Refresh deliberately when the production ledger changes.",
   "migrations": [
@@ -758,6 +758,10 @@
     {
       "version": "20261025092400",
       "name": "xposure_atomic_booking_confirmation"
+    },
+    {
+      "version": "20261025112836",
+      "name": "xposure_studio_catalog_items"
     }
   ]
 }
