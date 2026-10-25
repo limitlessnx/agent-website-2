@@ -21,7 +21,20 @@ export default async function PropertiesPage() {
   const driveReady = isGoogleDriveConfigured();
   return (
     <div className="admin-page">
-      <div className="admin-page-header"><div><p className="admin-kicker">Limitless Realty</p><h1>Properties</h1><p>View the catalog first, then expand only the property you need to inspect or edit.</p></div><div className="admin-page-header-actions"><Link href="/dashboard/real-estate/estates">Manage estates, terms & FAQs</Link><Link href="/dashboard/real-estate/estates#new-estate">Add estate</Link><span className={driveReady ? "admin-status live" : "admin-status warning"}>{driveReady ? "Google Drive ready" : "Drive env missing"}</span></div></div>
+      <style>{`
+        .estate-header-actions{display:flex;flex-direction:column;align-items:stretch;gap:12px;width:100%}
+        .estate-action-links{display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%}
+        .estate-action-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;box-sizing:border-box;width:100%;min-height:48px;padding:12px 16px;border:1px solid transparent;border-radius:12px;font-size:14px;font-weight:700;line-height:1.35;text-align:center;text-decoration:none;transition:background .15s ease,border-color .15s ease,transform .15s ease}
+        .estate-action-button:hover{transform:translateY(-1px)}
+        .estate-action-button:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}
+        .estate-action-button-primary{color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-color:rgba(196,181,253,.55);box-shadow:0 8px 18px rgba(76,29,149,.26)}
+        .estate-action-button-primary:hover{background:linear-gradient(135deg,#8b5cf6,#6d28d9)}
+        .estate-action-button-secondary{color:#ede9fe;background:rgba(139,92,246,.12);border-color:rgba(167,139,250,.42)}
+        .estate-action-button-secondary:hover{background:rgba(139,92,246,.22);border-color:rgba(196,181,253,.68)}
+        .estate-action-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:rgba(255,255,255,.18);font-size:19px;line-height:1}
+        @media(min-width:701px){.estate-header-actions{width:auto;align-items:flex-end}.estate-action-links{width:auto;flex-direction:row;flex-wrap:wrap;justify-content:flex-end}.estate-action-button{width:auto;min-width:180px}}
+      `}</style>
+      <div className="admin-page-header"><div><p className="admin-kicker">Limitless Realty</p><h1>Properties</h1><p>View the catalog first, then expand only the property you need to inspect or edit.</p></div><div className="admin-page-header-actions estate-header-actions"><nav className="estate-action-links" aria-label="Estate actions"><Link className="estate-action-button estate-action-button-primary" href="/dashboard/real-estate/estates#new-estate"><span className="estate-action-icon" aria-hidden="true">+</span>Add estate</Link><Link className="estate-action-button estate-action-button-secondary" href="/dashboard/real-estate/estates">Manage estates, terms & FAQs</Link></nav><span className={driveReady ? "admin-status live" : "admin-status warning"}>{driveReady ? "Google Drive ready" : "Drive env missing"}</span></div></div>
       <section className="admin-panel"><div className="admin-panel-header"><div><h2>Catalog</h2><p>{properties.length} property records. Tap a property name to reveal its details and controls.</p></div></div>
         <div className="property-editor-list">{properties.map((property) => { const previewImage = property.drive_photos_link || ""; return (
           <details key={property.id} className="property-editor-card admin-record-disclosure"><summary className="admin-record-summary"><div className="admin-record-summary-main"><span className="property-preview-avatar" aria-hidden="true">{previewImage ? <Image src={previewImage} alt="" width={44} height={44} unoptimized /> : <span className="property-preview-placeholder">P</span>}</span><div className="property-preview-copy"><strong>{property.title}</strong><span>{[property.location_area, property.location_city].filter(Boolean).join(", ") || "No location saved"}</span></div></div><div className="admin-record-summary-meta"><span>{property.price || "Price pending"}</span><em>{property.status || "active"}</em></div></summary>
