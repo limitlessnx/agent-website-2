@@ -18,6 +18,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint -- app/api/admin/xposure/bookings/route.ts app/api/admin/xposure/payment-settings/route.ts app/dashboard/bookings/page.tsx components/admin/XposureBookingsPanel.tsx lib/human-operations.ts tests/xposure-booking-payment-lifecycle.test.mjs tests/maia-handoff-system.test.mjs
       - run: node --test tests/supabase-migration-ledger.test.mjs
       - run: npm run test:maia
       - run: npm run build

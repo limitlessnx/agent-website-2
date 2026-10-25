@@ -103,7 +103,27 @@ async function resolveHandoffAssignment(input:{
         if((pref?.metadata as Record<string,unknown>|null)?.supervisor===true) return {membershipId:String(data.id),destinationPhone:null,notifyWhatsApp:pref?.notify_whatsapp_handoffs!==false,notifyDashboard:true,source:"agent_destination"};
       }
     }
-    if(destinationPhone) return {membershipId:null,destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination_phone"};
+    if(destinationPhone){
+      // A configured team phone is a notification route, not an assignee. If
+      // the tenant has exactly one active Owner, assign the handoff to that
+      // tenant-local membership while retaining the configured team phone.
+      const {data:ownerRole,error:ownerRoleError}=await admin.from("roles").select("id")
+        .eq("organization_id",input.organizationId).eq("slug","owner").maybeSingle();
+      if(ownerRoleError) throw ownerRoleError;
+      if(ownerRole?.id){
+        const {data:ownerLinks,error:ownerLinksError}=await admin.from("membership_roles").select("membership_id")
+          .eq("role_id",ownerRole.id);
+        if(ownerLinksError) throw ownerLinksError;
+        const ownerIds=[...new Set((ownerLinks||[]).map((link)=>String(link.membership_id||"")).filter(Boolean))];
+        if(ownerIds.length>0){
+          const {data:activeOwners,error:activeOwnersError}=await admin.from("organization_memberships").select("id")
+            .eq("organization_id",input.organizationId).eq("status","active").in("id",ownerIds);
+          if(activeOwnersError) throw activeOwnersError;
+          if(activeOwners?.length===1) return {membershipId:String(activeOwners[0].id),destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"organization_owner_fallback"};
+        }
+      }
+      return {membershipId:null,destinationPhone,notifyWhatsApp:true,notifyDashboard:true,source:"agent_destination_phone"};
+    }
   }
 
   return {membershipId:null,destinationPhone:null,notifyWhatsApp:false,notifyDashboard:true,source:"unassigned_queue"};
@@ -130,8 +150,11 @@ async function notifyHandoffAssignee(input:{
       .select("whatsapp_phone,notify_whatsapp_handoffs")
       .eq("organization_id",input.organizationId).eq("membership_id",input.membershipId).maybeSingle();
     if(prefError) throw prefError;
-    if(!pref?.notify_whatsapp_handoffs||!phone(pref.whatsapp_phone)) return;
-    recipient=phone(pref.whatsapp_phone);
+    // The member preference controls personal-number notifications. It must
+    // not suppress the separately configured tenant team destination.
+    if(pref?.notify_whatsapp_handoffs===false) recipient=phone(input.destinationPhone);
+    else recipient=phone(pref?.whatsapp_phone)||recipient;
+    if(!recipient) return;
   }
   if(!recipient) return;
 
