@@ -3,7 +3,8 @@ import { revalidatePath } from "next/cache";
 import { requireRealEstateAccess } from "@/lib/real-estate-access";
 import { saveEstate, saveEstateFaq, deleteEstateFaq, assignPropertyToEstate, getEstate } from "@/lib/real-estate-catalog";
 import { uploadPublicImage } from "@/lib/supabase-media";
-import { linkEstateKnowledgeSource } from "@/lib/real-estate-knowledge";
+import { approveEstateWebsiteSource, captureEstateWebsiteSource, linkEstateKnowledgeSource } from "@/lib/real-estate-knowledge";
+import { fetchEstateWebsiteSnapshot } from "@/lib/real-estate-website";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertFluxFeatureAccess } from "@/lib/flux-credits";
 import type { ActionResult } from "./ActionForm";
@@ -40,6 +41,27 @@ export async function saveEstateCoverAction(_previous:ActionResult,form:FormData
 
 export async function linkEstateKnowledgeAction(_previous:ActionResult,form:FormData):Promise<ActionResult>{
  return safeAction(async()=>{const scope=await requireRealEstateAccess("knowledge.write");const estateId=text(form,"estate_id"),sourceId=text(form,"knowledge_source_id");const remove=text(form,"remove_link")==="yes";await linkEstateKnowledgeSource(scope.organizationId,estateId,sourceId,scope.actorId,remove);return remove?"Knowledge source unlinked; its canonical document is retained.":"Canonical knowledge source linked to this estate.";});
+}
+
+export async function importEstateWebsiteAction(_previous:ActionResult,form:FormData):Promise<ActionResult>{
+ return safeAction(async()=>{
+  const scope=await requireRealEstateAccess("knowledge.write");
+  if(text(form,"confirm_official_website")!=="yes")throw new Error("Confirm that this is an official public website page for the estate.");
+  const estateId=text(form,"estate_id");
+  const snapshot=await fetchEstateWebsiteSnapshot(text(form,"source_url"));
+  const title=(text(form,"title")||snapshot.title||new URL(snapshot.url).hostname).slice(0,160);
+  await captureEstateWebsiteSource(scope.organizationId,estateId,{title,url:snapshot.url,content:snapshot.content,checksum:snapshot.checksum},scope.actorId);
+  return "Website snapshot captured as pending. Review the extracted text and approve it before Maia can use it.";
+ });
+}
+
+export async function approveEstateWebsiteSourceAction(_previous:ActionResult,form:FormData):Promise<ActionResult>{
+ return safeAction(async()=>{
+  const scope=await requireRealEstateAccess("knowledge.write");
+  if(text(form,"confirm_approval")!=="yes")throw new Error("Confirm that you reviewed and approve this website snapshot for Maia.");
+  await approveEstateWebsiteSource(scope.organizationId,text(form,"estate_id"),text(form,"knowledge_source_id"),scope.actorId);
+  return "Website snapshot approved. Maia can use it only when this estate is published and its knowledge status is approved.";
+ });
 }
 
 export async function setInspectionAutomationAction(_previous:ActionResult,form:FormData):Promise<ActionResult>{
