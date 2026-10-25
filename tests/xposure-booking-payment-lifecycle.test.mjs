@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 const read = (p) => readFileSync(p, 'utf8');
 
 test('Xposure booking schema keeps bank account details out of the application database', () => {
- const sql = read('supabase/migrations/20261024120000_xposure_booking_payment_lifecycle.sql');
+ const sql = read('supabase/migrations/20261025092354_xposure_booking_payment_lifecycle.sql');
  assert.ok(sql.includes('public.xposure_bookings'));
  assert.ok(sql.includes("Payment instructions remain in Maia's knowledge base"));
  assert.ok(!sql.includes('xposure_payment_settings'));
@@ -15,7 +15,7 @@ test('Xposure booking schema keeps bank account details out of the application d
 });
 
 test('booking and manual payment status records are tenant scoped and status constrained', () => {
- const sql = read('supabase/migrations/20261024120000_xposure_booking_payment_lifecycle.sql');
+ const sql = read('supabase/migrations/20261025092354_xposure_booking_payment_lifecycle.sql');
  assert.ok(sql.includes('unique (organization_id, idempotency_key)'));
  assert.ok(sql.includes("payment_status text not null default 'unpaid'"));
  assert.ok(sql.includes('enable row level security'));
@@ -25,7 +25,7 @@ test('staff actions require manual payment status before booking confirmation', 
  const route = read('app/api/admin/xposure/bookings/route.ts');
  assert.ok(route.includes('authorizeXposureTenantAccess("customers.manage")'));
  assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
- const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
+ const atomic = read('supabase/migrations/20261025092400_xposure_atomic_booking_confirmation.sql');
  assert.ok(atomic.includes("Payment must be manually verified first"));
  assert.ok(atomic.includes('staff_approved_quote'));
  assert.ok(route.includes('.eq("organization_id", access.organizationId)'));
@@ -35,7 +35,7 @@ test('payment and booking transitions reject terminal states and prevent confirm
  const route = read('app/api/admin/xposure/bookings/route.ts');
  assert.ok(route.includes('terminalStatuses.has(current.booking_status)'));
  assert.ok(route.includes('admin.rpc("confirm_xposure_booking"'));
- const atomic = read('supabase/migrations/20261025100000_xposure_atomic_booking_confirmation.sql');
+ const atomic = read('supabase/migrations/20261025092400_xposure_atomic_booking_confirmation.sql');
  assert.ok(atomic.includes("Booking is not active and unconfirmed"));
  assert.ok(route.includes('This time overlaps another confirmed booking.'));
  assert.ok(atomic.includes('pg_advisory_xact_lock'));
