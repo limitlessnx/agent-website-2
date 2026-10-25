@@ -166,6 +166,8 @@ test("F1 workspace setup returns the preserved post-auth destination",()=>{
   assert.match(route,/pending\.nextPath/);
   assert.match(route,/pending\.txRef/);
   assert.match(route,/pending\.trialPlan/);
+  assert.match(route,/url\.origin !== "https:\/\/fluxknight\.local"/);
+  assert.match(route,/searchParams\.set\("trial_plan",\s*pending\.trialPlan\)/);
   assert.match(route,/redirect_to/);
   assert.match(form,/result\.redirect_to/);
 });
@@ -433,7 +435,7 @@ test("F3 client signup requires matching password confirmation and exposes passw
   assert.match(password,/Show/);
   assert.match(password,/Hide/);
   assert.match(route,/passwordConfirmation/);
-  assert.match(route,/password!==passwordConfirmation/);
+  assert.match(route,/password\s*!==\s*passwordConfirmation/);
 });
 
 test("F3 client login has forgot-password entry and password visibility control",()=>{

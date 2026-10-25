@@ -15,6 +15,18 @@ function slugify(value: string) {
     .slice(0, 70);
 }
 
+function safeInternalPath(value: unknown, fallback: string) {
+  const path = String(value || "").trim();
+  if (!path.startsWith("/") || path.startsWith("//")) return fallback;
+  try {
+    const url = new URL(path, "https://fluxknight.local");
+    if (url.origin !== "https://fluxknight.local") return fallback;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const pending = await getPendingClientSetupSession();
@@ -72,8 +84,9 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
-    const redirectTo = new URL("/onboarding", "https://fluxknight.local");
+    const redirectTo = new URL(safeInternalPath(pending.nextPath, "/onboarding"), "https://fluxknight.local");
     if (pending.txRef) redirectTo.searchParams.set("tx_ref", pending.txRef);
+    if (pending.trialPlan) redirectTo.searchParams.set("trial_plan", pending.trialPlan);
 
     return NextResponse.json({
       ok: true,

@@ -1,56 +1,29 @@
-# Production-first rollout status — 25 October 2026
+# Limitless Realty Production rollout status
 
-## Current state
+**Updated:** 25 October 2026, 22:51 Europe/London
+**Repository:** `limitlessnx/agent-website-2`
+**Production code commit:** `7e00465` (PR #281)
 
-The user explicitly directed the release to bypass staging and apply the 21 pending feature migrations directly to FLUXNIT. Those 21 features and one narrow real-estate permission-scope guard are now recorded in the FLUXNIT Production migration ledger. The database layer is applied; the application branch has **not** yet been merged to `main` or deployed to Vercel Production.
+## Production status
 
-The target is Supabase project `tacxegmlppngnuvldojy` (FLUXNIT). No customer-row content was copied or exposed; only catalog metadata and aggregate status counts were queried. No WhatsApp message, calendar event, or customer notification was sent. The strict excluded-tenant boundary was preserved: no Xposure source or customer records were inspected or modified.
+PR #281 was merged to `main` as `7e00465`. The Vercel Production deployment for that commit reached **READY**, and status-only HTTP checks against the live aliases returned **200**. This confirms the web deployment, not every runtime workflow.
 
-## Production migration ledger reconciliation
+On FLUXNIT, the 21 reviewed feature migrations and one narrow real-estate permission-scope guard were applied, in addition to the previously authorized workspace-provisioning ACL hotfix. The local migration filenames have been reconciled to the exact remote ledger versions. Catalog-only postflight found the expected 42 core tables and 60 policies; a focused check confirmed the 16 new feature tables have RLS enabled and verified the critical service-only RPC grants. No customer rows were copied or inspected for this postflight.
 
-The 22 local filenames have been renamed to match the actual Supabase ledger versions so a future `supabase db push` will see them as applied rather than replaying them. Each filename retains the recorded migration name after its ledger version. This reconciliation is committed locally but not yet pushed; require exact-head CI/Preview after pushing the integration branch and before merge.
+The separate dependency audit found **42 pre-existing broad grants** on shared onboarding, admin, billing, and payment tables (24 anon privileges and 18 authenticated write privileges). They were not changed in this real-estate release because a blanket revocation could break shared flows and other tenants; they remain a separate cross-tenant security item.
 
-| Production version | Recorded migration name | Local filename |
-| --- | --- | --- |
-| `20261025210257` | `20261024140400_secure_workspace_provisioning_rpc` | `20261025210257_20261024140400_secure_workspace_provisioning_rpc.sql` |
-| `20261025210354` | `20261024140500_tenant_reminder_rules` | `20261025210354_20261024140500_tenant_reminder_rules.sql` |
-| `20261025210407` | `20261024140600_tenant_reminder_executions` | `20261025210407_20261024140600_tenant_reminder_executions.sql` |
-| `20261025210412` | `20261024140700_tenant_reminder_notifications` | `20261025210412_20261024140700_tenant_reminder_notifications.sql` |
-| `20261025210424` | `20261024140800_tenant_customer_contacts` | `20261025210424_20261024140800_tenant_customer_contacts.sql` |
-| `20261025210436` | `20261024140900_tenant_appointment_lifecycle_reminders` | `20261025210436_20261024140900_tenant_appointment_lifecycle_reminders.sql` |
-| `20261025210454` | `20261024141000_appointment_capacity_guard` | `20261025210454_20261024141000_appointment_capacity_guard.sql` |
-| `20261025210504` | `20261024141100_real_estate_handoff_idempotency` | `20261025210504_20261024141100_real_estate_handoff_idempotency.sql` |
-| `20261025210535` | `20261024141200_real_estate_action_approvals` | `20261025210535_20261024141200_real_estate_action_approvals.sql` |
-| `20261025210604` | `20261024141300_real_estate_inspections` | `20261025210604_20261024141300_real_estate_inspections.sql` |
-| `20261025210620` | `20261024141400_real_estate_estate_catalog` | `20261025210620_20261024141400_real_estate_estate_catalog.sql` |
-| `20261025210627` | `20261024141500_real_estate_knowledge_links` | `20261025210627_20261024141500_real_estate_knowledge_links.sql` |
-| `20261025210639` | `20261024141600_real_estate_outbound_tracking` | `20261025210639_20261024141600_real_estate_outbound_tracking.sql` |
-| `20261025211057` | `20261024141650_real_estate_permission_scope` | `20261025211057_20261024141650_real_estate_permission_scope.sql` |
-| `20261025211219` | `20261024141700_real_estate_delivery_receipts` | `20261025211219_20261024141700_real_estate_delivery_receipts.sql` |
-| `20261025211249` | `20261024141800_real_estate_atomic_audit` | `20261025211249_20261024141800_real_estate_atomic_audit.sql` |
-| `20261025211315` | `20261024141900_client_provisioning_retry_safe` | `20261025211315_20261024141900_client_provisioning_retry_safe.sql` |
-| `20261025211347` | `20261024142000_handoff_notification_receipt_states` | `20261025211347_20261024142000_handoff_notification_receipt_states.sql` |
-| `20261025211401` | `20261024142100_real_estate_campaign_groups` | `20261025211401_20261024142100_real_estate_campaign_groups.sql` |
-| `20261025211411` | `20261024142200_real_estate_customer_service_windows` | `20261025211411_20261024142200_real_estate_customer_service_windows.sql` |
-| `20261025211421` | `20261024142300_handoff_notification_retry_safety` | `20261025211421_20261024142300_handoff_notification_retry_safety.sql` |
-| `20261025211432` | `20261024142400_handoff_notification_retry_approvals` | `20261025211432_20261024142400_handoff_notification_retry_approvals.sql` |
+## Trigger workflow failure and follow-up
 
-The narrow permission-scope migration replaces only the three new estate/FAQ/knowledge write policies; the helper rejects cross-organization role mappings. It does not rewrite unrelated shared policies.
+The automatic main-branch Trigger deployment workflow, run `40235468479`, failed in its pre-deployment `npm run test:support` gate. The sanitized failures were confined to the screened Google Calendar/client-onboarding contract and shared Leo security test files. The Trigger deployment step did not run; no Trigger deployment was made.
 
-## Read-only Production checks after apply
+Follow-up changes on `fix/onboarding-trigger-regressions-20261025` preserve safe internal post-auth destinations and payment/trial context. Every generic Leo tool whose approval mode is not `none` now fails closed at the public gateway and internal executor; a caller-supplied `confirmed` boolean is not proof of approval. Real-estate mutations retain their existing database-backed, server-issued one-use approval flow. The follow-up is not in Production; carry it through the safe integration PR workflow before merging.
 
-- The catalog-only 42-table/60-policy preflight returned **zero findings**: all expected tables, policies, named helpers, and trigger helpers exist; the three workspace/trial provisioning RPCs deny `anon` and `authenticated` and allow `service_role`.
-- The supplemental 17-table/16-helper dependency preflight found **no missing tables, RLS gaps, or helper names**. It did report **42 pre-existing broad grant findings** on shared platform dependencies: 24 direct `anon` privileges and 18 direct authenticated write privileges across sensitive onboarding, platform-admin, billing, subscription, and payment tables. These grants predate this rollout and were not changed because their effect on shared signup/billing flows and other tenants requires a separate scoped review. RLS remains enabled, but these grants are a residual security-hardening item.
-- A focused postflight confirmed all 16 new feature tables have RLS enabled, no `anon` SELECT/INSERT, and service-role INSERT access. Authenticated INSERT is present only on the three estate-content tables and remains constrained by the replacement tenant/permission RLS policies.
-- Critical audit, receipt, retry, campaign, service-window, and provisioning RPCs are `postgres`-owned `SECURITY DEFINER` routines with `anon`/`authenticated` denied and `service_role` allowed. `has_real_estate_permission` is the intentional exception: authenticated callers may invoke it for RLS policy evaluation; `anon` and `service_role` are denied.
-- Local fictional tenant-neutral suite after filename reconciliation: **194/194 passed**. ESLint on updated tests and `git diff --check` passed. PR CI and Preview still must run against the new branch head.
+The focused onboarding plus Leo tests pass **54/54**; the focused Leo security file passes **12/12**; the canonical tenant-neutral `npm run test:real-estate` suite passes **232/232**. Scoped ESLint and `git diff --check` pass. The full broad `test:support` suite was not rerun locally because it exceeds the screened tenant-neutral scope; the automated main workflow is the gate for that suite after merge.
 
-## Still required before the release is complete
+After the scoped PR checks and isolated Preview pass, merge the follow-up PR. Then verify that the main Trigger workflow passes its regression gate and that the Trigger deployment step completes; separately verify live scheduled-task health. Do not edit n8n or send real customer messages as part of that verification.
 
-1. Commit and push the exact ledger-version filenames and their updated safe test references to the existing integration branch; do not force-push.
-2. Confirm the current-head tenant-neutral PR check and isolated Vercel Preview succeed, and confirm the Maia/dashboard broad jobs remain skipped only for the scoped branch.
-3. Merge PR #281 to `main` as authorized by the user, then verify the Vercel Production deployment reaches `READY` on the merge commit.
-4. Run post-deploy read-only health checks. Staging remains empty and was intentionally bypassed for this release, so there is no privileged end-to-end staging validation; do not claim that real provider/calendar or Trigger runtime flows were tested.
-5. Keep the 42 shared-table grant findings as a separate tracked security item. Do not broaden this release by changing platform-wide grants or excluded-tenant behavior without an explicitly scoped, tested migration.
+## Staging and tenant boundary
 
-Trigger deployment/production scheduler status and n8n remain unverified; no Trigger or n8n change was made in this rollout.
+Staging project `rwewcnftxnaynpotbsms` was intentionally bypassed at the user's direction and still has no application schema; no staging DDL was applied. That leaves privileged staging E2E unvalidated, but it does not change the completed Production migration record above.
+
+The 42 pre-existing shared-table grant findings require their own reviewed least-privilege migration and regression plan. No Xposure source/configuration or customer rows were read or changed; no customer-data copy, real outbound message, or n8n modification occurred.
