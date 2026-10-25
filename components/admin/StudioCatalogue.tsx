@@ -131,8 +131,8 @@ export default function StudioCatalogue({ initialItems, unavailable }: { initial
         : <div style={{ display: "grid", gap: 10 }}>{items.map(item =>
             <article key={item.id} style={{ border: "1px solid var(--fk-border, #393342)", borderRadius: 12, padding: 15, display: "flex", gap: 12 }}>
               {item.cover_image_url
-                ? <img src={item.cover_image_url} alt="" style={{ width: 76, height: 76, objectFit: "cover", borderRadius: 8 }} />
-                : <div aria-hidden="true" style={{ width: 76, height: 76, borderRadius: 8, display: "grid", placeItems: "center", background: "var(--fk-panel, rgba(255,255,255,.04))", fontSize: 11, color: "var(--fk-muted, #a9a1b5)" }}>No media</div>}
+                ? <img src={item.cover_image_url} alt={item.title + " catalogue cover"} loading="lazy" decoding="async" fetchPriority="low" style={{ width: 76, height: 76, flex: "0 0 76px", display: "block", objectFit: "cover", objectPosition: "center", borderRadius: 8, imageRendering: "auto" }} />
+                : <div aria-hidden="true" style={{ width: 76, height: 76, flex: "0 0 76px", borderRadius: 8, display: "grid", placeItems: "center", background: "var(--fk-panel, rgba(255,255,255,.04))", fontSize: 11, color: "var(--fk-muted, #a9a1b5)" }}>No media</div>}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                   <strong>{item.title}</strong>
@@ -152,5 +152,6 @@ export default function StudioCatalogue({ initialItems, unavailable }: { initial
               </div>
             </article>)}</div>}
     </section>
+
   </div>;
 }
