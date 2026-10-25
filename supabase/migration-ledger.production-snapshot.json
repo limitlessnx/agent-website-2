@@ -746,6 +746,14 @@
     {
       "version": "20261023132342",
       "name": "register_xposure_appointment_reminder_template"
+    },
+    {
+      "version": "20261025092354",
+      "name": "xposure_booking_payment_lifecycle"
+    },
+    {
+      "version": "20261025092400",
+      "name": "xposure_atomic_booking_confirmation"
     }
   ]
 }
