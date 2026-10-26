@@ -42,7 +42,7 @@ test("new organization owner choice preserves setup state and sends workspace cr
   const setup=read("app/api/client-auth/setup-workspace/route.ts");
   const signup=read("app/api/client-auth/signup/route.ts");
   assert.match(choice,/nextPath:\s*"\/portal"/);
-  assert.match(setup,/safeInternalPath\\(pending\\.nextPath,\\s*"\\/onboarding"\\)/);
+  assert.match(setup,/safeInternalPath\(pending\.nextPath,\s*"\/onboarding"\)/);
   assert.match(signup,/nextPath:"\/portal"/);
 });
 
