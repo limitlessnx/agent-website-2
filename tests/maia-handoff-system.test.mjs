@@ -71,13 +71,14 @@ test("Meta handoff notifications retry 24-hour-window failures with the approved
   assert.match(delivery, /template:\s*\{\s*name:\s*config!\.template_name/);
   assert.match(operations, /fallback_template_attempted:true/);
   assert.match(webhook, /syncHandoffNotificationStatus/);
-  assert.match(webhook, /errorMessage: firstError\?\.error_data\?\.details/);
+  assert.match(webhook, /errorMessage:\s*optionalText\(errorData\.details\s*\|\|\s*firstError\.title\s*\|\|\s*firstError\.message\)/);
 });
 
 test("Handoff dashboard notification status reflects asynchronous provider failures", () => {
   const operations = read("lib/human-operations.ts");
   const webhook = read("app/api/whatsapp/webhook/route.ts");
-  assert.match(operations, /status:"failed",error_message:message/);
+  assert.match(operations, /status:failure\.status,error_code:failure\.errorCode,error_message:failure\.errorMessage/);
+  assert.match(operations, /error_message:message\.slice\(0,2000\)/);
   assert.match(webhook, /handoff notification status sync failed/);
 });
 
