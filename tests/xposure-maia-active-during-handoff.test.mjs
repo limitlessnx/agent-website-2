@@ -12,6 +12,8 @@ test("Xposure handoffs keep Maia active without changing other tenants", () => {
   assert.match(migration, /then 'active' else 'human_takeover'/);
   assert.match(migration, /organization_id=p_organization_id/);
   assert.match(migration, /organization_id=v_handoff\.organization_id/);
+  assert.match(migration, /return jsonb_build_object\('handoff_id',p_handoff_id,'status','in_progress','membership_id',v_membership\)/);
+  assert.doesNotMatch(migration, /maia_active/);
   assert.match(runtime, /\["waiting","human_active","resolved"\]/);
   assert.match(runtime, /\["paused_for_handoff","human_takeover","stopped"\]/);
   assert.doesNotMatch(runtime, /\["active","paused_for_handoff"/);
