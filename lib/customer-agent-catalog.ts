@@ -2,6 +2,7 @@ import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import {
   planIncludesChannel,
   planIncludesFeature,
+  getMaxChannelCount,
   type FluxAgentChannel,
   type FluxFeatureKey,
   type FluxPlanCode,
@@ -115,9 +116,14 @@ export function getVisibleCustomerAgents(
   allocatedAgentKeys: readonly CustomerAgentKey[],
 ): CustomerAgentDefinition[] {
   const allocated = new Set(allocatedAgentKeys);
+  // A plan may offer more selectable channels than it permits a tenant to run
+  // simultaneously. Keep the customer view within the plan's activation cap.
+  // The canonical catalogue order provides deterministic presentation; server
+  // allocation APIs remain authoritative for actual provisioning.
+  const maxChannels = getMaxChannelCount(planCode);
   return CUSTOMER_AGENT_CATALOG.filter(
     (agent) => allocated.has(agent.key) && isCustomerAgentPlanEligible(agent, planCode),
-  ).map((agent) => ({ ...agent }));
+  ).slice(0, maxChannels).map((agent) => ({ ...agent }));
 }
 
 type OrganizationAgentRow = {
