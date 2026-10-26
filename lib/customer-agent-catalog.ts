@@ -167,7 +167,7 @@ export async function getOrganizationAllocatedCustomerAgentKeys(
     if (tokens.some((token) => ["web_chat", "web_chat_agent", "web_support", "web_support_agent"].includes(token))) {
       allocated.add("web_support");
     }
-    if (tokens.some((token) => ["voice", "voice_agent", "call", "call_agent", "voice_ai"].includes(token))) {
+    if (tokens.some((token) => ["voice", "voice_agent", "call", "call_agent", "voice_ai", "voice_receptionist", "outbound_call_agent"].includes(token))) {
       allocated.add("call");
     }
     if (tokens.some((token) => ["email", "email_agent", "email_ai", "email_automation"].includes(token))) {
