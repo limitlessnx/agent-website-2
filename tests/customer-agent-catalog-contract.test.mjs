@@ -38,6 +38,13 @@ test("catalogue eligibility checks both plan channel and feature entitlements", 
 });
 
 const plans = fs.readFileSync("lib/fluxknight-plans.ts", "utf8");
+const emailRuntime = fs.readFileSync("app/api/internal/runtime/actions/outbound-email/route.ts", "utf8");
+
+test("outbound email runtime enforces scoped follow-up vs full automation entitlements", () => {
+  assert.match(emailRuntime, /feature: followUpCharge \? "email_follow_up" : "email_automation"/);
+  assert.match(emailRuntime, /action: followUpCharge \? "email_follow_up" : "ai_email"/);
+  assert.doesNotMatch(emailRuntime, /assertFluxFeatureAccess\(organizationId, "cross_channel"\)/);
+});
 
 test("Basic and Plus allow one selected WhatsApp or web support channel", () => {
   assert.match(plans, /basic:[\s\S]*?selectableChannels: \["whatsapp", "web_chat"\]/);
