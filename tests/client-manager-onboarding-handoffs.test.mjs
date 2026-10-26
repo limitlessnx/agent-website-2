@@ -6,22 +6,22 @@ const read = (path) => readFileSync(path, "utf8");
 
 test("sign-in resolves an explicit organization invitation before primary membership", () => {
   const route = read("app/api/client-auth/login/route.ts");
-  const invitationBranch = route.indexOf("if(invitationToken)");
+  const invitationBranch = route.search(/if\s*\(\s*invitationToken\s*\)/);
   const primaryMembership = route.indexOf("getPrimaryMembership(auth.user.id)");
   assert.notEqual(invitationBranch, -1, "explicit invitation branch must exist");
   assert.notEqual(primaryMembership, -1, "primary membership fallback must exist");
   assert.ok(invitationBranch < primaryMembership, "invitation acceptance must precede primary membership fallback");
-  assert.match(route, /acceptOrganizationInvitation\(\{userId:auth\.user\.id,email:auth\.user\.email\|\|email,token:invitationToken\}\)/);
-  assert.match(route, /getMembershipForOrganization\(auth\.user\.id,accepted\.organization_id\)/);
+  assert.match(route, /acceptOrganizationInvitation\(\{\s*userId:\s*auth\.user\.id,\s*email:\s*auth\.user\.email\s*\|\|\s*email,\s*token:\s*invitationToken,\s*\}\)/);
+  assert.match(route, /getMembershipForOrganization\(auth\.user\.id,\s*accepted\.organization_id\)/);
   assert.match(route, /Invitation was accepted, but active organization membership could not be loaded/);
 });
 
 test("the signed-in session uses the organization resolved from the accepted invitation", () => {
   const route = read("app/api/client-auth/login/route.ts");
-  assert.match(route, /organizationId:membership\.organizationId/);
-  assert.match(route, /organizationSlug:membership\.organizationSlug/);
-  assert.match(route, /membershipId:membership\.membershipId/);
-  assert.match(route, /role:membership\.role/);
+  assert.match(route, /organizationId:\s*membership\.organizationId/);
+  assert.match(route, /organizationSlug:\s*membership\.organizationSlug/);
+  assert.match(route, /membershipId:\s*membership\.membershipId/);
+  assert.match(route, /role:\s*membership\.role/);
   assert.match(route, /getMembershipForOrganization\(auth\.user\.id,accepted\.organization_id\)/);
 });
 
