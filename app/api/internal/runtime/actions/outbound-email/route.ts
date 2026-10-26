@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertFluxFeatureAccess } from "@/lib/flux-credits";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 const text = (v: unknown) => typeof v === "string" ? v.trim() : "";
