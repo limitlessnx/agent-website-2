@@ -5,6 +5,7 @@ import { getOrganizationSystems, type SystemCatalogItem } from "@/lib/client-sys
 import { getFluxWalletSummary } from "@/lib/flux-credits";
 import {
   getOrganizationAllocatedCustomerAgentKeys,
+  getOrganizationPendingCustomerAgentKeys,
   getVisibleCustomerAgents,
 } from "@/lib/customer-agent-catalog";
 
@@ -35,8 +36,15 @@ export default async function MySystemsPage() {
     getFluxWalletSummary(session.organizationId).catch(() => null),
     getOrganizationAllocatedCustomerAgentKeys(session.organizationId).catch(() => []),
   ]);
+  const pendingAgentKeys = await getOrganizationPendingCustomerAgentKeys(
+    session.organizationId,
+    allocatedAgentKeys,
+  ).catch(() => []);
   const visibleAgents = wallet
     ? getVisibleCustomerAgents(wallet.planCode, allocatedAgentKeys)
+    : [];
+  const pendingAgents = wallet
+    ? getVisibleCustomerAgents(wallet.planCode, pendingAgentKeys)
     : [];
 
   return (
@@ -55,9 +63,10 @@ export default async function MySystemsPage() {
           </div>
           {wallet ? <em>{wallet.planName}</em> : null}
         </div>
-        {!visibleAgents.length ? (
-          <p className="portal-empty">No verified agents are currently active for this organization and plan. Ask your organization administrator to check agent allocation and setup.</p>
-        ) : (
+        {!visibleAgents.length && !pendingAgents.length ? (
+          <p className="portal-empty">No verified agents are currently active or allocated for this organization and plan. Ask your organization administrator to review agent allocation and setup.</p>
+        ) : null}
+        {visibleAgents.length ? (
           <div className="portal-system-list">
             {visibleAgents.map((agent) => (
               <article className="portal-system-installation" key={agent.key}>
@@ -69,7 +78,21 @@ export default async function MySystemsPage() {
               </article>
             ))}
           </div>
-        )}
+        ) : null}
+        {pendingAgents.length ? (
+          <div className="portal-system-list">
+            <h3>Allocated agents awaiting setup</h3>
+            {pendingAgents.map((agent) => (
+              <article className="portal-system-installation" key={agent.key}>
+                <summary>
+                  <div><strong>{agent.name}</strong><span>{agent.summary}</span></div>
+                  <em className="status-provisioning"><Clock3 size={16} />Setup pending</em>
+                </summary>
+                <p className="portal-empty">This agent has been allocated but is not yet active. Required integrations and setup must be completed before it can handle customers.</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {!systems.length ? (
