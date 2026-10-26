@@ -192,3 +192,57 @@ export async function getOrganizationAllocatedCustomerAgentKeys(
 
   return [...allocated];
 }
+
+type OrganizationAgentSelectionRow = {
+  agent_key?: string | null;
+  status?: string | null;
+};
+
+/**
+ * Resolve approved allocations that have not yet reached an active/published
+ * agent state. These are shown as setup-pending, never as enabled agents.
+ */
+export async function getOrganizationPendingCustomerAgentKeys(
+  organizationId: string,
+  activeAgentKeys: readonly CustomerAgentKey[] = [],
+): Promise<CustomerAgentKey[]> {
+  if (!organizationId.trim()) return [];
+
+  const rows = await supabaseServerRequest<OrganizationAgentSelectionRow[]>(
+    `organization_agent_selections?organization_id=eq.${encodeURIComponent(organizationId)}&select=agent_key,status&status=in.(selected,paid,provisioning,active)&order=created_at.asc`,
+  );
+
+  const keyMap: Record<string, CustomerAgentKey> = {
+    whatsapp_agent: "whatsapp",
+    whatsapp: "whatsapp",
+    web_chat_agent: "web_support",
+    web_support_agent: "web_support",
+    web_support: "web_support",
+    voice_agent: "call",
+    voice_receptionist: "call",
+    outbound_call_agent: "call",
+    call_agent: "call",
+    email_automation: "email",
+    email_agent: "email",
+    email: "email",
+    receipt_agent: "receipt",
+    receipt: "receipt",
+    social_media_agent: "social_media",
+    social_media: "social_media",
+    customise_agent: "customise",
+    custom_agent: "customise",
+    customise: "customise",
+  };
+  const active = new Set(activeAgentKeys);
+  const pending = new Set<CustomerAgentKey>();
+
+  for (const row of rows) {
+    const status = normalizeAgentToken(row.status);
+    if (!["selected", "paid", "provisioning", "active"].includes(status)) continue;
+    const key = keyMap[normalizeAgentToken(row.agent_key)];
+    if (key && !active.has(key)) pending.add(key);
+  }
+
+  return [...pending];
+}
+
