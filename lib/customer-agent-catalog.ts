@@ -170,7 +170,7 @@ export async function getOrganizationAllocatedCustomerAgentKeys(
     if (tokens.some((token) => ["voice", "voice_agent", "call", "call_agent", "voice_ai"].includes(token))) {
       allocated.add("call");
     }
-    if (tokens.some((token) => ["email", "email_agent", "email_ai"].includes(token))) {
+    if (tokens.some((token) => ["email", "email_agent", "email_ai", "email_automation"].includes(token))) {
       allocated.add("email");
     }
     if (tokens.some((token) => ["receipt", "receipt_agent"].includes(token))) {
