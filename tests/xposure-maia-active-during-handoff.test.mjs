@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 test("Xposure handoffs keep Maia active without changing other tenants", () => {
   const migration = readFileSync("supabase/migrations/20261026153000_xposure_maia_active_during_handoff.sql", "utf8");
+  const runtime = readFileSync("src/trigger/tenant-channel-runtime.ts", "utf8");
   assert.match(migration, /slug='xposure'/);
   assert.match(migration, /then 'ai_active' else 'waiting'/);
   assert.match(migration, /then 'active' else 'paused_for_handoff'/);
@@ -11,4 +12,7 @@ test("Xposure handoffs keep Maia active without changing other tenants", () => {
   assert.match(migration, /then 'active' else 'human_takeover'/);
   assert.match(migration, /organization_id=p_organization_id/);
   assert.match(migration, /organization_id=v_handoff\.organization_id/);
+  assert.match(runtime, /\["waiting","human_active","resolved"\]/);
+  assert.match(runtime, /\["paused_for_handoff","human_takeover","stopped"\]/);
+  assert.doesNotMatch(runtime, /\["active","paused_for_handoff"/);
 });
