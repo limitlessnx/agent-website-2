@@ -49,3 +49,20 @@ begin
 end $$;
 revoke all on function public.claim_human_handoff(uuid) from public,anon,authenticated;
 grant execute on function public.claim_human_handoff(uuid) to authenticated,service_role;
+
+-- Resume Xposure conversations already paused by earlier active handoffs.
+-- This updates only conversations whose canonical active_handoff_id matches
+-- an unresolved handoff in the Xposure organization; it sends no messages.
+update public.crm_conversations c
+set status='ai_active',
+    metadata=coalesce(c.metadata,'{}'::jsonb)||jsonb_build_object('active_handoff_id',h.id,'ai_response_mode','active'),
+    updated_at=now()
+from public.organizations o
+join public.human_handoffs h on h.organization_id=o.id
+where c.organization_id=o.id
+  and c.id=h.conversation_id
+  and o.slug='xposure'
+  and h.status in ('open','assigned','in_progress','waiting_customer')
+  and c.metadata->>'active_handoff_id'=h.id::text
+  and (c.status in ('waiting','human_active')
+       or c.metadata->>'ai_response_mode' in ('paused_for_handoff','human_takeover'));
