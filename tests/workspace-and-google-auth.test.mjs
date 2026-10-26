@@ -43,7 +43,7 @@ test("new organization owner choice preserves setup state and sends workspace cr
   const signup=read("app/api/client-auth/signup/route.ts");
   assert.match(choice,/nextPath:\s*"\/portal"/);
   assert.match(setup,/safeInternalPath\(pending\.nextPath,\s*"\/onboarding"\)/);
-  assert.match(signup,/nextPath:"\/portal"/);
+  assert.match(signup,/const ownerNextPath = "\/onboarding"/);
 });
 
 test("organization choice UI uses explicit accessible action cards and pending/error states",()=>{
