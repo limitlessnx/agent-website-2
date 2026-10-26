@@ -66,9 +66,9 @@ export const FLUX_CREDIT_ACTION_RATES: Record<FluxCreditAction, number> = {
 
 export const FLUX_USAGE_THRESHOLDS = [70, 90, 100] as const;
 
-const WEB_CHAT_AGENT: FluxAgentAllocation = { key: "web_chat_agent", name: "Web Chat Agent", channel: "web_chat" };
+const WEB_CHAT_AGENT: FluxAgentAllocation = { key: "web_chat_agent", name: "Web Support Agent", channel: "web_chat" };
 const WHATSAPP_AGENT: FluxAgentAllocation = { key: "whatsapp_agent", name: "WhatsApp Agent", channel: "whatsapp" };
-const VOICE_AGENT: FluxAgentAllocation = { key: "voice_agent", name: "Voice Agent", channel: "voice" };
+const VOICE_AGENT: FluxAgentAllocation = { key: "voice_agent", name: "Call Agent", channel: "voice" };
 const EMAIL_AGENT: FluxAgentAllocation = { key: "email_agent", name: "Email Agent", channel: "email" };
 const BASIC_CHANNEL_AGENTS = [WHATSAPP_AGENT];
 const BUSINESS_CHANNEL_AGENTS = [WHATSAPP_AGENT, VOICE_AGENT];
