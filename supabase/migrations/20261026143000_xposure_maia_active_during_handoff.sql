@@ -45,7 +45,7 @@ begin
  update public.crm_conversations set status=case when v_xposure then 'ai_active' else 'human_active' end,
  metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('active_handoff_id',p_handoff_id,'ai_response_mode',case when v_xposure then 'active' else 'human_takeover' end),updated_at=now()
  where organization_id=v_handoff.organization_id and id=v_handoff.conversation_id;
- return jsonb_build_object('handoff_id',p_handoff_id,'status','in_progress','membership_id',v_membership,'maia_active',v_xposure);
+ return jsonb_build_object('handoff_id',p_handoff_id,'status','in_progress','membership_id',v_membership);
 end $$;
 revoke all on function public.claim_human_handoff(uuid) from public,anon,authenticated;
 grant execute on function public.claim_human_handoff(uuid) to authenticated,service_role;
