@@ -22,7 +22,7 @@ test("the signed-in session uses the organization resolved from the accepted inv
   assert.match(route, /organizationSlug:\s*membership\.organizationSlug/);
   assert.match(route, /membershipId:\s*membership\.membershipId/);
   assert.match(route, /role:\s*membership\.role/);
-  assert.match(route, /getMembershipForOrganization\(auth\.user\.id,accepted\.organization_id\)/);
+  assert.match(route, /getMembershipForOrganization\(auth\.user\.id,\s*accepted\.organization_id\)/);
 });
 
 test("workspace provisioning cannot override an explicit invitation", () => {
