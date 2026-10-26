@@ -36,3 +36,18 @@ test("catalogue eligibility checks both plan channel and feature entitlements", 
   assert.match(catalog, /planIncludesFeature\(planCode, agent\.requiredFeature\)/);
   assert.match(catalog, /Outbound AI calling is not currently available/);
 });
+
+const plans = fs.readFileSync("lib/fluxknight-plans.ts", "utf8");
+
+test("Basic and Plus allow one selected WhatsApp or web support channel", () => {
+  assert.match(plans, /basic:[\s\S]*?selectableChannels: \["whatsapp", "web_chat"\]/);
+  assert.match(plans, /plus:[\s\S]*?selectableChannels: \["whatsapp", "web_chat"\]/);
+  assert.match(catalog, /key: "web_support",[\s\S]*?channel: "web_chat",[\s\S]*?requiredFeature: "core_ai_support"/);
+});
+
+test("Business plan includes email follow-up without unlocking full email automation", () => {
+  assert.match(plans, /business:[\s\S]*?selectableChannels: \["whatsapp", "voice", "email"\]/);
+  assert.match(plans, /business:[\s\S]*? "email_follow_up",/);
+  assert.match(plans, /business_plus:[\s\S]*? "email_automation",/);
+  assert.match(catalog, /key: "email",[\s\S]*?channel: "email",[\s\S]*?requiredFeature: "email_follow_up"/);
+});
