@@ -35,18 +35,10 @@ const expectedPendingVersions = [
   "20261009230000",
   "20261011143000",
   "20261012090000",
-  // Xposure tenant operations and booking/payment migrations reviewed in PR #261.
-  // These remain pending and are not applied to the production Supabase project.
-  "20261021180000",
+  // Xposure studio catalog migration reviewed but not yet applied to production.
   "20261021230000",
-  "20261022090000",
-  "20261022100000",
-  "20261022120000",
-  "20261022130000",
-  "20261022140000",
-  "20261022160000",
-  // Xposure Maia active-during-handoff behavior reviewed in PR #286; remains pending until the release gate passes.
-  "20261026153000",
+  // Xposure Maia active-during-handoff migration is pending release verification.
+  "20261026143000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
