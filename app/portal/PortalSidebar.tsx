@@ -6,6 +6,7 @@ import {
   Activity,
   Bell,
   Clock3,
+  CreditCard,
   LayoutDashboard,
   LifeBuoy,
   Menu,
@@ -26,6 +27,7 @@ export type PortalNavCapabilities = {
   systems:boolean;
   appointments:boolean;
   analytics:boolean;
+  billing:boolean;
   team:boolean;
   support:boolean;
 };
@@ -67,6 +69,7 @@ export default function PortalSidebar({
         {experience.slug === "photography-studio"?<Link href="/portal/catalogue" className={active("/portal/catalogue")?"active":""} onClick={close}><Workflow size={18}/><span>Studio Catalogue</span></Link>:null}
         {experience.slug === "photography-studio"?<Link href="/portal/campaigns" className={active("/portal/campaigns")?"active":""} onClick={close}><Zap size={18}/><span>Campaigns</span></Link>:null}
         {capabilities.analytics?<Link href="/portal/analytics" className={active("/portal/analytics")?"active":""} onClick={close}><Activity size={18}/><span>Analytics</span></Link>:null}
+        {capabilities.billing?<Link href="/portal/billing" className={active("/portal/billing")?"active":""} onClick={close}><CreditCard size={18}/><span>Flux Credits</span></Link>:null}
         {capabilities.team?<Link href="/portal/team" className={active("/portal/team")?"active":""} onClick={close}><Users size={18}/><span>Team</span></Link>:null}
 
         <span className="portal-nav-label">Help & Settings</span>
