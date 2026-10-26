@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-25",
+  "capturedAt": "2026-10-26",
   "projectRef": "tacxegmlppngnuvldojy",
   "purpose": "Read-only snapshot of the remote Supabase migration ledger used to reconcile missing local migration files. Refresh deliberately when the production ledger changes.",
   "migrations": [
@@ -762,6 +762,102 @@
     {
       "version": "20261025112836",
       "name": "xposure_studio_catalog_items"
+    },
+    {
+      "version": "20261025210257",
+      "name": "20261024140400_secure_workspace_provisioning_rpc"
+    },
+    {
+      "version": "20261025210354",
+      "name": "20261024140500_tenant_reminder_rules"
+    },
+    {
+      "version": "20261025210407",
+      "name": "20261024140600_tenant_reminder_executions"
+    },
+    {
+      "version": "20261025210412",
+      "name": "20261024140700_tenant_reminder_notifications"
+    },
+    {
+      "version": "20261025210424",
+      "name": "20261024140800_tenant_customer_contacts"
+    },
+    {
+      "version": "20261025210436",
+      "name": "20261024140900_tenant_appointment_lifecycle_reminders"
+    },
+    {
+      "version": "20261025210454",
+      "name": "20261024141000_appointment_capacity_guard"
+    },
+    {
+      "version": "20261025210504",
+      "name": "20261024141100_real_estate_handoff_idempotency"
+    },
+    {
+      "version": "20261025210535",
+      "name": "20261024141200_real_estate_action_approvals"
+    },
+    {
+      "version": "20261025210604",
+      "name": "20261024141300_real_estate_inspections"
+    },
+    {
+      "version": "20261025210620",
+      "name": "20261024141400_real_estate_estate_catalog"
+    },
+    {
+      "version": "20261025210627",
+      "name": "20261024141500_real_estate_knowledge_links"
+    },
+    {
+      "version": "20261025210639",
+      "name": "20261024141600_real_estate_outbound_tracking"
+    },
+    {
+      "version": "20261025211057",
+      "name": "20261024141650_real_estate_permission_scope"
+    },
+    {
+      "version": "20261025211219",
+      "name": "20261024141700_real_estate_delivery_receipts"
+    },
+    {
+      "version": "20261025211249",
+      "name": "20261024141800_real_estate_atomic_audit"
+    },
+    {
+      "version": "20261025211315",
+      "name": "20261024141900_client_provisioning_retry_safe"
+    },
+    {
+      "version": "20261025211347",
+      "name": "20261024142000_handoff_notification_receipt_states"
+    },
+    {
+      "version": "20261025211401",
+      "name": "20261024142100_real_estate_campaign_groups"
+    },
+    {
+      "version": "20261025211411",
+      "name": "20261024142200_real_estate_customer_service_windows"
+    },
+    {
+      "version": "20261025211421",
+      "name": "20261024142300_handoff_notification_retry_safety"
+    },
+    {
+      "version": "20261025211432",
+      "name": "20261024142400_handoff_notification_retry_approvals"
+    },
+    {
+      "version": "20261025221053",
+      "name": "20261025215800_real_estate_terms_of_service"
+    },
+    {
+      "version": "20261025231627",
+      "name": "real_estate_website_knowledge"
     }
   ]
 }
