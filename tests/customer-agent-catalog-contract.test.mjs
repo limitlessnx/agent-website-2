@@ -31,6 +31,13 @@ test("unverified products fail closed and are excluded from visible catalogue re
   assert.match(catalog, /allocated\.has\(agent\.key\) && isCustomerAgentPlanEligible\(agent, planCode\)/);
 });
 
+test("visible catalogue respects the plan's simultaneous channel cap", () => {
+  assert.match(catalog, /const maxChannels = getMaxChannelCount\(planCode\)/);
+  assert.match(catalog, /\.slice\(0, maxChannels\)/);
+  assert.match(plans, /business:[\s\S]*?maxChannels: 2/);
+  assert.match(plans, /business_plus:[\s\S]*?maxChannels: 4/);
+});
+
 test("catalogue eligibility checks both plan channel and feature entitlements", () => {
   assert.match(catalog, /planIncludesChannel\(planCode, agent\.channel\)/);
   assert.match(catalog, /planIncludesFeature\(planCode, agent\.requiredFeature\)/);
