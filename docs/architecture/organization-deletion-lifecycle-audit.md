@@ -20,13 +20,15 @@ A read-only query against PostgreSQL system catalogs found **171 direct foreign-
 - **11** use `ON DELETE SET NULL`
 - **1** uses default `NO ACTION`
 
-The `NO ACTION` constraint is `follow_ups.organization_id -> organizations(id)`. It may block a direct organization delete while follow-up rows remain. Do not bypass it by dropping the constraint or mass-deleting follow-ups; first determine the intended tenant lifecycle and whether the rows are still active.
+The direct `NO ACTION` constraint is `follow_ups.organization_id -> organizations(id)`. It may block a direct organization delete while follow-up rows remain. Do not bypass it by dropping the constraint or mass-deleting follow-ups; first determine the intended tenant lifecycle and whether the rows are still active. Additional indirect blockers include `appointments` referencing organization systems with RESTRICT, `customer_stage_history` referencing tenant stages with RESTRICT, `organization_invitations` referencing roles with RESTRICT, and payment attempts referencing organization quotes with RESTRICT.
 
 The `SET NULL` group includes `audit_logs`, `checkout_sessions`, onboarding submissions/documents, and support/evaluation records. These preserve some rows but remove their direct organization association, which affects traceability and reconciliation.
 
+A broader read-only query of all foreign keys owned by public tables containing an `organization_id` column found **452 constraints across 169 tenant-scoped tables**: 310 CASCADE, 105 SET NULL, 24 RESTRICT, and 13 NO ACTION. This includes indirect links to shared catalog/template records, workflow definitions, memberships, leads/properties, appointment systems, and billing objects. These non-cascade constraints make a naive delete graph even less predictable.
+
 **High-risk confirmed behavior:** the live schema currently cascades organization deletion into `flux_credit_ledger`, `flux_credit_wallets`, `payment_attempts`, `payment_records`, `organization_subscriptions`, and `xposure_bookings`. This is a concrete reason not to expose hard deletion yet: a direct delete could erase credit/payment/booking history. The ledger also has a `RESTRICT` FK to its wallet, and payment attempts have a `RESTRICT` FK to organization quotes, so indirect FK interactions require a deliberate dry-run before any deletion design is implemented.
 
-The separate project named **Limitless Realty Staging** did not have `public.organizations` when queried and is not a valid substitute for this schema inventory. No schema was changed and no tenant rows were queried or modified.
+The deployed FLUXNIT migration ledger's latest version is `20261026144829`, matching the latest migration filename in the repository at the time of this audit. This is a latest-version spot check, not a full per-version reconciliation. The separate project named **Limitless Realty Staging** did not have `public.organizations` when queried and is not a valid substitute for this schema inventory. No schema was changed and no tenant business rows were queried or modified.
 
 ## Evidence reviewed
 
