@@ -2,6 +2,11 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, PauseCircle, Settings2 } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationSystems, type SystemCatalogItem } from "@/lib/client-systems";
+import { getFluxWalletSummary } from "@/lib/flux-credits";
+import {
+  getOrganizationAllocatedCustomerAgentKeys,
+  getVisibleCustomerAgents,
+} from "@/lib/customer-agent-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +30,14 @@ function StatusIcon({ status }: { status: string }) {
 export default async function MySystemsPage() {
   const session = await getClientSession();
   if (!session) return null;
-  const systems = await getOrganizationSystems(session.organizationId).catch(() => []);
+  const [systems, wallet, allocatedAgentKeys] = await Promise.all([
+    getOrganizationSystems(session.organizationId).catch(() => []),
+    getFluxWalletSummary(session.organizationId).catch(() => null),
+    getOrganizationAllocatedCustomerAgentKeys(session.organizationId).catch(() => []),
+  ]);
+  const visibleAgents = wallet
+    ? getVisibleCustomerAgents(wallet.planCode, allocatedAgentKeys)
+    : [];
 
   return (
     <main className="portal-page">
@@ -34,6 +46,31 @@ export default async function MySystemsPage() {
         <h1>My Systems</h1>
         <p>Manage the business systems selected for your organization. Technical workflow details stay behind the scenes.</p>
       </header>
+
+      <section className="portal-card">
+        <div className="portal-card-head">
+          <div>
+            <h2>My Agents</h2>
+            <p>Customer-facing agents enabled for your plan and configured for your organization.</p>
+          </div>
+          {wallet ? <em>{wallet.planName}</em> : null}
+        </div>
+        {!visibleAgents.length ? (
+          <p className="portal-empty">No verified agents are currently active for this organization and plan. Ask your organization administrator to check agent allocation and setup.</p>
+        ) : (
+          <div className="portal-system-list">
+            {visibleAgents.map((agent) => (
+              <article className="portal-system-installation" key={agent.key}>
+                <summary>
+                  <div><strong>{agent.name}</strong><span>{agent.summary}</span></div>
+                  <em className="status-active"><CheckCircle2 size={16} />Enabled</em>
+                </summary>
+                {agent.limitation ? <p className="portal-empty">{agent.limitation}</p> : null}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {!systems.length ? (
         <section className="portal-card portal-empty-state">
