@@ -30,6 +30,7 @@ test("organization allocation is read from that organization's active agent reco
   assert.match(catalog, /row\.status !== "active" && row\.status !== "published"/);
   assert.match(catalog, /Unknown agent types fail closed/);
   assert.match(catalog, /"email", "email_agent", "email_ai", "email_automation"/);
+  assert.match(catalog, /"voice", "voice_agent", "call", "call_agent", "voice_ai", "voice_receptionist", "outbound_call_agent"/);
 });
 
 test("tenant systems page renders only the plan-eligible allocated agent list", () => {
