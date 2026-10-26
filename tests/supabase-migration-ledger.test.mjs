@@ -45,6 +45,8 @@ const expectedPendingVersions = [
   "20261022130000",
   "20261022140000",
   "20261022160000",
+  // Xposure Maia active-during-handoff behavior reviewed in PR #286; remains pending until the release gate passes.
+  "20261026153000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
