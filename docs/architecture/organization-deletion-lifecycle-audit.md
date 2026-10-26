@@ -10,7 +10,23 @@ Organization deletion must not be implemented as a single `DELETE FROM organizat
 
 The existing migration `20260926222444_b4_route_sync_safe_org_delete.sql` makes the route-sync trigger tolerate an organization row that no longer exists. It is a trigger-safety fix, **not** a complete deletion lifecycle.
 
-This is a static repository audit. It is not yet a complete foreign-key inventory from the live Supabase schema; do not treat it as approval to delete tenant data or as proof that every dependency has been found.
+This audit now includes a read-only live-schema inventory from the active Supabase project **FLUXNIT** (`tacxegmlppngnuvldojy`). It enumerated direct foreign keys to `public.organizations` and inspected selected indirect financial/queue dependencies. It is still not a complete inventory of external provider jobs, storage objects, backups, or every indirect cascade path; do not treat it as approval to delete tenant data.
+
+## Live schema result (read-only, FLUXNIT)
+
+A read-only query against PostgreSQL system catalogs found **171 direct foreign-key constraints** referencing `public.organizations`:
+
+- **159** use `ON DELETE CASCADE`
+- **11** use `ON DELETE SET NULL`
+- **1** uses default `NO ACTION`
+
+The `NO ACTION` constraint is `follow_ups.organization_id -> organizations(id)`. It may block a direct organization delete while follow-up rows remain. Do not bypass it by dropping the constraint or mass-deleting follow-ups; first determine the intended tenant lifecycle and whether the rows are still active.
+
+The `SET NULL` group includes `audit_logs`, `checkout_sessions`, onboarding submissions/documents, and support/evaluation records. These preserve some rows but remove their direct organization association, which affects traceability and reconciliation.
+
+**High-risk confirmed behavior:** the live schema currently cascades organization deletion into `flux_credit_ledger`, `flux_credit_wallets`, `payment_attempts`, `payment_records`, `organization_subscriptions`, and `xposure_bookings`. This is a concrete reason not to expose hard deletion yet: a direct delete could erase credit/payment/booking history. The ledger also has a `RESTRICT` FK to its wallet, and payment attempts have a `RESTRICT` FK to organization quotes, so indirect FK interactions require a deliberate dry-run before any deletion design is implemented.
+
+The separate project named **Limitless Realty Staging** did not have `public.organizations` when queried and is not a valid substitute for this schema inventory. No schema was changed and no tenant rows were queried or modified.
 
 ## Evidence reviewed
 
@@ -37,14 +53,14 @@ This is a static repository audit. It is not yet a complete foreign-key inventor
 | Reminder rules, executions, notifications | Rules reference organizations with cascade. Execution/notification records also reference parent rules/executions with cascade. | Cascading rows does not guarantee already-enqueued Trigger.dev tasks or provider-side messages are canceled. A pre-delete queue drain/cancel step is required. |
 | Customer contacts and appointment reminders | Tenant reminder/contact tables cascade with organization deletion; appointment reminder rows also reference tenant appointments. | Personal data retention/export requirements must be applied. Queued reminders must be suppressed before access is revoked, and the shared reminder engine must remain tenant-specific. |
 | Xposure bookings | `xposure_bookings.organization_id` references organizations with cascade. The lifecycle stores booking status, payment status, verification actor/timestamps, and confirmation metadata. | Deleting a tenant can erase booking/payment-review evidence. Preserve or export records under a defined retention policy; never infer that a booking's payment has been refunded or reconciled by deleting its row. |
-| Flux Credits top-up ledger | `apply_flux_credit_topup_from_checkout` uses checkout session state, a credit ledger, wallet rows, and a unique checkout-session ledger key for idempotency. | Financial ledger and checkout evidence must be reconciled and retained according to an approved policy. Do not cascade-delete or mutate ledger history as a shortcut to tenant deletion. |
+| Flux Credits top-up ledger | `apply_flux_credit_topup_from_checkout` uses checkout session state, a credit ledger, wallet rows, and a unique checkout-session ledger key for idempotency. The live FLUXNIT schema currently has organization-delete cascades to both `flux_credit_ledger` and `flux_credit_wallets`. | Financial ledger and checkout evidence must be reconciled and retained according to an approved policy. Current FK behavior is unsafe for unguarded hard deletion; do not cascade-delete or mutate ledger history as a shortcut to tenant deletion. |
 | System route synchronization | The safe-delete migration checks whether the organization still exists before calling route synchronization. | This only prevents one trigger path from attempting a sync for a missing organization. It does not clean up all route bindings, scheduled tasks, external systems, or historical records. |
 
 ## Risks that still need verification
 
 The following are **not yet proven safe** and require a full schema/runtime inventory before implementing any deletion workflow:
 
-1. **Complete foreign-key graph:** enumerate every FK referencing `organizations`, plus indirect tenant dependencies and all delete actions from the actual deployed schema. Compare the result with migration history and current migration files.
+1. **Indirect foreign-key graph and migration drift:** the direct FK list to `organizations` is inventoried for FLUXNIT, but indirect cascade/restrict paths across every table still need a full generated report. Compare all deployed constraints with migration history and current migration files.
 2. **Billing and subscriptions:** verify wallet, credit ledger, checkout session, subscription, invoice/payment event, and plan-assignment FK behavior. Financial history should normally be retained or anonymized under an approved policy, not silently cascaded.
 3. **Audit and security events:** verify that admin actions, webhook/event logs, consent records, handover summaries, and security logs survive tenant offboarding for the required retention window.
 4. **External credentials and integrations:** identify token/secret storage and provider revoke/disconnect procedures. Secrets must not be copied into exports or exposed in the admin page.
