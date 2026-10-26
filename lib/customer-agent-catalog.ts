@@ -49,7 +49,7 @@ export const CUSTOMER_AGENT_CATALOG: readonly CustomerAgentDefinition[] = [
     summary: "Handles customer questions through website chat.",
     availability: "implemented",
     channel: "web_chat",
-    requiredFeature: "web_chat_automation",
+    requiredFeature: "core_ai_support",
   },
   {
     key: "call",
@@ -75,10 +75,10 @@ export const CUSTOMER_AGENT_CATALOG: readonly CustomerAgentDefinition[] = [
   {
     key: "email",
     name: "Email Agent",
-    summary: "Customer communication and email automation.",
+    summary: "Supports customer email follow-up where configured.",
     availability: "implemented",
     channel: "email",
-    requiredFeature: "email_automation",
+    requiredFeature: "email_follow_up",
   },
   {
     key: "customise",
