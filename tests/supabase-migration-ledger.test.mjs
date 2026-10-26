@@ -35,8 +35,9 @@ const expectedPendingVersions = [
   "20261009230000",
   "20261011143000",
   "20261012090000",
-  // Xposure studio catalog migration reviewed but not yet applied to production.
+  // Xposure studio catalog migrations reviewed but not yet applied to production.
   "20261021230000",
+  "20261026170000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

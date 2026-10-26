@@ -277,3 +277,11 @@
   .exposure-catalogue-grid>a>span strong{font-size:.67rem}
   .exposure-catalogue-grid>a>span small{font-size:.55rem}
 }
+
+
+/* Xposure content-creation booking CTA. */
+.exposure-catalogue-grid>a.exposure-content-booking-card{border-color:rgba(195,151,255,.5);background:linear-gradient(155deg,#21152f,#10131f);text-decoration:none}
+.exposure-content-booking-card>div{display:grid;align-content:center;gap:5px;min-width:0;padding:9px;background:linear-gradient(180deg,rgba(17,21,34,.96),rgba(10,13,22,.98))}
+.exposure-content-booking-card>div strong{font-size:.72rem;line-height:1.3;color:#f8f5ff}
+.exposure-content-booking-card>div small{font-size:.6rem;line-height:1.35;color:#b7abc9}
+.exposure-content-booking-card>em{display:inline-flex;align-self:start;margin:7px 9px 0;padding:4px 7px;border-radius:999px;background:#c49aff;color:#171020;font-size:.58rem;font-style:normal;font-weight:800;letter-spacing:.05em}
