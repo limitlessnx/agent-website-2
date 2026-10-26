@@ -45,7 +45,14 @@ test("catalogue eligibility checks both plan channel and feature entitlements", 
 });
 
 const plans = fs.readFileSync("lib/fluxknight-plans.ts", "utf8");
+const industryCatalog = fs.readFileSync("lib/industryCatalog.ts", "utf8");
 const emailRuntime = fs.readFileSync("app/api/internal/runtime/actions/outbound-email/route.ts", "utf8");
+
+test("Business marketing copy does not promise more active channels than the plan allows", () => {
+  assert.match(plans, /business:[\s\S]*?maxChannels: 2/);
+  assert.match(industryCatalog, /up to two active channels selected from supported options/);
+  assert.doesNotMatch(industryCatalog, /businessExample: "[^"]*(?:email \+ WhatsApp follow-up|WhatsApp \+ email follow-up|inbound voice)[^"]*"/);
+});
 
 test("outbound email runtime enforces scoped follow-up vs full automation entitlements", () => {
   assert.match(emailRuntime, /feature: followUpCharge \? "email_follow_up" : "email_automation"/);
