@@ -118,3 +118,72 @@ export function getVisibleCustomerAgents(
     (agent) => allocated.has(agent.key) && isCustomerAgentPlanEligible(agent, planCode),
   ).map((agent) => ({ ...agent }));
 }
+
+import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+
+type OrganizationAgentRow = {
+  slug?: string | null;
+  name?: string | null;
+  status?: string | null;
+  agent_type?: string | null;
+  configuration?: Record<string, unknown> | null;
+  communication_channels?: unknown[] | null;
+};
+
+function normalizeAgentToken(value: unknown): string {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+/**
+ * Resolve allocations from active agent records belonging to this organization.
+ * Installed marketplace systems are deliberately not used as a proxy for agent
+ * allocation. Unknown agent types fail closed rather than being guessed.
+ */
+export async function getOrganizationAllocatedCustomerAgentKeys(
+  organizationId: string,
+): Promise<CustomerAgentKey[]> {
+  if (!organizationId.trim()) return [];
+
+  const rows = await supabaseServerRequest<OrganizationAgentRow[]>(
+    `agents?organization_id=eq.${encodeURIComponent(organizationId)}&select=slug,name,status,agent_type,configuration,communication_channels&order=updated_at.desc`,
+  );
+
+  const allocated = new Set<CustomerAgentKey>();
+  for (const row of rows) {
+    if (row.status !== "active" && row.status !== "published") continue;
+
+    const config = row.configuration || {};
+    const tokens = [
+      row.slug,
+      row.agent_type,
+      row.name,
+      config.agent_key,
+      ...(Array.isArray(row.communication_channels) ? row.communication_channels : []),
+      ...(Array.isArray(config.channels) ? config.channels : []),
+    ].map(normalizeAgentToken);
+
+    if (tokens.some((token) => ["whatsapp", "whatsapp_agent", "whatsapp_ai", "maia_whatsapp"].includes(token))) {
+      allocated.add("whatsapp");
+    }
+    if (tokens.some((token) => ["web_chat", "web_chat_agent", "web_support", "web_support_agent"].includes(token))) {
+      allocated.add("web_support");
+    }
+    if (tokens.some((token) => ["voice", "voice_agent", "call", "call_agent", "voice_ai"].includes(token))) {
+      allocated.add("call");
+    }
+    if (tokens.some((token) => ["email", "email_agent", "email_ai"].includes(token))) {
+      allocated.add("email");
+    }
+    if (tokens.some((token) => ["receipt", "receipt_agent"].includes(token))) {
+      allocated.add("receipt");
+    }
+    if (tokens.some((token) => ["social_media", "social_media_agent", "social_agent"].includes(token))) {
+      allocated.add("social_media");
+    }
+    if (tokens.some((token) => ["customise", "customise_agent", "custom_agent"].includes(token))) {
+      allocated.add("customise");
+    }
+  }
+
+  return [...allocated];
+}
