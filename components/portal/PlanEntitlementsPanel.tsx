@@ -4,11 +4,16 @@ import { FLUX_FEATURE_LABELS, getUpgradeLabel, planIncludesFeature, type FluxFea
 
 const FEATURES: FluxFeatureKey[] = [
   "core_ai_support",
+  "human_handoff",
   "leo_chat",
   "follow_ups",
   "reminders",
   "team_admin",
   "cross_channel",
+  "voice_automation",
+  "email_follow_up",
+  "email_automation",
+  "web_chat_automation",
   "leo_voice",
   "industry_database",
   "client_database",
