@@ -120,8 +120,6 @@ export function getVisibleCustomerAgents(
   ).map((agent) => ({ ...agent }));
 }
 
-import { supabaseServerRequest } from "@/lib/supabase-server-rest";
-
 type OrganizationAgentRow = {
   slug?: string | null;
   name?: string | null;
