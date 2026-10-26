@@ -177,7 +177,7 @@ export const industries: IndustryDefinition[] = [
       { title: "Qualify the buyer", description: "It captures budget, preferred location, property type, purchase timeline, financing or payment preference and urgency." },
       { title: "Match the opportunity", description: "Where configured, the system recommends relevant listings or routes the lead to the right property or human specialist." },
       { title: "Book or prepare inspection", description: "Plus and above can schedule inspection interest and send reminders through the same originating channel." },
-      { title: "Follow up intelligently", description: "Business can continue the conversation across WhatsApp and email while keeping the lead context connected for staff." },
+      { title: "Follow up intelligently", description: "Business can coordinate customer context across supported channels, with no more than two channels active at once." },
       { title: "Hand over to the closer", description: "Hot, urgent or complex opportunities are escalated with a concise summary so the human agent starts with context instead of asking everything again." }
     ],
     businessNotes: [
@@ -210,7 +210,7 @@ export const industries: IndustryDefinition[] = [
       { title: "Handle first response", description: "The AI answers approved product, service, availability, pricing-range and process questions immediately." },
       { title: "Capture sales intake", description: "It collects the information the sales team actually needs, such as need, budget, company size, location, urgency or purchase timeline." },
       { title: "Score intent", description: "Leads can be categorized by configured criteria so staff can separate low-intent enquiries from opportunities that deserve fast human attention." },
-      { title: "Maintain follow-up", description: "Plus keeps follow-up on the originating channel. Business can coordinate WhatsApp and email follow-up with higher usage allowances." },
+      { title: "Maintain follow-up", description: "Plus keeps follow-up on the originating channel. Business can coordinate follow-up across selected channels, with no more than two channels active at once." },
       { title: "Give management visibility", description: "Business adds admins, reporting and Leo so managers can see neglected leads, conversation context and pipeline movement without reading every chat manually." },
       { title: "Hand over to the closer", description: "When buying intent is clear, the assigned salesperson receives the lead context and can continue from a much stronger starting point." }
     ],
