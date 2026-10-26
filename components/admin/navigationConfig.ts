@@ -17,7 +17,7 @@ export type AdminNavGroup={id:string;label:string;sections:AdminNavSection[]}
 export const ADMIN_NAV_GROUPS:AdminNavGroup[]=[
   {id:"overview",label:"Overview",sections:[{items:[{href:"/dashboard",label:"Overview",exact:true}]}]},
   {id:"clients",label:"Clients",sections:[{items:[
-    {href:"/dashboard/clients",label:"Client Registry",exact:true},
+    {href:"/dashboard/clients",label:"Organization Management",exact:true},
     {href:"/dashboard/onboarding#new-client",label:"Onboard Client"},
     {href:"/dashboard/evaluations",label:"Evaluation Leads"},
   ]}]},
