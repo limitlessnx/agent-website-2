@@ -38,3 +38,14 @@ test("tenant systems page renders only the plan-eligible allocated agent list", 
   assert.match(systemsPage, /getVisibleCustomerAgents\(wallet\.planCode, allocatedAgentKeys\)/);
   assert.match(systemsPage, /Customer-facing agents enabled for your plan and configured for your organization/);
 });
+
+
+test("allocated agents that are not active are shown as setup-pending, not enabled", () => {
+  assert.match(catalog, /getOrganizationPendingCustomerAgentKeys/);
+  assert.match(catalog, /organization_agent_selections\?organization_id=eq/);
+  assert.match(catalog, /status=in\.\(selected,paid,provisioning,active\)/);
+  assert.match(systemsPage, /getOrganizationPendingCustomerAgentKeys\(/);
+  assert.match(systemsPage, /Allocated agents awaiting setup/);
+  assert.match(systemsPage, /Setup pending/);
+  assert.match(systemsPage, /not yet active/);
+});
