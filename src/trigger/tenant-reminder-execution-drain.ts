@@ -18,6 +18,26 @@ export const tenantReminderExecutionDrain = schedules.task({
         .eq("id", row.id).eq("organization_id", row.organization_id).eq("status", "queued").select("id").maybeSingle();
       if (claim.error) throw claim.error;
       if (!claim.data) continue;
+      const { data: organization, error: organizationError } = await admin
+        .from("organizations")
+        .select("status")
+        .eq("id", row.organization_id)
+        .maybeSingle();
+      if (organizationError) throw organizationError;
+      if (!organization || organization.status !== "active") {
+        const { error: inactiveCancelError } = await admin.from("tenant_reminder_executions")
+          .update({
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            last_error: "Organization is not active; reminder suppressed.",
+          })
+          .eq("id", row.id)
+          .eq("organization_id", row.organization_id)
+          .eq("status", "processing");
+        if (inactiveCancelError) throw inactiveCancelError;
+        continue;
+      }
       const { data: rule, error: ruleError } = await admin.from("tenant_reminder_rules")
         .select("name,description,status").eq("id", row.rule_id).eq("organization_id", row.organization_id).maybeSingle();
       if (ruleError) throw ruleError;

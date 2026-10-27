@@ -36,8 +36,10 @@ function toFollowupLead(value: unknown): FollowupLead | null {
 
 async function processDueLimitlessFollowups(limit = 25) {
   const admin = createAdminClient();
-  const { data: organization } = await admin.from("organizations").select("id").eq("slug", "limitless-realty").maybeSingle();
+  const { data: organization, error: organizationError } = await admin.from("organizations").select("id,status").eq("slug", "limitless-realty").maybeSingle();
+  if (organizationError) throw organizationError;
   if (!organization) return { processed: 0, sent: 0, failed: 0, cancelled: 0, reason: "organization_not_found" };
+  if (organization.status !== "active") return { processed: 0, sent: 0, failed: 0, cancelled: 0, reason: "organization_not_active" };
   try {
     await assertFluxFeatureAccess(organization.id, "follow_ups");
   } catch (error) {
@@ -136,7 +138,7 @@ export const systemEventDispatch = task({
     if (!payload.eventId) throw new Error("eventId is required.");
     const result = await processSystemEvent(payload.eventId);
     logger.info("System event dispatch completed", { eventId: payload.eventId, result });
-    if (result.status === "failed") throw new Error(result.error || "System event dispatch failed.");
+    if (result.status === "failed" && !("suppressed" in result && result.suppressed)) throw new Error(result.error || "System event dispatch failed.");
     return result;
   },
 });

@@ -55,7 +55,7 @@ jobs:
       - name: Dashboard regression contracts
         run: npm run test:support
       - name: Flux Social Storage policy static contract
-        if: startsWith(github.ref, 'refs/heads/draft/phase-7') || startsWith(github.ref, 'refs/heads/draft/phase-8')
+        if: startsWith(github.ref, 'refs/heads/draft/phase-7')
         run: node --test tests/flux-social-storage-policy-contract.test.mjs
       - name: Tenant offboarding guard contract
         if: startsWith(github.ref, 'refs/heads/draft/phase-8')

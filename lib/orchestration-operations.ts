@@ -164,6 +164,10 @@ export async function recoverFailedSystemEvents(limit = 50) {
 
   for (const event of events || []) {
     const metadata = record(event.metadata);
+    if (String(event.last_error || "").startsWith("Offboarding suppression:")) {
+      results.push({ eventId: event.id, action: "suppressed", reason: "organization_not_active" });
+      continue;
+    }
     const classification = classifyOrchestrationFailure(event.last_error);
     const autoRetryCount = Math.max(0, Number(metadata.orchestration_auto_retry_count || 0));
 

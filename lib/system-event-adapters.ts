@@ -1010,6 +1010,22 @@ export async function processDueAppointmentReminders(limit = 100) {
     }
 
     try {
+      const { data: organization, error: organizationError } = await admin
+        .from("organizations")
+        .select("status")
+        .eq("id", task.organization_id)
+        .maybeSingle();
+      if (organizationError) throw organizationError;
+      if (!organization || organization.status !== "active") {
+        const { error: cancelError } = await admin.from("crm_tasks").update({
+          status: "cancelled",
+          metadata: { ...metadata, reminder_error: "organization_not_active" },
+          updated_at: new Date().toISOString(),
+        }).eq("organization_id", task.organization_id).eq("id", task.id).eq("status", "scheduled");
+        if (cancelError) throw cancelError;
+        results.push({ taskId: task.id, status: "cancelled", reason: "organization_not_active" });
+        continue;
+      }
       const { data: eventId, error: publishError } = await callAdminRpc(admin, "publish_system_event", {
         p_organization_id: task.organization_id,
         p_source_system_id: sourceSystemId,

@@ -321,6 +321,23 @@ export async function processSystemEvent(eventId?: string | null) {
 
   const supabase = createAdminClient();
   try {
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .select("status")
+      .eq("id", event.organizationId)
+      .maybeSingle();
+    if (organizationError) throw organizationError;
+    if (!organization || organization.status !== "active") {
+      const message = "Offboarding suppression: organization is not active.";
+      const { error: suppressError } = await supabase.from("domain_events").update({
+        status: "failed",
+        last_error: message,
+        updated_at: new Date().toISOString(),
+      }).eq("organization_id", event.organizationId).eq("id", event.id);
+      if (suppressError) throw suppressError;
+      return { status: "failed" as const, eventId: event.id, error: message, suppressed: true, deliveries: [] };
+    }
+
     if(event.eventType==="handoff.requested"){
       const result=await createHandoffFromSystemEvent(event);
       const {error}=await supabase.from("domain_events").update({
