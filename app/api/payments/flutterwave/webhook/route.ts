@@ -19,9 +19,9 @@ export async function POST(request: Request) {
     const existing = await supabaseRest<any[]>(`payment_webhook_events?select=id,processed_at&provider=eq.flutterwave&external_event_id=eq.${encodeURIComponent(externalEventId)}&limit=1`);
     const existingEvent = existing[0];
 
-    // A completed event is safe to acknowledge as a duplicate. An event row
-    // without processed_at represents an interrupted attempt and must be retried.
-    if (existingEvent?.processed_at) return NextResponse.json({ received: true, duplicate: true });
+    // Never automatically reprocess a previously received event. Failed events
+    // are recorded for an authorized operator to inspect and retry manually.
+    if (existingEvent) return NextResponse.json({ received: true, duplicate: true });
 
     if (!existingEvent) {
       await supabaseRest("payment_webhook_events", {
@@ -41,13 +41,13 @@ export async function POST(request: Request) {
     const sessions = await supabaseRest<any[]>(`checkout_sessions?tx_ref=eq.${encodeURIComponent(String(data.tx_ref))}&limit=1`);
     const session = sessions[0];
     if (!session) {
-      // Leave the event unprocessed so a provider retry can recover from a
-      // transient checkout-session lookup/replication failure.
+      // Acknowledge to the provider to prevent automatic redelivery. An
+      // authorized operator must reconcile/retry this event manually.
       await supabaseRest(`payment_webhook_events?provider=eq.flutterwave&external_event_id=eq.${encodeURIComponent(externalEventId)}`, {
         method: "PATCH",
-        body: JSON.stringify({ processing_error: "Checkout session not found; waiting for retry." }),
+        body: JSON.stringify({ processed_at: new Date().toISOString(), processing_error: "Checkout session not found; manual reconciliation required." }),
       }).catch(() => undefined);
-      return NextResponse.json({ received: false, retryable: true }, { status: 503 });
+      return NextResponse.json({ received: true, manual_review_required: true });
     }
 
     const verification = await flutterwaveRequest<any>(`/transactions/${encodeURIComponent(String(data.id))}/verify`);
@@ -85,8 +85,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, verified: validPayment });
   } catch (error) {
     console.error("[payments/flutterwave/webhook]", error);
-    // Keep processed_at null on failure. The next provider retry can resume
-    // the interrupted work rather than being discarded as a duplicate.
-    return NextResponse.json({ received: false, retryable: true }, { status: 503 });
+    // Mark the event handled for delivery purposes so the provider does not
+    // automatically retry. Preserve the error for manual operator recovery.
+    await supabaseRest(`payment_webhook_events?provider=eq.flutterwave&external_event_id=eq.${encodeURIComponent(externalEventId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ processed_at: new Date().toISOString(), processing_error: error instanceof Error ? error.message : "Processing failed; manual retry required." }),
+    }).catch(() => undefined);
+    return NextResponse.json({ received: true, manual_review_required: true });
   }
 }
