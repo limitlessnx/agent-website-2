@@ -119,6 +119,10 @@ function publicStorageUrl(bucket: unknown, path: unknown): string | null {
   if (!url || typeof bucket !== "string" || typeof path !== "string" || !bucket || !path) return null;
   return `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
 }
+function removeInlineStorageObjectUrls(text: string | undefined): string | undefined {
+  if (!text) return text;
+  return text.replace(/https?:\\/\\/[^\\s<>"']*\\/storage\\/v1\\/object\\/(?:public|sign)\\/[^\\s<>"']+/gi, "").replace(/[ \\t]{2,}/g, " ").replace(/\\n{3,}/g, "\\n\\n").trim();
+}
 export async function resolvePropertyMediaFromText(organizationId: string, text: string) {
   if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
   try {
@@ -206,7 +210,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
       authToken:credentials.authToken,
       from:credentials.from,
       to:`+${to}`,
-      body:useTemplate?undefined:input.text,
+      body:useTemplate?undefined:removeInlineStorageObjectUrls(input.text),
       contentSid:contentSid||undefined,
       contentVariables:useTemplate?contentVariables:undefined,
       statusCallbackUrl:statusCallback,
@@ -242,7 +246,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
   } else {
     if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
-    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };
+    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: removeInlineStorageObjectUrls(input.text) } };
   }
 
   if (!useTemplate) {
