@@ -101,6 +101,16 @@ async function recordAttempt(payload: Record<string, unknown>) {
 function isDirectPublicImageUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com/i.test(value) && /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value);
 }
+function isPublicImageAssetUrl(value: unknown, mimeType: unknown): value is string {
+  if (isDirectPublicImageUrl(value)) return true;
+  if (typeof value !== "string" || !/^https?:\/\//i.test(value) || !/^image\/(?:jpeg|png|webp|gif|avif|bmp)$/i.test(String(mimeType || ""))) return false;
+  try {
+    const url = new URL(value);
+    return !url.username && !url.password && !/drive\.google\.com|localhost|127\.0\.0\.1/i.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
 function isDirectPublicVideoUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com|youtube\.com|youtu\.be/i.test(value) && /\.(?:mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(value);
 }
@@ -109,7 +119,7 @@ function publicStorageUrl(bucket: unknown, path: unknown): string | null {
   if (!url || typeof bucket !== "string" || typeof path !== "string" || !bucket || !path) return null;
   return `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
 }
-async function resolvePropertyMediaFromText(organizationId: string, text: string) {
+export async function resolvePropertyMediaFromText(organizationId: string, text: string) {
   if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
   try {
     const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown; drive_photos_link?: string | null }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls,drive_photos_link&limit=500`);
@@ -119,9 +129,14 @@ async function resolvePropertyMediaFromText(organizationId: string, text: string
       if (title.length < 5 || !lower.includes(title.toLowerCase()) || !row.id) continue;
       const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=20`);
       const videos = assets.filter((a) => /video\//i.test(String(a.mime_type || ""))).map((a) => publicStorageUrl(a.storage_bucket, a.storage_path)).filter((u): u is string => Boolean(u) && isDirectPublicVideoUrl(u)).slice(0, 3);
-      if (videos.length) return { videos, images: [] };
+      const assetImages = assets
+        .filter((a) => /^image\//i.test(String(a.mime_type || "")))
+        .map((a) => ({ url: publicStorageUrl(a.storage_bucket, a.storage_path), mimeType: a.mime_type }))
+        .filter((a): a is { url: string; mimeType: string | null | undefined } => Boolean(a.url) && isPublicImageAssetUrl(a.url, a.mimeType))
+        .map((a) => a.url);
       const candidates: unknown[] = [row.cover_image_url, row.drive_photos_link, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
-      return { videos: [], images: candidates.filter(isDirectPublicImageUrl).slice(0, 3) };
+      const images = [...new Set([...candidates.filter(isDirectPublicImageUrl), ...assetImages])].slice(0, 3);
+      return { videos, images };
     }
   } catch {}
   return { videos: [] as string[], images: [] as string[] };
