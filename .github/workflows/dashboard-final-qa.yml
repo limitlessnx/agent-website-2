@@ -1,6 +1,9 @@
 name: Dashboard Final QA
 
 on:
+  push:
+    branches:
+      - "draft/phase-*"
   pull_request:
     branches: [main]
     paths:
@@ -51,6 +54,12 @@ jobs:
         run: npm run test:xposure-dashboard
       - name: Dashboard regression contracts
         run: npm run test:support
+      - name: Flux Social Storage policy static contract
+        if: startsWith(github.ref, 'refs/heads/draft/phase-7') || startsWith(github.ref, 'refs/heads/draft/phase-8')
+        run: node --test tests/flux-social-storage-policy-contract.test.mjs
+      - name: Tenant offboarding guard contract
+        if: startsWith(github.ref, 'refs/heads/draft/phase-8')
+        run: npm run test:tenant-offboarding
       - name: Evaluation and conversation-center guardrails
         run: node --test tests/evaluation-and-conversation-center.test.mjs tests/workspace-and-google-auth.test.mjs
       - name: TypeScript
