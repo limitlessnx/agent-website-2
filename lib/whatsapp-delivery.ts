@@ -112,7 +112,7 @@ function publicStorageUrl(bucket: unknown, path: unknown): string | null {
 async function resolvePropertyMediaFromText(organizationId: string, text: string) {
   if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
   try {
-    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls&limit=500`);
+    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls,drive_photos_link&limit=500`);
     const lower = text.toLowerCase();
     for (const row of rows) {
       const title = String(row.title || "").trim();
