@@ -14,7 +14,8 @@ function sessionSecret() {
   return (
     process.env.ADMIN_SESSION_SECRET ||
     process.env.LIMITLESS_ADMIN_PASSWORD ||
-    "development-only-change-this-secret"
+    process.env.ADMIN_PASSWORD ||
+    (process.env.NODE_ENV === "production" ? "" : "development-only-change-this-secret")
   );
 }
 
@@ -27,7 +28,9 @@ function configuredPassword() {
 }
 
 function sign(payload: string) {
-  return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+  const secret = sessionSecret();
+  if (!secret) throw new Error("Admin session signing secret is not configured.");
+  return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
 function safeEqual(a: string, b: string) {
@@ -56,7 +59,7 @@ export function createSessionToken(session: AdminSession) {
 }
 
 export function verifySessionToken(token: string | undefined): AdminSession | null {
-  if (!token) return null;
+  if (!token || !sessionSecret()) return null;
   const [payload, signature] = token.split(".");
   if (!payload || !signature || !safeEqual(signature, sign(payload))) return null;
   try {
