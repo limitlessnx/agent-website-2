@@ -99,3 +99,18 @@ test("G3 failed webhook events are acknowledged without automatic retries and re
   assert.doesNotMatch(webhook,/status: 503/);
   assert.match(webhook,/apply_flux_credit_topup_from_checkout/);
 });
+
+test("G3 failed Flutterwave events expose an authenticated manual recovery action only",()=>{
+  const route=read("app/api/admin/billing/webhook-recovery/route.ts");
+  const panel=read("app/dashboard/billing/WebhookRecoveryPanel.tsx");
+  const page=read("app/dashboard/billing/page.tsx");
+  assert.match(route,/getAdminSession\(\)/);
+  assert.match(route,/processing_error/);
+  assert.match(route,/flutterwaveRequest/);
+  assert.match(route,/apply_flux_credit_topup_from_checkout/);
+  assert.match(route,/Manual replay is currently limited to charge\.completed events/);
+  assert.match(panel,/Manually retry top-up/);
+  assert.match(panel,/window\.confirm/);
+  assert.match(panel,/Failed events are never retried automatically/);
+  assert.match(page,/WebhookRecoveryPanel/);
+});
