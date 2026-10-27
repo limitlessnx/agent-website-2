@@ -33,3 +33,9 @@ test("plan entitlement panel exposes email follow-up and full channel automation
   assert.match(entitlements, /"web_chat_automation"/);
   assert.match(entitlements, /"human_handoff"/);
 });
+
+test("billing page does not offer a broken self-service plan upgrade", () => {
+  assert.match(billing, /Plan changes temporarily unavailable/);
+  assert.match(billing, /payment confirmation does not currently switch an existing organization to a new plan/);
+  assert.doesNotMatch(billing, /href="\/pricing#plan-details">Upgrade plan/);
+});
