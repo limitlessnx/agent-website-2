@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type FailedEvent = {
   id: string;
@@ -22,7 +22,7 @@ export default function WebhookRecoveryPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/admin/billing/webhook-recovery", { cache: "no-store" });
@@ -34,11 +34,11 @@ export default function WebhookRecoveryPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadEvents();
-  }, []);
+  }, [loadEvents]);
 
   async function retryManually(event: FailedEvent) {
     const confirmed = window.confirm(
