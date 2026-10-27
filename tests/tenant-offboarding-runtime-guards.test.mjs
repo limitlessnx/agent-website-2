@@ -104,8 +104,12 @@ test("appointment reminder cancellation is scoped and occurs before appointment 
 });
 
 test("CRM reminder and handoff cancellation is tenant-scoped and precedes external side effects", () => {
+  const appointmentReminderSection = systemEventAdapters.slice(
+    systemEventAdapters.indexOf("export async function processDueAppointmentReminders"),
+    systemEventAdapters.indexOf("export async function executeSystemWorkflowAdapter"),
+  );
   assertBefore(
-    systemEventAdapters,
+    appointmentReminderSection,
     '.from("organizations")',
     'callAdminRpc(admin, "publish_system_event"',
     "inactive appointment reminders must not publish a system event",
@@ -148,9 +152,13 @@ test("offboarding suppression is terminal for recovery and cannot trigger automa
 });
 
 test("organization lookup failures fail closed instead of allowing scheduled work to continue", () => {
+  assert.match(
+    installments,
+    /if \(planError \|\| orgError \|\| templateError \|\| whatsappTemplateError\) \{\s*throw new Error\("Unable to load installment reminder runtime data\."\)/,
+    "installment reminder organization lookup failures must abort the sweep",
+  );
   for (const [name, source] of [
     ["Limitless Realty follow-ups", followups],
-    ["installment reminders", installments],
     ["tenant reminder sweep", reminders],
     ["appointment reminder drain", appointments],
     ["internal reminder execution drain", reminderExecutionDrain],
