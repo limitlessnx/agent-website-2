@@ -5,6 +5,7 @@ import { getFluxInternalUsageSummary } from "@/lib/flux-credits";
 import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CreditAdjustmentForm from "./CreditAdjustmentForm";
+import WebhookRecoveryPanel from "./WebhookRecoveryPanel";
 
 export const dynamic = "force-dynamic";
 function formatCredits(value: number) { return new Intl.NumberFormat("en-US").format(value); }
@@ -84,6 +85,7 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
         </article> : null}
       </section>
       {selectedOrganizationId ? <CreditAdjustmentForm organizationId={selectedOrganizationId} /> : null}
+      <WebhookRecoveryPanel />
       <section className="admin-card">
         <h2>Credit ledger</h2>
         <p className="admin-note">Latest 30 transactions for {selectedOrganization?.name || "the selected tenant"}. Every manual change should have a reason and admin attribution.</p>
