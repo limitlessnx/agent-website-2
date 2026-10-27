@@ -17,6 +17,10 @@ The remediation migration explicitly uses storage.foldername(storage.objects.nam
 - No tenant IDs, object names, or file contents were queried.
 - Do not treat the static tests as proof of runtime RLS behavior.
 
+## Current environment gate (2026-10-27)
+
+The connected Supabase project currently lists only its `main` branch, and that branch reports `MIGRATIONS_FAILED`. No disposable/non-production branch is available for the required RLS exercise. No branch was created and no migration was applied; creating a Supabase branch may incur cost and requires explicit approval. Runtime RLS validation is therefore blocked until an approved disposable environment is available.
+
 ## Required non-production validation before applying
 
 Use two test organizations and authenticated members in a disposable/non-production Supabase project:
