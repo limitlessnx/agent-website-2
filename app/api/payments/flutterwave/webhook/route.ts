@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         method: "PATCH",
         body: JSON.stringify({ processing_error: "Checkout session not found; waiting for retry." }),
       }).catch(() => undefined);
-      return NextResponse.json({ received: true, retryable: true }, { status: 202 });
+      return NextResponse.json({ received: false, retryable: true }, { status: 503 });
     }
 
     const verification = await flutterwaveRequest<any>(`/transactions/${encodeURIComponent(String(data.id))}/verify`);
@@ -87,6 +87,6 @@ export async function POST(request: Request) {
     console.error("[payments/flutterwave/webhook]", error);
     // Keep processed_at null on failure. The next provider retry can resume
     // the interrupted work rather than being discarded as a duplicate.
-    return NextResponse.json({ received: true, retryable: true }, { status: 200 });
+    return NextResponse.json({ received: false, retryable: true }, { status: 503 });
   }
 }
