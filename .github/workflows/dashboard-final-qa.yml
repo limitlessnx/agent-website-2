@@ -50,6 +50,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Dependency vulnerability inventory (non-blocking)
+        shell: bash
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e 'const a=require("/tmp/npm-audit.json"); const items=Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==="string"?x:{title:x.title,url:x.url,range:x.range})})); console.log(JSON.stringify({summary:a.metadata?.vulnerabilities,advisories:items},null,2))'
       - name: Xposure dashboard and tenant authorization regressions
         run: npm run test:xposure-dashboard
       - name: Dashboard regression contracts
