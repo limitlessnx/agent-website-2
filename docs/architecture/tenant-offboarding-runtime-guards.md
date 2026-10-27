@@ -13,14 +13,13 @@ Organization deactivation must stop new tenant-owned scheduled work from being q
 - CRM appointment reminder and human-handoff follow-up drains: cancel due tasks for inactive organizations before creating events or sending messages.
 - System-event dispatcher and recovery sweep: mark inactive-tenant events as failed with an explicit offboarding-suppression reason and exclude those terminal suppressions from automatic retry.
 
-All checks are organization-scoped. Shared schedules remain enabled; no global cron or Trigger.dev schedule is paused.
+Flux Social task handlers are deliberately excluded from this phase and remain unchanged. All included checks are organization-scoped. Shared schedules remain enabled; no global cron or Trigger.dev schedule is paused.
 
 ## Validation and limitations
 
 - Static contract tests cover the non-Flux-Social guarded paths, including appointment/handoff follow-ups and system-event suppression.
 - Build and CI results are pending for this draft.
 - These checks are not a complete cancellation/drain solution for already-running provider operations or other asynchronous queues. Additional task families still need inventory and non-production testing.
-- The generation worker currently returns a skipped result for an inactive tenant; it does not delete generation-job rows.
 - No production code is deployed, no Supabase migration is included, and no live queue rows or organization statuses were modified.
 
 ## Required next tests
