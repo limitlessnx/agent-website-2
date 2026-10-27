@@ -182,3 +182,37 @@ This confirms both database-backed operational queues and Trigger.dev-managed ex
 3. **Trigger.dev cancellation remains unverified.** Trace all task files under `src/trigger`, enumerate organization-scoped task payload fields and retry behavior, and design a cancel/drain procedure that blocks re-enqueue after freeze. No Trigger.dev tasks were canceled during this audit.
 4. **Runtime queues must be included in dry-run output.** The dry-run dependency report should include the listed provisioning, workflow, event-delivery, social-publishing, inspection, and reminder tables plus active external tasks and webhook deliveries.
 5. **Next implementation gate:** documentation/source tracing and tests only, still on the Phase 6 draft branch. Do not add a deletion endpoint, lifecycle mutation, migration, storage deletion, scheduler changes, task cancellation, merge, or production deployment without explicit approval.
+
+
+## Follow-up: Storage policy expression and queue schema review (read-only)
+
+### Potential Storage policy defect requiring a separate security review
+
+The live `storage.objects` policies for `flux-social-assets` currently show predicates of the form:
+
+```sql
+FROM organizations o
+WHERE (o.id::text = storage.foldername(o.name)[1])
+  AND is_organization_member(o.id)
+```
+
+The expression calls `storage.foldername(o.name)` on the organization table's `name` column, rather than visibly applying `storage.foldername(name)` to the `storage.objects` row being authorized. As written, this appears to compare the organization ID with a folder segment derived from the organization's display name, not the requested object's path. This is a **potential policy correctness/security issue**, not a confirmed exploit: exact SQL name resolution, data conventions, and expected behavior must be validated with a targeted policy test before changing anything.
+
+Why it matters to offboarding: if the policy does not correctly bind the object path to the tenant, an offboarding workflow must not assume that disabling organization membership automatically prevents object access. Before any storage lifecycle implementation, add non-production tests for:
+- a member reading/writing an object in their own organization folder;
+- a member being denied access to another organization's folder;
+- a non-member being denied read/write/delete;
+- behavior after membership is revoked and after a tenant is frozen;
+- each relevant bucket, not just `flux-social-assets`.
+
+Do not patch this live policy as part of the deletion audit. A separate draft-only security fix should be reviewed and tested against the actual intended object path convention first.
+
+### Queue and integration schema evidence
+
+Read-only column metadata confirms that `automation_provisioning_jobs` and `provisioning_jobs` contain organization IDs, status, attempt counters, scheduling timestamps, idempotency keys (for automation provisioning), and payload/result/error fields. `organization_deployment_tasks` is organization-scoped and tracks task status. `real_estate_inspection_jobs` includes status, due time, idempotency key, provider message ID, and delivery status. `media_assets` stores organization ID plus storage bucket/path references. `photography_catalogue_media` likewise stores organization ID and storage path. `organization_integrations`, `channel_bindings`, and `integration_secret_bindings` hold organization linkage and credential-reference/secret-binding metadata.
+
+These are concrete dry-run inventory sources. A future report should count and classify pending, running, retrying, failed, and completed jobs without returning message bodies, credential values, or sensitive payload contents. It should also join media references to bucket/path metadata without downloading media. External credentials must be revoked through provider-supported flows, not merely by deleting a binding row.
+
+### Updated gate
+
+The next work remains source tracing and test design on the draft branch. Treat the Storage policy expression as a separate potential security issue to triage. Do not add a tenant freeze mutation, delete API, schema migration, live policy edit, object deletion, queue cancellation, merge, or production deployment without explicit approval.
