@@ -189,15 +189,24 @@ export async function sendWhatsAppMessage(input: SendInput) {
       const media=suppliedVideos.length||suppliedImages.length
         ?{videos:suppliedVideos,images:suppliedImages}
         :await resolvePropertyMediaFromText(input.organizationId,input.text||"");
-      const urls=media.videos.length?media.videos:media.images;
-      for(const url of urls){
+      for (const url of media.images) {
         await sendTwilioWhatsAppMessage({
-          accountSid:credentials.accountSid,
-          authToken:credentials.authToken,
-          from:credentials.from,
-          to:`+${to}`,
-          mediaUrl:url,
-          statusCallbackUrl:statusCallback,
+          accountSid: credentials.accountSid,
+          authToken: credentials.authToken,
+          from: credentials.from,
+          to: `+${to}`,
+          mediaUrl: url,
+          statusCallbackUrl: statusCallback,
+        });
+      }
+      for (const url of media.videos) {
+        await sendTwilioWhatsAppMessage({
+          accountSid: credentials.accountSid,
+          authToken: credentials.authToken,
+          from: credentials.from,
+          to: `+${to}`,
+          mediaUrl: url,
+          statusCallbackUrl: statusCallback,
         });
       }
     }
@@ -253,8 +262,8 @@ export async function sendWhatsAppMessage(input: SendInput) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
     const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
     const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, input.text || "");
-    if (media.videos.length) for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
-    else for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
+    for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
+    for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
   }
 
   const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
