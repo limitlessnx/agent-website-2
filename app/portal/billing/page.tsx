@@ -98,7 +98,8 @@ export default async function PortalBillingPage() {
         <article className="portal-card">
           <div className="portal-card-head"><div><h2>Top up Flux Credits</h2><p>1 Flux Credit = $0.01 of customer-facing usage value. Minimum top-up: $10 = 1,000 credits.</p></div></div>
           {canManageBilling && wallet.canTopUp ? <FluxCreditTopUpForm /> : canManageBilling ? <p className="portal-empty">Top-ups become available after the Basic trial converts.</p> : <p className="portal-empty">You have read-only billing access. Ask an organization owner or billing manager to purchase credits.</p> }
-          <div className="portal-actions" style={{marginTop:20}}><Link className="portal-button secondary" href="/pricing#plan-details">Upgrade plan</Link></div>
+          <div className="portal-actions" style={{marginTop:20}}><span className="portal-button secondary" aria-disabled="true" style={{opacity:0.65,cursor:"not-allowed"}}>Plan changes temporarily unavailable</span></div>
+          <p className="portal-empty">Self-service plan changes are being finalized. Do not start a second checkout for an existing subscription yet; payment confirmation does not currently switch an existing organization to a new plan.</p>
           <p className="portal-empty">Top-ups increase usage capacity only. They do not unlock higher-plan features.</p>
         </article>
       </section>
