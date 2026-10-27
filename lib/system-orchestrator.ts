@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { runTenantWorkIfActive } from "./tenant-offboarding-guard.mjs";
 import { createHandoffFromSystemEvent } from "@/lib/human-operations";
 import { executeSystemWorkflowAdapter } from "@/lib/system-event-adapters";
 
@@ -327,14 +328,21 @@ export async function processSystemEvent(eventId?: string | null) {
       .eq("id", event.organizationId)
       .maybeSingle();
     if (organizationError) throw organizationError;
-    if (!organization || organization.status !== "active") {
+    const tenantGate = await runTenantWorkIfActive(
+      organization?.status,
+      async () => "continue",
+      async () => {
+        const message = "Offboarding suppression: organization is not active.";
+        const { error: suppressError } = await supabase.from("domain_events").update({
+          status: "failed",
+          last_error: message,
+          updated_at: new Date().toISOString(),
+        }).eq("organization_id", event.organizationId).eq("id", event.id);
+        if (suppressError) throw suppressError;
+      },
+    );
+    if (!tenantGate.active) {
       const message = "Offboarding suppression: organization is not active.";
-      const { error: suppressError } = await supabase.from("domain_events").update({
-        status: "failed",
-        last_error: message,
-        updated_at: new Date().toISOString(),
-      }).eq("organization_id", event.organizationId).eq("id", event.id);
-      if (suppressError) throw suppressError;
       return { status: "failed" as const, eventId: event.id, error: message, suppressed: true, deliveries: [] };
     }
 
