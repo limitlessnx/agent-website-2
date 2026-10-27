@@ -19,9 +19,13 @@ Flux Social task handlers are deliberately excluded from this phase and remain u
 ## Validation and limitations
 
 - Static contract tests cover the non-Flux-Social guarded paths, including appointment/handoff follow-ups and system-event suppression.
-- Build and CI results are pending for this draft.
+- Static guard contracts, TypeScript, and production build passed on recorded head `d605979d12e057486df52cdfd1a13dd645c1531e` (2026-10-27). These checks validate source contracts and build integrity, not runtime task behavior.
 - These checks are not a complete cancellation/drain solution for already-running provider operations or other asynchronous queues. Additional task families still need inventory and non-production testing.
 - No production code is deployed, no Supabase migration is included, and no live queue rows or organization statuses were modified.
+
+## Current runtime-validation blocker (2026-10-27)
+
+No disposable/non-production Supabase branch is currently available; the connected project lists only `main`, which reports `MIGRATIONS_FAILED`. No branch was created and no live data or queue was changed. Synthetic-tenant runtime validation remains blocked until an approved safe environment and test credentials are available.
 
 ## Required next tests
 
