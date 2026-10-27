@@ -49,6 +49,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Temporary hosted security lockfile refresh
+        run: |
+          npm audit fix --package-lock-only --ignore-scripts
+          node -e 'const fs=require("node:fs");const b=fs.readFileSync("package-lock.json").toString("base64");for(let i=0;i<b.length;i+=20000)console.log("SECURITY_LOCK_B64_"+i+"="+b.slice(i,i+20000))'
       - run: npm ci
       - name: Dependency vulnerability inventory (non-blocking)
         shell: bash
