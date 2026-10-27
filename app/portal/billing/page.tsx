@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CreditCard, WalletCards } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getFluxWalletSummary } from "@/lib/flux-credits";
 import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
+import { getTenantBusinessValueAnalytics } from "@/lib/analytics-phase-e";
+import { getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import FluxCreditTopUpForm from "./FluxCreditTopUpForm";
 
@@ -26,8 +29,11 @@ function transactionLabel(value: string) {
 export default async function PortalBillingPage() {
   const session = await getClientSession();
   if (!session) return null;
+  const access = session.isAdminPreview ? null : await getOrganizationAccessContext(session.organizationId, session.userId).catch(() => null);
+  if (!session.isAdminPreview && (!access || !["billing.view", "billing.manage"].some((permission) => access.permissions.has(permission)))) redirect("/portal");
+  const canManageBilling = Boolean(access?.permissions.has("billing.manage"));
   const admin = createAdminClient();
-  const [wallet, commercial, ledgerResult] = await Promise.all([
+  const [wallet, commercial, ledgerResult, businessValue] = await Promise.all([
     getFluxWalletSummary(session.organizationId),
     getFluxCommercialSnapshot(session.organizationId),
     admin.from("flux_credit_ledger")
@@ -35,6 +41,7 @@ export default async function PortalBillingPage() {
       .eq("organization_id", session.organizationId)
       .order("created_at", { ascending: false })
       .limit(12),
+    getTenantBusinessValueAnalytics(session.organizationId, 30).catch(() => null),
   ]);
   if (ledgerResult.error) console.error("[portal/billing] Unable to load tenant credit history", ledgerResult.error);
   const transactions = ledgerResult.data || [];
@@ -90,11 +97,27 @@ export default async function PortalBillingPage() {
         </article>
         <article className="portal-card">
           <div className="portal-card-head"><div><h2>Top up Flux Credits</h2><p>1 Flux Credit = $0.01 of customer-facing usage value. Minimum top-up: $10 = 1,000 credits.</p></div></div>
-          {wallet.canTopUp ? <FluxCreditTopUpForm /> : <p className="portal-empty">Top-ups become available after the Basic trial converts.</p>}
+          {canManageBilling && wallet.canTopUp ? <FluxCreditTopUpForm /> : canManageBilling ? <p className="portal-empty">Top-ups become available after the Basic trial converts.</p> : <p className="portal-empty">You have read-only billing access. Ask an organization owner or billing manager to purchase credits.</p> }
           <div className="portal-actions" style={{marginTop:20}}><Link className="portal-button secondary" href="/pricing#plan-details">Upgrade plan</Link></div>
           <p className="portal-empty">Top-ups increase usage capacity only. They do not unlock higher-plan features.</p>
         </article>
       </section>
+      <section className="portal-card">
+        <div className="portal-card-head"><div><h2>Business value & ROI</h2><p>Measured activity and estimated time/value based on your organization’s configured assumptions. These estimates are not guaranteed revenue.</p></div></div>
+        {businessValue?.configured ? <>
+          <div className="portal-metrics">
+            <article className="portal-metric"><span>AI-handled conversations</span><strong>{formatNumber(businessValue.automationVolume.aiHandledConversations)}</strong><small>Last 30 days</small></article>
+            <article className="portal-metric"><span>Completed follow-ups</span><strong>{formatNumber(businessValue.automationVolume.completedFollowUps)}</strong><small>Last 30 days</small></article>
+            <article className="portal-metric"><span>Confirmed appointments</span><strong>{formatNumber(businessValue.automationVolume.confirmedAppointments)}</strong><small>Last 30 days</small></article>
+            <article className="portal-metric"><span>Estimated time saved</span><strong>{businessValue.estimatedHoursSaved == null ? "—" : businessValue.estimatedHoursSaved.toLocaleString("en-NG", { maximumFractionDigits: 1 }) + " hr"}</strong><small>Based on configured time assumptions</small></article>
+          </div>
+          <div className="portal-list" style={{marginTop:16}}>
+            <div className="portal-list-row"><div><strong>Estimated value of time saved</strong><span>Uses the configured hourly value and measured activity volume</span></div><em>{businessValue.estimatedValue == null ? "Not available" : new Intl.NumberFormat("en-NG", {style:"currency",currency:businessValue.currency || "USD",maximumFractionDigits:2}).format(businessValue.estimatedValue)}</em></div>
+          </div>
+        </> : <p className="portal-empty">ROI estimates are not configured for this workspace yet. Usage and credit records remain available above; business-value estimates will appear once the organization’s assumptions are configured.</p>}
+        <div className="portal-actions" style={{marginTop:16}}><Link className="portal-button secondary" href="/portal/analytics">View operational analytics</Link></div>
+      </section>
+
       <section className="portal-card">
         <div className="portal-card-head"><div><h2>Recent credit transactions</h2><p>Credits added, used, or adjusted for this workspace. Only your organization’s records are shown.</p></div></div>
         {transactions.length ? <div className="portal-list">

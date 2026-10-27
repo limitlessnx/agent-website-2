@@ -1,6 +1,9 @@
 name: Dashboard Final QA
 
 on:
+  push:
+    branches:
+      - "draft/phase-*"
   pull_request:
     branches: [main]
     paths:
@@ -44,13 +47,52 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
+      - name: Dependency vulnerability inventory (non-blocking)
+        shell: bash
+        run: |
+          if npm audit --json > /tmp/npm-audit.json; then
+            audit_exit=0
+          else
+            audit_exit=$?
+          fi
+          export AUDIT_EXIT_CODE="$audit_exit"
+          node <<'NODE'
+          const fs = require("node:fs");
+          let audit;
+          try {
+            audit = JSON.parse(fs.readFileSync("/tmp/npm-audit.json", "utf8"));
+          } catch {
+            console.log("Dependency audit did not return valid JSON; leaving this inventory non-blocking.");
+            process.exit(0);
+          }
+          const items = Object.entries(audit.vulnerabilities || {}).map(([name, v]) => ({
+            name,
+            severity: v.severity,
+            range: v.range,
+            fixAvailable: v.fixAvailable,
+            via: (v.via || []).map(x => typeof x === "string" ? x : {
+              title: x.title, url: x.url, range: x.range
+            })
+          }));
+          console.log(JSON.stringify({
+            auditExitCode: Number(process.env.AUDIT_EXIT_CODE || 0),
+            summary: audit.metadata?.vulnerabilities || null,
+            advisories: items
+          }, null, 2));
+          NODE
       - name: Xposure dashboard and tenant authorization regressions
         run: npm run test:xposure-dashboard
       - name: Dashboard regression contracts
         run: npm run test:support
+      - name: Flux Social Storage policy static contract
+        if: startsWith(github.ref, 'refs/heads/draft/phase-7') || startsWith(github.ref, 'refs/heads/draft/phase-8')
+        run: node --test tests/flux-social-storage-policy-contract.test.mjs
+      - name: Tenant offboarding runtime and guard contract
+        if: startsWith(github.ref, 'refs/heads/draft/phase-8')
+        run: npm run test:tenant-offboarding
       - name: Evaluation and conversation-center guardrails
         run: node --test tests/evaluation-and-conversation-center.test.mjs tests/workspace-and-google-auth.test.mjs
       - name: TypeScript

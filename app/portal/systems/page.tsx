@@ -2,6 +2,12 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, PauseCircle, Settings2 } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
 import { getOrganizationSystems, type SystemCatalogItem } from "@/lib/client-systems";
+import { getFluxWalletSummary } from "@/lib/flux-credits";
+import {
+  getOrganizationAllocatedCustomerAgentKeys,
+  getOrganizationPendingCustomerAgentKeys,
+  getVisibleCustomerAgents,
+} from "@/lib/customer-agent-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +31,21 @@ function StatusIcon({ status }: { status: string }) {
 export default async function MySystemsPage() {
   const session = await getClientSession();
   if (!session) return null;
-  const systems = await getOrganizationSystems(session.organizationId).catch(() => []);
+  const [systems, wallet, allocatedAgentKeys] = await Promise.all([
+    getOrganizationSystems(session.organizationId).catch(() => []),
+    getFluxWalletSummary(session.organizationId).catch(() => null),
+    getOrganizationAllocatedCustomerAgentKeys(session.organizationId).catch(() => []),
+  ]);
+  const pendingAgentKeys = await getOrganizationPendingCustomerAgentKeys(
+    session.organizationId,
+    allocatedAgentKeys,
+  ).catch(() => []);
+  const visibleAgents = wallet
+    ? getVisibleCustomerAgents(wallet.planCode, allocatedAgentKeys)
+    : [];
+  const pendingAgents = wallet
+    ? getVisibleCustomerAgents(wallet.planCode, pendingAgentKeys)
+    : [];
 
   return (
     <main className="portal-page">
@@ -34,6 +54,46 @@ export default async function MySystemsPage() {
         <h1>My Systems</h1>
         <p>Manage the business systems selected for your organization. Technical workflow details stay behind the scenes.</p>
       </header>
+
+      <section className="portal-card">
+        <div className="portal-card-head">
+          <div>
+            <h2>My Agents</h2>
+            <p>Customer-facing agents enabled for your plan and configured for your organization.</p>
+          </div>
+          {wallet ? <em>{wallet.planName}</em> : null}
+        </div>
+        {!visibleAgents.length && !pendingAgents.length ? (
+          <p className="portal-empty">No verified agents are currently active or allocated for this organization and plan. Ask your organization administrator to review agent allocation and setup.</p>
+        ) : null}
+        {visibleAgents.length ? (
+          <div className="portal-system-list">
+            {visibleAgents.map((agent) => (
+              <article className="portal-system-installation" key={agent.key}>
+                <summary>
+                  <div><strong>{agent.name}</strong><span>{agent.summary}</span></div>
+                  <em className="status-active"><CheckCircle2 size={16} />Enabled</em>
+                </summary>
+                {agent.limitation ? <p className="portal-empty">{agent.limitation}</p> : null}
+              </article>
+            ))}
+          </div>
+        ) : null}
+        {pendingAgents.length ? (
+          <div className="portal-system-list">
+            <h3>Allocated agents awaiting setup</h3>
+            {pendingAgents.map((agent) => (
+              <article className="portal-system-installation" key={agent.key}>
+                <summary>
+                  <div><strong>{agent.name}</strong><span>{agent.summary}</span></div>
+                  <em className="status-provisioning"><Clock3 size={16} />Setup pending</em>
+                </summary>
+                <p className="portal-empty">This agent has been allocated but is not yet active. Required integrations and setup must be completed before it can handle customers.</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
 
       {!systems.length ? (
         <section className="portal-card portal-empty-state">

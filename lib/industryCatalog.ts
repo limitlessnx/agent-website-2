@@ -85,7 +85,7 @@ export const planDefinitions: PlanDefinition[] = [
       "Everything in Plus",
       "Higher monthly usage and credits",
       "Admin workspace and team access",
-      "WhatsApp and email follow-up",
+      "Cross-channel follow-up across up to two active channels",
       "Leo Voice",
       "Cross-channel customer context",
       "Workflow visibility and reporting",
@@ -130,7 +130,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Enquiry", "Package selection", "Booking", "Reminder", "Shoot", "Repeat booking"],
     basicExample: "Package Q&A, enquiry capture, booking intent and human studio handoff.",
     starterExample: "Adds booking reminders, missed-enquiry recovery and same-channel follow-up.",
-    businessExample: "Adds promotional campaigns, WhatsApp + email follow-up, admin access, Leo and deeper reporting.",
+    businessExample: "Adds promotional campaigns, admin access, Leo and deeper reporting, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds structured client, shoot, catalogue and campaign history for studio operations.",
     databaseLabel: "Client + studio booking database",
     channels: ["WhatsApp", "Website support", "Inbound voice", "Email follow-up on Business", "Meta template campaigns on Business"],
@@ -166,7 +166,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Enquiry", "Qualification", "Property match", "Inspection", "Follow-up", "Human agent handoff"],
     basicExample: "Property Q&A, buyer qualification, detail capture and human-agent handoff.",
     starterExample: "Adds property enquiry follow-up and inspection reminders through the same originating channel.",
-    businessExample: "Adds admin users, higher usage, WhatsApp + email sequences, inbound voice, Leo and cross-channel lead visibility.",
+    businessExample: "Adds admin users, higher usage, Leo and cross-channel lead visibility, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds a buyer, property, inspection and deal-stage database for deeper operational control.",
     databaseLabel: "Buyer + property operations database",
     channels: ["WhatsApp", "Website support", "Inbound voice", "Email follow-up on Business"],
@@ -177,7 +177,7 @@ export const industries: IndustryDefinition[] = [
       { title: "Qualify the buyer", description: "It captures budget, preferred location, property type, purchase timeline, financing or payment preference and urgency." },
       { title: "Match the opportunity", description: "Where configured, the system recommends relevant listings or routes the lead to the right property or human specialist." },
       { title: "Book or prepare inspection", description: "Plus and above can schedule inspection interest and send reminders through the same originating channel." },
-      { title: "Follow up intelligently", description: "Business can continue the conversation across WhatsApp and email while keeping the lead context connected for staff." },
+      { title: "Follow up intelligently", description: "Business can coordinate customer context across supported channels, with no more than two channels active at once." },
       { title: "Hand over to the closer", description: "Hot, urgent or complex opportunities are escalated with a concise summary so the human agent starts with context instead of asking everything again." }
     ],
     businessNotes: [
@@ -200,7 +200,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Lead", "Qualification", "Sales intake", "Follow-up", "Sales-ready status", "Closer handoff"],
     basicExample: "Product or service Q&A, lead qualification, intake capture and human sales handoff.",
     starterExample: "Adds same-channel sales follow-up and scheduled reminders.",
-    businessExample: "Adds admin users, higher credits, email + WhatsApp follow-up, inbound voice, Leo and pipeline visibility.",
+    businessExample: "Adds admin users, higher credits, Leo and pipeline visibility, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds a prospect, account and opportunity database with lifecycle tracking.",
     databaseLabel: "Prospect + opportunity database",
     channels: ["WhatsApp", "Website support", "Inbound voice", "Email follow-up on Business"],
@@ -210,7 +210,7 @@ export const industries: IndustryDefinition[] = [
       { title: "Handle first response", description: "The AI answers approved product, service, availability, pricing-range and process questions immediately." },
       { title: "Capture sales intake", description: "It collects the information the sales team actually needs, such as need, budget, company size, location, urgency or purchase timeline." },
       { title: "Score intent", description: "Leads can be categorized by configured criteria so staff can separate low-intent enquiries from opportunities that deserve fast human attention." },
-      { title: "Maintain follow-up", description: "Plus keeps follow-up on the originating channel. Business can coordinate WhatsApp and email follow-up with higher usage allowances." },
+      { title: "Maintain follow-up", description: "Plus keeps follow-up on the originating channel. Business can coordinate follow-up across selected channels, with no more than two channels active at once." },
       { title: "Give management visibility", description: "Business adds admins, reporting and Leo so managers can see neglected leads, conversation context and pipeline movement without reading every chat manually." },
       { title: "Hand over to the closer", description: "When buying intent is clear, the assigned salesperson receives the lead context and can continue from a much stronger starting point." }
     ],
@@ -229,7 +229,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Guest enquiry", "Room or service Q&A", "Booking qualification", "Reminder", "Staff handoff"],
     basicExample: "Guest Q&A, reservation intake, qualification and staff handoff.",
     starterExample: "Adds booking and reservation reminders on the originating channel.",
-    businessExample: "Adds cross-channel guest follow-up, admin access, inbound voice, Leo and higher usage.",
+    businessExample: "Adds cross-channel guest follow-up, admin access, Leo and higher usage, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds structured guest, booking and service-history records where integrations permit.",
     databaseLabel: "Guest + booking operations database"
   },
@@ -243,7 +243,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Customer enquiry", "Menu or service Q&A", "Reservation or order intent", "Reminder", "Staff handoff"],
     basicExample: "Menu and service Q&A, reservation or catering intake and human handoff.",
     starterExample: "Adds reservation reminders and same-channel follow-up.",
-    businessExample: "Adds admin users, higher credits, email + WhatsApp follow-up, inbound voice and Leo.",
+    businessExample: "Adds admin users, higher credits and Leo, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds customer, reservation and loyalty-style records where supported.",
     databaseLabel: "Customer + reservation database"
   },
@@ -257,7 +257,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Enquiry", "Approved admin Q&A", "Appointment intake", "Reminder", "Staff escalation"],
     basicExample: "Approved administrative Q&A, appointment intake and human escalation.",
     starterExample: "Adds appointment reminders and same-channel follow-up.",
-    businessExample: "Adds admin users, email + WhatsApp follow-up, inbound voice, Leo and workflow visibility.",
+    businessExample: "Adds admin users, Leo and workflow visibility, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds carefully scoped non-clinical administrative records subject to privacy and compliance requirements.",
     databaseLabel: "Administrative patient-service database"
   },
@@ -282,7 +282,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Enquiry", "Service qualification", "Appointment booking", "Reminder", "Promotion", "Customer reactivation"],
     basicExample: "Service Q&A, appointment intake, customer detail capture and human handoff.",
     starterExample: "Adds appointment reminders, missed-booking follow-up and same-channel nurture.",
-    businessExample: "Adds promotional calls and campaigns, WhatsApp + email follow-up, admin users, inbound voice, Leo and higher usage.",
+    businessExample: "Adds promotional calls and campaigns where configured, admin users, Leo and higher usage, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds a customer, service, appointment and campaign history database for deeper lifecycle visibility.",
     databaseLabel: "Customer + appointment operations database",
     channels: ["WhatsApp", "Website support", "Inbound voice", "Email follow-up on Business", "Promotional calls and campaigns on Business"],
@@ -311,7 +311,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Membership enquiry", "Qualification", "Trial booking", "Reminder", "Membership handoff"],
     basicExample: "Membership Q&A, trial qualification, intake capture and staff handoff.",
     starterExample: "Adds trial, renewal and same-channel reminders.",
-    businessExample: "Adds higher credits, admin users, cross-channel follow-up, inbound voice, Leo and reporting.",
+    businessExample: "Adds higher credits, admin users, cross-channel follow-up, Leo and reporting, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds a dedicated gym membership database for members, plans, renewals and lifecycle visibility.",
     databaseLabel: "Gym membership system"
   },
@@ -325,7 +325,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Service enquiry", "Job intake", "Qualification", "Booking", "Follow-up", "Staff handoff"],
     basicExample: "Service Q&A, job-detail intake, qualification and human handoff.",
     starterExample: "Adds quote, booking and same-channel follow-up reminders.",
-    businessExample: "Adds admin users, higher usage, cross-channel follow-up, inbound voice and Leo.",
+    businessExample: "Adds admin users, higher usage, cross-channel follow-up and Leo, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds customer, job, quote and service-history records.",
     databaseLabel: "Customer + job operations database"
   },
@@ -339,7 +339,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Service enquiry", "Vehicle intake", "Qualification", "Booking", "Reminder", "Advisor handoff"],
     basicExample: "Service Q&A, vehicle-detail intake, qualification and advisor handoff.",
     starterExample: "Adds quote, booking and maintenance reminders on the originating channel.",
-    businessExample: "Adds admin users, cross-channel follow-up, inbound voice, Leo and higher usage.",
+    businessExample: "Adds admin users, cross-channel follow-up, Leo and higher usage, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds customer, vehicle and service-history records.",
     databaseLabel: "Vehicle + service history database"
   },
@@ -353,7 +353,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Product enquiry", "Buying intent", "Support", "Follow-up", "Human escalation"],
     basicExample: "Product Q&A, buyer-intent capture and human support handoff.",
     starterExample: "Adds same-channel follow-up for abandoned or incomplete buying journeys.",
-    businessExample: "Adds email + WhatsApp follow-up, admin users, inbound voice where relevant, Leo and higher usage.",
+    businessExample: "Adds admin users, Leo and higher usage, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds customer and order-context records where supported by integrations.",
     databaseLabel: "Customer + commerce operations database"
   },
@@ -367,7 +367,7 @@ export const industries: IndustryDefinition[] = [
     journey: ["Enquiry", "Qualification", "Discovery booking", "Follow-up", "Professional handoff"],
     basicExample: "Service Q&A, prospect qualification, intake and professional handoff.",
     starterExample: "Adds consultation and proposal reminders on the originating channel.",
-    businessExample: "Adds admin users, higher usage, email + WhatsApp follow-up, inbound voice and Leo.",
+    businessExample: "Adds admin users, higher usage and Leo, with up to two active channels selected from supported options.",
     businessPlusExample: "Adds client, engagement and onboarding records.",
     databaseLabel: "Client + engagement database"
   }

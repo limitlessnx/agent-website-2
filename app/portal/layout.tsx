@@ -42,6 +42,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
           systems:capabilities.systems,
           appointments:capabilities.appointments,
           analytics:capabilities.analytics,
+          billing:capabilities.billing,
           team:capabilities.team,
           support:capabilities.support,
         }}

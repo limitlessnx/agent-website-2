@@ -10,6 +10,7 @@ export type FluxFeatureKey =
   | "team_admin"
   | "cross_channel"
   | "voice_automation"
+  | "email_follow_up"
   | "email_automation"
   | "web_chat_automation"
   | "leo_chat"
@@ -66,13 +67,13 @@ export const FLUX_CREDIT_ACTION_RATES: Record<FluxCreditAction, number> = {
 
 export const FLUX_USAGE_THRESHOLDS = [70, 90, 100] as const;
 
-const WEB_CHAT_AGENT: FluxAgentAllocation = { key: "web_chat_agent", name: "Web Chat Agent", channel: "web_chat" };
+const WEB_CHAT_AGENT: FluxAgentAllocation = { key: "web_chat_agent", name: "Web Support Agent", channel: "web_chat" };
 const WHATSAPP_AGENT: FluxAgentAllocation = { key: "whatsapp_agent", name: "WhatsApp Agent", channel: "whatsapp" };
-const VOICE_AGENT: FluxAgentAllocation = { key: "voice_agent", name: "Voice Agent", channel: "voice" };
+const VOICE_AGENT: FluxAgentAllocation = { key: "voice_agent", name: "Call Agent", channel: "voice" };
 const EMAIL_AGENT: FluxAgentAllocation = { key: "email_agent", name: "Email Agent", channel: "email" };
-const BASIC_CHANNEL_AGENTS = [WHATSAPP_AGENT];
-const BUSINESS_CHANNEL_AGENTS = [WHATSAPP_AGENT, VOICE_AGENT];
-const BUSINESS_PLUS_CHANNEL_AGENTS = [...BUSINESS_CHANNEL_AGENTS, EMAIL_AGENT, WEB_CHAT_AGENT];
+const BASIC_CHANNEL_AGENTS = [WHATSAPP_AGENT, WEB_CHAT_AGENT];
+const BUSINESS_CHANNEL_AGENTS = [WHATSAPP_AGENT, VOICE_AGENT, EMAIL_AGENT];
+const BUSINESS_PLUS_CHANNEL_AGENTS = [...BUSINESS_CHANNEL_AGENTS, WEB_CHAT_AGENT];
 
 export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
   basic: {
@@ -81,7 +82,7 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
     name: "Basic",
     monthlyCredits: 2500,
     maxChannels: 1,
-    selectableChannels: ["whatsapp"],
+    selectableChannels: ["whatsapp", "web_chat"],
     includedFeatures: ["core_ai_support", "human_handoff"],
     availableAgents: BASIC_CHANNEL_AGENTS,
     customerLabel: "Basic",
@@ -92,7 +93,7 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
     name: "Plus",
     monthlyCredits: 5000,
     maxChannels: 1,
-    selectableChannels: ["whatsapp"],
+    selectableChannels: ["whatsapp", "web_chat"],
     includedFeatures: ["core_ai_support", "human_handoff", "follow_ups", "reminders"],
     availableAgents: BASIC_CHANNEL_AGENTS,
     customerLabel: "Plus",
@@ -103,13 +104,14 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
     name: "Business",
     monthlyCredits: 12000,
     maxChannels: 2,
-    selectableChannels: ["whatsapp", "voice"],
+    selectableChannels: ["whatsapp", "voice", "email"],
     includedFeatures: [
       "core_ai_support",
       "human_handoff",
       "follow_ups",
       "reminders",
       "voice_automation",
+      "email_follow_up",
       "team_admin",
       "cross_channel",
       "leo_voice",
@@ -152,6 +154,7 @@ export const FLUX_FEATURE_LABELS: Record<FluxFeatureKey, string> = {
   follow_ups: "Follow-up automation",
   reminders: "Reminders",
   voice_automation: "Voice automation",
+  email_follow_up: "Email follow-up",
   email_automation: "Email automation",
   web_chat_automation: "Web chat automation",
   leo_chat: "Leo Chat",

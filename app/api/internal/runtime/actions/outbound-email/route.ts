@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertFluxFeatureAccess } from "@/lib/flux-credits";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
 
 const text = (v: unknown) => typeof v === "string" ? v.trim() : "";
@@ -49,10 +48,12 @@ export async function POST(request: NextRequest) {
 
     const sequenceStep = Number(body.sequence_step) || 1;
     const followUpCharge = sequenceStep > 1 || text(body.event_type).toLowerCase().includes("follow");
-    await assertFluxFeatureAccess(organizationId, "cross_channel");
     await preflightChargeableFluxAi({
       organizationId,
-      feature: followUpCharge ? "follow_ups" : "cross_channel",
+      // Business includes scoped email follow-up. Full outbound email automation
+      // remains a Business+ entitlement; a general cross-channel entitlement
+      // must not accidentally grant that capability.
+      feature: followUpCharge ? "email_follow_up" : "email_automation",
       action: followUpCharge ? "email_follow_up" : "ai_email",
     });
 
