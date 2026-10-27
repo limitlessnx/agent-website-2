@@ -20,9 +20,71 @@ async function parseLeadImportFile(file:File):Promise<Partial<Lead>[]> {const fi
 export async function importLeadsAction(formData:FormData){await requireAdmin();const file=formData.get("contacts_file");if(!(file instanceof File)||file.size===0)throw new Error("Upload a CSV or Excel contact file first.");const result=await importLeads(await parseLeadImportFile(file));revalidatePath("/dashboard/limitless/leads");revalidatePath("/dashboard");redirect(`/dashboard/limitless/leads?imported=${result.imported}&skipped=${result.skipped}&errors=${result.errors.length}`);}
 function getPropertyFiles(formData:FormData){return formData.getAll("property_images").filter((value):value is File=>value instanceof File&&value.size>0);}
 export async function createPropertyAction(formData:FormData){await requireAdmin();const files=getPropertyFiles(formData);const scope=await requireAdminSystemScope("limitless-realty");const created=await createProperty({title:String(formData.get("title")||""),location_area:String(formData.get("location_area")||""),location_city:String(formData.get("location_city")||""),price:String(formData.get("price")||""),type:String(formData.get("type")||""),status:String(formData.get("status")||"active"),drive_brochure_link:String(formData.get("drive_brochure_link")||""),features:String(formData.get("features")||""),description:String(formData.get("description")||"")},scope.organizationId);const propertyId=created[0]?.id;if(!propertyId)throw new Error("Property record was not created.");for(const file of files)await uploadPublicMedia(file,{organizationKey:scope.slug,organizationId:scope.organizationId,propertyId:String(propertyId),channel:"whatsapp"});revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");revalidatePath("/dashboard");}
-export async function updatePropertyAction(formData:FormData){await requireAdmin();const scope=await requireAdminSystemScope("limitless-realty");const propertyId=String(formData.get("property_id")||"");if(!propertyId)throw new Error("Property ID is required.");await updateProperty(propertyId,{title:String(formData.get("title")||""),location_area:String(formData.get("location_area")||""),location_city:String(formData.get("location_city")||""),price:String(formData.get("price")||""),type:String(formData.get("type")||""),status:String(formData.get("status")||"active"),drive_brochure_link:String(formData.get("drive_brochure_link")||""),features:String(formData.get("features")||""),description:String(formData.get("description")||"")},scope.organizationId);const files=getPropertyFiles(formData);if(files.length){for(const file of files){const uploaded=await uploadPublicMedia(file,{organizationKey:scope.slug,organizationId:scope.organizationId,propertyId,channel:"whatsapp"});if(uploaded.mediaType==="image")await updatePropertyImageLink(propertyId,uploaded.url,scope.organizationId);}}revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");revalidatePath("/dashboard");}
-export async function uploadPropertyImagesAction(formData:FormData){await requireAdmin();const scope=await requireAdminSystemScope("limitless-realty");const propertyId=String(formData.get("property_id")||"");const files=getPropertyFiles(formData);if(!propertyId)throw new Error("Choose a property before uploading media.");if(!files.length)throw new Error("Choose at least one image or video.");for(const file of files){const uploaded=await uploadPublicMedia(file,{organizationKey:scope.slug,organizationId:scope.organizationId,propertyId,channel:"whatsapp"});if(uploaded.mediaType==="image")await updatePropertyImageLink(propertyId,uploaded.url,scope.organizationId);}revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
-export async function deletePropertyAction(formData:FormData){await requireAdmin();const scope=await requireAdminSystemScope("limitless-realty");const propertyId=String(formData.get("property_id")||"");if(!propertyId)throw new Error("Property ID is missing.");await deleteProperty(propertyId,scope.organizationId);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/properties");revalidatePath("/dashboard/limitless/media");}
+export async function updatePropertyAction(_previous: { ok: boolean; message: string }, formData: FormData): Promise<{ ok: boolean; message: string }> {
+  try {
+    await requireAdmin();
+    const scope = await requireAdminSystemScope("limitless-realty");
+    const propertyId = String(formData.get("property_id") || "");
+    if (!propertyId) throw new Error("Property ID is required.");
+    await updateProperty(propertyId, {
+      title: String(formData.get("title") || ""),
+      location_area: String(formData.get("location_area") || ""),
+      location_city: String(formData.get("location_city") || ""),
+      price: String(formData.get("price") || ""),
+      type: String(formData.get("type") || ""),
+      status: String(formData.get("status") || "active"),
+      drive_brochure_link: String(formData.get("drive_brochure_link") || ""),
+      features: String(formData.get("features") || ""),
+      description: String(formData.get("description") || ""),
+    }, scope.organizationId);
+    const files = getPropertyFiles(formData);
+    for (const file of files) {
+      const uploaded = await uploadPublicMedia(file, { organizationKey: scope.slug, organizationId: scope.organizationId, propertyId, channel: "whatsapp" });
+      if (uploaded.mediaType === "image") await updatePropertyImageLink(propertyId, uploaded.url, scope.organizationId);
+    }
+    revalidatePath("/dashboard/limitless/properties");
+    revalidatePath("/dashboard/limitless/media");
+    revalidatePath("/dashboard");
+    return { ok: true, message: "Property changes saved successfully." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Could not save property changes. Please try again." };
+  }
+}
+export async function uploadPropertyImagesAction(_previous: { ok: boolean; message: string }, formData: FormData): Promise<{ ok: boolean; message: string }> {
+  try {
+    await requireAdmin();
+    const scope = await requireAdminSystemScope("limitless-realty");
+    const propertyId = String(formData.get("property_id") || "");
+    const files = getPropertyFiles(formData);
+    if (!propertyId) throw new Error("Choose a property before uploading media.");
+    if (!files.length) throw new Error("Choose at least one image or video before uploading.");
+    for (const file of files) {
+      const uploaded = await uploadPublicMedia(file, { organizationKey: scope.slug, organizationId: scope.organizationId, propertyId, channel: "whatsapp" });
+      if (uploaded.mediaType === "image") await updatePropertyImageLink(propertyId, uploaded.url, scope.organizationId);
+    }
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/limitless/properties");
+    revalidatePath("/dashboard/limitless/media");
+    return { ok: true, message: files.length === 1 ? "Media uploaded successfully." : `${files.length} media files uploaded successfully.` };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Media upload failed. Please try again." };
+  }
+}
+export async function deletePropertyAction(_previous: { ok: boolean; message: string }, formData: FormData): Promise<{ ok: boolean; message: string }> {
+  try {
+    await requireAdmin();
+    const scope = await requireAdminSystemScope("limitless-realty");
+    const propertyId = String(formData.get("property_id") || "");
+    if (!propertyId) throw new Error("Property ID is missing.");
+    await deleteProperty(propertyId, scope.organizationId);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/limitless/properties");
+    revalidatePath("/dashboard/limitless/media");
+    return { ok: true, message: "Property deleted successfully." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Could not delete property. Please try again." };
+  }
+}
 export async function deleteLeadAction(formData:FormData){await requireAdmin();const leadId=String(formData.get("lead_id")||"");if(!leadId)throw new Error("Lead ID is missing.");await deleteLead(leadId);revalidatePath("/dashboard");revalidatePath("/dashboard/limitless/leads");revalidatePath("/dashboard/limitless/campaigns");}
 
 export async function recordGencouvTelegramConversationAction(formData: FormData) {
