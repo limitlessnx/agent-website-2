@@ -54,6 +54,27 @@ export const tenantAppointmentReminderDrain = schedules.task({
       if (!claim) continue;
 
       try {
+        const { data: organization, error: organizationError } = await admin
+          .from("organizations")
+          .select("id,status")
+          .eq("id", row.organization_id)
+          .maybeSingle();
+        if (organizationError) throw organizationError;
+        if (!organization || organization.status !== "active") {
+          const { error: inactiveCancelError } = await admin
+            .from("tenant_appointment_reminders")
+            .update({
+              status: "cancelled",
+              last_error: "Organization is not active; reminder suppressed.",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("organization_id", row.organization_id)
+            .eq("id", row.id)
+            .eq("status", "processing");
+          if (inactiveCancelError) throw inactiveCancelError;
+          continue;
+        }
+
         const { data: appointment, error: appointmentError } = await admin
           .from("appointments")
           .select("id,title,status,start_at,timezone")
