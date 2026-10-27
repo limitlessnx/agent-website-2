@@ -95,5 +95,6 @@ test("G3 interrupted webhook processing remains retryable while completed duplic
   assert.match(webhook,/if \(!existingEvent\)/);
   assert.match(webhook,/Leave the event unprocessed so a provider retry can recover/);
   assert.match(webhook,/retryable: true/);
+  assert.match(webhook,/status: 503/);
   assert.match(webhook,/apply_flux_credit_topup_from_checkout/);
 });
