@@ -109,6 +109,8 @@ test("G3 failed Flutterwave events expose an authenticated manual recovery actio
   assert.match(route,/flutterwaveRequest/);
   assert.match(route,/apply_flux_credit_topup_from_checkout/);
   assert.match(route,/Manual replay is currently limited to charge\.completed events/);
+  assert.match(route,/replayable:/);
+  assert.match(panel,/!event\.replayable/);
   assert.match(panel,/Manually retry top-up/);
   assert.match(panel,/window\.confirm/);
   assert.match(panel,/Failed events are never retried automatically/);
