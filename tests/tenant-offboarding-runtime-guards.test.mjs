@@ -29,3 +29,23 @@ test("appointment reminder drain cancels due work for inactive organizations", (
 });
 
 
+
+const handoffFollowup = read("lib/handoff-followup.ts");
+const systemEventAdapters = read("lib/system-event-adapters.ts");
+const systemOrchestrator = read("lib/system-orchestrator.ts");
+const orchestrationRecovery = read("lib/orchestration-operations.ts");
+
+test("handoff follow-up tasks are cancelled before sending when the tenant is inactive", () => {
+  assert.match(handoffFollowup, /select\("status"\)\.eq\("id",task\.organization_id\)/);
+  assert.match(handoffFollowup, /organization\.status!=="active"[\s\S]*?status:"cancelled"[\s\S]*?follow_up_error:"organization_not_active"/);
+});
+
+test("appointment reminder tasks are cancelled before publishing a system event for inactive tenants", () => {
+  assert.match(systemEventAdapters, /select\("status"\)[\s\S]*?eq\("id", task\.organization_id\)[\s\S]*?organization\.status !== "active"[\s\S]*?status: "cancelled"[\s\S]*?reminder_error: "organization_not_active"/);
+});
+
+test("system-event dispatch suppresses inactive-tenant events without retry storms", () => {
+  assert.match(systemOrchestrator, /Offboarding suppression: organization is not active/);
+  assert.match(systemOrchestrator, /!\("suppressed" in result && result\.suppressed\)/);
+  assert.match(orchestrationRecovery, /startsWith\("Offboarding suppression:"\)[\s\S]*?action: "suppressed"/);
+});

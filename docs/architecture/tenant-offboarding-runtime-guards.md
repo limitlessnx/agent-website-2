@@ -10,12 +10,14 @@ Organization deactivation must stop new tenant-owned scheduled work from being q
 - Installment reminder sweep: only processes payment plans whose organization appears in the active-organization lookup.
 - Tenant reminder sweep: does not enqueue reminder executions for inactive organizations.
 - Tenant appointment reminder drain: cancels due appointment reminders for missing/inactive organizations.
+- CRM appointment reminder and human-handoff follow-up drains: cancel due tasks for inactive organizations before creating events or sending messages.
+- System-event dispatcher and recovery sweep: mark inactive-tenant events as failed with an explicit offboarding-suppression reason and exclude those terminal suppressions from automatic retry.
 
 All checks are organization-scoped. Shared schedules remain enabled; no global cron or Trigger.dev schedule is paused.
 
 ## Validation and limitations
 
-- Static contract tests cover the non-Flux-Social guarded paths.
+- Static contract tests cover the non-Flux-Social guarded paths, including appointment/handoff follow-ups and system-event suppression.
 - Build and CI results are pending for this draft.
 - These checks are not a complete cancellation/drain solution for already-running provider operations or other asynchronous queues. Additional task families still need inventory and non-production testing.
 - The generation worker currently returns a skipped result for an inactive tenant; it does not delete generation-job rows.

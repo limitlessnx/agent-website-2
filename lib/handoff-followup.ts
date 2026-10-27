@@ -42,6 +42,17 @@ export async function processDueHandoffFollowups(limit=100){
     }
 
     try{
+      const {data:organization,error:organizationError}=await admin.from("organizations").select("status").eq("id",task.organization_id).maybeSingle();
+      if(organizationError) throw organizationError;
+      if(!organization || organization.status!=="active"){
+        const {error:cancelError}=await admin.from("crm_tasks").update({
+          status:"cancelled",updated_at:new Date().toISOString(),
+          metadata:{...metadata,follow_up_error:"organization_not_active"},
+        }).eq("organization_id",task.organization_id).eq("id",task.id).eq("status","scheduled");
+        if(cancelError) throw cancelError;
+        results.push({taskId:task.id,status:"cancelled",reason:"organization_not_active"});
+        continue;
+      }
       const [{data:customer,error:customerError},{data:conversation,error:conversationError},{data:lastInbound,error:lastInboundError}]=await Promise.all([
         admin.from("crm_customers").select("full_name,company_name,phone").eq("organization_id",task.organization_id).eq("id",task.customer_id).maybeSingle(),
         admin.from("crm_conversations").select("id,channel,status,metadata").eq("organization_id",task.organization_id).eq("id",conversationId).maybeSingle(),

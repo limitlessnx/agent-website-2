@@ -138,7 +138,7 @@ export const systemEventDispatch = task({
     if (!payload.eventId) throw new Error("eventId is required.");
     const result = await processSystemEvent(payload.eventId);
     logger.info("System event dispatch completed", { eventId: payload.eventId, result });
-    if (result.status === "failed") throw new Error(result.error || "System event dispatch failed.");
+    if (result.status === "failed" && !("suppressed" in result && result.suppressed)) throw new Error(result.error || "System event dispatch failed.");
     return result;
   },
 });
