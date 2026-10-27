@@ -54,9 +54,16 @@ export const tenantReminderSweep=schedules.task({
    .select("id,organization_id,name,trigger_type,event_key,anchor_field,schedule_config,audience_config,channel,status,starts_at,ends_at,timezone,created_at")
    .eq("status","active").limit(1000);
   if(error)throw error;
+  const organizationIds = [...new Set((rules || []).map((rule: ReminderRule) => rule.organization_id))];
+  const { data: organizations, error: organizationError } = organizationIds.length
+    ? await admin.from("organizations").select("id,status").in("id", organizationIds)
+    : { data: [], error: null };
+  if (organizationError) throw organizationError;
+  const activeOrganizationIds = new Set((organizations || []).filter((organization: { id: string; status: string }) => organization.status === "active").map((organization: { id: string }) => organization.id));
   let considered=0,queued=0,blocked=0,skipped=0;
   for(const rule of (rules||[]) as ReminderRule[]){
    considered++;
+   if (!activeOrganizationIds.has(rule.organization_id)) { skipped++; continue; }
    const external=rule.channel!=="internal";
    const contactDate=await contactsForRule(admin,rule,now);
    let targets:Array<{recipient:Recipient;scheduledFor:Date}>=[];

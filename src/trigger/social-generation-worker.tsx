@@ -486,6 +486,15 @@ export const fluxSocialGenerationWorker = task({
     const supabase = createSocialAdminClient();
     const { data: run, error: runError } = await supabase.from("social_weekly_runs").select("id,organization_id,brand_id,status").eq("id", payload.weeklyRunId).single();
     if (runError) throw runError;
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .select("id,status")
+      .eq("id", run.organization_id)
+      .maybeSingle();
+    if (organizationError) throw organizationError;
+    if (!organization || organization.status !== "active") {
+      return { weeklyRunId: run.id, skipped: true, reason: "organization_not_active" };
+    }
     if (["review_ready", "failed"].includes(run.status)) return { weeklyRunId: run.id, skipped: true, status: run.status };
 
     const { data: brand, error: brandError } = await supabase.from("social_brands").select("id,organization_id,name,audience,tone,products").eq("organization_id", run.organization_id).eq("id", run.brand_id).single();

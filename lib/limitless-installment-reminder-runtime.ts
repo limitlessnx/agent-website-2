@@ -80,6 +80,10 @@ export async function runLimitlessInstallmentReminderSweep() {
 
   for (const plan of plans || []) {
     const organizationId = String(plan.organization_id);
+    if (!orgMap.has(organizationId)) {
+      results.push({ planId: plan.id, status: "skipped", reason: "organization_not_active" });
+      continue;
+    }
     if (!reminderEntitlements.has(organizationId)) {
       try {
         await assertFluxFeatureAccess(organizationId, "reminders");
