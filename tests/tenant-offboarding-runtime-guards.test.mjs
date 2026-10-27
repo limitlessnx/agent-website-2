@@ -50,3 +50,10 @@ test("system-event dispatch suppresses inactive-tenant events without retry stor
   assert.match(systemOrchestratorTask, /!\("suppressed" in result && result\.suppressed\)/);
   assert.match(orchestrationRecovery, /startsWith\("Offboarding suppression:"\)[\s\S]*?action: "suppressed"/);
 });
+
+const reminderExecutionDrain = read("src/trigger/tenant-reminder-execution-drain.ts");
+
+test("already-queued internal reminders are cancelled when their organization is inactive", () => {
+  assert.match(reminderExecutionDrain, /from\("organizations"\)[\s\S]*?eq\("id", row\.organization_id\)[\s\S]*?organization\.status !== "active"/);
+  assert.match(reminderExecutionDrain, /status: "cancelled"[\s\S]*?Organization is not active; reminder suppressed/);
+});

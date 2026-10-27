@@ -9,6 +9,7 @@ Organization deactivation must stop new tenant-owned scheduled work from being q
 - Limitless Realty follow-up drain: verifies the organization status before reading due follow-ups.
 - Installment reminder sweep: only processes payment plans whose organization appears in the active-organization lookup.
 - Tenant reminder sweep: does not enqueue reminder executions for inactive organizations.
+- Tenant reminder execution drain: cancels already-queued internal notifications for inactive organizations.
 - Tenant appointment reminder drain: cancels due appointment reminders for missing/inactive organizations.
 - CRM appointment reminder and human-handoff follow-up drains: cancel due tasks for inactive organizations before creating events or sending messages.
 - System-event dispatcher and recovery sweep: mark inactive-tenant events as failed with an explicit offboarding-suppression reason and exclude those terminal suppressions from automatic retry.
