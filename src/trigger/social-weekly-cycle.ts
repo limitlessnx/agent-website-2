@@ -59,15 +59,6 @@ export const fluxSocialWeeklyCycle = task({
   run: async (payload: { organizationId: string; brandId: string; weekStart?: string }) => {
     const supabase = createSocialAdminClient();
     const weekStart = payload.weekStart || weekStartUtc();
-    const { data: organization, error: organizationError } = await supabase
-      .from("organizations")
-      .select("id,status")
-      .eq("id", payload.organizationId)
-      .maybeSingle();
-    if (organizationError) throw organizationError;
-    if (!organization || organization.status !== "active") {
-      return { weekStart, skipped: true, reason: "organization_not_active" };
-    }
 
     const { data: existingRun, error: existingRunError } = await supabase
       .from("social_weekly_runs")

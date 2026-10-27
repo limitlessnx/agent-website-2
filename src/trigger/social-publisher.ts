@@ -151,29 +151,6 @@ export const fluxSocialPublishPost = task({
       };
     }
 
-    const { data: organization, error: organizationError } = await supabase
-      .from("organizations")
-      .select("id,status")
-      .eq("id", schedule.organization_id)
-      .maybeSingle();
-    if (organizationError) throw organizationError;
-    if (!organization || organization.status !== "active") {
-      const { error: cancelError } = await supabase
-        .from("social_schedules")
-        .update({
-          status: "cancelled",
-          last_error: "Organization is not active; publication suppressed.",
-        })
-        .eq("id", schedule.id)
-        .eq("organization_id", schedule.organization_id);
-      if (cancelError) throw cancelError;
-      return {
-        scheduleId: schedule.id,
-        skipped: true,
-        reason: "organization_not_active",
-      };
-    }
-
     const { data: rawPost, error: postError } = await supabase
       .from("social_posts")
       .select(

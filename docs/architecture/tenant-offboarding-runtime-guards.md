@@ -8,19 +8,14 @@ Organization deactivation must stop new tenant-owned scheduled work from being q
 
 - Limitless Realty follow-up drain: verifies the organization status before reading due follow-ups.
 - Installment reminder sweep: only processes payment plans whose organization appears in the active-organization lookup.
-- Flux Social publisher: cancels a scheduled publication when the owning organization is missing or inactive.
-- Flux Social generation worker: skips generation for a missing/inactive organization.
 - Tenant reminder sweep: does not enqueue reminder executions for inactive organizations.
 - Tenant appointment reminder drain: cancels due appointment reminders for missing/inactive organizations.
-- Flux Social weekly planning: skips planning for missing/inactive organizations.
-- Flux Social learning snapshots and metric ingestion: skip background analytics work for missing/inactive organizations.
-- Flux Social Meta analytics and Reel rendering: skip background work for missing/inactive organizations.
 
 All checks are organization-scoped. Shared schedules remain enabled; no global cron or Trigger.dev schedule is paused.
 
 ## Validation and limitations
 
-- Static contract tests cover all eleven guarded paths.
+- Static contract tests cover the non-Flux-Social guarded paths.
 - Build and CI results are pending for this draft.
 - These checks are not a complete cancellation/drain solution for already-running provider operations or other asynchronous queues. Additional task families still need inventory and non-production testing.
 - The generation worker currently returns a skipped result for an inactive tenant; it does not delete generation-job rows.

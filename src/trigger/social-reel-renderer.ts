@@ -16,15 +16,6 @@ export const fluxSocialRenderReel = task({
   retry: { maxAttempts: 2, minTimeoutInMs: 10_000, maxTimeoutInMs: 60_000, factor: 2 },
   run: async (payload: { organizationId: string; postId: string }) => {
     const supabase = createAdminClient();
-    const { data: organization, error: organizationError } = await supabase
-      .from("organizations")
-      .select("id,status")
-      .eq("id", payload.organizationId)
-      .maybeSingle();
-    if (organizationError) throw organizationError;
-    if (!organization || organization.status !== "active") {
-      return { skipped: true, reason: "organization_not_active" };
-    }
 
     const { data: post, error: postError } = await supabase
       .from("social_posts")
