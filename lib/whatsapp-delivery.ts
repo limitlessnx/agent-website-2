@@ -101,6 +101,16 @@ async function recordAttempt(payload: Record<string, unknown>) {
 function isDirectPublicImageUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com/i.test(value) && /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value);
 }
+function isPublicImageAssetUrl(value: unknown, mimeType: unknown): value is string {
+  if (isDirectPublicImageUrl(value)) return true;
+  if (typeof value !== "string" || !/^https?:\/\//i.test(value) || !/^image\/(?:jpeg|png|webp|gif|avif|bmp)$/i.test(String(mimeType || ""))) return false;
+  try {
+    const url = new URL(value);
+    return !url.username && !url.password && !/drive\.google\.com|localhost|127\.0\.0\.1/i.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
 function isDirectPublicVideoUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com|youtube\.com|youtu\.be/i.test(value) && /\.(?:mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(value);
 }
@@ -109,19 +119,28 @@ function publicStorageUrl(bucket: unknown, path: unknown): string | null {
   if (!url || typeof bucket !== "string" || typeof path !== "string" || !bucket || !path) return null;
   return `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
 }
-async function resolvePropertyMediaFromText(organizationId: string, text: string) {
+export function removeInlineStorageObjectUrls(text: string | undefined): string | undefined {
+  if (!text) return text;
+  return text.replace(/https?:\/\/[^\s<>"']*\/storage\/v1\/object\/(?:public|sign)\/[^\s<>"']+/gi, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+export async function resolvePropertyMediaFromText(organizationId: string, text: string) {
   if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
   try {
-    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls&limit=500`);
+    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown; drive_photos_link?: string | null }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls,drive_photos_link&limit=500`);
     const lower = text.toLowerCase();
     for (const row of rows) {
       const title = String(row.title || "").trim();
       if (title.length < 5 || !lower.includes(title.toLowerCase()) || !row.id) continue;
-      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=20`);
+      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=50`);
       const videos = assets.filter((a) => /video\//i.test(String(a.mime_type || ""))).map((a) => publicStorageUrl(a.storage_bucket, a.storage_path)).filter((u): u is string => Boolean(u) && isDirectPublicVideoUrl(u)).slice(0, 3);
-      if (videos.length) return { videos, images: [] };
-      const candidates: unknown[] = [row.cover_image_url, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
-      return { videos: [], images: candidates.filter(isDirectPublicImageUrl).slice(0, 3) };
+      const assetImages = assets
+        .filter((a) => /^image\//i.test(String(a.mime_type || "")))
+        .map((a) => ({ url: publicStorageUrl(a.storage_bucket, a.storage_path), mimeType: a.mime_type }))
+        .filter((a): a is { url: string; mimeType: string | null | undefined } => Boolean(a.url) && isPublicImageAssetUrl(a.url, a.mimeType))
+        .map((a) => a.url);
+      const candidates: unknown[] = [row.cover_image_url, row.drive_photos_link, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
+      const images = [...new Set([...candidates.filter(isDirectPublicImageUrl), ...assetImages])].slice(0, 3);
+      return { videos, images };
     }
   } catch {}
   return { videos: [] as string[], images: [] as string[] };
@@ -170,15 +189,24 @@ export async function sendWhatsAppMessage(input: SendInput) {
       const media=suppliedVideos.length||suppliedImages.length
         ?{videos:suppliedVideos,images:suppliedImages}
         :await resolvePropertyMediaFromText(input.organizationId,input.text||"");
-      const urls=media.videos.length?media.videos:media.images;
-      for(const url of urls){
+      for (const url of media.images) {
         await sendTwilioWhatsAppMessage({
-          accountSid:credentials.accountSid,
-          authToken:credentials.authToken,
-          from:credentials.from,
-          to:`+${to}`,
-          mediaUrl:url,
-          statusCallbackUrl:statusCallback,
+          accountSid: credentials.accountSid,
+          authToken: credentials.authToken,
+          from: credentials.from,
+          to: `+${to}`,
+          mediaUrl: url,
+          statusCallbackUrl: statusCallback,
+        });
+      }
+      for (const url of media.videos) {
+        await sendTwilioWhatsAppMessage({
+          accountSid: credentials.accountSid,
+          authToken: credentials.authToken,
+          from: credentials.from,
+          to: `+${to}`,
+          mediaUrl: url,
+          statusCallbackUrl: statusCallback,
         });
       }
     }
@@ -191,7 +219,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
       authToken:credentials.authToken,
       from:credentials.from,
       to:`+${to}`,
-      body:useTemplate?undefined:input.text,
+      body:useTemplate?undefined:removeInlineStorageObjectUrls(input.text),
       contentSid:contentSid||undefined,
       contentVariables:useTemplate?contentVariables:undefined,
       statusCallbackUrl:statusCallback,
@@ -227,15 +255,15 @@ export async function sendWhatsAppMessage(input: SendInput) {
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
   } else {
     if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
-    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };
+    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: removeInlineStorageObjectUrls(input.text) } };
   }
 
   if (!useTemplate) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
     const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
     const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, input.text || "");
-    if (media.videos.length) for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
-    else for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
+    for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
+    for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
   }
 
   const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
