@@ -119,9 +119,9 @@ function publicStorageUrl(bucket: unknown, path: unknown): string | null {
   if (!url || typeof bucket !== "string" || typeof path !== "string" || !bucket || !path) return null;
   return `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
 }
-function removeInlineStorageObjectUrls(text: string | undefined): string | undefined {
+export function removeInlineStorageObjectUrls(text: string | undefined): string | undefined {
   if (!text) return text;
-  return text.replace(/https?:\\/\\/[^\\s<>"']*\\/storage\\/v1\\/object\\/(?:public|sign)\\/[^\\s<>"']+/gi, "").replace(/[ \\t]{2,}/g, " ").replace(/\\n{3,}/g, "\\n\\n").trim();
+  return text.replace(/https?:\/\/[^\s<>"']*\/storage\/v1\/object\/(?:public|sign)\/[^\s<>"']+/gi, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 export async function resolvePropertyMediaFromText(organizationId: string, text: string) {
   if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
@@ -131,7 +131,7 @@ export async function resolvePropertyMediaFromText(organizationId: string, text:
     for (const row of rows) {
       const title = String(row.title || "").trim();
       if (title.length < 5 || !lower.includes(title.toLowerCase()) || !row.id) continue;
-      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=20`);
+      const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=50`);
       const videos = assets.filter((a) => /video\//i.test(String(a.mime_type || ""))).map((a) => publicStorageUrl(a.storage_bucket, a.storage_path)).filter((u): u is string => Boolean(u) && isDirectPublicVideoUrl(u)).slice(0, 3);
       const assetImages = assets
         .filter((a) => /^image\//i.test(String(a.mime_type || "")))
