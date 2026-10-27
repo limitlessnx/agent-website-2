@@ -10,6 +10,7 @@ type FailedEvent = {
   processingError: string | null;
   createdAt: string;
   transactionReference: string | null;
+  replayable: boolean;
 };
 
 function formatTimestamp(value: string) {
@@ -83,10 +84,10 @@ export default function WebhookRecoveryPanel() {
               <button
                 className="admin-button"
                 type="button"
-                disabled={busyId !== null || event.eventType !== "charge.completed"}
+                disabled={busyId !== null || !event.replayable}
                 onClick={() => void retryManually(event)}
               >
-                {busyId === event.id ? "Verifying payment…" : "Manually retry top-up"}
+                {busyId === event.id ? "Verifying payment…" : event.replayable ? "Manually retry top-up" : "Manual reconciliation required"}
               </button>
             </div>
           ))}
