@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       .update({
         status: "successful",
         provider_transaction_id: verified?.id ? String(verified.id) : String(data.id),
-        provider_reference: verified?.flw_ref || data.reference || null,
+        provider_reference: verified?.flw_ref ? String(verified.flw_ref) : data.reference || null,
         provider_payload: verification,
         paid_at: new Date().toISOString(),
       })
