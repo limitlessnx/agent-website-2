@@ -88,13 +88,14 @@ test("G3 manual credit changes are admin-attributed and require a reason",()=>{
   assert.match(form,/\/api\/admin\/billing/);
 });
 
-test("G3 interrupted webhook processing remains retryable while completed duplicates are acknowledged",()=>{
+test("G3 failed webhook events are acknowledged without automatic retries and require manual recovery",()=>{
   const webhook=read("app/api/payments/flutterwave/webhook/route.ts");
   assert.match(webhook,/select=id,processed_at/);
-  assert.match(webhook,/if \(existingEvent\?\.processed_at\) return/);
-  assert.match(webhook,/if \(!existingEvent\)/);
-  assert.match(webhook,/Leave the event unprocessed so a provider retry can recover/);
-  assert.match(webhook,/retryable: true/);
-  assert.match(webhook,/status: 503/);
+  assert.match(webhook,/if \(existingEvent\) return/);
+  assert.match(webhook,/manual_review_required: true/);
+  assert.match(webhook,/manual reconciliation required/);
+  assert.match(webhook,/manual retry required/);
+  assert.doesNotMatch(webhook,/retryable: true/);
+  assert.doesNotMatch(webhook,/status: 503/);
   assert.match(webhook,/apply_flux_credit_topup_from_checkout/);
 });
