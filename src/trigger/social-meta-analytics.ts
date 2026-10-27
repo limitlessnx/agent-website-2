@@ -57,6 +57,17 @@ export const fluxSocialMetaAnalytics = task({
     maxTimeoutInMs: 60_000,
     factor: 2,
   },
-  run: async (payload: { organizationId: string; brandId: string }) =>
-    runMetaCollection(payload),
+  run: async (payload: { organizationId: string; brandId: string }) => {
+    const supabase = createSocialAdminClient();
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .select("id,status")
+      .eq("id", payload.organizationId)
+      .maybeSingle();
+    if (organizationError) throw organizationError;
+    if (!organization || organization.status !== "active") {
+      return { skipped: true, reason: "organization_not_active" };
+    }
+    return runMetaCollection(payload);
+  },
 });

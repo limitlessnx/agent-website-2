@@ -26,6 +26,15 @@ export const fluxSocialMetricIngestion = task({
     refreshLearning?: boolean;
   }) => {
     const supabase = createSocialAdminClient();
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .select("id,status")
+      .eq("id", payload.organizationId)
+      .maybeSingle();
+    if (organizationError) throw organizationError;
+    if (!organization || organization.status !== "active") {
+      return { status: "skipped", rowsReceived: 0, reason: "organization_not_active" };
+    }
     const result = await ingestSocialMetricBatch({
       supabase,
       organizationId: payload.organizationId,

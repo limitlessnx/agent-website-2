@@ -17,6 +17,15 @@ export const fluxSocialLearningSnapshot = task({
   retry: { maxAttempts: 2, minTimeoutInMs: 10_000, maxTimeoutInMs: 30_000, factor: 2 },
   run: async (payload: { organizationId: string; brandId: string; sourceWeeklyRunId?: string; lookbackDays?: number }) => {
     const supabase = createSocialAdminClient();
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .select("id,status")
+      .eq("id", payload.organizationId)
+      .maybeSingle();
+    if (organizationError) throw organizationError;
+    if (!organization || organization.status !== "active") {
+      return { status: "skipped", reason: "organization_not_active" };
+    }
     const snapshot = await buildSocialLearningSnapshot({
       supabase,
       organizationId: payload.organizationId,

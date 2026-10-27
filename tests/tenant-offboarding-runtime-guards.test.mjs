@@ -38,3 +38,24 @@ test("appointment reminder drain cancels due work for inactive organizations", (
   assert.match(appointments, /from\("organizations"\)[\s\S]*?eq\("id", row\.organization_id\)[\s\S]*?organization\.status !== "active"/);
   assert.match(appointments, /status: "cancelled"[\s\S]*?reminder suppressed/);
 });
+
+
+const weeklyCycle = read("src/trigger/social-weekly-cycle.ts");
+const learningCycle = read("src/trigger/social-learning-cycle.ts");
+const metricIngestion = read("src/trigger/social-metric-ingestion.ts");
+const metaAnalytics = read("src/trigger/social-meta-analytics.ts");
+const reelRenderer = read("src/trigger/social-reel-renderer.ts");
+
+test("social weekly planning refuses inactive organizations before creating a run", () => {
+  assert.match(weeklyCycle, /eq\("id", payload\.organizationId\)[\s\S]*?organization\.status !== "active"[\s\S]*?reason: "organization_not_active"/);
+});
+
+test("social learning snapshots and metric ingestion refuse inactive organizations", () => {
+  assert.match(learningCycle, /organization\.status !== "active"[\s\S]*?reason: "organization_not_active"/);
+  assert.match(metricIngestion, /organization\.status !== "active"[\s\S]*?status: "skipped", rowsReceived: 0, reason: "organization_not_active"/);
+});
+
+test("Meta analytics and Reel rendering refuse inactive organizations", () => {
+  assert.match(metaAnalytics, /organization\.status !== "active"[\s\S]*?reason: "organization_not_active"/);
+  assert.match(reelRenderer, /organization\.status !== "active"[\s\S]*?reason: "organization_not_active"/);
+});
