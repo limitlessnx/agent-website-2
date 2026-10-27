@@ -39,3 +39,12 @@ test("billing page does not offer a broken self-service plan upgrade", () => {
   assert.match(billing, /payment confirmation does not currently switch an existing organization to a new plan/);
   assert.doesNotMatch(billing, /href="\/pricing#plan-details">Upgrade plan/);
 });
+
+
+test("payment creation API blocks existing-workspace subscription checkout until plan changes are implemented", () => {
+  const createPayment = fs.readFileSync("app/api/payments/create/route.ts", "utf8");
+  assert.match(createPayment, /clientSession && billingType === "subscription"/);
+  assert.match(createPayment, /EXISTING_WORKSPACE_SUBSCRIPTION_CHANGE_UNAVAILABLE/);
+  assert.match(createPayment, /status: 409/);
+  assert.match(createPayment, /Do not start another subscription checkout for an existing workspace/);
+});
