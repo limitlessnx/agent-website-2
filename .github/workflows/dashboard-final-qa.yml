@@ -53,8 +53,35 @@ jobs:
       - name: Dependency vulnerability inventory (non-blocking)
         shell: bash
         run: |
-          npm audit --json > /tmp/npm-audit.json || true
-          node -e 'const a=require("/tmp/npm-audit.json"); const items=Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==="string"?x:{title:x.title,url:x.url,range:x.range})})); console.log(JSON.stringify({summary:a.metadata?.vulnerabilities,advisories:items},null,2))'
+          if npm audit --json > /tmp/npm-audit.json; then
+            audit_exit=0
+          else
+            audit_exit=$?
+          fi
+          node <<'NODE'
+          const fs = require("node:fs");
+          let audit;
+          try {
+            audit = JSON.parse(fs.readFileSync("/tmp/npm-audit.json", "utf8"));
+          } catch {
+            console.log("Dependency audit did not return valid JSON; leaving this inventory non-blocking.");
+            process.exit(0);
+          }
+          const items = Object.entries(audit.vulnerabilities || {}).map(([name, v]) => ({
+            name,
+            severity: v.severity,
+            range: v.range,
+            fixAvailable: v.fixAvailable,
+            via: (v.via || []).map(x => typeof x === "string" ? x : {
+              title: x.title, url: x.url, range: x.range
+            })
+          }));
+          console.log(JSON.stringify({
+            auditExitCode: Number(process.env.AUDIT_EXIT_CODE || 0),
+            summary: audit.metadata?.vulnerabilities || null,
+            advisories: items
+          }, null, 2));
+          NODE
       - name: Xposure dashboard and tenant authorization regressions
         run: npm run test:xposure-dashboard
       - name: Dashboard regression contracts
