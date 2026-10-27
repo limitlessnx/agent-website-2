@@ -20,6 +20,15 @@ export async function GET() {
       .limit(25);
     if (error) throw error;
 
+    const transactionReferences = [...new Set((data || [])
+      .map((event) => event.payload?.data?.tx_ref)
+      .filter((value): value is string => typeof value === "string" && value.length > 0))];
+    const { data: topUpCheckouts, error: topUpError } = transactionReferences.length
+      ? await admin.from("checkout_sessions").select("tx_ref").eq("billing_type", "top_up").in("tx_ref", transactionReferences)
+      : { data: [], error: null };
+    if (topUpError) throw topUpError;
+    const replayableReferences = new Set((topUpCheckouts || []).map((checkout) => checkout.tx_ref));
+
     return NextResponse.json({
       events: (data || []).map((event) => ({
         id: event.id,
@@ -29,6 +38,7 @@ export async function GET() {
         processingError: event.processing_error,
         createdAt: event.created_at,
         transactionReference: event.payload?.data?.tx_ref || null,
+        replayable: event.event_type === "charge.completed" && replayableReferences.has(event.payload?.data?.tx_ref),
       })),
     });
   } catch (error) {
@@ -112,9 +122,11 @@ export async function POST(request: NextRequest) {
       .eq("id", event.id);
     if (eventUpdateError) throw eventUpdateError;
 
+    console.info("[billing/webhook-recovery] manual replay succeeded", { eventId: event.id, adminEmail: session.email });
     return NextResponse.json({ ok: true, eventId: event.id, creditResult, replayedBy: session.email });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Manual replay failed.";
+    console.error("[billing/webhook-recovery] manual replay failed", { eventId: event.id, adminEmail: session.email, message });
     await admin.from("payment_webhook_events").update({ processing_error: message }).eq("id", event.id);
     return NextResponse.json({ error: message, manual_review_required: true }, { status: 422 });
   }
