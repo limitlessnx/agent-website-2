@@ -131,6 +131,54 @@ Use a staged, auditable lifecycle rather than a direct hard delete.
 ## Guardrails
 
 - This document adds no runtime behavior and contains no SQL migration.
-- No Supabase project/branch was created and no database query or mutation was executed against a live project.
-- No tenant was paused, deleted, exported, or otherwise mutated.
+- Read-only catalog queries and aggregate Storage metadata/cron inventory were executed against FLUXNIT. No tenant business records or object names were retrieved, and no data was mutated.
+- No Supabase project/branch was created. No tenant was paused, deleted, exported, or otherwise mutated.
 - Organization deletion must remain absent from the UI until the acceptance criteria are met and the user explicitly approves implementation.
+
+
+## Additional live runtime, storage, and scheduler inventory (read-only)
+
+A second read-only pass inspected Storage bucket metadata and object aggregates, active `pg_cron` jobs, and the public schema's queue/runtime table names in FLUXNIT. This is metadata inventory only; it did not inspect tenant message bodies, object names, credentials, or other business payloads.
+
+### Storage
+
+The live project reports three buckets:
+
+| Bucket | Visibility | Aggregate object count | Notes |
+|---|---:|---:|---|
+| `flux-social-assets` | Private | 24 | All 24 object paths are nested; storage policy predicates reference organization membership. |
+| `limitless-media` | Private | 0 observed | Bucket exists, but no objects were counted in the aggregate query. |
+| `limitless-public-media` | Public | 24 | All 24 object paths are nested; three objects were created in the 30 days preceding the query. |
+
+The bucket configuration allows media/PDF types appropriate to each bucket. The aggregate does **not** establish that every path is organization-prefixed, that every database media reference points to an existing object, or that signed/public URLs are revoked by an organization lifecycle change. The storage policy SQL should be reviewed carefully against the actual object path convention before any future cleanup is built. No storage objects were listed, downloaded, or removed.
+
+### Active scheduled database jobs
+
+The live `cron.job` inventory returned eight active jobs:
+
+| Job | Schedule | Work |
+|---:|---|---|
+| 1 | Every 5 minutes | Calls the Maia safety-net endpoint on the connected Vercel deployment. |
+| 4 | Every 15 minutes | Calls the Leo monitor endpoint on the connected Vercel deployment. |
+| 5 | Every minute | Reconciles Fluxknight lifecycle events. |
+| 6 | Hourly | Sends incomplete-onboarding reminders. |
+| 7 | Every 15 minutes | Calls the payment-status endpoint on the connected Vercel deployment. |
+| 8 | Hourly at minute 15 | Sends subscription reminders. |
+| 9 | Hourly at minute 30 | Sends subscription grace-period warnings. |
+| 10 | Hourly at minute 45 | Enforces subscription grace expiry. |
+
+These are shared platform schedulers, not evidence of per-tenant jobs. They must not be globally disabled during tenant offboarding. Each endpoint/function needs a tenant-scoped exclusion or cancellation contract, with tests proving that offboarding one organization does not interrupt other organizations. The audit did not inspect or reveal scheduler secret values.
+
+### Runtime and queued-work surfaces
+
+The live public schema contains tables for tenant reminder rules/executions/notifications, reminder attempts, automation provisioning jobs, organization deployment tasks, provisioning jobs, real-estate inspection jobs, social generation/publish jobs, workflow runs/webhooks, event delivery attempts, and system-event deliveries. The repository's `package.json` pins `@trigger.dev/sdk` to 4.5.16 and defines Trigger.dev development/deploy scripts; `trigger.config.ts` points to `src/trigger` and sets a 300-second maximum task duration.
+
+This confirms both database-backed operational queues and Trigger.dev-managed execution are part of the system. It does **not** prove the exact per-tenant task IDs, retry semantics, cancellation APIs, idempotency keys, or whether every worker rechecks organization lifecycle state before sending an outbound message. Those must be traced through task source files and tested before a freeze/offboarding implementation is proposed. Never cancel shared schedules or broad task families without a verified organization filter.
+
+## Updated risk assessment and next audit gates
+
+1. **Storage cleanup is not yet safe.** Build an inventory mapping database media references to bucket/path ownership and URL exposure. Verify the actual folder convention against the deployed Storage policies. Include orphan detection and restore tests; do not bulk-delete by guessed path prefix.
+2. **Shared schedulers require tenant-aware controls.** The active cron jobs cover safety monitoring, lifecycle reconciliation, onboarding reminders, payment status, and subscription reminders. Review each called endpoint/function for tenant filters and a lifecycle gate; preserve normal operation for unaffected tenants.
+3. **Trigger.dev cancellation remains unverified.** Trace all task files under `src/trigger`, enumerate organization-scoped task payload fields and retry behavior, and design a cancel/drain procedure that blocks re-enqueue after freeze. No Trigger.dev tasks were canceled during this audit.
+4. **Runtime queues must be included in dry-run output.** The dry-run dependency report should include the listed provisioning, workflow, event-delivery, social-publishing, inspection, and reminder tables plus active external tasks and webhook deliveries.
+5. **Next implementation gate:** documentation/source tracing and tests only, still on the Phase 6 draft branch. Do not add a deletion endpoint, lifecycle mutation, migration, storage deletion, scheduler changes, task cancellation, merge, or production deployment without explicit approval.
