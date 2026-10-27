@@ -90,7 +90,7 @@ jobs:
       - name: Flux Social Storage policy static contract
         if: startsWith(github.ref, 'refs/heads/draft/phase-7')
         run: node --test tests/flux-social-storage-policy-contract.test.mjs
-      - name: Tenant offboarding guard contract
+      - name: Tenant offboarding runtime and guard contract
         if: startsWith(github.ref, 'refs/heads/draft/phase-8')
         run: npm run test:tenant-offboarding
       - name: Evaluation and conversation-center guardrails
