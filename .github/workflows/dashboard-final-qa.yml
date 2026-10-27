@@ -58,6 +58,7 @@ jobs:
           else
             audit_exit=$?
           fi
+          export AUDIT_EXIT_CODE="$audit_exit"
           node <<'NODE'
           const fs = require("node:fs");
           let audit;
