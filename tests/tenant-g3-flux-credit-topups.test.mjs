@@ -116,3 +116,25 @@ test("G3 failed Flutterwave events expose an authenticated manual recovery actio
   assert.match(panel,/Failed events are never retried automatically/);
   assert.match(page,/WebhookRecoveryPanel/);
 });
+
+
+test("G3 manual webhook recovery is restricted to failed top-up events and verified checkout values",()=>{
+  const route=read("app/api/admin/billing/webhook-recovery/route.ts");
+  assert.match(route,/if \(!event\.processing_error\)[\s\S]*?status: 409/);
+  assert.match(route,/event\.event_type !== "charge\.completed"[\s\S]*?status: 400/);
+  assert.match(route,/checkout\.billing_type !== "top_up"[\s\S]*?Manual replay is restricted to Flux Credit top-ups/);
+  assert.match(route,/\/transactions\/\$\{encodeURIComponent\(String\(data\.id\)\)\}\/verify/);
+  assert.match(route,/verified\?\.tx_ref === checkout\.tx_ref/);
+  assert.match(route,/verified\?\.currency === checkout\.currency/);
+  assert.match(route,/Number\(verified\?\.amount\) >= Number\(checkout\.amount\)/);
+});
+
+test("G3 manual recovery records success only after the idempotent credit RPC completes",()=>{
+  const route=read("app/api/admin/billing/webhook-recovery/route.ts");
+  const creditRpc=route.indexOf('admin.rpc("apply_flux_credit_topup_from_checkout"');
+  const clearFailure=route.indexOf('.update({ processed_at: new Date().toISOString(), processing_error: null })');
+  assert.notEqual(creditRpc,-1,"manual recovery must apply credits through the idempotent RPC");
+  assert.notEqual(clearFailure,-1,"successful replay must clear the stored failure");
+  assert.ok(creditRpc < clearFailure,"the event must not be marked recovered before credit application completes");
+  assert.match(route,/\.eq\("id", event\.id\)/);
+});
