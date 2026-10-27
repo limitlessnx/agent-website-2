@@ -112,7 +112,7 @@ function publicStorageUrl(bucket: unknown, path: unknown): string | null {
 async function resolvePropertyMediaFromText(organizationId: string, text: string) {
   if (!text?.trim()) return { videos: [] as string[], images: [] as string[] };
   try {
-    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls,drive_photos_link&limit=500`);
+    const rows = await supabaseRequest<Array<{ id?: string; title?: string; cover_image_url?: string | null; image_urls?: unknown; drive_photos_link?: string | null }>>(`properties?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,title,cover_image_url,image_urls,drive_photos_link&limit=500`);
     const lower = text.toLowerCase();
     for (const row of rows) {
       const title = String(row.title || "").trim();
@@ -120,7 +120,7 @@ async function resolvePropertyMediaFromText(organizationId: string, text: string
       const assets = await supabaseRequest<Array<{ storage_bucket?: string | null; storage_path?: string | null; mime_type?: string | null }>>(`media_assets?property_id=eq.${encodeURIComponent(String(row.id))}&select=storage_bucket,storage_path,mime_type&limit=20`);
       const videos = assets.filter((a) => /video\//i.test(String(a.mime_type || ""))).map((a) => publicStorageUrl(a.storage_bucket, a.storage_path)).filter((u): u is string => Boolean(u) && isDirectPublicVideoUrl(u)).slice(0, 3);
       if (videos.length) return { videos, images: [] };
-      const candidates: unknown[] = [row.cover_image_url, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
+      const candidates: unknown[] = [row.cover_image_url, row.drive_photos_link, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
       return { videos: [], images: candidates.filter(isDirectPublicImageUrl).slice(0, 3) };
     }
   } catch {}
