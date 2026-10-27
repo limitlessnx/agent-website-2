@@ -126,10 +126,15 @@ test("Flux Social Storage policies enforce tenant isolation in a disposable PGli
     assert.equal(unchanged.rows[0]?.name, orgA + "/cover.png");
 
     await db.query("DELETE FROM storage.objects WHERE id=$1", [objectB]);
+    await db.exec("RESET ROLE; SET ROLE service_role;");
     const otherTenantObject = await db.query("SELECT id FROM storage.objects WHERE id=$1", [objectB]);
     assert.equal(otherTenantObject.rows.length, 1);
 
+    const ownTenantObjectBeforeDelete = await db.query("SELECT id FROM storage.objects WHERE id=$1", [objectA]);
+    assert.equal(ownTenantObjectBeforeDelete.rows.length, 1);
+    await db.exec("RESET ROLE; SET ROLE authenticated;");
     await db.query("DELETE FROM storage.objects WHERE id=$1", [objectA]);
+    await db.exec("RESET ROLE; SET ROLE service_role;");
     const ownTenantObject = await db.query("SELECT id FROM storage.objects WHERE id=$1", [objectA]);
     assert.equal(ownTenantObject.rows.length, 0);
   } finally {
