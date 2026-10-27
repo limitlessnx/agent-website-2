@@ -42,6 +42,12 @@ export async function POST(request: Request) {
     const billingType = body?.billingType === "subscription" ? "subscription" : "setup";
     const prepaidTerm = isPrepaidTerm(body?.term) ? body.term : legacyDurationToTerm(body?.durationMonths);
     const clientSession = await getClientSession();
+    if (clientSession && billingType === "subscription") {
+      return NextResponse.json({
+        error: "Self-service subscription changes are not available yet. Do not start another subscription checkout for an existing workspace.",
+        code: "EXISTING_WORKSPACE_SUBSCRIPTION_CHANGE_UNAVAILABLE",
+      }, { status: 409 });
+    }
     const customerName = typeof body?.customer?.name === "string" && body.customer.name.trim()
       ? body.customer.name.trim()
       : clientSession?.organizationSlug || "Fluxknight Client";
