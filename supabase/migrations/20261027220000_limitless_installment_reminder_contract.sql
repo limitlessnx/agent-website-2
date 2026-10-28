@@ -181,7 +181,7 @@ begin
         when template.timing_direction = 'before' then -template.timing_days
         when template.timing_direction = 'after' then template.timing_days
         else 0
-      end)::timestamp + interval '9 hours') at time zone 'Africa/Lagos')
+      end)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')
   )
     into next_scheduled_at
   from public.reminder_templates as template
@@ -195,7 +195,7 @@ begin
         when template.timing_direction = 'before' then -template.timing_days
         when template.timing_direction = 'after' then template.timing_days
         else 0
-      end)::timestamp + interval '9 hours') at time zone 'Africa/Lagos') > now();
+      end)::timestamp + interval '11 hours') at time zone 'Africa/Lagos') > now();
 
   new.next_reminder_at := next_scheduled_at;
   return new;
@@ -225,8 +225,9 @@ $$;
 revoke all on function public.sync_payment_plan_total() from public, anon, authenticated;
 grant execute on function public.sync_payment_plan_total() to service_role;
 
--- Successful delivery and payment-plan reminder cursor advancement are one transaction.
--- Failed/unknown attempts leave next_reminder_at overdue for review and explicit retry.
+-- Confirmed delivery advances the independent reminder cursor by a fixed 14-day interval.
+-- Missed windows are skipped forward without a catch-up send; failed/unknown outcomes
+-- leave the cursor in place for review and explicit retry.
 create or replace function public.sync_payment_plan_reminder_state()
 returns trigger
 language plpgsql
@@ -239,22 +240,27 @@ declare
   plan_status text;
   plan_reminders_enabled boolean;
   plan_balance numeric(18,2);
-  plan_template_id uuid;
   prior_last_reminder timestamptz;
   effective_sent_at timestamptz;
   next_scheduled_at timestamptz;
+  reminder_interval interval := interval '14 days';
+  skipped_intervals integer;
 begin
-  if tg_op <> 'UPDATE'
-     or old.status is not distinct from new.status
-     or new.status <> 'sent'
-     or new.sent_at is null then
+  if tg_op = 'UPDATE' and old.status is not distinct from new.status then
+    return new;
+  end if;
+  if new.status = 'sent' then
+    if new.sent_at is null then return new; end if;
+  elsif new.status = 'skipped' then
+    if new.error_message is distinct from 'missed_reminder_window' then return new; end if;
+  else
     return new;
   end if;
 
   select organization_id, next_due_date, status, reminders_enabled,
-         outstanding_balance, reminder_template_id, last_reminder_at
+         outstanding_balance, last_reminder_at
     into plan_organization_id, plan_due_date, plan_status, plan_reminders_enabled,
-         plan_balance, plan_template_id, prior_last_reminder
+         plan_balance, prior_last_reminder
   from public.payment_plans
   where id = new.payment_plan_id
   for update;
@@ -266,36 +272,27 @@ begin
     return new;
   end if;
 
-  effective_sent_at := greatest(coalesce(prior_last_reminder, new.sent_at), new.sent_at);
+  effective_sent_at := case when new.status = 'sent'
+    then greatest(coalesce(prior_last_reminder, new.sent_at), new.sent_at)
+    else prior_last_reminder end;
   next_scheduled_at := null;
   if plan_status = 'active'
      and plan_reminders_enabled
      and coalesce(plan_balance, 0) > 0
      and plan_due_date is not null then
-    select min(
-      (((plan_due_date + case
-          when template.timing_direction = 'before' then -template.timing_days
-          when template.timing_direction = 'after' then template.timing_days
-          else 0
-        end)::timestamp + interval '9 hours') at time zone 'Africa/Lagos')
-    )
-      into next_scheduled_at
-    from public.reminder_templates as template
-    where template.organization_id = new.organization_id
-      and template.enabled = true
-      and template.channel = 'whatsapp'
-      and template.timing_days >= 0
-      and template.timing_direction in ('before','on','after')
-      and (plan_template_id is null or template.id = plan_template_id)
-      and (((plan_due_date + case
-          when template.timing_direction = 'before' then -template.timing_days
-          when template.timing_direction = 'after' then template.timing_days
-          else 0
-        end)::timestamp + interval '9 hours') at time zone 'Africa/Lagos') > effective_sent_at;
+    if new.status = 'sent' then
+      next_scheduled_at := ((((effective_sent_at at time zone 'Africa/Lagos')::date + reminder_interval)::date + time '11:00') at time zone 'Africa/Lagos');
+    elsif new.scheduled_for is not null then
+      skipped_intervals := greatest(
+        floor(greatest(extract(epoch from (now() - new.scheduled_for)), 0) / extract(epoch from reminder_interval))::integer + 1,
+        1
+      );
+      next_scheduled_at := ((((new.scheduled_for at time zone 'Africa/Lagos')::date + reminder_interval * skipped_intervals)::date + time '11:00') at time zone 'Africa/Lagos');
+    end if;
   end if;
 
   update public.payment_plans
-     set last_reminder_at = effective_sent_at,
+     set last_reminder_at = case when new.status = 'sent' then effective_sent_at else prior_last_reminder end,
          next_reminder_at = next_scheduled_at,
          updated_at = now()
    where id = new.payment_plan_id
@@ -316,7 +313,7 @@ begin
       and not tgisinternal
   ) then
     create trigger sync_payment_plan_reminder_state
-      after update of status on public.reminder_attempts
+      after insert or update of status on public.reminder_attempts
       for each row execute function public.sync_payment_plan_reminder_state();
   end if;
 end;
@@ -346,6 +343,7 @@ declare
   v_plan_phone text;
   v_candidate_phone text;
   v_lead_count integer := 0;
+  v_expected_scheduled_at timestamptz;
 begin
   if p_organization_id is distinct from 'b15f21b4-5697-4d21-9421-8a34eae3476d'::uuid
      or p_plan_id is null or p_attempt_id is null or p_template_id is null
@@ -381,11 +379,21 @@ begin
     and t.timing_direction in ('before', 'on', 'after')
     and (v_plan.reminder_template_id is null or v_plan.reminder_template_id = t.id)
   for update;
-  if not found or p_scheduled_for is distinct from
+  if not found then
+    return jsonb_build_object('authorized', false, 'reason', 'template_unavailable');
+  end if;
+  if v_plan.next_reminder_at is not null
+     and (v_plan.next_reminder_at at time zone 'Africa/Lagos')::time is distinct from time '11:00:00' then
+    return jsonb_build_object('authorized', false, 'reason', 'cursor_time_invalid');
+  end if;
+  v_expected_scheduled_at := coalesce(
+    v_plan.next_reminder_at,
     (((v_plan.next_due_date + case
         when v_template.timing_direction = 'before' then -v_template.timing_days
         when v_template.timing_direction = 'after' then v_template.timing_days
-        else 0 end)::timestamp + interval '9 hours') at time zone 'Africa/Lagos') then
+        else 0 end)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')
+  );
+  if p_scheduled_for is distinct from v_expected_scheduled_at then
     return jsonb_build_object('authorized', false, 'reason', 'schedule_not_current');
   end if;
 

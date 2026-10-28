@@ -15,7 +15,7 @@ const scheduleHelpers = load("lib/limitless-installment-reminder-runtime.ts", {
   "@/lib/whatsapp-delivery": { sendWhatsAppMessage: async () => ({}) },
   "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({}) },
   "@/lib/limitless-followup-contract": phoneContract,
-}, "export { computeReminderOccurrence, classifyReminderOccurrence };");
+}, "export { computeReminderOccurrence, computeLimitlessReminderOccurrence, classifyReminderOccurrence };");
 const LIMITLESS_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 test("Limitless occurrences use next_due_date and deterministic Lagos local time while legacy tenants retain their cadence cursor", () => {
@@ -24,7 +24,7 @@ test("Limitless occurrences use next_due_date and deterministic Lagos local time
   assert.match(source, /direction === "before"/);
   assert.match(source, /direction === "after"/);
   assert.match(source, /const LAGOS_TIME_ZONE = "Africa\/Lagos"/);
-  assert.match(source, /const REMINDER_LOCAL_TIME = "09:00:00"/);
+  assert.match(source, /const REMINDER_LOCAL_TIME = "11:00:00"/);
   assert.match(source, /new Date\(`\$\{occurrenceDate\}T\$\{REMINDER_LOCAL_TIME\}\+01:00`\)/);
   assert.match(source, /classifyReminderOccurrence\(occurrenceDate, scheduledFor, now\)/);
   assert.match(source, /missed_reminder_window/);
@@ -33,6 +33,8 @@ test("Limitless occurrences use next_due_date and deterministic Lagos local time
   assert.match(source, /plan\.next_reminder_at/);
   assert.match(source, /plan\.start_at/);
   assert.match(source, /cadenceDays\(/);
+  assert.match(source, /computeLimitlessReminderOccurrence\(String\(plan\.next_due_date\), template\.timing_direction, Number\(template\.timing_days\), plan\.next_reminder_at\)/);
+  assert.match(source, /limitless_requires_single_local_reminder_template/);
 });
 
 test("Limitless reminders only send on their Lagos calendar day and missed windows never catch up in a burst", () => {
@@ -42,9 +44,23 @@ test("Limitless reminders only send on their Lagos calendar day and missed windo
   assert.equal(before.occurrenceDate, "2026-10-28");
   assert.equal(due.occurrenceDate, "2026-10-28");
   assert.equal(after.occurrenceDate, "2026-10-28");
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(before.occurrenceDate, before.scheduledFor, new Date("2026-10-28T07:59:00Z")), "waiting");
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(due.occurrenceDate, due.scheduledFor, new Date("2026-10-28T08:05:00Z")), "due");
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(after.occurrenceDate, after.scheduledFor, new Date("2026-10-29T08:05:00Z")), "missed");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(before.occurrenceDate, before.scheduledFor, new Date("2026-10-28T09:59:00Z")), "waiting");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(due.occurrenceDate, due.scheduledFor, new Date("2026-10-28T10:05:00Z")), "due");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(after.occurrenceDate, after.scheduledFor, new Date("2026-10-29T10:05:00Z")), "missed");
+});
+
+test("Limitless installment reminder cursor starts at 11:00 Lagos and repeats every 14 days independently of the due-date anchor", () => {
+  const first = scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, null);
+  assert.equal(first.occurrenceDate, "2026-10-28");
+  assert.equal(first.scheduledFor, "2026-10-28T10:00:00.000Z");
+  const next = scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T10:00:00.000Z");
+  assert.equal(next.occurrenceDate, "2026-11-11");
+  assert.equal(next.scheduledFor, "2026-11-11T10:00:00.000Z");
+  assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T09:30:00.000Z"), null);
+  assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T10:00:00.001Z"), null);
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T09:59:00Z")), "waiting");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T10:01:00Z")), "due");
+  assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("invalid", "on", 0, null), null);
 });
 
 test("both creation forms submit the same persisted installment schedule contract", () => {
@@ -202,7 +218,7 @@ test("Limitless invalid monetary fields create no attempt and authorization deni
 
   let providerCalled = false;
   let rpcArgs = null;
-  const deniedAttempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T08:00:00.000Z", status: "failed", retry_count: 0 };
+  const deniedAttempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T10:00:00.000Z", status: "failed", retry_count: 0 };
   class RetryQuery {
     constructor(table) { this.table = table; }
     select() { return this; }
@@ -267,6 +283,13 @@ test("payment sync advances due date only for a full installment and preserves t
   const paymentSyncFunction = source.split("create or replace function public.sync_payment_plan_reminder_state")[0];
   assert.doesNotMatch(paymentSyncFunction, /next_reminder_at\s*=/);
   assert.match(source, /next_reminder_at = next_scheduled_at/);
+  assert.match(source, /interval '11 hours'/);
+  const reminderStateFunction = source.split("create or replace function public.sync_payment_plan_reminder_state")[1].split("$function$;")[0];
+  assert.match(reminderStateFunction, /reminder_interval interval := interval '14 days'/);
+  assert.doesNotMatch(reminderStateFunction, /installment_frequency_interval/);
+  assert.match(source, /v_expected_scheduled_at := coalesce\(\s*v_plan\.next_reminder_at/);
+  assert.match(source, /reason', 'cursor_time_invalid/);
+  assert.match(source, /new\.error_message is distinct from 'missed_reminder_window'/);
   assert.match(source, /status in \('pending','queued','sent','failed','cancelled','skipped','unknown'\)/);
 });
 
@@ -278,7 +301,7 @@ test("explicit provider rejection remains manually retryable after the one-use s
     frequency: "biweekly", next_due_date: "2026-11-01", final_due_date: null, reminder_template_id: "template-a",
     handover_agent_name: "Agent", handover_agent_phone: "2348000000000", status: "active", reminders_enabled: true,
   };
-  const attempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T08:00:00.000Z", status: "failed", retry_count: 1, send_authorized_at: "2026-10-28T08:00:00.000Z" };
+  const attempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T10:00:00.000Z", status: "failed", retry_count: 1, send_authorized_at: "2026-10-28T08:00:00.000Z" };
   const template = { id: "template-a", organization_id: LIMITLESS_ID, name: "On", timing_direction: "on", timing_days: 0, channel: "whatsapp", message_template: "{{client_name}} {{installment_amount}} {{due_date}}", enabled: true };
   const variableKeys = ["client_name", "property_title", "installment_amount", "due_date", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"];
   const approved = { template_name: "approved", language_code: "en", variable_keys: variableKeys, metadata: { approved_variable_order: variableKeys, company_name: "Company" }, status: "active" };

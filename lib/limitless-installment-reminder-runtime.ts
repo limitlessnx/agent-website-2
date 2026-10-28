@@ -25,7 +25,7 @@ const LIMITLESS_EXPECTED_VARIABLE_KEYS = [
 ] as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LAGOS_TIME_ZONE = "Africa/Lagos";
-const REMINDER_LOCAL_TIME = "09:00:00";
+const REMINDER_LOCAL_TIME = "11:00:00";
 
 type ReminderDirection = "before" | "on" | "after";
 type ReminderTemplateRow = {
@@ -106,6 +106,25 @@ export function computeReminderOccurrence(nextDueDate: string, direction: Remind
   const scheduled = new Date(`${occurrenceDate}T${REMINDER_LOCAL_TIME}+01:00`);
   if (Number.isNaN(scheduled.getTime())) return null;
   return { occurrenceDate, scheduledFor: scheduled.toISOString() };
+}
+
+export function computeLimitlessReminderOccurrence(nextDueDate: string, direction: ReminderDirection, timingDays: number, nextReminderAt?: string | null) {
+  const initial = computeReminderOccurrence(nextDueDate, direction, timingDays);
+  if (!initial) return null;
+  let occurrenceDate = initial.occurrenceDate;
+  let cursorScheduledFor: string | null = null;
+  if (nextReminderAt) {
+    const cursor = new Date(nextReminderAt);
+    if (Number.isNaN(cursor.getTime())) return null;
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: LAGOS_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(cursor);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    occurrenceDate = `${values.year}-${values.month}-${values.day}`;
+    cursorScheduledFor = cursor.toISOString();
+  }
+  const scheduled = new Date(`${occurrenceDate}T${REMINDER_LOCAL_TIME}+01:00`);
+  if (Number.isNaN(scheduled.getTime())) return null;
+  if (cursorScheduledFor && new Date(cursorScheduledFor).getTime() !== scheduled.getTime()) return null;
+  return { occurrenceDate, scheduledFor: cursorScheduledFor || scheduled.toISOString() };
 }
 
 export function classifyReminderOccurrence(occurrenceDate: string, scheduledFor: string, now: Date) {
@@ -377,6 +396,10 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
     const selectedTemplates = plan.reminder_template_id
       ? selectedTemplateMatches
       : isLimitless ? tenantTemplates : tenantTemplates.slice(0, 1);
+    if (isLimitless && selectedTemplates.length !== 1) {
+      results.push({ planId: plan.id, status: "skipped", reason: "limitless_requires_single_local_reminder_template" });
+      continue;
+    }
     if (!selectedTemplates.length) { results.push({ planId: plan.id, status: "skipped", reason: "missing_local_reminder_template" }); continue; }
     const organizationName = approved.company_name || orgMap.get(organizationId) || "Your company";
 
@@ -384,7 +407,7 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
       let scheduledFor: string;
       let occurrenceDate: string | null = null;
       if (isLimitless) {
-        const occurrence = computeReminderOccurrence(String(plan.next_due_date), template.timing_direction, Number(template.timing_days));
+        const occurrence = computeLimitlessReminderOccurrence(String(plan.next_due_date), template.timing_direction, Number(template.timing_days), plan.next_reminder_at);
         if (!occurrence) { results.push({ planId: plan.id, templateId: template.id, status: "skipped", reason: "invalid_reminder_occurrence" }); continue; }
         scheduledFor = occurrence.scheduledFor;
         occurrenceDate = occurrence.occurrenceDate;
@@ -447,7 +470,7 @@ export async function retryLimitlessInstallmentReminder(args: { organizationId: 
   const approved = await loadApprovedTemplate(admin, organizationId);
   if (templateError || !template || !approved) throw new Error("The approved reminder contract is not available for retry.");
   const expectedScheduledFor = isLimitless
-    ? computeReminderOccurrence(String((plan as PaymentPlanRow).next_due_date || ""), template.timing_direction as ReminderDirection, Number(template.timing_days))?.scheduledFor
+    ? computeLimitlessReminderOccurrence(String((plan as PaymentPlanRow).next_due_date || ""), template.timing_direction as ReminderDirection, Number(template.timing_days), (plan as PaymentPlanRow).next_reminder_at)?.scheduledFor
     : (() => {
       const nextReminder = (plan as PaymentPlanRow).next_reminder_at ? new Date(String((plan as PaymentPlanRow).next_reminder_at)) : new Date(String((plan as PaymentPlanRow).start_at || ""));
       return Number.isNaN(nextReminder.getTime()) ? null : nextReminder.toISOString();

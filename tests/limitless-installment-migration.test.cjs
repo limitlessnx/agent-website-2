@@ -129,14 +129,14 @@ test('draft migration preserves zero placeholders and computes a future due-date
     );
     const dueA = (await db.query("select (current_date + 20)::text as due_date")).rows[0].due_date;
     await addPlan(db, PLAN_A, A, { due: dueA });
-    const expectedA = (await db.query("select (((($1::date - 3)::timestamp + interval '9 hours') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
+    const expectedA = (await db.query("select (((($1::date - 3)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
     const insertedPlan = await plan(db, PLAN_A);
     assert.ok(insertedPlan.next_reminder_at);
     assert.equal(insertedPlan.next_reminder_at.toISOString(), expectedA.toISOString());
 
     const dueB = (await db.query("select (current_date + 30)::text as due_date")).rows[0].due_date;
     await db.query('update payment_plans set next_due_date=$1 where id=$2', [dueB, PLAN_A]);
-    const expectedB = (await db.query("select (((($1::date - 3)::timestamp + interval '9 hours') at time zone 'Africa/Lagos')) as at", [dueB])).rows[0].at;
+    const expectedB = (await db.query("select (((($1::date - 3)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')) as at", [dueB])).rows[0].at;
     assert.equal((await plan(db, PLAN_A)).next_reminder_at.toISOString(), expectedB.toISOString());
 
     await addPlan(db, PLAN_B, B, { due: dueA });
@@ -248,58 +248,89 @@ test('reminder migration preserves existing queued/cancelled states and adds amb
   }
 });
 
-test('confirmed sends atomically advance last/next reminder timestamps at 09:00 Africa/Lagos; failures do not', async () => {
+test('confirmed sends recur every two weeks at 11:00 Lagos until paid; missed windows skip forward and failures do not', async () => {
   const db = await createDatabase();
   try {
-    await addPlan(db, PLAN_A, A, { due: '2026-10-10' });
     await db.query(
       `insert into reminder_templates(id,organization_id,timing_direction,timing_days,channel,enabled)
        values ($1,$4,'before',3,'whatsapp',true),($2,$4,'on',0,'whatsapp',true),($3,$4,'after',3,'whatsapp',true)`,
       [TEMPLATE_BEFORE, TEMPLATE_ON, TEMPLATE_AFTER, A],
     );
+    const dueA = (await db.query("select (current_date + 10)::text as due_date")).rows[0].due_date;
+    await addPlan(db, PLAN_A, A, { due: dueA });
+    await db.query('update payment_plans set reminder_template_id=$1 where id=$2', [TEMPLATE_ON, PLAN_A]);
+    const firstAt = (await plan(db, PLAN_A)).next_reminder_at;
+    const expectedFirst = (await db.query("select (((($1::date)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
+    assert.equal(firstAt.toISOString(), expectedFirst.toISOString());
 
     const first = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
-       values ($1,$2,$3,'2026-10-07T08:00:00Z','pending') returning id`,
-      [A, PLAN_A, TEMPLATE_BEFORE],
+       values ($1,$2,$3,$4,'pending') returning id`,
+      [A, PLAN_A, TEMPLATE_ON, firstAt],
     );
-    await db.query("update reminder_attempts set status='sent',sent_at='2026-10-07T08:01:00Z' where id=$1", [first.rows[0].id]);
+    const firstSentAt = new Date(firstAt.getTime() + 5 * 60 * 1000);
+    await db.query("update reminder_attempts set status='sent',sent_at=$2 where id=$1", [first.rows[0].id, firstSentAt]);
     let state = await plan(db, PLAN_A);
-    assert.equal(state.last_reminder_at.toISOString(), '2026-10-07T08:01:00.000Z');
-    assert.equal(state.next_reminder_at.toISOString(), '2026-10-10T08:00:00.000Z');
+    const secondAt = new Date(firstAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+    assert.equal(state.last_reminder_at.toISOString(), firstSentAt.toISOString());
+    assert.equal(state.next_reminder_at.toISOString(), secondAt.toISOString());
+    assert.equal(state.next_due_date.toISOString().slice(0, 10), dueA);
 
     const second = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
-       values ($1,$2,$3,'2026-10-10T08:00:00Z','pending') returning id`,
-      [A, PLAN_A, TEMPLATE_ON],
+       values ($1,$2,$3,$4,'pending') returning id`,
+      [A, PLAN_A, TEMPLATE_ON, secondAt],
     );
-    await db.query("update reminder_attempts set status='sent',sent_at='2026-10-10T08:01:00Z' where id=$1", [second.rows[0].id]);
+    await db.query("update reminder_attempts set status='sent',sent_at=$2 where id=$1", [second.rows[0].id, secondAt]);
     state = await plan(db, PLAN_A);
-    assert.equal(state.next_reminder_at.toISOString(), '2026-10-13T08:00:00.000Z');
+    const thirdAt = new Date(secondAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+    assert.equal(state.next_reminder_at.toISOString(), thirdAt.toISOString());
+    assert.equal(state.next_due_date.toISOString().slice(0, 10), dueA);
 
-    const third = await db.query(
+    await db.query('insert into payment_records(payment_plan_id,organization_id,amount) values ($1,$2,1000)', [PLAN_A, A]);
+    state = await plan(db, PLAN_A);
+    const advancedDueDate = (await db.query("select ($1::date + interval '14 days')::date as due_date", [dueA])).rows[0].due_date;
+    const nextInstallmentAt = (await db.query("select (((($1::date)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')) as at", [advancedDueDate])).rows[0].at;
+    assert.equal(state.next_due_date.toISOString().slice(0, 10), advancedDueDate.toISOString().slice(0, 10));
+    assert.equal(state.next_reminder_at.toISOString(), nextInstallmentAt.toISOString());
+
+    const dueB = (await db.query("select (current_date + 20)::text as due_date")).rows[0].due_date;
+    await addPlan(db, PLAN_B, A, { due: dueB, frequency: 'monthly' });
+    await db.query('update payment_plans set reminder_template_id=$1 where id=$2', [TEMPLATE_ON, PLAN_B]);
+    const monthlyFirstAt = (await plan(db, PLAN_B)).next_reminder_at;
+    const monthlySuccess = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
-       values ($1,$2,$3,'2026-10-13T08:00:00Z','pending') returning id`,
-      [A, PLAN_A, TEMPLATE_AFTER],
+       values ($1,$2,$3,$4,'pending') returning id`,
+      [A, PLAN_B, TEMPLATE_ON, monthlyFirstAt],
     );
-    await db.query("update reminder_attempts set status='sent',sent_at='2026-10-13T08:01:00Z' where id=$1", [third.rows[0].id]);
-    state = await plan(db, PLAN_A);
-    assert.equal(state.last_reminder_at.toISOString(), '2026-10-13T08:01:00.000Z');
-    assert.equal(state.next_reminder_at, null);
-
-    await addPlan(db, PLAN_B, A, { due: '2026-11-10' });
-    const scheduledBeforeFailure = (await plan(db, PLAN_B)).next_reminder_at;
+    await db.query("update reminder_attempts set status='sent',sent_at=$2 where id=$1", [monthlySuccess.rows[0].id, monthlyFirstAt]);
+    state = await plan(db, PLAN_B);
+    const scheduledBeforeFailure = new Date(monthlyFirstAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+    assert.equal(state.next_reminder_at.toISOString(), scheduledBeforeFailure.toISOString());
     const failed = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
-       values ($1,$2,$3,'2026-11-07T08:00:00Z','pending') returning id`,
-      [A, PLAN_B, TEMPLATE_BEFORE],
+       values ($1,$2,$3,$4,'pending') returning id`,
+      [A, PLAN_B, TEMPLATE_ON, scheduledBeforeFailure],
     );
     await db.query("update reminder_attempts set status='failed',error_message='safe reason' where id=$1", [failed.rows[0].id]);
     state = await plan(db, PLAN_B);
-    assert.equal(state.last_reminder_at, null);
+    assert.equal(state.last_reminder_at.toISOString(), monthlyFirstAt.toISOString());
     assert.equal(state.next_reminder_at.toISOString(), scheduledBeforeFailure.toISOString());
 
-    await addPlan(db, PLAN_C, A);
+    const missedDueDate = (await db.query("select (current_date - 40)::text as due_date")).rows[0].due_date;
+    await addPlan(db, PLAN_C, A, { due: missedDueDate });
+    await db.query('update payment_plans set reminder_template_id=$1 where id=$2', [TEMPLATE_ON, PLAN_C]);
+    const missedAt = (await db.query("select (((($1::date)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')) as at", [missedDueDate])).rows[0].at;
+    await db.query(
+      `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status,error_message)
+       values ($1,$2,$3,$4,'skipped','missed_reminder_window')`,
+      [A, PLAN_C, TEMPLATE_ON, missedAt],
+    );
+    state = await plan(db, PLAN_C);
+    assert.ok(state.next_reminder_at.getTime() > Date.now());
+    assert.equal(state.last_reminder_at, null);
+    assert.equal(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(state.next_reminder_at), '11:00');
+
     const crossTenant = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
        values ($1,$2,$3,'2026-10-07T08:00:00Z','pending') returning id`,
@@ -310,10 +341,11 @@ test('confirmed sends atomically advance last/next reminder timestamps at 09:00 
       /outside the active organization scope/,
     );
 
-    await addPlan(db, PLAN_D, B, { due: '2026-10-10' });
+    const dueD = (await db.query("select (current_date + 10)::text as due_date")).rows[0].due_date;
+    await addPlan(db, PLAN_D, B, { due: dueD });
     await db.query('insert into payment_records(payment_plan_id,organization_id,amount) values ($1,$2,100)', [PLAN_D, B]);
     state = await plan(db, PLAN_D);
-    assert.equal(state.next_due_date.toISOString().slice(0, 10), '2026-10-10');
+    assert.equal(state.next_due_date.toISOString().slice(0, 10), dueD);
     const otherTenantReminder = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,scheduled_for,status)
        values ($1,$2,'2026-10-07T08:00:00Z','pending') returning id`,
@@ -336,12 +368,12 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
        values ($1,$2,'before',3,'whatsapp',true),($3,$2,'on',0,'whatsapp',true),($4,$2,'after',3,'whatsapp',true)`,
       [TEMPLATE_BEFORE, A, TEMPLATE_ON, TEMPLATE_AFTER],
     );
-    await addPlan(db, PLAN_A, A, { due: '2026-11-01' });
+    const dueDate = (await db.query("select (current_date + 10)::text as due_date")).rows[0].due_date;
+    await addPlan(db, PLAN_A, A, { due: dueDate });
+    await db.query('update payment_plans set reminder_template_id=$1 where id=$2', [TEMPLATE_ON, PLAN_A]);
     await db.query('insert into leads(id,organization_id,phone,opted_out) values($1,$2,$3,false)', [LEAD_A, A, '08123456789']);
     await db.query('update payment_plans set contact_id=$1 where id=$2', [LEAD_A, PLAN_A]);
-    const scheduledFor = (await db.query("select (((date '2026-11-01'::date)::timestamp + interval '9 hours') at time zone 'Africa/Lagos') as at")).rows[0].at;
-    const beforeScheduledFor = (await db.query("select ((((date '2026-11-01'::date - 3)::timestamp + interval '9 hours') at time zone 'Africa/Lagos')) as at")).rows[0].at;
-    const afterScheduledFor = (await db.query("select ((((date '2026-11-01'::date + 3)::timestamp + interval '9 hours') at time zone 'Africa/Lagos')) as at")).rows[0].at;
+    const scheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
     const insertAttempt = async (id, templateId, at) => db.query(
       `insert into reminder_attempts(id,organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
        values($1,$2,$3,$4,$5,'pending')`, [id, A, PLAN_A, templateId, at],
@@ -365,25 +397,52 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
     assert.equal((await db.query('select send_authorized_at,status from reminder_attempts where id=$1', [ATTEMPT_A])).rows[0].send_authorized_at, null);
 
     await db.query('update leads set opted_out=false where id=$1', [LEAD_A]);
-    await insertAttempt(ATTEMPT_B, TEMPLATE_BEFORE, beforeScheduledFor);
+    const offTimeFor = new Date(scheduledFor.getTime() + 30 * 60 * 1000);
+    const offTimeAttempt = await db.query(
+      `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
+       values ($1,$2,$3,$4,'pending') returning id`,
+      [A, PLAN_A, TEMPLATE_ON, offTimeFor],
+    );
+    const offTimeDenied = (await db.query(
+      `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
+      [A, PLAN_A, offTimeAttempt.rows[0].id, TEMPLATE_ON, offTimeFor, ['08123456789', '2348123456789']],
+    )).rows[0].result;
+    assert.equal(offTimeDenied.authorized, false);
+    assert.equal(offTimeDenied.reason, 'schedule_not_current');
+    await db.query('update payment_plans set next_reminder_at=$1 where id=$2', [offTimeFor, PLAN_A]);
+    assert.equal((await plan(db, PLAN_A)).next_reminder_at.toISOString(), offTimeFor.toISOString());
+    const malformedStoredCursor = (await db.query(
+      `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
+      [A, PLAN_A, offTimeAttempt.rows[0].id, TEMPLATE_ON, offTimeFor, ['08123456789', '2348123456789']],
+    )).rows[0].result;
+    assert.equal(malformedStoredCursor.authorized, false);
+    assert.equal(malformedStoredCursor.reason, 'cursor_time_invalid');
+
+    const dueAfterStop = (await db.query("select ($1::date + interval '1 day')::date as due_date", [dueDate])).rows[0].due_date;
+    await db.query('update payment_plans set next_due_date=$1 where id=$2', [dueAfterStop, PLAN_A]);
+    const secondScheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
+    await insertAttempt(ATTEMPT_B, TEMPLATE_ON, secondScheduledFor);
     const authorized = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
-      [A, PLAN_A, ATTEMPT_B, TEMPLATE_BEFORE, beforeScheduledFor, ['08123456789', '2348123456789']],
+      [A, PLAN_A, ATTEMPT_B, TEMPLATE_ON, secondScheduledFor, ['08123456789', '2348123456789']],
     )).rows[0].result;
     assert.equal(authorized.authorized, true);
     assert.ok((await db.query('select send_authorized_at from reminder_attempts where id=$1', [ATTEMPT_B])).rows[0].send_authorized_at);
     const replay = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
-      [A, PLAN_A, ATTEMPT_B, TEMPLATE_BEFORE, beforeScheduledFor, ['08123456789', '2348123456789']],
+      [A, PLAN_A, ATTEMPT_B, TEMPLATE_ON, secondScheduledFor, ['08123456789', '2348123456789']],
     )).rows[0].result;
     assert.equal(replay.authorized, false);
     assert.equal(replay.reason, 'attempt_not_pending');
 
-    await insertAttempt(ATTEMPT_C, TEMPLATE_AFTER, afterScheduledFor);
+    const finalDueDate = (await db.query("select ($1::date + interval '1 day')::date as due_date", [dueAfterStop])).rows[0].due_date;
+    await db.query('update payment_plans set next_due_date=$1 where id=$2', [finalDueDate, PLAN_A]);
+    const finalScheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
+    await insertAttempt(ATTEMPT_C, TEMPLATE_ON, finalScheduledFor);
     await db.query('update payment_plans set reminders_enabled=false where id=$1', [PLAN_A]);
     const stalePlan = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
-      [A, PLAN_A, ATTEMPT_C, TEMPLATE_AFTER, afterScheduledFor, ['08123456789', '2348123456789']],
+      [A, PLAN_A, ATTEMPT_C, TEMPLATE_ON, finalScheduledFor, ['08123456789', '2348123456789']],
     )).rows[0].result;
     assert.equal(stalePlan.authorized, false);
     assert.equal(stalePlan.reason, 'plan_not_sendable');
