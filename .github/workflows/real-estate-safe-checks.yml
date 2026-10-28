@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - integration/limitless-realty-production-20261025
+      - draft/limitless-realty-followups-fix-20261027
   pull_request:
     branches:
       - main
@@ -17,7 +18,7 @@ permissions:
 
 jobs:
   safe-regression:
-    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025'
+    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -28,5 +29,7 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-      - name: Run tenant-neutral acceptance suite only
-        run: npm run test:real-estate
+      - name: Run explicitly allowlisted tenant-neutral acceptance suite
+        run: node tests/run-limitless-safe-suite.mjs
+      - name: TypeScript check for changed Limitless runtime modules only
+        run: npx tsc --noEmit --project tsconfig.limitless-followups.json

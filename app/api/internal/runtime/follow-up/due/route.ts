@@ -6,6 +6,7 @@ import { evaluateFollowUpEligibility, resolveFollowUpPolicy, text } from "@/lib/
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const LIMITLESS_REALTY_ORGANIZATION_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -43,6 +44,10 @@ export async function POST(request: NextRequest) {
       const meta = record(task.metadata);
       const organizationId = text(task.organization_id);
       const agentId = text(task.assigned_agent_id);
+      if (organizationId === LIMITLESS_REALTY_ORGANIZATION_ID) {
+        skipped.push({ task_id: String(task.id), reason: "limitless_uses_follow_ups_sequence_pipeline" });
+        continue;
+      }
       const customerId = text(task.customer_id);
       const leadId = text(task.lead_id);
       if (!organizationId || !agentId || !customerId) {

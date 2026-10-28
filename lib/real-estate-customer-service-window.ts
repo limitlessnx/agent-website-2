@@ -17,7 +17,7 @@ export function parseInboundTimestamp(value: unknown, receivedAt = Date.now()) {
 
 export function isWithinCustomerServiceWindow(value: unknown, now = Date.now()) {
   const at = Date.parse(String(value ?? ""));
-  return Number.isFinite(at) && at <= now && now - at <= WINDOW_MS;
+  return Number.isFinite(at) && at <= now && now - at < WINDOW_MS;
 }
 
 function normalizedPhone(value: unknown) {
@@ -48,6 +48,25 @@ export async function recordRealEstateCustomerInboundWindow(input: {
   });
   if (error) throw error;
   return true;
+}
+
+export async function getRealEstateDirectWindowLastInboundAt(organizationId: string, phoneValue: string, now = Date.now()) {
+  const phone = normalizedPhone(phoneValue);
+  if (!phone) return null;
+  const admin = createAdminClient();
+  const organization = await resolveActiveRealEstateOrganization(admin, organizationId);
+  if (!organization) return null;
+  const { data, error } = await admin.from("real_estate_customer_service_windows")
+    .select("phone_normalized,last_inbound_at")
+    .eq("organization_id", organization.id)
+    .eq("provider", "meta_whatsapp")
+    .eq("phone_normalized", phone)
+    .order("last_inbound_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const lastInboundAt = String(data?.last_inbound_at || "");
+  return isWithinCustomerServiceWindow(lastInboundAt, now) ? lastInboundAt : null;
 }
 
 export async function getRealEstateDirectWindowPhones(organizationId: string, phones: string[], now = Date.now()) {

@@ -237,36 +237,8 @@ function toolSet(): ToolDefinition[] {
         // Writing a Limitless lead ID into crm_tasks therefore fails at the FK
         // boundary and bypasses the scheduler that actually sends Maia follow-ups.
         if (ctx.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d") {
-          if (!leadId) throw new Error("A Limitless Realty lead is required to create a follow-up.");
-          const { data: lead, error: leadError } = await admin
-            .from("leads")
-            .select("id,phone,opted_out")
-            .eq("organization_id", ctx.organizationId)
-            .eq("id", leadId)
-            .maybeSingle();
-          if (leadError) throw leadError;
-          if (!lead) throw new Error("The lead is not assigned to this Limitless Realty organization.");
-          if (lead.opted_out) throw new Error("This lead has opted out of follow-up messages.");
-          if (!lead.phone) throw new Error("This lead has no phone number for WhatsApp follow-up.");
-          if (!dueAt || !Number.isFinite(Date.parse(dueAt)) || Date.parse(dueAt) <= Date.now()) throw new Error("A valid future follow-up date/time is required.");
-          if (!description && !title) throw new Error("Follow-up message content is required.");
-
-          const { data, error } = await admin
-            .from("follow_ups")
-            .insert({
-              organization_id: ctx.organizationId,
-              lead_id: lead.id,
-              stage: 0,
-              scheduled_at: dueAt,
-              message_sent: description || title,
-              status: "pending",
-              channel: "whatsapp",
-              agent_key: "maia",
-            })
-            .select("id,lead_id,stage,scheduled_at,message_sent,status,channel,agent_key")
-            .single();
-          if (error) throw error;
-          return { ...data, pipeline: "limitless_follow_ups" };
+          void admin; void title; void description; void dueAt; void leadId;
+          throw new Error("Limitless Maia follow-ups require the canonical tenant/customer/property sequence identity and explicit consent; use the Maia property sequence queue.");
         }
 
         const { data, error } = await admin

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   try {
     const result = await runLimitlessInstallmentReminderSweep();
     return NextResponse.json({ ok: true, ...result });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to run installment reminder sweep." }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Unable to run installment reminder sweep. Check restricted runtime diagnostics." }, { status: 500 });
   }
 }

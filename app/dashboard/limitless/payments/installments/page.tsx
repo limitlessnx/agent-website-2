@@ -12,10 +12,6 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 10;
 
-function defaultReminderDate() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date(Date.now() + 24 * 60 * 60 * 1000));
-}
-
 export default async function InstallmentsPage({ searchParams }: { searchParams?: Promise<{ success?: string; page?: string }> }) {
   const { organizationId } = await resolveAdminOrganizationScope();
   const params = searchParams ? await searchParams : {};
@@ -60,26 +56,17 @@ export default async function InstallmentsPage({ searchParams }: { searchParams?
         <ContactPicker contacts={contacts} />
         <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
         <input name="property_title" placeholder="Property title" required />
-        <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
+        <input name="agreed_price" type="number" min="0.01" step="0.01" placeholder="Agreed price (₦)" required />
         <label>Amount paid so far<input name="amount_paid" type="number" min="0" step="0.01" placeholder="0" defaultValue="0" /></label>
-        <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
-        <label>Start date<input name="start_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} required /></label>
-        <label>End date<input name="end_date" type="date" /></label>
+        <input name="installment_amount" type="number" min="0.01" step="0.01" placeholder="Installment amount (₦)" required />
+        <select name="frequency" defaultValue="biweekly"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
+        <label>Next due date<input name="next_due_date" type="date" required /></label>
+        <label>Final due date<input name="final_due_date" type="date" /></label>
         <div className="payment-reminder-schedule-card">
           <strong>First reminder</strong>
-          <span>Choose whether the first reminder goes out immediately or at a specific Lagos date and time.</span>
-          <label>When should the first reminder be sent?
-            <select name="reminder_start_mode" defaultValue="scheduled">
-              <option value="scheduled">Schedule for a date and time</option>
-              <option value="immediate">Send immediately</option>
-            </select>
-          </label>
-          <div className="payment-reminder-schedule-fields">
-            <label>Date<input name="reminder_start_date" type="date" defaultValue={new Date().toISOString().slice(0,10)} /></label>
-            <label>Time<input name="reminder_start_time" type="time" defaultValue="09:00" /></label>
-          </div>
-          <small>Scheduled times use Africa/Lagos time. Repeat cadence advances from the actual reminder delivery.</small>
+          <span>Derived from the next due date at 09:00 Africa/Lagos. Before/on/after timing is controlled by the saved reminder template.</span>
         </div>
+        <input type="hidden" name="first_reminder_mode" value="due_date" />
         <input type="hidden" name="handover_agent_name" value="Limitless Realty Handover" />
         <input type="hidden" name="handover_agent_phone" value="2348127753308" />
         <div className="payment-handover-card"><strong>Assigned agent</strong><span>Limitless Realty Handover</span><small>WhatsApp: 2348127753308</small></div>

@@ -1,12 +1,12 @@
 import FollowupControlCenter from "@/components/admin/FollowupControlCenter";
 import { getFollowupControlSummary } from "@/lib/followup-control";
-import { getLeads } from "@/lib/limitless-data";
+import { getLeads, LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function FollowupsPage() {
   const [summary, leads] = await Promise.all([
-    getFollowupControlSummary("limitless-realty"),
+    getFollowupControlSummary(LIMITLESS_REALTY_ORGANIZATION_ID),
     getLeads(1000).catch(() => []),
   ]);
 
@@ -14,7 +14,7 @@ export default async function FollowupsPage() {
   const scheduled = summary.statusSummary.upcoming;
   const dueNow = summary.statusSummary.due;
   const overdue = summary.statusSummary.overdue;
-  const logFailures = summary.logs.filter((item: { status?: string | null }) => ["failed", "error", "blocked"].includes(String(item.status).toLowerCase())).length;
+  const logFailures = summary.logs.filter((item: { status?: string | null }) => ["failed", "error", "blocked", "unknown"].includes(String(item.status).toLowerCase())).length;
   const attention = logFailures;
 
   return (
@@ -35,12 +35,13 @@ export default async function FollowupsPage() {
         <article className="admin-metric-card"><p>Upcoming</p><strong>{scheduled}</strong><span>Waiting for the next action</span></article>
         <article className="admin-metric-card"><p>Due now</p><strong>{dueNow}</strong><span>Ready for today&apos;s step</span></article>
         <article className="admin-metric-card"><p>Overdue</p><strong>{overdue}</strong><span>Missed by more than 24 hours</span></article>
-        <article className="admin-metric-card"><p>Built-in cadence</p><strong>6</strong><span>Maia steps: 1, 3, 7, 14, 21, 30 days</span></article>
+        <article className="admin-metric-card"><p>Built-in cadence</p><strong>Ongoing</strong><span>Maia steps: days 1, 3, 7, 14, 21, 30, then every 14 days</span></article>
         <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed or blocked actions requiring review</span></article>
       </div>
 
       <FollowupControlCenter
         configured={summary.configured}
+        now={summary.asOf}
         leads={leads.map((lead) => ({ id:String(lead.id), name:String(lead.name || ""), phone:String(lead.phone || "") }))}
         sequences={summary.sequences}
         steps={summary.steps}

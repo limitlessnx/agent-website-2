@@ -8,11 +8,10 @@ import { recordRealEstateCustomerInboundWindow } from "@/lib/real-estate-custome
 import { dispatchMaiaOutboundMessage } from "@/lib/maia-outbound";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import {
-  queueLimitlessFollowup,
   queueLimitlessPropertyFollowupSequence,
   searchLimitlessProperties,
-  shouldFollowUp,
 } from "@/lib/ai/limitless-realty-maia";
+import { isExplicitLimitlessOptInMessage, limitlessPhoneCandidates, normalizeLimitlessPhone, uniqueLimitlessPhoneMatchId } from "@/lib/limitless-followup-contract";
 import {
   type MaiaInboundPayload,
   claimMaiaConversationLock,
@@ -136,41 +135,30 @@ export const maiaProcessInboundMessage = task({
 
       if (isLimitlessRealty && stopIntent && payload.customerPhone) {
         const admin = createAdminClient();
-        const phone = payload.customerPhone.replace(/\D/g, "");
-        const { data: candidateLeads } = await admin
+        const rawPhone = payload.customerPhone.trim();
+        const phone = normalizeLimitlessPhone(rawPhone);
+        if (!phone) throw new Error("Unable to verify the customer phone for this opt-out request.");
+        const phoneVariants = limitlessPhoneCandidates(rawPhone);
+        const { data: candidateLeads, error: leadLookupError } = await admin
           .from("leads")
           .select("id,phone")
-          .eq("organization_id", payload.organizationId);
-        const matchingLeadIds = (candidateLeads || [])
-          .filter((lead) => String(lead.phone || "").replace(/\D/g, "") === phone)
-          .map((lead) => lead.id)
-          .filter(Boolean);
-
-        if (matchingLeadIds.length) {
-          await admin
-            .from("leads")
-            .update({ opted_out: true, status: "opted_out", updated_at: new Date().toISOString() })
-            .eq("organization_id", payload.organizationId)
-            .in("id", matchingLeadIds);
-        }
-
-        const leadIds = matchingLeadIds;
-        if (leadIds.length) {
-          await admin
-            .from("follow_ups")
-            .update({ status: "cancelled" })
-            .eq("organization_id", payload.organizationId)
-            .eq("status", "pending")
-            .in("lead_id", leadIds);
-        }
-        await admin
-          .from("agent_runtime_goals")
-          .update({ status: "cancelled", updated_at: new Date().toISOString() })
           .eq("organization_id", payload.organizationId)
-          .eq("agent_id", payload.agentId)
-          .eq("goal_type", "follow_up")
-          .in("status", ["queued", "running"])
-          .filter("input->>customer_phone", "eq", phone);
+          .in("phone", phoneVariants)
+          .limit(21);
+        if (leadLookupError) throw leadLookupError;
+        if ((candidateLeads || []).length >= 21) throw new Error("Limitless phone lookup is ambiguous; no opt-out updates were applied.");
+        const normalizedMatches = (candidateLeads || [])
+          .filter((lead) => normalizeLimitlessPhone(lead.phone) === phone)
+          .map((lead) => ({ id: lead.id }));
+        const matchingLeadId = uniqueLimitlessPhoneMatchId(normalizedMatches);
+        if (matchingLeadId) {
+          const { error: optOutError } = await admin.rpc("record_limitless_maia_opt_out", {
+            p_organization_id: payload.organizationId,
+            p_lead_id: matchingLeadId,
+            p_external_event_id: payload.externalEventId || null,
+          });
+          if (optOutError) throw optOutError;
+        }
         await markMaiaInboundCompleted(eventId);
         await recordMaiaRuntimeEvent({
           organizationId: payload.organizationId,
@@ -181,36 +169,6 @@ export const maiaProcessInboundMessage = task({
         });
         return { ok: true, duplicate: false, eventId, suppressedReply: true, reason: "customer_opted_out" };
       }
-      if (isLimitlessRealty && payload.customerPhone) {
-        const admin = createAdminClient();
-        const phone = payload.customerPhone.replace(/\D/g, "");
-        const { data: candidateLeads, error: candidateLeadError } = await admin
-          .from("leads")
-          .select("id,phone")
-          .eq("organization_id", payload.organizationId);
-        if (candidateLeadError) throw candidateLeadError;
-        const leadIds = (candidateLeads || [])
-          .filter((lead) => String(lead.phone || "").replace(/\D/g, "") === phone)
-          .map((lead) => lead.id)
-          .filter(Boolean);
-        if (leadIds.length) {
-          await admin
-            .from("follow_ups")
-            .update({ status: "cancelled" })
-            .eq("organization_id", payload.organizationId)
-            .eq("status", "pending")
-            .in("lead_id", leadIds);
-        }
-        await admin
-          .from("agent_runtime_goals")
-          .update({ status: "cancelled", updated_at: new Date().toISOString() })
-          .eq("organization_id", payload.organizationId)
-          .eq("agent_id", payload.agentId)
-          .eq("goal_type", "follow_up")
-          .in("status", ["queued", "running"])
-          .filter("input->>customer_phone", "eq", phone);
-      }
-
       const customerId = payload.customerPhone
         ? await resolveCanonicalCustomer({ organizationId: payload.organizationId, phone: payload.customerPhone, externalKey: "whatsapp:" + payload.customerPhone, fullName: payload.customerName || "WhatsApp customer", source: "maia-whatsapp-runtime" }).then((result) => result.customerId)
         : null;
@@ -257,8 +215,7 @@ export const maiaProcessInboundMessage = task({
       const result = await runMaia({ organizationId: payload.organizationId, agentId: payload.agentId, message: runtimeMessage, channel: payload.channel, externalConversationId: payload.externalConversationId, customerId: customerId || undefined, conversationId: conversationId || undefined, correlationId: eventId, autonomous: true });
 
       let followup: unknown = null;
-      const handedOff = result.toolResults.some((item) => ["handoff_to_human_supervisor", "request_property_inspection"].includes(String(item.tool)) && item.ok === true);
-      if (isLimitlessRealty && !handedOff && payload.channel === "whatsapp" && payload.customerPhone) {
+      if (isLimitlessRealty && payload.channel === "whatsapp" && payload.customerPhone) {
         followup = await runOptionalRealEstateOperation(async () => {
           let scheduledFollowup: unknown = null;
         const lowerMessage = effectiveMessage.toLowerCase();
@@ -266,29 +223,38 @@ export const maiaProcessInboundMessage = task({
           const title = String(property.title || "").trim().toLowerCase();
           return title.length >= 5 && lowerMessage.includes(title);
         })) || /\b(this|that|the)\s+(property|estate|land|plot|house|apartment)\b/i.test(effectiveMessage);
-        const buyingIntent = /\b(interested|interest|like|love|want|looking to buy|looking for|how much|price|payment|installment|inspection|title|documentation|documents|location|availability|reserve|book|pay|purchase)\b/i.test(effectiveMessage);
-        if (propertyMentioned && buyingIntent) {
+        const explicitOptIn = isExplicitLimitlessOptInMessage(effectiveMessage);
+        if (explicitOptIn && customerId) {
           scheduledFollowup = await queueLimitlessPropertyFollowupSequence({
             organizationId: payload.organizationId,
             agentId: payload.agentId,
+            customerId,
             customerPhone: payload.customerPhone,
             customerName: payload.customerName,
             propertyContext,
-          });
-        } else if (shouldFollowUp(effectiveMessage)) {
-          scheduledFollowup = await queueLimitlessFollowup({
-            organizationId: payload.organizationId,
-            agentId: payload.agentId,
-            customerPhone: payload.customerPhone,
-            customerName: payload.customerName,
-            when: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            message: `Follow up with ${payload.customerName || "the client"} about the Limitless Realty enquiry. Preserve the verified catalogue context and do not invent availability or pricing.`,
+            consentAt: new Date().toISOString(),
+            consentSource: "maia_whatsapp_inbound",
+            consentActor: `customer:${customerId}`,
+            explicitRenewedConsent: explicitOptIn,
+            specificPropertyMentioned: propertyMentioned,
           });
         }
 
           return scheduledFollowup;
         });
-        await recordMaiaRuntimeEvent({ organizationId: payload.organizationId, agentId: payload.agentId, eventType: "optional_followup_result", status: String((followup as {status:string}).status), payload: { eventId, result: followup } }).catch(() => undefined);
+        const followupSummary = followup && typeof followup === "object"
+          ? followup as { created?: unknown; skipped?: unknown }
+          : null;
+        await recordMaiaRuntimeEvent({
+          organizationId: payload.organizationId,
+          agentId: payload.agentId,
+          eventType: "optional_followup_result",
+          status: followupSummary?.skipped ? "skipped" : followupSummary?.created ? "scheduled" : "no_followup",
+          payload: {
+            created_count: typeof followupSummary?.created === "number" ? followupSummary.created : 0,
+            skip_reason: typeof followupSummary?.skipped === "string" ? followupSummary.skipped : null,
+          },
+        }).catch(() => undefined);
       }
 
       let delivery: Awaited<ReturnType<typeof dispatchMaiaOutboundMessage>> | null = null;

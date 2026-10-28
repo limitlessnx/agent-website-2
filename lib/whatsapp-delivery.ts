@@ -15,11 +15,13 @@ type SendInput = {
   variables?: Record<string, string | number | null | undefined>;
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
+  strictTemplateContract?: { approvedVariableOrder: readonly string[] };
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
 type MetaWhatsAppCredentials={providerFamily:"meta";phoneNumberId:string;accessToken:string;graphVersion:string;source:"tenant_vault"|"legacy_env"};
 type TwilioWhatsAppCredentials={providerFamily:"twilio";accountSid:string;authToken:string;from:string;senderSid?:string|null;source:"tenant_vault"};
 type WhatsAppCredentials=MetaWhatsAppCredentials|TwilioWhatsAppCredentials;
+const LIMITLESS_REALTY_ORGANIZATION_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 function supabaseConfig() {
   const url = (process.env.LIMITLESS_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
@@ -91,12 +93,49 @@ async function resolveWhatsAppCredentials(organizationId: string): Promise<Whats
 
   throw new Error("WhatsApp credentials are not configured for this organization.");
 }
-async function getTemplateConfig(organizationId: string, purpose: string): Promise<TemplateConfig | null> {
-  const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active&select=template_name,language_code,variable_keys,metadata,status&limit=1`);
+async function getTemplateConfig(organizationId: string, purpose: string, requestedTemplateName?: string, strictTemplateContract?: SendInput["strictTemplateContract"]): Promise<TemplateConfig | null> {
+  const strictLimitlessLookup = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && Boolean(strictTemplateContract);
+  const templateFilter = requestedTemplateName && !strictLimitlessLookup ? `&template_name=eq.${encodeURIComponent(requestedTemplateName)}` : "";
+  const limit = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID ? 2 : 1;
+  const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active${templateFilter}&select=template_name,language_code,variable_keys,metadata,status&limit=${limit}`);
+  if (organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && rows.length !== 1) return null;
   return rows[0] || null;
 }
+function exactVariableOrder(left: unknown, right: readonly string[]) {
+  return Array.isArray(left) && left.length === right.length && left.every((value, index) => value === right[index]);
+}
+function validVariableKeys(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every((key) => typeof key === "string" && key.trim().length > 0 && key === key.trim())
+    && new Set(value).size === value.length;
+}
+function validateStrictTemplateContract(config: TemplateConfig | null, input: SendInput) {
+  const approvedOrder = input.strictTemplateContract?.approvedVariableOrder;
+  const configuredKeys = config?.variable_keys;
+  const approvedMetadata = config?.metadata?.approved_variable_order;
+  if (!validVariableKeys(approvedOrder) || !validVariableKeys(configuredKeys) || !validVariableKeys(approvedMetadata)) {
+    throw new Error("The approved WhatsApp template variable contract is invalid.");
+  }
+  if (!exactVariableOrder(configuredKeys, approvedOrder) || !exactVariableOrder(approvedMetadata, approvedOrder)) {
+    throw new Error("The approved WhatsApp template variable order does not match the configured contract.");
+  }
+  if (configuredKeys.some((key) => String(input.variables?.[key] ?? "").trim() === "")) {
+    throw new Error("A required approved WhatsApp template variable is unavailable.");
+  }
+}
 async function recordAttempt(payload: Record<string, unknown>) {
-  return supabaseRequest<Array<{ id: string }>>("whatsapp_delivery_attempts", { method: "POST", body: JSON.stringify(payload) }).catch(() => []);
+  const organizationId = String(payload.organization_id || "");
+  const auditPayload = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID
+    ? {
+      ...payload,
+      recipient: "[redacted]",
+      error_message: payload.status === "failed" || payload.status === "blocked" ? "Provider response details are restricted." : null,
+      request_payload: { redacted: true },
+      response_payload: { redacted: true },
+    }
+    : payload;
+  return supabaseRequest<Array<{ id: string }>>("whatsapp_delivery_attempts", { method: "POST", body: JSON.stringify(auditPayload) }).catch(() => []);
 }
 function isDirectPublicImageUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value) && !/drive\.google\.com/i.test(value) && /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(value);
@@ -150,9 +189,12 @@ export async function sendWhatsAppMessage(input: SendInput) {
   if (requestedMode === "direct" && outsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open.");
 
   const config=useTemplate
-    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h")
+    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h",input.requestedTemplateName,input.strictTemplateContract)
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
+  if (useTemplate && input.organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && input.strictTemplateContract) {
+    validateStrictTemplateContract(config, input);
+  }
   if (useTemplate && input.requestedTemplateName && config?.template_name !== input.requestedTemplateName) {
     throw new Error(`The requested WhatsApp template is not the active approved template for ${input.templatePurpose || "this message"}.`);
   }

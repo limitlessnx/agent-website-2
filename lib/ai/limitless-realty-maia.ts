@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PropertyRecord } from "@/lib/limitless-data";
 import { assertFluxFeatureAccess } from "@/lib/flux-credits";
 import { resolveCanonicalCustomer, getOrCreateCanonicalConversation } from "@/lib/canonical-customer";
 import { createHumanHandoffFromMaia } from "@/lib/human-operations";
+import { LIMITLESS_REALTY_ORGANIZATION_ID, LIMITLESS_FOLLOWUP_SEQUENCE_KEY, LIMITLESS_FOLLOWUP_STAGES, limitlessPhoneCandidates, normalizeLimitlessPhone, qualifyLimitlessFollowup, uniqueLimitlessPhoneMatchId, uniqueRenewalPropertyId } from "@/lib/limitless-followup-contract";
+import { computeInitialFollowUpDueAt, computeSequenceStepDueAt, resolveFollowUpPolicy } from "@/lib/follow-up-policy";
 
 export const LIMITLESS_REALTY_HUMAN_WHATSAPP = "2348127753308";
 export const LIMITLESS_REALTY_MAIA_AGENT_SLUG = "maia";
@@ -83,39 +86,51 @@ export async function handoffToLimitlessHuman(args: { organizationId: string; ag
   return { handedOff: true, pending: !["delivered", "read"].includes(String((handoff as Record<string, unknown>).notificationStatus || "")), handoff };
 }
 
-export async function queueLimitlessFollowup(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; when: string; message: string; stage?: number }) {
+export async function queueLimitlessFollowup(args: { organizationId: string; agentId: string; customerId: string; sequenceId: string; sequenceKey: string; propertyId: string | null; leadId: string; customerPhone?: string; customerName?: string; when: string; message: string; stage?: number; sequenceStepKey?: string; consentAt: string; consentSource: string; consentActor: string }) {
   await assertFluxFeatureAccess(args.organizationId, "follow_ups");
   const admin = createAdminClient();
   const scheduledAt = new Date(args.when);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error("Invalid follow-up time.");
-  let leadId = args.leadId || null;
   const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
-  if (!leadId && phone) {
-    const { data: existing } = await admin.from("leads").select("id,opted_out").eq("organization_id", args.organizationId).eq("phone", phone).maybeSingle();
-    if (existing?.id) leadId = existing.id;
-    else {
-      const { data: created, error: createError } = await admin.from("leads").insert({ organization_id: args.organizationId, name: args.customerName || "Limitless Realty prospect", phone, status: "follow_up_pending", source: "maia", opted_out: false, agent_notified: false, conversation_log: [] }).select("id").single();
-      if (createError) throw createError;
-      leadId = created.id;
-    }
-  }
-  if (!leadId) throw new Error("A client phone number or lead ID is required before scheduling a follow-up.");
-  const { data: followup, error } = await admin.from("follow_ups").insert({ organization_id: args.organizationId, lead_id: leadId, stage: args.stage || 1, scheduled_at: scheduledAt.toISOString(), message_sent: args.message.slice(0, 2000), status: "pending" }).select("id,scheduled_at,status,lead_id,organization_id,stage").single();
+  const qualification = qualifyLimitlessFollowup({ explicitOptIn: Boolean(args.consentAt && args.consentSource && args.consentActor), meaningfulConversation: true, specificPropertyInterest: args.propertyId || "property", campaignOnly: false });
+  if (!qualification.eligible) throw new Error(`Limitless follow-up is not qualified: ${qualification.reasons.join(", ")}`);
+  const stepKey = args.sequenceStepKey || `stage-${args.stage || 1}`;
+  const { data: followup, error } = await admin.from("follow_ups").insert({
+    organization_id: args.organizationId,
+    lead_id: args.leadId,
+    customer_id: args.customerId,
+    property_id: args.propertyId,
+    sequence_id: args.sequenceId,
+    sequence_key: args.sequenceKey,
+    sequence_step_key: stepKey,
+    stage: args.stage || 1,
+    scheduled_at: scheduledAt.toISOString(),
+    due_at: scheduledAt.toISOString(),
+    message_sent: args.message.slice(0, 2000),
+    status: "pending",
+    channel: "whatsapp",
+    agent_key: "maia",
+    consent_state: "opted_in",
+    consent_at: args.consentAt,
+    consent_source: args.consentSource,
+    consent_actor: args.consentActor,
+    template_name: "follow_up_outside_24h",
+  }).select("id,scheduled_at,due_at,status,lead_id,customer_id,property_id,organization_id,sequence_id,sequence_step_key,stage").single();
   if (error) throw error;
-  const { data: goal, error: goalError } = await admin.from("agent_runtime_goals").insert({ organization_id: args.organizationId, agent_id: args.agentId, title: `Follow up with ${args.customerName || phone || "prospect"}`, goal_type: "follow_up", priority: 60, status: "queued", next_run_at: scheduledAt.toISOString(), input: { instructions: `Follow up with the client using this approved message: ${args.message.slice(0, 2000)}. Client phone: ${phone}. Send through the tenant-scoped Meta WhatsApp Cloud API via Trigger.dev only. Do not send if the client has opted out, the conversation has been handed to a human, or the lead is already resolved.`, followup_id: followup.id, customer_phone: phone, delivery_route: LIMITLESS_REALTY_CANONICAL_WHATSAPP_ROUTE } }).select("id,status,next_run_at").single();
-  if (goalError) throw goalError;
-  return { followup, autonomousGoal: goal };
+  return { followup, pipeline: "limitless_follow_ups", duplicateGoalEnqueue: false, phone };
 }
 
-export async function queueLimitlessPropertyFollowupSequence(args: { organizationId: string; agentId: string; leadId?: string; customerPhone?: string; customerName?: string; propertyContext: unknown }) {
+export async function queueLimitlessPropertyFollowupSequence(args: { organizationId: string; agentId: string; customerId: string; leadId?: string; customerPhone?: string; customerName?: string; propertyContext: unknown; consentAt: string; consentSource: string; consentActor: string; explicitRenewedConsent: boolean; specificPropertyMentioned?: boolean }) {
   const admin = createAdminClient();
-  const phone = String(args.customerPhone || "").replace(/[^\d]/g, "");
-  if (!phone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
+  if (args.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) throw new Error("Limitless follow-ups are restricted to the Limitless Realty organization.");
+  const phoneVariants = limitlessPhoneCandidates(args.customerPhone || "");
+  const normalizedPhone = normalizeLimitlessPhone(args.customerPhone || "");
+  if (!normalizedPhone && !args.leadId) throw new Error("A client phone number or lead ID is required before scheduling the property follow-up sequence.");
 
-  let existingLead: { id: string; opted_out: boolean | null } | null = null;
+  let existingLead: { id: string; phone?: string | null; opted_out: boolean | null } | null = null;
   if (args.leadId) {
     const { data, error } = await admin.from("leads")
-      .select("id,opted_out")
+      .select("id,phone,opted_out")
       .eq("organization_id", args.organizationId)
       .eq("id", args.leadId)
       .maybeSingle();
@@ -123,51 +138,108 @@ export async function queueLimitlessPropertyFollowupSequence(args: { organizatio
     existingLead = data;
   }
 
-  if (existingLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
-  let leadId = existingLead?.id;
-
-  if (!leadId && phone) {
-    const { data: phoneLead, error: phoneLeadError } = await admin.from("leads")
-      .select("id,opted_out")
+  if (!existingLead && phoneVariants.length) {
+    const { data: phoneLeads, error: phoneLeadError } = await admin.from("leads")
+      .select("id,phone,opted_out")
       .eq("organization_id", args.organizationId)
-      .eq("phone", phone)
-      .maybeSingle();
+      .in("phone", phoneVariants)
+      .limit(25);
     if (phoneLeadError) throw phoneLeadError;
-    if (phoneLead?.opted_out) return { created: 0, skipped: "opted_out", followups: [] };
-    leadId = phoneLead?.id;
+    const normalizedMatches = (phoneLeads || []).filter((lead: { phone?: string | null }) => normalizeLimitlessPhone(lead.phone) === normalizedPhone);
+    const matchedId = uniqueLimitlessPhoneMatchId(normalizedMatches);
+    existingLead = normalizedMatches.find((lead: { id: string }) => lead.id === matchedId) || null;
   }
 
-  if (!leadId && args.leadId && !phone) {
+  if (existingLead && normalizedPhone && normalizeLimitlessPhone(existingLead.phone) !== normalizedPhone) {
+    throw new Error("The lead phone does not match the inbound customer identity.");
+  }
+  const leadId = existingLead?.id;
+  if (!leadId && args.leadId && !normalizedPhone) {
     throw new Error("The lead was not found in the selected organization.");
   }
 
-  if (leadId) {
-    const { error: cancelPreviousError } = await admin.from("follow_ups")
-      .update({ status: "cancelled" })
+  if (!leadId) throw new Error("A tenant-scoped Limitless lead is required before scheduling a sequence.");
+  const wasOptedOut = existingLead?.opted_out === true;
+  if (wasOptedOut && !args.explicitRenewedConsent) return { created: 0, skipped: "opted_out", followups: [] };
+  const renewedConsent = wasOptedOut && args.explicitRenewedConsent;
+  const match = args.specificPropertyMentioned === true
+    ? ((args.propertyContext && typeof args.propertyContext === "object" ? (args.propertyContext as { matches?: Array<Record<string, unknown>> }).matches?.[0] : null) || null)
+    : null;
+  let propertyId = typeof match?.id === "string" && match.id.trim() ? match.id.trim() : null;
+  if (!propertyId && wasOptedOut && renewedConsent && args.specificPropertyMentioned !== true) {
+    const { data: priorSequences, error: priorSequenceError } = await admin.from("limitless_maia_followup_sequences")
+      .select("property_id")
       .eq("organization_id", args.organizationId)
+      .eq("customer_id", args.customerId)
       .eq("lead_id", leadId)
-      .eq("status", "pending");
-    if (cancelPreviousError) throw cancelPreviousError;
+      .eq("status", "opted_out")
+      .eq("consent_state", "opted_out")
+      .limit(1000);
+    if (priorSequenceError) throw priorSequenceError;
+    propertyId = (priorSequences || []).length >= 1000 ? null : uniqueRenewalPropertyId(priorSequences || []);
   }
+  if (!propertyId) {
+    return { created: 0, skipped: wasOptedOut && renewedConsent ? "prior_property_missing_or_ambiguous" : "specific_property_interest_required", followups: [] };
+  }
+  const { data: verifiedProperty, error: propertyError } = await admin.from("properties")
+    .select("id,title,location_area,location_city")
+    .eq("organization_id", args.organizationId)
+    .eq("id", propertyId)
+    .maybeSingle();
+  if (propertyError) throw propertyError;
+  if (!verifiedProperty) return { created: 0, skipped: "property_not_found_in_organization", followups: [] };
+  const qualification = qualifyLimitlessFollowup({ explicitOptIn: Boolean(args.consentAt && args.consentSource && args.consentActor && (!wasOptedOut || renewedConsent)), meaningfulConversation: true, specificPropertyInterest: propertyId, campaignOnly: false, optedOut: wasOptedOut && !renewedConsent });
+  if (!qualification.eligible) return { created: 0, skipped: qualification.reasons[0], followups: [] };
+  let existingSequenceQuery = admin.from("limitless_maia_followup_sequences").select("id,status,sequence_key").eq("organization_id", args.organizationId).eq("customer_id", args.customerId).eq("sequence_key", LIMITLESS_FOLLOWUP_SEQUENCE_KEY).in("status", ["active", "paused"]);
+  existingSequenceQuery = propertyId ? existingSequenceQuery.eq("property_id", propertyId) : existingSequenceQuery.is("property_id", null);
+  const { data: existingSequence, error: existingSequenceError } = await existingSequenceQuery.maybeSingle();
+  if (existingSequenceError) throw existingSequenceError;
+  if (existingSequence) return { created: 0, skipped: "active_sequence_exists", sequenceId: existingSequence.id, followups: [] };
 
-  const stages = [1, 3, 7, 14, 21, 30];
-  const propertyText = JSON.stringify(args.propertyContext).slice(0, 3500);
-  const created: unknown[] = [];
-  for (const [index, days] of stages.entries()) {
-    const when = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    const result = await queueLimitlessFollowup({
-      organizationId: args.organizationId,
-      agentId: args.agentId,
-      leadId,
-      customerPhone: phone,
-      customerName: args.customerName,
-      when,
+  const policy = await resolveFollowUpPolicy(args.organizationId, "limitless-realty");
+  const sequenceStartedAt = args.consentAt as string;
+  const anchorTime = Date.parse(sequenceStartedAt);
+  if (!Number.isFinite(anchorTime)) throw new Error("A valid explicit consent timestamp is required for the follow-up sequence.");
+  const laterStepAnchor = new Date(anchorTime + 24 * 60 * 60 * 1000).toISOString();
+  const scheduledTimes = LIMITLESS_FOLLOWUP_STAGES.map((_, index) => {
+    const scheduledAt = index === 0
+      ? computeInitialFollowUpDueAt(policy, sequenceStartedAt)
+      : computeSequenceStepDueAt(policy, laterStepAnchor, index + 1);
+    if (!scheduledAt) throw new Error(`The active Limitless follow-up policy is missing step ${index + 1}.`);
+    return scheduledAt;
+  });
+  const sequenceId = randomUUID();
+  const propertyText = [verifiedProperty.title, verifiedProperty.location_area, verifiedProperty.location_city].filter(Boolean).join(", ").slice(0, 500);
+  const rows = LIMITLESS_FOLLOWUP_STAGES.map((days, index) => {
+    const scheduledAt = scheduledTimes[index];
+    return {
+      sequence_step_key: `day-${days}`,
       stage: index + 1,
-      message: `Follow up with ${args.customerName || "the client"} about the property enquiry. Stage ${index + 1} of the 30-day sequence. Use the latest verified Limitless Realty catalogue data and the conversation context. Property context captured when the sequence started: ${propertyText}. If the client has replied, bought, opted out, requested a human, or the enquiry is resolved, stop instead of sending this message.`,
-    });
-    created.push(result);
+      scheduled_at: scheduledAt,
+      due_at: scheduledAt,
+      message_sent: `Checking in about ${propertyText}. Would you like updated availability or help arranging a viewing?`,
+    };
+  });
+  const { data: enrollment, error: enrollmentError } = await admin.rpc("create_limitless_maia_followup_sequence", {
+    p_organization_id: args.organizationId,
+    p_customer_id: args.customerId,
+    p_lead_id: leadId,
+    p_property_id: propertyId,
+    p_sequence_id: sequenceId,
+    p_sequence_key: LIMITLESS_FOLLOWUP_SEQUENCE_KEY,
+    p_consent_at: args.consentAt,
+    p_consent_source: args.consentSource,
+    p_consent_actor: args.consentActor,
+    p_renewed_consent: renewedConsent,
+    p_steps: rows,
+  });
+  if (enrollmentError) {
+    if (enrollmentError.code === "23505") return { created: 0, skipped: "active_sequence_exists", followups: [] };
+    throw enrollmentError;
   }
-  return { created: created.length, sequenceDays: stages, followups: created };
+  const enrollmentResult = enrollment as { sequence_id?: string; followups?: unknown[] } | null;
+  const created = Array.isArray(enrollmentResult?.followups) ? enrollmentResult.followups.length : 0;
+  return { created, sequenceDays: [...LIMITLESS_FOLLOWUP_STAGES], duplicateGoalEnqueue: false, renewedConsent };
 }
 
 export function shouldHandoff(message: string, reply: string) {

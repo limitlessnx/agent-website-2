@@ -59,6 +59,20 @@ export type ReminderTemplate = {
   enabled: boolean;
 };
 
+export type ReminderAttempt = {
+  id: string;
+  organization_id: string;
+  payment_plan_id: string;
+  reminder_template_id: string;
+  scheduled_for: string;
+  channel: string;
+  status: "pending" | "sent" | "failed" | "skipped" | "unknown";
+  provider_reference?: string | null;
+  error_message?: string | null;
+  retry_count?: number;
+  last_retry_at?: string | null;
+};
+
 function scope(organizationId: string) {
   if (!organizationId || organizationId.startsWith("unavailable:")) {
     throw new Error("Active organization context is required.");
@@ -81,6 +95,12 @@ export async function getPaymentRecords(organizationId: string, limit = 200) {
 export async function getReminderTemplates(organizationId: string) {
   return supabaseServerRequest<ReminderTemplate[]>(
     `reminder_templates?organization_id=eq.${scope(organizationId)}&select=*&order=position.asc`,
+  );
+}
+
+export async function getReminderAttempts(organizationId: string, status = "failed", limit = 100) {
+  return supabaseServerRequest<ReminderAttempt[]>(
+    `reminder_attempts?organization_id=eq.${scope(organizationId)}&status=eq.${encodeURIComponent(status)}&select=*&order=created_at.desc&limit=${limit}`,
   );
 }
 

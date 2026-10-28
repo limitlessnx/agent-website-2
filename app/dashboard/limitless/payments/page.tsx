@@ -1,10 +1,10 @@
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
-import { getPaymentPlans, getPaymentRecords, getReminderTemplates, formatMoney } from "@/lib/limitless-payments";
+import { getPaymentPlans, getPaymentRecords, getReminderAttempts, getReminderTemplates, formatMoney } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
-import { createOutrightPaymentAction, createPaymentPlanAction, recordPaymentAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
+import { createOutrightPaymentAction, createPaymentPlanAction, recordPaymentAction, retryReminderAttemptAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
 import ContactPicker from "@/components/admin/ContactPicker";
 import PaymentRecordActions from "./PaymentRecordActions";
 import PaymentSubmitButton from "./PaymentSubmitButton";
@@ -17,10 +17,11 @@ export default async function PaymentsPage() {
   let plans = [] as Awaited<ReturnType<typeof getPaymentPlans>>;
   let records = [] as Awaited<ReturnType<typeof getPaymentRecords>>;
   let templates = [] as Awaited<ReturnType<typeof getReminderTemplates>>;
+  let failedAttempts = [] as Awaited<ReturnType<typeof getReminderAttempts>>;
   let error = "";
   const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
   try {
-    [plans, records, templates] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getReminderTemplates(organizationId)]);
+    [plans, records, templates, failedAttempts] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getReminderTemplates(organizationId), getReminderAttempts(organizationId)]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Payment tables are not ready.";
   }
@@ -79,12 +80,14 @@ export default async function PaymentsPage() {
             <input name="client_email_manual" type="email" placeholder="New client email (optional)" />
             <select name="property_id"><option value="">Select property</option>{properties.map((property)=><option key={property.id} value={property.id}>{property.title}</option>)}</select>
             <input name="property_title" placeholder="Property title" required />
-            <input name="agreed_price" type="number" min="0" placeholder="Agreed price (₦)" required />
-            <input name="installment_amount" type="number" min="0" placeholder="Installment amount (₦)" />
-            <select name="frequency"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom</option></select>
-            <label>Next due date<input name="next_due_date" type="date" /></label>
+            <input name="agreed_price" type="number" min="0.01" step="0.01" placeholder="Agreed price (₦)" required />
+            <label>Amount paid so far<input name="amount_paid" type="number" min="0" step="0.01" placeholder="0" defaultValue="0" /></label>
+            <input name="installment_amount" type="number" min="0.01" step="0.01" placeholder="Installment amount (₦)" required />
+            <select name="frequency" defaultValue="biweekly"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
+            <label>Next due date<input name="next_due_date" type="date" required /></label>
             <label>Final due date<input name="final_due_date" type="date" /></label>
-            <input name="assigned_agent" placeholder="Assigned agent" />
+            <input type="hidden" name="first_reminder_mode" value="due_date" />
+            <div className="payment-reminder-schedule-card"><strong>First reminder</strong><span>Derived from the next due date at 09:00 Africa/Lagos. Before/on/after timing is controlled by the saved reminder template.</span></div>
             <textarea name="notes" placeholder="Notes" rows={3} />
             <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
             <PaymentSubmitButton>Create plan</PaymentSubmitButton>
@@ -143,6 +146,20 @@ export default async function PaymentsPage() {
             );
           })}
           {!records.length && !error ? <p className="admin-empty">No payments recorded yet.</p> : null}
+        </div>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header"><div><h2>Failed reminder attempts</h2><p>Only explicit provider failures are eligible for a manual retry. Unknown delivery outcomes remain closed.</p></div></div>
+        <div className="admin-list">
+          {failedAttempts.map((attempt) => {
+            const plan = planById.get(attempt.payment_plan_id);
+            return <div key={attempt.id} className="admin-list-row compact payment-record-row">
+              <span>{plan ? `${plan.client_name} · ${plan.property_title}` : "Installment plan"} · {attempt.scheduled_for}</span>
+              <form action={retryReminderAttemptAction}><input type="hidden" name="payment_plan_id" value={attempt.payment_plan_id}/><input type="hidden" name="reminder_attempt_id" value={attempt.id}/><PaymentSubmitButton className="admin-button secondary">Retry failed reminder</PaymentSubmitButton></form>
+            </div>;
+          })}
+          {!failedAttempts.length ? <p className="admin-empty">No explicit failed reminder attempts.</p> : null}
         </div>
       </section>
     </div>
