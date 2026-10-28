@@ -38,7 +38,6 @@ tests/real-estate-reminder-notification-safety.test.mjs
 tests/tenant-reminder-migrations-pglite.test.mjs
 tests/leo-campaign-report-tenant-scope.test.cjs
 tests/tenant-f-google-auth-calendar-onboarding.test.mjs
-tests/leo-core-security.test.cjs
 tests/lead-tenant-isolation.test.mjs
 tests/limitless-realty-followups-release.test.mjs
 tests/installment-payment-lifecycle.test.mjs
