@@ -15,8 +15,6 @@ const LEGACY_EXPECTED_VARIABLE_KEYS = [
 const LIMITLESS_EXPECTED_VARIABLE_KEYS = [
   "client_name",
   "property_title",
-  "installment_amount",
-  "due_date",
   "amount_paid",
   "outstanding_balance",
   "handover_agent_name",
@@ -188,10 +186,6 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   return { agreedPrice, paidToDate, outstandingBalance, installmentAmount };
 }
 
-function formatLagosDate(value: string) {
-  return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeZone: LAGOS_TIME_ZONE }).format(new Date(`${value}T12:00:00+01:00`));
-}
-
 function cadenceDays(frequency: string) {
   const normalized = frequency.trim().toLowerCase().replace(/[-\s]+/g, "_");
   if (["weekly", "week", "every_week", "7_days", "7_day"].includes(normalized)) return 7;
@@ -237,16 +231,13 @@ function valuesForPlan(plan: PaymentPlanRow, organizationName: string, approved:
     };
   }
 
-  const dueDate = parseLagosDate(plan.next_due_date);
-  if (!dueDate) throw new Error("Installment reminder schedule is missing a valid next due date.");
+  if (!parseLagosDate(plan.next_due_date)) throw new Error("Installment reminder schedule is missing a valid next due date.");
   const money = validatedLimitlessMoney(plan);
   if (!String(plan.client_name || "").trim() || !String(plan.property_title || "").trim()) throw new Error("Installment reminder requires the verified client name and property title.");
   if (!String(plan.handover_agent_name || "").trim() || !String(plan.handover_agent_phone || approved.handover_agent_phone || "").trim() || !String(organizationName || "").trim()) throw new Error("Installment reminder requires the approved company and contact details.");
   return {
     client_name: String(plan.client_name).trim(),
     property_title: String(plan.property_title).trim(),
-    installment_amount: formatMoneyCents(money.installmentAmount, String(plan.currency || "")),
-    due_date: formatLagosDate(dueDate),
     amount_paid: formatMoneyCents(money.paidToDate, String(plan.currency || "")),
     outstanding_balance: formatMoneyCents(money.outstandingBalance, String(plan.currency || "")),
     handover_agent_name: String(plan.handover_agent_name).trim(),

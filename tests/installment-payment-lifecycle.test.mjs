@@ -80,9 +80,9 @@ test("both creation forms submit the same persisted installment schedule contrac
   assert.match(source, /Reminders must use the next due date/);
 });
 
-test("approved WhatsApp template gating includes amount and due date in exact order", () => {
+test("approved WhatsApp template gating uses the approved seven-variable order", () => {
   const source = runtime();
-  for (const key of ["installment_amount", "due_date", "amount_paid", "outstanding_balance"]) assert.match(source, new RegExp(`"${key}"`));
+  for (const key of ["client_name", "property_title", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"]) assert.match(source, new RegExp(`"${key}"`));
   assert.match(source, /const LEGACY_EXPECTED_VARIABLE_KEYS/);
   assert.match(source, /const LIMITLESS_EXPECTED_VARIABLE_KEYS/);
   assert.match(source, /organizationId === LIMITLESS_REALTY_ORGANIZATION_ID \? LIMITLESS_EXPECTED_VARIABLE_KEYS : LEGACY_EXPECTED_VARIABLE_KEYS/);
@@ -230,7 +230,7 @@ test("Limitless invalid monetary fields create no attempt and authorization deni
       if (this.table === "leads") return Promise.resolve({ data: { id: "lead-a", opted_out: false }, error: null });
       if (this.table === "reminder_attempts") return Promise.resolve({ data: deniedAttempt, error: null });
       if (this.table === "reminder_templates") return Promise.resolve({ data: { id: "template-a", organization_id: LIMITLESS_ID, name: "On", timing_direction: "on", timing_days: 0, channel: "whatsapp", message_template: "{{client_name}}", enabled: true }, error: null });
-      if (this.table === "whatsapp_template_configs") return Promise.resolve({ data: { template_name: "approved", language_code: "en", variable_keys: ["client_name", "property_title", "installment_amount", "due_date", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"], metadata: { approved_variable_order: ["client_name", "property_title", "installment_amount", "due_date", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"], company_name: "Company" }, status: "active" }, error: null });
+      if (this.table === "whatsapp_template_configs") return Promise.resolve({ data: { template_name: "installment_reminder", language_code: "en", variable_keys: ["client_name", "property_title", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"], metadata: { approved_variable_order: ["client_name", "property_title", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"], company_name: "Company" }, status: "active" }, error: null });
       if (this.table === "organizations") return Promise.resolve({ data: { name: "Company" }, error: null });
       return Promise.resolve({ data: null, error: null });
     }
@@ -302,8 +302,8 @@ test("explicit provider rejection remains manually retryable after the one-use s
     handover_agent_name: "Agent", handover_agent_phone: "2348000000000", status: "active", reminders_enabled: true,
   };
   const attempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T10:00:00.000Z", status: "failed", retry_count: 1, send_authorized_at: "2026-10-28T08:00:00.000Z" };
-  const template = { id: "template-a", organization_id: LIMITLESS_ID, name: "On", timing_direction: "on", timing_days: 0, channel: "whatsapp", message_template: "{{client_name}} {{installment_amount}} {{due_date}}", enabled: true };
-  const variableKeys = ["client_name", "property_title", "installment_amount", "due_date", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"];
+  const template = { id: "template-a", organization_id: LIMITLESS_ID, name: "On", timing_direction: "on", timing_days: 0, channel: "whatsapp", message_template: "Hello {{client_name}} {{property_title}} {{amount_paid}} {{outstanding_balance}} {{handover_agent_name}} {{handover_agent_phone}} {{company_name}}", enabled: true };
+  const variableKeys = ["client_name", "property_title", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"];
   const approved = { template_name: "approved", language_code: "en", variable_keys: variableKeys, metadata: { approved_variable_order: variableKeys, company_name: "Company" }, status: "active" };
   const updates = [];
   const authorizationCalls = [];
