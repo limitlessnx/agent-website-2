@@ -8,12 +8,13 @@ import type { PropertyRecord } from "@/lib/limitless-data";
 
 type Props = { leads: ProgressiveLead[]; properties: PropertyRecord[]; groups: CampaignGroup[] };
 type AudienceMode = "all" | "manual" | "group" | "filters";
-type CampaignType = "new_estate_update" | "limitless_realty_update" | "limitless_realty_reminder" | "direct_message";
+type CampaignType = "estate_brief_update" | "new_estate_update" | "limitless_realty_update" | "limitless_realty_reminder" | "direct_message";
 type CampaignResult = { status: string; attempted: number; sent: number; delivered: number; pendingDelivery: number; failed: number; skipped: number; templateName?: string };
 type PendingApproval = { fingerprint: string; requestId: string; approvalId?: string; token?: string; expiresAt?: string; preview?: { attemptedRecipients: number; serviceWindowSkipped?: number; cooldownSkipped: number; messageParts: number; templateName?: string; message: string; propertyName?: string | null; recipientPreview?: Array<{ name: string; phone: string }>; moreRecipients?: number }; unresolved?: boolean };
 
 const CHANNEL_INVITE = "Reply YES if you'd like to join our Limitless Realty WhatsApp Channel for property deals, new estate launches and real estate updates near you.";
 const campaignTypes: Array<{ value: CampaignType; label: string; description: string; template?: string; unavailable?: boolean }> = [
+  { value: "estate_brief_update", label: "Estate brief", template: "estate_brief_update · IN REVIEW", description: "Prepare a property campaign with the Meta image header and five approved body variables.", },
   { value: "new_estate_update", label: "Estate update", template: "estate_brief_update · NOT VERIFIED", description: "Unavailable until the approved Meta template schema is verified.", unavailable: true },
   { value: "limitless_realty_update", label: "Market update", template: "limitless_realty_update_v2", description: "General real-estate campaigns, news and property updates." },
   { value: "limitless_realty_reminder", label: "Reminder", template: "limitless_realty_reminder · NOT VERIFIED", description: "Unavailable until the approved Meta template schema is verified.", unavailable: true },
@@ -65,6 +66,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const selectedProperty = properties.find((property) => property.id === propertyId);
   const selectedType = campaignTypes.find((item) => item.value === campaignType) || campaignTypes[1];
   const isUpdateTemplate = campaignType === "limitless_realty_update";
+  const isEstateBrief = campaignType === "estate_brief_update";
 
   const audience = useMemo(() => {
     const selected = new Set(selectedLeadIds);
@@ -98,7 +100,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const approvalMatches = Boolean(pendingApproval && pendingApproval.fingerprint === fingerprint);
   const approvalUsable = Boolean(approvalMatches && pendingApproval?.approvalId && pendingApproval.token && approvalClock?.expiresAt === pendingApproval?.expiresAt && pendingApproval.expiresAt && Date.parse(pendingApproval.expiresAt) > (approvalClock?.now || 0) && !pendingApproval.unresolved);
   const blockedByUnknown = Boolean(pendingApproval?.unresolved && pendingApproval.fingerprint !== fingerprint);
-  const canSend = Boolean(recipientCount && (isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !blockedByUnknown);
+  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !blockedByUnknown);
 
   const sendCampaign = () => {
     if (sending.current || isPending || !canSend) return;
@@ -147,7 +149,24 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
           <header><span>MESSAGE ENGINE</span><h2>Compose campaign</h2><small className="engine-note">Approved template routing · Maia delivery engine</small></header>
           <div className="campaign-type-grid">{campaignTypes.map((type) => <button key={type.value} type="button" disabled={type.unavailable} className={`${campaignType === type.value ? "active" : ""} ${type.unavailable ? "unavailable" : ""}`} onClick={() => { if (!type.unavailable) setCampaignType(type.value); }}><strong>{type.label}</strong><span>{type.description}</span>{type.template && <small>{type.template}</small>}</button>)}</div>
 
-          {isUpdateTemplate ? (
+          {isEstateBrief ? (
+            <>
+              <div className="template-contract">
+                <div><strong>Estate Brief Update · awaiting Meta approval</strong><span>Uses the selected property&apos;s direct public image as the Meta HEADER image. The route will remain unavailable to real recipients until Meta approves the template.</span></div>
+                <div className="variable-row"><b>{"{{1}}"}</b><span>Customer first name</span></div>
+                <div className="variable-row"><b>{"{{2}}"}</b><span>Property or estate name</span></div>
+                <div className="variable-row"><b>{"{{3}}"}</b><span>Property location</span></div>
+                <div className="variable-row"><b>{"{{4}}"}</b><span>Property price</span></div>
+                <div className="variable-row"><b>{"{{5}}"}</b><span>Campaign-specific selling point or offer</span></div>
+              </div>
+              <div className="form-grid">
+                <label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Estate campaign title" /></label>
+                <label>Featured property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">Choose a property with an image</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
+                <label className="wide">Selling point or offer · {"{{5}}"}<textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Example: Flexible payment options available. Secure your plot today with a convenient installment plan." /></label>
+              </div>
+              <div className="message-preview"><span>PREVIEW</span><p>Hello Greatness, 👋</p><p>🏡 {selectedProperty?.title || "Property name"}</p><p>📍 Location: {[selectedProperty?.location_area, selectedProperty?.location_city].filter(Boolean).join(", ") || "Property location"}</p><p>💰 Price: {selectedProperty?.price || "Property price"}</p><p>{message || "Campaign-specific selling point or offer"}</p><p>Whether you’re looking to secure land, grow your real estate portfolio, or find your next home, Limitless Realty is here to guide you.</p><p>Looking for something different?</p><p>Let’s find the right property for you. 🏡</p></div>
+            </>
+          ) : isUpdateTemplate ? (
             <>
               <div className="template-contract">
                 <div><strong>Limitless Realty Update v2</strong><span>Four body variables. No URL CTA or media attachment. The WhatsApp Channel invitation is already part of the approved template. The Channel URL is only sent by Maia after a client replies YES.</span></div>
@@ -168,7 +187,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
           ) : (
             <>
               {campaignType === "direct_message" && <div className="direct-notice"><strong>Direct message mode</strong><span>This sends your message exactly as written. It is only valid inside the recipient&apos;s 24-hour WhatsApp customer-service window.</span></div>}
-              <div className="form-grid"><label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Campaign title" /></label>{campaignType !== "direct_message" && <label>Featured property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>}<label className="wide">Message<textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={campaignType === "direct_message" ? "Write the exact WhatsApp message. Maia will not rewrite it." : "Write the campaign message Maia should deliver using the selected campaign route."} /></label><p className="wide audience-note">Media attachments are not enabled by the verified provider template; use text-only copy.</p></div>
+              <div className="form-grid"><label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Campaign title" /></label>{campaignType !== "direct_message" && <label>Featured property<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">No linked property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>}<label className="wide">Message<textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={campaignType === "direct_message" ? "Write the exact WhatsApp message. Maia will not rewrite it." : "Write the campaign message Maia should deliver using the selected campaign route."} /></label><p className="wide audience-note">{isEstateBrief ? "The selected property image will be sent as the Meta template header after approval." : "Media attachments are not enabled by the verified provider template; use text-only copy."}</p></div>
             </>
           )}
 

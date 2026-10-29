@@ -21,7 +21,7 @@ type WorkflowNode = { id?: string; name: string; type: string; typeVersion?: num
 type WorkflowConnection = { main?: Array<Array<{ node: string; type: string; index: number }>>; [key: string]: unknown };
 type CampaignSummary = { success?: boolean; action?: string; status?: string; attempted?: number; submitted?: number; accepted_by_whatsapp_api?: number; immediate_failed?: number; skipped?: number; pending_delivery_confirmation?: number; free_form_sent?: number; template_sent?: number; template_name?: string; failed_recipients?: Array<Record<string, unknown>>; accepted_recipients?: Array<Record<string, unknown>>; message?: string };
 
-export type MaiaCampaignAction = { commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; mediaUrl?: string; createdBy?: string };
+export type MaiaCampaignAction = { commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; propertyLocation?: string; propertyPrice?: string; sellingPoint?: string; mediaUrl?: string; createdBy?: string };
 export type MaiaWhatsAppFollowUpAction = {
   commandId: string;
   recipient: string;
@@ -68,39 +68,53 @@ export async function verifyMaiaActionWebhook() {
 function splitCampaignParagraphs(message: string) { return message.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean); }
 
 function buildTemplateComponents(command: MaiaCampaignAction) {
-  const paragraphs = splitCampaignParagraphs(command.message);
-  const bodyFor = (leadName?: string) => [
-    { type: "text", text: String(leadName || "there").trim() || "there" },
-    { type: "text", text: paragraphs[0] || command.message.trim() },
-    { type: "text", text: paragraphs[1] || "" },
-    { type: "text", text: paragraphs[2] || "" },
-  ];
+  const isEstateBrief = command.campaignType === "estate_brief_update" || command.templateName === "estate_brief_update";
+  const bodyFor = (leadName?: string) => isEstateBrief
+    ? [
+        { type: "text", text: String(leadName || "there").trim() || "there" },
+        { type: "text", text: String(command.propertyTitle || "Property update").trim() },
+        { type: "text", text: String(command.propertyLocation || "Location available on request").trim() },
+        { type: "text", text: String(command.propertyPrice || "Price available on request").trim() },
+        { type: "text", text: String(command.sellingPoint || command.message || "Please contact Limitless Realty for current details.").trim() },
+      ]
+    : (() => {
+        const paragraphs = splitCampaignParagraphs(command.message);
+        return [
+          { type: "text", text: String(leadName || "there").trim() || "there" },
+          { type: "text", text: paragraphs[0] || command.message.trim() },
+          { type: "text", text: paragraphs[1] || "" },
+          { type: "text", text: paragraphs[2] || "" },
+        ];
+      })();
   const bodyParameters = bodyFor();
-  // limitless_realty_update_v2 is approved with four BODY variables and no CTA/media component.
-  const components = [{ type: "body", parameters: bodyParameters }];
+  const header = isEstateBrief && command.mediaUrl
+    ? [{ type: "header", parameters: [{ type: "image", image: { link: command.mediaUrl } }] }]
+    : [];
+  const components = [...header, { type: "body", parameters: bodyParameters }];
   const byRecipient = command.recipients.map((lead) => ({
     phone: normalizeLeadPhone(String(lead.phone || "")),
     name: String(lead.name || "there").trim() || "there",
-    components: [{ type: "body", parameters: bodyFor(String(lead.name || "there").trim()) }],
+    components: [...header, { type: "body", parameters: bodyFor(String(lead.name || "there").trim()) }],
   }));
   return { body_parameters: bodyParameters, components, components_by_recipient: byRecipient };
 }
 
 function buildCampaignInput(command: MaiaCampaignAction) {
   const phones = [...new Set(command.recipients.map((lead) => normalizeLeadPhone(String(lead.phone || ""))).filter(Boolean))];
+  const isEstateBrief = command.campaignType === "estate_brief_update" || command.templateName === "estate_brief_update";
   const isUpdateTemplate = command.campaignType === "limitless_realty_update" || command.templateName === "limitless_realty_update_v2";
   const isDirect = command.campaignType === "direct_message";
-  const defaultTemplate = command.templateName || "limitless_realty_update_v2";
+  const defaultTemplate = command.templateName || (isEstateBrief ? "estate_brief_update" : "limitless_realty_update_v2");
   const templateComponents = buildTemplateComponents(command);
   return {
     source: "fluxknight_dashboard", command_id: command.commandId, chat_id: command.createdBy || "fluxknight_dashboard", user_id: command.createdBy || "fluxknight_dashboard", text: command.message, original_text: command.message,
-    action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: false,
+    action_type: "send_whatsapp_campaign", operation: "send_whatsapp_campaign", has_action: true, has_media: Boolean(isEstateBrief && command.mediaUrl),
     action_params: {
       recipient_phones: phones, custom_message: command.message, message_text: command.message, preserve_exact_message: true,
       message_delivery_mode: isDirect ? "direct" : "auto",
       campaign_type: command.campaignType || "limitless_realty_update", template_name: defaultTemplate, approved_template_name: defaultTemplate,
       allow_template_fallback: !isDirect, use_approved_template_outside_24h: !isDirect,
-      topic: command.topic, property_filter: command.propertyTitle || "", media_url: "", image_url: "", media_type: "", has_media: false,
+      topic: command.topic, property_filter: command.propertyTitle || "", media_url: isEstateBrief ? command.mediaUrl || "" : "", image_url: isEstateBrief ? command.mediaUrl || "" : "", media_type: isEstateBrief && command.mediaUrl ? "image" : "", has_media: Boolean(isEstateBrief && command.mediaUrl),
       template_components: templateComponents.components,
       template_body_parameters: templateComponents.body_parameters,
       template_components_by_recipient: templateComponents.components_by_recipient,
@@ -108,7 +122,9 @@ function buildCampaignInput(command: MaiaCampaignAction) {
       // The Channel link is delivered only after a client replies YES.
       confirm_send: true, confirm_real_client_broadcast: true, include_incomplete_leads: true, max_recipients: phones.length,
     },
-    natural_response: isDirect
+    natural_response: isEstateBrief
+      ? "Send estate_brief_update using exactly five BODY parameters: {{1}} recipient name, {{2}} property name, {{3}} property location, {{4}} property price, and {{5}} the campaign-specific selling point. Include the supplied public image as the HEADER image component. Do not send the image URL as a body variable and do not substitute another template."
+      : isDirect
       ? "Send this direct WhatsApp message exactly as written. Do not rewrite it. Direct mode is only valid for contacts inside the 24-hour customer service window."
       : isUpdateTemplate
         ? "Send limitless_realty_update_v2 using exactly four BODY parameters: {{1}} recipient name, {{2}} main campaign update, {{3}} supporting paragraph, {{4}} response prompt. The approved template has NO URL button and NO media component. Do not send any URL, media attachment, or extra template component. The Limitless Realty WhatsApp Channel link is sent separately only when the client replies YES."
