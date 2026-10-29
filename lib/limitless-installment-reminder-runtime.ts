@@ -23,7 +23,7 @@ const LIMITLESS_EXPECTED_VARIABLE_KEYS = [
 ] as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LAGOS_TIME_ZONE = "Africa/Lagos";
-const REMINDER_LOCAL_TIME = "11:00:00";
+const REMINDER_LOCAL_TIME = "10:00:00";
 
 type ReminderDirection = "before" | "on" | "after";
 type ReminderTemplateRow = {
@@ -179,7 +179,7 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   const outstandingBalance = parseMoneyCents(plan.outstanding_balance);
   const installmentAmount = parseMoneyCents(plan.installment_amount);
   if (agreedPrice === null || paidToDate === null || outstandingBalance === null || installmentAmount === null
-    || agreedPrice <= 0 || installmentAmount <= 0 || installmentAmount > agreedPrice
+    || agreedPrice <= 0 || installmentAmount < 0 || installmentAmount > agreedPrice
     || paidToDate > agreedPrice || outstandingBalance !== agreedPrice - paidToDate) {
     throw new Error("Installment reminder financial values are invalid or inconsistent.");
   }

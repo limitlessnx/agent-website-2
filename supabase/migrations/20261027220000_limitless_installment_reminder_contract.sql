@@ -171,7 +171,7 @@ begin
      or not new.reminders_enabled
      or greatest(coalesce(new.agreed_price, 0) - coalesce(new.total_paid, 0), 0) <= 0
      or new.next_due_date is null
-     or coalesce(new.installment_amount, 0) <= 0 then
+     or coalesce(new.installment_amount, 0) < 0 then
     new.next_reminder_at := null;
     return new;
   end if;
@@ -181,7 +181,7 @@ begin
         when template.timing_direction = 'before' then -template.timing_days
         when template.timing_direction = 'after' then template.timing_days
         else 0
-      end)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')
+      end)::timestamp + interval '10 hours') at time zone 'Africa/Lagos')
   )
     into next_scheduled_at
   from public.reminder_templates as template
@@ -195,7 +195,7 @@ begin
         when template.timing_direction = 'before' then -template.timing_days
         when template.timing_direction = 'after' then template.timing_days
         else 0
-      end)::timestamp + interval '11 hours') at time zone 'Africa/Lagos') > now();
+      end)::timestamp + interval '10 hours') at time zone 'Africa/Lagos') > now();
 
   new.next_reminder_at := next_scheduled_at;
   return new;
@@ -281,13 +281,13 @@ begin
      and coalesce(plan_balance, 0) > 0
      and plan_due_date is not null then
     if new.status = 'sent' then
-      next_scheduled_at := ((((effective_sent_at at time zone 'Africa/Lagos')::date + reminder_interval)::date + time '11:00') at time zone 'Africa/Lagos');
+      next_scheduled_at := ((((effective_sent_at at time zone 'Africa/Lagos')::date + reminder_interval)::date + time '10:00') at time zone 'Africa/Lagos');
     elsif new.scheduled_for is not null then
       skipped_intervals := greatest(
         floor(greatest(extract(epoch from (now() - new.scheduled_for)), 0) / extract(epoch from reminder_interval))::integer + 1,
         1
       );
-      next_scheduled_at := ((((new.scheduled_for at time zone 'Africa/Lagos')::date + reminder_interval * skipped_intervals)::date + time '11:00') at time zone 'Africa/Lagos');
+      next_scheduled_at := ((((new.scheduled_for at time zone 'Africa/Lagos')::date + reminder_interval * skipped_intervals)::date + time '10:00') at time zone 'Africa/Lagos');
     end if;
   end if;
 
@@ -358,7 +358,7 @@ begin
      or v_plan.total_paid is null or v_plan.total_paid < 0 or v_plan.total_paid > v_plan.agreed_price
      or v_plan.outstanding_balance is null
      or v_plan.outstanding_balance is distinct from (v_plan.agreed_price - v_plan.total_paid)
-     or v_plan.installment_amount is null or v_plan.installment_amount <= 0
+     or v_plan.installment_amount is null or v_plan.installment_amount < 0
      or v_plan.installment_amount > v_plan.agreed_price or v_plan.next_due_date is null
      or nullif(trim(v_plan.client_phone), '') is null then
     return jsonb_build_object('authorized', false, 'reason', 'plan_not_sendable');
@@ -383,7 +383,7 @@ begin
     return jsonb_build_object('authorized', false, 'reason', 'template_unavailable');
   end if;
   if v_plan.next_reminder_at is not null
-     and (v_plan.next_reminder_at at time zone 'Africa/Lagos')::time is distinct from time '11:00:00' then
+     and (v_plan.next_reminder_at at time zone 'Africa/Lagos')::time is distinct from time '10:00:00' then
     return jsonb_build_object('authorized', false, 'reason', 'cursor_time_invalid');
   end if;
   v_expected_scheduled_at := coalesce(
@@ -391,7 +391,7 @@ begin
     (((v_plan.next_due_date + case
         when v_template.timing_direction = 'before' then -v_template.timing_days
         when v_template.timing_direction = 'after' then v_template.timing_days
-        else 0 end)::timestamp + interval '11 hours') at time zone 'Africa/Lagos')
+        else 0 end)::timestamp + interval '10 hours') at time zone 'Africa/Lagos')
   );
   if p_scheduled_for is distinct from v_expected_scheduled_at then
     return jsonb_build_object('authorized', false, 'reason', 'schedule_not_current');
