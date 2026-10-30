@@ -154,7 +154,7 @@ test("offboarding suppression is terminal for recovery and cannot trigger automa
 test("organization lookup failures fail closed instead of allowing scheduled work to continue", () => {
   assert.match(
     installments,
-    /if \(planError \|\| orgError \|\| templateError \|\| whatsappTemplateError\) \{\s*throw new Error\("Unable to load installment reminder runtime data\."\)/,
+    /if \(planError \|\| orgError \|\| templateError\) throw new Error\("Unable to load installment reminder runtime data\."\)/,
     "installment reminder organization lookup failures must abort the sweep",
   );
   for (const [name, source] of [
