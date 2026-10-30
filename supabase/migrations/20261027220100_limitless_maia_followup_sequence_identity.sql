@@ -97,30 +97,9 @@ create index if not exists limitless_maia_followup_event_scope_idx
 create index if not exists limitless_maia_followup_lead_status_idx
   on public.limitless_maia_followup_sequences (organization_id, lead_id, customer_id, status, property_id);
 
--- A natural day-30 completion is not a terminal event: the runtime creates the
--- next nurture row after successful delivery. Explicit admin stop/close and
--- customer opt-out remain the only terminal controls for an active sequence.
-create or replace function public.complete_limitless_maia_followup_sequence()
-returns trigger language plpgsql security definer set search_path=pg_catalog,public as $$
-begin
-  return new;
-end;
-$$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_catalog.pg_trigger
-    where tgrelid = 'public.follow_ups'::regclass
-      and tgname = 'complete_limitless_maia_followup_sequence'
-      and not tgisinternal
-  ) then
-    create trigger complete_limitless_maia_followup_sequence
-    after update of status on public.follow_ups
-    for each row execute function public.complete_limitless_maia_followup_sequence();
-  end if;
-end;
-$$;
+-- Sequence completion is controlled explicitly by the worker/admin RPCs.
+-- No status trigger is installed: ordinary follow-up step updates must not
+-- implicitly complete a sequence or add a redundant no-op trigger.
 
 -- These identity/event tables are server-runtime state, never browser tables.
 alter table public.limitless_maia_followup_sequences enable row level security;
