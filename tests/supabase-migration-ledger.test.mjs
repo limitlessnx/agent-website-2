@@ -37,6 +37,11 @@ const expectedPendingVersions = [
   "20261012090000",
   // Xposure studio catalog migration reviewed but not yet applied to production.
   "20261021230000",
+  // Maia follow-up schema and installment reminder changes remain pending release review.
+  "20261027220000",
+  "20261027220100",
+  "20261028132000",
+  "20261029071600",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
