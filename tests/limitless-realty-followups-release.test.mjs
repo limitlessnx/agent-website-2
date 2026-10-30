@@ -76,7 +76,7 @@ test("Trigger follow-up drain is tenant-scoped, due-only, bounded, and duplicate
 test("Inbound STOP uses shared Nigerian phone normalization and one tenant-scoped opt-out transaction", () => {
   const runtime = read("src/trigger/maia-runtime.ts");
   const contract = read("lib/limitless-followup-contract.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   assert.match(runtime, /admin\.rpc\("record_limitless_maia_opt_out"/);
   assert.doesNotMatch(runtime, /\.from\("follow_ups"\)\.update/);
   assert.doesNotMatch(runtime, /\.from\("limitless_maia_followup_sequences"\)\.update/);
@@ -102,7 +102,7 @@ test("Admin follow-up controls are authenticated and server-side tenant scoped",
 
 test("Follow-up control state maps to the real Maia follow_ups table", () => {
   const control = read("lib/followup-control.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   assert.match(control, /follow_ups\?organization_id=eq/);
   assert.match(control, /pending.*scheduled.*queued/);
   assert.match(control, /sent.*completed/);
