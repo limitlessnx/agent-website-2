@@ -79,8 +79,6 @@ declare
   v_lead public.leads%rowtype;
   v_candidate public.leads%rowtype;
   v_plan_phone text;
-  v_candidate_phone text;
-  v_lead_count integer := 0;
   v_expected_scheduled_at timestamptz;
 begin
   if p_organization_id is distinct from 'b15f21b4-5697-4d21-9421-8a34eae3476d'::uuid
@@ -120,16 +118,19 @@ begin
   if not found then
     return jsonb_build_object('authorized', false, 'reason', 'template_unavailable');
   end if;
+
   if v_plan.next_reminder_at is not null
      and (v_plan.next_reminder_at at time zone 'Africa/Lagos')::time is distinct from time '10:00:00' then
     return jsonb_build_object('authorized', false, 'reason', 'cursor_time_invalid');
   end if;
+
   v_expected_scheduled_at := coalesce(
     v_plan.next_reminder_at,
     (((v_plan.next_due_date + case
-        when v_template.timing_direction = 'before' then -v_template.timing_days
-        when v_template.timing_direction = 'after' then v_template.timing_days
-        else 0 end)::timestamp + interval '10 hours') at time zone 'Africa/Lagos')
+      when v_template.timing_direction = 'before' then -v_template.timing_days
+      when v_template.timing_direction = 'after' then v_template.timing_days
+      else 0
+    end)::timestamp + interval '10 hours') at time zone 'Africa/Lagos')
   );
   if p_scheduled_for is distinct from v_expected_scheduled_at then
     return jsonb_build_object('authorized', false, 'reason', 'schedule_not_current');
@@ -141,59 +142,37 @@ begin
   elsif left(v_plan_phone, 1) = '0' and length(v_plan_phone) = 11 then
     v_plan_phone := '234' || substr(v_plan_phone, 2);
   end if;
+
   if v_plan_phone = '' or not exists (
     select 1 from unnest(p_phone_candidates) as candidate(phone)
     where regexp_replace(candidate.phone, '[^0-9]', '', 'g') = v_plan_phone
        or ('234' || substr(regexp_replace(candidate.phone, '[^0-9]', '', 'g'), 2)) = v_plan_phone
   ) then
-    return jsonb_build_object('authorized', false, 'reason', 'phone_scope_mismatch');
+    return jsonb_build_object('authorized', false, 'reason', 'phone_mismatch');
   end if;
 
   if v_plan.contact_id is not null then
-    select * into v_lead from public.leads l
-    where l.organization_id = p_organization_id and l.id = v_plan.contact_id for update;
-    if not found then return jsonb_build_object('authorized', false, 'reason', 'lead_unavailable'); end if;
-    v_candidate_phone := regexp_replace(coalesce(v_lead.phone, ''), '[^0-9]', '', 'g');
-    if left(v_candidate_phone, 4) = '2340' and length(v_candidate_phone) = 14 then
-      v_candidate_phone := '234' || substr(v_candidate_phone, 5);
-    elsif left(v_candidate_phone, 1) = '0' and length(v_candidate_phone) = 11 then
-      v_candidate_phone := '234' || substr(v_candidate_phone, 2);
+    select * into v_lead from public.leads
+    where id = v_plan.contact_id and organization_id = p_organization_id for update;
+    if not found then
+      return jsonb_build_object('authorized', false, 'reason', 'lead_not_found');
     end if;
-    if v_candidate_phone is distinct from v_plan_phone then
-      return jsonb_build_object('authorized', false, 'reason', 'lead_phone_mismatch');
+    if coalesce(v_lead.opted_out, false) then
+      return jsonb_build_object('authorized', false, 'reason', 'lead_opted_out');
     end if;
   else
-    for v_candidate in
-      select l.* from public.leads l
-      where l.organization_id = p_organization_id
-        and (case
-          when left(regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g'), 4) = '2340'
-            and length(regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g')) = 14
-            then '234' || substr(regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g'), 5)
-          when left(regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g'), 1) = '0'
-            and length(regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g')) = 11
-            then '234' || substr(regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g'), 2)
-          else regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g')
-        end) = v_plan_phone
-      order by l.id for update
-    loop
-      v_lead_count := v_lead_count + 1;
-      v_lead := v_candidate;
-    end loop;
-    if v_lead_count <> 1 then
-      return jsonb_build_object('authorized', false, 'reason', case when v_lead_count = 0 then 'lead_unavailable' else 'ambiguous_lead_phone' end);
+    select * into v_candidate from public.leads
+    where organization_id = p_organization_id
+      and regexp_replace(phone, '[^0-9]', '', 'g') = v_plan_phone
+    limit 1 for update;
+    if found and coalesce(v_candidate.opted_out, false) then
+      return jsonb_build_object('authorized', false, 'reason', 'lead_opted_out');
     end if;
-  end if;
-
-  if coalesce(v_lead.opted_out, false) then
-    return jsonb_build_object('authorized', false, 'reason', 'customer_opted_out');
   end if;
 
   update public.reminder_attempts set send_authorized_at = now()
-  where organization_id = p_organization_id and id = p_attempt_id
-    and payment_plan_id = p_plan_id and status = 'pending' and send_authorized_at is null;
-  if not found then return jsonb_build_object('authorized', false, 'reason', 'authorization_claim_conflict'); end if;
-  return jsonb_build_object('authorized', true, 'authorized_at', now());
+  where id = p_attempt_id and status = 'pending';
+  return jsonb_build_object('authorized', true, 'reason', 'authorized');
 end;
 $function$;
 revoke all on function public.authorize_limitless_installment_reminder_send(uuid,uuid,uuid,uuid,timestamptz,text[]) from public, anon, authenticated;
