@@ -13,7 +13,7 @@ const STEP = '40000000-0000-4000-8000-000000000001';
 const STEP_B = '40000000-0000-4000-8000-000000000002';
 const LEAD_B = '50000000-0000-4000-8000-000000000002';
 const PROPERTY_B = '60000000-0000-4000-8000-000000000002';
-const MIGRATION = 'supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql';
+const MIGRATION = 'supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql';
 
 async function createDatabase() {
   const db = new PGlite();
