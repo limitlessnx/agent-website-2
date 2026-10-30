@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "pretty": false
+  },
+  "exclude": [],
+  "include": [
+    "node_modules/next/dist/styled-jsx/types/global.d.ts",
+    "app/api/admin/followups/route.ts",
+    "app/api/limitless/maia/followups/route.ts",
+    "app/api/limitless/maia/route.ts",
+    "app/api/internal/runtime/follow-up/advance/route.ts",
+    "app/api/internal/runtime/follow-up/control/route.ts",
+    "app/api/internal/runtime/follow-up/due/route.ts",
+    "app/api/internal/runtime/follow-up/sync-sales/route.ts",
+    "app/api/cron/limitless-installment-reminders/route.ts",
+    "app/dashboard/limitless/followups/page.tsx",
+    "app/dashboard/limitless/payments/actions.ts",
+    "app/dashboard/limitless/payments/page.tsx",
+    "app/dashboard/limitless/payments/installments/page.tsx",
+    "components/admin/FollowupControlCenter.tsx",
+    "lib/ai/limitless-realty-maia.ts",
+    "lib/ai/maia-runtime.ts",
+    "lib/followup-control.ts",
+    "lib/limitless-followup-contract.ts",
+    "lib/limitless-installment-reminder-runtime.ts",
+    "lib/whatsapp-delivery.ts",
+    "lib/limitless-payments.ts",
+    "src/trigger/maia-runtime.ts",
+    "src/trigger/system-orchestrator.ts"
+  ]
+}

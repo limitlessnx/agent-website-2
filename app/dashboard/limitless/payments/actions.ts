@@ -15,18 +15,13 @@ import {
   createReminderTemplate,
   updateReminderTemplate,
 } from "@/lib/limitless-payments";
+import { retryLimitlessInstallmentReminder } from "@/lib/limitless-installment-reminder-runtime";
 
 const CADENCES = new Set(["weekly", "biweekly", "monthly"]);
 
 function money(value: FormDataEntryValue | null) {
   const parsed = Number(String(value || "0").replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function cadenceDays(frequency: string) {
-  if (frequency === "weekly") return 7;
-  if (frequency === "monthly") return 30;
-  return 14;
 }
 
 function startAtFromForm(value: string) {
@@ -36,20 +31,21 @@ function startAtFromForm(value: string) {
   return date.toISOString();
 }
 
-function reminderStartAtFromForm(mode: string, dateValue: string, timeValue: string) {
-  if (mode === "immediate") return new Date().toISOString();
-  if (!dateValue || !timeValue) throw new Error("Choose the first reminder date and time, or select Send immediately.");
-  const date = new Date(dateValue + "T" + timeValue + ":00+01:00");
-  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid first reminder date and time.");
-  if (date.getTime() <= Date.now()) throw new Error("The scheduled first reminder must be in the future. Select Send immediately for an immediate reminder.");
-  return date.toISOString();
+function dateOnly(value: string, label: string, required: boolean) {
+  if (!value && !required) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`Enter a valid ${label}.`);
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error(`Enter a valid ${label}.`);
+  return value;
 }
 
-function endAtFromForm(value: string) {
-  if (!value) return null;
-  const date = new Date(value + "T23:59:59.999Z");
-  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid installment end date.");
-  return date.toISOString();
+function startAtFromDueDate(value: string | null) {
+  return value ? new Date(`${value}T00:00:00+01:00`).toISOString() : new Date().toISOString();
+}
+
+function endAtFromFinalDate(value: string | null) {
+  return value ? new Date(`${value}T23:59:59.999+01:00`).toISOString() : null;
 }
 
 async function requireAdmin() {
@@ -95,25 +91,27 @@ export async function createPaymentPlanAction(formData: FormData) {
   const propertyTitle = String(formData.get("property_title") || "").trim();
   const agreedAmount = money(formData.get("agreed_price"));
   const initialPaid = money(formData.get("amount_paid"));
+  const installmentAmount = money(formData.get("installment_amount"));
   const frequency = String(formData.get("frequency") || "biweekly").trim();
-  const startAt = startAtFromForm(String(formData.get("start_date") || ""));
-  const endAt = endAtFromForm(String(formData.get("end_date") || ""));
-  const reminderStartMode = String(formData.get("reminder_start_mode") || "scheduled").trim();
   const remindersEnabled = formData.get("reminders_enabled") === "on";
-  const firstReminderAt = remindersEnabled
-    ? reminderStartAtFromForm(reminderStartMode, String(formData.get("reminder_start_date") || ""), String(formData.get("reminder_start_time") || ""))
-    : null;
+  const firstReminderMode = String(formData.get("first_reminder_mode") || "due_date").trim();
+  const nextDueDate = dateOnly(String(formData.get("next_due_date") || "").trim(), "next due date", initialPaid < agreedAmount);
+  const finalDueDate = dateOnly(String(formData.get("final_due_date") || "").trim(), "final due date", false);
   const handoverAgentName = String(formData.get("handover_agent_name") || "Limitless Realty Handover").trim();
   const handoverAgentPhone = String(formData.get("handover_agent_phone") || "2348127753308").trim();
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
 
-  if (endAt && new Date(endAt).getTime() < new Date(startAt).getTime()) {
-    throw new Error("The installment end date cannot be before the start date.");
+  if (finalDueDate && nextDueDate && finalDueDate < nextDueDate) {
+    throw new Error("The final due date cannot be before the next due date.");
   }
   if (!clientName || !clientPhone || !propertyTitle) throw new Error("Client, phone, and property/service context are required.");
   if (agreedAmount <= 0) throw new Error("The agreed amount must be greater than zero.");
   if (initialPaid < 0 || initialPaid > agreedAmount) throw new Error("Amount paid must be between zero and the agreed amount.");
+  if (installmentAmount <= 0 || installmentAmount > agreedAmount) throw new Error("The installment amount must be greater than zero and no greater than the agreed amount.");
   if (!CADENCES.has(frequency)) throw new Error("Invalid installment reminder cadence.");
+  if (initialPaid < agreedAmount && !nextDueDate) throw new Error("An active installment plan requires a next due date to advance its payment schedule.");
+  if (remindersEnabled && firstReminderMode !== "due_date") throw new Error("Reminders must use the next due date as their first reminder schedule.");
+  if (remindersEnabled && initialPaid >= agreedAmount) throw new Error("A completed plan cannot have reminders enabled.");
   if (!handoverAgentName || !handoverAgentPhone) throw new Error("A handover agent name and WhatsApp number are required.");
 
   if (!contactId && manualName && manualPhone) {
@@ -127,8 +125,6 @@ export async function createPaymentPlanAction(formData: FormData) {
     });
   }
 
-  const nextReminderAt = firstReminderAt;
-
   const plan = await createPaymentPlan({
     organization_id: organizationId,
     contact_id: contactId,
@@ -138,12 +134,15 @@ export async function createPaymentPlanAction(formData: FormData) {
     property_id: String(formData.get("property_id") || "").trim() || null,
     property_title: propertyTitle,
     agreed_price: agreedAmount,
+    installment_amount: installmentAmount,
     currency,
     payment_type: "installment",
     frequency,
-    start_at: startAt,
-    end_at: endAt,
-    next_reminder_at: nextReminderAt,
+    next_due_date: nextDueDate,
+    final_due_date: finalDueDate,
+    start_at: startAtFromDueDate(nextDueDate),
+    end_at: endAtFromFinalDate(finalDueDate),
+    next_reminder_at: null,
     handover_agent_name: handoverAgentName,
     handover_agent_phone: handoverAgentPhone,
     notes: String(formData.get("notes") || "").trim() || null,
@@ -156,10 +155,11 @@ export async function createPaymentPlanAction(formData: FormData) {
       organization_id: organizationId,
       payment_plan_id: plan.id,
       amount: initialPaid,
-      payment_date: String(formData.get("start_date") || new Date().toISOString().slice(0, 10)),
+      payment_date: nextDueDate || new Date().toISOString().slice(0, 10),
       payment_method: String(formData.get("payment_method") || "other").trim() || "other",
       payment_reference: String(formData.get("payment_reference") || "").trim() || null,
       notes: "Initial amount recorded when the installment plan was created.",
+      advances_installment_schedule: false,
       created_by: session.email,
     });
   }
@@ -199,7 +199,7 @@ export async function createOutrightPaymentAction(formData: FormData) {
   const amount = money(formData.get("amount"));
   const paymentDateValue = String(formData.get("payment_date") || "").trim();
   const paymentAt = startAtFromForm(paymentDateValue);
-  const paymentEndAt = endAtFromForm(paymentDateValue);
+  const paymentEndAt = endAtFromFinalDate(paymentDateValue);
   const currency = String(formData.get("currency") || "NGN").trim().toUpperCase() || "NGN";
 
   if (!clientName || !clientPhone || !propertyTitle) {
@@ -322,18 +322,40 @@ export async function updatePlanStatusAction(formData: FormData) {
   if (!["active", "due_soon", "overdue", "completed", "paused", "cancelled"].includes(status)) throw new Error("Invalid installment plan status.");
   if (frequency && !CADENCES.has(frequency)) throw new Error("Invalid installment cadence.");
 
+  const { data: existingPlan, error: existingPlanError } = await createAdminClient()
+    .from("payment_plans")
+    .select("id,payment_type,installment_amount,next_due_date,reminders_enabled")
+    .eq("organization_id", organizationId)
+    .eq("id", planId)
+    .maybeSingle();
+  if (existingPlanError) throw existingPlanError;
+  if (!existingPlan) throw new Error("The installment plan is not available in the active organization.");
+  if (status === "active" && (existingPlan.payment_type !== "installment" || Number(existingPlan.installment_amount || 0) <= 0 || !dateOnly(String(existingPlan.next_due_date || ""), "next due date", true))) {
+    throw new Error("Reminders require a valid installment amount and next due date.");
+  }
+
   const payload: Record<string, unknown> = {
     status,
-    reminders_enabled: status === "active",
+    reminders_enabled: status === "active" ? true : existingPlan.reminders_enabled,
   };
   if (frequency) {
     payload.frequency = frequency;
-    payload.next_reminder_at = new Date(Date.now() + cadenceDays(frequency) * 24 * 60 * 60 * 1000).toISOString();
   }
-  if (status === "completed") payload.next_reminder_at = null;
+  if (status === "completed") payload.reminders_enabled = false;
 
   await updatePaymentPlan(organizationId, planId, payload);
   revalidatePath("/dashboard/limitless/payments");
+}
+
+export async function retryReminderAttemptAction(formData: FormData) {
+  await requireAdmin();
+  const { organizationId } = await resolveScope();
+  const planId = String(formData.get("payment_plan_id") || "").trim();
+  const attemptId = String(formData.get("reminder_attempt_id") || "").trim();
+  if (!planId || !attemptId) throw new Error("A failed reminder attempt and installment plan are required.");
+  await retryLimitlessInstallmentReminder({ organizationId, planId, attemptId });
+  revalidatePath("/dashboard/limitless/payments");
+  revalidatePath("/dashboard/limitless/payments/installments");
 }
 
 export async function saveReminderTemplateAction(formData: FormData) {
@@ -343,14 +365,17 @@ export async function saveReminderTemplateAction(formData: FormData) {
   const payload = {
     name: String(formData.get("name") || "Installment Payment Reminder").trim(),
     position: 1,
-    timing_direction: "on",
-    timing_days: 0,
+    timing_direction: String(formData.get("timing_direction") || "on").trim(),
+    timing_days: Number(formData.get("timing_days") || 0),
     channel: "whatsapp",
     message_template: String(formData.get("message_template") || "").trim(),
     escalation_action: "Routine customer check-in. No escalation.",
     enabled: formData.get("enabled") === "on",
   };
   if (!payload.message_template) throw new Error("Reminder template content is required.");
+  if (!["before", "on", "after"].includes(payload.timing_direction)) throw new Error("Invalid reminder timing direction.");
+  if (!Number.isInteger(payload.timing_days) || payload.timing_days < 0) throw new Error("Reminder timing days must be a non-negative whole number.");
+  if (!payload.message_template.includes("{{installment_amount}}") || !payload.message_template.includes("{{due_date}}")) throw new Error("Reminder content must include installment amount and due date placeholders.");
   if (id) await updateReminderTemplate(organizationId, id, payload);
   else await createReminderTemplate(organizationId, payload);
   revalidatePath("/dashboard/limitless/payments/installments");

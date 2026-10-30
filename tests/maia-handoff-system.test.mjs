@@ -67,7 +67,7 @@ test("Meta handoff notifications retry 24-hour-window failures with the approved
   assert.match(templateMigration, /\x27human_handoff_staff\x27/);
   assert.match(templateMigration, /\x27hand_over_\x27/);
   assert.match(templateMigration, /business_name.*customer_name.*customer_phone.*handoff_reason.*conversation_summary/s);
-  assert.match(delivery, /getTemplateConfig\(input\.organizationId,input\.templatePurpose\|\|"follow_up_outside_24h"\)/);
+  assert.match(delivery, /getTemplateConfig\(input\.organizationId,input\.templatePurpose\|\|"follow_up_outside_24h",input\.requestedTemplateName,input\.strictTemplateContract\)/);
   assert.match(delivery, /template:\s*\{\s*name:\s*config!\.template_name/);
   assert.match(operations, /fallback_template_attempted:true/);
   assert.match(webhook, /syncHandoffNotificationStatus/);

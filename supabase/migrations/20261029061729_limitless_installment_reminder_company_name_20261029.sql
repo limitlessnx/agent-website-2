@@ -1,0 +1,1 @@
+update public.whatsapp_template_configs set metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{company_name}', to_jsonb('Limitless Realty'::text), true), updated_at = now() where organization_id = 'b15f21b4-5697-4d21-9421-8a34eae3476d' and purpose = 'installment_payment_reminder' and template_name = 'installment_reminder';

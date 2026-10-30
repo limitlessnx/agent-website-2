@@ -48,7 +48,7 @@ async function processDueLimitlessFollowups(limit = 25) {
 
   const { data: rows, error } = await admin.from("follow_ups")
     .select("id,organization_id,lead_id,created_at,scheduled_at,message_sent,status,template_name,stage,leads!follow_ups_lead_id_fkey(phone,name,opted_out,status,campaign_eligible)")
-    .eq("organization_id", organization.id).eq("status", "pending").lte("scheduled_at", new Date().toISOString())
+    .eq("organization_id", organization.id).eq("status", "pending").is("sequence_id", null).lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true }).limit(Math.max(1, Math.min(limit, 100)));
   if (error) throw error;
 

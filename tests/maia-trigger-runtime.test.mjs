@@ -39,10 +39,12 @@ test("Maia Trigger does not retry deterministic OpenAI 4xx failures", () => {
 
 test("Maia Trigger persists Limitless Realty opt-out and suppresses the reply", () => {
   assert.match(triggerTask, /stopIntent/);
-  assert.match(triggerTask, /opted_out: true/);
+  assert.match(triggerTask, /\.eq\("organization_id", payload\.organizationId\)/);
+  assert.match(triggerTask, /\.in\("phone", phoneVariants\)/);
+  assert.match(triggerTask, /admin\.rpc\("record_limitless_maia_opt_out"/);
   assert.match(triggerTask, /customer_opted_out/);
   assert.match(triggerTask, /suppressedReply: true/);
-  assert.match(triggerTask, /input->>customer_phone/);
+  assert.match(triggerTask, /markMaiaInboundCompleted\(eventId\)/);
 });
 
 test("Maia Trigger runtime reuses active conversation memory", () => {
@@ -54,16 +56,18 @@ test("Maia Trigger runtime reuses active conversation memory", () => {
 test("Limitless Maia follow-ups use the established follow_ups scheduler", () => {
   const followupBlock = maiaRuntime.slice(maiaRuntime.indexOf('name: "create_followup_task"'), maiaRuntime.indexOf('name: "upsert_lead"'));
   assert.match(followupBlock, /ctx\.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d"/);
-  assert.match(followupBlock, /\.from\("leads"\)/);
-  assert.match(followupBlock, /\.eq\("organization_id", ctx\.organizationId\)/);
-  assert.match(followupBlock, /\.from\("follow_ups"\)/);
-  assert.match(followupBlock, /channel: "whatsapp"/);
-  assert.match(followupBlock, /agent_key: "maia"/);
-  assert.doesNotMatch(followupBlock, /crm_tasks.*insert/);
+  assert.match(followupBlock, /canonical tenant\/customer\/property sequence identity and explicit consent/);
+  assert.match(followupBlock, /throw new Error\("Limitless Maia follow-ups require/);
+  assert.doesNotMatch(followupBlock, /\.from\("crm_tasks"\)\.insert/);
+  assert.match(limitlessRuntime, /\.from\("follow_ups"\)\.insert/);
+  assert.match(limitlessRuntime, /channel: "whatsapp"/);
+  assert.match(limitlessRuntime, /agent_key: "maia"/);
 });
 
 test("Legacy Limitless Maia lead access remains tenant-scoped", () => {
-  assert.match(limitlessRuntime, /\.eq\("organization_id", args\.organizationId\)\.eq\("phone", phone\)/);
+  assert.match(limitlessRuntime, /\.eq\("organization_id", args\.organizationId\)/);
+  assert.match(limitlessRuntime, /\.in\("phone", phoneVariants\)/);
+  assert.match(limitlessRuntime, /\.eq\("id", args\.leadId\)/);
   assert.match(limitlessRuntime, /organization_id: args\.organizationId/);
 });
 
@@ -72,21 +76,27 @@ test("30-day property follow-up stages reuse one tenant-scoped lead", () => {
     limitlessRuntime.indexOf("export async function queueLimitlessPropertyFollowupSequence"),
     limitlessRuntime.indexOf("export function shouldHandoff"),
   );
-  assert.match(sequence, /let leadId = existingLead\?\.id/);
-  assert.match(sequence, /if \(!leadId && phone\)/);
-  assert.match(sequence, /leadId,\s*customerPhone: phone/);
-  assert.match(sequence, /const stages = \[1, 3, 7, 14, 21, 30\]/);
-  assert.match(sequence, /if \(cancelPreviousError\)/);
+  assert.match(sequence, /let existingLead:/);
+  assert.match(sequence, /\.eq\("organization_id", args\.organizationId\)/);
+  assert.match(sequence, /\.in\("phone", phoneVariants\)/);
+  assert.match(sequence, /const leadId = existingLead\?\.id/);
+  assert.match(sequence, /LIMITLESS_FOLLOWUP_STAGES/);
+  assert.match(sequence, /admin\.rpc\("create_limitless_maia_followup_sequence"/);
+  assert.match(sequence, /p_organization_id: args\.organizationId/);
+  assert.match(sequence, /p_lead_id: leadId/);
 });
 
 test("Stale Maia follow-ups require confirmed cancellation before skipping delivery", async () => {
   const apiRoute = await readFile(new URL("../app/api/limitless/maia/followups/route.ts", import.meta.url), "utf8");
   const triggerOrchestrator = await readFile(new URL("../src/trigger/system-orchestrator.ts", import.meta.url), "utf8");
-  for (const source of [apiRoute, triggerOrchestrator]) {
-    assert.match(source, /const cancellation = await admin\.from\("follow_ups"\).*status: "cancelled".*select\("id"\)\.maybeSingle\(\)/);
-    assert.match(source, /if \(cancellation\.error\) throw cancellation\.error/);
-    assert.match(source, /if \(!cancellation\.data\) throw new Error\("Could not confirm cancellation of the stale follow-up\."/);
-  }
+  assert.match(apiRoute, /claim_limitless_maia_followup_step/);
+  assert.match(apiRoute, /\.in\("status", \["pending", "scheduled", "queued", "processing", "paused"\]\)/);
+  assert.match(apiRoute, /\.is\("send_authorized_at", null\)/);
+  assert.match(apiRoute, /status: "cancelled", control_reason: "customer_opted_out"/);
+  assert.match(triggerOrchestrator, /const cancellation = await admin\.from\("follow_ups"\)/);
+  assert.match(triggerOrchestrator, /\.eq\("status", "processing"\)\.select\("id"\)\.maybeSingle\(\)/);
+  assert.match(triggerOrchestrator, /if \(cancellation\.error\) throw cancellation\.error/);
+  assert.match(triggerOrchestrator, /if \(!cancellation\.data\) throw new Error\("Could not confirm cancellation of the stale follow-up\."/);
 });
 
 test("Phase 3 does not send WhatsApp directly from the Trigger task", () => {

@@ -3,6 +3,8 @@ import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeInitialFollowUpDueAt, evaluateFollowUpEnrollment, resolveFollowUpPolicy, text, truthy } from "@/lib/follow-up-policy";
 
+const LIMITLESS_REALTY_ORGANIZATION_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -15,6 +17,7 @@ export async function POST(request: NextRequest) {
     const qualification = record(body.qualification);
     const input = record(body.input);
     const organizationId = text(persisted.organization_id) || text(body.organization_id);
+    if (organizationId === LIMITLESS_REALTY_ORGANIZATION_ID) return NextResponse.json({ error: "Limitless Maia follow-ups use follow_ups sequence rows; crm_tasks is not an allowed duplicate pipeline." }, { status: 410 });
     const agentId = text(persisted.agent_id) || text(body.agent_id);
     const customerId = text(persisted.customer_id);
     const leadId = text(persisted.lead_id);

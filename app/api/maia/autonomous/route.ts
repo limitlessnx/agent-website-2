@@ -26,24 +26,44 @@ export async function POST(request: NextRequest) {
     if (!claimed) break;
 
     const goal = claimed as {
-      id: string;
-      organization_id: string;
-      agent_id: string;
-      title: string;
-      input: Record<string, unknown> | null;
-      priority: number | null;
+      id?: unknown;
+      organization_id?: unknown;
+      agent_id?: unknown;
+      title?: unknown;
+      input?: Record<string, unknown> | null;
+      priority?: number | null;
     };
 
+    // A malformed/non-row RPC response must never turn into PostgREST filters
+    // such as id=eq.null or organization_id=eq.null, nor consume a retry loop.
+    const goalId = typeof goal.id === "string" ? goal.id.trim() : "";
+    const organizationId = typeof goal.organization_id === "string" ? goal.organization_id.trim() : "";
+    const agentId = typeof goal.agent_id === "string" ? goal.agent_id.trim() : "";
+    const title = typeof goal.title === "string" ? goal.title.trim() : "";
+    if (!goalId || !organizationId || !agentId || !title) {
+      console.error("[maia-autonomous] invalid claimed goal payload; stopping batch", {
+        hasGoalId: Boolean(goalId),
+        hasOrganizationId: Boolean(organizationId),
+        hasAgentId: Boolean(agentId),
+        hasTitle: Boolean(title),
+        payloadType: typeof claimed,
+      });
+      results.push({ status: "skipped", reason: "invalid_claimed_goal_payload" });
+      break;
+    }
+
     try {
-      const { data: assignmentRows } = await admin
+      const { data: assignmentRows, error: assignmentError } = await admin
         .from("organization_agent_selections")
         .select("configuration,status")
-        .eq("organization_id", goal.organization_id);
+        .eq("organization_id", organizationId);
+
+      if (assignmentError) throw assignmentError;
 
       const assigned = (assignmentRows || []).some(
         (row) =>
           ["selected", "provisioning", "paid", "active"].includes(String(row.status || "")) &&
-          String((row.configuration as Record<string, unknown> | null)?.provisioned_agent_id || "") === goal.agent_id,
+          String((row.configuration as Record<string, unknown> | null)?.provisioned_agent_id || "") === agentId,
       );
 
       if (!assigned) throw new Error("Autonomous goal target is no longer assigned to this organization.");
@@ -55,28 +75,31 @@ export async function POST(request: NextRequest) {
           : "Complete the queued autonomous task using approved tenant tools and stop when the goal is satisfied.";
 
       const result = await runMaia({
-        organizationId: goal.organization_id,
-        agentId: goal.agent_id,
-        message: `AUTONOMOUS GOAL: ${goal.title}\n\n${instructions}`,
+        organizationId,
+        agentId,
+        message: `AUTONOMOUS GOAL: ${title}\n\n${instructions}`,
         channel: "autonomous",
         autonomous: true,
       });
 
-      await admin
+      const { error: completionError } = await admin
         .from("agent_runtime_goals")
         .update({ status: "completed", output: { result }, updated_at: new Date().toISOString() })
-        .eq("id", goal.id)
+        .eq("id", goalId)
+        .eq("organization_id", organizationId)
         .eq("status", "running");
 
-      results.push({ id: goal.id, status: "completed", steps: result.steps });
+      if (completionError) throw completionError;
+      results.push({ id: goalId, status: "completed", steps: result.steps });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "Autonomous goal failed.";
       await admin
         .from("agent_runtime_goals")
         .update({ status: "failed", output: { error: message }, updated_at: new Date().toISOString() })
-        .eq("id", goal.id)
+        .eq("id", goalId)
+        .eq("organization_id", organizationId)
         .eq("status", "running");
-      results.push({ id: goal.id, status: "failed", error: message });
+      results.push({ id: goalId, status: "failed", error: message });
     }
   }
 

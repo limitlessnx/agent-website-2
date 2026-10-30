@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeSequenceStepDueAt, resolveFollowUpPolicy, text } from "@/lib/follow-up-policy";
+import { computeSequenceStepDueAt, resolveFollowUpPolicy, text, type FollowUpPolicy } from "@/lib/follow-up-policy";
+
+const LIMITLESS_REALTY_ORGANIZATION_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -12,6 +14,7 @@ export async function POST(request: NextRequest) {
     assertRuntimeSecret(request.headers.get("x-runtime-secret"));
     const body = record(await request.json().catch(() => ({})));
     const organizationId = text(body.organization_id);
+    if (organizationId === LIMITLESS_REALTY_ORGANIZATION_ID) return NextResponse.json({ error: "Limitless Maia follow-ups advance existing follow_ups sequence steps; crm_tasks is not an allowed duplicate pipeline." }, { status: 410 });
     const agentId = text(body.agent_id);
     const customerId = text(body.customer_id);
     const leadId = text(body.lead_id);
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (sourceTask.error) throw sourceTask.error;
     const sourceMeta = record(sourceTask.data?.metadata);
     const policy = body.policy && typeof body.policy === "object"
-      ? body.policy as any
+      ? body.policy as FollowUpPolicy
       : await resolveFollowUpPolicy(organizationId, text(sourceMeta.organization_key) || null);
     const sequence = Array.isArray(policy.sequence) ? policy.sequence : [];
     const action = text(decision.action) || "skip";

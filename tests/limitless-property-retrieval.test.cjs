@@ -9,6 +9,8 @@ function fixture(rows, error = null) {
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: table => { calls.push(['from',table]); return q; } }) },
     '@/lib/whatsapp-delivery': { sendWhatsAppMessage: () => { throw new Error('Must not send'); } },
     '@/lib/flux-credits': { assertFluxFeatureAccess: async () => {} },
+    '@/lib/limitless-followup-contract': {},
+    '@/lib/follow-up-policy': {},
     '@/lib/canonical-customer': {},
     '@/lib/human-operations': {},
   });
