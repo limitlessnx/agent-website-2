@@ -37,10 +37,8 @@ const expectedPendingVersions = [
   "20261012090000",
   // Xposure studio catalog migration reviewed but not yet applied to production.
   "20261021230000",
-  // Installment payment sync contract remains pending its guard-preserving release.
-  "20261027220000",
-  // Positive-installment guard must be replayed after the pending payment contract migration.
-  "20261030210000",
+  // All reviewed Limitless reminder and Maia follow-up migrations in this release are applied.
+  
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
