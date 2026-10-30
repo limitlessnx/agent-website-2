@@ -65,7 +65,7 @@ test("a direct request for updates about a specific property is valid renewed co
 
 test("Maia creates the active sequence, opt-in audit, and six steps through one transactional enrollment RPC", () => {
   const enrollment = read("lib/ai/limitless-realty-maia.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   const trigger = read("src/trigger/maia-runtime.ts");
   const api = read("app/api/limitless/maia/route.ts");
   assert.match(enrollment, /admin\.rpc\("create_limitless_maia_followup_sequence"/);
