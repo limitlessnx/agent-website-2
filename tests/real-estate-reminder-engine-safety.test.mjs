@@ -82,7 +82,7 @@ test("confirmed appointments receive tenant-scoped 24-hour and 2-hour reminder s
 
 test("Limitless installment reminders reject zero installment amounts before authorization or delivery", () => {
   const runtime = read("lib/limitless-installment-reminder-runtime.ts");
-  const migration = read("supabase/migrations/20261030210000_limitless_reminder_positive_installment_guard.sql");
+  const migration = read("supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql");
   assert.match(runtime, /installmentAmount <= 0/);
   assert.match(migration, /installment_amount <= 0/);
   assert.match(migration, /v_plan\.installment_amount <= 0/);

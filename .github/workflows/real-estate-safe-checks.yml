@@ -6,6 +6,7 @@ on:
       - integration/limitless-realty-production-20261025
       - draft/limitless-realty-followups-fix-20261027
       - draft/maia-null-goal-guard-20261029
+      - fix/reconcile-production-migration-ledger-20261030
   pull_request:
     branches:
       - main
@@ -19,7 +20,7 @@ permissions:
 
 jobs:
   safe-regression:
-    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027' || github.head_ref == 'draft/maia-null-goal-guard-20261029'
+    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027' || github.head_ref == 'draft/maia-null-goal-guard-20261029' || github.head_ref == 'fix/reconcile-production-migration-ledger-20261030'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

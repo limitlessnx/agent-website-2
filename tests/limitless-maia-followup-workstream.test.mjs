@@ -65,7 +65,7 @@ test("a direct request for updates about a specific property is valid renewed co
 
 test("Maia creates the active sequence, opt-in audit, and six steps through one transactional enrollment RPC", () => {
   const enrollment = read("lib/ai/limitless-realty-maia.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   const trigger = read("src/trigger/maia-runtime.ts");
   const api = read("app/api/limitless/maia/route.ts");
   assert.match(enrollment, /admin\.rpc\("create_limitless_maia_followup_sequence"/);
@@ -127,7 +127,7 @@ test("canonical Limitless drain uses follow_ups sequence rows only and does not 
 test("Limitless controls are exact-scope, audited, and lifecycle events are non-terminal", () => {
   const control = read("app/api/internal/runtime/follow-up/control/route.ts");
   const helper = read("lib/followup-control.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   assert.match(control, /customer_id/);
   assert.match(control, /property_id/);
   assert.match(control, /sequence_id/);
@@ -278,7 +278,7 @@ test("nurture success advances one step and schedules the next 14-day check-in",
 });
 
 test("rolling nurture creation is idempotent and uses the approved variable order", () => {
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   const route = read("app/api/limitless/maia/followups/route.ts");
   const ai = read("lib/ai/limitless-realty-maia.ts");
   assert.match(migration, /limitless_maia_followup_sequence_step_key_unique/);
@@ -298,7 +298,7 @@ test("rolling nurture creation is idempotent and uses the approved variable orde
 
 test("only explicit opt-out or exact admin stop/close can cancel an active sequence", () => {
   const route = read("app/api/limitless/maia/followups/route.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   assert.match(route, /sequence\.status === "opted_out"/);
   assert.match(route, /\["stopped", "closed", "completed"\]\.includes/);
   assert.match(route, /admin_stop_or_close/);
@@ -310,7 +310,7 @@ test("only explicit opt-out or exact admin stop/close can cancel an active seque
 });
 
 test("new sequence and event tables are RLS-protected from browser roles", () => {
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   assert.match(migration, /enable row level security/);
   assert.match(migration, /limitless_canonical_followups_server_only[\s\S]*?as restrictive[\s\S]*?organization_id is distinct from/);
   assert.match(migration, /revoke all on table public\.limitless_maia_followup_sequences from public, anon, authenticated/);
@@ -354,7 +354,7 @@ test("ambiguous provider errors are non-retryable and dashboard Stop ends the ex
   const route = read("app/api/limitless/maia/followups/route.ts");
   const admin = read("app/api/admin/followups/route.ts");
   const controls = read("lib/followup-control.ts");
-  const migration = read("supabase/migrations/20261027220100_limitless_maia_followup_sequence_identity.sql");
+  const migration = read("supabase/migrations/20261030191816_limitless_maia_followup_sequence_identity.sql");
   const ui = read("components/admin/FollowupControlCenter.tsx");
   assert.match(route, /explicitlyRejectedByProvider\(error\) \? "failed" : "unknown"/);
   assert.match(admin, /actor:`admin:\$\{String\(session\.email/);

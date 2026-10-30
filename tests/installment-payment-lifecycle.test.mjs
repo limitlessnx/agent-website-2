@@ -8,7 +8,7 @@ const actions = () => read("app/dashboard/limitless/payments/actions.ts");
 const runtime = () => read("lib/limitless-installment-reminder-runtime.ts");
 const overview = () => read("app/dashboard/limitless/payments/page.tsx");
 const management = () => read("app/dashboard/limitless/payments/installments/page.tsx");
-const migration = () => read("supabase/migrations/20261027220000_limitless_installment_reminder_contract.sql");
+const migration = () => read("supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql");
 const phoneContract = load("lib/limitless-followup-contract.ts", {}, "export { LIMITLESS_REALTY_ORGANIZATION_ID, followupErrorSummary, limitlessPhoneCandidates };");
 const scheduleHelpers = load("lib/limitless-installment-reminder-runtime.ts", {
   "@/lib/supabase/admin": { createAdminClient: () => ({}) },
