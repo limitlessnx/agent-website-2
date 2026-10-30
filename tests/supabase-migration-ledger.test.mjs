@@ -40,8 +40,6 @@ const expectedPendingVersions = [
   // Maia follow-up schema and installment reminder changes remain pending release review.
   "20261027220000",
   "20261027220100",
-  "20261028132000",
-  "20261029071600",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
