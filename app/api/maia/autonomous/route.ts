@@ -4,7 +4,7 @@ import { runMaia } from "@/lib/ai/maia-runtime";
 
 async function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\\s+/i, "").trim();
+  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
   if (secret && supplied && supplied === secret) return true;
 
   const schedulerToken = request.headers.get("x-maia-scheduler-token")?.trim();
