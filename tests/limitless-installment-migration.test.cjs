@@ -16,7 +16,7 @@ const ATTEMPT_C = '40000000-0000-4000-8000-000000000003';
 const TEMPLATE_BEFORE = '20000000-0000-4000-8000-000000000001';
 const TEMPLATE_ON = '20000000-0000-4000-8000-000000000002';
 const TEMPLATE_AFTER = '20000000-0000-4000-8000-000000000003';
-const MIGRATION = 'supabase/migrations/20261027220000_limitless_installment_reminder_contract.sql';
+const MIGRATION = 'supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql';
 
 async function createDatabase() {
   const db = new PGlite();
