@@ -305,7 +305,9 @@ test("only explicit opt-out or exact admin stop/close can cancel an active seque
   assert.doesNotMatch(route, /followupStopReason/);
   assert.doesNotMatch(route, /customer\.replied|appointment\.booked|human\.handoff|lead\.status_changed/);
   assert.match(migration, /natural day-30 completion is not a terminal event/);
-  assert.match(migration, /return new;/);
+  assert.match(migration, /natural day-30 completion is not a terminal event/);
+  assert.doesNotMatch(migration, /return new;/);
+  assert.doesNotMatch(migration, /create trigger [\\s\\S]*complete_limitless_maia_followup_sequence/i);
 });
 
 test("new sequence and event tables are RLS-protected from browser roles", () => {
