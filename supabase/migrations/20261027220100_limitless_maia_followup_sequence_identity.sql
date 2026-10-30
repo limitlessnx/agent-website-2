@@ -97,6 +97,7 @@ create index if not exists limitless_maia_followup_event_scope_idx
 create index if not exists limitless_maia_followup_lead_status_idx
   on public.limitless_maia_followup_sequences (organization_id, lead_id, customer_id, status, property_id);
 
+-- natural day-30 completion is not a terminal event; the worker creates the next nurture row.
 -- Sequence completion is controlled explicitly by the worker/admin RPCs.
 -- No status trigger is installed: ordinary follow-up step updates must not
 -- implicitly complete a sequence or add a redundant no-op trigger.
