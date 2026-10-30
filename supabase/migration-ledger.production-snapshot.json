@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-10-26",
+  "capturedAt": "2026-10-30",
   "projectRef": "tacxegmlppngnuvldojy",
-  "purpose": "Read-only snapshot of the remote Supabase migration ledger used to reconcile missing local migration files. Refresh deliberately when the production ledger changes.",
+  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation.",
   "migrations": [
     {
       "version": "20260724",
@@ -862,6 +862,26 @@
     {
       "version": "20261026144829",
       "name": "xposure_maia_active_during_handoff"
+    },
+    {
+      "version": "20261027180755",
+      "name": "fix_flux_social_storage_tenant_folder_policy"
+    },
+    {
+      "version": "20261029061653",
+      "name": "limitless_installment_reminder_contract_10am"
+    },
+    {
+      "version": "20261029061703",
+      "name": "limitless_installment_reminder_reschedule_20261029"
+    },
+    {
+      "version": "20261029061709",
+      "name": "limitless_installment_reminder_template_enable_20261029"
+    },
+    {
+      "version": "20261029061729",
+      "name": "limitless_installment_reminder_company_name_20261029"
     }
   ]
 }
