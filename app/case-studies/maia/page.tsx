@@ -28,6 +28,17 @@ export const metadata: Metadata = {
   title: "Maia Real Estate Operating System",
   description,
   alternates: { canonical: "/case-studies/maia" },
+  openGraph: {
+    type: "website",
+    url: "/case-studies/maia",
+    title: "Maia Real Estate Operating System | Fluxknight",
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Maia Real Estate Operating System | Fluxknight",
+    description,
+  },
 };
 
 const breadcrumbJsonLd = {
