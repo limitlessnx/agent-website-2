@@ -393,7 +393,7 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
       [A, PLAN_A, ATTEMPT_A, TEMPLATE_ON, scheduledFor, ['08123456789', '2348123456789']],
     )).rows[0].result;
     assert.equal(stopFirst.authorized, false);
-    assert.equal(stopFirst.reason, 'customer_opted_out');
+    assert.equal(stopFirst.reason, 'lead_opted_out');
     assert.equal((await db.query('select send_authorized_at,status from reminder_attempts where id=$1', [ATTEMPT_A])).rows[0].send_authorized_at, null);
 
     await db.query('update leads set opted_out=false where id=$1', [LEAD_A]);
