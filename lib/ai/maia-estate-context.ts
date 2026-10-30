@@ -63,9 +63,11 @@ export function resolveNamedVerifiedPropertyId(message: string): string | null {
     const compactMessage = normalizedMessage.replace(/ /g, "");
     // Customers often type brand names as one word ("dprince builders")
     // while catalog titles preserve spacing ("D Prince Builders Diamond Estate").
-    // Accept a distinctive multi-character prefix, but never a generic short
-    // suffix such as "diamond estate" that could match multiple locations.
-    const distinctivePrefix = compactMessage.length >= 10 && compactTitle.startsWith(compactMessage);
+    // Match a distinctive catalog-name prefix anywhere in the customer's
+    // sentence, not only when the entire sentence is the estate name.
+    // Generic short suffixes such as "diamond estate" remain non-matching.
+    const distinctivePrefix = compactTitle.length >= 10 &&
+      compactMessage.includes(compactTitle.slice(0, Math.min(14, compactTitle.length)));
     if (!distinctivePrefix && (ratio < 0.75 || matched < Math.min(3, tokens.length))) return [];
     return [{ id, score: distinctivePrefix ? 2000 + compactMessage.length : ratio * 1000 + tokens.length }];
   }).sort((left, right) => right.score - left.score);
