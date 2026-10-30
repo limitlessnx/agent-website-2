@@ -87,5 +87,5 @@ test("Limitless installment reminders reject zero installment amounts before aut
   assert.match(migration, /installment_amount <= 0/);
   assert.match(migration, /v_plan\.installment_amount <= 0/);
   assert.match(migration, /set next_reminder_at = null/);
-  assert.match(migration, /coalesce\\(installment_amount, 0\\) <= 0/);
+  assert.match(migration, /coalesce\(installment_amount, 0\) <= 0/);
 });
