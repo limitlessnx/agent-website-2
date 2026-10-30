@@ -177,4 +177,15 @@ end;
 $function$;
 revoke all on function public.authorize_limitless_installment_reminder_send(uuid,uuid,uuid,uuid,timestamptz,text[]) from public, anon, authenticated;
 grant execute on function public.authorize_limitless_installment_reminder_send(uuid,uuid,uuid,uuid,timestamptz,text[]) to service_role;
+
+-- Clear stale scheduler cursors on existing zero-value plans without changing payment data.
+update public.payment_plans
+set next_reminder_at = null
+where organization_id = 'b15f21b4-5697-4d21-9421-8a34eae3476d'::uuid
+  and payment_type = 'installment'
+  and status = 'active'
+  and reminders_enabled = true
+  and coalesce(installment_amount, 0) <= 0
+  and next_reminder_at is not null;
+
 commit;
