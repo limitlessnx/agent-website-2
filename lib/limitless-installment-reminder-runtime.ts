@@ -179,7 +179,7 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   const outstandingBalance = parseMoneyCents(plan.outstanding_balance);
   const installmentAmount = parseMoneyCents(plan.installment_amount);
   if (agreedPrice === null || paidToDate === null || outstandingBalance === null || installmentAmount === null
-    || agreedPrice <= 0 || installmentAmount === null
+    || agreedPrice <= 0 || installmentAmount > agreedPrice
     || paidToDate > agreedPrice || outstandingBalance !== agreedPrice - paidToDate) {
     throw new Error("Installment reminder financial values are invalid or inconsistent.");
   }
@@ -274,8 +274,9 @@ async function sendAttempt(args: {
   scheduledFor: string;
   values: ReminderValues;
   isLimitless: boolean;
+  catchUp?: { missedDate: string; nextDate: string } | null;
 }) {
-  const { admin, plan, template, approved, attemptId, scheduledFor, values, isLimitless } = args;
+  const { admin, plan, template, approved, attemptId, scheduledFor, values, isLimitless, catchUp = null } = args;
   try {
     if (isLimitless) {
       const phoneCandidates = limitlessPhoneCandidates(plan.client_phone);
@@ -322,7 +323,7 @@ async function sendAttempt(args: {
     const status = providerMessageId ? "sent" : "unknown";
     const { error } = await admin
       .from("reminder_attempts")
-      .update({ status, sent_at: providerMessageId ? sentAt : null, provider_reference: providerMessageId, error_message: providerMessageId ? null : "Provider returned no message ID; delivery outcome is ambiguous and will not be retried automatically.", payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days, provider: delivery.provider, message_type: delivery.messageType } })
+      .update({ status, sent_at: providerMessageId ? sentAt : null, provider_reference: providerMessageId, error_message: providerMessageId ? null : "Provider returned no message ID; delivery outcome is ambiguous and will not be retried automatically.", payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days, provider: delivery.provider, message_type: delivery.messageType, ...(catchUp ? { catch_up: true, catch_up_for: catchUp.missedDate, catch_up_next_date: catchUp.nextDate } : {}) } })
       .eq("id", attemptId)
       .eq("organization_id", plan.organization_id)
       .eq("payment_plan_id", plan.id)
@@ -410,6 +411,12 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
         }
         scheduledFor = nextReminder.toISOString();
       }
+      const normalOccurrence = isLimitless
+        ? computeReminderOccurrence(String(plan.next_due_date), template.timing_direction, Number(template.timing_days))
+        : null;
+      const catchUp = isLimitless && occurrenceDate && normalOccurrence && occurrenceDate < normalOccurrence.occurrenceDate
+        ? { missedDate: "2026-10-28", nextDate: normalOccurrence.occurrenceDate }
+        : null;
       const { data: existing } = await admin.from("reminder_attempts").select("id,status").eq("organization_id", organizationId).eq("payment_plan_id", plan.id).eq("reminder_template_id", String(template.id)).eq("scheduled_for", scheduledFor).limit(1).maybeSingle();
       if (existing?.id && ["sent", "pending", "skipped", "unknown"].includes(String(existing.status))) continue;
       if (isLimitless && occurrenceDate) {
@@ -431,9 +438,9 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
       }
       let values: ReminderValues;
       try { values = valuesForPlan(plan, organizationName, approved, isLimitless); } catch { results.push({ planId: plan.id, templateId: template.id, status: "skipped", reason: "invalid_installment_schedule" }); continue; }
-      const attempt = await admin.from("reminder_attempts").insert({ organization_id: organizationId, payment_plan_id: plan.id, reminder_template_id: String(template.id), scheduled_for: scheduledFor, channel: "whatsapp", status: "pending", payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days } }).select("id").single();
+      const attempt = await admin.from("reminder_attempts").insert({ organization_id: organizationId, payment_plan_id: plan.id, reminder_template_id: String(template.id), scheduled_for: scheduledFor, channel: "whatsapp", status: "pending", payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days, ...(catchUp ? { catch_up: true, catch_up_for: catchUp.missedDate, catch_up_next_date: catchUp.nextDate } : {}) } }).select("id").single();
       if (attempt.error || !attempt.data?.id) { results.push({ planId: plan.id, templateId: template.id, status: "already_claimed_or_failed" }); continue; }
-      const delivery = await sendAttempt({ admin, plan, template, approved, attemptId: attempt.data.id, scheduledFor, values, isLimitless });
+      const delivery = await sendAttempt({ admin, plan, template, approved, attemptId: attempt.data.id, scheduledFor, values, isLimitless, catchUp });
       results.push({ planId: plan.id, templateId: template.id, ...delivery, scheduledFor });
     }
   }
