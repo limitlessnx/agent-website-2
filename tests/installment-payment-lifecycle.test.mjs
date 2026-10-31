@@ -284,7 +284,7 @@ test("payment sync advances due date only for a full installment and preserves t
   assert.doesNotMatch(paymentSyncFunction, /next_reminder_at\s*=/);
   assert.match(source, /next_reminder_at = next_scheduled_at/);
   assert.match(read("supabase/migrations/20261031142757_limitless_installment_reminder_time_1630_lagos.sql"), /time '16:30'/);
-  assert.match(read("supabase/migrations/20261031193000_limitless_installment_reminder_time_1930_lagos.sql"), /time '19:30'/);
+  assert.match(read("supabase/migrations/20261031181713_limitless_installment_reminder_time_1930_lagos.sql"), /time '19:30'/);
   const reminderStateFunction = source.split("create or replace function public.sync_payment_plan_reminder_state")[1].split("$function$;")[0];
   assert.match(reminderStateFunction, /reminder_interval interval := interval '14 days'/);
   assert.doesNotMatch(reminderStateFunction, /installment_frequency_interval/);
