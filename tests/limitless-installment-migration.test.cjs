@@ -144,7 +144,9 @@ test('draft migration preserves zero placeholders and computes a future due-date
     await addPlan(db, PLAN_B, B, { due: dueA });
     assert.equal((await plan(db, PLAN_B)).next_reminder_at, null);
 
-    await addPlan(db, PLAN_C, A, { installment: 0, due: null });
+    await addPlan(db, PLAN_C, A, { installment: 0, due: dueA });
+    assert.equal((await plan(db, PLAN_C)).next_reminder_at.toISOString(), expectedA.toISOString());
+    await db.query('update payment_plans set next_due_date=null where id=$1', [PLAN_C]);
     assert.equal((await plan(db, PLAN_C)).next_due_date, null);
     assert.equal((await plan(db, PLAN_C)).next_reminder_at, null);
   } finally {
@@ -423,12 +425,15 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
     const dueAfterStop = (await db.query("select ($1::date + interval '1 day')::date as due_date", [dueDate])).rows[0].due_date;
     await db.query('update payment_plans set next_due_date=$1 where id=$2', [dueAfterStop, PLAN_A]);
     const secondScheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
-    await insertAttempt(ATTEMPT_B, TEMPLATE_ON, secondScheduledFor);
+    await db.query('update payment_plans set installment_amount=0 where id=$1', [PLAN_A]);
+    const flexibleScheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
+    await insertAttempt(ATTEMPT_B, TEMPLATE_ON, flexibleScheduledFor);
     const authorized = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
-      [A, PLAN_A, ATTEMPT_B, TEMPLATE_ON, secondScheduledFor, ['08123456789', '2348123456789']],
+      [A, PLAN_A, ATTEMPT_B, TEMPLATE_ON, flexibleScheduledFor, ['08123456789', '2348123456789']],
     )).rows[0].result;
     assert.equal(authorized.authorized, true);
+    assert.equal(Number((await db.query('select installment_amount from payment_plans where id=$1', [PLAN_A])).rows[0].installment_amount), 0);
     assert.ok((await db.query('select send_authorized_at from reminder_attempts where id=$1', [ATTEMPT_B])).rows[0].send_authorized_at);
     const replay = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
