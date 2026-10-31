@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { matchesCampaignGroupRules, type CampaignGroup } from "@/lib/campaign-groups";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
@@ -10,7 +10,6 @@ type Props = { leads: ProgressiveLead[]; properties: PropertyRecord[]; groups: C
 type AudienceMode = "all" | "manual" | "group" | "filters";
 type CampaignType = "estate_brief_update" | "limitless_realty_update" | "limitless_realty_reminder" | "direct_message";
 type CampaignResult = { status: string; attempted: number; sent: number; delivered: number; pendingDelivery: number; failed: number; skipped: number; templateName?: string };
-type PendingApproval = { fingerprint: string; requestId: string; approvalId?: string; token?: string; expiresAt?: string; preview?: { attemptedRecipients: number; serviceWindowSkipped?: number; cooldownSkipped: number; messageParts: number; templateName?: string; message: string; propertyName?: string | null; recipientPreview?: Array<{ name: string; phone: string }>; moreRecipients?: number }; unresolved?: boolean };
 
 const CHANNEL_INVITE = "Reply YES if you'd like to join our Limitless Realty WhatsApp Channel for property deals, new estate launches and real estate updates near you.";
 const campaignTypes: Array<{ value: CampaignType; label: string; description: string; template?: string; unavailable?: boolean }> = [
@@ -23,7 +22,6 @@ const campaignTypes: Array<{ value: CampaignType; label: string; description: st
 function text(value: unknown) { return String(value || "").trim().toLowerCase(); }
 function money(value: unknown) { const parsed = Number(String(value || "").replace(/[^\d.]/g, "")); return Number.isFinite(parsed) ? parsed : 0; }
 function eligible(lead: ProgressiveLead) { const status = text(lead.status); return Boolean(lead.phone && lead.campaign_eligible !== false && !["opted_out", "do_not_contact", "blocked", "invalid"].includes(status)); }
-function approvalIsUnexpired(approval: PendingApproval | null) { return Boolean(approval?.expiresAt && Number.isFinite(Date.parse(approval.expiresAt)) && Date.parse(approval.expiresAt) > Date.now() && !approval.unresolved); }
 
 export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: Props) {
   const params = useSearchParams();
@@ -46,20 +44,10 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const [responsePrompt, setResponsePrompt] = useState("Reply MORE INFO if you'd like more information about this update.");
   const [result, setResult] = useState<CampaignResult | null>(null);
   const [error, setError] = useState("");
-  const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
-  const [approvalClock, setApprovalClock] = useState<{ expiresAt: string; now: number } | null>(null);
+  const [uncertain, setUncertain] = useState(false);
   const [isPending, startTransition] = useTransition();
   const sending = useRef(false);
-
-  useEffect(() => {
-    if (!pendingApproval?.expiresAt) return;
-    const approvalExpiry = pendingApproval.expiresAt;
-    const expiresAt = Date.parse(approvalExpiry);
-    const refresh = () => setApprovalClock({ expiresAt: approvalExpiry, now: Date.now() });
-    const initialRefresh = window.setTimeout(refresh, 0);
-    const expiryRefresh = Number.isFinite(expiresAt) ? window.setTimeout(refresh, Math.max(0, expiresAt - Date.now() + 1)) : undefined;
-    return () => { window.clearTimeout(initialRefresh); if (expiryRefresh !== undefined) window.clearTimeout(expiryRefresh); };
-  }, [pendingApproval?.expiresAt]);
+  const requestIdRef = useRef<string | null>(null);
 
   const selectedGroup = groups.find((group) => group.id === groupId);
   const selectedProperty = properties.find((property) => property.id === propertyId);
@@ -95,37 +83,40 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const composedUpdate = [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
   const outboundMessage = isUpdateTemplate ? composedUpdate : message.trim();
   const requestPayload = { campaignType, topic, message: outboundMessage, mediaUrl: "", audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId: campaignType === "direct_message" ? "" : propertyId, budgetMin, budgetMax };
-  const fingerprint = JSON.stringify(requestPayload);
-  const approvalMatches = Boolean(pendingApproval && pendingApproval.fingerprint === fingerprint);
-  const approvalUsable = Boolean(approvalMatches && pendingApproval?.approvalId && pendingApproval.token && approvalClock?.expiresAt === pendingApproval?.expiresAt && pendingApproval.expiresAt && Date.parse(pendingApproval.expiresAt) > (approvalClock?.now || 0) && !pendingApproval.unresolved);
-  const blockedByUnknown = Boolean(pendingApproval?.unresolved && pendingApproval.fingerprint !== fingerprint);
-  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !blockedByUnknown);
+  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
 
   const sendCampaign = () => {
     if (sending.current || isPending || !canSend) return;
     sending.current = true;
     setError("");
     setResult(null);
-    const approvalCurrent = approvalUsable && approvalIsUnexpired(pendingApproval);
-    const requestId = approvalMatches && approvalCurrent && pendingApproval ? pendingApproval.requestId : crypto.randomUUID();
-    const approvalStage = approvalCurrent ? "send" : "prepare";
+    const requestId = requestIdRef.current || crypto.randomUUID();
+    requestIdRef.current = requestId;
     startTransition(async () => {
       try {
         const endpoint = campaignType === "direct_message" ? "/api/limitless/campaigns/direct" : "/api/limitless/campaigns/send";
-        const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestId }, body: JSON.stringify({ ...requestPayload, requestId, approvalStage, ...(approvalStage === "send" && pendingApproval ? { approvalId: pendingApproval.approvalId, approvalToken: pendingApproval.token } : {}) }) });
+        const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestId }, body: JSON.stringify({ ...requestPayload, requestId, approvalStage: "send" }) });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Campaign failed.");
-        if (approvalStage === "prepare") {
-          if (!data.approval?.approvalId || !data.approval?.token || !data.preview) throw new Error("The server did not return a valid confirmation preview.");
-          setPendingApproval({ fingerprint, requestId, approvalId: data.approval.approvalId, token: data.approval.token, expiresAt: data.approval.expiresAt, preview: data.preview });
-          setError("");
+        if (!response.ok) {
+          if (response.status >= 500 || response.status === 202) {
+            setUncertain(true);
+            setError(data.message || "The provider result is uncertain. Reconcile this campaign in the delivery log before attempting another send.");
+          } else {
+            requestIdRef.current = null;
+            throw new Error(data.error || "Campaign failed before dispatch.");
+          }
+          return;
+        }
+        if (data.status === "unknown" || data.deliveryStatus === "unknown") {
+          setUncertain(true);
+          setError(data.message || "The provider result is uncertain. Reconcile this campaign before attempting another send.");
           return;
         }
         setResult({ status: data.status, attempted: data.attempted || 0, sent: data.sent || 0, delivered: data.delivered || 0, pendingDelivery: data.pendingDelivery || 0, failed: data.failed || 0, skipped: data.skipped || 0, templateName: data.templateName });
-        setPendingApproval(null);
+        requestIdRef.current = null;
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Campaign failed.");
-        if (approvalStage === "send") setPendingApproval({ fingerprint, requestId, unresolved: true });
+        setUncertain(true);
+        setError(caught instanceof Error ? caught.message : "The request result is uncertain. Reconcile it before another send.");
       } finally {
         sending.current = false;
       }
@@ -190,9 +181,8 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
             </>
           )}
 
-          <div className="sendbar"><div><strong>{recipientCount} SELECTED</strong><small>{selectedType.template || "DIRECT MESSAGE · SERVER-VERIFIED 24H WINDOW"}</small></div><button type="button" disabled={isPending || !canSend} onClick={sendCampaign}>{isPending ? "CHECKING / SENDING..." : approvalUsable ? `CONFIRM & SEND TO ${pendingApproval?.preview?.attemptedRecipients || 0}` : "PREVIEW & PREPARE"}</button></div>
-          {approvalUsable && pendingApproval?.preview && <div className="result"><strong>Review before sending {pendingApproval.preview.propertyName ? `· ${pendingApproval.preview.propertyName}` : ""}</strong><span>{pendingApproval.preview.attemptedRecipients} server-eligible recipients · {pendingApproval.preview.cooldownSkipped} provider cooldown skips · {pendingApproval.preview.messageParts} message part(s)</span>{pendingApproval.preview.serviceWindowSkipped !== undefined && <span>{pendingApproval.preview.serviceWindowSkipped} contacts excluded: no verified inbound message inside 24 hours.</span>}<pre>{pendingApproval.preview.message}</pre>{pendingApproval.preview.recipientPreview?.map((recipient, index) => <small key={`${recipient.phone}-${index}`}>{recipient.name} · {recipient.phone}</small>)}{!!pendingApproval.preview.moreRecipients && <small>+{pendingApproval.preview.moreRecipients} more recipients</small>}<small>Approval expires {new Date(pendingApproval.expiresAt!).toLocaleTimeString()} · changing the audience or message cancels this approval.</small></div>}
-          {blockedByUnknown && <div className="error">A previous send has an uncertain provider result. Reconcile it in Operations before preparing a changed campaign; the server will not automatically resend it.</div>}
+          <div className="sendbar"><div><strong>{recipientCount} SELECTED</strong><small>{selectedType.template || "DIRECT MESSAGE · SERVER-VERIFIED 24H WINDOW"}</small></div><button type="button" disabled={isPending || !canSend} onClick={sendCampaign}>{isPending ? "SENDING..." : uncertain ? "DELIVERY CHECK REQUIRED" : `SEND TO ${recipientCount}`}</button></div>
+          {uncertain && <div className="error">This request may already have reached WhatsApp. Check the delivery log before retrying; the campaign is locked to prevent duplicate sends.</div>}
           {result && <div className="result"><strong>{result.status.replaceAll("_", " ")}</strong><span>{result.sent} sent · {result.delivered} delivered · {result.pendingDelivery} pending · {result.failed} failed · {result.skipped} skipped</span>{result.templateName && <small>Template: {result.templateName}</small>}</div>}
           {error && <div className="error">{error}</div>}
         </section>
