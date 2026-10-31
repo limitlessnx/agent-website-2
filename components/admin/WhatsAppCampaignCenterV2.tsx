@@ -44,8 +44,10 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const [responsePrompt, setResponsePrompt] = useState("Reply MORE INFO if you'd like more information about this update.");
   const [result, setResult] = useState<CampaignResult | null>(null);
   const [error, setError] = useState("");
+  const [uncertain, setUncertain] = useState(false);
   const [isPending, startTransition] = useTransition();
   const sending = useRef(false);
+  const requestIdRef = useRef<string | null>(null);
 
   const selectedGroup = groups.find((group) => group.id === groupId);
   const selectedProperty = properties.find((property) => property.id === propertyId);
@@ -81,23 +83,35 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const composedUpdate = [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
   const outboundMessage = isUpdateTemplate ? composedUpdate : message.trim();
   const requestPayload = { campaignType, topic, message: outboundMessage, mediaUrl: "", audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId: campaignType === "direct_message" ? "" : propertyId, budgetMin, budgetMax };
-  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId));
+  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
 
   const sendCampaign = () => {
     if (sending.current || isPending || !canSend) return;
     sending.current = true;
     setError("");
     setResult(null);
-    const requestId = crypto.randomUUID();
+    const requestId = requestIdRef.current || crypto.randomUUID();
+    requestIdRef.current = requestId;
     startTransition(async () => {
       try {
         const endpoint = campaignType === "direct_message" ? "/api/limitless/campaigns/direct" : "/api/limitless/campaigns/send";
         const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestId }, body: JSON.stringify({ ...requestPayload, requestId, approvalStage: "send" }) });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Campaign failed.");
+        if (!response.ok) {
+          if (response.status >= 500 || response.status === 202) {
+            setUncertain(true);
+            setError(data.message || "The provider result is uncertain. Reconcile this campaign in the delivery log before attempting another send.");
+          } else {
+            requestIdRef.current = null;
+            throw new Error(data.error || "Campaign failed before dispatch.");
+          }
+          return;
+        }
         setResult({ status: data.status, attempted: data.attempted || 0, sent: data.sent || 0, delivered: data.delivered || 0, pendingDelivery: data.pendingDelivery || 0, failed: data.failed || 0, skipped: data.skipped || 0, templateName: data.templateName });
+        requestIdRef.current = null;
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Campaign failed.");
+        setUncertain(true);
+        setError(caught instanceof Error ? caught.message : "The request result is uncertain. Reconcile it before another send.");
       } finally {
         sending.current = false;
       }
@@ -162,7 +176,8 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
             </>
           )}
 
-          <div className="sendbar"><div><strong>{recipientCount} SELECTED</strong><small>{selectedType.template || "DIRECT MESSAGE · SERVER-VERIFIED 24H WINDOW"}</small></div><button type="button" disabled={isPending || !canSend} onClick={sendCampaign}>{isPending ? "SENDING..." : `SEND TO ${recipientCount}`}</button></div>
+          <div className="sendbar"><div><strong>{recipientCount} SELECTED</strong><small>{selectedType.template || "DIRECT MESSAGE · SERVER-VERIFIED 24H WINDOW"}</small></div><button type="button" disabled={isPending || !canSend} onClick={sendCampaign}>{isPending ? "SENDING..." : uncertain ? "DELIVERY CHECK REQUIRED" : `SEND TO ${recipientCount}`}</button></div>
+          {uncertain && <div className="error">This request may already have reached WhatsApp. Check the delivery log before retrying; the campaign is locked to prevent duplicate sends.</div>}
           {result && <div className="result"><strong>{result.status.replaceAll("_", " ")}</strong><span>{result.sent} sent · {result.delivered} delivered · {result.pendingDelivery} pending · {result.failed} failed · {result.skipped} skipped</span>{result.templateName && <small>Template: {result.templateName}</small>}</div>}
           {error && <div className="error">{error}</div>}
         </section>
