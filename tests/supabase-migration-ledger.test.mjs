@@ -37,7 +37,9 @@ const expectedPendingVersions = [
   "20261012090000",
   // Xposure studio catalog migration reviewed but not yet applied to production.
   "20261021230000",
-  // Flexible-deposit installment reminder eligibility fix.
+  // Pre-existing production release migration pending review.
+  "20261031100000",
+  // Flexible-deposit installment reminder eligibility and catch-up cursor fix.
   "20261031120000",
   // Limitless Estate Brief template contract registration; reviewed in PR #308.
   "20261031123000",
