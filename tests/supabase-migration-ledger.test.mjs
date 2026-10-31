@@ -39,8 +39,8 @@ const expectedPendingVersions = [
   "20261021230000",
   // Pre-existing production release migration pending review.
   "20261031100000",
-  // Flexible-deposit installment reminder eligibility and catch-up cursor fix.
-  "20261031120000",
+  // Flexible-deposit installment reminder eligibility and catch-up cursor fix (production version).
+  "20261031120144",
   // Limitless Estate Brief template contract registration; reviewed in PR #308.
   "20261031123000",
   // Previous reminder-time migration followed by complete 19:30 alignment.
