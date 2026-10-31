@@ -483,3 +483,9 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
     await db.close();
   }
 });
+
+test('Limitless installment runtime uses the same 16:30 Lagos cursor as the database', () => {
+  const runtime = fs.readFileSync('lib/limitless-installment-reminder-runtime.ts', 'utf8');
+  assert.match(runtime, /const REMINDER_LOCAL_TIME = "16:30:00"/);
+  assert.doesNotMatch(runtime, /const REMINDER_LOCAL_TIME = "10:00:00"/);
+});
