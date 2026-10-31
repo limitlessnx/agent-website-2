@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({})) as RequestBody;
     requestId = requestIdentifier(body.requestId);
     if (!requestId) return noStore({ error: "A valid campaign request ID is required." }, 400);
-    if (body.approvalStage !== "prepare" && body.approvalStage !== "send") return noStore({ error: "Campaigns require a preview stage followed by an explicit confirmation stage." }, 400);
+    if (body.approvalStage !== "send" && body.approvalStage !== "prepare") return noStore({ error: "A campaign send action is required." }, 400);
     if (body.campaignType && !Object.prototype.hasOwnProperty.call(campaignTemplates, body.campaignType)) return noStore({ error: "Unsupported campaign type." }, 400);
     if (String(body.mediaUrl || "").trim() && body.campaignType !== ESTATE_BRIEF_CAMPAIGN_TYPE) return noStore({ error: "Media attachments are not enabled by the verified campaign template." }, 400);
 
@@ -142,17 +142,23 @@ export async function POST(request: Request) {
     const identity = campaignApprovalIdentity(session);
     const sessionId = campaignApprovalSessionId(session, organizationId, requestId);
     if (body.approvalStage === "prepare") {
-      const approval = await createLeoActionApproval({ identity, organizationId, sessionId, channel: "api", toolKey: REAL_ESTATE_CAMPAIGN_SEND_TOOL, arguments: approvalArguments, realEstateOptIn: true });
-      return noStore({ ok: true, status: "confirmation_required", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length, expiresAt: approval.expiresAt }, approval: { approvalId: approval.approvalId, token: approval.token, expiresAt: approval.expiresAt } }, 200);
+      const previewApproval = await createLeoActionApproval({ identity, organizationId, sessionId, channel: "api", toolKey: REAL_ESTATE_CAMPAIGN_SEND_TOOL, arguments: approvalArguments, realEstateOptIn: true });
+      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length, expiresAt: previewApproval.expiresAt } }, 200);
     }
 
-    if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBriefTemplateApproved()) return noStore({ ok: false, status: "template_pending_approval", error: "estate_brief_update is prepared but remains blocked until Meta approves the template and LIMITLESS_ESTATE_BRIEF_TEMPLATE_APPROVED=true is enabled." }, 409);
+    if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBriefTemplateApproved()) return noStore({ ok: false, status: "template_pending_approval", error: "estate_brief_update remains blocked until its Meta-approved template contract is active." }, 409);
 
-    const approvalId = String(body.approvalId || "").trim();
-    const approvalToken = String(body.approvalToken || "").trim();
-    if (!approvalId || !approvalToken) return noStore({ error: "The exact campaign preview must be approved before sending." }, 409);
+    // A single authenticated Send click is the explicit operator approval. Issue and
+    // consume the exact, server-recomputed approval in this request; no second UI step.
+    const suppliedApprovalId = String(body.approvalId || "").trim();
+    const suppliedApprovalToken = String(body.approvalToken || "").trim();
+    const issuedApproval = suppliedApprovalId && suppliedApprovalToken
+      ? null
+      : await createLeoActionApproval({ identity, organizationId, sessionId, channel: "api", toolKey: REAL_ESTATE_CAMPAIGN_SEND_TOOL, arguments: approvalArguments, realEstateOptIn: true });
+    const approvalId = suppliedApprovalId || issuedApproval!.approvalId;
+    const approvalToken = suppliedApprovalToken || issuedApproval!.token;
     const consumed = await consumeLeoActionApproval({ identity, organizationId, sessionId, channel: "api", toolKey: REAL_ESTATE_CAMPAIGN_SEND_TOOL, arguments: approvalArguments, approvalId, token: approvalToken, realEstateOptIn: true });
-    if (!consumed.accepted) return noStore({ ok: false, status: consumed.status, error: "The campaign approval is invalid, expired, already used, or no longer matches the exact audience and message. Preview it again before any retry." }, 409);
+    if (!consumed.accepted) return noStore({ ok: false, status: consumed.status, error: "The campaign approval could not be validated. No send was attempted." }, 409);
 
     trackingAdmin = createAdminClient();
     parentIdempotencyKey = `campaign:${requestId}`;
