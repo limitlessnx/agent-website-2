@@ -45,8 +45,8 @@ test("Limitless reminders only send on their Lagos calendar day and missed windo
   assert.equal(due.occurrenceDate, "2026-10-28");
   assert.equal(after.occurrenceDate, "2026-10-28");
   assert.equal(scheduleHelpers.classifyReminderOccurrence(before.occurrenceDate, before.scheduledFor, new Date("2026-10-28T15:29:00Z")), "waiting");
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(due.occurrenceDate, due.scheduledFor, new Date("2026-10-28T15:35:00Z")), "due");
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(after.occurrenceDate, after.scheduledFor, new Date("2026-10-29T16:35:00Z")), "missed");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(due.occurrenceDate, due.scheduledFor, new Date("2026-10-28T18:35:00Z")), "due");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(after.occurrenceDate, after.scheduledFor, new Date("2026-10-29T18:35:00Z")), "missed");
 });
 
 test("Limitless installment reminder cursor starts at 19:30 Lagos and repeats every 14 days independently of the due-date anchor", () => {
@@ -58,8 +58,8 @@ test("Limitless installment reminder cursor starts at 19:30 Lagos and repeats ev
   assert.equal(next.scheduledFor, "2026-11-11T18:30:00.000Z");
   assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T15:00:00.000Z"), null);
   assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T09:00:00.001Z"), null);
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T15:29:00Z")), "waiting");
-  assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T15:31:00Z")), "due");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T18:29:00Z")), "waiting");
+  assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T18:31:00Z")), "due");
   assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("invalid", "on", 0, null), null);
 });
 
