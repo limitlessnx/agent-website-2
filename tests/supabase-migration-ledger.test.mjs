@@ -43,6 +43,9 @@ const expectedPendingVersions = [
   "20261031120000",
   // Limitless Estate Brief template contract registration; reviewed in PR #308.
   "20261031123000",
+  // Previous reminder-time migration followed by complete 19:30 alignment.
+  "20261031142757",
+  "20261031193000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

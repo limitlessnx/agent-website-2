@@ -23,7 +23,7 @@ const LIMITLESS_EXPECTED_VARIABLE_KEYS = [
 ] as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LAGOS_TIME_ZONE = "Africa/Lagos";
-const REMINDER_LOCAL_TIME = "10:00:00";
+const REMINDER_LOCAL_TIME = "19:30:00";
 
 type ReminderDirection = "before" | "on" | "after";
 type ReminderTemplateRow = {

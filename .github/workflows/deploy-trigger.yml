@@ -16,6 +16,7 @@ on:
       - "lib/ai/maia-trigger-runtime.ts"
       - "lib/ai/limitless-realty-maia.ts"
       - "lib/whatsapp-delivery.ts"
+      - "lib/limitless-installment-reminder-runtime.ts"
       - "lib/system-orchestrator.ts"
       - "lib/human-operations.ts"
       - "lib/handoff-followup.ts"
