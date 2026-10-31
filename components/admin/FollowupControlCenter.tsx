@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Clock3, Pause, Play, RotateCcw, XCircle } from "@/components/admin/ServerIcons";
 import type { FollowupEnrollment, FollowupLog } from "@/lib/followup-control";
@@ -51,10 +51,32 @@ function statusLabel(item: FollowupEnrollment) {
 export default function FollowupControlCenter(props: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
+  const [draftBusy, setDraftBusy] = useState("");
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [logStatus, setLogStatus] = useState<LogStatus>("all");
   const [logWindow, setLogWindow] = useState<LogWindow>("7d");
+  useEffect(() => {
+    let active = true;
+    fetch("/api/limitless/followup-drafts").then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to load drafts.");
+      if (active) setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft"));
+    }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); });
+    return () => { active = false; };
+  }, []);
+  async function reviewDraft(id: string, action: "approve" | "reject") {
+    setDraftBusy(id); setMessage("");
+    try {
+      const response = await fetch("/api/limitless/followup-drafts", {method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to review draft.");
+      setDrafts(current => current.filter(draft => draft.id !== id));
+      setMessage(data.note || "Draft review saved.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to review draft."); }
+    finally { setDraftBusy(""); }
+  }
   const sequenceName = (item: FollowupEnrollment) => item.current_step
     ? `Maia follow-up · step ${item.current_step}`
     : "Maia follow-up";
@@ -118,6 +140,19 @@ export default function FollowupControlCenter(props: Props) {
       <div className="admin-list-row compact"><div><strong>Runtime-aligned controls</strong><span>Manual sequence creation and enrollment are hidden because Maia owns this tenant&apos;s follow-up schedule.</span></div></div>
     </section>
     {props.automationIssues > 0 ? <section className="admin-panel"><div className="admin-list-row compact attention-danger"><div><strong>Automation needs attention</strong><span>{props.automationIssues} recent follow-up action(s) failed or were blocked.</span></div><em>{props.automationIssues} issue(s)</em></div></section> : null}
+    <section className="admin-panel">
+      <div className="admin-panel-header"><div><h2>Manual follow-up drafts</h2><p>Review drafts created from individual lead cards. Approval records your decision; it does not bypass customer consent or start messaging.</p></div><span className="admin-status warning">{drafts.length} pending</span></div>
+      <div className="followup-records">
+        {drafts.map(draft => <article key={draft.id} className="followup-record"><div style={{padding:"14px"}}>
+          <strong>{draft.leads?.name || "Lead"} · {draft.properties?.title || "Property"}</strong>
+          <p><b>Reason:</b> {draft.reason}</p>{draft.notes ? <p><b>Notes:</b> {draft.notes}</p> : null}
+          <small>System assessment: {draft.eligibility_snapshot?.system_recommendation || "Review required"} · Created {formatDate(draft.created_at)}</small>
+          {draft.eligibility_snapshot?.opted_out ? <p role="alert">Customer opt-out is recorded. Approval cannot authorize messaging.</p> : null}
+          <div className="followup-actions"><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"approve")}>Approve draft</button><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"reject")}>Reject</button></div>
+        </div></article>)}
+        {!drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
+      </div>
+    </section>
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Client-property follow-ups</h2><p>Review each property-specific sequence, consent state, next action, delivery attempts and safe error summary. Pause/resume is temporary; Close deal records a terminal business outcome.</p></div>
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
