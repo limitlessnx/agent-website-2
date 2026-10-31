@@ -16,6 +16,7 @@ type SendInput = {
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
   strictTemplateContract?: { approvedVariableOrder: readonly string[] };
+  templateHeaderImageUrl?: string;
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
 type MetaWhatsAppCredentials={providerFamily:"meta";phoneNumberId:string;accessToken:string;graphVersion:string;source:"tenant_vault"|"legacy_env"};
@@ -114,6 +115,7 @@ function validateStrictTemplateContract(config: TemplateConfig | null, input: Se
   const approvedOrder = input.strictTemplateContract?.approvedVariableOrder;
   const configuredKeys = config?.variable_keys;
   const approvedMetadata = config?.metadata?.approved_variable_order;
+  if (config?.metadata?.provider_status !== "approved") throw new Error("The requested WhatsApp template has not been verified as approved by the provider.");
   if (!validVariableKeys(approvedOrder) || !validVariableKeys(configuredKeys) || !validVariableKeys(approvedMetadata)) {
     throw new Error("The approved WhatsApp template variable contract is invalid.");
   }
@@ -202,6 +204,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
   if(credentials.providerFamily==="twilio"){
     const statusCallback=`${String(process.env.FLUXKNIGHT_APP_URL||process.env.NEXT_PUBLIC_SITE_URL||"https://fluxknight.space").replace(/\/$/,"")}/api/whatsapp/twilio/status`;
     const contentSid=useTemplate?String(config?.metadata?.twilio_content_sid||"").trim():null;
+    if (useTemplate && input.templateHeaderImageUrl) throw new Error("Template header images are not configured for this Twilio Content template.");
     if(useTemplate&&!contentSid){
       throw new Error(`No Twilio Content SID is configured for WhatsApp template ${config?.template_name||""}.`);
     }
@@ -266,7 +269,13 @@ export async function sendWhatsAppMessage(input: SendInput) {
   if (useTemplate) {
     templateName = config!.template_name;
     const parameters = (Array.isArray(config!.variable_keys) ? config!.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
-    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(parameters.length ? { components: [{ type: "body", parameters }] } : {}) } };
+    const components: Array<Record<string, unknown>> = [];
+    if (input.templateHeaderImageUrl) {
+      if (!isDirectPublicImageUrl(input.templateHeaderImageUrl)) throw new Error("The template header must be a direct public image URL.");
+      components.push({ type: "header", parameters: [{ type: "image", image: { link: input.templateHeaderImageUrl } }] });
+    }
+    if (parameters.length) components.push({ type: "body", parameters });
+    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(components.length ? { components } : {}) } };
   } else {
     if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };
