@@ -107,6 +107,11 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
           }
           return;
         }
+        if (data.status === "unknown" || data.deliveryStatus === "unknown") {
+          setUncertain(true);
+          setError(data.message || "The provider result is uncertain. Reconcile this campaign before attempting another send.");
+          return;
+        }
         setResult({ status: data.status, attempted: data.attempted || 0, sent: data.sent || 0, delivered: data.delivered || 0, pendingDelivery: data.pendingDelivery || 0, failed: data.failed || 0, skipped: data.skipped || 0, templateName: data.templateName });
         requestIdRef.current = null;
       } catch (caught) {
