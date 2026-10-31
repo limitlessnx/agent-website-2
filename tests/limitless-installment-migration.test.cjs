@@ -17,6 +17,7 @@ const TEMPLATE_BEFORE = '20000000-0000-4000-8000-000000000001';
 const TEMPLATE_ON = '20000000-0000-4000-8000-000000000002';
 const TEMPLATE_AFTER = '20000000-0000-4000-8000-000000000003';
 const MIGRATION = 'supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql';
+const FLEXIBLE_MIGRATION = 'supabase/migrations/20261031120000_limitless_flexible_installment_reminders.sql';
 
 async function createDatabase() {
   const db = new PGlite();
@@ -99,6 +100,7 @@ async function createDatabase() {
     $$;
   `);
   await db.exec(fs.readFileSync(MIGRATION, 'utf8'));
+  await db.exec(fs.readFileSync(FLEXIBLE_MIGRATION, 'utf8'));
   await db.exec(`
     create trigger payment_records_sync_plan
     after insert or update or delete on payment_records
@@ -142,7 +144,9 @@ test('draft migration preserves zero placeholders and computes a future due-date
     await addPlan(db, PLAN_B, B, { due: dueA });
     assert.equal((await plan(db, PLAN_B)).next_reminder_at, null);
 
-    await addPlan(db, PLAN_C, A, { installment: 0, due: null });
+    await addPlan(db, PLAN_C, A, { installment: 0, due: dueA });
+    assert.equal((await plan(db, PLAN_C)).next_reminder_at.toISOString(), expectedA.toISOString());
+    await db.query('update payment_plans set next_due_date=null where id=$1', [PLAN_C]);
     assert.equal((await plan(db, PLAN_C)).next_due_date, null);
     assert.equal((await plan(db, PLAN_C)).next_reminder_at, null);
   } finally {
@@ -360,6 +364,32 @@ test('confirmed sends recur every two weeks at 10:00 Lagos until paid; missed wi
   }
 });
 
+test('a one-time catch-up send preserves the explicitly configured next reminder date', async () => {
+  const db = await createDatabase();
+  try {
+    await db.query(
+      `insert into reminder_templates(id,organization_id,timing_direction,timing_days,channel,enabled)
+       values ($1,$2,'on',0,'whatsapp',true)`,
+      [TEMPLATE_ON, A],
+    );
+    await addPlan(db, PLAN_A, A, { due: '2026-11-12', installment: 0 });
+    const catchUpAt = new Date('2026-10-31T09:00:00.000Z');
+    const expectedNextAt = new Date('2026-11-12T09:00:00.000Z');
+    await db.query('update payment_plans set reminder_template_id=$1,next_reminder_at=$2 where id=$3', [TEMPLATE_ON, catchUpAt, PLAN_A]);
+    const attempt = await db.query(
+      `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status,payload)
+       values ($1,$2,$3,$4,'pending',$5::jsonb) returning id`,
+      [A, PLAN_A, TEMPLATE_ON, catchUpAt, JSON.stringify({ catch_up: true, catch_up_for: '2026-10-28', catch_up_next_date: '2026-11-12' })],
+    );
+    await db.query("update reminder_attempts set status='sent',sent_at=$2 where id=$1", [attempt.rows[0].id, catchUpAt]);
+    const state = await plan(db, PLAN_A);
+    assert.equal(state.last_reminder_at.toISOString(), catchUpAt.toISOString());
+    assert.equal(state.next_reminder_at.toISOString(), expectedNextAt.toISOString());
+  } finally {
+    await db.close();
+  }
+});
+
 test('installment send authorization is tenant-scoped, STOP-first safe, idempotent, and rejects an ineligible plan', async () => {
   const db = await createDatabase();
   try {
@@ -421,12 +451,15 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
     const dueAfterStop = (await db.query("select ($1::date + interval '1 day')::date as due_date", [dueDate])).rows[0].due_date;
     await db.query('update payment_plans set next_due_date=$1 where id=$2', [dueAfterStop, PLAN_A]);
     const secondScheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
-    await insertAttempt(ATTEMPT_B, TEMPLATE_ON, secondScheduledFor);
+    await db.query('update payment_plans set installment_amount=0 where id=$1', [PLAN_A]);
+    const flexibleScheduledFor = (await plan(db, PLAN_A)).next_reminder_at;
+    await insertAttempt(ATTEMPT_B, TEMPLATE_ON, flexibleScheduledFor);
     const authorized = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
-      [A, PLAN_A, ATTEMPT_B, TEMPLATE_ON, secondScheduledFor, ['08123456789', '2348123456789']],
+      [A, PLAN_A, ATTEMPT_B, TEMPLATE_ON, flexibleScheduledFor, ['08123456789', '2348123456789']],
     )).rows[0].result;
     assert.equal(authorized.authorized, true);
+    assert.equal(Number((await db.query('select installment_amount from payment_plans where id=$1', [PLAN_A])).rows[0].installment_amount), 0);
     assert.ok((await db.query('select send_authorized_at from reminder_attempts where id=$1', [ATTEMPT_B])).rows[0].send_authorized_at);
     const replay = (await db.query(
       `select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6) as result`,
