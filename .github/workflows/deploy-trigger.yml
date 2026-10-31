@@ -12,6 +12,7 @@ on:
       - "src/trigger/**"
       - "lib/social-learning.ts"
       - "lib/ai/maia-runtime.ts"
+      - "lib/ai/maia-estate-context.ts"
       - "lib/ai/maia-trigger-runtime.ts"
       - "lib/ai/limitless-realty-maia.ts"
       - "lib/whatsapp-delivery.ts"

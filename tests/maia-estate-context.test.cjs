@@ -16,6 +16,12 @@ test('resolves a uniquely named estate from the trusted property-search payload'
   assert.equal(resolveNamedVerifiedPropertyId(message), 'property-dprince');
 });
 
+test('resolves a compact brand alias such as dprince builders against the full verified property title', () => {
+  const message = 'Is there any fee or preferred inspection date with dprince builders?\\n' +
+    payload([{ id: 'property-dprince', title: 'D Prince Builders Diamond Estate. Benin.' }]);
+  assert.equal(resolveNamedVerifiedPropertyId(message), 'property-dprince');
+});
+
 test('does not guess when the customer names only an ambiguous estate suffix', () => {
   const message = 'Tell me about Diamond Estate\n' + payload([
     { id: 'property-edo', title: 'D Prince Builders Diamond Estate. Benin.' },

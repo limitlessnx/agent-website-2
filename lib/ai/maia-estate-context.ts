@@ -56,10 +56,20 @@ export function resolveNamedVerifiedPropertyId(message: string): string | null {
     const title = normalize(rawTitle.split(".")[0]);
     const tokens = title.split(" ").filter((token) => token.length > 1);
     if (!tokens.length) return [];
-    const matched = tokens.filter((token) => normalizedMessage.split(" ").includes(token)).length;
+    const messageTokens = normalizedMessage.split(" ");
+    const matched = tokens.filter((token) => messageTokens.includes(token)).length;
     const ratio = matched / tokens.length;
-    if (ratio < 0.75 || matched < Math.min(3, tokens.length)) return [];
-    return [{ id, score: ratio * 1000 + tokens.length }];
+    const compactTitle = title.replace(/ /g, "");
+    const compactMessage = normalizedMessage.replace(/ /g, "");
+    // Customers often type brand names as one word ("dprince builders")
+    // while catalog titles preserve spacing ("D Prince Builders Diamond Estate").
+    // Match a distinctive catalog-name prefix anywhere in the customer's
+    // sentence, not only when the entire sentence is the estate name.
+    // Generic short suffixes such as "diamond estate" remain non-matching.
+    const distinctivePrefix = compactTitle.length >= 10 &&
+      compactMessage.includes(compactTitle.slice(0, Math.min(14, compactTitle.length)));
+    if (!distinctivePrefix && (ratio < 0.75 || matched < Math.min(3, tokens.length))) return [];
+    return [{ id, score: distinctivePrefix ? 2000 + compactMessage.length : ratio * 1000 + tokens.length }];
   }).sort((left, right) => right.score - left.score);
 
   if (!scored.length || (scored[1] && scored[1].score === scored[0].score)) return null;
