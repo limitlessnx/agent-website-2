@@ -96,6 +96,12 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
   const [localGroups, setLocalGroups] = useState(groups);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [followupLead, setFollowupLead] = useState<ProgressiveLead | null>(null);
+  const [followupProperties, setFollowupProperties] = useState<Array<{id:string;title:string}>>([]);
+  const [followupPropertyId, setFollowupPropertyId] = useState("");
+  const [followupReason, setFollowupReason] = useState("");
+  const [followupNotes, setFollowupNotes] = useState("");
+  const [followupLoading, setFollowupLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const filteredLeads = useMemo(() => {
@@ -378,6 +384,12 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
                     ) : (
                       <>
                         <button type="button" onClick={() => startEdit(lead)}><Edit3 size={15} />Edit</button>
+                        <button type="button" onClick={async () => {
+                          setFollowupLead(lead); setFollowupReason(""); setFollowupNotes(""); setFollowupPropertyId(""); setError(""); setMessage(""); setFollowupLoading(true);
+                          try { const response=await fetch("/api/limitless/followup-drafts"); const data=await response.json(); if(!response.ok)throw new Error(data.error||"Unable to load properties."); setFollowupProperties(data.properties||[]); }
+                          catch(caught){setFollowupLead(null);setError(caught instanceof Error?caught.message:"Unable to load properties.");}
+                          finally{setFollowupLoading(false);}
+                        }}><Send size={15}/>Add to follow-up</button>
                         {whatsapp !== "#" ? (
                           <a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15} />WhatsApp</a>
                         ) : (
@@ -397,6 +409,21 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
 
         {!filteredLeads.length ? <div className="admin-empty-state"><strong>No leads match this view.</strong><p>Clear the search or change the filters.</p></div> : null}
       </section>
+
+      {followupLead ? (
+        <div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFollowupLead(null);}} style={{position:"fixed",inset:0,zIndex:1000,display:"grid",placeItems:"center",padding:16,background:"rgba(3,6,20,.78)"}}>
+          <section role="dialog" aria-modal="true" aria-labelledby="followup-draft-title" className="admin-panel" style={{width:"min(560px,100%)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.4)"}}>
+            <div className="admin-panel-header"><div><h2 id="followup-draft-title">Create follow-up draft</h2><p>{followupLead.name||followupLead.phone}. Saving this draft will not send a message or start an active sequence.</p></div><button type="button" onClick={()=>setFollowupLead(null)}><X size={16}/>Close</button></div>
+            <div className="lead-edit-grid">
+              <label className="wide">Property / estate<select value={followupPropertyId} onChange={event=>setFollowupPropertyId(event.target.value)} disabled={followupLoading}><option value="">Select a property</option>{followupProperties.map(property=><option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
+              <label className="wide">Reason for follow-up<textarea value={followupReason} onChange={event=>setFollowupReason(event.target.value)} rows={3} placeholder="Why should this lead be followed up?"/></label>
+              <label className="wide">Additional notes<textarea value={followupNotes} onChange={event=>setFollowupNotes(event.target.value)} rows={3} placeholder="Context, objections, preferred timing..."/></label>
+            </div>
+            <p className="group-builder-note">You can save a draft even when the system marks a lead ineligible. Customer opt-outs and messaging consent restrictions remain hard safeguards before messages can be sent.</p>
+            <div className="group-builder-actions"><button type="button" disabled={isPending||followupLoading||!followupPropertyId||!followupReason.trim()} onClick={()=>{setError("");setMessage("");startTransition(async()=>{try{const response=await fetch("/api/limitless/followup-drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lead_id:followupLead.id,property_id:followupPropertyId,reason:followupReason,notes:followupNotes})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to save draft.");setMessage("Follow-up draft saved. Review it in Follow-up Control.");setFollowupLead(null);router.refresh();}catch(caught){setError(caught instanceof Error?caught.message:"Unable to save draft.");}});}}><Save size={15}/>Save as draft</button><button type="button" className="secondary" onClick={()=>setFollowupLead(null)}>Cancel</button></div>
+          </section>
+        </div>
+      ) : null}
 
       <section className="admin-panel">
         <div className="admin-panel-header">
