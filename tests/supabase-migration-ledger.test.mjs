@@ -43,6 +43,8 @@ const expectedPendingVersions = [
   "20261031120144",
   // Limitless Estate Brief template contract registration; reviewed in PR #308.
   "20261031123000",
+  // Previously applied 14:30 reminder-time migration restored to the local history.
+  "20261031125123",
   // Previous reminder-time migration followed by complete 19:30 alignment.
   "20261031142757",
   "20261031193000",
