@@ -47,7 +47,7 @@ const expectedPendingVersions = [
   "20261031125123",
   // Previous reminder-time migration followed by complete 19:30 alignment.
   "20261031142757",
-  "20261031193000",
+  "20261031181713",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
