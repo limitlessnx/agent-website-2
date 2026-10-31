@@ -6,6 +6,7 @@ import {
 } from "@/lib/n8n-api";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
 import { normalizeLeadPhone } from "@/lib/lead-profile-service";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 const ACTION_WORKFLOW_NAME = "Maia Action - Search Lead";
 const ACTION_WORKFLOW_ID = "ZdRPo2dzteuK5Gup";
@@ -174,16 +175,104 @@ async function runMaiaActionPayload(commandId: string, payload: Record<string, u
 export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
   if (!command.message.trim()) throw new Error("A campaign message is required.");
   if (!command.recipients.length) throw new Error("The campaign has no recipients.");
-  const payload = buildCampaignInput(command);
-  const { route, execution } = await runMaiaActionPayload(command.commandId, payload);
-  const summary = execution.summary;
-  const failedRecipients = summary.failed_recipients || [];
-  const immediateFailed = Number(summary.immediate_failed || failedRecipients.length || 0);
-  if (immediateFailed > 0 && Number(summary.accepted_by_whatsapp_api || summary.submitted || 0) === 0) {
-    const details = failedRecipients.map((item) => String(item.error || item.reason || item.message || JSON.stringify(item))).filter(Boolean).join("; ");
-    throw new Error(`WhatsApp rejected the campaign: ${details || summary.message || `${immediateFailed} recipient(s) failed.`}`);
+
+  const isEstateBrief = command.campaignType === "estate_brief_update" || command.templateName === "estate_brief_update";
+  const isUpdateTemplate = command.campaignType === "limitless_realty_update" || command.templateName === "limitless_realty_update_v2";
+  if (!isEstateBrief && !isUpdateTemplate) throw new Error("This campaign template has no verified direct WhatsApp route.");
+
+  const templateName = isEstateBrief ? "estate_brief_update" : "limitless_realty_update_v2";
+  const templatePurpose = isEstateBrief ? "estate_brief_update" : "limitless_realty_update";
+  const variableKeys = isEstateBrief
+    ? ["customer_name", "property_name", "property_location", "property_price", "selling_point"] as const
+    : ["customer_name", "main_update", "supporting_update", "response_prompt"] as const;
+  const paragraphs = splitCampaignParagraphs(command.message);
+  const acceptedRecipients: Array<Record<string, unknown>> = [];
+  const failedRecipients: Array<Record<string, unknown>> = [];
+  let templateSent = 0;
+
+  // Sequential delivery avoids an uncontrolled burst and keeps one provider result per recipient.
+  const uniqueRecipients = [...new Map(command.recipients.map((lead) => [normalizeLeadPhone(String(lead.phone || "")), lead])).values()]
+    .filter((lead) => normalizeLeadPhone(String(lead.phone || "")));
+
+  for (const lead of uniqueRecipients) {
+    const phone = normalizeLeadPhone(String(lead.phone || ""));
+    const variables: Record<string, string> = isEstateBrief
+      ? {
+          customer_name: String(lead.name || "there").trim() || "there",
+          property_name: String(command.propertyTitle || "").trim(),
+          property_location: String(command.propertyLocation || "").trim(),
+          property_price: String(command.propertyPrice || "").trim(),
+          selling_point: String(command.sellingPoint || command.message || "").trim(),
+        }
+      : {
+          customer_name: String(lead.name || "there").trim() || "there",
+          main_update: paragraphs[0] || command.message.trim(),
+          supporting_update: paragraphs[1] || "",
+          response_prompt: paragraphs[2] || "",
+        };
+
+    try {
+      const result = await sendWhatsAppMessage({
+        organizationId: "b15f21b4-5697-4d21-9421-8a34eae3476d",
+        to: phone,
+        deliveryMode: "template",
+        forceTemplate: true,
+        templatePurpose,
+        requestedTemplateName: templateName,
+        variables,
+        strictTemplateContract: { approvedVariableOrder: variableKeys },
+        ...(isEstateBrief && command.mediaUrl ? { templateHeaderImageUrl: command.mediaUrl } : {}),
+      });
+      templateSent += 1;
+      acceptedRecipients.push({
+        leadId: lead.id,
+        phone,
+        name: String(lead.name || "there"),
+        provider: result.provider || "whatsapp",
+        providerMessageId: result.providerMessageId || null,
+        status: "accepted",
+      });
+    } catch (error) {
+      failedRecipients.push({
+        leadId: lead.id,
+        phone,
+        name: String(lead.name || "there"),
+        error: error instanceof Error ? error.message : "WhatsApp provider dispatch failed.",
+      });
+    }
   }
-  return { route, executionId: execution.executionId, path: execution.path, summary, attempted: Number(summary.attempted || command.recipients.length), accepted: Number(summary.accepted_by_whatsapp_api || summary.submitted || 0), failed: immediateFailed, skipped: Number(summary.skipped || 0), pendingDelivery: Number(summary.pending_delivery_confirmation || 0), freeFormSent: Number(summary.free_form_sent || 0), templateSent: Number(summary.template_sent || 0), acceptedRecipients: summary.accepted_recipients || [], failedRecipients, status: String(summary.status || "submitted"), message: String(summary.message || "Campaign submitted to WhatsApp.") };
+
+  const accepted = acceptedRecipients.length;
+  const failed = failedRecipients.length;
+  return {
+    route: { provider: "whatsapp_delivery_gateway", verified: true },
+    executionId: command.commandId,
+    path: ["campaign_api", "whatsapp_delivery_gateway", "meta_or_twilio_provider"],
+    summary: {
+      attempted: uniqueRecipients.length,
+      accepted_by_whatsapp_api: accepted,
+      immediate_failed: failed,
+      pending_delivery_confirmation: accepted,
+      free_form_sent: 0,
+      template_sent: templateSent,
+      status: accepted > 0 ? "submitted" : "failed",
+      accepted_recipients: acceptedRecipients,
+      failed_recipients: failedRecipients,
+    },
+    attempted: uniqueRecipients.length,
+    accepted,
+    failed,
+    skipped: 0,
+    pendingDelivery: accepted,
+    freeFormSent: 0,
+    templateSent,
+    acceptedRecipients,
+    failedRecipients,
+    status: accepted > 0 ? "submitted" : "failed",
+    message: accepted > 0
+      ? `${accepted} template message(s) accepted by WhatsApp; delivery receipts are pending.`
+      : "WhatsApp did not accept any campaign messages.",
+  };
 }
 
 export async function dispatchMaiaWhatsAppFollowUp(command: MaiaWhatsAppFollowUpAction) {
