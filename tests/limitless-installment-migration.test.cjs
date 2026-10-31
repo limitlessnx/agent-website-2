@@ -17,7 +17,7 @@ const TEMPLATE_BEFORE = '20000000-0000-4000-8000-000000000001';
 const TEMPLATE_ON = '20000000-0000-4000-8000-000000000002';
 const TEMPLATE_AFTER = '20000000-0000-4000-8000-000000000003';
 const MIGRATION = 'supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql';
-const FLEXIBLE_MIGRATION = 'supabase/migrations/20261031120000_limitless_flexible_installment_reminders.sql';
+const FLEXIBLE_MIGRATION = 'supabase/migrations/20261031120144_limitless_flexible_installment_reminders.sql';
 const TIME_MIGRATION = 'supabase/migrations/20261031142757_limitless_installment_reminder_time_1630_lagos.sql';
 const TIME_1930_MIGRATION = 'supabase/migrations/20261031193000_limitless_installment_reminder_time_1930_lagos.sql';
 
