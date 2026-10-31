@@ -19,6 +19,7 @@ const TEMPLATE_AFTER = '20000000-0000-4000-8000-000000000003';
 const MIGRATION = 'supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql';
 const FLEXIBLE_MIGRATION = 'supabase/migrations/20261031120000_limitless_flexible_installment_reminders.sql';
 const TIME_MIGRATION = 'supabase/migrations/20261031142757_limitless_installment_reminder_time_1630_lagos.sql';
+const TIME_1930_MIGRATION = 'supabase/migrations/20261031193000_limitless_installment_reminder_time_1930_lagos.sql';
 
 async function createDatabase() {
   const db = new PGlite();
@@ -103,6 +104,7 @@ async function createDatabase() {
   await db.exec(fs.readFileSync(MIGRATION, 'utf8'));
   await db.exec(fs.readFileSync(FLEXIBLE_MIGRATION, 'utf8'));
   await db.exec(fs.readFileSync(TIME_MIGRATION, 'utf8'));
+  await db.exec(fs.readFileSync(TIME_1930_MIGRATION, 'utf8'));
   await db.exec(`
     create trigger payment_records_sync_plan
     after insert or update or delete on payment_records
@@ -254,7 +256,7 @@ test('reminder migration preserves existing queued/cancelled states and adds amb
   }
 });
 
-test('confirmed sends recur every two weeks at 16:30 Lagos until paid; missed windows skip forward and failures do not', async () => {
+test('confirmed sends recur every two weeks at 19:30 Lagos until paid; missed windows skip forward and failures do not', async () => {
   const db = await createDatabase();
   try {
     await db.query(
@@ -335,7 +337,7 @@ test('confirmed sends recur every two weeks at 16:30 Lagos until paid; missed wi
     state = await plan(db, PLAN_C);
     assert.ok(state.next_reminder_at.getTime() > Date.now());
     assert.equal(state.last_reminder_at, null);
-    assert.equal(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(state.next_reminder_at), '16:30');
+    assert.equal(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(state.next_reminder_at), '19:30');
 
     const crossTenant = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status)
@@ -375,8 +377,8 @@ test('a one-time catch-up send preserves the explicitly configured next reminder
       [TEMPLATE_ON, A],
     );
     await addPlan(db, PLAN_A, A, { due: '2026-11-12', installment: 0 });
-    const catchUpAt = new Date('2026-10-31T15:30:00.000Z');
-    const expectedNextAt = new Date('2026-11-12T15:30:00.000Z');
+    const catchUpAt = new Date('2026-10-31T18:30:00.000Z');
+    const expectedNextAt = new Date('2026-11-12T18:30:00.000Z');
     await db.query('update payment_plans set reminder_template_id=$1,next_reminder_at=$2 where id=$3', [TEMPLATE_ON, catchUpAt, PLAN_A]);
     const attempt = await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status,payload)
@@ -486,8 +488,8 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
   }
 });
 
-test('Limitless installment runtime uses the same 16:30 Lagos cursor as the database', () => {
+test('Limitless installment runtime uses the same 19:30 Lagos cursor as the database', () => {
   const runtime = fs.readFileSync('lib/limitless-installment-reminder-runtime.ts', 'utf8');
-  assert.match(runtime, /const REMINDER_LOCAL_TIME = "16:30:00"/);
+  assert.match(runtime, /const REMINDER_LOCAL_TIME = "19:30:00"/);
   assert.doesNotMatch(runtime, /const REMINDER_LOCAL_TIME = "10:00:00"/);
 });
