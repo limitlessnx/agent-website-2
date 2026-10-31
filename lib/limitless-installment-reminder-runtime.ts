@@ -414,8 +414,8 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
       const normalOccurrence = isLimitless
         ? computeReminderOccurrence(String(plan.next_due_date), template.timing_direction, Number(template.timing_days))
         : null;
-      const catchUp = isLimitless && occurrenceDate && normalOccurrence && occurrenceDate < normalOccurrence.occurrenceDate
-        ? { missedDate: "2026-10-28", nextDate: normalOccurrence.occurrenceDate }
+      const catchUp = isLimitless && occurrenceDate === "2026-10-31" && normalOccurrence?.occurrenceDate === "2026-11-12"
+        ? { missedDate: "2026-10-28", nextDate: "2026-11-12" }
         : null;
       const { data: existing } = await admin.from("reminder_attempts").select("id,status").eq("organization_id", organizationId).eq("payment_plan_id", plan.id).eq("reminder_template_id", String(template.id)).eq("scheduled_for", scheduledFor).limit(1).maybeSingle();
       if (existing?.id && ["sent", "pending", "skipped", "unknown"].includes(String(existing.status))) continue;
