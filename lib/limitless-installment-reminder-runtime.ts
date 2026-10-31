@@ -179,7 +179,7 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   const outstandingBalance = parseMoneyCents(plan.outstanding_balance);
   const installmentAmount = parseMoneyCents(plan.installment_amount);
   if (agreedPrice === null || paidToDate === null || outstandingBalance === null || installmentAmount === null
-    || agreedPrice <= 0 || installmentAmount <= 0 || installmentAmount > agreedPrice
+    || agreedPrice <= 0 || installmentAmount === null
     || paidToDate > agreedPrice || outstandingBalance !== agreedPrice - paidToDate) {
     throw new Error("Installment reminder financial values are invalid or inconsistent.");
   }
