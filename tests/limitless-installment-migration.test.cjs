@@ -364,6 +364,32 @@ test('confirmed sends recur every two weeks at 10:00 Lagos until paid; missed wi
   }
 });
 
+test('a one-time catch-up send preserves the explicitly configured next reminder date', async () => {
+  const db = await createDatabase();
+  try {
+    await db.query(
+      `insert into reminder_templates(id,organization_id,timing_direction,timing_days,channel,enabled)
+       values ($1,$2,'on',0,'whatsapp',true)`,
+      [TEMPLATE_ON, A],
+    );
+    await addPlan(db, PLAN_A, A, { due: '2026-11-12', installment: 0 });
+    const catchUpAt = new Date('2026-10-31T09:00:00.000Z');
+    const expectedNextAt = new Date('2026-11-12T09:00:00.000Z');
+    await db.query('update payment_plans set reminder_template_id=$1,next_reminder_at=$2 where id=$3', [TEMPLATE_ON, catchUpAt, PLAN_A]);
+    const attempt = await db.query(
+      `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status,payload)
+       values ($1,$2,$3,$4,'pending',$5::jsonb) returning id`,
+      [A, PLAN_A, TEMPLATE_ON, catchUpAt, JSON.stringify({ catch_up: true, catch_up_for: '2026-10-28', catch_up_next_date: '2026-11-12' })],
+    );
+    await db.query("update reminder_attempts set status='sent',sent_at=$2 where id=$1", [attempt.rows[0].id, catchUpAt]);
+    const state = await plan(db, PLAN_A);
+    assert.equal(state.last_reminder_at.toISOString(), catchUpAt.toISOString());
+    assert.equal(state.next_reminder_at.toISOString(), expectedNextAt.toISOString());
+  } finally {
+    await db.close();
+  }
+});
+
 test('installment send authorization is tenant-scoped, STOP-first safe, idempotent, and rejects an ineligible plan', async () => {
   const db = await createDatabase();
   try {
