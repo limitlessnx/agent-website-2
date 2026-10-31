@@ -24,7 +24,7 @@ test("Limitless occurrences use next_due_date and deterministic Lagos local time
   assert.match(source, /direction === "before"/);
   assert.match(source, /direction === "after"/);
   assert.match(source, /const LAGOS_TIME_ZONE = "Africa\/Lagos"/);
-  assert.match(source, /const REMINDER_LOCAL_TIME = "16:30:00"/);
+  assert.match(source, /const REMINDER_LOCAL_TIME = "19:30:00"/);
   assert.match(source, /new Date\(`\$\{occurrenceDate\}T\$\{REMINDER_LOCAL_TIME\}\+01:00`\)/);
   assert.match(source, /classifyReminderOccurrence\(occurrenceDate, scheduledFor, now\)/);
   assert.match(source, /missed_reminder_window/);
@@ -49,13 +49,13 @@ test("Limitless reminders only send on their Lagos calendar day and missed windo
   assert.equal(scheduleHelpers.classifyReminderOccurrence(after.occurrenceDate, after.scheduledFor, new Date("2026-10-29T16:35:00Z")), "missed");
 });
 
-test("Limitless installment reminder cursor starts at 16:30 Lagos and repeats every 14 days independently of the due-date anchor", () => {
+test("Limitless installment reminder cursor starts at 19:30 Lagos and repeats every 14 days independently of the due-date anchor", () => {
   const first = scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, null);
   assert.equal(first.occurrenceDate, "2026-10-28");
-  assert.equal(first.scheduledFor, "2026-10-28T15:30:00.000Z");
-  const next = scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T15:30:00.000Z");
+  assert.equal(first.scheduledFor, "2026-10-28T18:30:00.000Z");
+  const next = scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T18:30:00.000Z");
   assert.equal(next.occurrenceDate, "2026-11-11");
-  assert.equal(next.scheduledFor, "2026-11-11T15:30:00.000Z");
+  assert.equal(next.scheduledFor, "2026-11-11T18:30:00.000Z");
   assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T15:00:00.000Z"), null);
   assert.equal(scheduleHelpers.computeLimitlessReminderOccurrence("2026-10-28", "on", 0, "2026-11-11T09:00:00.001Z"), null);
   assert.equal(scheduleHelpers.classifyReminderOccurrence(next.occurrenceDate, next.scheduledFor, new Date("2026-11-11T15:29:00Z")), "waiting");
@@ -218,7 +218,7 @@ test("Limitless invalid monetary fields create no attempt and authorization deni
 
   let providerCalled = false;
   let rpcArgs = null;
-  const deniedAttempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T15:30:00.000Z", status: "failed", retry_count: 0 };
+  const deniedAttempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T18:30:00.000Z", status: "failed", retry_count: 0 };
   class RetryQuery {
     constructor(table) { this.table = table; }
     select() { return this; }
@@ -301,7 +301,7 @@ test("explicit provider rejection remains manually retryable after the one-use s
     frequency: "biweekly", next_due_date: "2026-11-01", final_due_date: null, reminder_template_id: "template-a",
     handover_agent_name: "Agent", handover_agent_phone: "2348000000000", status: "active", reminders_enabled: true,
   };
-  const attempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T15:30:00.000Z", status: "failed", retry_count: 1, send_authorized_at: "2026-10-28T08:00:00.000Z" };
+  const attempt = { id: "attempt-a", organization_id: LIMITLESS_ID, payment_plan_id: "plan-a", reminder_template_id: "template-a", scheduled_for: "2026-11-01T18:30:00.000Z", status: "failed", retry_count: 1, send_authorized_at: "2026-10-28T08:00:00.000Z" };
   const template = { id: "template-a", organization_id: LIMITLESS_ID, name: "On", timing_direction: "on", timing_days: 0, channel: "whatsapp", message_template: "Hello {{client_name}} {{property_title}} {{amount_paid}} {{outstanding_balance}} {{handover_agent_name}} {{handover_agent_phone}} {{company_name}}", enabled: true };
   const variableKeys = ["client_name", "property_title", "amount_paid", "outstanding_balance", "handover_agent_name", "handover_agent_phone", "company_name"];
   const approved = { template_name: "approved", language_code: "en", variable_keys: variableKeys, metadata: { approved_variable_order: variableKeys, company_name: "Company" }, status: "active" };
