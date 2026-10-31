@@ -147,6 +147,26 @@ test('draft migration preserves zero placeholders and computes a 19:30 Lagos cur
     assert.ok(insertedPlan.next_reminder_at);
     assert.equal(insertedPlan.next_reminder_at.toISOString(), expectedA.toISOString());
 
+    // Exercise the production authorization function with a synthetic plan and
+    // a 19:30 cursor. This is database-to-send-authorization E2E coverage only;
+    // no WhatsApp provider is called by this test.
+    await db.query(
+      "insert into leads(id,organization_id,phone,opted_out) values($1,$2,$3,false)",
+      [LEAD_A, A, "08123456789"],
+    );
+    await db.query("update payment_plans set contact_id=$1, reminder_template_id=$2 where id=$3", [LEAD_A, TEMPLATE_BEFORE, PLAN_A]);
+    const authorizedCursor = (await plan(db, PLAN_A)).next_reminder_at;
+    await db.query(
+      "insert into reminder_attempts(id,organization_id,payment_plan_id,reminder_template_id,scheduled_for,status) values($1,$2,$3,$4,$5,'pending')",
+      [ATTEMPT_A, A, PLAN_A, TEMPLATE_BEFORE, authorizedCursor],
+    );
+    const authorization = await db.query(
+      "select public.authorize_limitless_installment_reminder_send($1,$2,$3,$4,$5,$6::text[]) as result",
+      [A, PLAN_A, ATTEMPT_A, TEMPLATE_BEFORE, authorizedCursor, ["08123456789", "2348123456789"]],
+    );
+    assert.equal(authorization.rows[0].result.authorized, true);
+    assert.equal((await db.query("select send_authorized_at from reminder_attempts where id=$1", [ATTEMPT_A])).rows[0].send_authorized_at !== null, true);
+
     const dueB = (await db.query("select (current_date + 30)::text as due_date")).rows[0].due_date;
     await db.query('update payment_plans set next_due_date=$1 where id=$2', [dueB, PLAN_A]);
     const expectedB = (await db.query("select (((($1::date - 3)::timestamp + interval '19 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueB])).rows[0].at;
