@@ -14,7 +14,7 @@ values (
   'b15f21b4-5697-4d21-9421-8a34eae3476d',
   'estate_brief_update',
   'estate_brief_update',
-  'en_US',
+  'en',
   '["customer_name","property_name","property_location","property_price","selling_point"]'::jsonb,
   'active',
   jsonb_build_object(
@@ -24,6 +24,7 @@ values (
     'approved_variable_order', jsonb_build_array('customer_name','property_name','property_location','property_price','selling_point'),
     'header_image_required', true,
     'approval_source', 'user_confirmed_meta_approval',
+    'language_code_source', 'meta_whatsapp_manager_english_template',
     'organization_slug', 'limitless-realty'
   ),
   now()
