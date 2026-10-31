@@ -125,7 +125,7 @@ async function plan(db, id) {
   return (await db.query('select organization_id,total_paid,outstanding_balance,next_due_date,status,reminders_enabled,last_reminder_at,next_reminder_at from payment_plans where id=$1', [id])).rows[0];
 }
 
-test('draft migration preserves zero placeholders and computes a future due-date cursor only for Limitless', async () => {
+test('draft migration preserves zero placeholders and computes a 19:30 Lagos cursor only for Limitless', async () => {
   const db = await createDatabase();
   try {
     await db.query(
@@ -133,16 +133,23 @@ test('draft migration preserves zero placeholders and computes a future due-date
        values ($1,$4,'before',3,'whatsapp',true),($2,$4,'on',0,'whatsapp',true),($3,$4,'after',3,'whatsapp',true)`,
       [TEMPLATE_BEFORE, TEMPLATE_ON, TEMPLATE_AFTER, A],
     );
+    const definitions = await db.query(`select proname, pg_get_functiondef(oid) as definition from pg_proc where proname in ('sync_limitless_payment_plan_reminder_cursor','authorize_limitless_installment_reminder_send','sync_payment_plan_reminder_state')`);
+    const byName = Object.fromEntries(definitions.rows.map(row => [row.proname, row.definition]));
+    assert.match(byName.sync_limitless_payment_plan_reminder_cursor, /interval '19 hours 30 minutes'/);
+    assert.doesNotMatch(byName.sync_limitless_payment_plan_reminder_cursor, /interval '10 hours'/);
+    assert.match(byName.authorize_limitless_installment_reminder_send, /time '19:30:00'/);
+    assert.match(byName.authorize_limitless_installment_reminder_send, /interval '19 hours 30 minutes'/);
+    assert.match(byName.sync_payment_plan_reminder_state, /time '19:30'/);
     const dueA = (await db.query("select (current_date + 20)::text as due_date")).rows[0].due_date;
     await addPlan(db, PLAN_A, A, { due: dueA });
-    const expectedA = (await db.query("select (((($1::date - 3)::timestamp + interval '16 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
+    const expectedA = (await db.query("select (((($1::date - 3)::timestamp + interval '19 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
     const insertedPlan = await plan(db, PLAN_A);
     assert.ok(insertedPlan.next_reminder_at);
     assert.equal(insertedPlan.next_reminder_at.toISOString(), expectedA.toISOString());
 
     const dueB = (await db.query("select (current_date + 30)::text as due_date")).rows[0].due_date;
     await db.query('update payment_plans set next_due_date=$1 where id=$2', [dueB, PLAN_A]);
-    const expectedB = (await db.query("select (((($1::date - 3)::timestamp + interval '16 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueB])).rows[0].at;
+    const expectedB = (await db.query("select (((($1::date - 3)::timestamp + interval '19 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueB])).rows[0].at;
     assert.equal((await plan(db, PLAN_A)).next_reminder_at.toISOString(), expectedB.toISOString());
 
     await addPlan(db, PLAN_B, B, { due: dueA });
@@ -268,7 +275,7 @@ test('confirmed sends recur every two weeks at 19:30 Lagos until paid; missed wi
     await addPlan(db, PLAN_A, A, { due: dueA });
     await db.query('update payment_plans set reminder_template_id=$1 where id=$2', [TEMPLATE_ON, PLAN_A]);
     const firstAt = (await plan(db, PLAN_A)).next_reminder_at;
-    const expectedFirst = (await db.query("select (((($1::date)::timestamp + interval '16 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
+    const expectedFirst = (await db.query("select (((($1::date)::timestamp + interval '19 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [dueA])).rows[0].at;
     assert.equal(firstAt.toISOString(), expectedFirst.toISOString());
 
     const first = await db.query(
@@ -298,7 +305,7 @@ test('confirmed sends recur every two weeks at 19:30 Lagos until paid; missed wi
     await db.query('insert into payment_records(payment_plan_id,organization_id,amount) values ($1,$2,1000)', [PLAN_A, A]);
     state = await plan(db, PLAN_A);
     const advancedDueDate = (await db.query("select ($1::date + interval '14 days')::date as due_date", [dueA])).rows[0].due_date;
-    const nextInstallmentAt = (await db.query("select (((($1::date)::timestamp + interval '16 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [advancedDueDate])).rows[0].at;
+    const nextInstallmentAt = (await db.query("select (((($1::date)::timestamp + interval '19 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [advancedDueDate])).rows[0].at;
     assert.equal(state.next_due_date.toISOString().slice(0, 10), advancedDueDate.toISOString().slice(0, 10));
     assert.equal(state.next_reminder_at.toISOString(), nextInstallmentAt.toISOString());
 
@@ -328,7 +335,7 @@ test('confirmed sends recur every two weeks at 19:30 Lagos until paid; missed wi
     const missedDueDate = (await db.query("select (current_date - 40)::text as due_date")).rows[0].due_date;
     await addPlan(db, PLAN_C, A, { due: missedDueDate });
     await db.query('update payment_plans set reminder_template_id=$1 where id=$2', [TEMPLATE_ON, PLAN_C]);
-    const missedAt = (await db.query("select (((($1::date)::timestamp + interval '16 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [missedDueDate])).rows[0].at;
+    const missedAt = (await db.query("select (((($1::date)::timestamp + interval '19 hours 30 minutes') at time zone 'Africa/Lagos')) as at", [missedDueDate])).rows[0].at;
     await db.query(
       `insert into reminder_attempts(organization_id,payment_plan_id,reminder_template_id,scheduled_for,status,error_message)
        values ($1,$2,$3,$4,'skipped','missed_reminder_window')`,
@@ -488,7 +495,7 @@ test('installment send authorization is tenant-scoped, STOP-first safe, idempote
   }
 });
 
-test('Limitless installment runtime uses the same 19:30 Lagos cursor as the database', () => {
+test('Limitless installment runtime uses the same 19:30 Lagos cursor as every database path', () => {
   const runtime = fs.readFileSync('lib/limitless-installment-reminder-runtime.ts', 'utf8');
   assert.match(runtime, /const REMINDER_LOCAL_TIME = "19:30:00"/);
   assert.doesNotMatch(runtime, /const REMINDER_LOCAL_TIME = "10:00:00"/);
