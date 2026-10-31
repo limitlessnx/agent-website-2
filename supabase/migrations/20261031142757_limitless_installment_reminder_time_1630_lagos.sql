@@ -7,6 +7,8 @@ begin
   v_definition := pg_get_functiondef('public.sync_payment_plan_reminder_state()'::regprocedure);
   if position('time ''14:30''' in v_definition) > 0 then
     v_definition := replace(v_definition, 'time ''14:30''', 'time ''16:30''');
+  elsif position('time ''10:00''' in v_definition) > 0 then
+    v_definition := replace(v_definition, 'time ''10:00''', 'time ''16:30''');
   elsif position('time ''16:30''' in v_definition) = 0 then
     raise exception 'Unexpected reminder schedule function; refusing unsafe replacement';
   end if;
