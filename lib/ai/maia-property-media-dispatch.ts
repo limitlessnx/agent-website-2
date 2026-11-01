@@ -2,6 +2,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export type MaiaPropertyMediaDispatch = {
   commandId: string;
+  organizationId: string;
   recipient: string;
   propertyId: string;
   propertyTitle: string;
@@ -31,7 +32,7 @@ export async function dispatchMaiaPropertyMedia(command: MaiaPropertyMediaDispat
 
   const caption = String(command.caption || command.propertyTitle || "Property media").trim().slice(0, 900);
   const delivery = await sendWhatsAppMessage({
-    organizationId: "b15f21b4-5697-4d21-9421-8a34eae3476d",
+    organizationId: command.organizationId,
     to: phone,
     text: caption,
     lastCustomerMessageAt: command.lastCustomerMessageAt,
