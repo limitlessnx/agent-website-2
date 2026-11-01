@@ -81,11 +81,7 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
   return parents.map((parent) => {
     const campaignId = text(parent.campaign_id || parent.id);
     const trackingRows = children.filter((row) => String(row.campaign_id || "") === campaignId);
-    const campaignAttempts = attemptRows.filter((row) => {
-      if (row.organization_id !== organizationId) return false;
-      const request = object(row.request_payload);
-      return text(request.campaign_id) === campaignId;
-    });
+    const campaignAttempts = attemptRows.filter((row) => row.organization_id === organizationId);
     // Webhook receipts update whatsapp_delivery_attempts. Merge those receipts
     // by provider message ID so a callback is not lost from the report merely
     // because the campaign-recipient row was written on a later async step.
@@ -111,7 +107,7 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
     const sentRows = rows.filter((row) => ["sent", "delivered", "read"].includes(normalized(row.delivery_status)));
     const failedRows = rows.filter((row) => normalized(row.delivery_status) === "failed" || normalized(row.lifecycle_status) === "failed");
     const providerFailed = number(response.failed);
-    const failed = Math.max(providerFailed, failedRows.length);
+    const failed = rows.length > 0 ? failedRows.length : providerFailed;
     const accepted = acceptedRows.length || number(response.accepted ?? response.sent);
     const skipped = number(response.skipped);
     const delivered = deliveredRows.length;
@@ -188,13 +184,22 @@ export async function getDetailedCampaignReports(organizationId: string, limit =
   const inFilter = `(${campaignIds.join(",")})`;
   const childUrl = `${url}/rest/v1/real_estate_outbound_tracking?select=${columns}&organization_id=eq.${org}&outbound_kind=eq.campaign_recipient&campaign_id=in.${encodeURIComponent(inFilter)}&order=created_at.asc&limit=10000`;
   const recipientRows = await fetchAllPages(childUrl, key, 1000, 10000);
-  return projectCampaignReports(organizationId, parentRows, recipientRows, limit);
-}  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,created_at";
+
+  // Dispatch rows carry campaign_id; Meta webhook receipt rows do not. First
+  // resolve this campaign's provider IDs, then fetch every receipt for those IDs.
+  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,created_at";
   const attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = [];
   for (const campaignId of campaignIds) {
     const containment = encodeURIComponent(JSON.stringify({ campaign_id: campaignId }));
-    const attemptUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&request_payload=cs.${containment}&order=created_at.asc&limit=10000`;
-    attemptRows.push(...await fetchAllPages(attemptUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>);
+    const dispatchUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&request_payload=cs.${containment}&order=created_at.asc&limit=10000`;
+    const dispatchRows = await fetchAllPages(dispatchUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>;
+    const messageIds = [...new Set(dispatchRows.map((row) => text(row.provider_message_id)).filter(Boolean))];
+    attemptRows.push(...dispatchRows);
+    if (messageIds.length) {
+      const messageFilter = `(${messageIds.map((id) => `"${id.replace(/"/g, "\\\"")}"`).join(",")})`;
+      const receiptUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&provider_message_id=in.${encodeURIComponent(messageFilter)}&order=created_at.asc&limit=10000`;
+      attemptRows.push(...await fetchAllPages(receiptUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>);
+    }
   }
-  return projectCampaignReports(organizationId, parentRows, recipientRows, limit);
+  return projectCampaignReports(organizationId, parentRows, recipientRows, limit, attemptRows);
 }
