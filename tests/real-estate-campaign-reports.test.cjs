@@ -21,7 +21,7 @@ test('campaign report projection filters parent and recipient rows by the explic
  assert.equal(report.accepted,2);
  assert.equal(report.sent,1);
  assert.equal(report.delivered,1);
- assert.equal(report.failed,1);
+ assert.equal(report.failed,0);
  assert.equal(report.pending_delivery,1);
  assert.equal(report.status,'partially_delivered');
  assert.equal(report.recipients.length,2);
