@@ -189,4 +189,12 @@ export async function getDetailedCampaignReports(organizationId: string, limit =
   const childUrl = `${url}/rest/v1/real_estate_outbound_tracking?select=${columns}&organization_id=eq.${org}&outbound_kind=eq.campaign_recipient&campaign_id=in.${encodeURIComponent(inFilter)}&order=created_at.asc&limit=10000`;
   const recipientRows = await fetchAllPages(childUrl, key, 1000, 10000);
   return projectCampaignReports(organizationId, parentRows, recipientRows, limit);
+}  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,created_at";
+  const attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = [];
+  for (const campaignId of campaignIds) {
+    const containment = encodeURIComponent(JSON.stringify({ campaign_id: campaignId }));
+    const attemptUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&request_payload=cs.${containment}&order=created_at.asc&limit=10000`;
+    attemptRows.push(...await fetchAllPages(attemptUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>);
+  }
+  return projectCampaignReports(organizationId, parentRows, recipientRows, limit);
 }
