@@ -70,7 +70,7 @@ function maskedRecipient(value: unknown) {
   return digits.length >= 4 ? `•••${digits.slice(-4)}` : "";
 }
 
-export function projectCampaignReports(organizationId: string, parentRows: TrackingRow[], recipientRows: TrackingRow[], limit = 50): DetailedCampaignReport[] {
+export function projectCampaignReports(organizationId: string, parentRows: TrackingRow[], recipientRows: TrackingRow[], limit = 50, attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = []): DetailedCampaignReport[] {
   if (!organizationId) throw new Error("Organization ID is required to read campaign reports.");
   const parents = parentRows
     .filter((row) => row.organization_id === organizationId && row.outbound_kind === "campaign")
@@ -80,7 +80,28 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
 
   return parents.map((parent) => {
     const campaignId = text(parent.campaign_id || parent.id);
-    const rows = children.filter((row) => String(row.campaign_id || "") === campaignId);
+    const trackingRows = children.filter((row) => String(row.campaign_id || "") === campaignId);
+    const campaignAttempts = attemptRows.filter((row) => {
+      if (row.organization_id !== organizationId) return false;
+      const request = object(row.request_payload);
+      return text(request.campaign_id) === campaignId;
+    });
+    // Webhook receipts update whatsapp_delivery_attempts. Merge those receipts
+    // by provider message ID so a callback is not lost from the report merely
+    // because the campaign-recipient row was written on a later async step.
+    const attemptByMessageId = new Map<string, TrackingRow>();
+    for (const attempt of campaignAttempts) {
+      const id = text(attempt.provider_message_id);
+      if (id) attemptByMessageId.set(id, { ...attempt, delivery_status: text(attempt.status) || "unknown", error_code: attempt.error_code, error_message: attempt.error_message });
+    }
+    const rowsByMessageId = new Map<string, TrackingRow>();
+    for (const row of trackingRows) {
+      const id = text(row.provider_message_id);
+      const receipt = id ? attemptByMessageId.get(id) : undefined;
+      rowsByMessageId.set(id || row.id, receipt ? { ...row, delivery_status: receipt.delivery_status, error_code: receipt.error_code, error_message: receipt.error_message } : row);
+    }
+    for (const [id, attempt] of attemptByMessageId) if (!rowsByMessageId.has(id)) rowsByMessageId.set(id, attempt);
+    const rows = [...rowsByMessageId.values()];
     const metadata = object(parent.metadata);
     const response = object(metadata.response);
     const attempted = number(metadata.attempted ?? response.attempted);
