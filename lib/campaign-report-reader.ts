@@ -89,7 +89,15 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
     for (const attempt of campaignAttempts) {
       const response = object((attempt as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
       const id = text(attempt.provider_message_id || response.providerMessageId);
-      if (id) attemptByMessageId.set(id, { ...attempt, provider_message_id: id, delivery_status: text(attempt.status) || "unknown", error_code: attempt.error_code, error_message: attempt.error_message });
+      if (id) {
+        const existing = attemptByMessageId.get(id);
+        const nextStatus = text(attempt.status) || "unknown";
+        // Dispatch acceptance is not a delivery receipt and must never replace
+        // a sent/delivered/read/failed webhook status, even if written later.
+        if (!(normalized(nextStatus) === "accepted" && existing && normalized(existing.delivery_status) !== "accepted")) {
+          attemptByMessageId.set(id, { ...attempt, provider_message_id: id, delivery_status: nextStatus, error_code: attempt.error_code, error_message: attempt.error_message });
+        }
+      }
     }
     const rowsByMessageId = new Map<string, TrackingRow>();
     for (const row of trackingRows) {
