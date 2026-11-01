@@ -103,7 +103,7 @@ test('Limitless strict template validation blocks missing or mismatched required
   strictTemplateContract:{approvedVariableOrder:order},
   variables:validValues,
  };
- const base={template_name:'unit_test_template',language_code:'en',variable_keys:order,status:'active',metadata:{approved_variable_order:order}};
+ const base={template_name:'unit_test_template',language_code:'en',variable_keys:order,status:'active',provider_status:'approved',metadata:{approved_variable_order:order}};
 
  for(const invalid of [
   {...base,metadata:{}},
