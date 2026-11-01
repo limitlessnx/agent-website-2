@@ -88,13 +88,13 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
     });
     const campaignMessageIds = new Set(campaignDispatchRows.map((row) => {
       const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
-      return text(row.provider_message_id || response.providerMessageId);
+      return text(row.provider_message_id || (row as TrackingRow & { response_message_id?: string }).response_message_id || response.providerMessageId);
     }).filter(Boolean));
     const campaignAttempts = attemptRows.filter((row) => {
       if (row.organization_id !== organizationId) return false;
       const request = object((row as TrackingRow & { request_payload?: Record<string, unknown> | string }).request_payload);
       const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
-      const id = text(row.provider_message_id || response.providerMessageId);
+      const id = text(row.provider_message_id || (row as TrackingRow & { response_message_id?: string }).response_message_id || response.providerMessageId);
       return text(request.campaign_id) === campaignId || Boolean(id && campaignMessageIds.has(id));
     });
     // Webhook receipts update whatsapp_delivery_attempts. Merge those receipts
@@ -103,7 +103,7 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
     const attemptByMessageId = new Map<string, TrackingRow>();
     for (const attempt of campaignAttempts) {
       const response = object((attempt as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
-      const id = text(attempt.provider_message_id || response.providerMessageId);
+      const id = text(attempt.provider_message_id || (attempt as TrackingRow & { response_message_id?: string }).response_message_id || response.providerMessageId);
       if (id) {
         const existing = attemptByMessageId.get(id);
         const nextStatus = text(attempt.status) || "unknown";
@@ -211,7 +211,7 @@ export async function getDetailedCampaignReports(organizationId: string, limit =
 
   // Dispatch rows carry campaign_id; Meta webhook receipt rows do not. First
   // resolve this campaign's provider IDs, then fetch every receipt for those IDs.
-  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,response_payload,created_at";
+  const attemptColumns = "id,organization_id,recipient,provider_message_id,response_message_id,status,error_code,error_message,request_payload,response_payload,created_at";
   const attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = [];
   for (const campaignId of campaignIds) {
     const containment = encodeURIComponent(JSON.stringify({ campaign_id: campaignId }));
