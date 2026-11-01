@@ -59,9 +59,11 @@ test('campaign report REST reads include the tenant filter for both campaign and
 
 test('campaign reports use recipient-level WhatsApp receipts instead of dispatch aggregate failures',()=>{
  const attempts=[
-  {id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered',request_payload:{campaign_id:'req-1'}},
-  {id:'wa-2',organization_id:A,recipient:'2348030000002',provider_message_id:'wamid-b',status:'failed',error_code:'131049',error_message:'Meta withheld delivery',request_payload:{campaign_id:'req-1'}},
-  {id:'wa-3',organization_id:A,recipient:'2348030000003',provider_message_id:'wamid-c',status:'failed',error_code:'131026',request_payload:{campaign_id:'req-1'}},
+  {id:'wa-dispatch',organization_id:A,recipient:'2348030000001',status:'accepted',response_payload:{providerMessageId:'wamid-a'},request_payload:{campaign_id:'req-1'}},
+  {id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered'},
+  {id:'wa-2',organization_id:A,recipient:'2348030000002',provider_message_id:'wamid-b',status:'failed',error_code:'131049',error_message:'Meta withheld delivery'},
+  {id:'wa-3',organization_id:A,recipient:'2348030000003',provider_message_id:'wamid-c',status:'failed',error_code:'131026'},
+  {id:'other-campaign',organization_id:A,recipient:'2348030000004',provider_message_id:'wamid-other',status:'failed',error_code:'131049',request_payload:{campaign_id:'another-campaign'}},
  ];
  const tracking=[child(A,'a1','accepted','2348030000001','wamid-a')];
  const result=reader.projectCampaignReports(A,[parent(A,{failed:77,accepted:3})],tracking,50,attempts)[0];
