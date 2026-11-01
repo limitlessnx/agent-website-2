@@ -12,7 +12,7 @@ values (
   'b15f21b4-5697-4d21-9421-8a34eae3476d',
   'limitless_realty_relationship_campaign',
   'limitless_realty_relationship_campaign',
-  'en_US',
+  'en',
   '["customer_name","greeting","call_to_action"]'::jsonb,
   'active',
   jsonb_build_object(
@@ -43,7 +43,7 @@ begin
     where organization_id = 'b15f21b4-5697-4d21-9421-8a34eae3476d'
       and purpose = 'limitless_realty_relationship_campaign'
       and template_name = 'limitless_realty_relationship_campaign'
-      and language_code = 'en_US'
+      and language_code = 'en'
       and status = 'active'
       and variable_keys = '["customer_name","greeting","call_to_action"]'::jsonb
       and metadata->>'provider_status' = 'approved'
