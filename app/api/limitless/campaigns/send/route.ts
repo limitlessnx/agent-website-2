@@ -142,8 +142,10 @@ export async function POST(request: Request) {
     const identity = campaignApprovalIdentity(session);
     const sessionId = campaignApprovalSessionId(session, organizationId, requestId);
     if (body.approvalStage === "prepare") {
-      const previewApproval = await createLeoActionApproval({ identity, organizationId, sessionId, channel: "api", toolKey: REAL_ESTATE_CAMPAIGN_SEND_TOOL, arguments: approvalArguments, realEstateOptIn: true });
-      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length, expiresAt: previewApproval.expiresAt } }, 200);
+      // Preview is read-only: it must not create a durable send approval.
+      // The authenticated Send request recomputes the exact payload and consumes
+      // a one-time approval immediately before claiming the outbound campaign.
+      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length } }, 200);
     }
 
     if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBriefTemplateApproved()) return noStore({ ok: false, status: "template_pending_approval", error: "estate_brief_update remains blocked until its Meta-approved template contract is active." }, 409);
