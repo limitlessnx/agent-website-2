@@ -186,6 +186,7 @@ export async function sendLegacyMaiaPropertyMedia(args: { organizationId: string
 
   const result = await dispatchMaiaPropertyMedia({
     commandId: `maia-legacy-property-media:${lead.id}:${asset.id}:${randomUUID()}`,
+    organizationId: args.organizationId,
     recipient: text(lead.phone),
     propertyId: String(property.id),
     propertyTitle: text(property.title) || "Property",
@@ -195,6 +196,7 @@ export async function sendLegacyMaiaPropertyMedia(args: { organizationId: string
     mimeType: text(asset.mime_type),
     fileName: text(asset.file_name),
     caption: text(asset.caption) || text(property.title) || "Property media",
+    lastCustomerMessageAt: new Date(inboundAt).toISOString(),
   });
 
   return {
