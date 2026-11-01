@@ -87,8 +87,9 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
     // because the campaign-recipient row was written on a later async step.
     const attemptByMessageId = new Map<string, TrackingRow>();
     for (const attempt of campaignAttempts) {
-      const id = text(attempt.provider_message_id);
-      if (id) attemptByMessageId.set(id, { ...attempt, delivery_status: text(attempt.status) || "unknown", error_code: attempt.error_code, error_message: attempt.error_message });
+      const response = object((attempt as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      const id = text(attempt.provider_message_id || response.providerMessageId);
+      if (id) attemptByMessageId.set(id, { ...attempt, provider_message_id: id, delivery_status: text(attempt.status) || "unknown", error_code: attempt.error_code, error_message: attempt.error_message });
     }
     const rowsByMessageId = new Map<string, TrackingRow>();
     for (const row of trackingRows) {
@@ -187,13 +188,16 @@ export async function getDetailedCampaignReports(organizationId: string, limit =
 
   // Dispatch rows carry campaign_id; Meta webhook receipt rows do not. First
   // resolve this campaign's provider IDs, then fetch every receipt for those IDs.
-  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,created_at";
+  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,response_payload,created_at";
   const attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = [];
   for (const campaignId of campaignIds) {
     const containment = encodeURIComponent(JSON.stringify({ campaign_id: campaignId }));
     const dispatchUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&request_payload=cs.${containment}&order=created_at.asc&limit=10000`;
     const dispatchRows = await fetchAllPages(dispatchUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>;
-    const messageIds = [...new Set(dispatchRows.map((row) => text(row.provider_message_id)).filter(Boolean))];
+    const messageIds = [...new Set(dispatchRows.map((row) => {
+      const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      return text(row.provider_message_id || response.providerMessageId);
+    }).filter(Boolean))];
     attemptRows.push(...dispatchRows);
     if (messageIds.length) {
       const messageFilter = `(${messageIds.map((id) => `"${id.replace(/"/g, "\\\"")}"`).join(",")})`;
