@@ -9,6 +9,7 @@ on:
       - fix/reconcile-production-migration-ledger-20261030
       - feature/limitless-realty-relationship-campaign
       - fix/limitless-campaign-delivery-reconciliation
+      - fix/maia-property-media-canonical-whatsapp
   pull_request:
     branches:
       - main
@@ -22,7 +23,7 @@ permissions:
 
 jobs:
   safe-regression:
-    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027' || github.head_ref == 'draft/maia-null-goal-guard-20261029' || github.head_ref == 'fix/reconcile-production-migration-ledger-20261030' || github.head_ref == 'feature/limitless-realty-relationship-campaign' || github.head_ref == 'fix/limitless-campaign-delivery-reconciliation'
+    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027' || github.head_ref == 'draft/maia-null-goal-guard-20261029' || github.head_ref == 'fix/reconcile-production-migration-ledger-20261030' || github.head_ref == 'feature/limitless-realty-relationship-campaign' || github.head_ref == 'fix/limitless-campaign-delivery-reconciliation' || github.head_ref == 'fix/maia-property-media-canonical-whatsapp'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -35,5 +36,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run explicitly allowlisted tenant-neutral acceptance suite
         run: node tests/run-limitless-safe-suite.mjs
+      - name: Run Maia property media regression tests
+        run: node --test tests/maia-property-media-canonical.test.cjs
       - name: TypeScript check for changed Limitless runtime modules only
         run: npx tsc --noEmit --project tsconfig.limitless-followups.json
