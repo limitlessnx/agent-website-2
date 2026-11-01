@@ -5,6 +5,7 @@ export type MaiaPropertyToolContext = {
   organizationId: string;
   agentId: string;
   sessionId: string;
+  conversationId?: string;
 };
 
 export type MaiaPropertyToolDefinition = {
@@ -37,47 +38,24 @@ function approvedMedia(metadata: unknown) {
 
 async function resolveTrustedWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
   const admin = createAdminClient();
-  const { data: session, error: sessionError } = await admin
-    .from("agent_runtime_sessions")
-    .select("id,organization_id,agent_id,channel,external_conversation_id")
-    .eq("id", ctx.sessionId)
+  if (!ctx.conversationId || !uuidLike(ctx.conversationId)) {
+    throw new Error("The current Maia runtime has no verified canonical CRM conversation.");
+  }
+
+  // The active Maia runtime creates canonical crm_conversations records. The
+  // older agent_conversations lookup belongs to a retired conversation model
+  // and cannot resolve current WhatsApp sessions.
+  const { data: conversation, error: conversationError } = await admin
+    .from("crm_conversations")
+    .select("id,organization_id,customer_id,channel")
+    .eq("id", ctx.conversationId)
     .eq("organization_id", ctx.organizationId)
-    .eq("agent_id", ctx.agentId)
+    .eq("channel", "whatsapp")
     .maybeSingle();
-  if (sessionError) throw sessionError;
-  if (!session) throw new Error("The Maia runtime session could not be verified.");
-  if (text(session.channel).toLowerCase() !== "whatsapp") throw new Error("Property media can only be sent from a verified WhatsApp runtime session.");
-
-  const externalId = text(session.external_conversation_id);
-  if (!externalId) throw new Error("The WhatsApp session is not linked to a verified CRM conversation.");
-
-  let conversation: any = null;
-  if (uuidLike(externalId)) {
-    const byId = await admin
-      .from("agent_conversations")
-      .select("id,organization_id,agent_id,customer_id,channel,external_thread_key")
-      .eq("id", externalId)
-      .eq("organization_id", ctx.organizationId)
-      .eq("agent_id", ctx.agentId)
-      .maybeSingle();
-    if (byId.error) throw byId.error;
-    conversation = byId.data;
+  if (conversationError) throw conversationError;
+  if (!conversation || !conversation.customer_id) {
+    throw new Error("No verified customer is attached to this WhatsApp conversation.");
   }
-  if (!conversation) {
-    const byThread = await admin
-      .from("agent_conversations")
-      .select("id,organization_id,agent_id,customer_id,channel,external_thread_key")
-      .eq("external_thread_key", externalId)
-      .eq("organization_id", ctx.organizationId)
-      .eq("agent_id", ctx.agentId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (byThread.error) throw byThread.error;
-    conversation = byThread.data;
-  }
-  if (!conversation || !conversation.customer_id) throw new Error("No verified customer is attached to this WhatsApp conversation.");
-  if (text(conversation.channel).toLowerCase() !== "whatsapp") throw new Error("The linked CRM conversation is not a WhatsApp conversation.");
 
   const { data: customer, error: customerError } = await admin
     .from("crm_customers")
@@ -86,22 +64,27 @@ async function resolveTrustedWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
   if (customerError) throw customerError;
-  if (!customer || !text(customer.phone)) throw new Error("The verified WhatsApp customer has no phone number.");
+  if (!customer || !text(customer.phone)) {
+    throw new Error("The verified WhatsApp customer has no phone number.");
+  }
 
   const { data: lastInbound, error: inboundError } = await admin
-    .from("conversation_messages")
+    .from("crm_messages")
     .select("created_at")
     .eq("organization_id", ctx.organizationId)
     .eq("conversation_id", conversation.id)
     .eq("sender_type", "customer")
+    .eq("direction", "inbound")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (inboundError) throw inboundError;
-  if (!lastInbound?.created_at) throw new Error("No verified customer inbound message exists for this conversation.");
+  if (!lastInbound?.created_at) {
+    throw new Error("No verified customer inbound message exists for this conversation.");
+  }
   const inboundAt = new Date(lastInbound.created_at).getTime();
-  if (!Number.isFinite(inboundAt) || Date.now() - inboundAt >= 24 * 60 * 60 * 1000) {
-    throw new Error("The WhatsApp customer-service window is closed. Direct property media was not sent.");
+  if (!Number.isFinite(inboundAt) || Date.now() - inboundAt < 0 || Date.now() - inboundAt >= 24 * 60 * 60 * 1000) {
+    throw new Error("The WhatsApp customer-service window is closed or could not be verified. Direct property media was not sent.");
   }
 
   return {
@@ -268,6 +251,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
         const commandId = `maia-property-media:${ctx.sessionId}:${asset.id}:${crypto.randomUUID()}`;
         const result = await dispatchMaiaPropertyMedia({
           commandId,
+          organizationId: ctx.organizationId,
           recipient: recipient.phone,
           propertyId: String(property.id),
           propertyTitle: text(property.title) || "Property",
@@ -277,6 +261,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
           mimeType: text(asset.mime_type),
           fileName: text(asset.file_name),
           caption: text(asset.caption) || text(property.title) || "Property media",
+          lastCustomerMessageAt: recipient.lastInboundAt,
         });
 
         return {
