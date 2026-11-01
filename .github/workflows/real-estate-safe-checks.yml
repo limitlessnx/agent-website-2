@@ -8,6 +8,7 @@ on:
       - draft/maia-null-goal-guard-20261029
       - fix/reconcile-production-migration-ledger-20261030
       - feature/limitless-realty-relationship-campaign
+      - fix/limitless-campaign-delivery-reconciliation
   pull_request:
     branches:
       - main
@@ -21,7 +22,7 @@ permissions:
 
 jobs:
   safe-regression:
-    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027' || github.head_ref == 'draft/maia-null-goal-guard-20261029' || github.head_ref == 'fix/reconcile-production-migration-ledger-20261030' || github.head_ref == 'feature/limitless-realty-relationship-campaign'
+    if: github.event_name != 'pull_request' || github.head_ref == 'integration/limitless-realty-production-20261025' || github.head_ref == 'draft/limitless-realty-followups-fix-20261027' || github.head_ref == 'draft/maia-null-goal-guard-20261029' || github.head_ref == 'fix/reconcile-production-migration-ledger-20261030' || github.head_ref == 'feature/limitless-realty-relationship-campaign' || github.head_ref == 'fix/limitless-campaign-delivery-reconciliation'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

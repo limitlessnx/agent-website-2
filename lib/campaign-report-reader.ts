@@ -70,7 +70,7 @@ function maskedRecipient(value: unknown) {
   return digits.length >= 4 ? `•••${digits.slice(-4)}` : "";
 }
 
-export function projectCampaignReports(organizationId: string, parentRows: TrackingRow[], recipientRows: TrackingRow[], limit = 50): DetailedCampaignReport[] {
+export function projectCampaignReports(organizationId: string, parentRows: TrackingRow[], recipientRows: TrackingRow[], limit = 50, attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = []): DetailedCampaignReport[] {
   if (!organizationId) throw new Error("Organization ID is required to read campaign reports.");
   const parents = parentRows
     .filter((row) => row.organization_id === organizationId && row.outbound_kind === "campaign")
@@ -80,7 +80,48 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
 
   return parents.map((parent) => {
     const campaignId = text(parent.campaign_id || parent.id);
-    const rows = children.filter((row) => String(row.campaign_id || "") === campaignId);
+    const trackingRows = children.filter((row) => String(row.campaign_id || "") === campaignId);
+    const campaignDispatchRows = attemptRows.filter((row) => {
+      if (row.organization_id !== organizationId) return false;
+      const request = object((row as TrackingRow & { request_payload?: Record<string, unknown> | string }).request_payload);
+      return text(request.campaign_id) === campaignId;
+    });
+    const campaignMessageIds = new Set(campaignDispatchRows.map((row) => {
+      const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      return text(row.provider_message_id || response.providerMessageId);
+    }).filter(Boolean));
+    const campaignAttempts = attemptRows.filter((row) => {
+      if (row.organization_id !== organizationId) return false;
+      const request = object((row as TrackingRow & { request_payload?: Record<string, unknown> | string }).request_payload);
+      const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      const id = text(row.provider_message_id || (row as TrackingRow & { response_message_id?: string }).response_message_id || response.providerMessageId);
+      return text(request.campaign_id) === campaignId || Boolean(id && campaignMessageIds.has(id));
+    });
+    // Webhook receipts update whatsapp_delivery_attempts. Merge those receipts
+    // by provider message ID so a callback is not lost from the report merely
+    // because the campaign-recipient row was written on a later async step.
+    const attemptByMessageId = new Map<string, TrackingRow>();
+    for (const attempt of campaignAttempts) {
+      const response = object((attempt as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      const id = text(attempt.provider_message_id || response.providerMessageId);
+      if (id) {
+        const existing = attemptByMessageId.get(id);
+        const nextStatus = text(attempt.status) || "unknown";
+        // Dispatch acceptance is not a delivery receipt and must never replace
+        // a sent/delivered/read/failed webhook status, even if written later.
+        if (!(normalized(nextStatus) === "accepted" && existing && normalized(existing.delivery_status) !== "accepted")) {
+          attemptByMessageId.set(id, { ...attempt, provider_message_id: id, delivery_status: nextStatus, error_code: attempt.error_code, error_message: attempt.error_message });
+        }
+      }
+    }
+    const rowsByMessageId = new Map<string, TrackingRow>();
+    for (const row of trackingRows) {
+      const id = text(row.provider_message_id);
+      const receipt = id ? attemptByMessageId.get(id) : undefined;
+      rowsByMessageId.set(id || row.id, receipt ? { ...row, delivery_status: receipt.delivery_status, error_code: receipt.error_code, error_message: receipt.error_message } : row);
+    }
+    for (const [id, attempt] of attemptByMessageId) if (!rowsByMessageId.has(id)) rowsByMessageId.set(id, attempt);
+    const rows = [...rowsByMessageId.values()];
     const metadata = object(parent.metadata);
     const response = object(metadata.response);
     const attempted = number(metadata.attempted ?? response.attempted);
@@ -90,7 +131,7 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
     const sentRows = rows.filter((row) => ["sent", "delivered", "read"].includes(normalized(row.delivery_status)));
     const failedRows = rows.filter((row) => normalized(row.delivery_status) === "failed" || normalized(row.lifecycle_status) === "failed");
     const providerFailed = number(response.failed);
-    const failed = Math.max(providerFailed, failedRows.length);
+    const failed = rows.length > 0 ? failedRows.length : providerFailed;
     const accepted = acceptedRows.length || number(response.accepted ?? response.sent);
     const skipped = number(response.skipped);
     const delivered = deliveredRows.length;
@@ -167,5 +208,25 @@ export async function getDetailedCampaignReports(organizationId: string, limit =
   const inFilter = `(${campaignIds.join(",")})`;
   const childUrl = `${url}/rest/v1/real_estate_outbound_tracking?select=${columns}&organization_id=eq.${org}&outbound_kind=eq.campaign_recipient&campaign_id=in.${encodeURIComponent(inFilter)}&order=created_at.asc&limit=10000`;
   const recipientRows = await fetchAllPages(childUrl, key, 1000, 10000);
-  return projectCampaignReports(organizationId, parentRows, recipientRows, limit);
+
+  // Dispatch rows carry campaign_id; Meta webhook receipt rows do not. First
+  // resolve this campaign's provider IDs, then fetch every receipt for those IDs.
+  const attemptColumns = "id,organization_id,recipient,provider_message_id,status,error_code,error_message,request_payload,response_payload,created_at";
+  const attemptRows: Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }> = [];
+  for (const campaignId of campaignIds) {
+    const containment = encodeURIComponent(JSON.stringify({ campaign_id: campaignId }));
+    const dispatchUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&request_payload=cs.${containment}&order=created_at.asc&limit=10000`;
+    const dispatchRows = await fetchAllPages(dispatchUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>;
+    const messageIds = [...new Set(dispatchRows.map((row) => {
+      const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      return text(row.provider_message_id || response.providerMessageId);
+    }).filter(Boolean))];
+    attemptRows.push(...dispatchRows);
+    if (messageIds.length) {
+      const messageFilter = `(${messageIds.map((id) => `"${id.replace(/"/g, "\\\"")}"`).join(",")})`;
+      const receiptUrl = `${url}/rest/v1/whatsapp_delivery_attempts?select=${attemptColumns}&organization_id=eq.${org}&provider_message_id=in.${encodeURIComponent(messageFilter)}&order=created_at.asc&limit=10000`;
+      attemptRows.push(...await fetchAllPages(receiptUrl, key, 1000, 10000) as Array<TrackingRow & { status?: string; request_payload?: Record<string, unknown> | string }>);
+    }
+  }
+  return projectCampaignReports(organizationId, parentRows, recipientRows, limit, attemptRows);
 }
