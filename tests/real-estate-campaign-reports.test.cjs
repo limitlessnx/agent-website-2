@@ -48,7 +48,8 @@ test('campaign report REST reads include the tenant filter for both campaign and
   assert.equal(result.length,1);
   assert.equal(calls.length,4);
   for(const url of calls) assert.match(url,/organization_id=eq\.b15f21b4-5697-4d21-9421-8a34eae3476d/);
-  assert.ok(calls.some(url=>url.includes('real_estate_outbound_tracking')));\n  assert.ok(calls.some(url=>url.includes('whatsapp_delivery_attempts')));
+  assert.ok(calls.some(url=>url.includes('real_estate_outbound_tracking')));
+  assert.ok(calls.some(url=>url.includes('whatsapp_delivery_attempts')));
   assert.ok(calls.every(url=>!url.includes('bot_sessions')));
  } finally {
   if(oldUrl===undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL=oldUrl;
