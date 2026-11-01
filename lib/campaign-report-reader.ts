@@ -81,7 +81,22 @@ export function projectCampaignReports(organizationId: string, parentRows: Track
   return parents.map((parent) => {
     const campaignId = text(parent.campaign_id || parent.id);
     const trackingRows = children.filter((row) => String(row.campaign_id || "") === campaignId);
-    const campaignAttempts = attemptRows.filter((row) => row.organization_id === organizationId);
+    const campaignDispatchRows = attemptRows.filter((row) => {
+      if (row.organization_id !== organizationId) return false;
+      const request = object((row as TrackingRow & { request_payload?: Record<string, unknown> | string }).request_payload);
+      return text(request.campaign_id) === campaignId;
+    });
+    const campaignMessageIds = new Set(campaignDispatchRows.map((row) => {
+      const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      return text(row.provider_message_id || response.providerMessageId);
+    }).filter(Boolean));
+    const campaignAttempts = attemptRows.filter((row) => {
+      if (row.organization_id !== organizationId) return false;
+      const request = object((row as TrackingRow & { request_payload?: Record<string, unknown> | string }).request_payload);
+      const response = object((row as TrackingRow & { response_payload?: Record<string, unknown> | string }).response_payload);
+      const id = text(row.provider_message_id || response.providerMessageId);
+      return text(request.campaign_id) === campaignId || Boolean(id && campaignMessageIds.has(id));
+    });
     // Webhook receipts update whatsapp_delivery_attempts. Merge those receipts
     // by provider message ID so a callback is not lost from the report merely
     // because the campaign-recipient row was written on a later async step.
