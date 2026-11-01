@@ -55,3 +55,41 @@ test('campaign report REST reads include the tenant filter for both campaign and
   if(oldKey===undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY=oldKey;
  }
 });
+
+test('campaign reports use recipient-level WhatsApp receipts instead of dispatch aggregate failures',()=>{
+ const attempts=[
+  {id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered',request_payload:{campaign_id:'req-1'}},
+  {id:'wa-2',organization_id:A,recipient:'2348030000002',provider_message_id:'wamid-b',status:'failed',error_code:'131049',error_message:'Meta withheld delivery',request_payload:{campaign_id:'req-1'}},
+  {id:'wa-3',organization_id:A,recipient:'2348030000003',provider_message_id:'wamid-c',status:'failed',error_code:'131026',request_payload:{campaign_id:'req-1'}},
+ ];
+ const tracking=[child(A,'a1','accepted','2348030000001','wamid-a')];
+ const result=reader.projectCampaignReports(A,[parent(A,{failed:77,accepted:3})],tracking,50,attempts)[0];
+ assert.equal(result.attempted,3);
+ assert.equal(result.accepted,3);
+ assert.equal(result.delivered,1);
+ assert.equal(result.failed,2);
+ assert.equal(result.recipients.length,3);
+ assert.equal(result.recipients.find(x=>x.message_id==='wamid-b').error_code,'131049');
+});
+
+test('campaign report fetch reads the WhatsApp delivery-attempt ledger',async()=>{
+ const oldUrl=process.env.SUPABASE_URL,oldKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ process.env.SUPABASE_URL='https://supabase.example.test';process.env.SUPABASE_SERVICE_ROLE_KEY='test-key';
+ const calls=[];
+ const api=load(path.join(root,'lib/campaign-report-reader.ts'),{},'',{fetch:async(url)=>{
+  calls.push(String(url));
+  if(String(url).includes('outbound_kind=eq.campaign&')) return {ok:true,json:async()=>[parent(A)]};
+  if(String(url).includes('real_estate_outbound_tracking')) return {ok:true,json:async()=>[child(A,'a1','delivered','2348030000001','wamid-a')]};
+  return {ok:true,json:async()=>[{id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered',request_payload:{campaign_id:'req-1'}}]};
+ }});
+ try {
+  const result=await api.getDetailedCampaignReports(A,10);
+  assert.equal(result[0].delivered,1);
+  assert.equal(calls.length,3);
+  assert.ok(calls.some(url=>url.includes('whatsapp_delivery_attempts')));
+  assert.ok(calls.every(url=>url.includes('organization_id=eq.b15f21b4-5697-4d21-9421-8a34eae3476d')));
+ } finally {
+  if(oldUrl===undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL=oldUrl;
+  if(oldKey===undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY=oldKey;
+ }
+});
