@@ -59,7 +59,7 @@ test('campaign report REST reads include the tenant filter for both campaign and
 
 test('campaign reports use recipient-level WhatsApp receipts instead of dispatch aggregate failures',()=>{
  const attempts=[
-  {id:'wa-dispatch',organization_id:A,recipient:'2348030000001',status:'accepted',response_payload:{providerMessageId:'wamid-a'},request_payload:{campaign_id:'req-1'}},
+  {id:'wa-dispatch',organization_id:A,recipient:'2348030000001',status:'accepted',response_message_id:'wamid-a',request_payload:{campaign_id:'req-1'}},
   {id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered'},
   {id:'wa-2',organization_id:A,recipient:'2348030000002',provider_message_id:'wamid-b',status:'failed',error_code:'131049',error_message:'Meta withheld delivery'},
   {id:'wa-3',organization_id:A,recipient:'2348030000003',provider_message_id:'wamid-c',status:'failed',error_code:'131026'},
@@ -83,7 +83,7 @@ test('campaign report fetch reads the WhatsApp delivery-attempt ledger',async()=
   calls.push(String(url));
   if(String(url).includes('outbound_kind=eq.campaign&')) return {ok:true,json:async()=>[parent(A)]};
   if(String(url).includes('real_estate_outbound_tracking')) return {ok:true,json:async()=>[child(A,'a1','delivered','2348030000001','wamid-a')]};
-  return {ok:true,json:async()=>[{id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered',request_payload:{campaign_id:'req-1'}}]};
+  return {ok:true,json:async()=>[{id:'wa-dispatch',organization_id:A,recipient:'2348030000001',response_message_id:'wamid-a',status:'accepted',request_payload:{campaign_id:'req-1'}},{id:'wa-1',organization_id:A,recipient:'2348030000001',provider_message_id:'wamid-a',status:'delivered'}]};
  }});
  try {
   const result=await api.getDetailedCampaignReports(A,10);
