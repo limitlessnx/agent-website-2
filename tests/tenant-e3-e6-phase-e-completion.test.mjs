@@ -83,7 +83,8 @@ test("E6 maintenance scan stays available on demand while automatic schedules ar
   assert.doesNotMatch(trigger,/schedules\.task/);
   assert.match(trigger,/scanAnalyticsAnomalies/);
   assert.match(trigger,/syncDueFluxSubscriptionWallets/);
-  assert.match(workflow,/lib\/analytics-phase-e\.ts/);
+  assert.match(workflow,/push:/);
+  assert.doesNotMatch(workflow,/^\s+paths:/m);
 });
 
 test("E3 E4 E5 E6 RPCs remain service-role only",()=>{
