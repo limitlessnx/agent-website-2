@@ -111,13 +111,16 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
 
   const isEstateBrief = command.campaignType === "estate_brief_update" || command.templateName === "estate_brief_update";
   const isUpdateTemplate = command.campaignType === "limitless_realty_update" || command.templateName === "limitless_realty_update_v2";
-  if (!isEstateBrief && !isUpdateTemplate) throw new Error("This campaign template has no verified direct WhatsApp route.");
+  const isRelationshipCampaign = command.campaignType === "limitless_realty_relationship_campaign" || command.templateName === "limitless_realty_relationship_campaign";
+  if (!isEstateBrief && !isUpdateTemplate && !isRelationshipCampaign) throw new Error("This campaign template has no verified direct WhatsApp route.");
 
-  const templateName = isEstateBrief ? "estate_brief_update" : "limitless_realty_update_v2";
-  const templatePurpose = isEstateBrief ? "estate_brief_update" : "limitless_realty_update";
+  const templateName = isEstateBrief ? "estate_brief_update" : isRelationshipCampaign ? "limitless_realty_relationship_campaign" : "limitless_realty_update_v2";
+  const templatePurpose = isEstateBrief ? "estate_brief_update" : isRelationshipCampaign ? "limitless_realty_relationship_campaign" : "limitless_realty_update";
   const variableKeys = isEstateBrief
     ? ["customer_name", "property_name", "property_location", "property_price", "selling_point"] as const
-    : ["customer_name", "main_update", "supporting_update", "response_prompt"] as const;
+    : isRelationshipCampaign
+      ? ["customer_name", "greeting", "call_to_action"] as const
+      : ["customer_name", "main_update", "supporting_update", "response_prompt"] as const;
   const paragraphs = splitCampaignParagraphs(command.message);
   const acceptedRecipients: Array<Record<string, unknown>> = [];
   const failedRecipients: Array<Record<string, unknown>> = [];
@@ -137,12 +140,18 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
           property_price: String(command.propertyPrice || "").trim(),
           selling_point: String(command.sellingPoint || command.message || "").trim(),
         }
-      : {
-          customer_name: String(lead.name || "there").trim() || "there",
-          main_update: paragraphs[0] || command.message.trim(),
-          supporting_update: paragraphs[1] || "",
-          response_prompt: paragraphs[2] || "",
-        };
+      : isRelationshipCampaign
+        ? {
+            customer_name: String(lead.name || "there").trim() || "there",
+            greeting: paragraphs[0] || command.message.trim(),
+            call_to_action: paragraphs[1] || "",
+          }
+        : {
+            customer_name: String(lead.name || "there").trim() || "there",
+            main_update: paragraphs[0] || command.message.trim(),
+            supporting_update: paragraphs[1] || "",
+            response_prompt: paragraphs[2] || "",
+          };
 
     try {
       const result = await sendWhatsAppMessage({

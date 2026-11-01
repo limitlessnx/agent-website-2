@@ -21,6 +21,7 @@ function fixture(lead = null) {
   const module = load('lib/ai/maia-runtime.ts', {
     '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/ai/maia-estate-tools': {},
+    '@/lib/ai/maia-estate-context': { resolveNamedVerifiedPropertyId: async () => null },
     '@/lib/real-estate-access': {},
     '@/lib/real-estate-inspections': {},
     '@/lib/ai/maia-property-tools': { maiaPropertyTools: () => [] },

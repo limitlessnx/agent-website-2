@@ -17,7 +17,7 @@ import { buildEstateBriefCampaign, EstateBriefCampaignError, ESTATE_BRIEF_CAMPAI
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CampaignType = "estate_brief_update" | "limitless_realty_update";
+type CampaignType = "estate_brief_update" | "limitless_realty_update" | "limitless_realty_relationship_campaign";
 type RequestBody = {
   requestId?: string;
   approvalStage?: "prepare" | "send";
@@ -36,8 +36,8 @@ type RequestBody = {
   budgetMin?: number | string;
   budgetMax?: number | string;
 };
-const campaignTemplates = { estate_brief_update: ESTATE_BRIEF_TEMPLATE_NAME, limitless_realty_update: "limitless_realty_update_v2" } as const;
-function campaignLabel(type: CampaignType) { return type === ESTATE_BRIEF_CAMPAIGN_TYPE ? "Estate Brief Update" : "Limitless Realty Update"; }
+const campaignTemplates = { estate_brief_update: ESTATE_BRIEF_TEMPLATE_NAME, limitless_realty_update: "limitless_realty_update_v2", limitless_realty_relationship_campaign: "limitless_realty_relationship_campaign" } as const;
+function campaignLabel(type: CampaignType) { return type === ESTATE_BRIEF_CAMPAIGN_TYPE ? "Estate Brief Update" : type === "limitless_realty_relationship_campaign" ? "Limitless Realty Relationship Campaign" : "Limitless Realty Update"; }
 const estateBriefTemplateApproved = () => process.env.LIMITLESS_ESTATE_BRIEF_TEMPLATE_APPROVED === "true";
 function text(value: unknown) { return String(value ?? "").trim().toLowerCase(); }
 function money(value: unknown) { const parsed = Number(String(value ?? "").replace(/[^\d.]/g, "")); return Number.isFinite(parsed) ? parsed : 0; }
@@ -142,8 +142,10 @@ export async function POST(request: Request) {
     const identity = campaignApprovalIdentity(session);
     const sessionId = campaignApprovalSessionId(session, organizationId, requestId);
     if (body.approvalStage === "prepare") {
-      const previewApproval = await createLeoActionApproval({ identity, organizationId, sessionId, channel: "api", toolKey: REAL_ESTATE_CAMPAIGN_SEND_TOOL, arguments: approvalArguments, realEstateOptIn: true });
-      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length, expiresAt: previewApproval.expiresAt } }, 200);
+      // Preview is read-only: it must not create a durable send approval.
+      // The authenticated Send request recomputes the exact payload and consumes
+      // a one-time approval immediately before claiming the outbound campaign.
+      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length } }, 200);
     }
 
     if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBriefTemplateApproved()) return noStore({ ok: false, status: "template_pending_approval", error: "estate_brief_update remains blocked until its Meta-approved template contract is active." }, 409);

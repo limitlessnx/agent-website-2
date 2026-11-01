@@ -43,7 +43,9 @@ test('standard campaign preview is tenant-scoped and returns the exact composed 
  const {route,state}=harness();
  const result=await route.POST(request(base()));
  assert.equal(result.status,200);
- assert.equal(result.body.status,'confirmation_required');
+ assert.equal(result.body.status,'preview_ready');
+ assert.equal(result.body.approval,undefined);
+ assert.equal(state.approvals.size,0);
  assert.equal(state.propertyQueryOrg,ORG);
  assert.equal(result.body.preview.attemptedRecipients,1);
  assert.equal(result.body.preview.propertyName,'Verified duplex');
@@ -55,7 +57,7 @@ test('standard campaign preview is tenant-scoped and returns the exact composed 
 test('standard campaign sends only after exact one-time confirmation and reports accepted-not-delivered state',async()=>{
  const {route,state}=harness();
  const prepared=await route.POST(request(base()));
- const sent=await route.POST(request(base({approvalStage:'send',approvalId:prepared.body.approval.approvalId,approvalToken:prepared.body.approval.token})));
+ const sent=await route.POST(request(base({approvalStage:'send'})));
  assert.equal(sent.status,200);
  assert.equal(sent.body.approvalStatus,'consumed');
  assert.equal(sent.body.accepted,1);
@@ -67,9 +69,9 @@ test('standard campaign sends only after exact one-time confirmation and reports
 test('replay with a new approval and same request ID is stopped by the durable outbox claim',async()=>{
  const {route,state}=harness();
  let prepared=await route.POST(request(base()));
- await route.POST(request(base({approvalStage:'send',approvalId:prepared.body.approval.approvalId,approvalToken:prepared.body.approval.token})));
+ await route.POST(request(base({approvalStage:'send'})));
  prepared=await route.POST(request(base()));
- const replay=await route.POST(request(base({approvalStage:'send',approvalId:prepared.body.approval.approvalId,approvalToken:prepared.body.approval.token})));
+ const replay=await route.POST(request(base({approvalStage:'send'})));
  assert.equal(replay.body.duplicatePrevented,true);
  assert.equal(state.dispatches,1);
 });
