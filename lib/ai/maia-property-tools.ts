@@ -251,6 +251,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
         const commandId = `maia-property-media:${ctx.sessionId}:${asset.id}:${crypto.randomUUID()}`;
         const result = await dispatchMaiaPropertyMedia({
           commandId,
+          organizationId: ctx.organizationId,
           recipient: recipient.phone,
           propertyId: String(property.id),
           propertyTitle: text(property.title) || "Property",
@@ -260,6 +261,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
           mimeType: text(asset.mime_type),
           fileName: text(asset.file_name),
           caption: text(asset.caption) || text(property.title) || "Property media",
+          lastCustomerMessageAt: recipient.lastInboundAt,
         });
 
         return {
