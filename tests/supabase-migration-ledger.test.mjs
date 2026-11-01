@@ -48,6 +48,8 @@ const expectedPendingVersions = [
   // Previous reminder-time migration followed by complete 19:30 alignment.
   "20261031142757",
   "20261031181713",
+  // Limitless Realty relationship campaign template contract registration; reviewed in PR #315.
+  "20261101110000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
