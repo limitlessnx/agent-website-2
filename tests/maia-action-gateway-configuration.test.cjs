@@ -18,7 +18,7 @@ function fixture(overrides={}){
 function loadGateway(workflow){
  const changes={updates:0,activations:0};
  const api={getN8nWorkflow:async()=>workflow,findN8nWorkflowByName:async()=>null,getN8nBaseUrl:()=>"https://n8n.invalid",listN8nExecutions:async()=>[],updateN8nWorkflow:async()=>{changes.updates++;return workflow},activateN8nWorkflow:async()=>{changes.activations++;return workflow}};
- return {gateway:load(gatewayPath,{'@/lib/n8n-api':api,'@/lib/lead-profile-service':{normalizeLeadPhone:(value)=>String(value||'').replace(/\D/g,'')}}),changes};
+ return {gateway:load(gatewayPath,{'@/lib/n8n-api':api,'@/lib/lead-profile-service':{normalizeLeadPhone:(value)=>String(value||'').replace(/\D/g,'')},'@/lib/whatsapp-delivery':{sendWhatsAppMessage:async()=>({ok:true})}}),changes};
 }
 
 test('valid active campaign workflow is verified without making any n8n changes',async()=>{
