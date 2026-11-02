@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Clock3, Pause, Play, RotateCcw, XCircle } from "@/components/admin/ServerIcons";
 import type { FollowupEnrollment, FollowupLog } from "@/lib/followup-control";
@@ -77,7 +77,7 @@ export default function FollowupControlCenter(props: Props) {
     return () => { active = false; };
   }, []);
   const selectedProperty = properties.find(property => property.id === selectedPropertyId) || null;
-  async function createDraft(event: React.FormEvent<HTMLFormElement>) {
+  async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedLeadId || !selectedPropertyId || !draftReason.trim()) {
       setMessage("Choose a lead, choose a property, and enter a follow-up reason.");
