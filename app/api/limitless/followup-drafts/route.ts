@@ -12,11 +12,18 @@ async function context() {
 export async function GET() {
  const current=await context(); if(!current)return NextResponse.json({error:"Unauthorized"},{status:401});
  try {
-  const [properties,drafts]=await Promise.all([
+  const [properties,drafts,template]=await Promise.all([
    current.admin.from("properties").select("id,title,type,location_city,location_area,price,bedrooms,bathrooms,size_sqm,status,features,description,estate_id").eq("organization_id",current.organizationId).order("title"),
-   current.admin.from("limitless_maia_followup_drafts").select("*,leads(name,phone),properties(title)").eq("organization_id",current.organizationId).order("created_at",{ascending:false}).limit(200)
+   current.admin.from("limitless_maia_followup_drafts").select("*,leads(name,phone),properties(title)").eq("organization_id",current.organizationId).order("created_at",{ascending:false}).limit(200),
+   current.admin.from("whatsapp_template_configs").select("template_name,status,metadata").eq("organization_id",current.organizationId).eq("purpose","follow_up_outside_24h").eq("template_name","limitless_realty_reminder").eq("status","active").limit(1).maybeSingle()
   ]);
-  if(properties.error)throw properties.error;if(drafts.error)throw drafts.error;
+  if(properties.error)throw properties.error;if(drafts.error)throw drafts.error;if(template.error)throw template.error;
+  const approvedOrder=["customer_name","followup_context","property_details","next_step"];
+  const templateMetadata=(template.data?.metadata||{}) as Record<string,unknown>;
+  const templateReady=templateMetadata.provider_status==="approved"
+   && Array.isArray(templateMetadata.approved_variable_order)
+   && templateMetadata.approved_variable_order.length===approvedOrder.length
+   && templateMetadata.approved_variable_order.every((key:unknown,index:number)=>key===approvedOrder[index]);
   const estateIds=[...new Set((properties.data||[]).map((property:any)=>property.estate_id).filter(Boolean))];
   const estates=estateIds.length
    ? await current.admin.from("real_estate_estates").select("id,name,location,address,status,payment_terms").eq("organization_id",current.organizationId).in("id",estateIds)
@@ -24,7 +31,7 @@ export async function GET() {
   if(estates.error)throw estates.error;
   const estateById=new Map((estates.data||[]).map((estate:any)=>[estate.id,estate]));
   const propertyOptions=(properties.data||[]).map((property:any)=>({...property,estate:property.estate_id?estateById.get(property.estate_id)||null:null}));
-  return NextResponse.json({properties:propertyOptions,drafts:drafts.data||[]},{headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({properties:propertyOptions,drafts:drafts.data||[],templateReady,templateStatus:templateMetadata.provider_status||"unverified"},{headers:{"Cache-Control":"no-store"}});
  } catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to load follow-up drafts."},{status:500});}
 }
 export async function POST(request:NextRequest) {
