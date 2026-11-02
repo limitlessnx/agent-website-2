@@ -87,7 +87,7 @@ export default function FollowupControlCenter(props: Props) {
     try {
       const response = await fetch("/api/limitless/followup-drafts", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({lead_id:selectedLeadId,property_id:selectedPropertyId,reason:draftReason.trim(),notes:draftNotes.trim()})
+        body:JSON.stringify({lead_id:selectedLeadId,property_id:selectedPropertyId,reason:draftReason.trim(),message_context:draftNotes.trim()})
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to create follow-up draft.");
@@ -213,8 +213,8 @@ export default function FollowupControlCenter(props: Props) {
           <label>Follow-up reason
             <input value={draftReason} onChange={event=>setDraftReason(event.target.value)} placeholder="e.g. Customer requested details about this property" required />
           </label>
-          <label>Additional context or objection (optional)
-            <textarea value={draftNotes} onChange={event=>setDraftNotes(event.target.value)} rows={3} placeholder="Add verified customer context or a specific question to address" />
+          <label>Message context for the customer (optional)
+            <textarea value={draftNotes} onChange={event=>setDraftNotes(event.target.value)} rows={3} placeholder="Add context you want included in the customer-facing follow-up" />
           </label>
           <div className="followup-actions"><button type="submit" disabled={Boolean(draftBusy)||!props.leads.length||!properties.length}>{draftBusy==="create"?"Creating draft…":"Create follow-up draft"}</button></div>
           {!properties.length ? <small>No properties are currently available in this organisation.</small> : null}
