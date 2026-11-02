@@ -51,9 +51,11 @@ export default async function FollowupsPage() {
         <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed or blocked actions requiring review</span></article>
       </div>
 
+      {summaryError ? <section className="admin-panel" role="alert"><div className="admin-list-row compact attention-danger"><div><strong>Follow-up data is temporarily unavailable</strong><span>{summaryError}</span></div><span className="admin-status warning">Data unavailable</span></div></section> : null}
       <FollowupControlCenter
         configured={summary.configured}
         now={summary.asOf}
+        loadError={summaryError}
         leads={leads.map((lead) => ({ id:String(lead.id), name:String(lead.name || ""), phone:String(lead.phone || "") }))}
         sequences={summary.sequences}
         steps={summary.steps}
