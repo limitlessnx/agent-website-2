@@ -179,11 +179,12 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   const outstandingBalance = parseMoneyCents(plan.outstanding_balance);
   const installmentAmount = parseMoneyCents(plan.installment_amount);
   if (agreedPrice === null || paidToDate === null || outstandingBalance === null
-    || agreedPrice <= 0 || (installmentAmount !== null && (installmentAmount <= 0 || installmentAmount > agreedPrice))
-    || paidToDate > agreedPrice || outstandingBalance !== agreedPrice - paidToDate) {
+    || agreedPrice <= 0 || paidToDate < 0 || paidToDate > agreedPrice
+    || outstandingBalance !== agreedPrice - paidToDate || outstandingBalance <= 0) {
     throw new Error("Installment reminder financial values are invalid or inconsistent.");
   }
-  return { agreedPrice, paidToDate, outstandingBalance, installmentAmount };
+  // Use the verified remaining balance as the next reminder amount, regardless of the optional fixed installment field.
+  return { agreedPrice, paidToDate, outstandingBalance, installmentAmount: outstandingBalance };
 }
 
 function cadenceDays(frequency: string) {
