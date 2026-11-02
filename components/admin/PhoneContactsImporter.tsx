@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./PhoneContactsImporter.module.css";
 
 type DeviceContact = { name?: string[]; tel?: string[]; email?: string[] };
@@ -33,7 +33,8 @@ function parseVCard(source: string): PreviewContact[] {
 
 export default function PhoneContactsImporter() {
   const picker = (typeof navigator !== "undefined" ? navigator as ContactPickerNavigator : null)?.contacts;
-  const supported = Boolean(picker?.select);
+  const [supported, setSupported] = useState(false);
+  useEffect(() => { setSupported(Boolean(picker?.select)); }, []);
   const fileRef = useRef<HTMLInputElement>(null);
   const [contacts, setContacts] = useState<PreviewContact[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
@@ -77,11 +78,12 @@ export default function PhoneContactsImporter() {
     setError("");
     setNotice("");
     try {
-      const parsed = parseVCard(await file.text()).slice(0, 500);
+      const allParsed = parseVCard(await file.text());
+      const parsed = allParsed.slice(0, 500);
       setContacts(parsed);
       setSelected(parsed.map((_, index) => index));
       if (!parsed.length) setError("No contacts with a name and phone number were found in that VCF file.");
-      else if (parseVCard(await file.text()).length > 500) setNotice("Showing the first 500 contacts. Import them in batches.");
+      else if (allParsed.length > 500) setNotice("Showing the first 500 contacts. Import them in batches.");
     } catch {
       setError("Unable to read this contact file. Export it again as a .vcf file and retry.");
     } finally {
