@@ -17,7 +17,7 @@ import { buildEstateBriefCampaign, EstateBriefCampaignError, ESTATE_BRIEF_CAMPAI
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CampaignType = "estate_brief_update" | "limitless_realty_update" | "limitless_realty_relationship_campaign";
+type CampaignType = "estate_brief_update" | "limitless_realty_update" | "limitless_realty_relationship_campaign" | "limitless_realty_reminder";
 type RequestBody = {
   requestId?: string;
   approvalStage?: "prepare" | "send";
@@ -36,8 +36,8 @@ type RequestBody = {
   budgetMin?: number | string;
   budgetMax?: number | string;
 };
-const campaignTemplates = { estate_brief_update: ESTATE_BRIEF_TEMPLATE_NAME, limitless_realty_update: "limitless_realty_update_v2", limitless_realty_relationship_campaign: "limitless_realty_relationship_campaign" } as const;
-function campaignLabel(type: CampaignType) { return type === ESTATE_BRIEF_CAMPAIGN_TYPE ? "Estate Brief Update" : type === "limitless_realty_relationship_campaign" ? "Limitless Realty Relationship Campaign" : "Limitless Realty Update"; }
+const campaignTemplates = { estate_brief_update: ESTATE_BRIEF_TEMPLATE_NAME, limitless_realty_update: "limitless_realty_update_v2", limitless_realty_relationship_campaign: "limitless_realty_relationship_campaign", limitless_realty_reminder: "limitless_realty_reminder" } as const;
+function campaignLabel(type: CampaignType) { return type === ESTATE_BRIEF_CAMPAIGN_TYPE ? "Estate Brief Update" : type === "limitless_realty_relationship_campaign" ? "Limitless Realty Relationship Campaign" : type === "limitless_realty_reminder" ? "Limitless Realty Reminder" : "Limitless Realty Update"; }
 const estateBriefTemplateApproved = () => process.env.LIMITLESS_ESTATE_BRIEF_TEMPLATE_APPROVED === "true";
 function text(value: unknown) { return String(value ?? "").trim().toLowerCase(); }
 function money(value: unknown) { const parsed = Number(String(value ?? "").replace(/[^\d.]/g, "")); return Number.isFinite(parsed) ? parsed : 0; }
