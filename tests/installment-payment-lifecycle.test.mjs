@@ -112,7 +112,7 @@ test("retry is authenticated, tenant/plan scoped, compare-and-set, and never aut
   assert.match(runtimeSource, /\.eq\("status", "failed"\)[\s\S]*\.select\("id"\)/);
   assert.match(runtimeSource, /status: "pending"[\s\S]*send_authorized_at: null/);
   assert.match(runtimeSource, /const status = explicitDeliveryFailure\(error\) \? "failed" : "unknown"/);
-  assert.match(runtimeSource, /\["sent", "pending", "skipped", "unknown"\]/);
+  assert.match(runtimeSource, /\["sent", "pending", "unknown"\]/);\n  assert.match(runtimeSource, /existing\\?\\.status === "skipped" && existing\\.error_message === "missed_reminder_window"/);
 });
 
 test("scheduled and manual installment sends honor tenant-scoped lead opt-out status", () => {
