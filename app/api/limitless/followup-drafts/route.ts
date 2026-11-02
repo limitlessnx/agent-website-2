@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 async function context() {
  const session=await getAdminSession(); if(!session)return null;
@@ -43,9 +44,9 @@ export async function PATCH(request:NextRequest) {
  const current=await context();if(!current)return NextResponse.json({error:"Unauthorized"},{status:401});
  try {
   const body=await request.json(),id=String(body.id||"").trim(),action=String(body.action||"").trim();
-  if(!id||!["approve","reject","cancel","confirm_consent"].includes(action))return NextResponse.json({error:"A draft and valid review action are required."},{status:400});
+  if(!id||!["approve","reject","cancel","confirm_consent","send"].includes(action))return NextResponse.json({error:"A draft and valid review action are required."},{status:400});
   const {data:existing,error:readError}=await current.admin.from("limitless_maia_followup_drafts")
-   .select("id,lead_id,eligibility_snapshot,status").eq("id",id).eq("organization_id",current.organizationId).maybeSingle();
+   .select("id,lead_id,property_id,reason,notes,eligibility_snapshot,status").eq("id",id).eq("organization_id",current.organizationId).maybeSingle();
   if(readError)throw readError;
   if(!existing||existing.status!=="draft")return NextResponse.json({error:"This draft is no longer awaiting review."},{status:409});
   const now=new Date().toISOString(),actor=String(current.session.email||"authenticated-admin");
@@ -66,6 +67,48 @@ export async function PATCH(request:NextRequest) {
    }).eq("id",id).eq("organization_id",current.organizationId).eq("status","draft").select("*").single();
    if(error)throw error;
    return NextResponse.json({draft:data,activated:false,note:body.consent_received?"Consent confirmation recorded. The draft still requires approval and the messaging workflow.":"No permission recorded. The draft remains inactive and no message was sent."});
+  }
+  if(action==="send"){
+   const confirmation=snapshot.consent_confirmation as Record<string,unknown>|undefined;
+   if(confirmation?.received!==true)return NextResponse.json({error:"Confirm that the customer genuinely gave permission before sending."},{status:409});
+   const [lead,property]=await Promise.all([
+    current.admin.from("leads").select("name,phone,opted_out,status,property_interest,purpose,location_preference").eq("id",existing.lead_id).eq("organization_id",current.organizationId).maybeSingle(),
+    current.admin.from("properties").select("title,location").eq("id",existing.property_id).eq("organization_id",current.organizationId).maybeSingle()
+   ]);
+   if(lead.error)throw lead.error;if(property.error)throw property.error;
+   if(!lead.data||!property.data)return NextResponse.json({error:"Lead or property could not be verified."},{status:404});
+   if(Boolean(lead.data.opted_out)||lead.data.status==="opted_out")return NextResponse.json({error:"This lead has opted out. Sending is blocked."},{status:409});
+   if(!lead.data.phone)return NextResponse.json({error:"This lead has no WhatsApp phone number."},{status:400});
+   const {data:locked,error:lockError}=await current.admin.from("limitless_maia_followup_drafts").update({status:"sending",updated_at:now,delivery_error:null})
+    .eq("id",id).eq("organization_id",current.organizationId).eq("status","draft").select("id").maybeSingle();
+   if(lockError)throw lockError;
+   if(!locked)return NextResponse.json({error:"This draft is already being processed."},{status:409});
+   try{
+    const result=await sendWhatsAppMessage({
+     organizationId:current.organizationId,to:String(lead.data.phone),deliveryMode:"template",forceTemplate:true,
+     templatePurpose:"follow_up_outside_24h",requestedTemplateName:"limitless_realty_reminder",recipientType:"customer",
+     variables:{
+      customer_name:String(lead.data.name||"there"),
+      last_topic:String(existing.reason||existing.notes||"your property enquiry"),
+      property_name:String(property.data.title||"the property"),
+      property_location:String(property.data.location||lead.data.location_preference||"Not specified"),
+      customer_interest:String(lead.data.property_interest||existing.reason||"Property enquiry"),
+      customer_goal:String(lead.data.purpose||"Not specified"),
+      objection:String(existing.notes||"None shared")
+     }
+    });
+    const sentAt=new Date().toISOString();
+    const {data:sent,error:sentError}=await current.admin.from("limitless_maia_followup_drafts").update({
+     status:"sent",provider_message_id:result.providerMessageId||null,sent_at:sentAt,delivery_error:null,updated_at:sentAt,
+     review_note:"Manual follow-up sent using the configured WhatsApp follow-up template."
+    }).eq("id",id).eq("organization_id",current.organizationId).eq("status","sending").select("*").single();
+    if(sentError)throw sentError;
+    return NextResponse.json({draft:sent,sent:true,note:"Follow-up template accepted by WhatsApp. Maia's automated sequence was not changed."});
+   }catch(sendError){
+    const failedAt=new Date().toISOString(),safeError=sendError instanceof Error?sendError.message:"WhatsApp delivery failed.";
+    await current.admin.from("limitless_maia_followup_drafts").update({status:"failed",delivery_error:safeError,updated_at:failedAt,review_note:"Manual follow-up delivery failed."}).eq("id",id).eq("organization_id",current.organizationId).eq("status","sending");
+    return NextResponse.json({error:safeError,status:"failed"},{status:502});
+   }
   }
   const status=action==="approve"?"approved":action==="reject"?"rejected":"cancelled";
   const {data,error}=await current.admin.from("limitless_maia_followup_drafts").update({
