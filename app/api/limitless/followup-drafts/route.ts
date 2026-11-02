@@ -12,10 +12,11 @@ async function context() {
 export async function GET() {
  const current=await context(); if(!current)return NextResponse.json({error:"Unauthorized"},{status:401});
  try {
-  const [properties,drafts,template]=await Promise.all([
+  const [properties,drafts,template,deliverySchemaProbe]=await Promise.all([
    current.admin.from("properties").select("id,title,type,location_city,location_area,price,bedrooms,bathrooms,size_sqm,status,features,description,estate_id").eq("organization_id",current.organizationId).order("title"),
    current.admin.from("limitless_maia_followup_drafts").select("*,leads(name,phone),properties(title)").eq("organization_id",current.organizationId).order("created_at",{ascending:false}).limit(200),
-   current.admin.from("whatsapp_template_configs").select("template_name,status,metadata").eq("organization_id",current.organizationId).eq("purpose","follow_up_outside_24h").eq("template_name","limitless_realty_reminder").eq("status","active").limit(1).maybeSingle()
+   current.admin.from("whatsapp_template_configs").select("template_name,status,metadata").eq("organization_id",current.organizationId).eq("purpose","follow_up_outside_24h").eq("template_name","limitless_realty_reminder").eq("status","active").limit(1).maybeSingle(),
+   current.admin.from("limitless_maia_followup_drafts").select("provider_message_id,sent_at,delivery_error").limit(1)
   ]);
   if(properties.error)throw properties.error;if(drafts.error)throw drafts.error;if(template.error)throw template.error;
   const approvedOrder=["customer_name","followup_context","property_details","next_step"];
@@ -24,6 +25,7 @@ export async function GET() {
    && Array.isArray(templateMetadata.approved_variable_order)
    && templateMetadata.approved_variable_order.length===approvedOrder.length
    && templateMetadata.approved_variable_order.every((key:unknown,index:number)=>key===approvedOrder[index]);
+  const deliverySchemaReady=!deliverySchemaProbe.error;
   const estateIds=[...new Set((properties.data||[]).map((property:any)=>property.estate_id).filter(Boolean))];
   const estates=estateIds.length
    ? await current.admin.from("real_estate_estates").select("id,name,location,address,status,payment_terms").eq("organization_id",current.organizationId).in("id",estateIds)
@@ -31,7 +33,7 @@ export async function GET() {
   if(estates.error)throw estates.error;
   const estateById=new Map((estates.data||[]).map((estate:any)=>[estate.id,estate]));
   const propertyOptions=(properties.data||[]).map((property:any)=>({...property,estate:property.estate_id?estateById.get(property.estate_id)||null:null}));
-  return NextResponse.json({properties:propertyOptions,drafts:drafts.data||[],templateReady,templateStatus:templateMetadata.provider_status||"unverified"},{headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({properties:propertyOptions,drafts:drafts.data||[],templateReady,templateStatus:templateMetadata.provider_status||"unverified",deliverySchemaReady},{headers:{"Cache-Control":"no-store"}});
  } catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to load follow-up drafts."},{status:500});}
 }
 export async function POST(request:NextRequest) {
@@ -83,6 +85,18 @@ export async function PATCH(request:NextRequest) {
    return NextResponse.json({draft:data,activated:false,note:body.consent_received?"Consent confirmation recorded. The draft still requires approval and the messaging workflow.":"No permission recorded. The draft remains inactive and no message was sent."});
   }
   if(action==="send"){
+   const [templateCheck,schemaCheck]=await Promise.all([
+    current.admin.from("whatsapp_template_configs").select("template_name,status,metadata").eq("organization_id",current.organizationId).eq("purpose","follow_up_outside_24h").eq("template_name","limitless_realty_reminder").eq("status","active").limit(1).maybeSingle(),
+    current.admin.from("limitless_maia_followup_drafts").select("provider_message_id,sent_at,delivery_error").limit(1)
+   ]);
+   if(templateCheck.error)throw templateCheck.error;
+   const approvedOrder=["customer_name","followup_context","property_details","next_step"];
+   const approvedMetadata=(templateCheck.data?.metadata||{}) as Record<string,unknown>;
+   const approved=approvedMetadata.provider_status==="approved" && Array.isArray(approvedMetadata.approved_variable_order)
+    && approvedMetadata.approved_variable_order.length===approvedOrder.length
+    && approvedMetadata.approved_variable_order.every((key:unknown,index:number)=>key===approvedOrder[index]);
+   if(!approved)return NextResponse.json({error:"The approved four-variable WhatsApp template contract is not verified."},{status:409});
+   if(schemaCheck.error)return NextResponse.json({error:"Follow-up delivery database migration is not applied. Sending remains disabled until delivery history fields and statuses are available."},{status:409});
    const confirmation=snapshot.consent_confirmation as Record<string,unknown>|undefined;
    if(confirmation?.received!==true)return NextResponse.json({error:"Confirm that the customer genuinely gave permission before sending."},{status:409});
    const [lead,property]=await Promise.all([
