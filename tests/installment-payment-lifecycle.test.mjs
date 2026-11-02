@@ -179,8 +179,11 @@ test("Limitless flexible installment plans may omit a fixed installment amount w
   assert.ok(validator.includes("function validatedLimitlessMoney"));
   assert.doesNotMatch(validator, /installmentAmount <= 0/);
   assert.match(validator, /agreedPrice <= 0/);
-  assert.match(validator, /installmentAmount > agreedPrice/);
+  assert.doesNotMatch(validator, /installmentAmount > agreedPrice/);
+  assert.match(validator, /paidToDate > agreedPrice/);
   assert.match(validator, /outstandingBalance !== agreedPrice - paidToDate/);
+  assert.match(validator, /outstandingBalance <= 0/);
+  assert.match(validator, /installmentAmount: outstandingBalance/);
 });
 
 test("the one-time 31 October catch-up reclaims only a missed-window attempt and advances to 12 November after provider acceptance", () => {

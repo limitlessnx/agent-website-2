@@ -80,12 +80,13 @@ test("confirmed appointments receive tenant-scoped 24-hour and 2-hour reminder s
 });
 
 
-test("Limitless installment reminders reject zero installment amounts before authorization or delivery", () => {
+test("Limitless installment reminders derive the send amount from the verified outstanding balance", () => {
   const runtime = read("lib/limitless-installment-reminder-runtime.ts");
   const migration = read("supabase/migrations/20261030191938_limitless_installment_reminder_contract_positive_guard.sql");
-  assert.match(runtime, /installmentAmount <= 0/);
-  assert.match(migration, /installment_amount <= 0/);
-  assert.match(migration, /v_plan\.installment_amount <= 0/);
-  assert.match(migration, /set next_reminder_at = null/);
-  assert.match(migration, /coalesce\(installment_amount, 0\) <= 0/);
+  assert.match(runtime, /installmentAmount: outstandingBalance/);
+  assert.match(runtime, /outstandingBalance !== agreedPrice - paidToDate/);
+  assert.equal(migration.includes("coalesce(new.installment_amount, 0) <= 0"), false);
+  assert.equal(migration.includes("v_plan.installment_amount is null or v_plan.installment_amount <= 0"), false);
+  assert.equal(migration.includes("set next_reminder_at = null"), false);
+  assert.ok(migration.includes("v_plan.outstanding_balance is distinct from (v_plan.agreed_price - v_plan.total_paid)"));
 });

@@ -359,8 +359,7 @@ begin
      or v_plan.total_paid is null or v_plan.total_paid < 0 or v_plan.total_paid > v_plan.agreed_price
      or v_plan.outstanding_balance is null
      or v_plan.outstanding_balance is distinct from (v_plan.agreed_price - v_plan.total_paid)
-     or v_plan.installment_amount is null or v_plan.installment_amount < 0
-     or v_plan.installment_amount > v_plan.agreed_price or v_plan.next_due_date is null
+     or v_plan.next_due_date is null
      or nullif(trim(v_plan.client_phone), '') is null then
     return jsonb_build_object('authorized', false, 'reason', 'plan_not_sendable');
   end if;
@@ -493,7 +492,7 @@ begin
      or not new.reminders_enabled
      or greatest(coalesce(new.agreed_price, 0) - coalesce(new.total_paid, 0), 0) <= 0
      or new.next_due_date is null
-     or coalesce(new.installment_amount, 0) <= 0 then
+     then
     new.next_reminder_at := null;
     return new;
   end if;
@@ -560,8 +559,7 @@ begin
      or v_plan.total_paid is null or v_plan.total_paid < 0 or v_plan.total_paid > v_plan.agreed_price
      or v_plan.outstanding_balance is null
      or v_plan.outstanding_balance is distinct from (v_plan.agreed_price - v_plan.total_paid)
-     or v_plan.installment_amount is null or v_plan.installment_amount <= 0
-     or v_plan.installment_amount > v_plan.agreed_price or v_plan.next_due_date is null
+     or v_plan.next_due_date is null
      or nullif(trim(v_plan.client_phone), '') is null then
     return jsonb_build_object('authorized', false, 'reason', 'plan_not_sendable');
   end if;
@@ -643,15 +641,5 @@ end;
 $function$;
 revoke all on function public.authorize_limitless_installment_reminder_send(uuid,uuid,uuid,uuid,timestamptz,text[]) from public, anon, authenticated;
 grant execute on function public.authorize_limitless_installment_reminder_send(uuid,uuid,uuid,uuid,timestamptz,text[]) to service_role;
-
--- Clear stale scheduler cursors on existing zero-value plans without changing payment data.
-update public.payment_plans
-set next_reminder_at = null
-where organization_id = 'b15f21b4-5697-4d21-9421-8a34eae3476d'::uuid
-  and payment_type = 'installment'
-  and status = 'active'
-  and reminders_enabled = true
-  and coalesce(installment_amount, 0) <= 0
-  and next_reminder_at is not null;
 
 commit;

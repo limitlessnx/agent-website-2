@@ -11,19 +11,17 @@ declare
         next_scheduled_at := ((((effective_sent_at at time zone 'Africa/Lagos')::date + reminder_interval)::date + time '10:00') at time zone 'Africa/Lagos');
       end if;$new$;
 begin
+  -- Older installations may still have a fixed-installment guard. Remove only
+  -- that restriction; newer definitions already omit it and are valid as-is.
   v_definition := pg_get_functiondef('public.sync_limitless_payment_plan_reminder_cursor()'::regprocedure);
   if position('coalesce(new.installment_amount, 0) <= 0' in v_definition) > 0 then
     v_definition := replace(v_definition, 'coalesce(new.installment_amount, 0) <= 0', 'coalesce(new.installment_amount, 0) < 0');
-  elsif position('coalesce(new.installment_amount, 0) < 0' in v_definition) = 0 then
-    raise exception 'Unexpected reminder cursor function guard; refusing unsafe replacement';
   end if;
   execute v_definition;
 
   v_definition := pg_get_functiondef('public.authorize_limitless_installment_reminder_send(uuid,uuid,uuid,uuid,timestamptz,text[])'::regprocedure);
   if position('v_plan.installment_amount <= 0' in v_definition) > 0 then
     v_definition := replace(v_definition, 'v_plan.installment_amount <= 0', 'v_plan.installment_amount < 0');
-  elsif position('v_plan.installment_amount < 0' in v_definition) = 0 then
-    raise exception 'Unexpected reminder authorization guard; refusing unsafe replacement';
   end if;
   execute v_definition;
 

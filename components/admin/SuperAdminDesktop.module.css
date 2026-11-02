@@ -327,3 +327,27 @@
     transition:none!important;
   }
 }
+
+/* Dashboard content-height rail: the desktop sidebar stretches to the end of the page content. */
+@media (min-width:901px){
+  .desktopChrome :global(.admin-shell){
+    align-items:stretch!important;
+  }
+  .desktopChrome :global(.admin-sidebar){
+    position:relative!important;
+    top:auto!important;
+    align-self:stretch!important;
+    height:auto!important;
+    min-height:100vh!important;
+    display:flex!important;
+    flex-direction:column!important;
+    overflow-y:visible!important;
+    overflow-x:hidden!important;
+  }
+  .desktopChrome :global(.admin-sidebar .admin-nav){
+    flex:1 0 auto!important;
+  }
+  .desktopChrome :global(.admin-sidebar-footer){
+    margin-top:auto!important;
+  }
+}

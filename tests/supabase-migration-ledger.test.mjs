@@ -50,6 +50,10 @@ const expectedPendingVersions = [
   "20261031181713",
   // Limitless Realty relationship campaign template contract registration; reviewed in PR #315.
   "20261101110000",
+  // Align the approved Limitless Realty reminder campaign template variable contract; PR #323.
+  "20261102130000",
+  // Forward-only production authorization update for flexible installment reminders; PR #323.
+  "20261102210000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
