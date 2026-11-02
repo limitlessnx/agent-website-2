@@ -37,6 +37,6 @@ test("database migration aligns configured and approved reminder variable order"
   assert.match(migration, /template_name = 'limitless_realty_reminder'/);
   assert.match(migration, /metadata->>'provider_status' = 'approved'/);
   assert.equal((migration.match(/'followup_context'/g) || []).length, 4);
-  assert.equal((migration.match(/'property_details'/g) || []).length, 2);
+  assert.equal((migration.match(/'property_details'/g) || []).length, 4);
   assert.equal((migration.match(/'next_step'/g) || []).length, 2);
 });
