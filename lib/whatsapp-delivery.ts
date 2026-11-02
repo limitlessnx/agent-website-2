@@ -114,7 +114,7 @@ function validVariableKeys(value: unknown): value is string[] {
 }
 function validateStrictTemplateContract(config: TemplateConfig | null, input: SendInput) {
   const approvedOrder = input.strictTemplateContract?.approvedVariableOrder;
-  const configuredKeys = config?.variable_keys;
+  const configuredKeys = input.templateVariableOrder || config?.variable_keys;
   const approvedMetadata = config?.metadata?.approved_variable_order;
   if (config?.metadata?.provider_status !== "approved") throw new Error("The requested WhatsApp template has not been verified as approved by the provider.");
   if (!validVariableKeys(approvedOrder) || !validVariableKeys(configuredKeys) || !validVariableKeys(approvedMetadata)) {
