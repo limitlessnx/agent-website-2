@@ -32,6 +32,6 @@ test("phone contact picker requests only user-selected contacts and offers a VCF
   const component = read("components/admin/PhoneContactsImporter.tsx");
   assert.match(component, /picker\.select\(\["name", "tel", "email"\], \{ multiple: true \}\)/);
   assert.match(component, /onClick=\{chooseFromPhone\}/);
-  assert.match(component, /accept="\.vcf,text\/vcard,text\/x-vcard"/);
+  assert.match(component, /accept="\.vcf,\.vcard,text\/vcard,text\/x-vcard,application\/vcard"/);
   assert.match(component, /Import \.vcf file/);
 });
