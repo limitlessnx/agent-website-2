@@ -64,7 +64,7 @@ function parseVCard(source: string): PreviewContact[] {
       const name = fn
         ? decodeVCardValue(fn.value, fn.params)
         : n
-          ? decodeVCardValue(n.value.split(";").filter(Boolean).reverse().join(" "), n.params)
+          ? decodeVCardValue((() => { const [family, given, middle, prefix, suffix] = n.value.split(";"); return [prefix, given, middle, family, suffix].filter(Boolean).join(" "); })(), n.params)
           : "";
       const phones = values("TEL").map((item) => ({
         value: decodeVCardValue(item.value, item.params),
