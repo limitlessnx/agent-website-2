@@ -4,6 +4,7 @@ import {
   importProgressiveLeadsAction,
 } from "@/app/dashboard/progressive-lead-actions";
 import LeadsCrm from "@/components/admin/LeadsCrm";
+import PhoneContactsImporter from "@/components/admin/PhoneContactsImporter";
 import styles from "./page.module.css";
 import { getCampaignGroups } from "@/lib/campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
@@ -81,6 +82,7 @@ export default async function LeadsPage({
       </div>
 
       <section id="lead-tools" className={styles.toolsGrid}>
+        <div style={{ gridColumn: "1 / -1" }}><PhoneContactsImporter /></div>
         <details className={styles.toolPanel} open={params.addContact === "1"}>
           <summary>Add a contact <span className="admin-status warning">{undocumented} undocumented</span></summary>
           <div className={styles.toolBody}>
