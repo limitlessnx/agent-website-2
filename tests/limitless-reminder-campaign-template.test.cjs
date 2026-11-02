@@ -40,3 +40,11 @@ test("database migration aligns configured and approved reminder variable order"
   assert.equal((migration.match(/'property_details'/g) || []).length, 4);
   assert.equal((migration.match(/'next_step'/g) || []).length, 4);
 });
+
+test("forward-only production migration removes the fixed installment authorization requirement", () => {
+  const migration = read("supabase/migrations/20261102210000_limitless_flexible_installment_authorization.sql");
+  assert.match(migration, /authorize_limitless_installment_reminder_send/);
+  assert.match(migration, /v_plan\.installment_amount is null/);
+  assert.match(migration, /v_plan\.installment_amount > v_plan\.agreed_price/);
+  assert.match(migration, /Unexpected installment authorization guard/);
+});
