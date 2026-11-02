@@ -6,6 +6,7 @@ import { ChevronDown, Clock3, Pause, Play, RotateCcw, XCircle } from "@/componen
 import type { FollowupEnrollment, FollowupLog } from "@/lib/followup-control";
 
 type LeadOption = { id: string; name: string; phone: string };
+type PropertyOption = { id: string; title: string; type?: string | null; location_city?: string | null; location_area?: string | null; price?: number | null; size_sqm?: number | null; bedrooms?: number | null; bathrooms?: number | null; status?: string | null; features?: string | null; estate?: { name?: string | null } | null };
 type Props = {
   leads: LeadOption[];
   sequences: unknown[];
@@ -53,6 +54,11 @@ export default function FollowupControlCenter(props: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState(props.leads[0]?.id || "");
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [draftReason, setDraftReason] = useState("");
+  const [draftNotes, setDraftNotes] = useState("");
   const [deliveryHistory, setDeliveryHistory] = useState<Array<Record<string, any>>>([]);
   const [draftBusy, setDraftBusy] = useState("");
   const [draftsLoading, setDraftsLoading] = useState(true);
@@ -65,11 +71,32 @@ export default function FollowupControlCenter(props: Props) {
     fetch("/api/limitless/followup-drafts").then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load drafts.");
-      if (active) { setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft")); setDeliveryHistory((data.drafts || []).filter((draft: Record<string, any>) => ["sent","failed"].includes(draft.status))); }
+      if (active) { setProperties(data.properties || []); setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft")); setDeliveryHistory((data.drafts || []).filter((draft: Record<string, any>) => ["sent","failed"].includes(draft.status))); }
     }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); })
       .finally(() => { if (active) setDraftsLoading(false); });
     return () => { active = false; };
   }, []);
+  const selectedProperty = properties.find(property => property.id === selectedPropertyId) || null;
+  async function createDraft(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedLeadId || !selectedPropertyId || !draftReason.trim()) {
+      setMessage("Choose a lead, choose a property, and enter a follow-up reason.");
+      return;
+    }
+    setDraftBusy("create"); setMessage("");
+    try {
+      const response = await fetch("/api/limitless/followup-drafts", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({lead_id:selectedLeadId,property_id:selectedPropertyId,reason:draftReason.trim(),notes:draftNotes.trim()})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to create follow-up draft.");
+      setDrafts(current => [data.draft, ...current]);
+      setDraftReason(""); setDraftNotes("");
+      setMessage("Property-specific follow-up draft created. Confirm genuine customer permission before sending.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to create follow-up draft."); }
+    finally { setDraftBusy(""); }
+  }
   async function reviewDraft(id: string, consentReceived: boolean) {
     setDraftBusy(id); setMessage("");
     try {
@@ -162,6 +189,39 @@ export default function FollowupControlCenter(props: Props) {
       <div className="admin-list-row compact"><div><strong>Runtime-aligned controls</strong><span>Manual sequence creation and enrollment are hidden because Maia owns this tenant&apos;s follow-up schedule.</span></div></div>
     </section>
     {props.automationIssues > 0 ? <section className="admin-panel"><div className="admin-list-row compact attention-danger"><div><strong>Automation needs attention</strong><span>{props.automationIssues} recent follow-up action(s) failed or were blocked.</span></div><em>{props.automationIssues} issue(s)</em></div></section> : null}
+    <section className="admin-panel">
+      <div className="admin-panel-header"><div><h2>Create property-specific follow-up</h2><p>Select the lead and the exact property to include in the reminder. Property details are loaded from the Limitless Realty catalogue.</p></div></div>
+      <form className="followup-record" onSubmit={createDraft}>
+        <div style={{padding:"14px",display:"grid",gap:"12px"}}>
+          <label>Customer
+            <select value={selectedLeadId} onChange={event=>setSelectedLeadId(event.target.value)} required>
+              <option value="">Select a lead</option>
+              {props.leads.map(lead=><option key={lead.id} value={lead.id}>{lead.name} · {lead.phone}</option>)}
+            </select>
+          </label>
+          <label>Property to include in the reminder
+            <select value={selectedPropertyId} onChange={event=>setSelectedPropertyId(event.target.value)} required>
+              <option value="">Select a Limitless Realty property</option>
+              {properties.map(property=><option key={property.id} value={property.id}>{property.title}{property.location_city ? " · " + property.location_city : ""}</option>)}
+            </select>
+          </label>
+          {selectedProperty ? <div className="admin-list-row compact"><div>
+            <strong>{selectedProperty.title}</strong>
+            <span>{[selectedProperty.type,selectedProperty.estate?.name,[selectedProperty.location_area,selectedProperty.location_city].filter(Boolean).join(", "),selectedProperty.price!==null&&selectedProperty.price!==undefined?"₦"+Number(selectedProperty.price).toLocaleString("en-NG"):null,selectedProperty.size_sqm?selectedProperty.size_sqm+" sqm":null,selectedProperty.status].filter(Boolean).join(" · ")}</span>
+            {selectedProperty.features ? <small>{selectedProperty.features}</small> : null}
+          </div></div> : null}
+          <label>Follow-up reason
+            <input value={draftReason} onChange={event=>setDraftReason(event.target.value)} placeholder="e.g. Customer requested details about this property" required />
+          </label>
+          <label>Additional context or objection (optional)
+            <textarea value={draftNotes} onChange={event=>setDraftNotes(event.target.value)} rows={3} placeholder="Add verified customer context or a specific question to address" />
+          </label>
+          <div className="followup-actions"><button type="submit" disabled={Boolean(draftBusy)||!props.leads.length||!properties.length}>{draftBusy==="create"?"Creating draft…":"Create follow-up draft"}</button></div>
+          {!properties.length ? <small>No properties are currently available in this organisation.</small> : null}
+          {!props.leads.length ? <small>No leads are available to select.</small> : null}
+        </div>
+      </form>
+    </section>
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Manual follow-up drafts</h2><p>Before activation, confirm whether the customer genuinely gave permission to receive follow-up messages. This records the admin attestation; it does not itself send a message.</p></div><span className="admin-status warning">{drafts.length} pending</span></div>
       <div className="followup-records">
