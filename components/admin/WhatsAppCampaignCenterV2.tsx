@@ -16,7 +16,7 @@ const campaignTypes: Array<{ value: CampaignType; label: string; description: st
   { value: "estate_brief_update", label: "Estate brief", template: "estate_brief_update · APPROVED CONTRACT", description: "Property campaign with a Meta image header and five ordered body variables." },
   { value: "limitless_realty_update", label: "Market update", template: "limitless_realty_update_v2 · NOT CONFIGURED", description: "Unavailable until its provider approval and four-variable contract are registered.", unavailable: true },
   { value: "limitless_realty_relationship_campaign", label: "Relationship campaign", template: "limitless_realty_relationship_campaign · META APPROVED", description: "Reusable new-week, new-month, festive and celebration campaigns." },
-  { value: "limitless_realty_reminder", label: "Reminder", template: "limitless_realty_reminder · NOT VERIFIED", description: "Unavailable until Meta approval and its variable contract are verified.", unavailable: true },
+  { value: "limitless_realty_reminder", label: "Reminder", template: "limitless_realty_reminder · APPROVED CONTRACT", description: "Personalised follow-up reminder using the approved four-variable WhatsApp template." },
   { value: "direct_message", label: "Direct message", description: "Send your exact message inside the 24-hour WhatsApp window." },
 ];
 
@@ -55,6 +55,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const selectedType = campaignTypes.find((item) => item.value === campaignType) || campaignTypes[0];
   const isUpdateTemplate = campaignType === "limitless_realty_update";
   const isRelationshipCampaign = campaignType === "limitless_realty_relationship_campaign";
+  const isReminderCampaign = campaignType === "limitless_realty_reminder";
   const isEstateBrief = campaignType === "estate_brief_update";
 
   const audience = useMemo(() => {
@@ -84,9 +85,9 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const recipientCount = audience.length + (audienceMode === "group" && selectedGroup?.groupType === "manual" ? selectedGroup.phones.length : 0);
   const composedUpdate = [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
   const relationshipMessage = [mainUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
-  const outboundMessage = isUpdateTemplate ? composedUpdate : isRelationshipCampaign ? relationshipMessage : message.trim();
+  const outboundMessage = isUpdateTemplate ? composedUpdate : isRelationshipCampaign || isReminderCampaign ? [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n") : message.trim();
   const requestPayload = { campaignType, topic, message: outboundMessage, mediaUrl: "", audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId: campaignType === "direct_message" ? "" : propertyId, budgetMin, budgetMax };
-  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : isRelationshipCampaign ? mainUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
+  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate || isReminderCampaign ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : isRelationshipCampaign ? mainUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
 
   const sendCampaign = () => {
     if (sending.current || isPending || !canSend) return;
@@ -174,7 +175,7 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
               </div>
               <div className="message-preview"><span>APPROVED TEMPLATE PREVIEW</span><p>Hello Grace,</p><p>{mainUpdate || "Your occasion-specific greeting or campaign message."}</p><p>{responsePrompt || "Your call to action or invitation."}</p><p>At Limitless Realty, we appreciate the trust you place in us. We remain committed to helping you make confident property and investment decisions.</p><p>Warm regards,<br />Limitless Realty 🏡</p></div>
             </>
-          ) : isUpdateTemplate ? (
+           ) : isReminderCampaign ? (\n             <>\n               <div className="template-contract">\n                 <div><strong>Limitless Realty Reminder · approved Meta template</strong><span>Uses the active provider-approved reminder template outside the 24-hour customer-service window. Each recipient receives their own name and the three campaign-specific values in the registered order.</span></div>\n                 <div className="variable-row"><b>{"{{1}}"}</b><span>Customer first name · populated from the selected contact</span></div>\n                 <div className="variable-row"><b>{"{{2}}"}</b><span>Follow-up context</span></div>\n                 <div className="variable-row"><b>{"{{3}}"}</b><span>Property details or relevant context</span></div>\n                 <div className="variable-row"><b>{"{{4}}"}</b><span>Next step or response prompt</span></div>\n               </div>\n               <div className="form-grid">\n                 <label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. November property follow-up" /></label>\n                 <label className="wide">Follow-up context · {"{{2}}"}<textarea rows={4} value={mainUpdate} onChange={(e) => setMainUpdate(e.target.value)} placeholder="Write a brief, relevant reminder for the customer." /></label>\n                 <label className="wide">Property details · {"{{3}}"}<textarea rows={3} value={supportingUpdate} onChange={(e) => setSupportingUpdate(e.target.value)} placeholder="Add only verified property or enquiry details. Do not include private payment balances here." /></label>\n                 <label className="wide">Next step · {"{{4}}"}<textarea rows={3} value={responsePrompt} onChange={(e) => setResponsePrompt(e.target.value)} placeholder="Tell the customer how to respond or continue the conversation." /></label>\n               </div>\n               <div className="message-preview"><span>APPROVED TEMPLATE PREVIEW</span><p>Hello Grace,</p><p>{mainUpdate || "Follow-up context"}</p><p>{supportingUpdate || "Property details or relevant context"}</p><p>{responsePrompt || "Next step or response prompt"}</p><p>Limitless Realty</p></div>\n             </>\n           ) : isUpdateTemplate ? (
             <>
               <div className="template-contract">
                 <div><strong>Limitless Realty Update v2</strong><span>Four body variables. No URL CTA or media attachment. The WhatsApp Channel invitation is already part of the approved template. The Channel URL is only sent by Maia after a client replies YES.</span></div>
