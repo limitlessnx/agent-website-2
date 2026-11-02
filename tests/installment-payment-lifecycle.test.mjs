@@ -112,7 +112,8 @@ test("retry is authenticated, tenant/plan scoped, compare-and-set, and never aut
   assert.match(runtimeSource, /\.eq\("status", "failed"\)[\s\S]*\.select\("id"\)/);
   assert.match(runtimeSource, /status: "pending"[\s\S]*send_authorized_at: null/);
   assert.match(runtimeSource, /const status = explicitDeliveryFailure\(error\) \? "failed" : "unknown"/);
-  assert.match(runtimeSource, /\["sent", "pending", "skipped", "unknown"\]/);
+  assert.match(runtimeSource, /\["sent", "pending", "unknown"\]/);
+  assert.ok(runtimeSource.includes('existing.status === "skipped" && existing.error_message === "missed_reminder_window"'));
 });
 
 test("scheduled and manual installment sends honor tenant-scoped lead opt-out status", () => {
@@ -168,6 +169,31 @@ test("manual retry makes no provider call for an opted-out linked or phone-match
   const repairedPrefixCalls = await retryWithLead({ ...basePlan, client_phone: "+234 08123456789", contact_id: null }, { id: "lead-opted-out", opted_out: true });
   const repairedPrefixLookup = repairedPrefixCalls.find((call) => call.table === "leads" && call.phoneCandidates);
   assert.ok(repairedPrefixLookup.phoneCandidates.includes("2348123456789"));
+});
+
+test("Limitless flexible installment plans may omit a fixed installment amount without weakening balance validation", () => {
+  const source = runtime();
+  const start = source.indexOf("function validatedLimitlessMoney");
+  const end = source.indexOf("\n}", start) + 2;
+  const validator = source.slice(start, end);
+  assert.ok(validator.includes("function validatedLimitlessMoney"));
+  assert.doesNotMatch(validator, /installmentAmount <= 0/);
+  assert.match(validator, /agreedPrice <= 0/);
+  assert.match(validator, /installmentAmount > agreedPrice/);
+  assert.match(validator, /outstandingBalance !== agreedPrice - paidToDate/);
+});
+
+test("the one-time 31 October catch-up reclaims only a missed-window attempt and advances to 12 November after provider acceptance", () => {
+  const source = runtime();
+  assert.ok(source.includes('occurrenceDate === "2026-10-31" && normalOccurrence?.occurrenceDate === "2026-11-12"'));
+  assert.ok(source.includes('timing === "missed" && !catchUp'));
+  assert.ok(source.includes('existing.error_message === "missed_reminder_window"'));
+  assert.ok(source.includes('.eq("status", "skipped").eq("error_message", "missed_reminder_window")'));
+  assert.ok(source.includes('catchUp && delivery.status === "sent" && normalOccurrence?.scheduledFor'));
+  assert.ok(source.includes('.eq("next_reminder_at", scheduledFor)'));
+  assert.ok(source.includes("catch_up_next_date: catchUp.nextDate"));
+  assert.ok(source.includes('retryPayload.catch_up === true && retryDelivery.status === "sent"'));
+  assert.ok(source.includes("String(attempt.scheduled_for)"));
 });
 
 test("Limitless invalid monetary fields create no attempt and authorization denial makes no provider call", async () => {

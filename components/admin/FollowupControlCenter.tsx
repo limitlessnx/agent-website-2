@@ -15,6 +15,7 @@ type Props = {
   configured: boolean;
   automationIssues: number;
   now: number;
+  loadError?: string;
 };
 type StatusFilter = "active" | "paused" | "failed" | "unknown" | "completed" | "cancelled" | "stopped" | "opted_out" | "closed" | "all";
 type LogStatus = "all" | "success" | "failed" | "blocked";
@@ -53,6 +54,7 @@ export default function FollowupControlCenter(props: Props) {
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
   const [draftBusy, setDraftBusy] = useState("");
+  const [draftsLoading, setDraftsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [logStatus, setLogStatus] = useState<LogStatus>("all");
@@ -63,7 +65,8 @@ export default function FollowupControlCenter(props: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load drafts.");
       if (active) setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft"));
-    }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); });
+    }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); })
+      .finally(() => { if (active) setDraftsLoading(false); });
     return () => { active = false; };
   }, []);
   async function reviewDraft(id: string, action: "approve" | "reject") {
@@ -133,7 +136,8 @@ export default function FollowupControlCenter(props: Props) {
     }
   }
 
-  return <div className="followup-center">
+  return <div className="followup-center" aria-busy={draftsLoading}>
+    {props.loadError ? <section className="admin-panel" role="alert"><div className="admin-list-row compact attention-danger"><div><strong>Live follow-up data is unavailable</strong><span>{props.loadError} Draft review and sequence controls are disabled until the records load correctly.</span></div><em>Read-only fallback</em></div></section> : null}
     {!props.configured ? <section className="admin-panel"><div className="admin-list-row compact"><div><strong>Follow-up setup needs attention</strong><span>Supabase configuration is required before Maia follow-ups can be managed.</span></div><em>Setup required</em></div></section> : null}
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Maia follow-up engine</h2><p>Maia creates follow-ups on days 1, 3, 7, 14, 21 and 30 at the tenant&apos;s preferred Africa/Lagos send time, then checks in every 14 days until consent is withdrawn or an authorized operator stops/closes the deal.</p></div><span className="admin-status live">Maia managed</span></div>
@@ -150,7 +154,8 @@ export default function FollowupControlCenter(props: Props) {
           {draft.eligibility_snapshot?.opted_out ? <p role="alert">Customer opt-out is recorded. Approval cannot authorize messaging.</p> : null}
           <div className="followup-actions"><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"approve")}>Approve draft</button><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"reject")}>Reject</button></div>
         </div></article>)}
-        {!drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
+        {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}
+        {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
       </div>
     </section>
     <section className="admin-panel">
@@ -203,6 +208,6 @@ export default function FollowupControlCenter(props: Props) {
       </tbody></table></div><p className="admin-empty">Showing up to 25 matching records. Provider IDs and raw response payloads are not displayed.</p>
     </section>
     {message ? <p className="admin-form-message">{message}</p> : null}
-    <style jsx>{`.followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}`}</style>
+    <style jsx>{`.followup-center{display:grid;gap:16px;min-width:0;min-height:320px}.followup-records{min-width:0}.followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}`}</style>
   </div>;
 }

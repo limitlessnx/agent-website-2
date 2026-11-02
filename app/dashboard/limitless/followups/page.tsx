@@ -5,10 +5,22 @@ import { getLeads, LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data
 export const dynamic = "force-dynamic";
 
 export default async function FollowupsPage() {
-  const [summary, leads] = await Promise.all([
-    getFollowupControlSummary(LIMITLESS_REALTY_ORGANIZATION_ID),
+  const [summaryResult, leads] = await Promise.all([
+    getFollowupControlSummary(LIMITLESS_REALTY_ORGANIZATION_ID)
+      .then((summary) => ({ summary, error: "" }))
+      .catch(() => ({ summary: null, error: "Follow-up records could not be loaded. The page is available, but its live data needs attention." })),
     getLeads(1000).catch(() => []),
   ]);
+  const summaryError = summaryResult.error;
+  const summary = summaryResult.summary || {
+    configured: false,
+    asOf: Date.now(),
+    sequences: [],
+    steps: [],
+    enrollments: [],
+    logs: [],
+    statusSummary: { upcoming: 0, due: 0, overdue: 0, completed: 0, failed: 0, cancelled: 0, paused: 0, optedOut: 0, stopped: 0, closed: 0, unknown: 0, draft: 0, unscheduled: 0 },
+  };
 
   const active = summary.enrollments.filter((item) => item.status === "active").length;
   const scheduled = summary.statusSummary.upcoming;
@@ -39,9 +51,11 @@ export default async function FollowupsPage() {
         <article className="admin-metric-card"><p>Needs attention</p><strong>{attention}</strong><span>Failed or blocked actions requiring review</span></article>
       </div>
 
+      {summaryError ? <section className="admin-panel" role="alert"><div className="admin-list-row compact attention-danger"><div><strong>Follow-up data is temporarily unavailable</strong><span>{summaryError}</span></div><span className="admin-status warning">Data unavailable</span></div></section> : null}
       <FollowupControlCenter
         configured={summary.configured}
         now={summary.asOf}
+        loadError={summaryError}
         leads={leads.map((lead) => ({ id:String(lead.id), name:String(lead.name || ""), phone:String(lead.phone || "") }))}
         sequences={summary.sequences}
         steps={summary.steps}
