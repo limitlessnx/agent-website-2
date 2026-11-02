@@ -54,7 +54,7 @@ export default function FollowupControlCenter(props: Props) {
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
   const [draftBusy, setDraftBusy] = useState("");
-  const [draftsLoading, setDraftsLoading] = useState(true);\n  const [draftsLoading, setDraftsLoading] = useState(true);
+  const [draftsLoading, setDraftsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [logStatus, setLogStatus] = useState<LogStatus>("all");
