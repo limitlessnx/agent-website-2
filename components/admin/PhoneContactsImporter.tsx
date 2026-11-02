@@ -16,19 +16,66 @@ function first(value?: string[]) {
   return String(value?.find((item) => item?.trim()) || "").trim();
 }
 
+function decodeVCardValue(value: string, params: string[]) {
+  let decoded = value;
+  if (params.some((param) => /ENCODING=(?:QUOTED-PRINTABLE|QP)/i.test(param))) {
+    const bytes: number[] = [];
+    for (let index = 0; index < decoded.length; index += 1) {
+      if (decoded[index] === "=" && /^[0-9A-F]{2}$/i.test(decoded.slice(index + 1, index + 3))) {
+        bytes.push(parseInt(decoded.slice(index + 1, index + 3), 16));
+        index += 2;
+      } else {
+        bytes.push(decoded.charCodeAt(index) & 0xff);
+      }
+    }
+    try { decoded = new TextDecoder("utf-8").decode(new Uint8Array(bytes)); } catch { /* retain readable source value */ }
+  }
+  return decoded
+    .replace(/\\[nN]/g, " ")
+    .replace(/\\,/g, ",")
+    .replace(/\\;/g, ";")
+    .replace(/\\\\/g, "\\")
+    .trim();
+}
+
 function parseVCard(source: string): PreviewContact[] {
-  const unfolded = source.replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "");
-  return unfolded.split(/(?=BEGIN:VCARD)/i).filter((card) => /BEGIN:VCARD/i.test(card)).map((card) => {
-    const lines = card.split(/\r?\n/);
-    const read = (prefix: string) => {
-      const line = lines.find((item) => item.toUpperCase().startsWith(prefix));
-      return line ? line.slice(line.indexOf(":") + 1).trim().replace(/\\[nN]/g, " ").replace(/\\,/g, ",").replace(/\\;/g, ";") : "";
-    };
-    const name = read("FN:") || read("N:");
-    const phone = lines.find((item) => /^TEL(?:;[^:]*)?:/i.test(item))?.split(":").slice(1).join(":").trim() || "";
-    const email = lines.find((item) => /^EMAIL(?:;[^:]*)?:/i.test(item))?.split(":").slice(1).join(":").trim() || "";
-    return { name, phone, email };
-  }).filter((contact) => contact.name && contact.phone);
+  // vCard permits folded lines and optional group prefixes (for example item1.TEL).
+  const unfolded = source
+    .replace(/^\\uFEFF/, "")
+    .replace(/\r\n[ \t]/g, "")
+    .replace(/\n[ \t]/g, "")
+    .replace(/\r(?=[^\n])/g, "\n");
+  return unfolded.split(/(?=BEGIN:VCARD)/i)
+    .filter((card) => /BEGIN:VCARD/i.test(card))
+    .map((card) => {
+      const lines = card.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const properties = lines.flatMap((line) => {
+        const colon = line.indexOf(":");
+        if (colon < 0) return [];
+        const left = line.slice(0, colon);
+        const value = line.slice(colon + 1);
+        const parts = left.split(";");
+        const property = (parts.shift() || "").split(".").pop()?.toUpperCase() || "";
+        return [{ property, params: parts, value }];
+      });
+      const values = (property: string) => properties.filter((item) => item.property === property);
+      const fn = values("FN")[0];
+      const n = values("N")[0];
+      const name = fn
+        ? decodeVCardValue(fn.value, fn.params)
+        : n
+          ? decodeVCardValue(n.value.split(";").filter(Boolean).reverse().join(" "), n.params)
+          : "";
+      const phones = values("TEL").map((item) => ({
+        value: decodeVCardValue(item.value, item.params),
+        preferred: item.params.some((param) => /TYPE=.*(?:CELL|MOBILE)/i.test(param)) || item.params.some((param) => /PREF/i.test(param)),
+      })).filter((item) => item.value);
+      const phone = (phones.find((item) => item.preferred) || phones[0])?.value || "";
+      const emailItem = values("EMAIL")[0];
+      const email = emailItem ? decodeVCardValue(emailItem.value, emailItem.params) : "";
+      return { name, phone, email };
+    })
+    .filter((contact) => contact.name && contact.phone);
 }
 
 export default function PhoneContactsImporter() {
@@ -137,10 +184,10 @@ export default function PhoneContactsImporter() {
         <button type="button" className={styles.secondary} onClick={() => fileRef.current?.click()} disabled={loading || importing}>
           Import .vcf file
         </button>
-        <input ref={fileRef} className={styles.hiddenFile} type="file" accept=".vcf,text/vcard,text/x-vcard" onChange={(event) => void readVCard(event.target.files?.[0])} />
+        <input ref={fileRef} className={styles.hiddenFile} type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard,application/vcard" onChange={(event) => void readVCard(event.target.files?.[0])} />
       </div>
 
-      {!supported ? <p className={styles.hint}>This browser does not support the native contact picker. On iPhone or unsupported browsers, export/share contacts as a .vcf file and import that file here.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
+      {!supported ? <p className={styles.hint}>This browser does not support the native contact picker. On iPhone, open Contacts, select the contacts you want, use Share, then save or share the contact card as a .vcf file. Import that file here. The direct picker is unavailable in this browser.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
 
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
