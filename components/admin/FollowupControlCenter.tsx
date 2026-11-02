@@ -52,7 +52,7 @@ export default function FollowupControlCenter(props: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
-  const [draftBusy, setDraftBusy] = useState("");
+  const [draftBusy, setDraftBusy] = useState("");\n  const [draftsLoading, setDraftsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [logStatus, setLogStatus] = useState<LogStatus>("all");
@@ -150,7 +150,7 @@ export default function FollowupControlCenter(props: Props) {
           {draft.eligibility_snapshot?.opted_out ? <p role="alert">Customer opt-out is recorded. Approval cannot authorize messaging.</p> : null}
           <div className="followup-actions"><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"approve")}>Approve draft</button><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"reject")}>Reject</button></div>
         </div></article>)}
-        {!drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
+        {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}\n        {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
       </div>
     </section>
     <section className="admin-panel">
@@ -203,6 +203,6 @@ export default function FollowupControlCenter(props: Props) {
       </tbody></table></div><p className="admin-empty">Showing up to 25 matching records. Provider IDs and raw response payloads are not displayed.</p>
     </section>
     {message ? <p className="admin-form-message">{message}</p> : null}
-    <style jsx>{`.followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}`}</style>
+    <style jsx>{`.followup-center{display:grid;gap:16px;min-width:0;min-height:320px}.followup-records{min-width:0}.followup-log-filters{display:flex;gap:8px;flex-wrap:wrap}.followup-log-filters select{min-width:150px}.admin-table td{vertical-align:top;max-width:320px;word-break:break-word}@media(max-width:760px){.followup-log-filters{width:100%}.followup-log-filters select{width:100%}}`}</style>
   </div>;
 }
