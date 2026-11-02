@@ -30,7 +30,7 @@ export async function GET() {
 export async function POST(request:NextRequest) {
  const current=await context();if(!current)return NextResponse.json({error:"Unauthorized"},{status:401});
  try {
-  const body=await request.json(),leadId=String(body.lead_id||"").trim(),propertyId=String(body.property_id||"").trim(),reason=String(body.reason||"").trim(),notes=String(body.notes||"").trim();
+  const body=await request.json(),leadId=String(body.lead_id||"").trim(),propertyId=String(body.property_id||"").trim(),reason=String(body.reason||"").trim(),notes=String(body.notes||"").trim(),messageContext=String(body.message_context||"").trim();
   if(!leadId||!propertyId||!reason)return NextResponse.json({error:"Lead, property, and follow-up reason are required."},{status:400});
   const [lead,property]=await Promise.all([
    current.admin.from("leads").select("id,opted_out,status,score").eq("id",leadId).eq("organization_id",current.organizationId).maybeSingle(),
@@ -41,7 +41,7 @@ export async function POST(request:NextRequest) {
   const optedOut=Boolean(lead.data.opted_out)||lead.data.status==="opted_out";
   const {data,error}=await current.admin.from("limitless_maia_followup_drafts").insert({
    organization_id:current.organizationId,lead_id:leadId,property_id:propertyId,reason,notes:notes||null,
-   eligibility_snapshot:{system_recommendation:optedOut?"ineligible":"eligible_for_review",opted_out:optedOut,lead_status:lead.data.status||null,lead_score:lead.data.score||null},
+   eligibility_snapshot:{system_recommendation:optedOut?"ineligible":"eligible_for_review",opted_out:optedOut,lead_status:lead.data.status||null,lead_score:lead.data.score||null,message_context:messageContext||null},
    status:"draft",created_by:String(current.session.email||"authenticated-admin")
   }).select("*").single();
   if(error)throw error;return NextResponse.json({draft:data},{status:201});
@@ -110,7 +110,7 @@ export async function PATCH(request:NextRequest) {
     estateResult.data?.payment_terms? `Estate payment terms: ${JSON.stringify(estateResult.data.payment_terms)}`:null
    ].filter(Boolean);
    const propertyDetails=propertyFacts.join(" | ").slice(0,950);
-   const enquiryContext=[clean(existing.reason),clean(lead.data.property_interest),clean(lead.data.purpose)]
+   const enquiryContext=[clean(existing.reason),clean(snapshot.message_context),clean(lead.data.property_interest),clean(lead.data.purpose)]
     .filter(Boolean).join(" · ").slice(0,450);
    const followupContext=enquiryContext
     ? `I'm following up on your enquiry about ${enquiryContext}. Please let us know if you'd like any clarification.`
