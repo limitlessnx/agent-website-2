@@ -173,7 +173,7 @@ test("manual retry makes no provider call for an opted-out linked or phone-match
 test("Limitless flexible installment plans may omit a fixed installment amount without weakening balance validation", () => {
   const source = runtime();
   const start = source.indexOf("function validatedLimitlessMoney");
-  const end = source.indexOf("\\n}", start) + 2;
+  const end = source.indexOf("\n}", start) + 2;
   const validator = source.slice(start, end);
   assert.ok(validator.includes("function validatedLimitlessMoney"));
   assert.doesNotMatch(validator, /installmentAmount <= 0/);
