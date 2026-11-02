@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       ? selectedProperty ? buildEstateBriefCampaign(selectedProperty, originalMessage) : null
       : null;
     if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBrief) return noStore({ error: "Select a verified property before preparing an estate brief campaign." }, 400);
+    if (campaignType === "limitless_realty_reminder" && !selectedProperty) return noStore({ error: "Select a verified property from the Limitless Realty catalogue for this reminder." }, 400);
     const propertyCampaign = selectedProperty && !estateBrief ? buildPropertyCampaignContent(selectedProperty, originalMessage, String(body.mediaUrl || "")) : null;
     const message = estateBrief ? estateBrief.sellingPoint : propertyCampaign?.message || originalMessage;
     const topic = String(body.topic || (propertyCampaign ? `${propertyCampaign.propertyName} property update` : "WhatsApp campaign")).trim();
@@ -185,7 +186,7 @@ export async function POST(request: Request) {
     const dispatches: Array<Awaited<ReturnType<typeof dispatchMaiaCampaignAction>>> = [];
     try {
       for (let index = 0; index < messageParts.length; index += 1) {
-        dispatches.push(await dispatchMaiaCampaignAction({ commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`, campaignType, templateName, topic, message: messageParts[index], recipients, propertyTitle: estateBrief?.propertyName || propertyCampaign?.propertyName || selectedProperty?.title, propertyLocation: estateBrief?.location, propertyPrice: estateBrief?.price, sellingPoint: estateBrief?.sellingPoint, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || undefined, createdBy }));
+        dispatches.push(await dispatchMaiaCampaignAction({ commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`, campaignType, templateName, topic, message: messageParts[index], recipients, propertyTitle: estateBrief?.propertyName || propertyCampaign?.propertyName || selectedProperty?.title, propertyLocation: estateBrief?.location, propertyPrice: estateBrief?.price || selectedProperty?.price, propertyDetails: selectedProperty ? [selectedProperty.location_area, selectedProperty.location_city, selectedProperty.price, selectedProperty.features, selectedProperty.description].filter(Boolean).join(" · ") : undefined, sellingPoint: estateBrief?.sellingPoint, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || undefined, createdBy }));
       }
     } catch (dispatchError) {
       const detail = dispatchError instanceof Error ? dispatchError.message.slice(0, 1000) : "Provider execution returned an ambiguous failure.";
