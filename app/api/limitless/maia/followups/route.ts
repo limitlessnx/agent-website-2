@@ -14,12 +14,9 @@ const FOLLOWUP_TEMPLATE_PURPOSE = "follow_up_outside_24h";
 const DAY_30_STAGE = 6;
 const LIMITLESS_APPROVED_FOLLOWUP_VARIABLE_ORDER = [
   "customer_name",
-  "last_topic",
-  "property_name",
-  "property_location",
-  "customer_interest",
-  "customer_goal",
-  "objection",
+  "followup_context",
+  "property_details",
+  "next_step",
 ] as const;
 
 function explicitlyRejectedByProvider(error: unknown) {
@@ -365,12 +362,9 @@ export async function POST(request: NextRequest) {
         ...(!withinCustomerServiceWindow ? { strictTemplateContract: { approvedVariableOrder: LIMITLESS_APPROVED_FOLLOWUP_VARIABLE_ORDER } } : {}),
         variables: {
           customer_name: String(lead?.name || ""),
-          last_topic: String(property.title || "your property enquiry"),
-          property_name: String(property.title || "Property details"),
-          property_location: propertyLocation,
-          customer_interest: `Property enquiry: ${String(property.title || "property")}`,
-          customer_goal: "Updated availability or help arranging a viewing",
-          objection: "No objection recorded",
+          followup_context: String(property.title || "Your property enquiry"),
+          property_details: [propertyLocation, property.price, property.features].filter(Boolean).join(" · ") || "Property details available on request",
+          next_step: "Would you like the latest availability or help arranging an inspection?",
         },
       });
       providerMessageId = String(delivery.providerMessageId || "").trim() || null;
