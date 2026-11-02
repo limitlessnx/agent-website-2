@@ -41,6 +41,7 @@ export default function PhoneContactsImporter() {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [whatsappConsentConfirmed, setWhatsappConsentConfirmed] = useState(false);
 
   const selectedContacts = useMemo(() => selected.map((index) => contacts[index]).filter(Boolean), [contacts, selected]);
 
@@ -101,11 +102,11 @@ export default function PhoneContactsImporter() {
       const response = await fetch("/api/limitless/leads/phone-contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contacts: selectedContacts }),
+        body: JSON.stringify({ contacts: selectedContacts, whatsappConsentConfirmed }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Contact import failed.");
-      setNotice(data.imported + " new lead(s) added; " + data.skipped + " skipped as duplicates or invalid contacts.");
+      setNotice(data.imported + " new lead(s) added; " + data.skipped + " skipped. " + (data.campaignEligible ? "They are marked campaign-eligible based on your consent confirmation." : "They are saved as leads but excluded from campaigns until consent is confirmed."));
       setContacts([]);
       setSelected([]);
       window.dispatchEvent(new CustomEvent("limitless-leads-imported"));
@@ -157,6 +158,7 @@ export default function PhoneContactsImporter() {
               </label>
             ))}
           </div>
+          <label className={styles.consentCheck}><input type="checkbox" checked={whatsappConsentConfirmed} onChange={(event) => setWhatsappConsentConfirmed(event.target.checked)} /><span>I confirm these contacts have given permission to receive WhatsApp marketing messages. Without this confirmation, imported leads will be excluded from campaigns.</span></label>
           <button type="button" className={styles.importButton} onClick={importSelected} disabled={!selected.length || importing}>
             {importing ? "Adding leads…" : "Add " + selected.length + " selected to Leads"}
           </button>
