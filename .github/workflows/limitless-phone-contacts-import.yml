@@ -1,0 +1,38 @@
+name: Limitless phone contacts import tests
+
+on:
+  push:
+    branches:
+      - main
+      - release/limitless-phone-contacts-import
+    paths:
+      - "app/api/limitless/leads/phone-contacts/**"
+      - "app/dashboard/limitless/leads/page.tsx"
+      - "components/admin/PhoneContactsImporter*"
+      - "tests/limitless-phone-contacts-import.test.mjs"
+      - "tests/real-estate-campaign-leads.test.cjs"
+      - "tests/real-estate-campaign-send-route.test.cjs"
+      - "tests/real-estate-direct-campaign-route.test.cjs"
+      - ".github/workflows/limitless-phone-contacts-import.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phone-contacts-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Run phone contact import and campaign regression tests
+        run: >-
+          node --test
+          tests/limitless-phone-contacts-import.test.mjs
+          tests/real-estate-campaign-leads.test.cjs
+          tests/real-estate-campaign-send-route.test.cjs
+          tests/real-estate-direct-campaign-route.test.cjs
