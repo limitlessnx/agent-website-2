@@ -192,7 +192,7 @@ test("the one-time 31 October catch-up reclaims only a missed-window attempt and
   assert.ok(source.includes('catchUp && delivery.status === "sent" && normalOccurrence?.scheduledFor'));
   assert.ok(source.includes('.eq("next_reminder_at", scheduledFor)'));
   assert.ok(source.includes("catch_up_next_date: catchUp.nextDate"));
-  assert.ok(source.includes("retryPayload.catch_up === true && retryDelivery.status === "sent""));
+  assert.ok(source.includes('retryPayload.catch_up === true && retryDelivery.status === "sent"'));
   assert.ok(source.includes("String(attempt.scheduled_for)"));
 });
 
