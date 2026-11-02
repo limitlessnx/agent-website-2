@@ -177,7 +177,6 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   const agreedPrice = parseMoneyCents(plan.agreed_price);
   const paidToDate = parseMoneyCents(plan.total_paid);
   const outstandingBalance = parseMoneyCents(plan.outstanding_balance);
-  const installmentAmount = parseMoneyCents(plan.installment_amount);
   if (agreedPrice === null || paidToDate === null || outstandingBalance === null
     || agreedPrice <= 0 || paidToDate < 0 || paidToDate > agreedPrice
     || outstandingBalance !== agreedPrice - paidToDate || outstandingBalance <= 0) {
