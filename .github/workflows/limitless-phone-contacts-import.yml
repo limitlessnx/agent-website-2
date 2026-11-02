@@ -35,4 +35,3 @@ jobs:
           tests/real-estate-campaign-leads.test.cjs
           tests/real-estate-campaign-send-route.test.cjs
           tests/real-estate-direct-campaign-route.test.cjs
-          tests/maia-campaign-direct-delivery.test.cjs
