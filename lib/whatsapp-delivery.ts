@@ -16,6 +16,7 @@ type SendInput = {
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
   strictTemplateContract?: { approvedVariableOrder: readonly string[] };
+  templateVariableOrder?: readonly string[];
   templateHeaderImageUrl?: string;
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
@@ -228,7 +229,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
       }
     }
 
-    const variableKeys=Array.isArray(config?.variable_keys)?config!.variable_keys!:[];
+    const variableKeys=input.templateVariableOrder || (Array.isArray(config?.variable_keys)?config!.variable_keys!:[]);
     const contentVariables:Record<string,string>={};
     variableKeys.forEach((key,index)=>{contentVariables[String(index+1)]=String(input.variables?.[key]??"");});
     const result=await sendTwilioWhatsAppMessage({
@@ -268,7 +269,8 @@ export async function sendWhatsAppMessage(input: SendInput) {
   let templateName: string | null = null;
   if (useTemplate) {
     templateName = config!.template_name;
-    const parameters = (Array.isArray(config!.variable_keys) ? config!.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
+    const variableKeys=input.templateVariableOrder || (Array.isArray(config!.variable_keys) ? config!.variable_keys : []);
+    const parameters = variableKeys.map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
     const components: Array<Record<string, unknown>> = [];
     if (input.templateHeaderImageUrl) {
       if (!isDirectPublicImageUrl(input.templateHeaderImageUrl)) throw new Error("The template header must be a direct public image URL.");
