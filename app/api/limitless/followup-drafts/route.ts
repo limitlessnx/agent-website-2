@@ -13,11 +13,18 @@ export async function GET() {
  const current=await context(); if(!current)return NextResponse.json({error:"Unauthorized"},{status:401});
  try {
   const [properties,drafts]=await Promise.all([
-   current.admin.from("properties").select("id,title").eq("organization_id",current.organizationId).order("title"),
+   current.admin.from("properties").select("id,title,type,location_city,location_area,price,bedrooms,bathrooms,size_sqm,status,features,description,estate_id").eq("organization_id",current.organizationId).order("title"),
    current.admin.from("limitless_maia_followup_drafts").select("*,leads(name,phone),properties(title)").eq("organization_id",current.organizationId).order("created_at",{ascending:false}).limit(200)
   ]);
   if(properties.error)throw properties.error;if(drafts.error)throw drafts.error;
-  return NextResponse.json({properties:properties.data||[],drafts:drafts.data||[]},{headers:{"Cache-Control":"no-store"}});
+  const estateIds=[...new Set((properties.data||[]).map((property:any)=>property.estate_id).filter(Boolean))];
+  const estates=estateIds.length
+   ? await current.admin.from("real_estate_estates").select("id,name,location,address,status,payment_terms").eq("organization_id",current.organizationId).in("id",estateIds)
+   : {data:[],error:null};
+  if(estates.error)throw estates.error;
+  const estateById=new Map((estates.data||[]).map((estate:any)=>[estate.id,estate]));
+  const propertyOptions=(properties.data||[]).map((property:any)=>({...property,estate:property.estate_id?estateById.get(property.estate_id)||null:null}));
+  return NextResponse.json({properties:propertyOptions,drafts:drafts.data||[]},{headers:{"Cache-Control":"no-store"}});
  } catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to load follow-up drafts."},{status:500});}
 }
 export async function POST(request:NextRequest) {
@@ -72,13 +79,42 @@ export async function PATCH(request:NextRequest) {
    const confirmation=snapshot.consent_confirmation as Record<string,unknown>|undefined;
    if(confirmation?.received!==true)return NextResponse.json({error:"Confirm that the customer genuinely gave permission before sending."},{status:409});
    const [lead,property]=await Promise.all([
-    current.admin.from("leads").select("name,phone,opted_out,status,property_interest,purpose,location_preference").eq("id",existing.lead_id).eq("organization_id",current.organizationId).maybeSingle(),
-    current.admin.from("properties").select("title,location").eq("id",existing.property_id).eq("organization_id",current.organizationId).maybeSingle()
+    current.admin.from("leads").select("name,phone,opted_out,status,property_interest,purpose,location_preference,property_type,budget,timeline").eq("id",existing.lead_id).eq("organization_id",current.organizationId).maybeSingle(),
+    current.admin.from("properties").select("id,title,type,location_city,location_area,price,bedrooms,bathrooms,size_sqm,status,features,description,estate_id").eq("id",existing.property_id).eq("organization_id",current.organizationId).maybeSingle()
    ]);
    if(lead.error)throw lead.error;if(property.error)throw property.error;
    if(!lead.data||!property.data)return NextResponse.json({error:"Lead or property could not be verified."},{status:404});
    if(Boolean(lead.data.opted_out)||lead.data.status==="opted_out")return NextResponse.json({error:"This lead has opted out. Sending is blocked."},{status:409});
    if(!lead.data.phone)return NextResponse.json({error:"This lead has no WhatsApp phone number."},{status:400});
+   const estateResult=property.data.estate_id
+    ? await current.admin.from("real_estate_estates").select("name,location,address,status,payment_terms").eq("id",property.data.estate_id).eq("organization_id",current.organizationId).maybeSingle()
+    : {data:null,error:null};
+   if(estateResult.error)throw estateResult.error;
+   const clean=(value:unknown)=>String(value??"").replace(/\\s+/g," ").trim();
+   const propertyFacts=[
+    clean(property.data.title),
+    clean(property.data.type)?`Type: ${clean(property.data.type)}`:null,
+    [clean(property.data.location_area),clean(property.data.location_city)].filter(Boolean).length
+      ? `Location: ${[clean(property.data.location_area),clean(property.data.location_city)].filter(Boolean).join(", ")}`:null,
+    property.data.price!==null&&property.data.price!==undefined
+      ? `Listed price: ₦${Number(property.data.price).toLocaleString("en-NG")}`:null,
+    property.data.size_sqm!==null&&property.data.size_sqm!==undefined
+      ? `Size: ${Number(property.data.size_sqm).toLocaleString("en-NG")} sqm`:null,
+    property.data.bedrooms!==null&&property.data.bedrooms!==undefined? `Bedrooms: ${property.data.bedrooms}`:null,
+    property.data.bathrooms!==null&&property.data.bathrooms!==undefined? `Bathrooms: ${property.data.bathrooms}`:null,
+    clean(property.data.status)?`Listing status: ${clean(property.data.status)}`:null,
+    clean(property.data.features)?`Features/title: ${clean(property.data.features)}`:null,
+    clean(estateResult.data?.name)?`Estate: ${clean(estateResult.data?.name)}`:null,
+    clean(estateResult.data?.location)?`Estate location: ${clean(estateResult.data?.location)}`:null,
+    estateResult.data?.payment_terms? `Estate payment terms: ${JSON.stringify(estateResult.data.payment_terms)}`:null
+   ].filter(Boolean);
+   const propertyDetails=propertyFacts.join(" | ").slice(0,950);
+   const enquiryContext=[clean(existing.reason),clean(existing.notes),clean(lead.data.property_interest),clean(lead.data.purpose)]
+    .filter(Boolean).join(" · ").slice(0,450);
+   const followupContext=enquiryContext
+    ? `I'm following up on your enquiry about ${enquiryContext}. Please let us know if you'd like any clarification.`
+    : "I'm checking in on your property enquiry and would be happy to answer any questions.";
+   const nextStep="Would you like more information about this property or help arranging the next step?";
    const {data:locked,error:lockError}=await current.admin.from("limitless_maia_followup_drafts").update({status:"sending",updated_at:now,delivery_error:null})
     .eq("id",id).eq("organization_id",current.organizationId).eq("status","draft").select("id").maybeSingle();
    if(lockError)throw lockError;
@@ -87,14 +123,12 @@ export async function PATCH(request:NextRequest) {
     const result=await sendWhatsAppMessage({
      organizationId:current.organizationId,to:String(lead.data.phone),deliveryMode:"template",forceTemplate:true,
      templatePurpose:"follow_up_outside_24h",requestedTemplateName:"limitless_realty_reminder",recipientType:"customer",
+     templateVariableOrder:["customer_name","followup_context","property_details","next_step"],
      variables:{
       customer_name:String(lead.data.name||"there"),
-      last_topic:String(existing.reason||existing.notes||"your property enquiry"),
-      property_name:String(property.data.title||"the property"),
-      property_location:String(property.data.location||lead.data.location_preference||"Not specified"),
-      customer_interest:String(lead.data.property_interest||existing.reason||"Property enquiry"),
-      customer_goal:String(lead.data.purpose||"Not specified"),
-      objection:String(existing.notes||"None shared")
+      followup_context:followupContext,
+      property_details:propertyDetails||clean(property.data.title)||"Property details available on request",
+      next_step:nextStep
      }
     });
     const sentAt=new Date().toISOString();
