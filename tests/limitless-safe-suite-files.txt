@@ -44,3 +44,4 @@ tests/installment-payment-lifecycle.test.mjs
 tests/limitless-maia-followup-workstream.test.mjs
 tests/limitless-maia-followup-migration.test.cjs
 tests/limitless-installment-migration.test.cjs
+tests/limitless-reminder-campaign-template.test.cjs
