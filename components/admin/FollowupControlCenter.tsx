@@ -53,6 +53,7 @@ export default function FollowupControlCenter(props: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
+  const [deliveryHistory, setDeliveryHistory] = useState<Array<Record<string, any>>>([]);
   const [draftBusy, setDraftBusy] = useState("");
   const [draftsLoading, setDraftsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -64,7 +65,7 @@ export default function FollowupControlCenter(props: Props) {
     fetch("/api/limitless/followup-drafts").then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load drafts.");
-      if (active) setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft"));
+      if (active) { setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft")); setDeliveryHistory((data.drafts || []).filter((draft: Record<string, any>) => ["sent","failed"].includes(draft.status))); }
     }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); })
       .finally(() => { if (active) setDraftsLoading(false); });
     return () => { active = false; };
@@ -91,6 +92,7 @@ export default function FollowupControlCenter(props: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to send follow-up template.");
       setDrafts(current => current.filter(draft => draft.id !== id));
+      setDeliveryHistory(current => [data.draft, ...current]);
       setMessage(data.note || "Follow-up template sent.");
       router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to send follow-up."); }
@@ -179,6 +181,18 @@ export default function FollowupControlCenter(props: Props) {
         </div></article>)}
         {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}
         {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
+      </div>
+    </section>
+    <section className="admin-panel">
+      <div className="admin-panel-header"><div><h2>Manual follow-up delivery history</h2><p>Sent messages leave Drafts. Failed attempts remain visible for review.</p></div><span className="admin-status live">{deliveryHistory.filter(item=>item.status==="sent").length} sent</span></div>
+      <div className="followup-records">
+        {deliveryHistory.map(item => <article key={item.id} className="followup-record"><div style={{padding:"14px"}}>
+          <strong>{item.leads?.name || "Lead"} · {item.properties?.title || "Property"}</strong>
+          <p><span className={item.status==="sent"?"admin-status live":"admin-status warning"}>{item.status==="sent"?"Sent":"Failed"}</span> · {formatDate(item.sent_at || item.updated_at)}</p>
+          {item.provider_message_id ? <small>Provider message ID: {item.provider_message_id}</small> : null}
+          {item.delivery_error ? <p role="alert">{item.delivery_error}</p> : null}
+        </div></article>)}
+        {!deliveryHistory.length ? <p className="admin-empty">No manual follow-up messages sent or failed yet.</p> : null}
       </div>
     </section>
     <section className="admin-panel">
