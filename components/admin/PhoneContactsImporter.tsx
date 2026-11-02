@@ -131,16 +131,22 @@ export default function PhoneContactsImporter() {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" onClick={chooseFromPhone} disabled={!supported || loading || importing}>
-          {loading ? "Opening contacts…" : "Choose phone contacts"}
-        </button>
-        <button type="button" className={styles.secondary} onClick={() => fileRef.current?.click()} disabled={loading || importing}>
-          Import .vcf file
+        {supported ? (
+          <button type="button" onClick={chooseFromPhone} disabled={loading || importing}>
+            {loading ? "Opening contacts…" : "Choose phone contacts"}
+          </button>
+        ) : (
+          <button type="button" className={styles.unavailable} disabled aria-describedby="contact-picker-unavailable">
+            Phone picker unavailable in Safari
+          </button>
+        )}
+        <button type="button" className={supported ? styles.secondary : styles.primaryFallback} onClick={() => fileRef.current?.click()} disabled={loading || importing}>
+          Choose .vcf contact file
         </button>
         <input ref={fileRef} className={styles.hiddenFile} type="file" accept=".vcf,text/vcard,text/x-vcard" onChange={(event) => void readVCard(event.target.files?.[0])} />
       </div>
 
-      {!supported ? <p className={styles.hint}>This browser does not support the native contact picker. On iPhone or unsupported browsers, export/share contacts as a .vcf file and import that file here.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
+      {!supported ? <p id="contact-picker-unavailable" className={styles.hint}>Safari on iPhone does not provide the browser contact-picker permission prompt, so the first option is unavailable here. Tap “Choose .vcf contact file” to select an exported contacts file from Files. Nothing is imported until you review and confirm the list.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
 
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
