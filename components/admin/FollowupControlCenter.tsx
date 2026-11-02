@@ -69,15 +69,19 @@ export default function FollowupControlCenter(props: Props) {
       .finally(() => { if (active) setDraftsLoading(false); });
     return () => { active = false; };
   }, []);
-  async function reviewDraft(id: string, action: "approve" | "reject") {
+  async function reviewDraft(id: string, consentReceived: boolean) {
     setDraftBusy(id); setMessage("");
     try {
-      const response = await fetch("/api/limitless/followup-drafts", {method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action})});
+      const response = await fetch("/api/limitless/followup-drafts", {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id,action:"confirm_consent",consent_received:consentReceived})
+      });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to review draft.");
-      setDrafts(current => current.filter(draft => draft.id !== id));
-      setMessage(data.note || "Draft review saved.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to review draft."); }
+      if (!response.ok) throw new Error(data.error || "Unable to save consent confirmation.");
+      setDrafts(current => current.map(draft => draft.id === id ? data.draft : draft));
+      setMessage(data.note || "Consent confirmation saved.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save consent confirmation."); }
     finally { setDraftBusy(""); }
   }
   const sequenceName = (item: FollowupEnrollment) => item.current_step
@@ -145,14 +149,20 @@ export default function FollowupControlCenter(props: Props) {
     </section>
     {props.automationIssues > 0 ? <section className="admin-panel"><div className="admin-list-row compact attention-danger"><div><strong>Automation needs attention</strong><span>{props.automationIssues} recent follow-up action(s) failed or were blocked.</span></div><em>{props.automationIssues} issue(s)</em></div></section> : null}
     <section className="admin-panel">
-      <div className="admin-panel-header"><div><h2>Manual follow-up drafts</h2><p>Review drafts created from individual lead cards. Approval records your decision; it does not bypass customer consent or start messaging.</p></div><span className="admin-status warning">{drafts.length} pending</span></div>
+      <div className="admin-panel-header"><div><h2>Manual follow-up drafts</h2><p>Before activation, confirm whether the customer genuinely gave permission to receive follow-up messages. This records the admin attestation; it does not itself send a message.</p></div><span className="admin-status warning">{drafts.length} pending</span></div>
       <div className="followup-records">
         {drafts.map(draft => <article key={draft.id} className="followup-record"><div style={{padding:"14px"}}>
           <strong>{draft.leads?.name || "Lead"} · {draft.properties?.title || "Property"}</strong>
           <p><b>Reason:</b> {draft.reason}</p>{draft.notes ? <p><b>Notes:</b> {draft.notes}</p> : null}
           <small>System assessment: {draft.eligibility_snapshot?.system_recommendation || "Review required"} · Created {formatDate(draft.created_at)}</small>
-          {draft.eligibility_snapshot?.opted_out ? <p role="alert">Customer opt-out is recorded. Approval cannot authorize messaging.</p> : null}
-          <div className="followup-actions"><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"approve")}>Approve draft</button><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"reject")}>Reject</button></div>
+          {draft.eligibility_snapshot?.opted_out ? <p role="alert">Customer opt-out is recorded. Neither answer can override the opt-out.</p> : null}
+          {draft.eligibility_snapshot?.consent_confirmation ? <small>Last confirmation: {draft.eligibility_snapshot.consent_confirmation.received ? "Yes, permission received" : "No, permission not received"} · {formatDate(draft.eligibility_snapshot.consent_confirmation.confirmed_at)}</small> : null}
+          <p><b>Was customer permission received for follow-up messages?</b></p>
+          <div className="followup-actions">
+            <button disabled={Boolean(draftBusy)||Boolean(draft.eligibility_snapshot?.opted_out)} onClick={()=>reviewDraft(String(draft.id),true)}>Yes, permission was received</button>
+            <button disabled={Boolean(draftBusy)||Boolean(draft.eligibility_snapshot?.opted_out)} onClick={()=>reviewDraft(String(draft.id),false)}>No, permission was not received</button>
+          </div>
+          <small>Choose Yes only when the customer actually agreed, including verbally. The system records who confirmed and when. No keeps the draft inactive.</small>
         </div></article>)}
         {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}
         {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
