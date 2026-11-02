@@ -90,7 +90,7 @@ export async function PATCH(request:NextRequest) {
     ? await current.admin.from("real_estate_estates").select("name,location,address,status,payment_terms").eq("id",property.data.estate_id).eq("organization_id",current.organizationId).maybeSingle()
     : {data:null,error:null};
    if(estateResult.error)throw estateResult.error;
-   const clean=(value:unknown)=>String(value??"").replace(/\\s+/g," ").trim();
+   const clean=(value:unknown)=>String(value??"").replace(/\s+/g," ").trim();
    const propertyFacts=[
     clean(property.data.title),
     clean(property.data.type)?`Type: ${clean(property.data.type)}`:null,
@@ -104,12 +104,13 @@ export async function PATCH(request:NextRequest) {
     property.data.bathrooms!==null&&property.data.bathrooms!==undefined? `Bathrooms: ${property.data.bathrooms}`:null,
     clean(property.data.status)?`Listing status: ${clean(property.data.status)}`:null,
     clean(property.data.features)?`Features/title: ${clean(property.data.features)}`:null,
+    clean(property.data.description)?`Description: ${clean(property.data.description).slice(0,320)}`:null,
     clean(estateResult.data?.name)?`Estate: ${clean(estateResult.data?.name)}`:null,
     clean(estateResult.data?.location)?`Estate location: ${clean(estateResult.data?.location)}`:null,
     estateResult.data?.payment_terms? `Estate payment terms: ${JSON.stringify(estateResult.data.payment_terms)}`:null
    ].filter(Boolean);
    const propertyDetails=propertyFacts.join(" | ").slice(0,950);
-   const enquiryContext=[clean(existing.reason),clean(existing.notes),clean(lead.data.property_interest),clean(lead.data.purpose)]
+   const enquiryContext=[clean(existing.reason),clean(lead.data.property_interest),clean(lead.data.purpose)]
     .filter(Boolean).join(" · ").slice(0,450);
    const followupContext=enquiryContext
     ? `I'm following up on your enquiry about ${enquiryContext}. Please let us know if you'd like any clarification.`
@@ -124,6 +125,7 @@ export async function PATCH(request:NextRequest) {
      organizationId:current.organizationId,to:String(lead.data.phone),deliveryMode:"template",forceTemplate:true,
      templatePurpose:"follow_up_outside_24h",requestedTemplateName:"limitless_realty_reminder",recipientType:"customer",
      templateVariableOrder:["customer_name","followup_context","property_details","next_step"],
+     strictTemplateContract:{approvedVariableOrder:["customer_name","followup_context","property_details","next_step"]},
      variables:{
       customer_name:String(lead.data.name||"there"),
       followup_context:followupContext,
