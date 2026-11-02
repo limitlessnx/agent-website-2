@@ -172,8 +172,10 @@ test("manual retry makes no provider call for an opted-out linked or phone-match
 
 test("Limitless flexible installment plans may omit a fixed installment amount without weakening balance validation", () => {
   const source = runtime();
-  const validator = source.match(/function validatedLimitlessMoney\\(plan: PaymentPlanRow\\) \\{[\\s\\S]*?\\n\\}/)?.[0] || "";
-  assert.ok(validator);
+  const start = source.indexOf("function validatedLimitlessMoney");
+  const end = source.indexOf("\\n}", start) + 2;
+  const validator = source.slice(start, end);
+  assert.ok(validator.includes("function validatedLimitlessMoney"));
   assert.doesNotMatch(validator, /installmentAmount <= 0/);
   assert.match(validator, /agreedPrice <= 0/);
   assert.match(validator, /installmentAmount > agreedPrice/);
@@ -182,13 +184,13 @@ test("Limitless flexible installment plans may omit a fixed installment amount w
 
 test("the one-time 31 October catch-up reclaims only a missed-window attempt and advances to 12 November after provider acceptance", () => {
   const source = runtime();
-  assert.match(source, /occurrenceDate === "2026-10-31" && normalOccurrence\\?\\.occurrenceDate === "2026-11-12"/);
-  assert.match(source, /timing === "missed" && !catchUp/);
-  assert.match(source, /existing\\.error_message === "missed_reminder_window"/);
-  assert.match(source, /\\.eq\\("status", "skipped"\\)\\.eq\\("error_message", "missed_reminder_window"\\)/);
-  assert.match(source, /catchUp && delivery\\.status === "sent" && normalOccurrence\\?\\.scheduledFor/);
-  assert.match(source, /\\.eq\\("next_reminder_at", scheduledFor\\)/);
-  assert.match(source, /catch_up_next_date: catchUp\\.nextDate/);
+  assert.ok(source.includes('occurrenceDate === "2026-10-31" && normalOccurrence?.occurrenceDate === "2026-11-12"'));
+  assert.ok(source.includes('timing === "missed" && !catchUp'));
+  assert.ok(source.includes('existing.error_message === "missed_reminder_window"'));
+  assert.ok(source.includes('.eq("status", "skipped").eq("error_message", "missed_reminder_window")'));
+  assert.ok(source.includes('catchUp && delivery.status === "sent" && normalOccurrence?.scheduledFor'));
+  assert.ok(source.includes('.eq("next_reminder_at", scheduledFor)'));
+  assert.ok(source.includes("catch_up_next_date: catchUp.nextDate"));
 });
 
 test("Limitless invalid monetary fields create no attempt and authorization denial makes no provider call", async () => {
