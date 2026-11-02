@@ -5,8 +5,8 @@ const { readFileSync } = require('node:fs');
 const source = readFileSync('components/admin/PhoneContactsImporter.tsx', 'utf8');
 
 test('VCF parser accepts parameterized FN/N fields from iPhone exports', () => {
-  assert.match(source, /property === "FN"/);
-  assert.match(source, /property === "N"/);
+  assert.match(source, /values\("FN"\)/);
+  assert.match(source, /values\("N"\)/);
   assert.match(source, /split\("\."\)\.pop\(\)/);
   assert.match(source, /decodeVCardValue/);
 });
