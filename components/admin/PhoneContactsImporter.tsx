@@ -34,7 +34,7 @@ function parseVCard(source: string): PreviewContact[] {
 export default function PhoneContactsImporter() {
   const picker = (typeof navigator !== "undefined" ? navigator as ContactPickerNavigator : null)?.contacts;
   const [supported, setSupported] = useState(false);
-  useEffect(() => { setSupported(Boolean(picker?.select)); }, []);
+  useEffect(() => { setSupported(Boolean((navigator as ContactPickerNavigator).contacts?.select)); }, []);
   const fileRef = useRef<HTMLInputElement>(null);
   const [contacts, setContacts] = useState<PreviewContact[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
