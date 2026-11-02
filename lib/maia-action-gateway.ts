@@ -22,7 +22,7 @@ type WorkflowNode = { id?: string; name: string; type: string; typeVersion?: num
 type WorkflowConnection = { main?: Array<Array<{ node: string; type: string; index: number }>>; [key: string]: unknown };
 type CampaignSummary = { success?: boolean; action?: string; status?: string; attempted?: number; submitted?: number; accepted_by_whatsapp_api?: number; immediate_failed?: number; skipped?: number; pending_delivery_confirmation?: number; free_form_sent?: number; template_sent?: number; template_name?: string; failed_recipients?: Array<Record<string, unknown>>; accepted_recipients?: Array<Record<string, unknown>>; message?: string };
 
-export type MaiaCampaignAction = { commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; propertyLocation?: string; propertyPrice?: string; sellingPoint?: string; mediaUrl?: string; createdBy?: string };
+export type MaiaCampaignAction = { commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; propertyLocation?: string; propertyPrice?: string; propertyDetails?: string; sellingPoint?: string; mediaUrl?: string; createdBy?: string };
 export type MaiaWhatsAppFollowUpAction = {
   commandId: string;
   recipient: string;
@@ -152,9 +152,9 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
         : isReminderCampaign
           ? {
               customer_name: String(lead.name || "there").trim() || "there",
-              followup_context: paragraphs[0] || "",
-              property_details: paragraphs[1] || "",
-              next_step: paragraphs[2] || "",
+              followup_context: String(command.propertyTitle || "").trim(),
+              property_details: String(command.propertyDetails || "").trim(),
+              next_step: paragraphs[0] || command.message.trim(),
             }
         : {
             customer_name: String(lead.name || "there").trim() || "there",

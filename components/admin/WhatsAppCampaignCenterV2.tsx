@@ -85,9 +85,9 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const recipientCount = audience.length + (audienceMode === "group" && selectedGroup?.groupType === "manual" ? selectedGroup.phones.length : 0);
   const composedUpdate = [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
   const relationshipMessage = [mainUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
-  const outboundMessage = isUpdateTemplate ? composedUpdate : isRelationshipCampaign || isReminderCampaign ? [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n") : message.trim();
+  const outboundMessage = isUpdateTemplate ? composedUpdate : isRelationshipCampaign ? [mainUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n") : isReminderCampaign ? responsePrompt.trim() : message.trim();
   const requestPayload = { campaignType, topic, message: outboundMessage, mediaUrl: "", audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId: campaignType === "direct_message" ? "" : propertyId, budgetMin, budgetMax };
-  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate || isReminderCampaign ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : isRelationshipCampaign ? mainUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
+  const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isReminderCampaign ? selectedProperty?.title && responsePrompt.trim() : isUpdateTemplate ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : isRelationshipCampaign ? mainUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
 
   const sendCampaign = () => {
     if (sending.current || isPending || !canSend) return;
@@ -178,19 +178,19 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
            ) : isReminderCampaign ? (
              <>
                <div className="template-contract">
-                 <div><strong>Limitless Realty Reminder · approved Meta template</strong><span>Uses the active provider-approved reminder template outside the 24-hour customer-service window. Each recipient receives their own name and the three campaign-specific values in the registered order.</span></div>
+                 <div><strong>Limitless Realty Reminder · approved Meta template</strong><span>Uses the active provider-approved reminder template outside the 24-hour customer-service window. Each recipient receives their name, the selected catalogue property, its verified details, and your follow-up prompt in the registered four-variable order.</span></div>
                  <div className="variable-row"><b>{"{{1}}"}</b><span>Customer first name · populated from the selected contact</span></div>
-                 <div className="variable-row"><b>{"{{2}}"}</b><span>Follow-up context</span></div>
-                 <div className="variable-row"><b>{"{{3}}"}</b><span>Property details or relevant context</span></div>
+                 <div className="variable-row"><b>{"{{2}}"}</b><span>Selected property name · required catalogue selection</span></div>
+                 <div className="variable-row"><b>{"{{3}}"}</b><span>Verified location, price and property features · populated automatically</span></div>
                  <div className="variable-row"><b>{"{{4}}"}</b><span>Next step or response prompt</span></div>
                </div>
                <div className="form-grid">
                  <label>Campaign title<input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. November property follow-up" /></label>
-                 <label className="wide">Follow-up context · {"{{2}}"}<textarea rows={4} value={mainUpdate} onChange={(e) => setMainUpdate(e.target.value)} placeholder="Write a brief, relevant reminder for the customer." /></label>
-                 <label className="wide">Property details · {"{{3}}"}<textarea rows={3} value={supportingUpdate} onChange={(e) => setSupportingUpdate(e.target.value)} placeholder="Add only verified property or enquiry details. Do not include private payment balances here." /></label>
+                 <label className="wide">Selected property · {"{{2}}"}<select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}><option value="">Choose a property from the catalogue</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
+                 <div className="wide"><strong>Property details · {"{{3}}"}</strong><p>{selectedProperty ? [selectedProperty.location_area, selectedProperty.location_city, selectedProperty.price, selectedProperty.features].filter(Boolean).join(" · ") : "Select a property to populate verified location, price and features automatically."}</p></div>
                  <label className="wide">Next step · {"{{4}}"}<textarea rows={3} value={responsePrompt} onChange={(e) => setResponsePrompt(e.target.value)} placeholder="Tell the customer how to respond or continue the conversation." /></label>
                </div>
-               <div className="message-preview"><span>APPROVED TEMPLATE PREVIEW</span><p>Hello Grace,</p><p>{mainUpdate || "Follow-up context"}</p><p>{supportingUpdate || "Property details or relevant context"}</p><p>{responsePrompt || "Next step or response prompt"}</p><p>Limitless Realty</p></div>
+               <div className="message-preview"><span>APPROVED TEMPLATE PREVIEW</span><p>Hello Grace,</p><p>{selectedProperty?.title || "Selected property"}</p><p>{selectedProperty ? [selectedProperty.location_area, selectedProperty.location_city, selectedProperty.price, selectedProperty.features].filter(Boolean).join(" · ") : "Verified property details"}</p><p>{responsePrompt || "Next step or response prompt"}</p><p>Limitless Realty</p></div>
              </>
            ) : isUpdateTemplate ? (
             <>
