@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const whatsappConsentConfirmed = body.whatsappConsentConfirmed === true;
     if (!Array.isArray(body.contacts) || body.contacts.length < 1 || body.contacts.length > 500) {
       return NextResponse.json({ error: "Select between 1 and 500 phone contacts per import." }, { status: 400 });
     }
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
         email: email || undefined,
         status: "new",
         source: "phone_contacts",
-        campaign_eligible: true,
+        campaign_eligible: whatsappConsentConfirmed,
+        notes: whatsappConsentConfirmed ? "WhatsApp marketing consent confirmed by admin during phone contact import at " + new Date().toISOString() : "Imported from phone contacts. WhatsApp marketing consent not confirmed; campaign eligibility disabled.",
       });
     }
 
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
       skipped: skipped + result.skipped,
       errors: [...invalid, ...result.errors].slice(0, 30),
       organization: scope.name,
+      campaignEligible: whatsappConsentConfirmed,
     });
   } catch (error) {
     return NextResponse.json(
