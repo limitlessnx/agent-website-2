@@ -154,7 +154,8 @@ export default function FollowupControlCenter(props: Props) {
           {draft.eligibility_snapshot?.opted_out ? <p role="alert">Customer opt-out is recorded. Approval cannot authorize messaging.</p> : null}
           <div className="followup-actions"><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"approve")}>Approve draft</button><button disabled={Boolean(draftBusy)} onClick={()=>reviewDraft(String(draft.id),"reject")}>Reject</button></div>
         </div></article>)}
-        {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}\n        {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
+        {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}
+        {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
       </div>
     </section>
     <section className="admin-panel">
