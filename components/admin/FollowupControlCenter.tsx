@@ -226,6 +226,7 @@ export default function FollowupControlCenter(props: Props) {
     </section>
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Manual follow-up drafts</h2><p>Before activation, confirm whether the customer genuinely gave permission to receive follow-up messages. This records the admin attestation; it does not itself send a message.</p></div><span className="admin-status warning">{drafts.length} pending</span></div>
+      {!templateReady ? <div className="admin-list-row compact attention-danger"><div><strong>WhatsApp template verification required</strong><span>Sending is disabled because limitless_realty_reminder is currently marked {templateStatus}, or its approved four-variable order has not been verified.</span></div></div> : null}
       <div className="followup-records">
         {drafts.map(draft => <article key={draft.id} className="followup-record"><div style={{padding:"14px"}}>
           <strong>{draft.leads?.name || "Lead"} · {draft.properties?.title || "Property"}</strong>
