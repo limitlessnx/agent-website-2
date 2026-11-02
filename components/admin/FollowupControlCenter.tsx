@@ -56,6 +56,7 @@ export default function FollowupControlCenter(props: Props) {
   const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
   const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [templateReady, setTemplateReady] = useState(false);
+  const [deliverySchemaReady, setDeliverySchemaReady] = useState(false);
   const [templateStatus, setTemplateStatus] = useState("unverified");
   const [selectedLeadId, setSelectedLeadId] = useState(props.leads[0]?.id || "");
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
@@ -73,7 +74,7 @@ export default function FollowupControlCenter(props: Props) {
     fetch("/api/limitless/followup-drafts").then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load drafts.");
-      if (active) { setProperties(data.properties || []); setTemplateReady(Boolean(data.templateReady)); setTemplateStatus(String(data.templateStatus || "unverified")); setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft")); setDeliveryHistory((data.drafts || []).filter((draft: Record<string, any>) => ["sent","failed"].includes(draft.status))); }
+      if (active) { setProperties(data.properties || []); setTemplateReady(Boolean(data.templateReady)); setDeliverySchemaReady(Boolean(data.deliverySchemaReady)); setTemplateStatus(String(data.templateStatus || "unverified")); setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft")); setDeliveryHistory((data.drafts || []).filter((draft: Record<string, any>) => ["sent","failed"].includes(draft.status))); }
     }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); })
       .finally(() => { if (active) setDraftsLoading(false); });
     return () => { active = false; };
@@ -240,7 +241,7 @@ export default function FollowupControlCenter(props: Props) {
             <button disabled={Boolean(draftBusy)||Boolean(draft.eligibility_snapshot?.opted_out)} onClick={()=>reviewDraft(String(draft.id),false)}>No, permission was not received</button>
           </div>
           <small>Choose Yes only when the customer actually agreed, including verbally. The system records who confirmed and when. No keeps the draft inactive.</small>
-          {draft.eligibility_snapshot?.consent_confirmation?.received === true && !draft.eligibility_snapshot?.opted_out ? <div className="followup-actions"><button disabled={Boolean(draftBusy)||!templateReady} onClick={()=>sendDraft(String(draft.id))}>Send follow-up template</button></div> : null}
+          {draft.eligibility_snapshot?.consent_confirmation?.received === true && !draft.eligibility_snapshot?.opted_out ? <div className="followup-actions"><button disabled={Boolean(draftBusy)||!templateReady||!deliverySchemaReady} onClick={()=>sendDraft(String(draft.id))}>Send follow-up template</button></div> : null}
         </div></article>)}
         {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}
         {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
