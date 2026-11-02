@@ -179,7 +179,7 @@ function validatedLimitlessMoney(plan: PaymentPlanRow) {
   const outstandingBalance = parseMoneyCents(plan.outstanding_balance);
   const installmentAmount = parseMoneyCents(plan.installment_amount);
   if (agreedPrice === null || paidToDate === null || outstandingBalance === null || installmentAmount === null
-    || agreedPrice <= 0 || installmentAmount <= 0 || installmentAmount > agreedPrice
+    || agreedPrice <= 0 || installmentAmount > agreedPrice
     || paidToDate > agreedPrice || outstandingBalance !== agreedPrice - paidToDate) {
     throw new Error("Installment reminder financial values are invalid or inconsistent.");
   }
@@ -415,15 +415,15 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
         ? computeReminderOccurrence(String(plan.next_due_date), template.timing_direction, Number(template.timing_days))
         : null;
       const catchUp = isLimitless && occurrenceDate === "2026-10-31" && normalOccurrence?.occurrenceDate === "2026-11-12"
-        ? { missedDate: "2026-10-28", nextDate: "2026-11-12" }
+        ? { missedDate: "2026-10-31", nextDate: "2026-11-12" }
         : null;
-      const { data: existing } = await admin.from("reminder_attempts").select("id,status").eq("organization_id", organizationId).eq("payment_plan_id", plan.id).eq("reminder_template_id", String(template.id)).eq("scheduled_for", scheduledFor).limit(1).maybeSingle();
-      if (existing?.id && ["sent", "pending", "skipped", "unknown"].includes(String(existing.status))) continue;
+      const { data: existing } = await admin.from("reminder_attempts").select("id,status,error_message").eq("organization_id", organizationId).eq("payment_plan_id", plan.id).eq("reminder_template_id", String(template.id)).eq("scheduled_for", scheduledFor).limit(1).maybeSingle();
+      if (existing?.id && ["sent", "pending", "unknown"].includes(String(existing.status))) continue;
       if (isLimitless && occurrenceDate) {
         const timing = classifyReminderOccurrence(occurrenceDate, scheduledFor, now);
         if (timing === "invalid") { results.push({ planId: plan.id, templateId: template.id, status: "skipped", reason: "invalid_reminder_occurrence" }); continue; }
         if (timing === "waiting") { results.push({ planId: plan.id, templateId: template.id, status: "waiting", scheduledFor }); continue; }
-        if (timing === "missed") {
+        if (timing === "missed" && !catchUp) {
           if (!existing?.id) {
             const skipped = await admin.from("reminder_attempts").insert({ organization_id: organizationId, payment_plan_id: plan.id, reminder_template_id: String(template.id), scheduled_for: scheduledFor, channel: "whatsapp", status: "skipped", error_message: "missed_reminder_window", payload: { approved_template: approved.template_name, language_code: approved.language_code, timing_direction: template.timing_direction, timing_days: template.timing_days } }).select("id").maybeSingle();
             const uniqueConflict = String((skipped.error as { code?: string } | null)?.code || "") === "23505";
@@ -438,9 +438,29 @@ export async function runLimitlessInstallmentReminderSweep(now = new Date()) {
       }
       let values: ReminderValues;
       try { values = valuesForPlan(plan, organizationName, approved, isLimitless); } catch { results.push({ planId: plan.id, templateId: template.id, status: "skipped", reason: "invalid_installment_schedule" }); continue; }
-      const attempt = await admin.from("reminder_attempts").insert({ organization_id: organizationId, payment_plan_id: plan.id, reminder_template_id: String(template.id), scheduled_for: scheduledFor, channel: "whatsapp", status: "pending", payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days, ...(catchUp ? { catch_up: true, catch_up_for: catchUp.missedDate, catch_up_next_date: catchUp.nextDate } : {}) } }).select("id").single();
-      if (attempt.error || !attempt.data?.id) { results.push({ planId: plan.id, templateId: template.id, status: "already_claimed_or_failed" }); continue; }
-      const delivery = await sendAttempt({ admin, plan, template, approved, attemptId: attempt.data.id, scheduledFor, values, isLimitless, catchUp });
+      let attemptId: string | null = null;
+      if (catchUp && existing?.id && existing.status === "skipped" && existing.error_message === "missed_reminder_window") {
+        const claimed = await admin.from("reminder_attempts").update({
+          status: "pending",
+          error_message: null,
+          payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days, catch_up: true, catch_up_for: catchUp.missedDate, catch_up_next_date: catchUp.nextDate },
+        }).eq("id", existing.id).eq("organization_id", organizationId).eq("payment_plan_id", plan.id).eq("status", "skipped").eq("error_message", "missed_reminder_window").select("id").maybeSingle();
+        attemptId = claimed.data?.id ? String(claimed.data.id) : null;
+      } else if (!existing?.id) {
+        const attempt = await admin.from("reminder_attempts").insert({ organization_id: organizationId, payment_plan_id: plan.id, reminder_template_id: String(template.id), scheduled_for: scheduledFor, channel: "whatsapp", status: "pending", payload: { approved_template: approved.template_name, language_code: approved.language_code, variable_keys: approved.variable_keys, variable_count: Object.keys(values).length, timing_direction: template.timing_direction, timing_days: template.timing_days, ...(catchUp ? { catch_up: true, catch_up_for: catchUp.missedDate, catch_up_next_date: catchUp.nextDate } : {}) } }).select("id").single();
+        attemptId = attempt.data?.id ? String(attempt.data.id) : null;
+      }
+      if (!attemptId) { results.push({ planId: plan.id, templateId: template.id, status: "already_claimed_or_failed" }); continue; }
+      const delivery = await sendAttempt({ admin, plan, template, approved, attemptId, scheduledFor, values, isLimitless, catchUp });
+      if (catchUp && delivery.status === "sent" && normalOccurrence?.scheduledFor) {
+        const advancedAt = new Date().toISOString();
+        const advanced = await admin.from("payment_plans").update({ next_reminder_at: normalOccurrence.scheduledFor, last_reminder_at: advancedAt, updated_at: advancedAt })
+          .eq("id", plan.id).eq("organization_id", organizationId).eq("status", "active").eq("reminders_enabled", true).eq("next_reminder_at", scheduledFor).select("id").maybeSingle();
+        if (!advanced.data?.id) {
+          results.push({ planId: plan.id, templateId: template.id, ...delivery, scheduledFor, cursorAdvance: "needs_reconciliation" });
+          continue;
+        }
+      }
       results.push({ planId: plan.id, templateId: template.id, ...delivery, scheduledFor });
     }
   }
