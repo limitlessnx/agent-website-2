@@ -84,6 +84,18 @@ export default function FollowupControlCenter(props: Props) {
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save consent confirmation."); }
     finally { setDraftBusy(""); }
   }
+  async function sendDraft(id: string) {
+    setDraftBusy(id); setMessage("");
+    try {
+      const response = await fetch("/api/limitless/followup-drafts", {method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action:"send"})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to send follow-up template.");
+      setDrafts(current => current.filter(draft => draft.id !== id));
+      setMessage(data.note || "Follow-up template sent.");
+      router.refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to send follow-up."); }
+    finally { setDraftBusy(""); }
+  }
   const sequenceName = (item: FollowupEnrollment) => item.current_step
     ? `Maia follow-up · step ${item.current_step}`
     : "Maia follow-up";
@@ -163,6 +175,7 @@ export default function FollowupControlCenter(props: Props) {
             <button disabled={Boolean(draftBusy)||Boolean(draft.eligibility_snapshot?.opted_out)} onClick={()=>reviewDraft(String(draft.id),false)}>No, permission was not received</button>
           </div>
           <small>Choose Yes only when the customer actually agreed, including verbally. The system records who confirmed and when. No keeps the draft inactive.</small>
+          {draft.eligibility_snapshot?.consent_confirmation?.received === true && !draft.eligibility_snapshot?.opted_out ? <div className="followup-actions"><button disabled={Boolean(draftBusy)} onClick={()=>sendDraft(String(draft.id))}>Send follow-up template</button></div> : null}
         </div></article>)}
         {draftsLoading ? <p className="admin-empty" role="status">Loading manual follow-up drafts…</p> : null}
         {!draftsLoading && !drafts.length ? <p className="admin-empty">No pending manual follow-up drafts.</p> : null}
