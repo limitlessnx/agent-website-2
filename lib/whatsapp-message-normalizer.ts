@@ -1,9 +1,7 @@
 /**
  * Shared WhatsApp message normalisation.
- *
- * Template parameters are single text values: control characters and line breaks
- * are converted to spaces and whitespace is collapsed. Direct-session messages
- * retain intentional paragraph breaks. Neither path silently truncates content.
+ * Template parameters are single-line values; direct-session messages retain paragraphs.
+ * Content is never silently truncated.
  */
 export class WhatsAppMessageValidationError extends Error {
   constructor(message: string) {
@@ -22,9 +20,9 @@ export function normalizeTemplateParameter(value: unknown, options: { maxLength?
     .replace(/[\r\n\t]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!normalized) throw new WhatsAppMessageValidationError(\`\${fieldName} is required and cannot be empty.\`);
+  if (!normalized) throw new WhatsAppMessageValidationError(fieldName + " is required and cannot be empty.");
   if (options.maxLength && normalized.length > options.maxLength) {
-    throw new WhatsAppMessageValidationError(\`\${fieldName} is too long (\${normalized.length}/\${options.maxLength} characters). Shorten it before sending.\`);
+    throw new WhatsAppMessageValidationError(fieldName + " is too long (" + normalized.length + "/" + options.maxLength + " characters). Shorten it before sending.");
   }
   return normalized;
 }
@@ -39,7 +37,7 @@ export function normalizeDirectMessage(value: unknown, maxLength = 4096) {
     .trim();
   if (!normalized) throw new WhatsAppMessageValidationError("Message text is required.");
   if (normalized.length > maxLength) {
-    throw new WhatsAppMessageValidationError(\`Message is too long (\${normalized.length}/\${maxLength} characters). Shorten it before sending.\`);
+    throw new WhatsAppMessageValidationError("Message is too long (" + normalized.length + "/" + maxLength + " characters). Shorten it before sending.");
   }
   return normalized;
 }
@@ -51,7 +49,7 @@ export function normalizeTemplateVariables(
 ) {
   const result: Record<string, string> = {};
   for (const key of keys) {
-    result[key] = normalizeTemplateParameter(values[key], { maxLength, fieldName: \`Template variable "\${key}"\` });
+    result[key] = normalizeTemplateParameter(values[key], { maxLength, fieldName: "Template variable " + key });
   }
   return result;
 }
