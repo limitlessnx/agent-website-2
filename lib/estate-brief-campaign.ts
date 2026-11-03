@@ -18,7 +18,7 @@ export class EstateBriefCampaignError extends Error {
 }
 
 function clean(value: unknown, max = 1024) {
-  return String(value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ").trim().slice(0, max);
+  return String(value ?? "").replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 export function requirePublicHttpsImageUrl(value: unknown) {
