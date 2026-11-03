@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "@/components/admin/ServerIcons";
 import { industries, planDefinitions, type PlanKey } from "@/lib/industryCatalog";
 import { industryPricingBySlug } from "@/lib/industryPricing";
-import { calculatePrepaidPrice, isPrepaidTerm, PREPAID_TERMS, type PrepaidTerm } from "@/lib/payments/terms";
+
 import { usePublicPricing } from "@/lib/use-public-pricing";
 
 const planOrder: PlanKey[] = ["basic", "starter", "business", "business-plus"];
@@ -15,7 +15,6 @@ const checkoutSlugByPlan: Record<PlanKey, string> = {
   business: "ai-front-desk-suite",
   "business-plus": "custom-ai-operations",
 };
-type BillingTerm = "monthly" | PrepaidTerm;
 
 function normalizeRequestedPlan(value: string | null): PlanKey | null {
   if (value === "plus") return "starter";
@@ -33,7 +32,6 @@ function money(value: number, currency: "NGN" | "USD") {
 export default function PricingClient() {
   const [activePlan, setActivePlan] = useState<PlanKey>("basic");
   const [industrySlug, setIndustrySlug] = useState("");
-  const [billingTerm, setBillingTerm] = useState<BillingTerm>("monthly");
   const {
     prices,
     currency,
@@ -47,24 +45,17 @@ export default function PricingClient() {
     const params = new URLSearchParams(window.location.search);
     const requested = normalizeRequestedPlan(params.get("plan"));
     const requestedIndustry = params.get("industry") || "";
-    const requestedTerm = params.get("term");
     if (requested && planOrder.includes(requested)) setActivePlan(requested);
     if (requestedIndustry) setIndustrySlug(requestedIndustry);
-    if (isPrepaidTerm(requestedTerm)) setBillingTerm(requestedTerm);
   }, []);
 
   const active = planDefinitions.find((plan) => plan.key === activePlan) ?? planDefinitions[0];
   const selectedIndustry = industries.find((industry) => industry.slug === industrySlug);
   const pricingProfile = industrySlug ? industryPricingBySlug[industrySlug] : undefined;
   const activePrice = prices[active.key];
-  const prepaidPrice = billingTerm !== "monthly" && activePrice && !activePrice.custom
-    ? calculatePrepaidPrice(activePrice.installationFee, activePrice.recurringFee, billingTerm)
-    : null;
   const checkoutSlug = activePrice?.slug ?? checkoutSlugByPlan[active.key];
-  const checkoutHref = `/checkout?plan=${encodeURIComponent(checkoutSlug)}${billingTerm === "monthly" ? "" : `&term=${encodeURIComponent(billingTerm)}`}`;
-  const planCtaLabel = prepaidPrice && activePrice
-    ? `Prepay ${money(prepaidPrice.total, activePrice.currency)}`
-    : "Continue to checkout";
+  const checkoutHref = `/checkout?plan=${encodeURIComponent(checkoutSlug)}`;
+  const planCtaLabel = "Subscribe monthly";
   const customHref = `/evaluation?plan=custom${industrySlug ? `&industry=${encodeURIComponent(industrySlug)}` : ""}`;
 
   return (
@@ -118,7 +109,7 @@ export default function PricingClient() {
                 >
                   <span className="pricing-plan-eyebrow">{plan.eyebrow}</span>
                   <h2>{plan.name}</h2>
-                  {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.first}</strong><span> + {planPrice.ongoing}</span></div> : null}
+                  {planPrice ? <div className="pricing-plan-mini-price"><strong>{planPrice.ongoing}</strong></div> : null}
                   
                   <p>{plan.summary}</p>
                   <span className="pricing-plan-action">{selected ? "Selected" : "View full explanation"} <ArrowRight size={14} /></span>
@@ -154,12 +145,11 @@ export default function PricingClient() {
                 <span>{currency ? `Pricing in ${currency}` : "Fluxknight pricing"}</span>
                 {activePrice ? (
                   <div className="pricing-current-price">
-                    <div><small>Implementation</small><strong>{activePrice.first}</strong></div>
-                    <div><small>Monthly renewal</small><strong>{activePrice.ongoing}</strong></div>
+                    <div><small>Monthly subscription</small><strong>{activePrice.ongoing}</strong></div>
                   </div>
                 ) : null}
 
-                {activePrice && !activePrice.custom ? (
+                {false && activePrice && !activePrice.custom ? (
                   <div className="pricing-term-box">
                     <label htmlFor="pricing-billing-duration">Billing duration</label>
                     <div className="pricing-term-select-wrap">
@@ -180,8 +170,8 @@ export default function PricingClient() {
                     ) : (
                       <div className="pricing-term-total">
                         <small>Monthly option</small>
-                        <strong>{activePrice.first}</strong>
-                        <span>Implementation is paid at checkout. Monthly renewal continues at {activePrice.ongoing}.</span>
+                        <strong>{activePrice.ongoing}</strong>
+                        <span>No installation fee. Your subscription renews monthly at {activePrice.ongoing}.</span>
                       </div>
                     )}
                   </div>
@@ -199,7 +189,7 @@ export default function PricingClient() {
             </div>
           </section>
 
-          <p className="pricing-footnote">Prepaid discounts apply to the implementation plus the selected prepaid renewal period. Custom work is scoped separately. Third-party messaging, email and provider usage may still be subject to fair-use limits or additional usage charges depending on volume and provider costs.</p>
+          <p className="pricing-footnote">All standard plans are billed monthly with no installation fee. Custom work is scoped separately. Third-party messaging, email and provider usage may still be subject to fair-use limits or additional usage charges depending on volume and provider costs.</p>
         </div>
       </section>
 
