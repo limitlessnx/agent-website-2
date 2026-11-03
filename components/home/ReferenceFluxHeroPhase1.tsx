@@ -18,6 +18,7 @@ const particles = Array.from({ length: 16 }, (_, i) => ({ left: `${(i * 37) % 10
 export default function ReferenceFluxHeroPhase1() {
   // Keep the public homepage hero static: continuous decorative motion can
   // compete with scrolling and consume GPU on lower-powered phones.
+  const reduceMotion = true;
   return (
     <section className="relative isolate overflow-hidden bg-[#03000A] text-neutral-50 selection:bg-purple-500/30">
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
