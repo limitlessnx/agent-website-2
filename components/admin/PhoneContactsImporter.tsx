@@ -90,6 +90,7 @@ export default function PhoneContactsImporter() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [whatsappConsentConfirmed, setWhatsappConsentConfirmed] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const selectedContacts = useMemo(() => selected.map((index) => contacts[index]).filter(Boolean), [contacts, selected]);
 
@@ -157,8 +158,8 @@ export default function PhoneContactsImporter() {
       setNotice(data.imported + " new lead(s) added; " + data.skipped + " skipped. " + (data.campaignEligible ? "They are marked campaign-eligible based on your consent confirmation." : "They are saved as leads but excluded from campaigns until consent is confirmed."));
       setContacts([]);
       setSelected([]);
+      setExpanded(false);
       window.dispatchEvent(new CustomEvent("limitless-leads-imported"));
-      window.location.reload();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Contact import failed.");
     } finally {
