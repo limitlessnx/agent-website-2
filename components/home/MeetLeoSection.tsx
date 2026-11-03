@@ -61,8 +61,8 @@ export default function MeetLeoSection() {
         <div className="relative mx-auto w-full max-w-[560px] min-w-0">
           <div aria-hidden="true" className="absolute left-1/2 top-[10%] h-48 w-48 -translate-x-1/2 rounded-full bg-purple-500/15 blur-[65px] sm:h-64 sm:w-64" />
           <div className="relative flex min-w-0 flex-col items-center">
-            <div className="relative z-10 mx-auto w-[min(68vw,270px)] sm:w-[min(44vw,320px)] lg:w-[min(100%,360px)]">
-              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} quality={75} sizes="(min-width: 1024px) 360px, (min-width: 640px) 320px, 68vw" className="block h-auto max-h-[340px] w-full object-contain drop-shadow-[0_16px_34px_rgba(124,58,237,.18)] sm:max-h-[400px] lg:max-h-[440px]" />
+            <div className="relative z-10 mx-auto w-full max-w-[420px] sm:w-[min(44vw,320px)] lg:w-[min(100%,360px)]">
+              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} quality={75} sizes="(min-width: 1024px) 360px, (min-width: 640px) 320px, min(88vw, 420px)" className="block h-auto max-h-none w-full max-w-full object-contain drop-shadow-[0_16px_34px_rgba(124,58,237,.18)] sm:max-h-[400px] lg:max-h-[440px]" />
               <div className="absolute bottom-[5%] left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-xl border border-purple-300/25 bg-[#100b1c]/90 px-3 py-2 shadow-[0_8px_30px_rgba(0,0,0,.35)] backdrop-blur sm:bottom-[7%] sm:px-4">
                 <div className="flex items-center gap-2 text-xs font-semibold text-white"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Leo <span className="font-normal text-white/45">· assistant preview</span></div>
               </div>
