@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { Mail, MessageCircle, PhoneCall } from "lucide-react";
 import styles from "./ChannelAutomationCarousel.module.css";
 
@@ -42,17 +42,6 @@ const channels: Channel[] = [
 
 export default function ChannelAutomationCarousel() {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
   const current = channels[active];
   const Icon = current.Icon;
 
@@ -60,12 +49,6 @@ export default function ChannelAutomationCarousel() {
     <section
       className={styles.carousel}
       aria-label="Examples of automation channels"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
-      }}
     >
       <div className={styles.heading}>
         <div>
