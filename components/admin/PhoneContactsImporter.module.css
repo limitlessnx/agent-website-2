@@ -25,3 +25,8 @@
  .instructions summary{padding:12px;font-size:13px}
  .instructions ol{font-size:12px;padding:11px 15px 13px 30px}
 }
+
+/* Collapsed state after a successful import */
+.collapsed{display:block;padding:10px 14px}
+.reopenButton{display:flex;align-items:center;gap:9px;width:100%;min-height:42px;padding:8px 12px;border:1px solid rgba(151,112,255,.35);border-radius:12px;background:rgba(109,40,217,.09);color:#7540d8;font-size:13px;font-weight:800;text-align:left;cursor:pointer}
+.reopenButton span{display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:#6d28d9;color:#fff;font-size:19px;line-height:1}
