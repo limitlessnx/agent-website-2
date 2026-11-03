@@ -193,7 +193,20 @@ export default function PhoneContactsImporter() {
         <input ref={fileRef} className={styles.hiddenFile} type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard,application/vcard" onChange={(event) => void readVCard(event.target.files?.[0])} />
       </div>
 
-      {!supported ? <p id="contact-picker-unavailable" className={styles.hint}>iPhone browsers, including Chrome, do not expose the native contact picker to this page. To import contacts, open the Contacts app, select the contacts you want, use Share, then save or share the contact card as a .vcf file. Tap “Choose .vcf contact file” and review the contacts before importing. Nothing is saved until you confirm.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
+      {!supported ? (
+        <div className={styles.fallbackHelp}>
+          <p className={styles.hint}>Direct address-book access is restricted in iPhone browsers. You can still choose and review contacts using a vCard file.</p>
+          <details className={styles.instructions}>
+            <summary>How to export contacts on iPhone</summary>
+            <ol>
+              <li>Open the Contacts app and select the contact or contacts you want to share.</li>
+              <li>Tap Share Contact, then save or share the contact card as a .vcf file.</li>
+              <li>Return here, tap “Choose .vcf contact file”, and select the saved file.</li>
+              <li>Review the contacts and confirm the ones you want to add as leads.</li>
+            </ol>
+          </details>
+        </div>
+      ) : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
 
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
