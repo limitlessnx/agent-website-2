@@ -99,13 +99,16 @@ export async function GET(request: Request) {
       }
 
       if (clientSession) {
-        const onboarding = new URL("/onboarding", url.origin);
-        onboarding.searchParams.set("tx_ref", txRef);
-        return NextResponse.redirect(onboarding);
+        const destinationPath = session.organization_id ? "/portal" : "/onboarding";
+        const next = new URL(destinationPath, url.origin);
+        next.searchParams.set("payment", "success");
+        next.searchParams.set("tx_ref", txRef);
+        return NextResponse.redirect(next);
       }
 
       const login = new URL("/account/login", url.origin);
       login.searchParams.set("tx_ref", txRef);
+      login.searchParams.set("payment", "success");
       login.searchParams.set("next", "/onboarding");
       return NextResponse.redirect(login);
     }
