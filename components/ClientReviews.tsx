@@ -77,7 +77,7 @@ function PinIcon() {
 }
 
 export default function ClientReviews() {
-  const loop = reviews;
+  const loop = [...reviews, ...reviews];
 
   return (
     <section className="testimonial-section" aria-labelledby="testimonial-title">
@@ -120,9 +120,9 @@ export default function ClientReviews() {
         .testimonial-heading h2{margin:18px 0 12px;font-size:clamp(2.45rem,5vw,4.45rem);line-height:.98;letter-spacing:-.055em;font-weight:750}
         .testimonial-heading h2 em{font-style:normal;background:linear-gradient(90deg,#d996ff,#9859e9);-webkit-background-clip:text;background-clip:text;color:transparent}
         .testimonial-heading p{margin:0;color:#b0b4c5;font-size:clamp(.98rem,1.5vw,1.18rem)}
-        .testimonial-window{position:relative;width:100%;overflow-x:auto;overflow-y:hidden;padding:18px 0 36px;overscroll-behavior-x:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
-        .testimonial-track{display:flex;width:max-content;gap:18px;animation:none;transform:none}
-        .testimonial-card{scroll-snap-align:start}
+        .testimonial-window{position:relative;width:100%;overflow:hidden;padding:18px 0 36px}
+        .testimonial-track{display:flex;width:max-content;gap:18px;animation:testimonial-scroll 82s linear infinite}
+        .testimonial-window:hover .testimonial-track{animation-play-state:paused}
         .testimonial-card{width:365px;min-height:455px;display:flex;flex-direction:column;flex-shrink:0;padding:32px 34px;border:1px solid rgba(118,121,139,.58);border-radius:26px;background:linear-gradient(145deg,rgba(25,27,37,.92),rgba(17,18,27,.78) 62%,rgba(50,29,69,.36));box-shadow:inset 0 1px rgba(255,255,255,.035),0 26px 70px rgba(0,0,0,.28);transition:transform .25s ease,border-color .25s ease}
         .testimonial-card:hover{transform:translateY(-5px);border-color:rgba(158,119,203,.72)}
         .testimonial-person strong{display:block;color:#fafafa;font-size:1.04rem;font-weight:700;letter-spacing:-.02em}
@@ -143,7 +143,7 @@ export default function ClientReviews() {
         .fade-right{inset:0 0 0 auto;width:10vw;min-width:70px;background:linear-gradient(270deg,#080a10 8%,rgba(8,10,16,.9) 35%,transparent)}
         .fade-top{inset:0 0 auto;height:42px;background:linear-gradient(#080a10,transparent)}
         .fade-bottom{inset:auto 0 0;height:54px;background:linear-gradient(transparent,#080a10)}
-        
+        @keyframes testimonial-scroll{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 9px))}}
         @media(max-width:700px){
           .testimonial-section{padding:72px 0 76px}
           .testimonial-heading{margin-bottom:40px}
@@ -152,10 +152,10 @@ export default function ClientReviews() {
           .testimonial-heading h2{font-size:clamp(2.25rem,11vw,3.2rem)}
           .testimonial-heading p{font-size:.9rem}
           .testimonial-window{padding:10px 0 28px}
-          .testimonial-track{gap:13px}
+          .testimonial-track{gap:13px;animation-duration:68s}
           .testimonial-card{width:305px;min-height:420px;padding:25px 24px;border-radius:23px}
           .testimonial-copy{font-size:.89rem;line-height:1.65}
-          .fade-left,.fade-right{display:none}
+          .fade-left,.fade-right{width:34px;min-width:34px}
         }
         @media(prefers-reduced-motion:reduce){
           .testimonial-track{animation:none}
