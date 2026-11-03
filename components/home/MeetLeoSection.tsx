@@ -82,13 +82,38 @@ export default function MeetLeoSection() {
                 <AudioLines size={18} className="shrink-0 text-purple-300" />
               </div>
               <div className="space-y-3 py-4 sm:space-y-4 sm:py-5">
-                <div className="ml-auto max-w-[92%] break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
-                  We miss follow-ups after new enquiries come in.
+                <div className="ml-auto max-w-[94%]">
+                  <p className="mb-1.5 pr-1 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-purple-200/55">Admin</p>
+                  <div className="break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
+                    Leo, how many new leads have we received this week?
+                  </div>
                 </div>
                 <div className="flex min-w-0 items-start gap-2.5">
                   <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-purple-400/10 text-purple-200"><Sparkles size={14} /></span>
-                  <div className="min-w-0 break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/75">
-                    Let’s map what happens after an enquiry, where the response slows down, and which follow-up steps may be suitable for automation.
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Leo</p>
+                    <div className="break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/80">
+                      You’ve received <strong className="font-semibold text-white">120 new leads</strong> this week.
+                    </div>
+                  </div>
+                </div>
+                <div className="ml-auto max-w-[94%]">
+                  <p className="mb-1.5 pr-1 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-purple-200/55">Admin</p>
+                  <div className="break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
+                    Send a campaign to all 120 leads announcing our new estate launch.
+                  </div>
+                </div>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-purple-400/10 text-purple-200"><Sparkles size={14} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Leo</p>
+                    <div className="break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/80">
+                      Preparing the new-estate campaign, checking the audience and getting the message ready…
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-1.5 text-[11px] font-semibold text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      Campaign sent to all 120 leads
+                    </div>
                   </div>
                 </div>
               </div>

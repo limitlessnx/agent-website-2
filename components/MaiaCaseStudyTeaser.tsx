@@ -14,15 +14,27 @@ const outcomes = [
   { icon: CalendarCheck2, label: "Coordinates inspection requests" },
 ];
 
-const capabilities = [
-  "Responds to new property enquiries",
-  "Qualifies budget, location and requirements",
-  "Recommends relevant configured properties",
-  "Shares property information and media where configured",
-  "Keeps conversation context for follow-up",
-  "Collects inspection requests for admin confirmation",
-  "Hands serious prospects to a human with context",
-  "Keeps lead stages visible to management",
+const journey = [
+  {
+    step: "01",
+    title: "Capture every enquiry",
+    description: "Maia responds across connected channels, so new property enquiries get a timely first response instead of sitting in an inbox.",
+  },
+  {
+    step: "02",
+    title: "Understand the buyer",
+    description: "She asks about budget, preferred location and property requirements, then shares relevant configured estates and property details.",
+  },
+  {
+    step: "03",
+    title: "Keep the conversation moving",
+    description: "Maia retains context and follows up with interested prospects, helping the team pick up where the conversation left off.",
+  },
+  {
+    step: "04",
+    title: "Coordinate the next step",
+    description: "She collects inspection requests and passes serious prospects, along with their conversation context, to the team for confirmation.",
+  },
 ];
 
 function WhatsAppMark() {
@@ -48,7 +60,9 @@ export default function MaiaCaseStudyTeaser() {
         <div className={styles.content}>
           <span className={styles.eyebrow}>A real example · Real estate</span>
           <h2 id="maia-case-study-title">See how Fluxknight works in <span>a real business.</span></h2>
-          <p>Maia helps Limitless Realty respond to property enquiries, collect buyer details, follow up with interested buyers and submit inspection requests for the team to confirm.</p>
+          <p className={styles.lead}>Every property enquiry is a potential sale. The challenge is responding quickly, understanding what each buyer needs and making sure interested prospects do not get forgotten.</p>
+          <p>When buyers reach Limitless Realty through connected channels, Maia becomes the first point of contact. She answers property questions, gathers buyer preferences, shares relevant estate information and keeps each conversation moving.</p>
+          <p>When a prospect is ready for the next step, Maia collects the inspection request and hands the conversation to the sales team with the context they need to follow through.</p>
 
           <div className={styles.outcomes} aria-label="Maia case study outcomes">
             {outcomes.map(({ icon: Icon, label }) => (
@@ -59,11 +73,18 @@ export default function MaiaCaseStudyTeaser() {
             ))}
           </div>
 
-          <div className={styles.capabilities} aria-label="What Maia can support in a real-estate customer journey">
-            {capabilities.map((label) => (
-              <span key={label}><CheckCircle2 size={15} /> {label}</span>
+          <div className={styles.journey} aria-label="How Maia supports the property sales journey">
+            {journey.map(({ step, title, description }) => (
+              <article className={styles.journeyStep} key={step}>
+                <span className={styles.journeyNumber}>{step}</span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </div>
+              </article>
             ))}
           </div>
+          <p className={styles.result}><strong>The result:</strong> your sales team spends less time chasing conversations and more time engaging informed prospects and coordinating property inspections.</p>
 
           <div className={styles.attribution}>Limitless Realty <span>×</span> Fluxknight</div>
 
