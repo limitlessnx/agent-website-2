@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
 import { getPublicPlan } from "@/lib/payments/catalog";
 import { getRequestBillingRegion, type BillingRegion } from "@/lib/payments/region";
-import { isPrepaidTerm } from "@/lib/payments/terms";
 import CheckoutClient from "./CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +14,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string; term?: string }> }) {
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const params = await searchParams;
   const planSlug = typeof params.plan === "string" ? params.plan : "";
-  const initialTerm = isPrepaidTerm(params.term) ? params.term : null;
   if (!planSlug) notFound();
 
   const [{ region: detectedRegion }, session, cookieStore] = await Promise.all([
@@ -44,7 +42,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
             <span className="brand-eyebrow">Secure checkout</span>
             <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)", lineHeight: 1 }}>Get your AI system started.</h1>
             <p>
-              Checkout is using your selected pricing region: {region === "NG" ? "Nigeria (NGN)" : "International (USD)"}. Billing duration remains attached to the selected plan.
+              Checkout is using your selected pricing region: {region === "NG" ? "Nigeria (NGN)" : "International (USD)"}. Your subscription is billed monthly. No installation fee.
             </p>
           </div>
           <CheckoutClient
@@ -53,10 +51,8 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
               name: plan.name,
               description: plan.description,
               currency: plan.currency,
-              installationFee: plan.installationFee,
               recurringFee: plan.recurringFee,
             }}
-            initialTerm={initialTerm}
             customer={session ? { name: session.organizationSlug, email: session.email } : null}
           />
         </div>
