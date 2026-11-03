@@ -1,4 +1,5 @@
 import type { PropertyRecord } from "@/lib/limitless-data";
+import { normalizeTemplateParameter } from "@/lib/whatsapp-message-normalizer";
 
 export const ESTATE_BRIEF_TEMPLATE_NAME = "estate_brief_update";
 export const ESTATE_BRIEF_CAMPAIGN_TYPE = "estate_brief_update";
@@ -18,7 +19,7 @@ export class EstateBriefCampaignError extends Error {
 }
 
 function clean(value: unknown, max = 1024) {
-  return String(value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ").trim().slice(0, max);
+  return String(value ?? "").replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 export function requirePublicHttpsImageUrl(value: unknown) {
@@ -37,7 +38,12 @@ export function buildEstateBriefCampaign(property: PropertyRecord, sellingPoint:
   const propertyName = clean(property.title, 160);
   const location = [clean(property.location_area, 120), clean(property.location_city, 120)].filter(Boolean).join(", ");
   const price = clean(property.price, 120);
-  const offer = clean(sellingPoint, 600);
+  let offer = "";
+  try {
+    offer = normalizeTemplateParameter(sellingPoint, { maxLength: 600, fieldName: "Campaign selling point" });
+  } catch (error) {
+    throw new EstateBriefCampaignError(error instanceof Error ? error.message : "The campaign selling point is invalid.");
+  }
   if (!propertyName || !property.id) throw new EstateBriefCampaignError("Choose a verified property before preparing an estate brief campaign.");
   if (!location) throw new EstateBriefCampaignError("The selected property needs a location before preparing an estate brief campaign.");
   if (!price) throw new EstateBriefCampaignError("The selected property needs a price before preparing an estate brief campaign.");

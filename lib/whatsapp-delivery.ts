@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTwilioWhatsAppMessage } from "@/lib/twilio-whatsapp";
+import { normalizeDirectMessage, normalizeTemplateVariables } from "@/lib/whatsapp-message-normalizer";
 
 type TemplateConfig = { template_name: string; language_code: string; variable_keys?: string[]; metadata?: Record<string,unknown> };
 type SendInput = {
@@ -111,7 +112,7 @@ function validVariableKeys(value: unknown): value is string[] {
     && value.every((key) => typeof key === "string" && key.trim().length > 0 && key === key.trim())
     && new Set(value).size === value.length;
 }
-function validateStrictTemplateContract(config: TemplateConfig | null, input: SendInput) {
+function validateStrictTemplateContract(config: TemplateConfig | null, input: SendInput, normalizedVariables: Record<string, string>) {
   const approvedOrder = input.strictTemplateContract?.approvedVariableOrder;
   const configuredKeys = config?.variable_keys;
   const approvedMetadata = config?.metadata?.approved_variable_order;
@@ -122,7 +123,7 @@ function validateStrictTemplateContract(config: TemplateConfig | null, input: Se
   if (!exactVariableOrder(configuredKeys, approvedOrder) || !exactVariableOrder(approvedMetadata, approvedOrder)) {
     throw new Error("The approved WhatsApp template variable order does not match the configured contract.");
   }
-  if (configuredKeys.some((key) => String(input.variables?.[key] ?? "").trim() === "")) {
+  if (configuredKeys.some((key) => !normalizedVariables[key])) {
     throw new Error("A required approved WhatsApp template variable is unavailable.");
   }
 }
@@ -194,8 +195,10 @@ export async function sendWhatsAppMessage(input: SendInput) {
     ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h",input.requestedTemplateName,input.strictTemplateContract)
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
+  const normalizedVariables = useTemplate ? normalizeTemplateVariables(config?.variable_keys || [], input.variables || {}) : {};
+  const normalizedText = !useTemplate && input.text ? normalizeDirectMessage(input.text) : input.text;
   if (useTemplate && input.organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && input.strictTemplateContract) {
-    validateStrictTemplateContract(config, input);
+    validateStrictTemplateContract(config, input, normalizedVariables);
   }
   if (useTemplate && input.requestedTemplateName && config?.template_name !== input.requestedTemplateName) {
     throw new Error(`The requested WhatsApp template is not the active approved template for ${input.templatePurpose || "this message"}.`);
@@ -214,7 +217,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
       const suppliedImages=(input.propertyImageUrls||[]).filter(isDirectPublicImageUrl).slice(0,3);
       const media=suppliedVideos.length||suppliedImages.length
         ?{videos:suppliedVideos,images:suppliedImages}
-        :await resolvePropertyMediaFromText(input.organizationId,input.text||"");
+        :await resolvePropertyMediaFromText(input.organizationId,normalizedText||"");
       const urls=media.videos.length?media.videos:media.images;
       for(const url of urls){
         await sendTwilioWhatsAppMessage({
@@ -230,13 +233,13 @@ export async function sendWhatsAppMessage(input: SendInput) {
 
     const variableKeys=Array.isArray(config?.variable_keys)?config!.variable_keys!:[];
     const contentVariables:Record<string,string>={};
-    variableKeys.forEach((key,index)=>{contentVariables[String(index+1)]=String(input.variables?.[key]??"");});
+    variableKeys.forEach((key,index)=>{contentVariables[String(index+1)]=normalizedVariables[key] || "";});
     const result=await sendTwilioWhatsAppMessage({
       accountSid:credentials.accountSid,
       authToken:credentials.authToken,
       from:credentials.from,
       to:`+${to}`,
-      body:useTemplate?undefined:input.text,
+      body:useTemplate?undefined:normalizedText,
       contentSid:contentSid||undefined,
       contentVariables:useTemplate?contentVariables:undefined,
       statusCallbackUrl:statusCallback,
@@ -268,7 +271,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
   let templateName: string | null = null;
   if (useTemplate) {
     templateName = config!.template_name;
-    const parameters = (Array.isArray(config!.variable_keys) ? config!.variable_keys : []).map((key) => ({ type: "text", text: String(input.variables?.[key] ?? "") }));
+    const parameters = (Array.isArray(config!.variable_keys) ? config!.variable_keys : []).map((key) => ({ type: "text", text: normalizedVariables[key] || "" }));
     const components: Array<Record<string, unknown>> = [];
     if (input.templateHeaderImageUrl) {
       if (!isDirectPublicImageUrl(input.templateHeaderImageUrl)) throw new Error("The template header must be a direct public image URL.");
@@ -277,14 +280,14 @@ export async function sendWhatsAppMessage(input: SendInput) {
     if (parameters.length) components.push({ type: "body", parameters });
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: config!.template_name, language: { code: config!.language_code }, ...(components.length ? { components } : {}) } };
   } else {
-    if (!input.text?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
-    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: input.text } };
+    if (!normalizedText?.trim()) throw new Error("Message text is required while the 24-hour service window is open.");
+    requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: normalizedText } };
   }
 
   if (!useTemplate) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
     const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
-    const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, input.text || "");
+    const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, normalizedText || "");
     if (media.videos.length) for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
     else for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
   }
