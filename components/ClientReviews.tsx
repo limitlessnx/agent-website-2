@@ -127,7 +127,7 @@ export default function ClientReviews() {
         .testimonial-card:hover{transform:translateY(-5px);border-color:rgba(158,119,203,.72)}
         .testimonial-person strong{display:block;color:#fafafa;font-size:1.04rem;font-weight:700;letter-spacing:-.02em}
         .testimonial-person span{display:block;margin-top:5px;color:#c1c1ce;font-size:.83rem}
-        .testimonial-divider{height:1px;margin:22px 0;background:rgba(205,207,220,.22)}
+        .testimonial-divider{height:1px;margin:16px 0;background:rgba(205,207,220,.22)}
         .testimonial-rating{display:flex;align-items:center;gap:16px}
         .testimonial-rating b{font-size:.95rem;color:#f4f4f5}
         .review-stars{display:flex;gap:3px;color:#f5a900}
@@ -144,18 +144,27 @@ export default function ClientReviews() {
         .fade-top{inset:0 0 auto;height:42px;background:linear-gradient(#080a10,transparent)}
         .fade-bottom{inset:auto 0 0;height:54px;background:linear-gradient(transparent,#080a10)}
         @keyframes testimonial-scroll{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 9px))}}
-        @media(max-width:700px){
-          .testimonial-section{padding:72px 0 76px}
-          .testimonial-heading{margin-bottom:40px}
+        @media(max-width:900px){
+          .testimonial-section{padding:54px 0 58px}
+          .testimonial-heading{margin-bottom:28px}
           .testimonial-kicker{gap:12px;font-size:.63rem;letter-spacing:.25em}
           .testimonial-kicker span{width:32px}
           .testimonial-heading h2{font-size:clamp(2.25rem,11vw,3.2rem)}
           .testimonial-heading p{font-size:.9rem}
-          .testimonial-window{padding:10px 0 28px}
-          .testimonial-track{gap:13px;animation-duration:68s}
-          .testimonial-card{width:305px;min-height:420px;padding:25px 24px;border-radius:23px}
-          .testimonial-copy{font-size:.89rem;line-height:1.65}
-          .fade-left,.fade-right{width:34px;min-width:34px}
+          .testimonial-window{padding:8px 0 20px}
+          .testimonial-track{gap:10px;animation-duration:68s}
+          .testimonial-card{width:min(70vw,248px);min-height:310px;padding:17px 16px;border-radius:18px}
+          .testimonial-person strong{font-size:.94rem}
+          .testimonial-person span{font-size:.76rem}
+          .testimonial-divider{margin:12px 0}
+          .testimonial-rating{gap:10px}
+          .testimonial-rating b{font-size:.84rem}
+          .review-stars svg{width:14px;height:14px}
+          .testimonial-copy{margin-top:13px;font-size:.78rem;line-height:1.48}
+          .testimonial-meta{padding-top:18px}
+          .testimonial-tag{padding:6px 10px;font-size:.66rem}
+          .testimonial-location{margin-top:12px;font-size:.68rem}
+          .fade-left,.fade-right{width:24px;min-width:24px}
         }
         @media(prefers-reduced-motion:reduce){
           .testimonial-track{animation:none}
