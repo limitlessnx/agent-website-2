@@ -21,14 +21,6 @@ function normalizeRequestedPlan(value: string | null): PlanKey | null {
   return value as PlanKey | null;
 }
 
-function money(value: number, currency: "NGN" | "USD") {
-  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export default function PricingClient() {
   const [activePlan, setActivePlan] = useState<PlanKey>("basic");
   const [industrySlug, setIndustrySlug] = useState("");
