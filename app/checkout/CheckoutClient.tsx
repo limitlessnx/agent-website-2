@@ -10,7 +10,6 @@ type Plan = {
   name: string;
   description: string;
   currency: "NGN" | "USD";
-  installationFee: number;
   recurringFee: number;
 };
 
@@ -65,7 +64,7 @@ export default function CheckoutClient({ plan, customer }: Props) {
   return (
     <section className="checkout-layout">
       <article className="brand-card pricing-featured">
-        <span className="brand-eyebrow">{plan.currency} · choose billing duration</span>
+        <span className="brand-eyebrow">{plan.currency} · monthly subscription</span>
         <h2>{plan.name}</h2>
         <p>{plan.description}</p>
 
@@ -82,7 +81,7 @@ export default function CheckoutClient({ plan, customer }: Props) {
             <span style={{ fontSize: 11, opacity: .65, letterSpacing: ".08em" }}>TOTAL DUE TODAY</span>
             <strong style={{ display: "block", fontSize: 34, marginTop: 5 }}>{money(dueToday, plan.currency)}</strong>
             <small style={{ display: "block", marginTop: 5, color: "#d8b4fe", lineHeight: 1.5 }}>
-              `You pay ${money(plan.recurringFee, plan.currency)} today, then renew monthly. No setup fee.`
+              You pay {money(plan.recurringFee, plan.currency)} today, then renew monthly. No setup fee.
             </small>
           </div>
         </div>
@@ -91,7 +90,7 @@ export default function CheckoutClient({ plan, customer }: Props) {
           {[
             "Your monthly subscription starts after successful payment",
             "Payment is verified before onboarding is unlocked",
-            "Your selected currency and billing term stay attached to the checkout record",
+            "Your selected currency and monthly plan stay attached to the checkout record",
             "After successful payment you continue directly to onboarding",
           ].map((item) => (
             <span key={item} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
