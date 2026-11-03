@@ -42,8 +42,8 @@ test("Strict Limitless template contract blocks blank variables, missing order m
   assert.match(helper, /approved_variable_order/);
   assert.match(helper, /validVariableKeys\(approvedOrder\).*validVariableKeys\(configuredKeys\).*validVariableKeys\(approvedMetadata\)/s);
   assert.match(helper, /exactVariableOrder\(configuredKeys, approvedOrder\).*exactVariableOrder\(approvedMetadata, approvedOrder\)/s);
-  assert.match(helper, /configuredKeys\.some\(\(key\) => String\(input\.variables\?\.\[key\] \?\? ""\)\.trim\(\) === ""\)/);
-  const validationCall = helper.indexOf("validateStrictTemplateContract(config, input)");
+  assert.match(helper, /configuredKeys\.some\(\(key\) => !normalizedVariables\[key\]\)/);
+  const validationCall = helper.indexOf("validateStrictTemplateContract(config, input, normalizedVariables)");
   const providerFetch = helper.indexOf("fetch(`https://graph.facebook.com", validationCall);
   assert.ok(validationCall >= 0, "strict validation must be called");
   assert.ok(providerFetch > validationCall, "strict validation must precede provider delivery");
