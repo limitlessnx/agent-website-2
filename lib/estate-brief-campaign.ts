@@ -38,7 +38,7 @@ export function buildEstateBriefCampaign(property: PropertyRecord, sellingPoint:
   const propertyName = clean(property.title, 160);
   const location = [clean(property.location_area, 120), clean(property.location_city, 120)].filter(Boolean).join(", ");
   const price = clean(property.price, 120);
-  const offer = normalizeTemplateParameter(sellingPoint, { maxLength: 600, fieldName: "Campaign selling point" });
+  let offer = "";\n  try { offer = normalizeTemplateParameter(sellingPoint, { maxLength: 600, fieldName: "Campaign selling point" }); }\n  catch (error) { throw new EstateBriefCampaignError(error instanceof Error ? error.message : "The campaign selling point is invalid."); }
   if (!propertyName || !property.id) throw new EstateBriefCampaignError("Choose a verified property before preparing an estate brief campaign.");
   if (!location) throw new EstateBriefCampaignError("The selected property needs a location before preparing an estate brief campaign.");
   if (!price) throw new EstateBriefCampaignError("The selected property needs a price before preparing an estate brief campaign.");
