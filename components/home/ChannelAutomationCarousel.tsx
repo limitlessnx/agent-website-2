@@ -53,14 +53,6 @@ export default function ChannelAutomationCarousel() {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => {
-    if (paused || reducedMotion) return;
-    const timer = window.setInterval(() => {
-      setActive((current) => (current + 1) % channels.length);
-    }, 4500);
-    return () => window.clearInterval(timer);
-  }, [paused, reducedMotion]);
-
   const current = channels[active];
   const Icon = current.Icon;
 
@@ -80,7 +72,7 @@ export default function ChannelAutomationCarousel() {
           <p className={styles.eyebrow}>Examples of configurable channels</p>
           <h3>Meet customers where they already are.</h3>
         </div>
-        <span className={styles.status}>{paused || reducedMotion ? "Paused" : "Auto-rotating"}</span>
+        <span className={styles.status}>Manual controls</span>
       </div>
 
       <div className={styles.slide} style={{ "--channel-accent": current.accent } as React.CSSProperties}>
