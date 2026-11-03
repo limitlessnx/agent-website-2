@@ -6,7 +6,6 @@ type PublicPricingPlan = {
   slug: string;
   name: string;
   currency: "NGN" | "USD";
-  installationFee: number;
   recurringFee: number;
   billingInterval: string;
   custom: boolean;
@@ -77,7 +76,6 @@ export function usePublicPricing() {
             first: `${plan.custom ? "From " : ""}${formatAmount(plan.currency, plan.installationFee)}`,
             ongoing: `${plan.custom ? "From " : ""}${formatAmount(plan.currency, plan.recurringFee)}/${plan.billingInterval === "monthly" ? "month" : plan.billingInterval}`,
             currency: plan.currency,
-            installationFee: plan.installationFee,
             recurringFee: plan.recurringFee,
             billingInterval: plan.billingInterval,
             custom: plan.custom,
