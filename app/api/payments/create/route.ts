@@ -27,14 +27,6 @@ type CheckoutSession = {
 
 type FlutterwavePaymentResponse = { status: string; message: string; data?: { id?: number; link?: string } };
 
-function legacyDurationToTerm(value: unknown): PrepaidTerm | null {
-  const months = Number(value);
-  if (months === 3) return "3m";
-  if (months === 6) return "6m";
-  if (months === 12) return "12m";
-  return null;
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
