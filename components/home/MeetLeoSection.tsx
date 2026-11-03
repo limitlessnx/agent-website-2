@@ -61,8 +61,8 @@ export default function MeetLeoSection() {
         <div className="relative mx-auto w-full max-w-[560px] min-w-0">
           <div aria-hidden="true" className="absolute left-1/2 top-[10%] h-48 w-48 -translate-x-1/2 rounded-full bg-purple-500/15 blur-[65px] sm:h-64 sm:w-64" />
           <div className="relative flex min-w-0 flex-col items-center">
-            <div className="relative z-10 mx-auto w-[min(68vw,270px)] sm:w-[min(44vw,320px)] lg:w-[min(100%,360px)]">
-              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} quality={75} sizes="(min-width: 1024px) 360px, (min-width: 640px) 320px, 68vw" className="block h-auto max-h-[340px] w-full object-contain drop-shadow-[0_16px_34px_rgba(124,58,237,.18)] sm:max-h-[400px] lg:max-h-[440px]" />
+            <div className="relative z-10 mx-auto w-full max-w-[420px] sm:w-[min(44vw,320px)] lg:w-[min(100%,360px)]">
+              <Image src="https://d2ol7oe51mr4n9.cloudfront.net/user_3GTV38w6zCm0fb6vRYkPEmmsNnH/e9f1e345-e1c5-48a9-bac9-4ea84663bd58.jpg" alt="Leo, Fluxknight’s friendly white-and-black robot with glowing purple facial features and illuminated headphones" width={480} height={450} quality={75} sizes="(min-width: 1024px) 360px, (min-width: 640px) 320px, min(88vw, 420px)" className="block h-auto max-h-none w-full max-w-full object-contain drop-shadow-[0_16px_34px_rgba(124,58,237,.18)] sm:max-h-[400px] lg:max-h-[440px]" />
               <div className="absolute bottom-[5%] left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-xl border border-purple-300/25 bg-[#100b1c]/90 px-3 py-2 shadow-[0_8px_30px_rgba(0,0,0,.35)] backdrop-blur sm:bottom-[7%] sm:px-4">
                 <div className="flex items-center gap-2 text-xs font-semibold text-white"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Leo <span className="font-normal text-white/45">· assistant preview</span></div>
               </div>
@@ -82,13 +82,38 @@ export default function MeetLeoSection() {
                 <AudioLines size={18} className="shrink-0 text-purple-300" />
               </div>
               <div className="space-y-3 py-4 sm:space-y-4 sm:py-5">
-                <div className="ml-auto max-w-[92%] break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
-                  We miss follow-ups after new enquiries come in.
+                <div className="ml-auto max-w-[94%]">
+                  <p className="mb-1.5 pr-1 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-purple-200/55">Admin</p>
+                  <div className="break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
+                    Leo, how many new leads have we received this week?
+                  </div>
                 </div>
                 <div className="flex min-w-0 items-start gap-2.5">
                   <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-purple-400/10 text-purple-200"><Sparkles size={14} /></span>
-                  <div className="min-w-0 break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/75">
-                    Let’s map what happens after an enquiry, where the response slows down, and which follow-up steps may be suitable for automation.
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Leo</p>
+                    <div className="break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/80">
+                      You’ve received <strong className="font-semibold text-white">120 new leads</strong> this week.
+                    </div>
+                  </div>
+                </div>
+                <div className="ml-auto max-w-[94%]">
+                  <p className="mb-1.5 pr-1 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-purple-200/55">Admin</p>
+                  <div className="break-words rounded-2xl rounded-tr-sm border border-purple-300/15 bg-purple-500/20 px-3.5 py-3 text-sm leading-6 text-white/90">
+                    Send a campaign to all 120 leads announcing our new estate launch.
+                  </div>
+                </div>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-purple-400/10 text-purple-200"><Sparkles size={14} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Leo</p>
+                    <div className="break-words rounded-2xl rounded-tl-sm border border-white/[0.08] bg-white/[0.035] px-3.5 py-3 text-sm leading-6 text-white/80">
+                      Preparing the new-estate campaign, checking the audience and getting the message ready…
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-1.5 text-[11px] font-semibold text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      Campaign sent to all 120 leads
+                    </div>
                   </div>
                 </div>
               </div>
