@@ -178,16 +178,22 @@ export default function PhoneContactsImporter() {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" onClick={chooseFromPhone} disabled={!supported || loading || importing}>
-          {loading ? "Opening contacts…" : "Choose phone contacts"}
-        </button>
-        <button type="button" className={styles.secondary} onClick={() => fileRef.current?.click()} disabled={loading || importing}>
-          Import .vcf file
+        {supported ? (
+          <button type="button" onClick={chooseFromPhone} disabled={loading || importing}>
+            {loading ? "Opening contacts…" : "Choose phone contacts"}
+          </button>
+        ) : (
+          <button type="button" className={styles.unavailable} disabled aria-describedby="contact-picker-unavailable">
+            Phone picker unavailable on iPhone
+          </button>
+        )}
+        <button type="button" className={supported ? styles.secondary : styles.primaryFallback} onClick={() => fileRef.current?.click()} disabled={loading || importing}>
+          Choose .vcf contact file
         </button>
         <input ref={fileRef} className={styles.hiddenFile} type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard,application/vcard" onChange={(event) => void readVCard(event.target.files?.[0])} />
       </div>
 
-      {!supported ? <p className={styles.hint}>This browser does not support the native contact picker. On iPhone, open Contacts, select the contacts you want, use Share, then save or share the contact card as a .vcf file. Import that file here. The direct picker is unavailable in this browser.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
+      {!supported ? <p id="contact-picker-unavailable" className={styles.hint}>iPhone browsers, including Chrome, do not expose the native contact picker to this page. To import contacts, open the Contacts app, select the contacts you want, use Share, then save or share the contact card as a .vcf file. Tap “Choose .vcf contact file” and review the contacts before importing. Nothing is saved until you confirm.</p> : <p className={styles.hint}>Your browser will ask you to choose contacts. Limitless Realty receives only the contacts you select, not your full address book.</p>}
 
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
