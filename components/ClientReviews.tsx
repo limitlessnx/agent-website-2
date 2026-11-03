@@ -144,18 +144,27 @@ export default function ClientReviews() {
         .fade-top{inset:0 0 auto;height:42px;background:linear-gradient(#080a10,transparent)}
         .fade-bottom{inset:auto 0 0;height:54px;background:linear-gradient(transparent,#080a10)}
         @keyframes testimonial-scroll{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 9px))}}
-        @media(max-width:700px){
-          .testimonial-section{padding:72px 0 76px}
-          .testimonial-heading{margin-bottom:40px}
+        @media(max-width:900px){
+          .testimonial-section{padding:54px 0 58px}
+          .testimonial-heading{margin-bottom:28px}
           .testimonial-kicker{gap:12px;font-size:.63rem;letter-spacing:.25em}
           .testimonial-kicker span{width:32px}
           .testimonial-heading h2{font-size:clamp(2.25rem,11vw,3.2rem)}
           .testimonial-heading p{font-size:.9rem}
-          .testimonial-window{padding:10px 0 28px}
-          .testimonial-track{gap:13px;animation-duration:68s}
-          .testimonial-card{width:min(82vw,280px);min-height:360px;padding:20px 19px;border-radius:20px}
-          .testimonial-copy{margin-top:16px;font-size:.84rem;line-height:1.55}
-          .fade-left,.fade-right{width:34px;min-width:34px}
+          .testimonial-window{padding:8px 0 20px}
+          .testimonial-track{gap:10px;animation-duration:68s}
+          .testimonial-card{width:min(70vw,248px);min-height:310px;padding:17px 16px;border-radius:18px}
+          .testimonial-person strong{font-size:.94rem}
+          .testimonial-person span{font-size:.76rem}
+          .testimonial-divider{margin:12px 0}
+          .testimonial-rating{gap:10px}
+          .testimonial-rating b{font-size:.84rem}
+          .review-stars svg{width:14px;height:14px}
+          .testimonial-copy{margin-top:13px;font-size:.78rem;line-height:1.48}
+          .testimonial-meta{padding-top:18px}
+          .testimonial-tag{padding:6px 10px;font-size:.66rem}
+          .testimonial-location{margin-top:12px;font-size:.68rem}
+          .fade-left,.fade-right{width:24px;min-width:24px}
         }
         @media(prefers-reduced-motion:reduce){
           .testimonial-track{animation:none}
