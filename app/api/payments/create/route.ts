@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       currency,
       redirect_url: `${siteUrl}/api/payments/callback`,
       customer: { email: customerEmail, name: customerName, phonenumber: customerPhone || undefined },
-      payment_options: currency === "NGN" ? "card, banktransfer, ussd" : "card",
+      payment_options: "card",
       configurations: { session_duration: 30, max_retry_attempt: 5 },
       customizations: { title: "Fluxknight AI Automation", description },
       meta: {
