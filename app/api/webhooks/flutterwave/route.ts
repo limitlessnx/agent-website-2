@@ -376,6 +376,28 @@ export async function POST(request: Request) {
       eventRow = existing[0];
       if (!eventRow) throw new Error("Unable to persist webhook event.");
       if (eventRow.processed_at) return NextResponse.json({ received: true, duplicate: true });
+
+      // The first insert owns processing. Only one failed-event retry may
+      // reclaim the row; concurrent deliveries must not renew twice.
+      if (!eventRow.processing_error) {
+        return NextResponse.json(
+          { received: false, retry: true, reason: "Event processing is already in progress." },
+          { status: 503, headers: { "Retry-After": "10" } },
+        );
+      }
+      const reclaimed = await supabaseRest<Array<{ id: string }>>(
+        `payment_webhook_events?id=eq.${encodeURIComponent(eventRow.id)}&processed_at=is.null&processing_error=eq.${encodeURIComponent(eventRow.processing_error)}&select=id`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ processing_error: null }),
+        },
+      );
+      if (reclaimed.length !== 1) {
+        return NextResponse.json(
+          { received: false, retry: true, reason: "Another worker claimed this event." },
+          { status: 503, headers: { "Retry-After": "10" } },
+        );
+      }
     }
 
     const result = eventType === "subscription.cancelled"
