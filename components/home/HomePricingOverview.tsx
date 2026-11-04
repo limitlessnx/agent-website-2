@@ -21,13 +21,6 @@ function canonicalSlug(slug: string) {
   return checkoutSlugByFramework[slug] ?? slug;
 }
 
-function money(currency: "NGN" | "USD", amount: number) {
-  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function HomePricingOverview({ plans }: { plans: Array<Omit<PricingCarouselPlan, "icon">> }) {
   const trackRef = useRef<HTMLDivElement>(null);
