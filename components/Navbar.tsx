@@ -12,9 +12,12 @@ const navLinks = [
   { href: "/industries", label: "Industries" },
   { href: "/case-studies", label: "Case Studies" },
   { href: "/pricing", label: "Pricing" },
+];
+
+const additionalMobileLinks = [
   { href: "/faq", label: "FAQ" },
-  { href: "/evaluation", label: "Business AI Evaluation" },
   { href: "/about", label: "About" },
+  { href: "/evaluation", label: "Business AI Evaluation" },
 ];
 
 export default function Navbar() {
@@ -65,7 +68,7 @@ export default function Navbar() {
         </div>
         <div className={styles.desktopActions}>
           <Link className={styles.loginLink} href="/account/login">Login</Link>
-          <Link className={`${styles.demoLink} flux-contact`} href="/account/signup?trial=basic&next=%2Fportal">Start Free Trial <span>↗</span></Link>
+          <Link className={`${styles.demoLink} flux-contact`} href="/evaluation">Evaluate My Business <span aria-hidden="true">↗</span></Link>
         </div>
         <button className={styles.mobileToggle} type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={22} /></button>
       </nav>
@@ -78,7 +81,7 @@ export default function Navbar() {
               <button className={styles.closeButton} type="button" onClick={closeMenu} aria-label="Close navigation menu"><X size={25} /></button>
             </div>
             <nav className={styles.mobileLinks} aria-label="Mobile navigation links">
-              {navLinks.map((link) => (
+              {[...navLinks, ...additionalMobileLinks].map((link) => (
                 <Link className={pathname === link.href ? styles.active : ""} key={link.href} href={link.href} onClick={closeMenu}>{link.label}</Link>
               ))}
             </nav>
