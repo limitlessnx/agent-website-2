@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "@/components/admin/ServerIcons";
-import IndustryCarousel from "@/components/IndustryCarousel";
+import IndustryExplorer from "@/components/home/IndustryExplorer";
 import ClientReviews from "@/components/ClientReviews";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ProductLedHero from "@/components/home/ProductLedHero";
@@ -16,7 +16,7 @@ export default function HomePage() {
       <AutomationJourney />
       <MeetLeoSection />
       <MaiaCaseStudyTeaser />
-      <IndustryCarousel />
+      <IndustryExplorer />
       <ClientReviews />
       <section className="brand-section evaluation-journey" id="evaluation-journey">
         <div className="brand-shell"><div className="evaluation-conversion-card evaluation-conversion-card--visual evaluation-conversion-card--image">
