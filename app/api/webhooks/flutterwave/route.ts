@@ -14,6 +14,7 @@ type CheckoutSession = {
   billing_region: "NG" | "INTERNATIONAL";
   currency: string;
   amount: number;
+  customer_email: string;
   organization_id: string | null;
 };
 
@@ -158,6 +159,9 @@ async function processCharge(event: WebhookEvent, eventType: string) {
 
   if (session) {
     if (session.billing_type !== "subscription") return { ignored: true };
+    if (!payment.customer?.email || payment.customer.email.trim().toLowerCase() !== session.customer_email.trim().toLowerCase()) {
+      throw new Error("Verified payment customer does not match the stored checkout.");
+    }
     if (payment.currency !== session.currency) {
       throw new Error("Verified payment currency does not match the stored checkout.");
     }
