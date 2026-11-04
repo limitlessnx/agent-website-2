@@ -18,7 +18,6 @@ export async function GET() {
         name: plan.name,
         description: plan.description,
         currency: plan.currency,
-        installationFee: plan.custom ? null : plan.installationFee,
         recurringFee: plan.custom ? null : plan.recurringFee,
         billingInterval: plan.billingInterval,
         custom: plan.custom,
