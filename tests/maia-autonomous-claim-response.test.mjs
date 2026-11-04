@@ -1,7 +1,10 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const path = require('node:path');
-const load = require('./helpers/load-typescript.cjs');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import load from './helpers/load-typescript.cjs';
+
+const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const goal = { id: 'goal-1', organization_id: 'org-1', agent_id: 'agent-1', title: 'Queued task', input: { instructions: 'Approved task' } };
 function setup({ claims = [null], assigned = true, authorized = true, claimError = null } = {}) {
@@ -22,7 +25,7 @@ function setup({ claims = [null], assigned = true, authorized = true, claimError
       return chain;
     },
   };
-  const route = load(path.resolve(__dirname, '../app/api/maia/autonomous/route.ts'), {
+  const route = load(path.resolve(testDirectory, '../app/api/maia/autonomous/route.ts'), {
     'next/server': { NextResponse: { json: (body, init = {}) => ({ body, status: init.status || 200 }) } },
     '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/ai/maia-runtime': { runMaia: async input => { calls.runs.push(input); return { steps: 2 }; } },
