@@ -4,7 +4,6 @@ import type { ComponentType, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2, Layers3, MessageSquareText, Network, Workflow } from "@/components/admin/ServerIcons";
-import { calculatePrepaidPrice, type PrepaidTerm } from "@/lib/payments/terms";
 import { usePublicPricing } from "@/lib/use-public-pricing";
 import styles from "@/components/PricingCarousel.module.css";
 
@@ -26,11 +25,9 @@ export type PricingCarouselPlan = {
 type PricingCarouselProps = {
   plans: PricingCarouselPlan[];
   compact?: boolean;
-  showDurationSelector?: boolean;
 };
 
 type PlanPresentation = Pick<PricingCarouselPlan, "icon" | "name" | "description" | "features">;
-type BillingTerm = "monthly" | PrepaidTerm;
 
 const pricingFrameworkSlugs = new Set(["basic", "plus", "starter", "business", "business-plus"]);
 const checkoutSlugByFramework: Record<string, string> = {
@@ -41,11 +38,7 @@ const checkoutSlugByFramework: Record<string, string> = {
   "business-plus": "custom-ai-operations",
 };
 
-const durationOptions: Array<{ key: BillingTerm; label: string; saving?: string }> = [
-  { key: "monthly", label: "Monthly", saving: "Standard" },
-  { key: "6m", label: "6 months", saving: "Save 15%" },
-  { key: "12m", label: "Yearly", saving: "Save 20%" },
-];
+
 
 const publicPlanPresentation: Record<string, PlanPresentation> = {
   "whatsapp-ai-starter": {
@@ -110,13 +103,6 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   },
 };
 
-function formatMoney(currency: "NGN" | "USD", amount: number) {
-  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function canonicalPricingSlug(slug: string) {
   return pricingFrameworkSlugs.has(slug) ? checkoutSlugByFramework[slug] : slug;
@@ -128,9 +114,8 @@ function visibleCardsForWidth(width: number) {
   return 1;
 }
 
-export default function PricingCarousel({ plans, compact = false, showDurationSelector = false }: PricingCarouselProps) {
+export default function PricingCarousel({ plans, compact = false }: PricingCarouselProps) {
   const [active, setActive] = useState(0);
-  const [billingTerm, setBillingTerm] = useState<BillingTerm>("monthly");
   const trackRef = useRef<HTMLDivElement>(null);
   const settledRef = useRef<number | null>(null);
   const programmaticRef = useRef<number | null>(null);
@@ -258,25 +243,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
     </div>
   ) : null;
 
-  const durationControl = showDurationSelector ? (
-    <div className={styles.durationField} aria-label="Billing duration">
-      <span className={styles.durationLabel}>Billing duration</span>
-      <div className={styles.durationSwitch}>
-        {durationOptions.map((option) => (
-          <button
-            key={option.key}
-            type="button"
-            className={billingTerm === option.key ? styles.durationActive : ""}
-            onClick={() => setBillingTerm(option.key)}
-            aria-pressed={billingTerm === option.key}
-          >
-            <span>{option.label}</span>
-            <small>{option.saving}</small>
-          </button>
-        ))}
-      </div>
-    </div>
-  ) : null;
+
 
   return (
     <div
@@ -302,7 +269,6 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
             <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={18} /></button>
           </div>
         </div>
-        {showDurationSelector ? <div className={styles.durationBar}>{durationControl}</div> : null}
       </div>
 
       <div className={styles.mobileToolbar}>
@@ -316,7 +282,7 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
             <button type="button" onClick={() => move(1)} disabled={active === presentedPlans.length - 1} aria-label="Next pricing plan"><ArrowRight size={15} /></button>
           </div>
         </div>
-        <div className={styles.mobileControlGrid}>{regionControl}{durationControl}</div>
+        <div className={styles.mobileControlGrid}>{regionControl}</div>
       </div>
 
       <div className={styles.track} ref={trackRef} onScroll={onScroll} tabIndex={0} role="region" aria-label="Scrollable pricing plans">
@@ -324,18 +290,12 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
           const Icon = plan.icon;
           const canonicalSlug = canonicalPricingSlug(plan.slug);
           const detected = prices[plan.slug] ?? prices[canonicalSlug];
-          const firstPrice = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
           const ongoingPrice = detected?.ongoing ?? plan.ongoing;
           const isExplicitCustom = plan.custom === true || plan.slug === "custom";
           const isCustom = isExplicitCustom || (plan.slug !== "business-plus" && plan.custom === undefined && detected?.custom === true);
           const isBasic = plan.slug === "basic" || canonicalSlug === "whatsapp-ai-starter";
           const checkoutSlug = detected?.slug ?? canonicalSlug;
-          const prepaid = billingTerm !== "monthly" && detected && !isCustom
-            ? calculatePrepaidPrice(detected.installationFee, detected.recurringFee, billingTerm)
-            : null;
-          const href = isCustom
-            ? `/evaluation?plan=${encodeURIComponent(plan.slug)}`
-            : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${showDurationSelector && billingTerm !== "monthly" ? `&term=${encodeURIComponent(billingTerm)}` : ""}`;
+          const href = isCustom ? "/contact" : `/checkout?plan=${encodeURIComponent(checkoutSlug)}`;
           const ctaLabel = plan.cta ?? "Get started";
 
           return (
@@ -364,15 +324,8 @@ export default function PricingCarousel({ plans, compact = false, showDurationSe
               </div>
 
               <div className={styles.priceBlock}>
-                <div><span>Implementation</span><strong>{firstPrice}</strong></div>
-                <div><span>{billingTerm === "monthly" ? "Monthly renewal" : "Standard renewal"}</span><strong>{ongoingPrice}</strong></div>
-                {prepaid && detected ? (
-                  <div className={styles.termValue}>
-                    <span>{prepaid.label} prepaid · save {prepaid.discountPercent}%</span>
-                    <strong>{formatMoney(detected.currency, prepaid.total)}</strong>
-                    <small>Save {formatMoney(detected.currency, prepaid.discount)} from {formatMoney(detected.currency, prepaid.subtotal)}</small>
-                  </div>
-                ) : null}
+                <div><span>Monthly subscription</span><strong>{ongoingPrice}</strong></div>
+                <small>No installation fee</small>
               </div>
 
               <h4>What&apos;s included</h4>
