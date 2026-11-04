@@ -17,7 +17,7 @@ type VerifiedPayment = {
   amount: number;
   currency: string;
   flw_ref?: string;
-  customer?: { id?: number | string };
+  customer?: { id?: number | string; email?: string };
 };
 
 type CurrentSubscription = {
@@ -94,6 +94,8 @@ export async function activatePaidTrialSubscription(
           paid_tx_ref: session.tx_ref,
           provider_transaction_id: payment.id ? String(payment.id) : null,
           provider_reference: payment.flw_ref || null,
+          provider_customer_email: payment.customer?.email || null,
+          flutterwave_payment_plan_id: (plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[session.billing_region === "NG" ? "ngn" : "usd"] || null,
           billing_interval: "monthly",
           billing_currency: payment.currency,
           paid_at: now.toISOString(),
