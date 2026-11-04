@@ -46,10 +46,16 @@ async function claimPaidCheckout(txRef: string, session: Awaited<ReturnType<type
   }
 
   if (!checkout.organization_id) {
-    await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&organization_id=is.null`, {
-      method: "PATCH",
-      body: JSON.stringify({ organization_id: session.organizationId }),
-    });
+    const claimed = await supabaseRest<Array<{ organization_id: string }>>(
+      `checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}&organization_id=is.null&select=organization_id`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ organization_id: session.organizationId }),
+      },
+    );
+    if (claimed.length !== 1 || claimed[0].organization_id !== session.organizationId) {
+      redirect(`/pricing?payment=account_mismatch&tx_ref=${encodeURIComponent(txRef)}`);
+    }
   }
 
   if (checkout.billing_type === "subscription") {
