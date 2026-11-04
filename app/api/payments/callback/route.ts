@@ -29,7 +29,7 @@ type VerificationResponse = {
     currency: string;
     charged_amount?: number;
     flw_ref?: string;
-    customer?: { id?: number | string };
+    customer?: { id?: number | string; email?: string };
   };
 };
 
