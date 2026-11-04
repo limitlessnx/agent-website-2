@@ -1,0 +1,38 @@
+name: Monthly Billing Verification
+
+on:
+  push:
+    branches:
+      - fix/monthly-billing-merge-ready
+      - feat/monthly-only-pricing-checkout
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/api/payments/**"
+      - "app/api/webhooks/flutterwave/**"
+      - "app/api/admin/billing/**"
+      - "lib/payments/**"
+      - "lib/payments/catalog.ts"
+      - "app/onboarding/**"
+      - "tests/flutterwave-billing-route-contract.test.mjs"
+      - "package.json"
+      - ".github/workflows/monthly-billing-verification.yml"
+  workflow_dispatch:
+
+jobs:
+  billing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Billing regression contracts
+        run: npm run test:billing
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
