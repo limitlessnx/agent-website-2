@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 type Template = { name: string; language: string; category: string; placeholder_count: number; placeholder_indexes: number[] };
 type Customer = { id: string; full_name: string; phone: string | null; email: string | null };
 
-export default function CampaignComposer({ customers }: { customers: Customer[] }) {
+export default function CampaignComposer({ customers, hotel = false }: { customers: Customer[]; hotel?: boolean }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("en_US");
@@ -35,7 +35,7 @@ export default function CampaignComposer({ customers }: { customers: Customer[] 
       const response = await fetch("/api/portal/campaigns/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateName: selectedTemplate, languageCode: selectedLanguage, customerIds: selectedCustomers, variables }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Campaign send failed.");
-      setNotice(`Campaign submitted: ${payload.accepted} accepted by Meta, ${payload.failed} failed.`);
+      setNotice(`Campaign submitted: ${payload.accepted} accepted by Meta, ${payload.failed} failed, ${payload.skipped || 0} skipped.`);
       setSelectedCustomers([]);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Campaign send failed."); } finally { setSending(false); }
   };
@@ -49,6 +49,6 @@ export default function CampaignComposer({ customers }: { customers: Customer[] 
       <div className="exposure-sendbar"><div><strong>{selectedCustomers.length} client{selectedCustomers.length === 1 ? "" : "s"} selected</strong><small>Meta acceptance and delivery status are recorded separately.</small></div><button type="button" className="portal-button" onClick={submit} disabled={sending || !selectedTemplate || !selectedCustomers.length} aria-busy={sending}>{sending ? "Sending…" : "Send campaign"}</button></div>
       {notice ? <p className="exposure-success" role="status">{notice}</p> : null}{error ? <p className="exposure-error" role="alert">{error}</p> : null}
     </section>
-    <section className="exposure-panel"><header><div><p className="portal-kicker">Audience</p><h2>Select studio clients</h2><p>Recipients are loaded from this organization only.</p></div><button type="button" className="exposure-select-all" onClick={() => setSelectedCustomers(selectedCustomers.length === customers.length ? [] : customers.map((customer) => customer.id))}>{selectedCustomers.length === customers.length ? "Clear all" : "Select all"}</button></header><div className="exposure-audience-list">{customers.map((customer) => <label key={customer.id}><input type="checkbox" checked={selectedCustomers.includes(customer.id)} onChange={() => toggleCustomer(customer.id)} /><span><strong>{customer.full_name}</strong><small>{customer.phone || customer.email || "No contact detail"}</small></span></label>)}{!customers.length ? <p className="exposure-empty">No studio clients are available yet.</p> : null}</div></section>
+    <section className="exposure-panel"><header><div><p className="portal-kicker">Audience</p><h2>{hotel ? "Select guests" : "Select studio clients"}</h2><p>Recipients are loaded from this organization only.</p></div><button type="button" className="exposure-select-all" onClick={() => setSelectedCustomers(selectedCustomers.length === customers.length ? [] : customers.map((customer) => customer.id))}>{selectedCustomers.length === customers.length ? "Clear all" : "Select all"}</button></header><div className="exposure-audience-list">{customers.map((customer) => <label key={customer.id}><input type="checkbox" checked={selectedCustomers.includes(customer.id)} onChange={() => toggleCustomer(customer.id)} /><span><strong>{customer.full_name}</strong><small>{customer.phone || customer.email || "No contact detail"}</small></span></label>)}{!customers.length ? <p className="exposure-empty">{hotel ? "No guests are available yet." : "No studio clients are available yet."}</p> : null}</div></section>
   </div>;
 }

@@ -67,7 +67,7 @@ export default function PortalSidebar({
         {capabilities.systems?<Link href="/portal/systems" className={active("/portal/systems")?"active":""} onClick={close}><Workflow size={18}/><span>Systems</span></Link>:null}
         {capabilities.appointments&&experience.features.appointments?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
         {experience.slug === "photography-studio"?<Link href="/portal/catalogue" className={active("/portal/catalogue")?"active":""} onClick={close}><Workflow size={18}/><span>Studio Catalogue</span></Link>:null}
-        {experience.slug === "photography-studio"?<Link href="/portal/campaigns" className={active("/portal/campaigns")?"active":""} onClick={close}><Zap size={18}/><span>Campaigns</span></Link>:null}
+        {capabilities.conversations && ["photography-studio", "hotels"].includes(experience.slug)?<Link href="/portal/campaigns" className={active("/portal/campaigns")?"active":""} onClick={close}><Zap size={18}/><span>Campaigns</span></Link>:null}
         {capabilities.analytics?<Link href="/portal/analytics" className={active("/portal/analytics")?"active":""} onClick={close}><Activity size={18}/><span>Analytics</span></Link>:null}
         {capabilities.billing?<Link href="/portal/billing" className={active("/portal/billing")?"active":""} onClick={close}><CreditCard size={18}/><span>Flux Credits</span></Link>:null}
         {capabilities.team?<Link href="/portal/team" className={active("/portal/team")?"active":""} onClick={close}><Users size={18}/><span>Team</span></Link>:null}

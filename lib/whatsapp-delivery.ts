@@ -18,6 +18,7 @@ type SendInput = {
   propertyVideoUrls?: string[];
   strictTemplateContract?: { approvedVariableOrder: readonly string[] };
   templateHeaderImageUrl?: string;
+  requireProviderApproval?: boolean;
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
 type MetaWhatsAppCredentials={providerFamily:"meta";phoneNumberId:string;accessToken:string;graphVersion:string;source:"tenant_vault"|"legacy_env"};
@@ -46,7 +47,8 @@ const normalizePhone = (value: string) => value.replace(/[^0-9]/g, "");
 function outsideCustomerWindow(lastCustomerMessageAt?: string | null) {
   if (!lastCustomerMessageAt) return true;
   const timestamp = new Date(lastCustomerMessageAt).getTime();
-  return !Number.isFinite(timestamp) || Date.now() - timestamp >= 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  return !Number.isFinite(timestamp) || timestamp > now || now - timestamp >= 24 * 60 * 60 * 1000;
 }
 async function resolveWhatsAppCredentials(organizationId: string): Promise<WhatsAppCredentials> {
   const admin = createAdminClient();
@@ -195,7 +197,15 @@ export async function sendWhatsAppMessage(input: SendInput) {
     ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h",input.requestedTemplateName,input.strictTemplateContract)
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
-  const normalizedVariables = useTemplate ? normalizeTemplateVariables(config?.variable_keys || [], input.variables || {}) : {};
+  const templateValues = input.requireProviderApproval
+    ? Object.fromEntries((config?.variable_keys || []).map((key, index) => [key, input.variables?.[key] ?? input.variables?.[String(index + 1)]]))
+    : input.variables || {};
+  const normalizedVariables = useTemplate ? normalizeTemplateVariables(config?.variable_keys || [], templateValues) : {};
+  if (useTemplate && input.requireProviderApproval) {
+    if (config?.metadata?.provider_status !== "approved") throw new Error("Hotel WhatsApp template requires verified provider approval.");
+    const keys = config.variable_keys || [];
+    if (new Set(keys).size !== keys.length || keys.some(key => !key.trim() || !normalizedVariables[key]?.trim())) throw new Error("Hotel WhatsApp template variables are incomplete.");
+  }
   const normalizedText = !useTemplate && input.text ? normalizeDirectMessage(input.text) : input.text;
   if (useTemplate && input.organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && input.strictTemplateContract) {
     validateStrictTemplateContract(config, input, normalizedVariables);
