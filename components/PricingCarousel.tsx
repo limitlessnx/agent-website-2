@@ -103,13 +103,6 @@ const publicPlanPresentation: Record<string, PlanPresentation> = {
   },
 };
 
-function formatMoney(currency: "NGN" | "USD", amount: number) {
-  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 function canonicalPricingSlug(slug: string) {
   return pricingFrameworkSlugs.has(slug) ? checkoutSlugByFramework[slug] : slug;
