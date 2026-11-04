@@ -23,9 +23,16 @@ export async function POST(request: NextRequest) {
   for (let i = 0; i < 10; i += 1) {
     const { data: claimed, error: claimError } = await admin.rpc("claim_next_maia_autonomous_goal");
     if (claimError) return NextResponse.json({ error: "Unable to claim autonomous goal.", detail: claimError.message }, { status: 500 });
-    if (!claimed) break;
+    // Table-composite RPCs return row arrays. A NULL composite may arrive as
+    // one all-null row; both that and an empty array mean an idle queue.
+    const candidate = Array.isArray(claimed) && claimed.length <= 1 ? claimed[0] : claimed;
+    if (candidate == null) break;
+    if (
+      typeof candidate === "object" && !Array.isArray(candidate) &&
+      Object.keys(candidate).length > 0 && Object.values(candidate).every((value) => value === null)
+    ) break;
 
-    const goal = claimed as {
+    const goal = candidate as {
       id?: unknown;
       organization_id?: unknown;
       agent_id?: unknown;
