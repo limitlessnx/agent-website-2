@@ -20,6 +20,7 @@ type Subscription = {
   id: string;
   organization_id: string;
   plan_id: string;
+  provider_subscription_id: string | null;
   status: string;
   current_period_end: string | null;
   metadata: Record<string, unknown> | null;
@@ -81,31 +82,59 @@ async function findRecurringSubscription(input: {
   if (!email || !Number.isFinite(input.amount) || input.amount <= 0) return null;
 
   const subscriptions = await supabaseRest<Subscription[]>(
-    `organization_subscriptions?select=id,organization_id,plan_id,status,current_period_end,metadata&provider=eq.flutterwave&status=in.(active,past_due,grace_period)&metadata->>provider_customer_email=ilike.${encodeURIComponent(email)}&limit=100`,
+    `organization_subscriptions?select=id,organization_id,plan_id,provider_subscription_id,status,current_period_end,metadata&provider=eq.flutterwave&status=in.(active,past_due,grace_period)&metadata->>provider_customer_email=ilike.${encodeURIComponent(email)}&limit=100`,
   );
   if (!subscriptions.length) return null;
+
+  // charge.completed omits subscription and plan IDs. Resolve Flutterwave's
+  // subscription list, then match the unique provider subscription ID we stored.
+  const providerResult = await flutterwaveRequest<{
+    status: string;
+    data?: Array<{
+      id: number | string;
+      amount?: number;
+      customer?: { customer_email?: string; email?: string };
+      plan?: number | string | { id?: number | string };
+    }>;
+  }>(`/subscriptions?email=${encodeURIComponent(email)}`);
+  const providerSubscriptions = (providerResult.data || []).filter((item) => {
+    const providerEmail = String(item.customer?.customer_email || item.customer?.email || "").trim().toLowerCase();
+    const providerPlanId = typeof item.plan === "object" ? String(item.plan?.id || "") : String(item.plan || "");
+    return providerEmail === email && Boolean(providerPlanId);
+  });
+  if (!providerSubscriptions.length) return null;
 
   const planIds = [...new Set(subscriptions.map((item) => item.plan_id))];
   const plans = await supabaseRest<BillingPlan[]>(
     `billing_plans?select=id,slug,currency,recurring_fee,metadata&id=in.(${planIds.map(encodeURIComponent).join(",")})`,
   );
 
-  const matches = subscriptions.filter((subscription) => {
+  const matches = subscriptions.flatMap((subscription) => {
+    if (!subscription.provider_subscription_id) return [];
+    const providerSubscription = providerSubscriptions.find(
+      (item) => String(item.id) === String(subscription.provider_subscription_id),
+    );
+    if (!providerSubscription) return [];
     const plan = plans.find((candidate) => candidate.id === subscription.plan_id);
-    if (!plan) return false;
+    if (!plan) return [];
     const billingCurrency = String(subscription.metadata?.billing_currency || plan.currency).toUpperCase();
     const international = plan.metadata?.international as { recurring_fee?: number } | undefined;
     const configuredAmount = billingCurrency === "USD" ? Number(international?.recurring_fee) : Number(plan.recurring_fee);
+    const providerPlanId = typeof providerSubscription.plan === "object"
+      ? String(providerSubscription.plan?.id || "")
+      : String(providerSubscription.plan || "");
     const storedPlanId = String(subscription.metadata?.flutterwave_payment_plan_id || "");
-    const expectedPlanId = input.planId ? String(input.planId) : "";
-    return (
-      billingCurrency === input.currency.toUpperCase() &&
-      configuredAmount === Number(input.amount) &&
-      (!expectedPlanId || storedPlanId === expectedPlanId)
-    );
+    const providerAmount = Number(providerSubscription.amount);
+    if (
+      billingCurrency !== input.currency.toUpperCase() ||
+      configuredAmount !== Number(input.amount) ||
+      !storedPlanId ||
+      providerPlanId !== storedPlanId ||
+      (Number.isFinite(providerAmount) && providerAmount > 0 && providerAmount !== configuredAmount)
+    ) return [];
+    return [{ subscription, plan }];
   });
-
-  return matches.length === 1 ? { subscription: matches[0], plan: plans.find((plan) => plan.id === matches[0].plan_id)! } : null;
+  return matches.length === 1 ? matches[0] : null;
 }
 
 async function processCharge(event: WebhookEvent, eventType: string) {
@@ -244,11 +273,28 @@ async function processCancellation(event: WebhookEvent) {
   const planId = data.plan?.id ? String(data.plan.id) : "";
   if (!email || !planId) throw new Error("Cancellation event is missing customer email or payment plan ID.");
 
+  const providerResult = await flutterwaveRequest<{
+    status: string;
+    data?: Array<{
+      id: number | string;
+      customer?: { customer_email?: string; email?: string };
+      plan?: number | string | { id?: number | string };
+    }>;
+  }>(`/subscriptions?email=${encodeURIComponent(email)}&plan=${encodeURIComponent(planId)}`);
+  const providerMatches = (providerResult.data || []).filter((item) => {
+    const providerEmail = String(item.customer?.customer_email || item.customer?.email || "").trim().toLowerCase();
+    const providerPlanId = typeof item.plan === "object" ? String(item.plan?.id || "") : String(item.plan || "");
+    return providerEmail === email && providerPlanId === planId;
+  });
+  if (providerMatches.length !== 1) {
+    throw new Error("Flutterwave did not return exactly one matching subscription for cancellation.");
+  }
+  const providerSubscriptionId = String(providerMatches[0].id);
   const candidates = await supabaseRest<Subscription[]>(
-    `organization_subscriptions?select=id,organization_id,plan_id,status,current_period_end,metadata&provider=eq.flutterwave&status=in.(active,past_due,grace_period)&metadata->>provider_customer_email=ilike.${encodeURIComponent(email)}&metadata->>flutterwave_payment_plan_id=eq.${encodeURIComponent(planId)}&limit=10`,
+    `organization_subscriptions?select=id,organization_id,plan_id,provider_subscription_id,status,current_period_end,metadata&provider=eq.flutterwave&provider_subscription_id=eq.${encodeURIComponent(providerSubscriptionId)}&status=in.(active,past_due,grace_period)&metadata->>provider_customer_email=ilike.${encodeURIComponent(email)}&metadata->>flutterwave_payment_plan_id=eq.${encodeURIComponent(planId)}&limit=10`,
   );
   if (candidates.length !== 1) {
-    throw new Error("Cancellation could not be matched to exactly one subscription; no tenant access was changed.");
+    throw new Error("Cancellation could not be matched to exactly one stored provider subscription ID; no tenant access was changed.");
   }
 
   const subscription = candidates[0];
@@ -293,7 +339,7 @@ export async function POST(request: Request) {
   }
 
   const externalId = eventType === "subscription.cancelled"
-    ? `subscription.cancelled:${String(data.customer?.email || "").toLowerCase()}:${String(data.plan?.id || "")}`
+    ? `subscription.cancelled:${String(data.customer?.email || "").toLowerCase()}:${String(data.plan?.id || "")}:${String(data.plan?.date_created || data.date_created || "")}`
     : `${eventType}:${String(data.id || "")}`;
   if (externalId.endsWith(":") || !externalId) {
     return NextResponse.json({ error: "Webhook event is missing its idempotency fields." }, { status: 400 });
