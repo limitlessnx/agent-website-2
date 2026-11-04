@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase-server-rest";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
 import { getClientSession } from "@/lib/client-auth";
+import { activatePaidTrialSubscription } from "@/lib/payments/activate-paid-trial";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ type Session = {
   currency: string;
   status: string;
   billing_type?: string;
+  billing_region?: "NG" | "INTERNATIONAL";
+  plan_slug?: string;
   organization_id?: string | null;
   customer_email: string;
 };
@@ -26,6 +29,7 @@ type VerificationResponse = {
     currency: string;
     charged_amount?: number;
     flw_ref?: string;
+    customer?: { id?: number | string; email?: string };
   };
 };
 
@@ -56,6 +60,7 @@ export async function GET(request: Request) {
       payment.status === "successful" &&
       payment.tx_ref === session.tx_ref &&
       payment.currency === session.currency &&
+      payment.customer?.email?.trim().toLowerCase() === session.customer_email.trim().toLowerCase() &&
       Number(payment.amount) >= Number(session.amount),
     );
 
@@ -69,11 +74,24 @@ export async function GET(request: Request) {
         return NextResponse.redirect(destination);
       }
 
+      if (session.organization_id && clientSession && session.organization_id !== clientSession.organizationId) {
+        destination.searchParams.set("payment", "account_mismatch");
+        destination.searchParams.set("tx_ref", txRef);
+        return NextResponse.redirect(destination);
+      }
+      const organizationId = session.organization_id || null;
+      if (session.billing_type === "subscription" && organizationId && session.billing_region && session.plan_slug) {
+        await activatePaidTrialSubscription(
+          { id: session.id, tx_ref: session.tx_ref, plan_slug: session.plan_slug, billing_region: session.billing_region, organization_id: organizationId },
+          payment!,
+        );
+      }
+
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(txRef)}`, {
         method: "PATCH",
         body: JSON.stringify({
           status: "successful",
-          organization_id: clientSession?.organizationId || session.organization_id || null,
+          organization_id: organizationId,
           provider_transaction_id: payment?.id ? String(payment.id) : transactionId,
           provider_reference: payment?.flw_ref || null,
           provider_payload: verification,
@@ -99,13 +117,16 @@ export async function GET(request: Request) {
       }
 
       if (clientSession) {
-        const onboarding = new URL("/onboarding", url.origin);
-        onboarding.searchParams.set("tx_ref", txRef);
-        return NextResponse.redirect(onboarding);
+        const destinationPath = session.organization_id ? "/portal" : "/onboarding";
+        const next = new URL(destinationPath, url.origin);
+        next.searchParams.set("payment", "success");
+        next.searchParams.set("tx_ref", txRef);
+        return NextResponse.redirect(next);
       }
 
       const login = new URL("/account/login", url.origin);
       login.searchParams.set("tx_ref", txRef);
+      login.searchParams.set("payment", "success");
       login.searchParams.set("next", "/onboarding");
       return NextResponse.redirect(login);
     }

@@ -1,0 +1,58 @@
+name: Monthly Billing Verification
+
+on:
+  push:
+    branches:
+      - fix/monthly-billing-merge-ready
+      - feat/monthly-only-pricing-checkout
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/api/payments/**"
+      - "app/api/webhooks/flutterwave/**"
+      - "app/api/admin/billing/**"
+      - "lib/payments/**"
+      - "lib/payments/catalog.ts"
+      - "app/onboarding/**"
+      - "tests/flutterwave-billing-route-contract.test.mjs"
+      - "tests/flutterwave-*.test.*"
+      - "tests/fixtures/flutterwave-billing.sql"
+      - "supabase/migrations/**"
+      - "package.json"
+      - ".github/workflows/monthly-billing-verification.yml"
+  workflow_dispatch:
+
+jobs:
+  billing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: billing_test_only
+          POSTGRES_DB: billing_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Billing runtime and database regressions
+        run: npm run test:billing
+      - name: PostgreSQL concurrent renewal sessions
+        env:
+          BILLING_TEST_DATABASE_URL: postgresql://postgres:billing_test_only@localhost:5432/billing_test
+        run: node --test tests/flutterwave-concurrency.test.mjs
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build

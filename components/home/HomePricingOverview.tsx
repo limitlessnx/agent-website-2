@@ -4,11 +4,9 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "@/components/admin/ServerIcons";
 import type { PricingCarouselPlan } from "@/components/PricingCarousel";
-import { calculatePrepaidPrice, type PrepaidTerm } from "@/lib/payments/terms";
 import { usePublicPricing } from "@/lib/use-public-pricing";
 import styles from "./HomePricingOverview.module.css";
 
-type BillingTerm = "monthly" | PrepaidTerm;
 
 const checkoutSlugByFramework: Record<string, string> = {
   basic: "whatsapp-ai-starter",
@@ -18,26 +16,13 @@ const checkoutSlugByFramework: Record<string, string> = {
   "business-plus": "custom-ai-operations",
 };
 
-const terms: Array<{ key: BillingTerm; label: string; saving?: string }> = [
-  { key: "monthly", label: "Monthly" },
-  { key: "6m", label: "6 Months", saving: "Save 15%" },
-  { key: "12m", label: "Yearly", saving: "Save 20%" },
-];
 
 function canonicalSlug(slug: string) {
   return checkoutSlugByFramework[slug] ?? slug;
 }
 
-function money(currency: "NGN" | "USD", amount: number) {
-  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function HomePricingOverview({ plans }: { plans: Array<Omit<PricingCarouselPlan, "icon">> }) {
-  const [term, setTerm] = useState<BillingTerm>("monthly");
   const trackRef = useRef<HTMLDivElement>(null);
   const { prices, currency, canViewInternational, viewingInternational, showInternational, showNigeria } = usePublicPricing();
 
@@ -52,13 +37,7 @@ export default function HomePricingOverview({ plans }: { plans: Array<Omit<Prici
   return (
     <div className={styles.pricing}>
       <div className={styles.controls}>
-        <div className={styles.termSwitch} aria-label="Billing duration">
-          {terms.map((option) => (
-            <button key={option.key} type="button" onClick={() => setTerm(option.key)} className={term === option.key ? styles.termActive : ""} aria-pressed={term === option.key}>
-              <span>{option.label}</span>{option.saving ? <small>{option.saving}</small> : null}
-            </button>
-          ))}
-        </div>
+        <span className={styles.currencyNote}>Simple monthly subscriptions · no setup fees</span>
         {canViewInternational ? (
           <div className={styles.regionSwitch} aria-label="Pricing region">
             <button type="button" onClick={showNigeria} className={!viewingInternational ? styles.regionActive : ""}>Nigeria</button>
@@ -74,11 +53,9 @@ export default function HomePricingOverview({ plans }: { plans: Array<Omit<Prici
             const canonical = canonicalSlug(plan.slug);
             const detected = prices[plan.slug] ?? prices[canonical];
             const isCustom = plan.custom === true || plan.slug === "custom";
-            const implementation = detected?.first ?? plan.firstMonth ?? plan.first ?? "Custom";
-            const renewal = detected?.ongoing ?? plan.ongoing;
-            const prepaid = term !== "monthly" && detected && !isCustom ? calculatePrepaidPrice(detected.installationFee, detected.recurringFee, term) : null;
+            const monthlyPrice = detected?.ongoing ?? plan.ongoing;
             const checkoutSlug = detected?.slug ?? canonical;
-            const href = isCustom ? `/evaluation?plan=${encodeURIComponent(plan.slug)}` : `/checkout?plan=${encodeURIComponent(checkoutSlug)}${term !== "monthly" ? `&term=${encodeURIComponent(term)}` : ""}`;
+            const href = isCustom ? `/evaluation?plan=${encodeURIComponent(plan.slug)}` : `/checkout?plan=${encodeURIComponent(checkoutSlug)}`;
             const isBasic = plan.slug === "basic";
 
             return (
@@ -88,11 +65,11 @@ export default function HomePricingOverview({ plans }: { plans: Array<Omit<Prici
                   {plan.featured ? <span className={styles.popular}>Recommended</span> : isBasic ? <span className={styles.trial}>14-day trial</span> : null}
                 </div>
                 <div className={styles.price}>
-                  <span>Implementation</span>
-                  <strong>{implementation}</strong>
-                  <small>{isCustom ? "Tailored to your workflow" : `then ${renewal}`}</small>
+                  <span>{isCustom ? "Monthly pricing" : "Monthly subscription"}</span>
+                  <strong>{monthlyPrice}</strong>
+                  <small>{isCustom ? "Tailored to your workflow" : "No installation fee"}</small>
                 </div>
-                {prepaid && detected ? <p className={styles.prepaid}>{prepaid.label}: <strong>{money(detected.currency, prepaid.total)}</strong> · save {prepaid.discountPercent}%</p> : <div className={styles.prepaidSpacer}/>} 
+ 
                 <p className={styles.description}>{plan.description}</p>
                 {isBasic ? (
                   <Link href="/account/signup?trial=basic&next=%2Fportal" className={`${styles.cta} ${styles.primaryCta}`}>Start Free Trial</Link>

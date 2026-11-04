@@ -54,6 +54,9 @@ const expectedPendingVersions = [
   "20261102130000",
   // Forward-only production authorization update for flexible installment reminders; PR #323.
   "20261102210000",
+  // PR #333 atomic Flutterwave renewal migration; prepared and tested only.
+  // Production application still requires explicit approval.
+  "20261104114151",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
