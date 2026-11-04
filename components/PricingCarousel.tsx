@@ -295,6 +295,7 @@ export default function PricingCarousel({ plans, compact = false }: PricingCarou
           const isCustom = isExplicitCustom || (plan.slug !== "business-plus" && plan.custom === undefined && detected?.custom === true);
           const isBasic = plan.slug === "basic" || canonicalSlug === "whatsapp-ai-starter";
           const checkoutSlug = detected?.slug ?? canonicalSlug;
+          const href = isCustom ? "/contact" : `/checkout?plan=${encodeURIComponent(checkoutSlug)}`;
           const ctaLabel = plan.cta ?? "Get started";
 
           return (
