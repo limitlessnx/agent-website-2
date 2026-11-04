@@ -1,5 +1,6 @@
 import { supabaseRest } from "@/lib/supabase-server-rest";
 import { getPublicPlan } from "@/lib/payments/catalog";
+import { flutterwaveRequest } from "@/lib/payments/flutterwave";
 import type { BillingRegion } from "@/lib/payments/region";
 
 type PaidCheckoutSession = {
@@ -69,6 +70,38 @@ export async function activatePaidTrialSubscription(
     throw new Error("The existing subscription is not an eligible Basic free trial. No organization changes were made.");
   }
 
+  const paymentPlanId = String(
+    (plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[
+      session.billing_region === "NG" ? "ngn" : "usd"
+    ] || "",
+  );
+  if (!paymentPlanId) {
+    throw new Error("The Flutterwave payment plan ID is not configured for this billing region.");
+  }
+
+  const providerSubscriptions = await flutterwaveRequest<{
+    status: string;
+    data?: Array<{
+      id: number | string;
+      amount?: number;
+      customer?: { customer_email?: string; email?: string };
+      plan?: number | string | { id?: number | string };
+    }>;
+  }>(
+    `/subscriptions?transaction_id=${encodeURIComponent(String(payment.id || ""))}&plan=${encodeURIComponent(paymentPlanId)}`,
+  );
+  const paymentEmail = String(payment.customer?.email || "").trim().toLowerCase();
+  const matchingProviderSubscriptions = (providerSubscriptions.data || []).filter((item) => {
+    const providerEmail = String(item.customer?.customer_email || item.customer?.email || "").trim().toLowerCase();
+    const providerPlanId = typeof item.plan === "object" ? String(item.plan?.id || "") : String(item.plan || "");
+    return providerEmail === paymentEmail && providerPlanId === paymentPlanId;
+  });
+  if (matchingProviderSubscriptions.length !== 1) {
+    throw new Error("Flutterwave did not return exactly one subscription for the verified initial payment and plan. The tenant trial was not converted.");
+  }
+  const providerSubscriptionId = String(matchingProviderSubscriptions[0].id);
+  if (!providerSubscriptionId) throw new Error("Flutterwave returned a subscription without an ID.");
+
   const now = new Date();
   const periodEnd = addOneMonth(now);
   const updated = await supabaseRest<CurrentSubscription[]>(
@@ -79,6 +112,7 @@ export async function activatePaidTrialSubscription(
         plan_id: plan.id,
         provider: "flutterwave",
         provider_customer_id: payment.customer?.id ? String(payment.customer.id) : null,
+        provider_subscription_id: providerSubscriptionId,
         status: "active",
         current_period_start: now.toISOString(),
         current_period_end: periodEnd.toISOString(),
@@ -95,7 +129,8 @@ export async function activatePaidTrialSubscription(
           provider_transaction_id: payment.id ? String(payment.id) : null,
           provider_reference: payment.flw_ref || null,
           provider_customer_email: payment.customer?.email || null,
-          flutterwave_payment_plan_id: (plan.metadata?.flutterwave_payment_plans as Record<string, unknown> | undefined)?.[session.billing_region === "NG" ? "ngn" : "usd"] || null,
+          flutterwave_payment_plan_id: paymentPlanId,
+          flutterwave_provider_subscription_id: providerSubscriptionId,
           billing_interval: "monthly",
           billing_currency: payment.currency,
           paid_at: now.toISOString(),
