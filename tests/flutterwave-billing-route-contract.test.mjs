@@ -42,10 +42,10 @@ test("trial conversion preserves the existing organization subscription", () => 
   assert.match(code, /sync_flux_credit_wallet_from_subscription/);
 });
 
-test("duplicate webhook delivery cannot enter processing while first claim is active", () => {
+test("webhook claim and completion are fenced by the worker token", () => {
   const code = source("app/api/webhooks/flutterwave/route.ts");
-  assert.match(code, /if \(!eventRow\.processing_error\)/);
+  assert.match(code, /rpc\/claim_flutterwave_webhook/);
   assert.match(code, /status:\s*503/);
-  assert.match(code, /processing_error=eq\.\$\{encodeURIComponent\(eventRow\.processing_error\)\}/);
-  assert.match(code, /reclaimed\.length !== 1/);
+  assert.match(code, /processing_token=eq\.\$\{claimToken\}/);
+  assert.match(code, /completed\.length !== 1/);
 });

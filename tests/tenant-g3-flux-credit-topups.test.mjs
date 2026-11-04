@@ -50,7 +50,7 @@ test("G3 trial wallets cannot buy top-ups",()=>{
 
 test("G3 Flutterwave callback and webhook both apply the same idempotent top-up RPC",()=>{
   const callback=read("app/api/payments/callback/route.ts");
-  const webhook=read("app/api/payments/flutterwave/webhook/route.ts");
+  const webhook=read("app/api/webhooks/flutterwave/route.ts");
   assert.match(callback,/billing_type === "top_up"/);
   assert.match(callback,/rpc\/apply_flux_credit_topup_from_checkout/);
   assert.match(webhook,/session\.billing_type === "top_up"/);

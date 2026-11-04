@@ -31,11 +31,11 @@ type CurrentSubscription = {
 
 function addOneMonth(from: Date) {
   const next = new Date(from);
-  const day = next.getDate();
-  next.setDate(1);
-  next.setMonth(next.getMonth() + 1);
-  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-  next.setDate(Math.min(day, lastDay));
+  const day = next.getUTCDate();
+  next.setUTCDate(1);
+  next.setUTCMonth(next.getUTCMonth() + 1);
+  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+  next.setUTCDate(Math.min(day, lastDay));
   return next;
 }
 
@@ -68,6 +68,9 @@ export async function activatePaidTrialSubscription(
 
   const metadata = current.metadata || {};
   if (metadata.paid_checkout_session_id === session.id) {
+    await supabaseRest("rpc/sync_flux_credit_wallet_from_subscription", {
+      method: "POST", body: JSON.stringify({ target_subscription_id: current.id }),
+    });
     return { upgraded: true, alreadyApplied: true, subscriptionId: current.id };
   }
   if (current.status !== "trialing" || metadata.trial_type !== "basic_free_trial") {
@@ -149,6 +152,9 @@ export async function activatePaidTrialSubscription(
       `organization_subscriptions?select=id,status,metadata&organization_id=eq.${encodeURIComponent(session.organization_id)}&limit=1`,
     );
     if (latest[0]?.metadata?.paid_checkout_session_id === session.id) {
+      await supabaseRest("rpc/sync_flux_credit_wallet_from_subscription", {
+        method: "POST", body: JSON.stringify({ target_subscription_id: latest[0].id }),
+      });
       return { upgraded: true, alreadyApplied: true, subscriptionId: latest[0].id };
     }
     throw new Error("Trial subscription changed during payment activation. Retry the verified payment event.");

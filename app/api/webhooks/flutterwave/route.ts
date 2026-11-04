@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase-server-rest";
 import { flutterwaveRequest, isValidFlutterwaveWebhook } from "@/lib/payments/flutterwave";
@@ -68,13 +68,6 @@ type WebhookEvent = {
 
 const isoNow = () => new Date().toISOString();
 
-async function updateWallet(subscriptionId: string) {
-  await supabaseRest("rpc/sync_flux_credit_wallet_from_subscription", {
-    method: "POST",
-    body: JSON.stringify({ target_subscription_id: subscriptionId }),
-  });
-}
-
 async function findRecurringSubscription(input: {
   email: string;
   amount: number;
@@ -141,7 +134,7 @@ async function findRecurringSubscription(input: {
   return matches.length === 1 ? matches[0] : null;
 }
 
-async function processCharge(event: WebhookEvent, eventType: string) {
+async function processCharge(event: WebhookEvent, eventId: string, claimToken: string) {
   const data = event.data || {};
   if (!data.id || !data.tx_ref) throw new Error("Charge event is missing its transaction ID or reference.");
 
@@ -153,12 +146,12 @@ async function processCharge(event: WebhookEvent, eventType: string) {
     `/transactions/${encodeURIComponent(String(data.id))}/verify`,
   );
   const payment = verification.data;
-  if (!payment || payment.tx_ref !== data.tx_ref || payment.currency !== data.currency) {
+  if (!payment || String(payment.id) !== String(data.id) || payment.tx_ref !== data.tx_ref || payment.currency !== data.currency) {
     throw new Error("Verified charge does not match the signed webhook payload.");
   }
 
   if (session) {
-    if (session.billing_type !== "subscription") return { ignored: true };
+    if (!["subscription", "top_up"].includes(session.billing_type)) return { ignored: true };
     if (!payment.customer?.email || payment.customer.email.trim().toLowerCase() !== session.customer_email.trim().toLowerCase()) {
       throw new Error("Verified payment customer does not match the stored checkout.");
     }
@@ -172,7 +165,7 @@ async function processCharge(event: WebhookEvent, eventType: string) {
       });
       return { failed: true };
     }
-    if (session.organization_id && session.billing_region && session.plan_slug) {
+    if (session.billing_type === "subscription" && session.organization_id && session.billing_region && session.plan_slug) {
       await activatePaidTrialSubscription(
         {
           id: session.id,
@@ -194,6 +187,11 @@ async function processCharge(event: WebhookEvent, eventType: string) {
         paid_at: payment.created_at || isoNow(),
       }),
     });
+    if (session.billing_type === "top_up") {
+      await supabaseRest("rpc/apply_flux_credit_topup_from_checkout", {
+        method: "POST", body: JSON.stringify({ target_checkout_session_id: session.id }),
+      });
+    }
     return { checkout: true, activated: Boolean(session.organization_id) };
   }
 
@@ -206,78 +204,28 @@ async function processCharge(event: WebhookEvent, eventType: string) {
   if (!match) throw new Error("Recurring charge could not be matched to exactly one subscription; no tenant access was changed.");
 
   const subscription = match.subscription;
-  const now = new Date(payment.created_at || isoNow());
-  if (payment.status === "successful") {
-    const priorTransactionIds = Array.isArray(subscription.metadata?.processed_flutterwave_transaction_ids)
-      ? subscription.metadata!.processed_flutterwave_transaction_ids as string[]
-      : [];
-    const transactionId = String(payment.id || data.id);
-    if (priorTransactionIds.includes(transactionId)) return { duplicate: true };
+  // The database locks the subscription, records the transaction permanently,
+  // and syncs the wallet in the same transaction. A lost HTTP response is safe.
+  return supabaseRest("rpc/apply_flutterwave_renewal", {
+    method: "POST",
+    body: JSON.stringify({
+      target_subscription_id: subscription.id,
+      expected_provider_subscription_id: subscription.provider_subscription_id,
+      target_event_id: eventId,
+      claim_token: claimToken,
+      transaction_id: String(payment.id),
+      payment_status: payment.status,
+      paid_at: payment.created_at || null,
+      payment_amount: Number(payment.amount),
+      payment_currency: payment.currency,
+      customer_email: email.trim().toLowerCase(),
+      provider_reference: payment.flw_ref || null,
+    }),
+  });
 
-    const currentEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : now;
-    const periodStart = currentEnd > now ? currentEnd : now;
-    const nextEnd = new Date(periodStart);
-    const day = nextEnd.getUTCDate();
-    nextEnd.setUTCDate(1);
-    nextEnd.setUTCMonth(nextEnd.getUTCMonth() + 1);
-    const lastDay = new Date(Date.UTC(nextEnd.getUTCFullYear(), nextEnd.getUTCMonth() + 1, 0)).getUTCDate();
-    nextEnd.setUTCDate(Math.min(day, lastDay));
-
-    const updated = await supabaseRest<Subscription[]>(
-      `organization_subscriptions?id=eq.${encodeURIComponent(subscription.id)}&status=in.(active,past_due,grace_period)`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          status: "active",
-          current_period_start: periodStart.toISOString(),
-          current_period_end: nextEnd.toISOString(),
-          grace_period_end: null,
-          metadata: {
-            ...(subscription.metadata || {}),
-            provider_customer_email: email.toLowerCase(),
-            provider_transaction_id: transactionId,
-            provider_reference: payment.flw_ref || null,
-            processed_flutterwave_transaction_ids: [...priorTransactionIds, transactionId].slice(-24),
-            last_renewal_paid_at: now.toISOString(),
-            last_renewal_status: "successful",
-          },
-          updated_at: isoNow(),
-        }),
-      },
-    );
-    if (!updated.length) throw new Error("Subscription changed while applying renewal; retry the webhook.");
-    await updateWallet(subscription.id);
-    return { renewed: true, subscriptionId: subscription.id };
-  }
-
-  if (payment.status === "failed" || eventType === "charge.failed") {
-    const graceEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const updated = await supabaseRest<Subscription[]>(
-      `organization_subscriptions?id=eq.${encodeURIComponent(subscription.id)}&status=in.(active,past_due,grace_period)`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          status: "grace_period",
-          grace_period_end: graceEnd.toISOString(),
-          metadata: {
-            ...(subscription.metadata || {}),
-            last_renewal_failed_at: isoNow(),
-            last_renewal_status: "failed",
-            last_failed_transaction_id: String(payment.id || data.id),
-          },
-          updated_at: isoNow(),
-        }),
-      },
-    );
-    if (!updated.length) throw new Error("Subscription changed while applying failed renewal; retry the webhook.");
-    await updateWallet(subscription.id);
-    return { pastDue: true, subscriptionId: subscription.id };
-  }
-
-  return { ignored: true };
 }
 
-async function processCancellation(event: WebhookEvent) {
+async function processCancellation(event: WebhookEvent, eventId: string, claimToken: string) {
   const data = event.data || {};
   const email = data.customer?.email?.trim().toLowerCase() || "";
   const planId = data.plan?.id ? String(data.plan.id) : "";
@@ -301,32 +249,17 @@ async function processCancellation(event: WebhookEvent) {
   }
   const providerSubscriptionId = String(providerMatches[0].id);
   const candidates = await supabaseRest<Subscription[]>(
-    `organization_subscriptions?select=id,organization_id,plan_id,provider_subscription_id,status,current_period_end,metadata&provider=eq.flutterwave&provider_subscription_id=eq.${encodeURIComponent(providerSubscriptionId)}&status=in.(active,past_due,grace_period)&metadata->>provider_customer_email=ilike.${encodeURIComponent(email)}&metadata->>flutterwave_payment_plan_id=eq.${encodeURIComponent(planId)}&limit=10`,
+    `organization_subscriptions?select=id,organization_id,plan_id,provider_subscription_id,status,current_period_end,metadata&provider=eq.flutterwave&provider_subscription_id=eq.${encodeURIComponent(providerSubscriptionId)}&status=in.(active,past_due,grace_period,cancelled)&metadata->>provider_customer_email=ilike.${encodeURIComponent(email)}&metadata->>flutterwave_payment_plan_id=eq.${encodeURIComponent(planId)}&limit=10`,
   );
   if (candidates.length !== 1) {
     throw new Error("Cancellation could not be matched to exactly one stored provider subscription ID; no tenant access was changed.");
   }
 
   const subscription = candidates[0];
-  const updated = await supabaseRest<Subscription[]>(
-    `organization_subscriptions?id=eq.${encodeURIComponent(subscription.id)}&status=in.(active,past_due,grace_period)`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "cancelled",
-        grace_period_end: null,
-        metadata: {
-          ...(subscription.metadata || {}),
-          cancelled_at: isoNow(),
-          cancellation_source: "flutterwave",
-        },
-        updated_at: isoNow(),
-      }),
-    },
-  );
-  if (!updated.length) throw new Error("Subscription changed while applying cancellation; retry the webhook.");
-  await updateWallet(subscription.id);
-  return { cancelled: true, subscriptionId: subscription.id };
+  return supabaseRest("rpc/cancel_flutterwave_subscription", {
+    method: "POST",
+    body: JSON.stringify({ target_subscription_id: subscription.id, expected_provider_subscription_id: providerSubscriptionId, target_event_id: eventId, claim_token: claimToken }),
+  });
 }
 
 export async function POST(request: Request) {
@@ -338,6 +271,7 @@ export async function POST(request: Request) {
   let event: WebhookEvent;
   try {
     event = JSON.parse(rawBody) as WebhookEvent;
+    if (!event || typeof event !== "object" || Array.isArray(event)) throw new Error("Invalid event");
   } catch {
     return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
   }
@@ -359,69 +293,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook event is missing its idempotency fields." }, { status: 400 });
   }
 
+  const claimToken = randomUUID();
+  let eventId: string | undefined;
   try {
-    const inserted = await supabaseRest<Array<{ id: string; processed_at: string | null; processing_error: string | null }>>(
-      "payment_webhook_events?on_conflict=provider,external_event_id",
-      {
-        method: "POST",
-        headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
-        body: JSON.stringify({
-          provider: "flutterwave",
-          external_event_id: externalId,
-          event_type: eventType,
-          signature_valid: true,
-          payload: event,
-        }),
-      },
+    const claim = await supabaseRest<{ id: string; state: "claimed" | "busy" | "processed" }>(
+      "rpc/claim_flutterwave_webhook",
+      { method: "POST", body: JSON.stringify({ external_id: externalId, event_type: eventType, event_payload: event, claim_token: claimToken }) },
     );
-
-    let eventRow = inserted[0];
-    if (!eventRow) {
-      const existing = await supabaseRest<Array<{ id: string; processed_at: string | null; processing_error: string | null }>>(
-        `payment_webhook_events?provider=eq.flutterwave&external_event_id=eq.${encodeURIComponent(externalId)}&limit=1`,
-      );
-      eventRow = existing[0];
-      if (!eventRow) throw new Error("Unable to persist webhook event.");
-      if (eventRow.processed_at) return NextResponse.json({ received: true, duplicate: true });
-
-      // The first insert owns processing. Only one failed-event retry may
-      // reclaim the row; concurrent deliveries must not renew twice.
-      if (!eventRow.processing_error) {
-        return NextResponse.json(
-          { received: false, retry: true, reason: "Event processing is already in progress." },
-          { status: 503, headers: { "Retry-After": "10" } },
-        );
-      }
-      const reclaimed = await supabaseRest<Array<{ id: string }>>(
-        `payment_webhook_events?id=eq.${encodeURIComponent(eventRow.id)}&processed_at=is.null&processing_error=eq.${encodeURIComponent(eventRow.processing_error)}&select=id`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ processing_error: null }),
-        },
-      );
-      if (reclaimed.length !== 1) {
-        return NextResponse.json(
-          { received: false, retry: true, reason: "Another worker claimed this event." },
-          { status: 503, headers: { "Retry-After": "10" } },
-        );
-      }
+    if (claim.state === "processed") return NextResponse.json({ received: true, duplicate: true });
+    if (claim.state !== "claimed") {
+      return NextResponse.json({ received: false, retry: true }, { status: 503, headers: { "Retry-After": "10" } });
     }
+    eventId = claim.id;
 
     const result = eventType === "subscription.cancelled"
-      ? await processCancellation(event)
-      : await processCharge(event, eventType);
+      ? await processCancellation(event, eventId, claimToken)
+      : await processCharge(event, eventId, claimToken);
 
-    await supabaseRest(`payment_webhook_events?id=eq.${encodeURIComponent(eventRow.id)}`, {
+    const completed = await supabaseRest<Array<{ id: string }>>(`payment_webhook_events?id=eq.${encodeURIComponent(eventId)}&processing_token=eq.${claimToken}&processed_at=is.null`, {
       method: "PATCH",
-      body: JSON.stringify({ processed_at: isoNow(), processing_error: null }),
+      body: JSON.stringify({ processed_at: isoNow(), processing_error: null, processing_token: null, processing_started_at: null }),
     });
+    if (completed.length !== 1) throw new Error("Webhook lease was reclaimed; retry the event.");
     return NextResponse.json({ received: true, result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown webhook processing error";
     try {
-      await supabaseRest(`payment_webhook_events?provider=eq.flutterwave&external_event_id=eq.${encodeURIComponent(externalId)}`, {
+      if (eventId) await supabaseRest(`payment_webhook_events?id=eq.${encodeURIComponent(eventId)}&processing_token=eq.${claimToken}&processed_at=is.null`, {
         method: "PATCH",
-        body: JSON.stringify({ processing_error: message }),
+        body: JSON.stringify({ processing_error: message, processing_token: null, processing_started_at: null }),
       });
     } catch (logError) {
       console.error("[payments/flutterwave-webhook-log]", logError);
