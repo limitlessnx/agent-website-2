@@ -12,6 +12,8 @@ create table public.flutterwave_renewal_transactions (
   paid_at timestamptz not null,
   created_at timestamptz not null default now()
 );
+create index flutterwave_renewal_transactions_subscription_idx
+  on public.flutterwave_renewal_transactions(subscription_id);
 alter table public.flutterwave_renewal_transactions enable row level security;
 revoke all on public.flutterwave_renewal_transactions from public, anon, authenticated;
 grant select, insert, update on public.flutterwave_renewal_transactions to service_role;
