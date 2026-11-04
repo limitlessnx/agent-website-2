@@ -53,7 +53,7 @@ const PUBLIC_PRICING: Record<string, {
     planCode: "business_plus",
     name: "Business+",
     description: "Advanced customer operations with configurable credits, industry databases, deeper workflows, integrations, dashboards and operational data systems.",
-    custom: false,
+    custom: true,
   },
 };
 
@@ -68,8 +68,9 @@ export async function getPublicPlan(slug: string, region: BillingRegion): Promis
   if (!plan || plan.metadata?.public_catalog !== true) return null;
 
   const international = plan.metadata?.international as { recurring_fee?: number | null } | undefined;
+  const isCustom = pricing.custom || plan.metadata?.custom === true;
   const recurringFee = region === "NG" ? Number(plan.recurring_fee) : Number(international?.recurring_fee);
-  if (!pricing.custom && (!Number.isFinite(recurringFee) || recurringFee <= 0)) return null;
+  if (!isCustom && (!Number.isFinite(recurringFee) || recurringFee <= 0)) return null;
   const fluxPlan = getFluxPlanDefinition(pricing.planCode);
 
   return {
@@ -78,12 +79,12 @@ export async function getPublicPlan(slug: string, region: BillingRegion): Promis
     name: pricing.name,
     description: pricing.description,
     currency: region === "NG" ? "NGN" : "USD",
-    recurringFee: pricing.custom ? 0 : recurringFee,
+    recurringFee: isCustom ? 0 : recurringFee,
     billingInterval: plan.billing_interval || "monthly",
-    custom: pricing.custom || plan.metadata?.custom === true,
+    custom: isCustom,
     metadata: {
       ...(plan.metadata || {}),
-      custom: pricing.custom || plan.metadata?.custom === true,
+      custom: isCustom,
       plan_code: pricing.planCode,
       monthly_credits: fluxPlan.monthlyCredits,
       pricing_version: "v2-2026-09",
