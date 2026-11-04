@@ -360,7 +360,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const inserted = await supabaseRest<Array<{ id: string; processed_at: string | null }>>(
+    const inserted = await supabaseRest<Array<{ id: string; processed_at: string | null; processing_error: string | null }>>(
       "payment_webhook_events?on_conflict=provider,external_event_id",
       {
         method: "POST",
