@@ -71,6 +71,11 @@ export async function POST(request: NextRequest) {
   const adminSession = await getAdminSession();
   if (!adminSession) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
+  const origin = request.headers.get("origin");
+  if (!origin || new URL(origin).host !== request.headers.get("host")) {
+    return NextResponse.json({ error: "Cross-origin requests are not allowed." }, { status: 403 });
+  }
+
   // Require an explicit confirmation phrase to prevent accidental creation from generic admin requests.
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   if (body.confirm !== "CREATE_FLUXKNIGHT_MONTHLY_PLANS") {
