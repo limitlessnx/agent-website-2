@@ -93,13 +93,14 @@ async function findRecurringSubscription(input: {
   const matches = subscriptions.filter((subscription) => {
     const plan = plans.find((candidate) => candidate.id === subscription.plan_id);
     if (!plan) return false;
-    const regionKey = String(subscription.metadata?.billing_currency || input.currency).toUpperCase();
+    const billingCurrency = String(subscription.metadata?.billing_currency || plan.currency).toUpperCase();
+    const international = plan.metadata?.international as { recurring_fee?: number } | undefined;
+    const configuredAmount = billingCurrency === "USD" ? Number(international?.recurring_fee) : Number(plan.recurring_fee);
     const storedPlanId = String(subscription.metadata?.flutterwave_payment_plan_id || "");
     const expectedPlanId = input.planId ? String(input.planId) : "";
     return (
-      plan.currency.toUpperCase() === input.currency.toUpperCase() &&
-      Number(plan.recurring_fee) === Number(input.amount) &&
-      regionKey === input.currency.toUpperCase() &&
+      billingCurrency === input.currency.toUpperCase() &&
+      configuredAmount === Number(input.amount) &&
       (!expectedPlanId || storedPlanId === expectedPlanId)
     );
   });
