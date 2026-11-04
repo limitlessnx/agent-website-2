@@ -99,7 +99,7 @@ export async function GET(request: Request) {
       }
 
       if (clientSession) {
-        const destinationPath = session.organization_id ? "/portal" : "/onboarding";
+        const destinationPath = (clientSession.organizationId || session.organization_id) ? "/portal" : "/onboarding";
         const next = new URL(destinationPath, url.origin);
         next.searchParams.set("payment", "success");
         next.searchParams.set("tx_ref", txRef);
