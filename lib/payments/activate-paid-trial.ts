@@ -55,6 +55,10 @@ export async function activatePaidTrialSubscription(
 
   const plan = await getPublicPlan(session.plan_slug, session.billing_region);
   if (!plan || plan.custom) throw new Error("The paid billing plan could not be resolved.");
+  const expectedCurrency = session.billing_region === "NG" ? "NGN" : "USD";
+  if (payment.currency !== expectedCurrency || Number(payment.amount) < Number(plan.recurringFee)) {
+    throw new Error("Verified payment amount or currency does not match the selected monthly plan.");
+  }
 
   const rows = await supabaseRest<CurrentSubscription[]>(
     `organization_subscriptions?select=id,plan_id,status,trial_ends_at,metadata&organization_id=eq.${encodeURIComponent(session.organization_id)}&status=in.(trialing,active,pending)&order=updated_at.desc&limit=1`,
