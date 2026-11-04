@@ -5,6 +5,7 @@ import IndustryExplorer from "@/components/home/IndustryExplorer";
 import ClientReviews from "@/components/ClientReviews";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ProductLedHero from "@/components/home/ProductLedHero";
+import ProductShowcase from "@/components/home/ProductShowcase";
 import AutomationJourney from "@/components/home/AutomationJourney";
 import MeetLeoSection from "@/components/home/MeetLeoSection";
 import styles from "./HomepageHeaderRestore.module.css";
@@ -14,6 +15,7 @@ export default function HomePage() {
     <main className={`quantix-home ${styles.home}`}>
       <ProductLedHero />
       <AutomationJourney />
+      <ProductShowcase />
       <MeetLeoSection />
       <MaiaCaseStudyTeaser />
       <IndustryExplorer />
