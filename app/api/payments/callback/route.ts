@@ -60,6 +60,7 @@ export async function GET(request: Request) {
       payment.status === "successful" &&
       payment.tx_ref === session.tx_ref &&
       payment.currency === session.currency &&
+      payment.customer?.email?.trim().toLowerCase() === session.customer_email.trim().toLowerCase() &&
       Number(payment.amount) >= Number(session.amount),
     );
 
