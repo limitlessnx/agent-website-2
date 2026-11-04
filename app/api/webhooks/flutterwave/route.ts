@@ -158,6 +158,9 @@ async function processCharge(event: WebhookEvent, eventType: string) {
 
   if (session) {
     if (session.billing_type !== "subscription") return { ignored: true };
+    if (payment.currency !== session.currency) {
+      throw new Error("Verified payment currency does not match the stored checkout.");
+    }
     if (payment.status !== "successful" || Number(payment.amount) < Number(session.amount)) {
       await supabaseRest(`checkout_sessions?tx_ref=eq.${encodeURIComponent(session.tx_ref)}`, {
         method: "PATCH",
