@@ -96,7 +96,7 @@ export async function executePublicLeoTool(input: {
       plans: planDefinitions.map((definition) => {
         const billingCode = definition.key === "starter" ? "plus" : definition.key === "business-plus" ? "business_plus" : definition.key;
         const priced = pricing.find((item) => String(item.metadata.plan_code || "") === billingCode || item.name === definition.name);
-        return { ...publicPlan(definition), pricing: priced ? { currency: priced.currency, installationFee: priced.installationFee, recurringFee: priced.recurringFee, billingInterval: priced.billingInterval } : null };
+        return { ...publicPlan(definition), pricing: priced ? { currency: priced.currency, recurringFee: priced.recurringFee, billingInterval: priced.billingInterval } : null };
       }),
       trial: LEO_PUBLIC_KNOWLEDGE.trial,
       voiceAvailability: LEO_PUBLIC_KNOWLEDGE.availability.voice,
