@@ -141,33 +141,7 @@ export default function PricingClient() {
                   </div>
                 ) : null}
 
-                {false && activePrice && !activePrice.custom ? (
-                  <div className="pricing-term-box">
-                    <label htmlFor="pricing-billing-duration">Billing duration</label>
-                    <div className="pricing-term-select-wrap">
-                      <select id="pricing-billing-duration" value={billingTerm} onChange={(event) => setBillingTerm(event.target.value as BillingTerm)} aria-label="Choose billing duration">
-                        <option value="monthly">Monthly · Standard</option>
-                        {(Object.keys(PREPAID_TERMS) as PrepaidTerm[]).map((key) => {
-                          const option = PREPAID_TERMS[key];
-                          return <option key={key} value={key}>{option.label} · Save {option.discountPercent}%</option>;
-                        })}
-                      </select>
-                    </div>
-                    {prepaidPrice ? (
-                      <div className="pricing-term-total">
-                        <small>{prepaidPrice.label} prepaid total</small>
-                        <strong>{money(prepaidPrice.total, activePrice.currency)}</strong>
-                        <span>You save {money(prepaidPrice.discount, activePrice.currency)} from {money(prepaidPrice.subtotal, activePrice.currency)}</span>
-                      </div>
-                    ) : (
-                      <div className="pricing-term-total">
-                        <small>Monthly option</small>
-                        <strong>{activePrice.ongoing}</strong>
-                        <span>No installation fee. Your subscription renews monthly at {activePrice.ongoing}.</span>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+
 
                 <h3>{selectedIndustry ? `${selectedIndustry.name} scope` : "Pricing follows the actual system."}</h3>
                 {pricingProfile ? <>
