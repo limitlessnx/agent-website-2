@@ -73,7 +73,12 @@ export async function GET(request: Request) {
         return NextResponse.redirect(destination);
       }
 
-      const organizationId = clientSession?.organizationId || session.organization_id || null;
+      if (session.organization_id && clientSession && session.organization_id !== clientSession.organizationId) {
+        destination.searchParams.set("payment", "account_mismatch");
+        destination.searchParams.set("tx_ref", txRef);
+        return NextResponse.redirect(destination);
+      }
+      const organizationId = session.organization_id || clientSession?.organizationId || null;
       if (session.billing_type === "subscription" && organizationId && session.billing_region && session.plan_slug) {
         await activatePaidTrialSubscription(
           { id: session.id, tx_ref: session.tx_ref, plan_slug: session.plan_slug, billing_region: session.billing_region, organization_id: organizationId },
