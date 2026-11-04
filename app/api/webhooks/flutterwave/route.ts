@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase-server-rest";
 import { flutterwaveRequest, isValidFlutterwaveWebhook } from "@/lib/payments/flutterwave";
@@ -340,8 +341,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, ignored: true });
   }
 
+  // Hash the full signed cancellation payload: Flutterwave's cancellation
+  // sample does not expose a stable subscription ID in the webhook itself.
+  // Exact webhook retries dedupe, while later re-subscriptions with changed
+  // payloads do not collide merely because email and plan are the same.
   const externalId = eventType === "subscription.cancelled"
-    ? `subscription.cancelled:${String(data.customer?.email || "").toLowerCase()}:${String(data.plan?.id || "")}:${String(data.plan?.date_created || data.date_created || "")}`
+    ? `subscription.cancelled:${createHash("sha256").update(rawBody).digest("hex")}`
     : `${eventType}:${String(data.id || "")}`;
   if (externalId.endsWith(":") || !externalId) {
     return NextResponse.json({ error: "Webhook event is missing its idempotency fields." }, { status: 400 });
