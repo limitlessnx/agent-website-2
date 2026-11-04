@@ -59,7 +59,8 @@ type WebhookEvent = {
     amount?: number;
     currency?: string;
     customer?: { email?: string; id?: number | string };
-    plan?: { id?: number | string; amount?: number; currency?: string };
+    plan?: { id?: number | string; amount?: number; currency?: string; date_created?: string };
+    date_created?: string;
   };
 };
 
@@ -94,11 +95,12 @@ async function findRecurringSubscription(input: {
       id: number | string;
       amount?: number;
       customer?: { customer_email?: string; email?: string };
+      customer_email?: string;
       plan?: number | string | { id?: number | string };
     }>;
   }>(`/subscriptions?email=${encodeURIComponent(email)}`);
   const providerSubscriptions = (providerResult.data || []).filter((item) => {
-    const providerEmail = String(item.customer?.customer_email || item.customer?.email || "").trim().toLowerCase();
+    const providerEmail = String(item.customer?.customer_email || item.customer?.email || item.customer_email || "").trim().toLowerCase();
     const providerPlanId = typeof item.plan === "object" ? String(item.plan?.id || "") : String(item.plan || "");
     return providerEmail === email && Boolean(providerPlanId);
   });
