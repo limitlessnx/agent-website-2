@@ -4,7 +4,7 @@ import { ArrowRight } from "@/components/admin/ServerIcons";
 import IndustryCarousel from "@/components/IndustryCarousel";
 import ClientReviews from "@/components/ClientReviews";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
-import ReferenceFluxHeroPhase1 from "@/components/home/ReferenceFluxHeroPhase1";
+import ProductLedHero from "@/components/home/ProductLedHero";
 import AutomationJourney from "@/components/home/AutomationJourney";
 import MeetLeoSection from "@/components/home/MeetLeoSection";
 import styles from "./HomepageHeaderRestore.module.css";
@@ -12,7 +12,7 @@ import styles from "./HomepageHeaderRestore.module.css";
 export default function HomePage() {
   return (
     <main className={`quantix-home ${styles.home}`}>
-      <ReferenceFluxHeroPhase1 />
+      <ProductLedHero />
       <AutomationJourney />
       <MeetLeoSection />
       <MaiaCaseStudyTeaser />
