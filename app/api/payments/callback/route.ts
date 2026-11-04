@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         destination.searchParams.set("tx_ref", txRef);
         return NextResponse.redirect(destination);
       }
-      const organizationId = session.organization_id || clientSession?.organizationId || null;
+      const organizationId = session.organization_id || null;
       if (session.billing_type === "subscription" && organizationId && session.billing_region && session.plan_slug) {
         await activatePaidTrialSubscription(
           { id: session.id, tx_ref: session.tx_ref, plan_slug: session.plan_slug, billing_region: session.billing_region, organization_id: organizationId },
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
       }
 
       if (clientSession) {
-        const destinationPath = (clientSession.organizationId || session.organization_id) ? "/portal" : "/onboarding";
+        const destinationPath = session.organization_id ? "/portal" : "/onboarding";
         const next = new URL(destinationPath, url.origin);
         next.searchParams.set("payment", "success");
         next.searchParams.set("tx_ref", txRef);
