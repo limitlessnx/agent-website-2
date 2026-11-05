@@ -15,7 +15,7 @@ Each manager needs an active organization membership with `customers.manage` to 
 `GET /api/portal/hotel` returns the latest 200 guest profiles, enquiries and follow-ups per collection. `POST` supports:
 
 - `save_guest`: `customerId`, `marketingConsent`, `serviceConsent` (`unknown|opted_in|opted_out`), `optedOut`, `humanHandoff`, optional `consentSource`.
-- `save_enquiry`: `customerId`, `status`, optional `arrivalDate`, `departureDate`; updates also require `bookingId` and current `revision` for optimistic concurrency.
+- `save_enquiry`: `customerId`, `status`, optional `arrivalDate`, `departureDate` (calendar dates in `YYYY-MM-DD` form); updates also require `bookingId` and current `revision` for optimistic concurrency. Omitted dates preserve stored values; explicit `null` clears a date.
 - `schedule_followup`: `customerId`, `bookingId`, unique UUID `requestId`, future ISO `scheduledAt`, `purpose`, `message`, optional `templateName`.
 - `dispatch_followups`: dispatch at most 25 due jobs for the session organization.
 

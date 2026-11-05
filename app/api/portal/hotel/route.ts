@@ -49,7 +49,17 @@ export async function POST(request: Request) {
     }
     if (body.action === "save_enquiry") {
       if (!HOTEL_BOOKING_STATES.includes(body.status as typeof HOTEL_BOOKING_STATES[number])) throw new Error("Invalid booking state.");
-      const values = { status: String(body.status), arrival_date: body.arrivalDate || null, departure_date: body.departureDate || null, updated_by: session.userId };
+      const values: Record<string, string | null> = { status: String(body.status), updated_by: session.userId };
+      for (const [field, column] of [["arrivalDate", "arrival_date"], ["departureDate", "departure_date"]]) {
+        // Omitted dates preserve the stored stay; explicit null clears a date.
+        if (!Object.prototype.hasOwnProperty.call(body, field)) continue;
+        const value = body[field];
+        if (value === null || value === "") { values[column] = null; continue; }
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${field} must be a calendar date or null.`);
+        const timestamp = Date.parse(`${value}T00:00:00Z`);
+        if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== value) throw new Error(`${field} is not a valid calendar date.`);
+        values[column] = value;
+      }
       let query;
       if (body.bookingId) {
         if (!uuid(body.bookingId) || !Number.isInteger(body.revision)) throw new Error("Booking ID and current revision are required.");
