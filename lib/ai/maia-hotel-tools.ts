@@ -1,0 +1,5 @@
+import { requireHotelOrganization } from "@/lib/hotel-communications";
+import { readPublishedHotelCatalog } from "@/lib/hotel-catalog";
+export function maiaHotelTools() {
+  return [{name:"search_hotel_catalog",description:"Read this hotel's saved hotel identity, check-in/out, cancellation policies and inclusions, plus published room types, facilities, services, prices and approved photo/video links. Use before answering hotel offer questions. Supply arrival, departure and guests to check live room availability; otherwise availability is unknown. Never use remembered or onboarding prices instead. This tool cannot book rooms, reserve service sessions or take payments.",parameters:{type:"object",additionalProperties:false,properties:{query:{type:"string"},itemId:{type:"string"},arrival:{type:"string",description:"YYYY-MM-DD"},departure:{type:"string",description:"YYYY-MM-DD checkout"},guests:{type:"integer",minimum:1,maximum:20}},required:["query"]},execute:async(input:Record<string,unknown>,ctx:{organizationId:string})=>{await requireHotelOrganization(ctx.organizationId);return readPublishedHotelCatalog(ctx.organizationId,input);}}];
+}

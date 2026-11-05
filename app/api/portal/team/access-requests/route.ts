@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
       if (!/^[0-9a-f-]{36}$/i.test(requestId)) {
         return NextResponse.json({ error: "A valid access request is required." }, { status: 400 });
       }
+      const scoped = await supabaseServerRequest<Array<{id:string}>>(
+        `organization_access_requests?id=eq.${encodeURIComponent(requestId)}&organization_id=eq.${encodeURIComponent(session.organizationId)}&status=eq.pending&select=id&limit=1`,
+      );
+      if (!scoped.length) return NextResponse.json({ error: "Pending access request not found in this organization." }, { status: 404 });
       const rpc = action === "approve"
         ? "rpc/approve_organization_access_request"
         : "rpc/reject_organization_access_request";

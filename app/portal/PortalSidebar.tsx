@@ -65,7 +65,8 @@ export default function PortalSidebar({
         {capabilities.customers?<Link href="/portal/customers" className={active("/portal/customers")?"active":""} onClick={close}><Users size={18}/><span>{experience.customerLabel}</span><span className="sr-only">Customers</span></Link>:null}
         {capabilities.conversations?<Link href="/portal/conversations" className={active("/portal/conversations")?"active":""} onClick={close}><MessageSquareText size={18}/><span>Conversations</span></Link>:null}
         {capabilities.systems?<Link href="/portal/systems" className={active("/portal/systems")?"active":""} onClick={close}><Workflow size={18}/><span>Systems</span></Link>:null}
-        {capabilities.appointments&&experience.features.appointments?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
+        {capabilities.customers&&experience.slug === "hotels"?<><Link href="/portal/hotel" className={active("/portal/hotel",true)?"active":""} onClick={close}><Clock3 size={18}/><span>Hotel workspace</span></Link><Link href="/portal/hotel/catalog" className={active("/portal/hotel/catalog")?"active":""} onClick={close}><Workflow size={18}/><span>Hotel Catalog</span></Link></>:null}
+        {capabilities.appointments&&experience.features.appointments&&experience.slug !== "hotels"?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
         {experience.slug === "photography-studio"?<Link href="/portal/catalogue" className={active("/portal/catalogue")?"active":""} onClick={close}><Workflow size={18}/><span>Studio Catalogue</span></Link>:null}
         {capabilities.conversations && ["photography-studio", "hotels"].includes(experience.slug)?<Link href="/portal/campaigns" className={active("/portal/campaigns")?"active":""} onClick={close}><Zap size={18}/><span>Campaigns</span></Link>:null}
         {capabilities.analytics?<Link href="/portal/analytics" className={active("/portal/analytics")?"active":""} onClick={close}><Activity size={18}/><span>Analytics</span></Link>:null}
@@ -73,6 +74,7 @@ export default function PortalSidebar({
         {capabilities.team?<Link href="/portal/team" className={active("/portal/team")?"active":""} onClick={close}><Users size={18}/><span>Team</span></Link>:null}
 
         <span className="portal-nav-label">Help & Settings</span>
+        {experience.slug === "hotels"?<Link href="/portal/hotel/setup" className={active("/portal/hotel/setup")?"active":""} onClick={close}><Settings size={18}/><span>Hotel setup</span></Link>:null}
         {capabilities.support?<Link href="/portal/support" className={active("/portal/support")?"active":""} onClick={close}><LifeBuoy size={18}/><span>Support</span></Link>:null}
         <Link href="/portal/settings" className={active("/portal/settings")?"active":""} onClick={close}><Settings size={18}/><span>Settings</span></Link>
       </nav>

@@ -57,6 +57,14 @@ const expectedPendingVersions = [
   // PR #333 atomic Flutterwave renewal migration; prepared and tested only.
   // Production application still requires explicit approval.
   "20261104114151",
+  // Hotel Phase 2 booking workspace: prepared for review, not applied to production.
+  "20261105064158",
+  // Hotel Catalog private media and publication rules; prepared for review only.
+  "20261105085441",
+  // Hotel Overview read-only tenant-wide aggregates; prepared for review only.
+  "20261105121746",
+  "20261105125822",
+  "20261105134815",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

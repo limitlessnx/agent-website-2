@@ -20,6 +20,8 @@ import { getProperties } from "@/lib/limitless-data";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import OrganizationDashboard from "@/components/portal/OrganizationDashboard";
 import PhotographyDashboard from "@/components/portal/PhotographyDashboard";
+import HotelOverviewPage from "@/components/portal/hotel/HotelOverviewPage";
+import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -59,6 +61,8 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   if (evaluationId) {
     await admin.from("ai_business_evaluation_sessions").update({ organization_id: session.organizationId, user_id: session.userId, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", evaluationId).eq("status", "evaluated").or(`organization_id.is.null,organization_id.eq.${session.organizationId}`);
   }
+  const onboarding = await getClientOnboardingProfile(session.organizationId).catch(() => null);
+  if (getIndustryExperience(onboarding?.industry).slug === "hotels") return <HotelOverviewPage/>;
   const [summary, wallet, subscription, whatsappStatus, latestEvaluation] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
@@ -77,6 +81,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
 
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
   const experience = getIndustryExperience(summary.onboarding?.industry);
+  if (experience.slug === "hotels") return <HotelOverviewPage/>;
   if (experience.name.toLowerCase().includes("real estate") || experience.name.toLowerCase().includes("realty")) {
     const [properties, leads, appointments] = await Promise.all([
       getProperties(100, session.organizationId).catch(() => []),
