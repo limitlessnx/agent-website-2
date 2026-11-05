@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
-  if (isSpeculativeRequest(request)) return new NextResponse(null, {status:204});
+  if (isSpeculativeRequest(request)) return new NextResponse(null, {status:204,headers:{"Cache-Control":"no-store"}});
   const session = await getAdminSession();
   const response = NextResponse.redirect(new URL(session ? "/dashboard" : "/login", request.url));
   response.cookies.set("fluxknight_admin_tenant_preview_v2", "", {httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path: "/", maxAge: 0});
