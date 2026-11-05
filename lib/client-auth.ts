@@ -130,8 +130,10 @@ export async function clearPendingPasswordReset(){const store=await cookies();st
 export async function getPendingClientSetupSession(){const store=await cookies();const session=readSignedToken<PendingClientSetupSession>(store.get(CLIENT_SETUP_COOKIE)?.value,CLIENT_SETUP_TTL);if(!session?.userId||!session.email)return null;return session}
 export async function clearPendingClientSetupSession(){const store=await cookies();store.delete(CLIENT_SETUP_COOKIE)}
 async function getAdminPreviewSession(store: Awaited<ReturnType<typeof cookies>>): Promise<ClientSession | null> {
- const preview=verifyAdminTenantPreviewToken(store.get(CLIENT_ADMIN_PREVIEW_COOKIE)?.value);
- const admin=preview?await getAdminSession():null;
+ const token=store.get(CLIENT_ADMIN_PREVIEW_COOKIE)?.value;
+ const preview=verifyAdminTenantPreviewToken(token);
+ const admin=await getAdminSession();
+ if(admin)console.info("[tenant-preview-session]",{cookiePresent:Boolean(token),signatureValid:Boolean(preview),organizationId:preview?.organizationId||null});
  if(!preview||!admin)return null;
  const organizations=await supabaseServerRequest<Array<{id:string;slug:string}>>(`organizations?id=eq.${encodeURIComponent(preview.organizationId)}&select=id,slug&limit=1`).catch(()=>[]);
  const organization=organizations[0];
