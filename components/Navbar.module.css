@@ -246,3 +246,6 @@
 @media (min-width: 921px) {
   .overlay { display: none; }
 }
+
+/* Reliable mobile hamburger independent of SVG icon styling. */
+.hamburgerIcon{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;width:24px;height:24px}.hamburgerIcon span{display:block;width:22px;height:2px;border-radius:2px;background:currentColor;flex:none}
