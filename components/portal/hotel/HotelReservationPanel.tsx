@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, ReceiptText } from "lucide-react";
-import { HOTEL_STATE_ACTIONS, hotelQuotedTotal, formatHotelMoney, type HotelWorkspaceData, type HotelReservation, type HotelPayment, type HotelPaymentTotal, type HotelBookingEvent,type HotelCustomer,type HotelRoom } from "@/lib/hotel-booking-contract";
+import { hotelBookingReference, HOTEL_STATE_ACTIONS, hotelQuotedTotal, formatHotelMoney, type HotelWorkspaceData, type HotelReservation, type HotelPayment, type HotelPaymentTotal, type HotelBookingEvent,type HotelCustomer,type HotelRoom } from "@/lib/hotel-booking-contract";
 import { Action, Status, dateLabel, hotelRequest, type HotelMutation } from "./HotelUI";
 import styles from "./HotelWorkspace.module.css";
 export type HotelReservationDetails = { reservation: HotelReservation; payments: HotelPayment[]; paymentTotal: HotelPaymentTotal | null; events: HotelBookingEvent[];customer?:HotelCustomer|null;room?:HotelRoom|null };
@@ -35,7 +35,7 @@ export default function HotelReservationPanel({ id, data, busy, mutate, edit, re
   const pendingLabels: Record<string, string> = { quoted: "Saving quote…", confirmed: "Confirming…", checked_in: "Checking in…", checked_out: "Checking out…", cancelled: "Cancelling…", expired: "Expiring…" };
   return <div className={styles.detail}>
     <div className={styles.guestHeading}><div className={styles.avatar}>{(customer?.full_name || "G").slice(0, 1).toUpperCase()}</div><div><h3>{customer?.full_name || "Guest"}</h3><p>{customer?.phone || customer?.email || "No contact details recorded"}</p></div><Status value={booking.status}/></div>
-    <dl className={styles.stayDetails}><div><dt>Room</dt><dd>{room?.name || "Not assigned"}</dd></div><div><dt>Guests</dt><dd>{booking.guest_count}</dd></div><div><dt>Arrival</dt><dd>{dateLabel(booking.arrival_date)}</dd></div><div><dt>Departure</dt><dd>{dateLabel(booking.departure_date)}</dd></div></dl>
+    <p className={styles.hint}>Reservation {hotelBookingReference(booking)}</p><dl className={styles.stayDetails}><div><dt>Room</dt><dd>{room?.name || "Not assigned"}</dd></div><div><dt>Guests</dt><dd>{booking.guest_count}</dd></div><div><dt>Arrival</dt><dd>{dateLabel(booking.arrival_date)}</dd></div><div><dt>Departure</dt><dd>{dateLabel(booking.departure_date)}</dd></div></dl>
     {data.canManage ? <div className={styles.bookingActions}>{(HOTEL_STATE_ACTIONS[booking.status] || []).map(action => <Action key={action.status} secondary={action.status !== "confirmed" && action.status !== "checked_in" && action.status !== "checked_out"} danger={action.status === "cancelled"} disabled={busy} aria-busy={pendingStatus === action.status} onClick={() => void changeStatus(action.status)}>{pendingStatus === action.status ? pendingLabels[action.status] : action.label}</Action>)}<button type="button" className={styles.textButton} disabled={busy} onClick={() => edit(booking)}>{["checked_out", "cancelled", "expired"].includes(booking.status) ? "Edit notes" : "Edit stay details"}</button><button type="button" className={styles.textButton} disabled={busy} onClick={() => setVersion(value => value + 1)}>Reload record</button></div> : <p className={styles.hint}>You have read-only access to this reservation.</p>}
     <p className={styles.hint}>Booking changes do not send a guest message.</p>
     {booking.notes ? <section className={styles.note}><h4>Reservation notes</h4><p>{booking.notes}</p></section> : null}

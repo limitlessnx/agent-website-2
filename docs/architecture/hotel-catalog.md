@@ -37,3 +37,13 @@ Local browser checks use real production components in an isolated harness with 
 CI runs catalog tests and lint alongside Phase 1 communication tests, Phase 2 booking tests, shared manager/portal regressions, disposable PostgreSQL allocation concurrency, type checks and production builds. The migration ledger lists the catalog migration as pending. A release must review both Phase 2 migrations explicitly and must not apply unrelated pending migrations. Production merge, migration/storage creation and deployment remain separate approved actions.
 
 Supabase implementation references: [signed upload URLs](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl), [standard uploads](https://supabase.com/docs/guides/storage/uploads/standard-uploads), [signed reads](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl).
+
+## Catalog refinements
+
+The catalog now includes a selected-entry summary, photo/video counts, room capacity and bed facts, and a facilities strip. Guest information preview uses the exact published-only agent projection; drafts remain hidden even when requested by ID. It does not simulate a WhatsApp conversation or promise availability without dates.
+
+Draft media controls offer Make cover, Move earlier/later and captions. The pending workspace-refinements migration locks the catalog parent and compares its revision for each metadata edit, then normalizes order atomically. Stale or cross-hotel edits and published-item changes fail. Caption input retains its starting revision.
+
+Signed uploads show transfer progress separately from file verification. Interrupted files can be verified or removed before retry. Catalog reads renew expiring links automatically, and failed media offers an explicit recovery control. The upload transport has mocked progress/network/timeout/provider-failure tests; live Storage transport still requires validation.
+
+The latest refinement browser check could not run because the browser connection was unavailable. Earlier browser checks above apply to the preceding catalog version. New layout and interaction changes still need visual review.

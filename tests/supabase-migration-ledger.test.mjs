@@ -63,6 +63,7 @@ const expectedPendingVersions = [
   "20261105085441",
   // Hotel Overview read-only tenant-wide aggregates; prepared for review only.
   "20261105121746",
+  "20261105125822",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
-import { hotelAmountInput, parseHotelAmount, formatHotelMoney, stayNights, type HotelWorkspaceData, type HotelReservation, type HotelCustomer, type HotelGuestProfile, type HotelRoomType, type HotelRoom, type HotelPayment } from "@/lib/hotel-booking-contract";
+import { hotelBookingReference, hotelAmountInput, parseHotelAmount, formatHotelMoney, stayNights, type HotelWorkspaceData, type HotelReservation, type HotelCustomer, type HotelGuestProfile, type HotelRoomType, type HotelRoom, type HotelPayment } from "@/lib/hotel-booking-contract";
 import { Action, Field, type HotelMutation } from "./HotelUI";
 import styles from "./HotelWorkspace.module.css";
 type Common = { mutate: HotelMutation; busy: boolean; close: () => void };
@@ -29,7 +29,7 @@ export function ReservationForm({ data, booking, guestId, roomId, arrival, depar
     try { const result = await mutate<{ reservation: HotelReservation }>(body, booking ? "Reservation updated." : "Reservation created."); saved(result.reservation.id); } catch { /* Error stays in the open panel. */ }
   }
   return <form ref={formRef} onSubmit={submit} className={styles.form}>
-    {booking ? <div className={styles.formSummary}><small>GUEST</small><strong>{data.customers.find(item => item.id === booking.customer_id)?.full_name || "Guest"}</strong><span>Reservation {booking.id.slice(0, 8).toUpperCase()}</span></div> : <Field label="Guest" wide><select name="customerId" required defaultValue={guestId || ""} disabled={busy}><option value="">Choose a hotel guest</option>{guests.map(item => <option value={item.id} key={item.id}>{item.full_name || "Unnamed guest"}{item.phone ? ` · ${item.phone}` : ""}</option>)}</select></Field>}
+    {booking ? <div className={styles.formSummary}><small>GUEST</small><strong>{data.customers.find(item => item.id === booking.customer_id)?.full_name || "Guest"}</strong><span>Reservation {hotelBookingReference(booking)}</span></div> : <Field label="Guest" wide><select name="customerId" required defaultValue={guestId || ""} disabled={busy}><option value="">Choose a hotel guest</option>{guests.map(item => <option value={item.id} key={item.id}>{item.full_name || "Unnamed guest"}{item.phone ? ` · ${item.phone}` : ""}</option>)}</select></Field>}
     {!booking ? <button type="button" className={styles.textButton} disabled={busy} onClick={() => addGuest({ roomId: selectedRoom, arrivalDate: start, departureDate: end, nightlyRate: rate, status, guestCount: Number(formValue(formRef.current!, "guestCount") || 1), notes: formValue(formRef.current!, "notes") })}>+ Add a new guest</button> : null}
     {closed ? <p className={styles.hint}>This reservation is closed. You can add a note; its stay details are retained.</p> : <>
       <div className={styles.formGrid}><Field label="Arrival"><input type="date" name="arrival" required value={start} onChange={event => setStart(event.target.value)} disabled={busy}/></Field><Field label="Departure"><input type="date" name="departure" required min={start || undefined} value={end} onChange={event => setEnd(event.target.value)} disabled={busy}/></Field></div>

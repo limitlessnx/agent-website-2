@@ -16,7 +16,7 @@ function fixture(options={}){
  const service=load('lib/hotel-catalog.ts',{'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/hotel-booking-service':workspace,'@/lib/hotel-booking-contract':booking,'@/lib/hotel-catalog-contract':contract});
  const hotel={requireHotelOrganization:async id=>{assert.equal(id,org);if(!state.hotel)throw new Error('Not a hotel');}};
  const access=load('lib/hotel-catalog-access.ts',{'@/lib/client-auth':{getClientSession:async()=>state.session},'@/lib/portal-access':{requirePortalPermission:async(session,permissions)=>{if(session.isAdminPreview||!permissions.some(p=>state.permissions.has(p)))throw new Error('Forbidden');return{permissions:state.permissions}}},'@/lib/hotel-communications':hotel,'@/lib/hotel-booking-service':workspace});
- const route=load('app/api/portal/hotel/catalog/route.ts',{'next/server':{NextResponse:{json:(body,{status=200}={})=>({body,status})}},'@/lib/hotel-catalog-access':access,'@/lib/hotel-catalog':service,'@/lib/hotel-booking-service':workspace});
+ const route=load('app/api/portal/hotel/catalog/route.ts',{'next/server':{NextResponse:{json:(body,{status=200}={})=>({body,status})}},'@/lib/hotel-catalog-access':access,'@/lib/hotel-catalog':service,'@/lib/hotel-booking-service':workspace},'',{URL});
  const tools=load('lib/ai/maia-hotel-tools.ts',{'@/lib/hotel-communications':hotel,'@/lib/hotel-catalog':service});
  return{state,service,route,tool:tools.maiaHotelTools()[0],post:body=>route.POST({json:async()=>body})};
 }
@@ -47,4 +47,9 @@ test('private uploads validate declared size and content; foreign/published medi
 test('media byte signatures reject mislabeled content and runtime keeps hotel tools tenant-gated',()=>{
  assert.equal(contract.hotelMediaMatches('image/png',new Uint8Array([137,80,78,71,13,10,26,10])),true);assert.equal(contract.hotelMediaMatches('image/webp',new TextEncoder().encode('RIFF0000WEBP')),true);assert.equal(contract.hotelMediaMatches('video/mp4',new Uint8Array([0,0,0,16,102,116,121,112,105,115,111,109])),true);assert.equal(contract.hotelMediaMatches('image/jpeg',new TextEncoder().encode('<html>')),false);
  const runtime=readFileSync('lib/ai/maia-runtime.ts','utf8');assert.match(runtime,/hotelContext\?maiaHotelTools\(\):\[\]/);assert.match(runtime,/filter\(\(tool\) => safeToolPolicy/);assert.match(runtime,/Recheck on subsequent questions/);
+});
+
+test('guest preview uses the published agent projection and metadata writes retain server identity',async()=>{
+ const f=fixture();const preview=await f.route.GET({url:'https://hotel.invalid/api/portal/hotel/catalog?preview=published'});assert.equal(preview.status,200);assert.equal(preview.body.entries.length,1);assert.equal(JSON.stringify(preview.body).includes('SECRET'),false);const hidden=await f.route.GET({url:'https://hotel.invalid/api/portal/hotel/catalog?preview=published&itemId='+draft});assert.equal(hidden.body.entries.length,0);
+ const media=f.state.tables.hotel_catalog_media.find(row=>row.item_id===draft);const result=await f.post({action:'order_media',itemId:draft,mediaId:media.id,direction:'cover',revision:1,organizationId:other,actor:'forged'});assert.equal(result.status,200);const [name,args]=f.state.rpc.at(-1);assert.equal(name,'hotel_catalog_order_media');assert.equal(args.p_organization_id,org);assert.equal(args.p_actor,actor);assert.equal(args.p_revision,1);assert.equal((await f.post({action:'order_media',itemId:draft,mediaId:media.id,direction:'invalid',revision:1})).status,400);assert.equal((await f.post({action:'update_media',itemId:draft,mediaId:media.id,caption:'caption',revision:0})).status,400);
 });

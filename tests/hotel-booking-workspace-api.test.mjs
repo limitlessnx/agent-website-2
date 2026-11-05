@@ -17,7 +17,7 @@ function harness(options={}){
   hotel_room_types:[{id:type,organization_id:org,currency:'NGN',nightly_rate_minor:10000,capacity:2,name:'Double'}],
   hotel_rooms:[{id:room,organization_id:org,room_type_id:type,name:'101',active:true}],
   hotel_booking_enquiries:[{id:booking,organization_id:org,customer_id:guest,room_id:room,status:'confirmed',revision:2,currency:'NGN',nightly_rate_minor:10000,arrival_date:'2026-12-01',departure_date:'2026-12-03'},{id:foreignBooking,organization_id:other,customer_id:foreignGuest,revision:1,currency:'USD'}],
-  hotel_offline_payments:[],hotel_booking_events:[],
+  hotel_offline_payments:[],hotel_booking_events:[],hotel_booking_references:[{organization_id:org,booking_id:booking,number:42},{organization_id:other,booking_id:foreignBooking,number:42}],
  }};
  const admin={from(table){let filters=[],values=null,operation=null,upsertOptions={},limit=Infinity;const q={
   select(){return q},eq(k,v){filters.push(row=>row[k]===v);state.queries.push([table,k,v]);return q},in(k,v){filters.push(row=>v.includes(row[k]));return q},order(){return q},limit(n){limit=n;return q},
@@ -28,8 +28,14 @@ function harness(options={}){
    if(conflict&&upsertOptions.ignoreDuplicates)matches=[];
    else {const row={id:randomUUID(),status:table==='hotel_offline_payments'?'pending':'enquiry',...values};rows.push(row);matches=[row];state.writes.push([table,{...values}]);}
   }else if(operation==='update'){matches.forEach(row=>Object.assign(row,values));if(matches.length)state.writes.push([table,{...values}]);}
-  return{data:single?matches[0]||null:matches.slice(0,limit),error:null};}return q},
-  async rpc(name,args){state.rpc.push([name,args]);if(name==='hotel_room_availability')return {data:[{room_id:room,available:false}],error:null};return{data:(args.p_booking_ids||[]).map(booking_id=>({booking_id,verified_minor:'0',pending_minor:'0'})),error:null}},
+  return{data:single?matches[0]||null:matches.slice(0,limit),count:matches.length,error:null};}return q},
+  async rpc(name,args){state.rpc.push([name,args]);if(name==='hotel_workspace_page'){
+    const all=state.tables.hotel_booking_enquiries.filter(row=>row.organization_id===args.p_organization_id);const allRooms=state.tables.hotel_rooms.filter(row=>row.organization_id===args.p_organization_id),types=state.tables.hotel_room_types.filter(row=>row.organization_id===args.p_organization_id);
+    let rows=all.filter(row=>(!args.p_status||row.status===args.p_status)&&(!args.p_arrival_day||row.arrival_date===args.p_arrival_day&&['confirmed','checked_in','checked_out'].includes(row.status))&&(!args.p_departure_day||row.departure_date===args.p_departure_day&&['checked_in','checked_out'].includes(row.status))&&(!args.p_pending_only||state.tables.hotel_offline_payments.some(p=>p.organization_id===args.p_organization_id&&p.booking_id===row.id&&p.status==='pending')));
+    rows=rows.filter(row=>!args.p_query||`${state.tables.crm_customers.find(c=>c.id===row.customer_id)?.full_name} ${row.id}`.toLowerCase().includes(args.p_query.toLowerCase()));const total=rows.length,page=Math.min(args.p_page,Math.max(Math.ceil(total/25)-1,0));
+    const availability=allRooms.map(r=>({room_id:r.id,available:r.active&&!all.some(b=>b.room_id===r.id&&['confirmed','checked_in'].includes(b.status)&&b.arrival_date<args.p_departure&&b.departure_date>args.p_arrival)}));
+    return{data:{reservations:rows.slice(page*25,page*25+25),pagination:{total,page,pageSize:25,query:args.p_query,status:args.p_status,pendingOnly:args.p_pending_only},summary:{enquiries:all.filter(b=>['enquiry','quoted'].includes(b.status)).length,confirmed:all.filter(b=>b.status==='confirmed').length,inHouse:all.filter(b=>b.status==='checked_in').length},rooms:allRooms,roomTypes:types,availability,availabilityGroups:types.map(t=>({...t,active_rooms:allRooms.filter(r=>r.room_type_id===t.id&&r.active).length,available_rooms:allRooms.filter(r=>r.room_type_id===t.id&&availability.some(a=>a.room_id===r.id&&a.available)).length}))},error:null};
+  }if(name==='hotel_room_availability')return {data:[{room_id:room,available:false}],error:null};return{data:(args.p_booking_ids||[]).map(booking_id=>({booking_id,verified_minor:'0',pending_minor:'0'})),error:null}},
  };
  const service=load(path.resolve(dirname,'../lib/hotel-booking-service.ts'),{
   '@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/hotel-booking-contract':contract,
@@ -107,4 +113,9 @@ test('room rate changes require a current rate and retain server-owned currency'
  const {route,state}=harness();const body={action:'update_type',typeId:type,name:'Double',nightlyRate:'150.00',expectedRateMinor:'10000',currency:'USD',capacity:99};
  assert.equal((await post(route,body)).status,200);const values=state.writes[0][1];assert.equal(values.nightly_rate_minor,'15000');assert.equal(Object.hasOwn(values,'currency'),false);assert.equal(Object.hasOwn(values,'capacity'),false);
  assert.equal((await post(route,{...body,nightlyRate:'160.00'})).status,409);
+});
+
+test('full-history query parameters retain tenant scope and pending queues require finance access',async()=>{
+ const f=harness();const response=await f.route.GET({url:'https://hotel.invalid/api/portal/hotel/workspace?arrival=2026-12-01&departure=2026-12-03&query=HT-000042&page=2&view=payments&organizationId='+other});assert.equal(response.status,200);const call=f.state.rpc.find(r=>r[0]==='hotel_workspace_page');assert.equal(call[1].p_organization_id,org);assert.equal(call[1].p_query,'HT-000042');assert.equal(call[1].p_page,2);assert.equal(call[1].p_pending_only,true);const denied=harness({permissions:['customers.view']});assert.equal((await denied.route.GET({url:'https://hotel.invalid/api/portal/hotel/workspace?arrival=2026-12-01&departure=2026-12-03&view=payments'})).status,403);
+ const detail=await f.route.GET({url:'https://hotel.invalid/api/portal/hotel/workspace?bookingId='+booking});assert.equal(detail.body.reservation.reference,'HT-000042');
 });

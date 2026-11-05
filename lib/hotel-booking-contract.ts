@@ -4,7 +4,7 @@ export type HotelCustomer = { id: string; full_name: string | null; phone: strin
 export type HotelReservation = {
   id: string; customer_id: string; room_id: string | null; status: string; revision: number;
   arrival_date: string | null; departure_date: string | null; guest_count: number;
-  nightly_rate_minor: number | string | null; currency: string | null; notes: string; created_at: string;
+  nightly_rate_minor: number | string | null; currency: string | null; notes: string; created_at: string;reference?:string;guest_name?:string;room_name?:string;room_type?:string;
 };
 export type HotelPayment = { id: string; booking_id: string; amount_minor: string | number; currency: string; method: string; reference: string; note: string; status: string; recorded_by: string; verified_by: string | null; verified_at: string | null; verification_note: string; void_reason: string; review_history: Array<{status: string; actor_id: string; note: string; at: string}>; created_at: string };
 export type HotelPaymentTotal = { booking_id: string; verified_minor: string; pending_minor: string };
@@ -15,7 +15,12 @@ export type HotelWorkspaceData = {
   reservations: HotelReservation[]; paymentTotals: HotelPaymentTotal[];
   availability: Array<{ room_id: string; available: boolean }>;
   canManage: boolean; canManagePayments: boolean; canViewPayments: boolean;
+  pagination?:{total:number;page:number;pageSize:number;query:string;status:string|null;pendingOnly:boolean};
+  summary?:{enquiries:number;confirmed:number;inHouse:number};
+  pendingReceipts?:number|null;
+  availabilityGroups?:Array<HotelRoomType&{active_rooms:number;available_rooms:number}>;
 };
+export function hotelBookingReference(booking:Pick<HotelReservation,"id"|"reference">){return booking.reference||booking.id.toUpperCase();}
 export const HOTEL_STATE_ACTIONS: Record<string, Array<{ status: string; label: string }>> = {
   enquiry: [{ status: "quoted", label: "Mark quoted" }, { status: "confirmed", label: "Confirm booking" }, { status: "cancelled", label: "Cancel enquiry" }, { status: "expired", label: "Mark expired" }],
   quoted: [{ status: "confirmed", label: "Confirm booking" }, { status: "cancelled", label: "Cancel enquiry" }, { status: "expired", label: "Mark expired" }],

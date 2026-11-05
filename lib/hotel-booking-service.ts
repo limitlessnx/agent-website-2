@@ -43,22 +43,25 @@ async function reservation(organizationId: string, bookingId: string) {
   return result.data as HotelReservation;
 }
 
-export async function loadHotelWorkspace(organizationId: string, options: { arrival: string; departure: string; guests: number; canViewPayments: boolean; canManage: boolean; canManagePayments: boolean; arrivalDay?:string;departureDay?:string;status?:string }): Promise<HotelWorkspaceData> {
+export async function loadHotelWorkspace(organizationId: string, options: { arrival: string; departure: string; guests: number; canViewPayments: boolean; canManage: boolean; canManagePayments: boolean; arrivalDay?:string;departureDay?:string;status?:string;query?:string;page?:number;pendingOnly?:boolean }): Promise<HotelWorkspaceData> {
   if (!isCalendarDate(options.arrival) || !isCalendarDate(options.departure) || stayNights(options.arrival, options.departure) < 1 || stayNights(options.arrival, options.departure) > 365) throw new HotelWorkspaceError("Choose a stay of 1 to 365 nights.");
   integer(options.guests, 20, "Guest count");
   const admin = createAdminClient();
-  let bookingQuery=admin.from("hotel_booking_enquiries").select("*").eq("organization_id",organizationId);
-  if(options.arrivalDay){if(!isCalendarDate(options.arrivalDay))throw new HotelWorkspaceError("Choose a valid arrival day.");bookingQuery=bookingQuery.eq("arrival_date",options.arrivalDay).in("status",["confirmed","checked_in","checked_out"]);}
-  if(options.departureDay){if(!isCalendarDate(options.departureDay))throw new HotelWorkspaceError("Choose a valid departure day.");bookingQuery=bookingQuery.eq("departure_date",options.departureDay).in("status",["checked_in","checked_out"]);}
-  if(options.status){if(!(HOTEL_BOOKING_STATES as readonly string[]).includes(options.status))throw new HotelWorkspaceError("Choose a valid booking state.");bookingQuery=bookingQuery.eq("status",options.status);}
-  const [types, rooms, customers, bookings, availability] = await Promise.all([
-    admin.from("hotel_room_types").select("*").eq("organization_id", organizationId).order("name"),
-    admin.from("hotel_rooms").select("*").eq("organization_id", organizationId).order("name"),
+  if(options.arrivalDay&&!isCalendarDate(options.arrivalDay))throw new HotelWorkspaceError("Choose a valid arrival day.");
+  if(options.departureDay&&!isCalendarDate(options.departureDay))throw new HotelWorkspaceError("Choose a valid departure day.");
+  if(options.status&&!(HOTEL_BOOKING_STATES as readonly string[]).includes(options.status))throw new HotelWorkspaceError("Choose a valid booking state.");
+  const search=text(options.query,120,"Search"),page=options.page??0;
+  if(!Number.isInteger(page)||page<0||page>100000)throw new HotelWorkspaceError("Choose a valid booking page.");
+  if(options.pendingOnly&&!options.canViewPayments)throw new HotelWorkspaceError("Payment review access required.",403);
+  const [customers, pageResult, pending] = await Promise.all([
     admin.from("crm_customers").select("id,full_name,phone,email").eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(250),
-    bookingQuery.order("created_at", { ascending: false }).limit(250),
-    admin.rpc("hotel_room_availability", { p_organization_id: organizationId, p_arrival: options.arrival, p_departure: options.departure, p_guests: options.guests }),
+    admin.rpc("hotel_workspace_page",{p_organization_id:organizationId,p_query:search,p_status:options.status||null,p_arrival_day:options.arrivalDay||null,p_departure_day:options.departureDay||null,p_page:page,p_pending_only:Boolean(options.pendingOnly),p_arrival:options.arrival,p_departure:options.departure,p_guests:options.guests}),
+    options.canViewPayments?admin.from("hotel_offline_payments").select("id",{count:"exact",head:true}).eq("organization_id",organizationId).eq("status","pending"):Promise.resolve({count:null,error:null}),
   ]);
-  for (const result of [types, rooms, customers, bookings, availability]) databaseError(result.error);
+  for (const result of [customers,pageResult,pending]) databaseError(result.error);
+  const workspace=pageResult.data as Pick<HotelWorkspaceData,"reservations"|"roomTypes"|"rooms"|"availability"|"availabilityGroups"|"pagination"|"summary">;
+  if(!workspace||!Array.isArray(workspace.reservations))throw new HotelWorkspaceError("The hotel workspace is temporarily unavailable.",503);
+  const bookings={data:workspace.reservations};
   const loadedCustomers = customers.data || [];
   const loadedIds = new Set(loadedCustomers.map(row => String(row.id)));
   const missingIds = [...new Set((bookings.data || []).map(row => String(row.customer_id)).filter(id => !loadedIds.has(id)))];
@@ -70,19 +73,20 @@ export async function loadHotelWorkspace(organizationId: string, options: { arri
   const ids = (bookings.data || []).map(row => row.id);
   const totals = options.canViewPayments && ids.length ? await admin.rpc("hotel_booking_payment_totals", { p_organization_id: organizationId, p_booking_ids: ids }) : { data: [], error: null };
   databaseError(totals.error);
-  return { roomTypes: types.data || [], rooms: rooms.data || [], customers: allCustomers, guests: guests.data || [], reservations: bookings.data || [], availability: availability.data || [], paymentTotals: totals.data || [], canManage: options.canManage, canManagePayments: options.canManagePayments, canViewPayments: options.canViewPayments } as HotelWorkspaceData;
+  return { ...workspace,customers: allCustomers, guests: guests.data || [],paymentTotals: totals.data || [],pendingReceipts:pending.count??null,canManage: options.canManage, canManagePayments: options.canManagePayments, canViewPayments: options.canViewPayments } as HotelWorkspaceData;
 }
 export async function loadHotelReservation(organizationId: string, bookingId: string, canViewPayments: boolean) {
   const booking = await reservation(organizationId, bookingId); const admin = createAdminClient();
-  const [events, payments, totals, customer, room] = await Promise.all([
+  const [events, payments, totals, customer, room, reference] = await Promise.all([
     admin.from("hotel_booking_events").select("*").eq("organization_id", organizationId).eq("booking_id", bookingId).order("created_at", { ascending: false }).limit(100),
     canViewPayments ? admin.from("hotel_offline_payments").select("*").eq("organization_id", organizationId).eq("booking_id", bookingId).order("created_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
     canViewPayments ? admin.rpc("hotel_booking_payment_totals", { p_organization_id: organizationId, p_booking_ids: [bookingId] }) : Promise.resolve({ data: [], error: null }),
     admin.from("crm_customers").select("id,full_name,phone,email").eq("organization_id",organizationId).eq("id",booking.customer_id).maybeSingle(),
     booking.room_id?admin.from("hotel_rooms").select("id,name,room_type_id,active").eq("organization_id",organizationId).eq("id",booking.room_id).maybeSingle():Promise.resolve({data:null,error:null}),
+    admin.from("hotel_booking_references").select("number").eq("organization_id",organizationId).eq("booking_id",bookingId).maybeSingle(),
   ]);
-  for (const result of [events, payments, totals, customer, room]) databaseError(result.error);
-  return { reservation: booking, events: events.data || [], payments: payments.data || [], paymentTotal: totals.data?.[0] || null,customer:customer.data,room:room.data };
+  for (const result of [events, payments, totals, customer, room, reference]) databaseError(result.error);
+  return { reservation: {...booking,...(reference.data?{reference:`HT-${String(reference.data.number).padStart(6,"0")}`}:{})}, events: events.data || [], payments: payments.data || [], paymentTotal: totals.data?.[0] || null,customer:customer.data,room:room.data };
 }
 
 export async function mutateHotelWorkspace(organizationId: string, actorId: string, body: Record<string, unknown>) {

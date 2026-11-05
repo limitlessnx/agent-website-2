@@ -10,7 +10,7 @@ The companion [Hotel Catalog](hotel-catalog.md) adds published room descriptions
 
 Hotel tenants enter `/portal/hotel` from the portal home or sidebar. Reservations, rooms, guest preferences and offline payment review share the existing tenant session. Other industries retain their existing portal home and appointment navigation. The workspace offers date-specific availability, room types and rates, room activation, enquiry-to-checkout transitions, guest timelines, and manual receipt recording and review. Adding a guest during reservation entry retains the draft stay details. Pending receipts never reduce the verified balance.
 
-Read-only members and trusted admin previews can inspect permitted data without mutation controls. Payment data and actions follow finance permissions. Errors keep forms open for correction; writes retain request IDs across retries and stale booking/rate edits require a refresh. Native dialogs provide focus containment, Escape handling and accessible field labels. Tables adapt to narrow screens and motion respects reduced-motion preferences. The reservation list is explicitly limited to the latest 250 records; availability still checks all allocations.
+Read-only members and trusted admin previews can inspect permitted data without mutation controls. Payment data and actions follow finance permissions. Errors keep forms open for correction; writes retain request IDs across retries and stale booking/rate edits require a refresh. Native dialogs provide focus containment, Escape handling and accessible field labels. Tables adapt to narrow screens and motion respects reduced-motion preferences. Reservations use full-history server search and deterministic 25-row pages. Availability and summary counts cover the whole hotel. The guest picker still starts with 250 recent customers, supplemented by the current page’s guests.
 
 ## Model and booking rules
 
@@ -32,7 +32,7 @@ Reservation operations require active hotel membership and `customers.manage`. V
 
 ## API
 
-`GET /api/portal/hotel/workspace?arrival=YYYY-MM-DD&departure=YYYY-MM-DD&guests=1` returns room types, rooms, the latest 250 reservations, up to 250 recent canonical customers plus customers referenced by those reservations, guest consent profiles, current availability and capability flags. Availability checks all confirmed/in-house reservations, independently of the list limit. Profiles are fetched for the returned customer IDs so an older opt-out is not mistaken for missing consent. Financial totals aggregate the full payment ledger for each returned booking, not just the latest visible receipts.
+`GET /api/portal/hotel/workspace?arrival=YYYY-MM-DD&departure=YYYY-MM-DD&guests=1` returns all room types and rooms, a 25-row reservation page, up to 250 recent canonical customers plus customers referenced by that page, guest consent profiles, current availability and capability flags. Availability checks all confirmed/in-house reservations, independently of the list limit. Profiles are fetched for the returned customer IDs so an older opt-out is not mistaken for missing consent. Financial totals aggregate the full payment ledger for each returned booking, not just the latest visible receipts.
 
 `GET ...?bookingId=<uuid>` returns one tenant-owned reservation, the latest 100 events, and (with finance permission) its latest 100 payment records and full totals.
 
@@ -57,3 +57,11 @@ Run `npm run test:hotel-workspace`, `npm run test:hotel`, migration-ledger tests
 CI also starts a disposable localhost PostgreSQL 17 database and runs `node tests/hotel-booking-concurrency.mjs`, with `HOTEL_TEST_DATABASE_URL` pointing to `/hotel_test`. The script refuses remote hosts or nonempty databases. It verifies that concurrent read-committed and repeatable-read allocations each commit exactly one reservation and that an adjacent stay succeeds. This uses no production database or staging subscription.
 
 The migration ledger lists Phase 2 as pending only. Do not apply other pending migrations as part of this release. A production release, live tests, and real-number WhatsApp template validation remain separate actions. This phase does not enroll follow-ups, activate automatic sends, collect payments, or add staff/housekeeping workflows.
+
+## Workspace refinements
+
+The pending `20261105125822_hotel_workspace_refinements.sql` migration adds stable tenant references such as HT-000001, allocated atomically in separate metadata so backfilling does not change booking revisions, follow-ups or audit history. References are unique within a hotel.
+
+The service-only workspace RPC accepts literal case-insensitive guest/contact/room/type/reference searches, booking state, daily scopes and zero-based pages. Counts and page clamping happen before returning rows. A finance-gated pending-payment queue finds older bookings across all history, with exact receipt counts. Financial totals still include the full booking ledger. Grouped room availability retains date, guest-capacity and checkout-exclusive allocation checks.
+
+The new regression suite seeds 311 bookings and 1,005 rooms and checks tenant boundaries, reference backfill, full-history pagination and old pending receipts. Disposable PostgreSQL CI also verifies concurrent reference allocation. No production migration has been applied.

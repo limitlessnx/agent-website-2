@@ -25,13 +25,13 @@ export async function loadHotelCatalog(org: string, canManage: boolean, publishe
   const [items,types] = await Promise.all([query,admin.from("hotel_room_types").select("id,name,capacity,nightly_rate_minor,currency").eq("organization_id",org).order("name")]);
   checked(items.error);checked(types.error);
   const rows = (items.data || []) as HotelCatalogItem[];
-  const assets = rows.length ? await admin.from("hotel_catalog_media").select("id,item_id,mime_type,caption,status,position,storage_path").eq("organization_id",org).in("item_id",rows.map(item=>item.id)).neq("status","removed").order("position").order("created_at") : {data:[],error:null};checked(assets.error);
+  const assets = rows.length ? await admin.from("hotel_catalog_media").select("id,item_id,mime_type,caption,status,position,storage_path").eq("organization_id",org).in("item_id",rows.map(item=>item.id)).neq("status","removed").order("position").order("created_at").order("id") : {data:[],error:null};checked(assets.error);
   const media = await Promise.all((assets.data || []).map(async asset => {
     let url: string | undefined;
     if (asset.status === "ready") { const result = await admin.storage.from(HOTEL_CATALOG_BUCKET).createSignedUrl(asset.storage_path,900); if (result.error) throw new HotelWorkspaceError("Catalog media could not be loaded. Try again.",503); url=result.data?.signedUrl; }
     return {id:asset.id,item_id:asset.item_id,mime_type:asset.mime_type,caption:asset.caption,status:asset.status,position:asset.position,url} as HotelCatalogMedia;
   }));
-  return {items:rows,roomTypes:types.data || [],media,canManage};
+  return {items:rows,roomTypes:types.data || [],media,canManage,mediaExpiresAt:new Date(Date.now()+870000).toISOString()};
 }
 export async function mutateHotelCatalog(org: string, actor: string, body: Record<string,unknown>) {
   const admin = createAdminClient();
@@ -67,6 +67,11 @@ export async function mutateHotelCatalog(org: string, actor: string, body: Recor
     const result = await admin.from("hotel_catalog_items").update({status:body.status,updated_by:actor}).eq("organization_id",org).eq("id",item.id).eq("revision",Number(body.revision)).select("*").maybeSingle();checked(result.error);
     if (!result.data) throw new HotelWorkspaceError("This entry changed. Reload before changing its publication state.",409);return {item:result.data};
   }
+  if(body.action==="order_media"||body.action==="update_media"){
+    const item=await itemFor(org,body.itemId);const revision=Number(body.revision);
+    if(!Number.isInteger(revision)||revision<1||body.action==="order_media"&&!["cover","up","down"].includes(String(body.direction)))throw new HotelWorkspaceError("Reload this draft and choose a valid media action.");
+    const result=await admin.rpc("hotel_catalog_order_media",{p_organization_id:org,p_item_id:item.id,p_media_id:hotelUuid(body.mediaId,"Media"),p_action:body.action==="update_media"?"caption":body.direction,p_revision:revision,p_actor:actor,p_caption:body.action==="update_media"?text(body.caption,200,"Caption"):null});checked(result.error);return{itemId:item.id};
+  }
   if (body.action === "start_upload") {
     const item = await itemFor(org,body.itemId);if (item.status!=="draft")throw new HotelWorkspaceError("Move this entry to draft before uploading.",409);
     const type=String(body.mimeType || ""),size=Number(body.size);try {validateHotelMedia(type,size);}catch(error){throw new HotelWorkspaceError((error as Error).message);}
@@ -76,7 +81,7 @@ export async function mutateHotelCatalog(org: string, actor: string, body: Recor
     if(signed.error) {await admin.from("hotel_catalog_media").update({status:"removed"}).eq("organization_id",org).eq("id",id);throw new HotelWorkspaceError("Media upload could not start. Try again.",503);}
     return {mediaId:id,signedUrl:signed.data.signedUrl};
   }
-  if (["finish_upload","remove_media","update_media"].includes(String(body.action))) {
+  if (["finish_upload","remove_media"].includes(String(body.action))) {
     const result=await admin.from("hotel_catalog_media").select("*").eq("organization_id",org).eq("id",hotelUuid(body.mediaId,"Media")).maybeSingle();checked(result.error);
     const media=result.data;if (!media || media.status==="removed")throw new HotelWorkspaceError("Media not found in this hotel.",404);
     const item=await itemFor(org,media.item_id);if(item.status!=="draft")throw new HotelWorkspaceError("Move this entry to draft before changing media.",409);
@@ -88,8 +93,7 @@ export async function mutateHotelCatalog(org: string, actor: string, body: Recor
       const blob=download.data;const bytes=new Uint8Array(await blob.arrayBuffer());
       if(blob.size!==media.size_bytes || !hotelMediaMatches(media.mime_type,bytes))throw new HotelWorkspaceError("The uploaded file does not match its image or video format. Remove it and upload a supported file.");
       update={status:"ready"};
-    } else if(body.action==="remove_media")update={status:"removed"};
-    else {const position=Number(body.position);if(!Number.isInteger(position)||position<0||position>99)throw new HotelWorkspaceError("Media order must be between 0 and 99.");update={position,caption:text(body.caption,200,"Caption")};}
+    } else update={status:"removed"};
     const saved=await admin.from("hotel_catalog_media").update(update).eq("organization_id",org).eq("id",media.id).eq("status",media.status).select("id").maybeSingle();checked(saved.error);
     if(!saved.data)throw new HotelWorkspaceError("This media changed. Reload before trying again.",409);
     return {mediaId:media.id};

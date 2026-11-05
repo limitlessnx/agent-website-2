@@ -13,9 +13,9 @@ function run(extra,application='hotel_workspace_test'){
 const sql=(query,application)=>run(['-c',query],application);
 async function expectSuccess(result,label){const value=await result;assert.equal(value.code,0,`${label}: ${value.stderr}`);return value.stdout;}
 assert.equal(await expectSuccess(sql(`select count(*) from information_schema.tables where table_schema='public'`),'empty fixture database'),'0','Refusing to mutate a non-empty test database.');
-for(const file of ['tests/fixtures/hotel-workspace-postgres.sql','supabase/migrations/20261105045404_hotel_shared_communications.sql','supabase/migrations/20261105064158_hotel_booking_workspace.sql'])await expectSuccess(run(['-f',file]),'apply test schema');
+for(const file of ['tests/fixtures/hotel-workspace-postgres.sql','supabase/migrations/20261105045404_hotel_shared_communications.sql','supabase/migrations/20261105064158_hotel_booking_workspace.sql','supabase/migrations/20261105085441_hotel_catalog.sql','supabase/migrations/20261105121746_hotel_overview.sql','supabase/migrations/20261105125822_hotel_workspace_refinements.sql'])await expectSuccess(run(['-1','-f',file]),'apply test schema');
 const org=randomUUID(),customer=randomUUID(),type=randomUUID(),room=randomUUID();
-await expectSuccess(sql(`insert into organizations values('${org}');insert into crm_customers values('${customer}','${org}');insert into hotel_guest_profiles(organization_id,customer_id) values('${org}','${customer}');insert into hotel_room_types(id,organization_id,name,capacity,nightly_rate_minor,currency) values('${type}','${org}','Double',2,10000,'NGN');insert into hotel_rooms(id,organization_id,room_type_id,name) values('${room}','${org}','${type}','101');`),'seed synthetic fixture');
+await expectSuccess(sql(`insert into organizations values('${org}');insert into crm_customers(id,organization_id) values('${customer}','${org}');insert into hotel_guest_profiles(organization_id,customer_id) values('${org}','${customer}');insert into hotel_room_types(id,organization_id,name,capacity,nightly_rate_minor,currency) values('${type}','${org}','Double',2,10000,'NGN');insert into hotel_rooms(id,organization_id,room_type_id,name) values('${room}','${org}','${type}','101');`),'seed synthetic fixture');
 function insert(start,end){return `insert into hotel_booking_enquiries(organization_id,customer_id,room_id,status,arrival_date,departure_date) values('${org}','${customer}','${room}','confirmed','${start}','${end}');`;}
 async function overlapScenario(start,end,isolation){
  const holder=sql(`begin;${insert(start,end)}select pg_sleep(5);commit;`,'hotel_booking_holder');
@@ -36,3 +36,5 @@ await overlapScenario('2026-12-01','2026-12-03','read committed');
 await overlapScenario('2026-12-10','2026-12-12','repeatable read');
 await expectSuccess(sql(insert('2026-12-03','2026-12-04')),'adjacent checkout-exclusive stay');
 console.log('PASS: adjacent stay is permitted; no external provider or production database was used');
+
+const concurrent=await Promise.all(Array.from({length:8},()=>sql(`insert into hotel_booking_enquiries(organization_id,customer_id,status) values('${org}','${customer}','enquiry');`)));for(const result of concurrent)assert.equal(result.code,0,result.stderr);assert.equal(await expectSuccess(sql(`select count(*)=count(distinct number) from hotel_booking_references where organization_id='${org}'`),'unique concurrent references'),'t');console.log('PASS: concurrent hotel enquiries receive distinct tenant references');
