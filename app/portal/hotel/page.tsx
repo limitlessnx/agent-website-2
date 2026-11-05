@@ -13,7 +13,7 @@ export const metadata = { title: "Hotel workspace | Fluxknight" };
 export default async function HotelWorkspacePage({searchParams}:{searchParams?:Promise<Record<string,string|string[]|undefined>>}) {
   const session = await getClientSession(); if (!session) redirect("/account/login");
   try { await requireHotelOrganization(session.organizationId); }
-  catch { return <main className="portal-page"><h1>Hotel workspace unavailable</h1><p>Ask your administrator to check that this hotel workspace is active and correctly configured.</p></main>; }
+  catch (error) { console.warn("[hotel-workspace-access]",{organizationId:session.organizationId,preview:Boolean(session.isAdminPreview),code:typeof error==="object"&&error&&"code" in error?String(error.code):null,message:error instanceof Error?error.message:"Hotel classification lookup failed"});return <main className="portal-page"><h1>Hotel workspace unavailable</h1><p>Ask your administrator to check that this hotel workspace is active and correctly configured.</p></main>; }
   let permissions: Set<string>;
   try { permissions = session.isAdminPreview ? new Set(["customers.view", "billing.view"]) : (await requirePortalPermission(session, ["customers.view", "customers.manage"])).permissions; }
   catch { return <main className="portal-page"><h1>Hotel workspace</h1><p>You need guest-record access to use this workspace. Ask your hotel administrator to review your permissions.</p></main>; }
