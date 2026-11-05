@@ -25,6 +25,8 @@ function fixture(lead = null) {
     '@/lib/real-estate-access': {},
     '@/lib/real-estate-inspections': {},
     '@/lib/ai/maia-property-tools': { maiaPropertyTools: () => [] },
+    '@/lib/ai/maia-hotel-tools': { maiaHotelTools: () => [] },
+    '@/lib/hotel-communication-policy': { isHotelOrganization: () => false },
     '@/lib/ai/maia-appointment-tools': { maiaAppointmentTools: () => [] },
     '@/lib/ai/limitless-handoff-policy.mjs': { buildLimitlessHandoffAcknowledgement: () => 'Handoff recorded.' },
     '@/lib/flux-ai-metering-core': {},

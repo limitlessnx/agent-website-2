@@ -59,6 +59,8 @@ const expectedPendingVersions = [
   "20261104114151",
   // Hotel Phase 2 booking workspace: prepared for review, not applied to production.
   "20261105064158",
+  // Hotel Catalog private media and publication rules; prepared for review only.
+  "20261105085441",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

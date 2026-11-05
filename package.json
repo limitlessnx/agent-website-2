@@ -18,7 +18,8 @@
     "test:tenant-offboarding": "node --test tests/tenant-offboarding-runtime-guards.test.mjs tests/tenant-offboarding-runtime.test.mjs",
     "test:billing": "node --test tests/flutterwave-billing-route-contract.test.mjs tests/flutterwave-webhook-runtime.test.cjs tests/flutterwave-renewal-database.test.mjs",
     "test:hotel": "node --test tests/hotel-api-authorization.test.cjs tests/hotel-communication-policy.test.cjs tests/hotel-campaign-route.test.cjs tests/hotel-followup-runtime.test.cjs tests/hotel-whatsapp-delivery.test.cjs tests/hotel-communications-database.test.mjs",
-    "test:hotel-workspace": "node --test tests/hotel-booking-contract.test.mjs tests/hotel-booking-workspace-api.test.mjs tests/hotel-booking-workspace-database.test.mjs"
+    "test:hotel-workspace": "node --test tests/hotel-booking-contract.test.mjs tests/hotel-booking-workspace-api.test.mjs tests/hotel-booking-workspace-database.test.mjs",
+    "test:hotel-catalog": "node --test tests/hotel-catalog-api.test.mjs tests/hotel-catalog-database.test.mjs"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.523",

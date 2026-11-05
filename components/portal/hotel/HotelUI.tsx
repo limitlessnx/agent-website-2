@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, type ReactNode, type ButtonHTMLAttributes } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useRef, type ReactNode, type ButtonHTMLAttributes } from "react";
 import { X } from "lucide-react";
 import styles from "./HotelWorkspace.module.css";
 
@@ -14,7 +14,10 @@ export function Action({ secondary, danger, className = "", type = "button", ...
   return <button {...props} type={type} className={[styles.button, secondary ? styles.secondary : "", danger ? styles.danger : "", className].join(" ")} />;
 }
 export function Field({ label, hint, wide, children }: { label: string; hint?: string; wide?: boolean; children: ReactNode }) {
-  return <label className={`${styles.field} ${wide ? styles.wide : ""}`}><span>{label}</span>{children}{hint ? <small>{hint}</small> : null}</label>;
+  const id=useId();
+  const control=isValidElement<{id?:string;"aria-describedby"?:string}>(children)?children:null;
+  const controlId=control?.props.id||id;
+  return <div className={`${styles.field} ${wide ? styles.wide : ""}`}><label htmlFor={controlId}>{label}</label>{control?cloneElement(control,{id:controlId,"aria-describedby":[control.props["aria-describedby"],hint?`${id}-hint`:null].filter(Boolean).join(" ")||undefined}):children}{hint ? <small id={`${id}-hint`}>{hint}</small> : null}</div>;
 }
 export function Status({ value }: { value: string }) {
   return <span className={styles.badge} data-state={value}>{value.replaceAll("_", " ")}</span>;

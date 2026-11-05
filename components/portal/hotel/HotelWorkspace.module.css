@@ -70,7 +70,7 @@
 .availability>form{display:grid;gap:12px}
 .availability>form>.button{width:100%;margin-top:3px;justify-content:space-between}
 .field{display:grid;gap:7px;min-width:0;font-size:12px}
-.field>span{font-size:11px;font-weight:600;color:#c4b8ce}
+.field>span,.field>label{font-size:11px;font-weight:600;color:#c4b8ce}
 .field :is(input,select,textarea){width:100%;max-width:100%}
 .field>small{font-size:10px;color:#a092af;line-height:1.6}
 .field textarea{resize:vertical;min-height:80px}

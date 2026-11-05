@@ -27,6 +27,10 @@ jobs:
         run: npm run test:hotel-workspace
       - name: Hotel workspace lint
         run: npx eslint app/api/portal/hotel/workspace/route.ts app/portal/hotel/page.tsx components/portal/hotel/*.tsx lib/hotel-booking-service.ts lib/hotel-booking-contract.ts tests/hotel-booking-workspace-api.test.mjs tests/hotel-booking-workspace-database.test.mjs
+      - name: Hotel catalog, private media and agent retrieval regressions
+        run: npm run test:hotel-catalog
+      - name: Hotel catalog lint
+        run: npx eslint app/api/portal/hotel/catalog/route.ts app/portal/hotel/catalog/page.tsx lib/hotel-catalog*.ts lib/ai/maia-hotel-tools.ts tests/hotel-catalog*.test.mjs
       - run: npm run test:maia
       - run: npm run build
 

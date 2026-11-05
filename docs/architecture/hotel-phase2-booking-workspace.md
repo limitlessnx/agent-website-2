@@ -4,6 +4,8 @@ This phase is prepared on a separate branch for review. Its migration has not be
 
 ## Manager workspace
 
+The companion [Hotel Catalog](hotel-catalog.md) adds published room descriptions/media, facilities and services, plus a read-only WhatsApp agent lookup connected to this inventory and availability model.
+
 Hotel tenants enter `/portal/hotel` from the portal home or sidebar. Reservations, rooms, guest preferences and offline payment review share the existing tenant session. Other industries retain their existing portal home and appointment navigation. The workspace offers date-specific availability, room types and rates, room activation, enquiry-to-checkout transitions, guest timelines, and manual receipt recording and review. Adding a guest during reservation entry retains the draft stay details. Pending receipts never reduce the verified balance.
 
 Read-only members and trusted admin previews can inspect permitted data without mutation controls. Payment data and actions follow finance permissions. Errors keep forms open for correction; writes retain request IDs across retries and stale booking/rate edits require a refresh. Native dialogs provide focus containment, Escape handling and accessible field labels. Tables adapt to narrow screens and motion respects reduced-motion preferences. The reservation list is explicitly limited to the latest 250 records; availability still checks all allocations.
