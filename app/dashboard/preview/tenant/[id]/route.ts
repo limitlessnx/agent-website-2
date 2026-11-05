@@ -1,3 +1,4 @@
+import { isSpeculativeRequest } from "@/lib/speculative-request";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -5,6 +6,7 @@ import { ADMIN_ORGANIZATION_COOKIE, serializeAdminOrganizationContext } from "@/
 import { createAdminTenantPreviewToken } from "@/lib/client-auth";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (isSpeculativeRequest(request)) return new NextResponse(null, {status:204,headers:{"Cache-Control":"no-store"}});
   const session = await getAdminSession();
   if (!session) return NextResponse.redirect(new URL("/login?next=/dashboard", request.url));
 

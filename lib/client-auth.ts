@@ -132,8 +132,7 @@ export async function clearPendingClientSetupSession(){const store=await cookies
 async function getAdminPreviewSession(store: Awaited<ReturnType<typeof cookies>>): Promise<ClientSession | null> {
  const token=store.get(CLIENT_ADMIN_PREVIEW_COOKIE)?.value;
  const preview=verifyAdminTenantPreviewToken(token);
- const admin=await getAdminSession();
- if(admin)console.info("[tenant-preview-session]",{cookiePresent:Boolean(token),signatureValid:Boolean(preview),organizationId:preview?.organizationId||null});
+ const admin=preview?await getAdminSession():null;
  if(!preview||!admin)return null;
  const organizations=await supabaseServerRequest<Array<{id:string;slug:string}>>(`organizations?id=eq.${encodeURIComponent(preview.organizationId)}&select=id,slug&limit=1`).catch(()=>[]);
  const organization=organizations[0];

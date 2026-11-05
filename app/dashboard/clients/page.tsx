@@ -56,10 +56,10 @@ export default async function ClientsPage() {
                 <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/inspect`}>
                   <Building2 size={15} /> Inspect read-only
                 </Link>
-                <Link className="admin-button secondary" href={`/dashboard/preview/tenant/${encodeURIComponent(profile.organization_id)}`}>
+                <Link prefetch={false} className="admin-button secondary" href={`/dashboard/preview/tenant/${encodeURIComponent(profile.organization_id)}`}>
                   <Building2 size={15} /> Open tenant dashboard
                 </Link>
-                <Link className="admin-button secondary" href={`/dashboard/switch/tenant/${encodeURIComponent(profile.organization_id)}`}>
+                <Link prefetch={false} className="admin-button secondary" href={`/dashboard/switch/tenant/${encodeURIComponent(profile.organization_id)}`}>
                   <Building2 size={15} /> Open workspace (admin)
                 </Link>
                 <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/setup`}>

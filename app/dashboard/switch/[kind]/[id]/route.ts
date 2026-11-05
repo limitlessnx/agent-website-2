@@ -1,3 +1,4 @@
+import { isSpeculativeRequest } from "@/lib/speculative-request";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
@@ -11,6 +12,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ kind: string; id: string }> },
 ) {
+  if (isSpeculativeRequest(request)) return new NextResponse(null, {status:204,headers:{"Cache-Control":"no-store"}});
   const session = await getAdminSession();
   if (!session) return NextResponse.redirect(new URL("/login?next=/dashboard", request.url));
 
