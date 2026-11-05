@@ -375,12 +375,23 @@ export async function POST(request: NextRequest) {
           const accepted = "accepted" in result && result.accepted === true;
           if (accepted) voiceCallsAccepted += 1;
           else voiceCallsIgnored += 1;
+          const realtimeCallId = "realtimeCallId" in result ? result.realtimeCallId : "";
+          if (accepted && realtimeCallId) {
+            await tasks.trigger("maia-whatsapp-call-sideband", {
+              callId: realtimeCallId,
+              organizationId: tenant.organizationId,
+              agentId: tenant.agentId,
+              customerPhone: call.from,
+              customerName: call.contactName,
+            }, { idempotencyKey: `maia-whatsapp-sideband:${tenant.organizationId}:${call.id}` });
+          }
           console.info("[whatsapp-webhook] Maia voice call handled", {
             organizationId: tenant.organizationId,
             agentId: tenant.agentId,
             callId: call.id,
             event: call.event,
             accepted,
+            sidebandQueued: accepted && Boolean(realtimeCallId),
             reason: result.reason || null,
           });
         } catch (error) {

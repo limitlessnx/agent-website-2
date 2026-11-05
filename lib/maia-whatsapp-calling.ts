@@ -116,9 +116,12 @@ export async function acceptMaiaWhatsAppCall(call: WhatsAppCallEvent, target: Te
   });
   const answer = await openAiResponse.text();
   if (!openAiResponse.ok) throw new Error(providerError(answer));
+  const location = openAiResponse.headers.get("location") || openAiResponse.headers.get("Location") || "";
+  const realtimeCallId = location.split("/").filter(Boolean).pop() || "";
+  if (!realtimeCallId) throw new Error("OpenAI accepted the Maia voice offer but did not return a realtime session identifier.");
 
   const opaqueData = JSON.stringify({ organizationId: target.organizationId, agentId: target.agentId, callId: call.id });
   const metaResult = await metaCallAction({ phoneNumberId, accessToken, graphVersion, callId: call.id, sdp: answer, opaqueData });
   await recordChargeableFluxAiUsage({ organizationId: target.organizationId, action: "leo_voice_minute", source: "maia_whatsapp_calling", provider: "openai", model: String(session.model), quantity: 1, metadata: { call_id: call.id, provider: "meta_whatsapp" } });
-  return { ok: true, enabled: true, accepted: true, callId: call.id, model: session.model, voice: (session.audio as Json).output && text(((session.audio as Json).output as Json).voice), meta: metaResult } as const;
+  return { ok: true, enabled: true, accepted: true, callId: call.id, realtimeCallId, model: session.model, voice: (session.audio as Json).output && text(((session.audio as Json).output as Json).voice), meta: metaResult } as const;
 }

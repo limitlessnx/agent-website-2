@@ -6,7 +6,7 @@ Meta sends a WhatsApp `calls` webhook containing the caller, call ID, direction,
 
 The implementation is feature-flagged with `MAIA_WHATSAPP_CALLING_ENABLED=false` by default. Enabling it requires Meta Calling to be enabled for the tenant’s Cloud API phone number, the app to subscribe to the `calls` webhook field, and the number to be using Cloud API rather than the WhatsApp Business app. The Meta call-answer window is approximately 30–60 seconds, so the SDP handshake runs synchronously in the webhook route rather than through Trigger.dev.
 
-The current first slice configures Maia-scoped voice instructions, OpenAI Realtime audio settings, tenant credential lookup, charge preflight, and Meta call acceptance. Dynamic Maia property-tool execution over the live audio session is a follow-up slice using OpenAI’s server-side session controls/sideband connection; the feature should remain disabled until that behavior and the tenant’s Meta Calling setup are tested end to end.
+The current slice configures Maia-scoped voice instructions, OpenAI Realtime audio settings, tenant credential lookup, charge preflight, and Meta call acceptance. A Trigger.dev sideband task now attaches to the returned OpenAI realtime session and exposes read-only `search_estates`, `get_estate_knowledge`, `search_properties`, and `get_property_media` tools with the Limitless Realty organization scope. Media delivery and CRM mutations remain intentionally unavailable during the call because the existing delivery tools require a verified WhatsApp chat session and their existing approval controls.
 
 Sources:
 
