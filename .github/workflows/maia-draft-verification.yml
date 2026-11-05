@@ -23,5 +23,34 @@ jobs:
       - run: node --test tests/supabase-migration-ledger.test.mjs
       - name: Hotel communication and tenant-isolation regressions
         run: npm run test:hotel
+      - name: Hotel booking and offline-verification regressions
+        run: npm run test:hotel-workspace
       - run: npm run test:maia
       - run: npm run build
+
+  hotel-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hotel_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hotel_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Exercise concurrent hotel room allocation in disposable PostgreSQL
+        env:
+          HOTEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/hotel_test
+        run: node tests/hotel-booking-concurrency.mjs
