@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 import { syncHandoffNotificationStatus } from "@/lib/human-operations";
 import { syncRealEstateProviderStatus } from "@/lib/real-estate-provider-status";
+import { acceptMaiaWhatsAppCall, type WhatsAppCallEvent } from "@/lib/maia-whatsapp-calling";
 
 export const dynamic = "force-dynamic";
 
@@ -183,6 +184,19 @@ function inboundText(message: WebhookRecord) {
   return "";
 }
 
+function callSession(call: WebhookRecord) {
+  const direct = record(call.session);
+  if (String(direct.sdp || "").trim()) return direct;
+  const connection = record(call.connection);
+  const webrtc = record(connection.webrtc);
+  const rawSdp = webrtc.sdp;
+  if (rawSdp && typeof rawSdp === "object") return record(rawSdp);
+  if (typeof rawSdp === "string") {
+    try { return record(JSON.parse(rawSdp)); } catch { return {}; }
+  }
+  return {};
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const nextUrl = request.nextUrl;
@@ -279,6 +293,9 @@ export async function POST(request: NextRequest) {
   let inboundQueued = 0;
   let ignoredInbound = 0;
   let humanEchoes = 0;
+  let voiceCallsAccepted = 0;
+  let voiceCallsIgnored = 0;
+  let voiceCallsFailed = 0;
 
   for (const entry of recordArray(body.entry)) {
     for (const change of recordArray(entry.changes)) {
@@ -336,6 +353,46 @@ export async function POST(request: NextRequest) {
       const contact = contacts[0] || {};
       const contactProfile = record(contact.profile);
       const contactName = String(contactProfile.name || "");
+
+      for (const rawCall of recordArray(value.calls)) {
+        const call: WhatsAppCallEvent = {
+          id: String(rawCall.id || ""),
+          from: String(rawCall.from || "").replace(/[^0-9]/g, ""),
+          to: String(rawCall.to || "").replace(/[^0-9]/g, "") || undefined,
+          direction: rawCall.direction === "USER_INITIATED" || rawCall.direction === "BUSINESS_INITIATED" ? rawCall.direction : "UNKNOWN",
+          event: String(rawCall.event || ""),
+          timestamp: String(rawCall.timestamp || "") || undefined,
+          session: callSession(rawCall) as WhatsAppCallEvent["session"],
+          contactName,
+          phoneNumberId,
+        };
+        if (!tenant || tenant.mode !== "maia" || !call.id || !call.from) {
+          voiceCallsIgnored += 1;
+          continue;
+        }
+        try {
+          const result = await acceptMaiaWhatsAppCall(call, tenant);
+          const accepted = "accepted" in result && result.accepted === true;
+          if (accepted) voiceCallsAccepted += 1;
+          else voiceCallsIgnored += 1;
+          console.info("[whatsapp-webhook] Maia voice call handled", {
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            callId: call.id,
+            event: call.event,
+            accepted,
+            reason: result.reason || null,
+          });
+        } catch (error) {
+          voiceCallsFailed += 1;
+          console.error("[whatsapp-webhook] Maia voice call handling failed", {
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            callId: call.id,
+            errorType: error instanceof Error ? error.name : "unknown",
+          });
+        }
+      }
 
       if (change.field === "smb_message_echoes" && tenant) {
         for (const echo of recordArray(value.message_echoes)) {
@@ -432,5 +489,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes });
+  return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes, voiceCallsAccepted, voiceCallsIgnored, voiceCallsFailed });
 }
