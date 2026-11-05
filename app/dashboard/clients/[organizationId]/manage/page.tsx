@@ -139,8 +139,8 @@ export default async function OrganizationManagementPage({ params }: PageProps) 
       <div className="admin-actions" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         <Link className="admin-button secondary" href={"/dashboard/clients/"+encodeURIComponent(organizationId)+"/inspect"}>Read-only inspection</Link>
         <Link className="admin-button secondary" href={"/dashboard/clients/"+encodeURIComponent(organizationId)+"/setup"}>Full setup</Link>
-        <Link className="admin-button secondary" href={"/dashboard/preview/tenant/"+encodeURIComponent(organizationId)}>Open tenant preview</Link>
-        <Link className="admin-button secondary" href={"/dashboard/switch/tenant/"+encodeURIComponent(organizationId)}>Open admin workspace</Link>
+        <Link prefetch={false} className="admin-button secondary" href={"/dashboard/preview/tenant/"+encodeURIComponent(organizationId)}>Open tenant preview</Link>
+        <Link prefetch={false} className="admin-button secondary" href={"/dashboard/switch/tenant/"+encodeURIComponent(organizationId)}>Open admin workspace</Link>
       </div>
       <p className="admin-note" style={{marginTop:14}}>Deletion is intentionally not exposed in this draft. A safe deletion lifecycle needs verified export, retention, ownership-transfer, dependency-cleanup and audit steps before any destructive control is added.</p>
     </section>

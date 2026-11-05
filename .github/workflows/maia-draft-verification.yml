@@ -30,7 +30,7 @@ jobs:
       - name: Hotel setup and manager access regressions
         run: npm run test:hotel-setup
       - name: Hotel setup lint
-        run: npx eslint lib/hotel-setup*.ts app/api/portal/hotel/setup/route.ts app/portal/hotel/setup/page.tsx app/api/portal/team/access-requests/route.ts app/portal/PortalSidebar.tsx tests/hotel-setup*.mjs tests/hotel-manager-access-runtime.test.mjs
+        run: npx eslint lib/hotel-setup*.ts app/api/portal/hotel/setup/route.ts app/portal/hotel/setup/page.tsx app/api/portal/team/access-requests/route.ts app/portal/PortalSidebar.tsx tests/hotel-setup*.mjs tests/hotel-manager-access-runtime.test.mjs lib/speculative-request.ts tests/tenant-preview-session-runtime.test.mjs app/dashboard/preview/exit/route.ts "app/dashboard/preview/tenant/[id]/route.ts" "app/dashboard/switch/[kind]/[id]/route.ts"
       - name: Hotel refinements regression tests
         run: npm run test:hotel-refinements
       - name: Hotel refinement lint
