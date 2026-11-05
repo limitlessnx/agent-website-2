@@ -96,3 +96,11 @@ test('currency mismatches, replayed request IDs and unauthorized finance reads f
  for(const table of ['hotel_room_types','hotel_rooms','hotel_offline_payments','hotel_booking_events']) assert.equal((await db.query(`select relrowsecurity from pg_class where oid=$1::regclass`,[table])).rows[0].relrowsecurity,true);
  assert.equal((await db.query(`select has_function_privilege('anon','hotel_booking_payment_totals(uuid,uuid[])','execute') as permitted`)).rows[0].permitted,false);
 });
+test('new room rates do not rewrite existing reservation quotes or room type identity',async t=>{
+ const db=await fixture(t);const first=await booking(db);
+ await db.query(`update hotel_room_types set nightly_rate_minor=15000 where id=$1`,[ta]);
+ const next=await booking(db,{arrival:'2026-12-03',departure:'2026-12-04'});
+ assert.equal(Number((await db.query(`select nightly_rate_minor from hotel_booking_enquiries where id=$1`,[first.id])).rows[0].nightly_rate_minor),10000);assert.equal(Number(next.nightly_rate_minor),15000);
+ await assert.rejects(db.query(`update hotel_room_types set currency='USD' where id=$1`,[ta]),/immutable/);
+ await assert.rejects(db.query(`update hotel_room_types set capacity=1 where id=$1`,[ta]),/immutable/);
+});

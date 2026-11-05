@@ -1,10 +1,16 @@
 # Hotel Phase 2 — booking workspace
 
-This phase is prepared on a separate branch for review. Its migration has not been applied and the code has not been merged or deployed to production. Phase 1 production remains unchanged. The manager interface is pending the required design-tool connection; the backend and tests can be reviewed independently.
+This phase is prepared on a separate branch for review. Its migration has not been applied and the code has not been merged or deployed to production. Phase 1 production remains unchanged. The manager interface follows the repository's GPT TasteSkill and existing portal design.
+
+## Manager workspace
+
+Hotel tenants enter `/portal/hotel` from the portal home or sidebar. Reservations, rooms, guest preferences and offline payment review share the existing tenant session. Other industries retain their existing portal home and appointment navigation. The workspace offers date-specific availability, room types and rates, room activation, enquiry-to-checkout transitions, guest timelines, and manual receipt recording and review. Adding a guest during reservation entry retains the draft stay details. Pending receipts never reduce the verified balance.
+
+Read-only members and trusted admin previews can inspect permitted data without mutation controls. Payment data and actions follow finance permissions. Errors keep forms open for correction; writes retain request IDs across retries and stale booking/rate edits require a refresh. Native dialogs provide focus containment, Escape handling and accessible field labels. Tables adapt to narrow screens and motion respects reduced-motion preferences. The reservation list is explicitly limited to the latest 250 records; availability still checks all allocations.
 
 ## Model and booking rules
 
-Room types define capacity, nightly rate in integer minor units, and currency. Physical rooms belong to one type and tenant. Type creation and room activation/deactivation are supported; room/type identity is immutable. Room deactivation requires resolving confirmed or in-house reservations first. There is no housekeeping or staff model.
+Room types define capacity, nightly rate in integer minor units, and currency. Physical rooms belong to one type and tenant. Names and base rates can be edited; room/type identity, capacity and currency are immutable. Rate edits compare the expected current rate and do not alter saved reservation quotes. Room deactivation requires resolving confirmed or in-house reservations first. There is no housekeeping or staff model.
 
 The existing `hotel_booking_enquiries` table becomes the canonical reservation record. `enquiry` and `quoted` do not reserve a room. `confirmed` and `checked_in` occupy a physical room for the checkout-exclusive interval `[arrival, departure)`. Adjacent stays are allowed. Confirming requires a valid room, dates and capacity. A native GiST exclusion constraint prevents overlapping allocations, including concurrent transactions with repeatable-read snapshots. Row locks also serialize room activation and assignment checks. The migration installs `btree_gist` if needed and resolves its actual extension schema.
 
@@ -29,7 +35,9 @@ Reservation operations require active hotel membership and `customers.manage`. V
 `POST` actions:
 
 - `create_type`: name, capacity, nightlyRate (decimal string), currency (three-letter code).
+- `update_type`: roomTypeId, name, nightlyRate, expectedRateMinor. Capacity and currency remain server-owned.
 - `create_room`: name, roomTypeId.
+- `rename_room`: roomId, name.
 - `set_room_active`: roomId, active (boolean).
 - `create_guest`: requestId, name, optional phone/email. Canonical identity resolution is reused. A matching existing profile's opt-out, handover and consent are never reset; new consent defaults to unknown. Consent edits continue to use the Phase 1 API.
 - `save_reservation`: status, optional roomId, arrivalDate, departureDate, guestCount, nightlyRate and notes. Creation requires customerId and requestId; updates require bookingId and current revision. Omitted fields are preserved; explicit null clears optional fields where booking rules allow it. Blank nightlyRate resets to the room type rate. A changed room resets rate/currency unless an explicit rate is supplied.

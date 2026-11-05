@@ -12,7 +12,10 @@ export async function GET(request: Request) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   let access;
-  try { access = await requirePortalPermission(session, ["customers.view", "customers.manage"]); await requireHotelOrganization(session.organizationId); }
+  try {
+    access = session.isAdminPreview ? { permissions: new Set(["customers.view", "billing.view"]) } : await requirePortalPermission(session, ["customers.view", "customers.manage"]);
+    await requireHotelOrganization(session.organizationId);
+  }
   catch { return NextResponse.json({ error: "Hotel customer access required." }, { status: 403 }); }
   const canViewPayments = access.permissions.has("billing.view") || access.permissions.has("billing.manage");
   try {

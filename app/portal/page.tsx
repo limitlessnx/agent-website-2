@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
@@ -77,6 +78,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
 
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
   const experience = getIndustryExperience(summary.onboarding?.industry);
+  if (experience.slug === "hotels") redirect("/portal/hotel");
   if (experience.name.toLowerCase().includes("real estate") || experience.name.toLowerCase().includes("realty")) {
     const [properties, leads, appointments] = await Promise.all([
       getProperties(100, session.organizationId).catch(() => []),

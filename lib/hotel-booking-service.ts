@@ -90,6 +90,19 @@ export async function mutateHotelWorkspace(organizationId: string, actorId: stri
     const result = await admin.from("hotel_rooms").insert({ organization_id: organizationId, name: text(body.name, 80, "Room name", true), room_type_id: hotelUuid(body.roomTypeId, "Room type") }).select("*").single();
     databaseError(result.error); return { room: result.data };
   }
+  if (body.action === "update_type") {
+    const id = hotelUuid(body.typeId, "Room type");
+    const current = await admin.from("hotel_room_types").select("currency").eq("organization_id", organizationId).eq("id", id).maybeSingle();
+    databaseError(current.error); if (!current.data) throw new HotelWorkspaceError("Room type not found.", 404);
+    const expected = typeof body.expectedRateMinor === "string" || typeof body.expectedRateMinor === "number" ? String(body.expectedRateMinor) : "";
+    if (!/^\d{1,13}$/.test(expected)) throw new HotelWorkspaceError("Refresh the current room rate before saving.");
+    const result = await admin.from("hotel_room_types").update({ name: text(body.name, 80, "Room type", true), nightly_rate_minor: amount(body.nightlyRate, current.data.currency, true) }).eq("organization_id", organizationId).eq("id", id).eq("nightly_rate_minor", Number(expected)).select("*").maybeSingle();
+    databaseError(result.error); if (!result.data) throw new HotelWorkspaceError("This room rate changed. Refresh before saving again.", 409); return { roomType: result.data };
+  }
+  if (body.action === "rename_room") {
+    const result = await admin.from("hotel_rooms").update({ name: text(body.name, 80, "Room name", true) }).eq("organization_id", organizationId).eq("id", hotelUuid(body.roomId, "Room")).select("*").maybeSingle();
+    databaseError(result.error); if (!result.data) throw new HotelWorkspaceError("Room not found.", 404); return { room: result.data };
+  }
   if (body.action === "set_room_active") {
     if (typeof body.active !== "boolean") throw new HotelWorkspaceError("Choose an active state.");
     const result = await admin.from("hotel_rooms").update({ active: body.active }).eq("organization_id", organizationId).eq("id", hotelUuid(body.roomId, "Room")).select("*").maybeSingle();

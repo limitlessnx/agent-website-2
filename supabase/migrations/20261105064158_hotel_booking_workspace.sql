@@ -134,6 +134,12 @@ begin
   return new;
 end $$;
 create trigger hotel_room_update before update on public.hotel_rooms for each row execute function public.hotel_room_update_guard();
+create function public.hotel_room_type_update_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+  if (new.id,new.organization_id,new.capacity,new.currency) is distinct from (old.id,old.organization_id,old.capacity,old.currency) then raise exception 'Room type identity, capacity and currency are immutable; create another type instead'; end if;
+  return new;
+end $$;
+create trigger hotel_room_type_update before update on public.hotel_room_types for each row execute function public.hotel_room_type_update_guard();
 
 create function public.hotel_booking_audit() returns trigger language plpgsql security invoker set search_path='' as $$
 begin
@@ -187,5 +193,5 @@ returns table(booking_id uuid,verified_minor text,pending_minor text) language s
   from public.hotel_booking_enquiries b left join public.hotel_offline_payments p on p.organization_id=b.organization_id and p.booking_id=b.id
   where b.organization_id=p_organization_id and b.id=any(p_booking_ids) group by b.id
 $$;
-revoke all on function public.hotel_reservation_guard(),public.hotel_room_update_guard(),public.hotel_booking_audit(),public.hotel_offline_payment_guard(),public.hotel_payment_audit(),public.hotel_room_availability(uuid,date,date,integer),public.hotel_booking_payment_totals(uuid,uuid[]) from public,anon,authenticated;
+revoke all on function public.hotel_reservation_guard(),public.hotel_room_update_guard(),public.hotel_room_type_update_guard(),public.hotel_booking_audit(),public.hotel_offline_payment_guard(),public.hotel_payment_audit(),public.hotel_room_availability(uuid,date,date,integer),public.hotel_booking_payment_totals(uuid,uuid[]) from public,anon,authenticated;
 grant execute on function public.hotel_room_availability(uuid,date,date,integer),public.hotel_booking_payment_totals(uuid,uuid[]) to service_role;

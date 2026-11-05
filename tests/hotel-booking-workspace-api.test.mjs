@@ -92,3 +92,12 @@ test('payment state changes require the current state and a reason for rejection
  assert.equal((await post(route,{action:'void_payment',paymentId:id})).status,400);
  assert.equal((await post(route,{action:'void_payment',paymentId:id,note:'Incorrect reference recorded'})).status,200);
 });
+test('trusted admin preview reads are allowed but all mutation capabilities remain off',async()=>{
+ const {route,state}=harness({preview:true});const response=await get(route);assert.equal(response.status,200);assert.equal(response.body.canManage,false);assert.equal(response.body.canManagePayments,false);assert.equal(response.body.canViewPayments,true);
+ assert.equal((await post(route,{action:'create_room',name:'999',roomTypeId:type})).status,403);assert.equal(state.writes.length,0);
+});
+test('room rate changes require a current rate and retain server-owned currency',async()=>{
+ const {route,state}=harness();const body={action:'update_type',typeId:type,name:'Double',nightlyRate:'150.00',expectedRateMinor:'10000',currency:'USD',capacity:99};
+ assert.equal((await post(route,body)).status,200);const values=state.writes[0][1];assert.equal(values.nightly_rate_minor,'15000');assert.equal(Object.hasOwn(values,'currency'),false);assert.equal(Object.hasOwn(values,'capacity'),false);
+ assert.equal((await post(route,{...body,nightlyRate:'160.00'})).status,409);
+});
