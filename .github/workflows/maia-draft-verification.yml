@@ -25,6 +25,8 @@ jobs:
         run: npm run test:hotel
       - name: Hotel booking and offline-verification regressions
         run: npm run test:hotel-workspace
+      - name: Hotel workspace lint
+        run: npx eslint app/api/portal/hotel/workspace/route.ts app/portal/hotel/page.tsx components/portal/hotel/*.tsx lib/hotel-booking-service.ts lib/hotel-booking-contract.ts tests/hotel-booking-workspace-api.test.mjs tests/hotel-booking-workspace-database.test.mjs
       - run: npm run test:maia
       - run: npm run build
 

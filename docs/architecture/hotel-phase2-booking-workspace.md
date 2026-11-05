@@ -35,7 +35,7 @@ Reservation operations require active hotel membership and `customers.manage`. V
 `POST` actions:
 
 - `create_type`: name, capacity, nightlyRate (decimal string), currency (three-letter code).
-- `update_type`: roomTypeId, name, nightlyRate, expectedRateMinor. Capacity and currency remain server-owned.
+- `update_type`: typeId, name, nightlyRate, expectedRateMinor. Capacity and currency remain server-owned.
 - `create_room`: name, roomTypeId.
 - `rename_room`: roomId, name.
 - `set_room_active`: roomId, active (boolean).
