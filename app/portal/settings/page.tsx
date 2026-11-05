@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { getIndustryExperience } from "@/lib/industryExperience";
 import { Building2, Mail, Phone, ShieldCheck, User, Users } from "@/components/admin/ServerIcons";
 import AccountAdministrationPanel from "@/components/portal/AccountAdministrationPanel";
 import { getAccountAdministrationSnapshot } from "@/lib/account-administration";
@@ -42,6 +44,7 @@ export default async function PortalSettingsPage() {
   return (
     <main className="portal-page">
       <header className="portal-section-title"><h1>Settings</h1><p>Workspace identity, members, ownership, account state, and security scope.</p></header>
+      {getIndustryExperience(profile?.industry).slug==="hotels"?<p><Link className="portal-button secondary" href="/portal/hotel/setup">Edit hotel information & policies</Link></p>:null}
       <section className="portal-grid">
         <article className="portal-card">
           <div className="portal-card-head"><div><h2><Building2 size={17} /> Business profile</h2><p>Captured during onboarding.</p></div></div>

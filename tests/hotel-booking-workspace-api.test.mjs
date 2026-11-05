@@ -12,6 +12,7 @@ const booking='30000000-0000-4000-8000-000000000001',foreignBooking='30000000-00
 const room='40000000-0000-4000-8000-000000000001',type='50000000-0000-4000-8000-000000000001',requestId='60000000-0000-4000-8000-000000000001';
 function harness(options={}){
  const state={queries:[],writes:[],canonical:[],rpc:[],tables:{
+  hotel_settings:[{organization_id:org,values:{currency:"USD"}}],
   crm_customers:[{id:guest,organization_id:org,full_name:'Ada',phone:'123',email:null},{id:foreignGuest,organization_id:other,full_name:'Outside'}],
   hotel_guest_profiles:[{customer_id:guest,organization_id:org,marketing_consent:'opted_out',service_consent:'unknown',opted_out:true,human_handoff:true}],
   hotel_room_types:[{id:type,organization_id:org,currency:'NGN',nightly_rate_minor:10000,capacity:2,name:'Double'}],
@@ -119,3 +120,5 @@ test('full-history query parameters retain tenant scope and pending queues requi
  const f=harness();const response=await f.route.GET({url:'https://hotel.invalid/api/portal/hotel/workspace?arrival=2026-12-01&departure=2026-12-03&query=HT-000042&page=2&view=payments&organizationId='+other});assert.equal(response.status,200);const call=f.state.rpc.find(r=>r[0]==='hotel_workspace_page');assert.equal(call[1].p_organization_id,org);assert.equal(call[1].p_query,'HT-000042');assert.equal(call[1].p_page,2);assert.equal(call[1].p_pending_only,true);const denied=harness({permissions:['customers.view']});assert.equal((await denied.route.GET({url:'https://hotel.invalid/api/portal/hotel/workspace?arrival=2026-12-01&departure=2026-12-03&view=payments'})).status,403);
  const detail=await f.route.GET({url:'https://hotel.invalid/api/portal/hotel/workspace?bookingId='+booking});assert.equal(detail.body.reservation.reference,'HT-000042');
 });
+
+test("new room defaults use saved hotel currency without changing existing room quotes",async()=>{const f=harness();const response=await get(f.route);assert.equal(response.body.defaultCurrency,"USD");assert.equal(response.body.roomTypes[0].currency,"NGN");assert.equal(response.body.reservations[0].currency,"NGN");});

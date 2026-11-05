@@ -70,13 +70,13 @@ export function GuestForm({ customer, profile, mutate, busy, created, close }: C
   </form>;
 }
 
-export function RoomTypeForm({ type, mutate, busy, close }: Common & { type?: HotelRoomType }) {
+export function RoomTypeForm({ type, mutate, busy, close,defaultCurrency }: Common & { type?: HotelRoomType;defaultCurrency?:string }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = event.currentTarget;
     try { await mutate({ action: type ? "update_type" : "create_type", ...(type ? { typeId: type.id, expectedRateMinor: String(type.nightly_rate_minor) } : { capacity: Number(formValue(form, "capacity")), currency: formValue(form, "currency") }), name: formValue(form, "name"), nightlyRate: formValue(form, "rate") }, type ? "Room type updated. Existing quotes are unchanged." : "Room type added."); close(); } catch { /* Keep the form. */ }
   }
   return <form onSubmit={submit} className={styles.form}><Field label="Room type name"><input name="name" required maxLength={80} defaultValue={type?.name} placeholder="For example, Garden double" disabled={busy}/></Field>
-    {type ? <p className={styles.hint}>Capacity: {type.capacity} · Currency: {type.currency}. Create another type for a different capacity or currency.</p> : <div className={styles.formGrid}><Field label="Maximum guests"><input name="capacity" type="number" min={1} max={20} required defaultValue={2} disabled={busy}/></Field><Field label="Currency code" hint="Three letters, for example NGN or USD."><input name="currency" required pattern="[A-Za-z]{3}" maxLength={3} placeholder="NGN" disabled={busy}/></Field></div>}
+    {type ? <p className={styles.hint}>Capacity: {type.capacity} · Currency: {type.currency}. Create another type for a different capacity or currency.</p> : <div className={styles.formGrid}><Field label="Maximum guests"><input name="capacity" type="number" min={1} max={20} required defaultValue={2} disabled={busy}/></Field><Field label="Currency code" hint="Three letters, for example NGN or USD."><input name="currency" required pattern="[A-Za-z]{3}" maxLength={3} defaultValue={defaultCurrency||""} placeholder="NGN" disabled={busy}/></Field></div>}
     <Field label="Default nightly rate"><input name="rate" required inputMode="decimal" defaultValue={type ? hotelAmountInput(type.nightly_rate_minor, type.currency) : ""} placeholder="0.00" disabled={busy}/></Field><p className={styles.hint}>New reservations use this rate. Existing reservation quotes keep their saved rate.</p><div className={styles.formFooter}><Action type="submit" disabled={busy} aria-busy={busy}>{busy ? "Saving room type…" : type ? "Save room type" : "Add room type"}</Action></div></form>;
 }
 export function RoomForm({ room, types, mutate, busy, close }: Common & { room?: HotelRoom; types: HotelRoomType[] }) {

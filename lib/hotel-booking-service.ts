@@ -53,12 +53,13 @@ export async function loadHotelWorkspace(organizationId: string, options: { arri
   const search=text(options.query,120,"Search"),page=options.page??0;
   if(!Number.isInteger(page)||page<0||page>100000)throw new HotelWorkspaceError("Choose a valid booking page.");
   if(options.pendingOnly&&!options.canViewPayments)throw new HotelWorkspaceError("Payment review access required.",403);
-  const [customers, pageResult, pending] = await Promise.all([
+  const [customers, pageResult, pending, settings] = await Promise.all([
     admin.from("crm_customers").select("id,full_name,phone,email").eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(250),
     admin.rpc("hotel_workspace_page",{p_organization_id:organizationId,p_query:search,p_status:options.status||null,p_arrival_day:options.arrivalDay||null,p_departure_day:options.departureDay||null,p_page:page,p_pending_only:Boolean(options.pendingOnly),p_arrival:options.arrival,p_departure:options.departure,p_guests:options.guests}),
     options.canViewPayments?admin.from("hotel_offline_payments").select("id",{count:"exact",head:true}).eq("organization_id",organizationId).eq("status","pending"):Promise.resolve({count:null,error:null}),
+    admin.from("hotel_settings").select("values").eq("organization_id",organizationId).maybeSingle(),
   ]);
-  for (const result of [customers,pageResult,pending]) databaseError(result.error);
+  for (const result of [customers,pageResult,pending,settings]) databaseError(result.error);
   const workspace=pageResult.data as Pick<HotelWorkspaceData,"reservations"|"roomTypes"|"rooms"|"availability"|"availabilityGroups"|"pagination"|"summary">;
   if(!workspace||!Array.isArray(workspace.reservations))throw new HotelWorkspaceError("The hotel workspace is temporarily unavailable.",503);
   const bookings={data:workspace.reservations};
@@ -73,7 +74,7 @@ export async function loadHotelWorkspace(organizationId: string, options: { arri
   const ids = (bookings.data || []).map(row => row.id);
   const totals = options.canViewPayments && ids.length ? await admin.rpc("hotel_booking_payment_totals", { p_organization_id: organizationId, p_booking_ids: ids }) : { data: [], error: null };
   databaseError(totals.error);
-  return { ...workspace,customers: allCustomers, guests: guests.data || [],paymentTotals: totals.data || [],pendingReceipts:pending.count??null,canManage: options.canManage, canManagePayments: options.canManagePayments, canViewPayments: options.canViewPayments } as HotelWorkspaceData;
+  return { ...workspace,defaultCurrency:settings.data?.values?.currency||undefined,customers: allCustomers, guests: guests.data || [],paymentTotals: totals.data || [],pendingReceipts:pending.count??null,canManage: options.canManage, canManagePayments: options.canManagePayments, canViewPayments: options.canViewPayments } as HotelWorkspaceData;
 }
 export async function loadHotelReservation(organizationId: string, bookingId: string, canViewPayments: boolean) {
   const booking = await reservation(organizationId, bookingId); const admin = createAdminClient();

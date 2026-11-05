@@ -9,3 +9,5 @@ create function public.has_organization_permission(uuid,text) returns boolean la
 create schema storage;
 create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(bucket_id text);
+
+create table client_onboarding_profiles(organization_id uuid,business_name text,business_email text,phone text,country text,timezone text,human_contact_name text,human_contact_email text);

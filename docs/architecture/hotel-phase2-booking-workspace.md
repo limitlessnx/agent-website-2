@@ -65,3 +65,5 @@ The pending `20261105125822_hotel_workspace_refinements.sql` migration adds stab
 The service-only workspace RPC accepts literal case-insensitive guest/contact/room/type/reference searches, booking state, daily scopes and zero-based pages. Counts and page clamping happen before returning rows. A finance-gated pending-payment queue finds older bookings across all history, with exact receipt counts. Financial totals still include the full booking ledger. Grouped room availability retains date, guest-capacity and checkout-exclusive allocation checks.
 
 The new regression suite seeds 311 bookings and 1,005 rooms and checks tenant boundaries, reference backfill, full-history pagination and old pending receipts. Disposable PostgreSQL CI also verifies concurrent reference allocation. No production migration has been applied.
+
+The companion [Hotel setup](hotel-setup.md) provides editable business/policy settings, private escalation contacts, channel readiness and manager-access verification.

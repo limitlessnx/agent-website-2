@@ -11,6 +11,7 @@ export type HotelPaymentTotal = { booking_id: string; verified_minor: string; pe
 export type HotelGuestProfile = { customer_id: string; marketing_consent: string; service_consent: string; opted_out: boolean; human_handoff: boolean };
 export type HotelBookingEvent = { id: string; event_type: string; actor_id: string | null; created_at: string; details: Record<string, unknown> };
 export type HotelWorkspaceData = {
+  defaultCurrency?:string;
   roomTypes: HotelRoomType[]; rooms: HotelRoom[]; customers: HotelCustomer[]; guests: HotelGuestProfile[];
   reservations: HotelReservation[]; paymentTotals: HotelPaymentTotal[];
   availability: Array<{ room_id: string; available: boolean }>;

@@ -74,6 +74,7 @@ export default function PortalSidebar({
         {capabilities.team?<Link href="/portal/team" className={active("/portal/team")?"active":""} onClick={close}><Users size={18}/><span>Team</span></Link>:null}
 
         <span className="portal-nav-label">Help & Settings</span>
+        {experience.slug === "hotels"?<Link href="/portal/hotel/setup" className={active("/portal/hotel/setup")?"active":""} onClick={close}><Settings size={18}/><span>Hotel setup</span></Link>:null}
         {capabilities.support?<Link href="/portal/support" className={active("/portal/support")?"active":""} onClick={close}><LifeBuoy size={18}/><span>Support</span></Link>:null}
         <Link href="/portal/settings" className={active("/portal/settings")?"active":""} onClick={close}><Settings size={18}/><span>Settings</span></Link>
       </nav>
