@@ -8,11 +8,10 @@ import ProductShowcase from "@/components/home/ProductShowcase";
 import MaiaInteractiveDemo from "@/components/home/MaiaInteractiveDemo";
 import AutomationJourney from "@/components/home/AutomationJourney";
 import MeetLeoSection from "@/components/home/MeetLeoSection";
-import styles from "./HomepageHeaderRestore.module.css";
 
 export default function HomePage() {
   return (
-    <main className={`quantix-home ${styles.home}`}>
+    <div className="quantix-home">
       <ProductLedHero />
       <AutomationJourney />
       <IndustryExplorer />
@@ -27,6 +26,6 @@ export default function HomePage() {
           <div className="evaluation-conversion-actions"><Link className="button-primary" href="/evaluation" data-cta="evaluation-final">Evaluate My Business <ArrowRight size={17} /></Link><a className="button-secondary" href="/#talk-to-leo" data-cta="evaluation-talk-to-leo">Talk to Leo for more details</a><small>You do not need to know which plan or automation you need. Leo can also help you think through the gaps first.</small></div>
         </div></div>
       </section>
-    </main>
+    </div>
   );
 }
