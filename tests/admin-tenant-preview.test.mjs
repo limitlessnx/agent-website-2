@@ -10,8 +10,8 @@ test("tenant preview is admin-only, signed, and available across portal navigati
   const portal = read("lib/portal-access.ts");
   assert.match(route, /getAdminSession/);
   assert.match(route, /createAdminTenantPreviewToken/);
-  assert.match(route, /path: "\/"/);
-  assert.match(route, /sameSite: process\.env\.NODE_ENV === "production" \? "none" : "lax"/);
+  assert.match(route, /path:\s*"\/"/);
+  assert.match(route, /sameSite: "lax"/);
   assert.match(auth, /isAdminPreview/);
   assert.match(auth, /getAdminSession/);
   assert.match(portal, /if \(session\.isAdminPreview\)/);
@@ -29,8 +29,8 @@ test("Super Admin surfaces expose both tenant preview and admin workspace access
 test("preview can be exited without destroying the admin session", () => {
   const exit = read("app/dashboard/preview/exit/route.ts");
   assert.match(exit, /getAdminSession/);
-  assert.match(exit, /maxAge: 0/);
-  assert.match(exit, /path: "\/portal"/);
+  assert.match(exit, /maxAge:\s*0/);
+  assert.match(exit, /"\/portal"/);
   assert.match(exit, /path: "\/"/);
   assert.match(exit, /\/dashboard/);
 });

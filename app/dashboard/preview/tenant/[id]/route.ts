@@ -17,26 +17,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!organization) return NextResponse.redirect(new URL("/dashboard/clients", request.url));
 
   const response = NextResponse.redirect(new URL("/portal", request.url));
-  response.cookies.set("fluxknight_admin_tenant_preview", "", {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/portal",
-    maxAge: 0,
-  });
   response.cookies.set(ADMIN_ORGANIZATION_COOKIE, serializeAdminOrganizationContext({ kind: "tenant", id: organizationId }), {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
-  response.cookies.set("fluxknight_admin_tenant_preview", createAdminTenantPreviewToken(organizationId), {
+  response.cookies.set("fluxknight_admin_tenant_preview_v2", createAdminTenantPreviewToken(organizationId), {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60,
   });
+  // ResponseCookies is keyed by name: append separate headers to expire every legacy path.
+  for (const path of ["/", "/portal", "/portal/"]) response.headers.append("Set-Cookie", `fluxknight_admin_tenant_preview=; Path=${path}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
   return response;
 }
