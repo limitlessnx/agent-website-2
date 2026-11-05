@@ -13,7 +13,7 @@ async function fixture(t) {
     create function has_organization_permission(uuid,text) returns boolean language sql stable as $$ select $1::text=current_setting('test.organization',true) and current_setting('test.manager',true) in ('manager-1','manager-2') $$;
     insert into organizations values ('${a}'),('${b}');
     insert into crm_customers values ('${c}','${a}'),('${d}','${b}');`);
-  await db.exec(readFileSync('supabase/migrations/20261104145157_hotel_shared_communications.sql','utf8'));
+  await db.exec(readFileSync('supabase/migrations/20261105045404_hotel_shared_communications.sql','utf8'));
   await db.exec(`insert into hotel_guest_profiles(organization_id,customer_id) values ('${a}','${c}'),('${b}','${d}');`);
   return db;
 }

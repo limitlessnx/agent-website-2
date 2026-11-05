@@ -38,3 +38,9 @@ The `hotel-followup-drain` Trigger task takes an explicit organization ID, has o
 ## Validation
 
 Run `npm run test:hotel`, `npm run test:real-estate`, `npm run test:maia`, `npm run test:xposure-dashboard`, and `npx tsc --noEmit`. Hotel tests execute the migration in PGlite, exercise permission isolation and multiple managers, campaign dispatch, provider approval for Meta/Twilio, 24-hour boundaries, duplicate drains, booking changes, handover and opt-outs. No live tenant data or WhatsApp messages are used.
+
+### Approved production validation — 5 November 2026
+
+With explicit user approval, the hotel migration was applied to FLUXNIT production as version `20261105045404`. Its source filename and the production migration snapshot now match that recorded version. No other pending migration was applied.
+
+A transaction on the live database created synthetic hotel tenants, guests and manager memberships, exercised the actual permission helper and RLS policies, and verified cross-tenant denial, two-manager access, revoked/anonymous denial, booking/date-change cancellation, stale-enrollment rejection and opt-out cancellation. All fixture writes were rolled back. Follow-up queries confirmed zero test users, organizations, guests, bookings or jobs remained. All three new tables have RLS enabled and the security advisor reported no hotel-specific findings. No provider credentials, outbound messages or automatic schedules were created during these tests.

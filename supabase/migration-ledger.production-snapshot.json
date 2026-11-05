@@ -1,7 +1,7 @@
 {
   "capturedAt": "2026-10-30",
   "projectRef": "tacxegmlppngnuvldojy",
-  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation.",
+  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation. Incremental update: hotel_shared_communications was verified applied to production on 2026-11-05 with user approval; other baseline entries retain their original capture date.",
   "migrations": [
     {
       "version": "20260724",
@@ -894,6 +894,10 @@
     {
       "version": "20261030191938",
       "name": "limitless_installment_reminder_contract_positive_guard"
+    },
+    {
+      "version": "20261105045404",
+      "name": "hotel_shared_communications"
     }
   ]
 }
