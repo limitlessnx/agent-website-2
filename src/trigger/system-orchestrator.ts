@@ -3,6 +3,7 @@ import { processSystemEvent } from "@/lib/system-orchestrator";
 import { processDueAppointmentReminders } from "@/lib/system-event-adapters";
 import { recoverFailedSystemEvents } from "@/lib/orchestration-operations";
 import { processDueHandoffFollowups } from "@/lib/handoff-followup";
+import { processDueHotelFollowups } from "@/lib/hotel-communications";
 import { scanAnalyticsAnomalies } from "@/lib/analytics-phase-e";
 import { syncDueFluxSubscriptionWallets } from "@/lib/flux-commercial";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -161,6 +162,17 @@ export const limitlessFollowupDrain = task({
     const result = await processDueLimitlessFollowups(25);
     logger.info("Limitless Realty follow-up drain completed", result);
     return result;
+  },
+});
+
+// Explicit tenant payload; activation/scheduling is a separate release decision.
+export const hotelFollowupDrain = task({
+  id: "hotel-followup-drain",
+  maxDuration: 300,
+  retry: { maxAttempts: 1 },
+  run: async (payload: { organizationId: string }) => {
+    if (!payload.organizationId) throw new Error("organizationId is required.");
+    return processDueHotelFollowups(payload.organizationId, 25);
   },
 });
 
