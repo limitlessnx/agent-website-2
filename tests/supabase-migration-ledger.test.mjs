@@ -61,6 +61,8 @@ const expectedPendingVersions = [
   "20261105064158",
   // Hotel Catalog private media and publication rules; prepared for review only.
   "20261105085441",
+  // Hotel Overview read-only tenant-wide aggregates; prepared for review only.
+  "20261105121746",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

@@ -2,10 +2,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, ReceiptText } from "lucide-react";
-import { HOTEL_STATE_ACTIONS, hotelQuotedTotal, formatHotelMoney, type HotelWorkspaceData, type HotelReservation, type HotelPayment, type HotelPaymentTotal, type HotelBookingEvent } from "@/lib/hotel-booking-contract";
+import { HOTEL_STATE_ACTIONS, hotelQuotedTotal, formatHotelMoney, type HotelWorkspaceData, type HotelReservation, type HotelPayment, type HotelPaymentTotal, type HotelBookingEvent,type HotelCustomer,type HotelRoom } from "@/lib/hotel-booking-contract";
 import { Action, Status, dateLabel, hotelRequest, type HotelMutation } from "./HotelUI";
 import styles from "./HotelWorkspace.module.css";
-export type HotelReservationDetails = { reservation: HotelReservation; payments: HotelPayment[]; paymentTotal: HotelPaymentTotal | null; events: HotelBookingEvent[] };
+export type HotelReservationDetails = { reservation: HotelReservation; payments: HotelPayment[]; paymentTotal: HotelPaymentTotal | null; events: HotelBookingEvent[];customer?:HotelCustomer|null;room?:HotelRoom|null };
 export function HotelBalance({ booking, total }: { booking: HotelReservation; total: HotelPaymentTotal | null | undefined }) {
   const quoted = hotelQuotedTotal(booking); const verified = BigInt(total?.verified_minor || "0"); const pending = BigInt(total?.pending_minor || "0"); const currency = booking.currency;
   return <div className={styles.balance}>
@@ -24,7 +24,7 @@ export default function HotelReservationPanel({ id, data, busy, mutate, edit, re
   }, [id, version]);
   if (error) return <div className={styles.form}><p className={styles.error} role="alert">{error}</p><Action secondary onClick={() => { setError(""); setVersion(value => value + 1); }}>Reload reservation</Action></div>;
   if (!detail) return <p role="status" className={styles.loading}>Loading reservation…</p>;
-  const booking = detail.reservation; const customer = data.customers.find(item => item.id === booking.customer_id); const room = data.rooms.find(item => item.id === booking.room_id);
+  const booking = detail.reservation; const customer = detail.customer || data.customers.find(item => item.id === booking.customer_id); const room = detail.room || data.rooms.find(item => item.id === booking.room_id);
   async function changeStatus(status: string) {
     if (["cancelled", "expired"].includes(status) && !window.confirm(status === "cancelled" ? "Cancel this reservation? Its room will become available. The booking history will remain." : "Mark this enquiry expired? It will remain in the booking history.")) return;
     setPendingStatus(status);

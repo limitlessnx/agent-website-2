@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   try {
     const params = new URL(request.url).searchParams;
     if (params.has("bookingId")) return NextResponse.json(await loadHotelReservation(session.organizationId, hotelUuid(params.get("bookingId"), "Reservation"), canViewPayments));
-    return NextResponse.json(await loadHotelWorkspace(session.organizationId, { arrival: params.get("arrival") || "", departure: params.get("departure") || "", guests: Number(params.get("guests") || 1), canViewPayments, canManage: !session.isAdminPreview && access.permissions.has("customers.manage"), canManagePayments: !session.isAdminPreview && access.permissions.has("customers.manage") && access.permissions.has("billing.manage") }));
+    return NextResponse.json(await loadHotelWorkspace(session.organizationId, { arrival: params.get("arrival") || "", departure: params.get("departure") || "", guests: Number(params.get("guests") || 1),arrivalDay:params.get("arrivalDay")||undefined,departureDay:params.get("departureDay")||undefined,status:params.get("filter")||undefined, canViewPayments, canManage: !session.isAdminPreview && access.permissions.has("customers.manage"), canManagePayments: !session.isAdminPreview && access.permissions.has("customers.manage") && access.permissions.has("billing.manage") }));
   } catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {

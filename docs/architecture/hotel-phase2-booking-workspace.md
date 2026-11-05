@@ -4,6 +4,8 @@ This phase is prepared on a separate branch for review. Its migration has not be
 
 ## Manager workspace
 
+Hotel portal home now renders the separate [Hotel Overview](hotel-overview.md). The booking workspace remains at `/portal/hotel`, with exact reservation and scoped daily links from the dashboard.
+
 The companion [Hotel Catalog](hotel-catalog.md) adds published room descriptions/media, facilities and services, plus a read-only WhatsApp agent lookup connected to this inventory and availability model.
 
 Hotel tenants enter `/portal/hotel` from the portal home or sidebar. Reservations, rooms, guest preferences and offline payment review share the existing tenant session. Other industries retain their existing portal home and appointment navigation. The workspace offers date-specific availability, room types and rates, room activation, enquiry-to-checkout transitions, guest timelines, and manual receipt recording and review. Adding a guest during reservation entry retains the draft stay details. Pending receipts never reduce the verified balance.

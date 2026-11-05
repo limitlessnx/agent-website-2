@@ -47,6 +47,13 @@ function harness(options={}){
 }
 const post=(route,body)=>route.POST({json:async()=>body});
 const get=(route,query='arrival=2026-12-01&departure=2026-12-03')=>route.GET({url:'https://hotel.test/api/portal/hotel/workspace?'+query});
+test('overview links scope daily stays before the recent-list limit and fetch exact older booking context',async()=>{
+ const {route,state}=harness({permissions:['customers.view']});
+ state.tables.hotel_booking_enquiries.unshift(...Array.from({length:300},(_,i)=>({id:`new-${i}`,organization_id:org,customer_id:guest,arrival_date:'2027-01-01',departure_date:'2027-01-02',status:'enquiry'})));
+ const daily=await get(route,'arrival=2026-12-01&departure=2026-12-03&arrivalDay=2026-12-01');assert.equal(daily.status,200);assert.equal(daily.body.reservations.length,1);assert.equal(daily.body.reservations[0].id,booking);
+ const detail=await get(route,'bookingId='+booking);assert.equal(detail.status,200);assert.equal(detail.body.customer.id,guest);assert.equal(detail.body.room.id,room);assert.equal(detail.body.payments.length,0);assert.equal(state.rpc.some(([name])=>name==='hotel_booking_payment_totals'),false);
+ assert.equal((await get(route,'arrival=2026-12-01&departure=2026-12-03&arrivalDay=invalid')).status,400);
+});
 test('workspace is session-tenant scoped and finance data is permission gated',async()=>{
  const {route,state}=harness({permissions:['customers.view']});const response=await get(route);
  assert.equal(response.status,200);assert.equal(response.body.customers.length,1);assert.equal(response.body.canViewPayments,false);assert.equal(response.body.canManage,false);

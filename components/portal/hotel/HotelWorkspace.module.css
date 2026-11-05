@@ -7,7 +7,7 @@
 .heading>p:last-child{font-size:14px;color:var(--muted);margin:0}
 .eyebrow{font-size:10px!important;font-weight:750;letter-spacing:.17em;color:#b2a5c4;margin:0;line-height:1.5}
 .headerActions,.inlineActions,.bookingActions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.button{min-height:40px;border:1px solid transparent;border-radius:9px;background:#c4a2f4;color:#22132f;padding:10px 15px;font-family:inherit;font-size:12px;font-weight:750;display:inline-flex;align-items:center;justify-content:center;gap:8px;line-height:1.35;cursor:pointer;transition:background .15s,border-color .15s}
+.button{min-height:40px;border:1px solid transparent;border-radius:9px;background:#c4a2f4;color:#22132f;padding:10px 15px;font-family:inherit;font-size:12px;font-weight:750;display:inline-flex;align-items:center;justify-content:center;gap:8px;line-height:1.35;cursor:pointer;text-decoration:none;transition:background .15s,border-color .15s}
 .button:hover:not(:disabled){background:#d2b6fa}
 .secondary{background:#201926;color:#e1d5ef;border-color:#44344e}
 .secondary:hover:not(:disabled){background:#2c2135;border-color:#765c8e}
