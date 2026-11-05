@@ -13,7 +13,8 @@ const CLIENT_SETUP_TTL=60*60;
 const CLIENT_OAUTH_CONTEXT_TTL=60*10;
 const CLIENT_PASSWORD_RESET_COOKIE="fluxknight_password_reset";
 const CLIENT_PASSWORD_RESET_TTL=60*10;
-const CLIENT_ADMIN_PREVIEW_COOKIE="fluxknight_admin_tenant_preview";
+// A new root-scoped name avoids legacy cookies shadowing the selected preview.
+const CLIENT_ADMIN_PREVIEW_COOKIE="fluxknight_admin_tenant_preview_v2";
 const CLIENT_ADMIN_PREVIEW_TTL=60*60;
 
 type SupabaseAuthUser={id:string;email?:string;user_metadata?:Record<string,unknown>};
@@ -103,7 +104,7 @@ export function createClientSessionToken(session:ClientSession){return createSig
 export function verifyClientSessionToken(token?:string):ClientSession|null{const session=readSignedToken<ClientSession>(token,CLIENT_SESSION_TTL);if(!session?.userId||!session.organizationId||!session.membershipId)return null;return session}
 export function createAdminTenantPreviewToken(organizationId:string){return createSignedToken({organizationId,issuedAt:Date.now(),isAdminPreview:true})}
 function verifyAdminTenantPreviewToken(token?:string){const preview=readSignedToken<{organizationId:string;issuedAt:number;isAdminPreview:true}>(token,CLIENT_ADMIN_PREVIEW_TTL);return preview?.isAdminPreview&&preview.organizationId?preview:null}
-export async function setAdminTenantPreview(organizationId:string){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,createAdminTenantPreviewToken(organizationId),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_ADMIN_PREVIEW_TTL,path:"/"})}
+export async function setAdminTenantPreview(organizationId:string){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,createAdminTenantPreviewToken(organizationId),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_ADMIN_PREVIEW_TTL,path:"/"})}
 export async function clearAdminTenantPreview(){const store=await cookies();store.set(CLIENT_ADMIN_PREVIEW_COOKIE,"",{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:0,path:"/"})}
 export async function setClientSession(session:ClientSession){const store=await cookies();store.set(CLIENT_COOKIE,createClientSessionToken(session),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SESSION_TTL,path:"/"});store.delete(CLIENT_SETUP_COOKIE)}
 export async function setPendingClientSetupSession(session:PendingClientSetupSession){const store=await cookies();store.set(CLIENT_SETUP_COOKIE,createSignedToken(session),{httpOnly:true,sameSite:process.env.NODE_ENV==="production"?"none":"lax",secure:process.env.NODE_ENV==="production",maxAge:CLIENT_SETUP_TTL,path:"/"})}
