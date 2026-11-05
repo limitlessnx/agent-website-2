@@ -15,6 +15,16 @@ const featured = [
   { slug: "service-businesses", Icon: BriefcaseBusiness },
 ] as const;
 
+// Reuse the exact images already shown on the existing Industries directory.
+const industryImages: Record<string, string> = {
+  "real-estate": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=82",
+  "hotels": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=82",
+  "restaurants": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=82",
+  "gyms": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=82",
+  "clinics": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=82",
+  "service-businesses": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=1200&q=82"
+};
+
 export default function IndustryExplorer() {
   const [active, setActive] = useState<string>("real-estate");
   const industry = industries.find((item) => item.slug === active) ?? industries[0];
@@ -47,12 +57,18 @@ export default function IndustryExplorer() {
               <Link href="/evaluation" className={styles.secondary}>Evaluate My Business</Link>
             </div>
           </div>
-          <div className={styles.journey}>
+          <div className={styles.visualColumn}>
+            <div className={styles.industryImage}>
+              <img key={industry.slug} src={industryImages[industry.slug]} alt={`${industry.name} industry`} loading="lazy" decoding="async" />
+              <div className={styles.imageLabel}><span>INDUSTRY EXPERIENCE</span><strong>{industry.name}</strong></div>
+            </div>
+            <div className={styles.journey}>
             <div className={styles.journeyTop}><strong>Example customer journey</strong><span>ILLUSTRATIVE</span></div>
             <ol>
               {journey.map((step, index) => <li key={`${industry.slug}-${index}`}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span><span>{step}</span></li>)}
             </ol>
             <p>Workflows depend on your configuration and enabled plan.</p>
+            </div>
           </div>
         </div>
         <Link className={styles.all} href="/industries">View all industries <ArrowRight size={17} aria-hidden="true" /></Link>
