@@ -23,7 +23,8 @@
     "test:hotel-overview": "node --test tests/hotel-overview-api.test.mjs tests/hotel-overview-database.test.mjs",
     "test:hotel-refinements": "node --test tests/hotel-refinements-database.test.mjs tests/hotel-media-upload.test.mjs",
     "test:hotel-setup": "node --test tests/hotel-setup-api.test.mjs tests/hotel-setup-database.test.mjs tests/hotel-manager-access-runtime.test.mjs tests/manager-access-transaction-safety.test.mjs tests/phase3-manager-access-guardrails.test.mjs tests/phase4-5-manager-organization-access.test.mjs tests/tenant-preview-session-runtime.test.mjs tests/admin-tenant-preview.test.mjs tests/hotel-tenant-readiness-database.test.mjs tests/hotel-onboarding-handoff.test.mjs tests/phase-2-client-onboarding.test.mjs",
-    "test:leo-execution": "node --test tests/leo-crm-execution.test.cjs tests/leo-crm-execution-database.test.mjs tests/leo-real-estate-execution-security.test.cjs tests/leo-action-approval.test.mjs tests/leo-core-security.test.mjs"
+    "test:leo-execution": "node --test tests/leo-crm-execution.test.cjs tests/leo-crm-execution-database.test.mjs tests/leo-real-estate-execution-security.test.cjs tests/leo-action-approval.test.mjs tests/leo-core-security.test.mjs",
+    "test:xposure-campaigns": "node --test tests/xposure-campaigns.test.cjs tests/xposure-campaign-contacts.test.cjs"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.523",

@@ -10,6 +10,10 @@ on:
       - "app/api/admin/clients/**"
       - "app/dashboard/**"
       - "app/portal/**"
+      - "app/api/portal/campaigns/**"
+      - "lib/campaign-*.ts"
+      - "lib/portal-campaign-templates.ts"
+      - "tests/xposure-campaign*.test.cjs"
       - "components/admin/**"
       - "components/portal/**"
       - "lib/admin-organization-*.ts"
@@ -85,6 +89,10 @@ jobs:
           NODE
       - name: Xposure dashboard and tenant authorization regressions
         run: npm run test:xposure-dashboard
+      - name: Xposure campaigns and phone contacts
+        run: npm run test:xposure-campaigns
+      - name: Hotel campaign regressions
+        run: npm run test:hotel
       - name: Dashboard regression contracts
         run: npm run test:support
       - name: Flux Social Storage policy static contract

@@ -1,0 +1,49 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export class CampaignTemplateError extends Error { constructor(message: string, public status = 503) { super(message); } }
+type MetaTemplate = { name?: string; status?: string; language?: string; category?: string; components?: Array<{ type?: string; text?: string }> };
+type MetaResponse = { data?: MetaTemplate[]; paging?: { next?: string }; error?: { message?: string; code?: number } };
+
+function placeholders(template: MetaTemplate) {
+  const found = new Set<number>();
+  for (const component of template.components || []) for (const match of (component.text || "").matchAll(/\{\{\s*(\d+)\s*\}\}/g)) found.add(Number(match[1]));
+  return [...found].filter(Number.isInteger).sort((a, b) => a - b);
+}
+
+export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true) {
+  const admin = createAdminClient();
+  const { data: linked, error: linkedError } = await admin.from("whatsapp_template_configs")
+    .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active")
+    .in("purpose", ["campaign", "customer_follow_up", "hotel_campaign"]);
+  if (linkedError) throw new CampaignTemplateError("Unable to read linked campaign templates.", 503);
+  const { data: integration, error: integrationError } = await admin.from("organization_integrations").select("configuration,status").eq("organization_id", organizationId).eq("provider", "whatsapp").in("status", ["configured", "connected", "degraded"]).maybeSingle();
+  if (integrationError) throw new CampaignTemplateError("Unable to read WhatsApp configuration.", 500);
+  if (!integration) throw new CampaignTemplateError("Connect WhatsApp before loading Meta templates.", 409);
+  const { data: rawCredentials, error: credentialsError } = await admin.rpc("get_organization_integration_credentials", { p_organization_id: organizationId, p_provider: "whatsapp" });
+  if (credentialsError) throw new CampaignTemplateError("WhatsApp credentials are not available.", 409);
+  const credentials = rawCredentials && typeof rawCredentials === "object" ? rawCredentials as Record<string, unknown> : {};
+  const configuration = integration.configuration && typeof integration.configuration === "object" ? integration.configuration as Record<string, unknown> : {};
+  const wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || "").trim();
+  const accessToken = String(credentials.access_token || credentials.accessToken || "").trim();
+  const graphVersion = String(credentials.graph_version || configuration.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v26.0").trim();
+  if (!/^\d+$/.test(wabaId) || !accessToken || !/^v\d+\.\d+$/.test(graphVersion)) throw new CampaignTemplateError("Meta WhatsApp Business credentials are incomplete.", 409);
+  let nextUrl: URL | null = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
+  nextUrl.searchParams.set("fields", "name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
+  const rows: MetaTemplate[] = []; let pageCount = 0;
+  while (nextUrl && pageCount < 10) {
+    const response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    const payload = await response.json().catch(() => ({})) as MetaResponse;
+    if (!response.ok) throw new CampaignTemplateError("Meta could not return the template inventory.", 502);
+    rows.push(...(payload.data || []));
+    const next = payload.paging?.next;
+    if (!next) nextUrl = null;
+    else { const candidate = new URL(next); if (candidate.protocol !== "https:" || candidate.hostname !== "graph.facebook.com" || !candidate.pathname.includes(`/${wabaId}/message_templates`)) throw new CampaignTemplateError("Meta returned an unsafe pagination URL.", 502); nextUrl = candidate; }
+    pageCount += 1;
+  }
+  if (nextUrl) throw new CampaignTemplateError("The template inventory is incomplete. Try again later.", 503);
+  return { ok: true, templates: rows.flatMap((template) => {
+    const config = (linked || []).find((item) => item.template_name === template.name && item.language_code === template.language);
+    if (linkedOnly && !config || template.status !== "APPROVED") return [];
+    return [{ name: String(template.name || ""), status: "APPROVED", language: String(template.language || ""), category: String(template.category || ""), purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[], body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"), placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template) }];
+  }).sort((a, b) => a.name.localeCompare(b.name)) };
+}
