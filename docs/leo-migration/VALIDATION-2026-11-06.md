@@ -5,7 +5,7 @@ Baseline: `36de5e12`, current main when implementation started and re-fetched be
 | Check | Local result |
 | --- | --- |
 | `npm ci --no-audit --no-fund` | Passed; dependency versions/lockfile unchanged |
-| `npm run test:leo-execution` | 49/49 passed |
+| `npm run test:leo-execution` | 50/50 passed, including specialized-domain and human-handoff boundary checks |
 | `npm run test:maia` | 134/134 passed |
 | `npm run test:hotel` | 26/26 passed |
 | `npm run test:hotel-setup` | 44/44 passed |
@@ -13,7 +13,8 @@ Baseline: `36de5e12`, current main when implementation started and re-fetched be
 | `npm run test:support` | Final expanded run 524/525; one baseline Windows path-separator assertion failure |
 | `npm run test:real-estate` | 265/272; seven failures reproduced against untouched current main |
 | `npx tsc --noEmit` | Passed, exit 0 |
-| Focused ESLint | Existing synchronous hydration effect corrected; final lint result recorded in PR |
+| Migration ledger tests | 4/4 passed after registering the new unapplied migration |
+| Focused ESLint | Passed, exit 0; no errors, two existing voice hook dependency warnings |
 | `npm run build` | Passed, exit 0; Next 16.4.3 compilation, TypeScript and page generation completed |
 | `git diff --check` | Passed |
 
@@ -34,6 +35,8 @@ New tests exercise the real dispatcher, client approval transport, signed-envelo
 Tests cover concurrent duplicate tasks, late execution authorization, revoked permissions, changed membership, mismatched tenant/approval/principal, handoff/window/entitlement suppression, provider timeout, missing receipt, enqueue ambiguity, stable retry key, logging failure after acceptance and private status access. Unknown delivery outcomes cannot automatically resend. Client summaries distinguish unconfirmed dispatch, queued execution and provider acceptance from delivery.
 
 ## Release limitations
+
+Initial PR checks: Leo controlled execution and Dashboard Final QA passed, and Vercel preview became READY. Maia Draft Verification initially stopped at the migration-ledger test because the new unapplied migration was missing from its explicit pending list. This PR registers it as prepared for review (without changing the production snapshot or applying SQL); the final checks must validate that correction.
 
 The application preview keeps the new provider flag off unless explicitly configured for staging. No hosted database migration, Trigger worker deployment, production configuration, live WhatsApp send or real voice call is performed. A green application preview cannot establish those separate integrations. Complete the staging procedure in `PHASE3A-2026-11-06.md` and resolve/review all required CI results before asking for merge or production promotion approval.
 

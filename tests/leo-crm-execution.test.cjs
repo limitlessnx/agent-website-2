@@ -97,10 +97,10 @@ test('real signed envelopes reject tampering and expiration before CRM enqueue',
 test('CRM adapter reconciles ambiguous enqueue using same execution and broker key, then returns queued without completion',async()=>{
   process.env.LEO_EXECUTION_SIGNING_SECRET='test-only-secret';
   const current={...identity,permissions:['customers.manage']};
-  let row={id:'durable-id',approval_id:'approval',status:'pending_dispatch',result:null,error:null}, calls=[],fail=true;
+  let row={id:'durable-id',approval_id:'approval',status:'pending_dispatch',result:null,error:null}, calls=[],fail=true,race=false;
   const store={transition:async(id,from,patch)=>{if(!from.includes(row.status))return null;return row={...row,...patch};},loadExecution:async()=>row};
   const api=load('lib/leo-execution/providers/trigger-crm.ts',{
-    '@trigger.dev/sdk':{tasks:{trigger:async(task,payload,options)=>{calls.push({task,payload,options});if(fail)throw Error('timeout');return {id:'run'};}}},
+    '@trigger.dev/sdk':{tasks:{trigger:async(task,payload,options)=>{calls.push({task,payload,options});if(fail)throw Error('timeout');if(race)row.status='completed';return {id:'run'};}}},
     '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async()=>({data:row,error:null})})},
     '@/lib/leo-execution-envelope':{verifyLeoExecutionEnvelope:e=>({envelope:e,identity:current})},
     '../authorization':{currentCrmIdentity:async()=>current,validateCrmBindings:async()=>({})},
@@ -112,6 +112,8 @@ test('CRM adapter reconciles ambiguous enqueue using same execution and broker k
   assert.equal(calls[0].options.idempotencyKey,calls[1].options.idempotencyKey);
   assert.deepEqual(calls[0].payload,{executionId:'durable-id'});
   await api.dispatchCrmFollowup(envelope);assert.equal(calls.length,2);
+  row={...row,status:'pending_dispatch',provider_run_id:null};race=true;
+  const raced=await api.dispatchCrmFollowup(envelope);assert.equal(raced.status,'completed');assert.equal(raced.runId,'run');
   await assert.rejects(api.dispatchCrmFollowup({...envelope,arguments:{...action,_crm_approval:{approvalId:'approval',token:'token',principal:'user:other'}}}),/approval required/);
 });
 
@@ -144,4 +146,26 @@ test('status endpoint keeps execution private to its initiating actor and report
   permitted=false;assert.equal((await get()).status,404);
   permitted=true;current={...identity,userId:'other'};assert.equal((await get()).status,404);
   current=null;assert.equal((await get()).status,401);
+});
+
+test('canonical CRM binding checks retain tenant filters and reject specialized domains, opt-out and human handoff',async()=>{
+  let variant='healthy'; const filters=[];
+  const db={from(table){
+    const row={organizations:{id:org,status:'active',slug:'generic',metadata:{}},agents:{id:org,status:'active'},crm_customers:{id:org,phone:'15550000000',metadata:{}},client_onboarding_profiles:null,hotel_guest_profiles:null,human_handoffs:null};
+    if(variant==='hotel')row.organizations.metadata={industry:'hotel'};
+    if(variant==='profileHotel')row.client_onboarding_profiles={industry:'Hotel'};
+    if(variant==='realEstate')row.organizations.metadata={industry:'real_estate'};
+    if(variant==='profileRealEstate')row.client_onboarding_profiles={industry:'Real Estate'};
+    if(variant==='guest')row.hotel_guest_profiles={customer_id:org};
+    if(variant==='handoff')row.human_handoffs={id:org};
+    if(variant==='optOut')row.crm_customers.metadata={opted_out:true};
+    if(variant==='paused')row.agents.status='paused';
+    const q={select(){return q;},eq(key,value){filters.push({table,key,value});return q;},in(){return q;},limit(){return q;},single:async()=>({data:row[table],error:null}),maybeSingle:async()=>({data:row[table],error:null})};return q;
+  }};
+  const hotel=load('lib/hotel-communication-policy.ts');
+  const realEstate=load('lib/real-estate-organization.ts');
+  const api=load('lib/leo-execution/authorization.ts',{'@/lib/leo-core':{},'@/lib/organization-membership':{},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/hotel-communication-policy':hotel,'@/lib/real-estate-organization':realEstate,'./contract':contract});
+  assert.equal((await api.validateCrmBindings(action)).phone,'15550000000');
+  for(const table of ['agents','crm_customers','client_onboarding_profiles','hotel_guest_profiles','human_handoffs']) assert.ok(filters.some(f=>f.table===table&&f.key==='organization_id'&&f.value===org));
+  for(variant of ['hotel','profileHotel','realEstate','profileRealEstate','guest','handoff','optOut','paused']) await assert.rejects(api.validateCrmBindings(action));
 });

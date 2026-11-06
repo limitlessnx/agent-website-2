@@ -49,7 +49,10 @@ export async function dispatchCrmFollowup(envelope: LeoExecutionEnvelope) {
   try {
     // The database key survives Trigger's finite deduplication TTL and request retries.
     const run = await tasks.trigger(CRM_FOLLOWUP_TASK, { executionId: row.id }, { idempotencyKey: `leo-crm:${row.id}`, idempotencyKeyTTL: "24h" });
-    row = await transition(row.id, ["pending_dispatch"], { status: "queued", provider_run_id: run.id, error: null }) || row;
+    // A fast worker can advance before trigger() returns. Record correlation without
+    // overwriting its status, then mark queued only if it is still awaiting dispatch.
+    await transition(row.id, ["pending_dispatch", "queued", "processing", "sending", "completed", "failed", "unknown"], { provider_run_id: run.id });
+    row = await transition(row.id, ["pending_dispatch"], { status: "queued", error: null }) || row;
     // Worker may already have advanced the row; never overwrite its result.
     return executionResult(await loadExecution(row.id));
   } catch {
