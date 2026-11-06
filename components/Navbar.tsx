@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "@/components/admin/ServerIcons";
+import { X } from "@/components/admin/ServerIcons";
 import FluxLogo from "@/components/FluxLogo";
 import styles from "@/components/Navbar.module.css";
 
@@ -67,7 +67,7 @@ export default function Navbar() {
           <Link className={styles.loginLink} href="/account/login">Login</Link>
           <Link className={`${styles.demoLink} flux-contact`} href="/account/signup?trial=basic&next=%2Fportal">Start Free Trial <span>↗</span></Link>
         </div>
-        <button className={styles.mobileToggle} type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu size={22} /></button>
+        <button className={styles.mobileToggle} type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><span className={styles.hamburgerIcon} aria-hidden="true"><span /><span /><span /></span></button>
       </nav>
       {menuOpen ? (
         <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Mobile navigation">
