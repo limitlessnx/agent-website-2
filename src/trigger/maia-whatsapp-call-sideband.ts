@@ -18,7 +18,7 @@ type VoiceTool = {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
-  execute: (input: Record<string, unknown>, context: { organizationId: string; agentId: string; sessionId: string }) => Promise<unknown>;
+  execute: (input: Record<string, unknown>, context: { organizationId: string; agentId: string; sessionId: string; customerPhone?: string }) => Promise<unknown>;
 };
 
 function safeText(value: unknown, max = 8000) {
@@ -37,7 +37,7 @@ function parseArguments(value: unknown) {
 function toolsForVoice(): VoiceTool[] {
   return [
     ...maiaEstateTools(),
-    ...maiaPropertyTools().filter((tool) => ["search_properties", "get_property_media"].includes(tool.name)),
+    ...maiaPropertyTools().filter((tool) => ["search_properties", "get_property_media", "send_property_details_to_whatsapp"].includes(tool.name)),
   ];
 }
 
@@ -95,6 +95,7 @@ async function runSideband(input: MaiaSidebandPayload) {
             organizationId: input.organizationId,
             agentId: input.agentId,
             sessionId: input.callId,
+            customerPhone: input.customerPhone,
           });
         } catch (error) {
           output = { ok: false, error: error instanceof Error ? error.message : "Maia voice tool failed." };
@@ -113,7 +114,7 @@ async function runSideband(input: MaiaSidebandPayload) {
             "You are Maia for Limitless Realty. Use the approved read-only estate and property tools when a caller asks for current property or estate facts.",
             "Search before answering named-property questions. Use an exact returned ID before requesting estate knowledge or media metadata.",
             "Never invent availability, price, payment terms, title status, or estate facts. If a tool returns ambiguity or no match, ask a concise clarification.",
-            "Do not send WhatsApp media or perform CRM mutations from this live call yet. Offer to continue in WhatsApp or hand off to the Limitless Realty team.",
+            "If the caller explicitly asks you to send the exact property details in WhatsApp, first search and confirm one exact property, then use send_property_details_to_whatsapp. Tell the caller that delivery is attempted only to the verified existing chat and only while the WhatsApp customer-service window is open. Do not claim delivery unless the tool confirms it.",
             `Caller: ${safeText(input.customerName, 180) || "unknown"}; phone: ${safeText(input.customerPhone, 80) || "unknown"}.`,
           ].join("\n\n"),
           tools: toolSchemas(tools),

@@ -6,6 +6,7 @@ export async function dispatchMaiaOutboundMessage(input: {
   text: string;
   deliveryMode: "direct" | "template";
   lastCustomerMessageAt?: string;
+  propertyImageUrls?: string[];
 }) {
   return sendWhatsAppMessage(input);
 }

@@ -25,13 +25,13 @@ test("The call bridge performs the Meta offer to OpenAI answer to Meta accept fl
   assert.match(webhook, /callSession\(rawCall\)/);
 });
 
-test("The accepted call queues an OpenAI sideband with read-only Limitless tools", () => {
+test("The accepted call queues an OpenAI sideband with safe Limitless lookup and explicit chat handoff tools", () => {
   assert.match(helper, /realtimeCallId/);
   assert.match(webhook, /maia-whatsapp-call-sideband/);
   assert.match(sideband, /maiaEstateTools\(\)/);
   assert.match(sideband, /maiaPropertyTools\(\)/);
-  assert.match(sideband, /\["search_properties", "get_property_media"\]/);
-  assert.doesNotMatch(sideband, /send_property_media/);
+  assert.match(sideband, /"search_properties", "get_property_media", "send_property_details_to_whatsapp"/);
+  assert.match(sideband, /send_property_details_to_whatsapp/);
   assert.match(sideband, /organizationId: input\.organizationId/);
   assert.match(helper, /LIMITLESS_REALTY_ORGANIZATION_ID/);
   assert.match(sideband, /LIMITLESS_REALTY_ORGANIZATION_ID/);

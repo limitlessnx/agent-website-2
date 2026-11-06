@@ -1,10 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchMaiaPropertyMedia } from "@/lib/ai/maia-property-media-dispatch";
+import { dispatchMaiaOutboundMessage } from "@/lib/maia-outbound";
+import { normalizeLeadPhone } from "@/lib/lead-profile-service";
 
 export type MaiaPropertyToolContext = {
   organizationId: string;
   agentId: string;
   sessionId: string;
+  customerPhone?: string;
 };
 
 export type MaiaPropertyToolDefinition = {
@@ -14,7 +17,7 @@ export type MaiaPropertyToolDefinition = {
   execute: (input: Record<string, unknown>, ctx: MaiaPropertyToolContext) => Promise<unknown>;
 };
 
-const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+const text = (value: unknown, max = 500) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const propertySearchText = (value: unknown) => text(value).slice(0, 160).replace(/[%_(),\\]/g, " ").replace(/\s+/g, " ").trim();
 const object = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const uuidLike = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -122,6 +125,46 @@ async function resolveTrustedWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
   };
 }
 
+async function resolveVoiceWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
+  const phone = normalizeLeadPhone(text(ctx.customerPhone));
+  if (!phone) throw new Error("The voice caller does not have a valid WhatsApp number for chat delivery.");
+  const admin = createAdminClient();
+  const { data: customers, error: customerError } = await admin
+    .from("crm_customers")
+    .select("id,full_name,phone")
+    .eq("organization_id", ctx.organizationId)
+    .limit(500);
+  if (customerError) throw customerError;
+  const matches = (customers || []).filter((customer) => normalizeLeadPhone(text(customer.phone)) === phone);
+  if (matches.length !== 1) throw new Error(matches.length > 1 ? "The voice caller matches more than one WhatsApp customer." : "No unique WhatsApp customer was found for this voice caller.");
+  const customer = matches[0];
+  const { data: conversation, error: conversationError } = await admin
+    .from("agent_conversations")
+    .select("id,channel,customer_id,external_thread_key")
+    .eq("organization_id", ctx.organizationId)
+    .eq("agent_id", ctx.agentId)
+    .eq("customer_id", customer.id)
+    .eq("channel", "whatsapp")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (conversationError) throw conversationError;
+  if (!conversation) throw new Error("The caller has no existing WhatsApp message session for this Limitless Realty agent.");
+  const { data: lastInbound, error: inboundError } = await admin
+    .from("conversation_messages")
+    .select("created_at")
+    .eq("organization_id", ctx.organizationId)
+    .eq("conversation_id", conversation.id)
+    .eq("sender_type", "customer")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (inboundError) throw inboundError;
+  if (!lastInbound?.created_at) throw new Error("The WhatsApp chat has no verified inbound customer message.");
+  if (Date.now() - new Date(lastInbound.created_at).getTime() >= 24 * 60 * 60 * 1000) throw new Error("The WhatsApp customer-service window is closed; property details were not sent.");
+  return { phone, conversationId: String(conversation.id), lastInboundAt: String(lastInbound.created_at) };
+}
+
 export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
   return [
     {
@@ -226,6 +269,51 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
           has_registered_media: assets.length > 0,
           warning: assets.length === 0 && catalogLinks.length === 0 ? "No approved media is registered for this property." : null,
         };
+      },
+    },
+    {
+      name: "send_property_details_to_whatsapp",
+      description: "Send exact verified details for one property to the caller's existing Limitless Realty WhatsApp message session. Use only after search_properties returns one exact property ID and the caller explicitly asks for the details in WhatsApp. The server verifies the caller, tenant, existing WhatsApp conversation and 24-hour customer-service window.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: { propertyId: { type: "string" } },
+        required: ["propertyId"],
+      },
+      execute: async (input, ctx) => {
+        const propertyId = text(input.propertyId);
+        if (!propertyId) throw new Error("propertyId is required.");
+        const admin = createAdminClient();
+        const { data: property, error } = await admin
+          .from("properties")
+          .select("id,title,type,location_city,location_area,price,features,description,cover_image_url,image_urls")
+          .eq("organization_id", ctx.organizationId)
+          .eq("id", propertyId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!property) throw new Error("The requested property was not found for this Limitless Realty organization.");
+        const recipient = await resolveVoiceWhatsAppRecipient(ctx);
+        const imageUrls = [property.cover_image_url, ...(Array.isArray(property.image_urls) ? property.image_urls : [])]
+          .map((url) => text(url))
+          .filter((url) => /^https:\/\//i.test(url))
+          .slice(0, 3);
+        const detailText = [
+          `Property details: ${text(property.title) || "Untitled property"}`,
+          property.type ? `Type: ${text(property.type)}` : "",
+          property.location_city || property.location_area ? `Location: ${[text(property.location_area), text(property.location_city)].filter(Boolean).join(", ")}` : "",
+          property.price ? `Price: ${text(property.price)}` : "",
+          property.features ? `Features: ${text(property.features, 1200)}` : "",
+          property.description ? `Description: ${text(property.description, 2400)}` : "",
+        ].filter(Boolean).join("\n");
+        const delivery = await dispatchMaiaOutboundMessage({
+          organizationId: ctx.organizationId,
+          to: recipient.phone,
+          text: detailText,
+          deliveryMode: "direct",
+          lastCustomerMessageAt: recipient.lastInboundAt,
+          propertyImageUrls: imageUrls,
+        });
+        return { sent: true, conversation_id: recipient.conversationId, property_id: property.id, property_title: property.title, image_count: imageUrls.length, provider_message_id: delivery.providerMessageId || null };
       },
     },
     {
