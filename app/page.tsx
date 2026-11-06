@@ -5,6 +5,7 @@ import IndustryExplorer from "@/components/home/IndustryExplorer";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ProductLedHero from "@/components/home/ProductLedHero";
 import ProductShowcase from "@/components/home/ProductShowcase";
+import HotelExperienceShowroom from "@/components/home/HotelExperienceShowroom";
 import MaiaInteractiveDemo from "@/components/home/MaiaInteractiveDemo";
 import AutomationJourney from "@/components/home/AutomationJourney";
 import MeetLeoSection from "@/components/home/MeetLeoSection";
@@ -16,6 +17,7 @@ export default function HomePage() {
       <AutomationJourney />
       <IndustryExplorer />
       <ProductShowcase />
+      <HotelExperienceShowroom />
       <MaiaInteractiveDemo />
       <MeetLeoSection />
       <MaiaCaseStudyTeaser />
