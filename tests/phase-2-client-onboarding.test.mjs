@@ -35,7 +35,7 @@ test("Phase 2 completion submits intake for Super Admin instead of client agent 
   assert.match(route,/submitClientOnboarding/);
   assert.doesNotMatch(route,/completeClientOnboarding\(/);
   assert.match(form,/Submit setup/);
-  assert.match(form,/router\.push\("\/portal"\)/);
+  assert.match(form,/router\.push\(result\.next==="\/portal\/hotel\/setup"\?"\/portal\/hotel\/setup":"\/portal"\)/);
   assert.doesNotMatch(form,/\/portal\/agents\/select/);
 });
 

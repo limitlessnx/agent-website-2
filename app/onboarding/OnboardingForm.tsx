@@ -58,7 +58,7 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
       setSaving(true);setError("");await save(5);
       const response=await fetch("/api/client-onboarding",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"complete"})});
       const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"Unable to submit setup.");
-      router.push("/portal");router.refresh();
+      router.push(result.next==="/portal/hotel/setup"?"/portal/hotel/setup":"/portal");router.refresh();
     }catch(e){setError(e instanceof Error?e.message:"Unable to submit setup.");}finally{setSaving(false);}
   }
 

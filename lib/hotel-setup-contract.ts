@@ -7,7 +7,10 @@ export const HOTEL_SETUP_FIELDS = {
 } as const;
 export type HotelSetupValues=Record<keyof typeof HOTEL_SETUP_FIELDS,string>;
 export type HotelSetupRecord={values:HotelSetupValues;revision:number;updated_at?:string};
-export type HotelSetupData=HotelSetupRecord&{canManage:boolean;canViewIntegrations:boolean;canManageIntegrations:boolean;canViewTeam:boolean;checks:Array<{key:string;label:string;detail:string;state:"ready"|"attention"|"unverified";href?:string}>};
+export type HotelInventoryReadiness={roomTypes:number;activeRooms:number;activeRoomTypes:number;publishedRoomTypes:number;unpublishedRoomTypes:number;publishedServices:number};
+export type HotelSetupCheck={key:string;label:string;detail:string;state:"ready"|"attention"|"unverified";href?:string;required?:boolean;group?:"basics"|"messaging"|"optional"};
+export function hotelSetupProgress(checks:HotelSetupCheck[]){const required=checks.filter(check=>check.required);return {configured:required.filter(check=>check.state==="ready").length,total:required.length,ready:required.length>0&&required.every(check=>check.state==="ready")};}
+export type HotelSetupData=HotelSetupRecord&{canManage:boolean;canViewIntegrations:boolean;canManageIntegrations:boolean;canViewTeam:boolean;inventory?:HotelInventoryReadiness|null;checks:HotelSetupCheck[]};
 export function hotelSetupValues(input:unknown):HotelSetupValues {
   if(!input||typeof input!=="object"||Array.isArray(input))throw new Error("Enter valid hotel settings.");
   const result={} as HotelSetupValues;
