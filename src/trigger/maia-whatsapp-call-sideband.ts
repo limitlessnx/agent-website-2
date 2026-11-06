@@ -45,7 +45,7 @@ function toolSchemas(tools: VoiceTool[]) {
   return tools.map((tool) => ({
     type: "function",
     name: tool.name,
-    description: `${tool.description} This is a read-only voice lookup; do not claim an action was completed unless the tool result proves it.`,
+    description: `${tool.description} ${tool.name === "send_property_details_to_whatsapp" ? "This is an explicit customer-requested WhatsApp delivery action; do not claim it succeeded unless the tool result proves it." : "This is a read-only voice lookup; do not claim an action was completed unless the tool result proves it."}`,
     parameters: tool.parameters,
   }));
 }
