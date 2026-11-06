@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 import { syncHandoffNotificationStatus } from "@/lib/human-operations";
 import { syncRealEstateProviderStatus } from "@/lib/real-estate-provider-status";
-import { acceptMaiaWhatsAppCall, type WhatsAppCallEvent } from "@/lib/maia-whatsapp-calling";
+import { acceptMaiaWhatsAppCall, terminateMaiaWhatsAppCall, type WhatsAppCallEvent } from "@/lib/maia-whatsapp-calling";
 
 export const dynamic = "force-dynamic";
 
@@ -370,8 +370,9 @@ export async function POST(request: NextRequest) {
           voiceCallsIgnored += 1;
           continue;
         }
+        let result: Awaited<ReturnType<typeof acceptMaiaWhatsAppCall>> | undefined;
         try {
-          const result = await acceptMaiaWhatsAppCall(call, tenant);
+          result = await acceptMaiaWhatsAppCall(call, tenant);
           const accepted = "accepted" in result && result.accepted === true;
           if (accepted) voiceCallsAccepted += 1;
           else voiceCallsIgnored += 1;
@@ -379,6 +380,8 @@ export async function POST(request: NextRequest) {
           if (accepted && realtimeCallId) {
             await tasks.trigger("maia-whatsapp-call-sideband", {
               callId: realtimeCallId,
+              metaCallId: call.id,
+              phoneNumberId: call.phoneNumberId,
               organizationId: tenant.organizationId,
               agentId: tenant.agentId,
               customerPhone: call.from,
@@ -395,6 +398,18 @@ export async function POST(request: NextRequest) {
             reason: result.reason || null,
           });
         } catch (error) {
+          if (result && "accepted" in result && result.accepted === true) {
+            try {
+              await terminateMaiaWhatsAppCall({ organizationId: tenant.organizationId, phoneNumberId: call.phoneNumberId, callId: call.id });
+              console.warn("[whatsapp-webhook] Maia call terminated because sideband could not be queued", { organizationId: tenant.organizationId, callId: call.id });
+            } catch (terminationError) {
+              console.error("[whatsapp-webhook] Maia call termination failed after sideband enqueue error", {
+                organizationId: tenant.organizationId,
+                callId: call.id,
+                errorType: terminationError instanceof Error ? terminationError.name : "unknown",
+              });
+            }
+          }
           voiceCallsFailed += 1;
           console.error("[whatsapp-webhook] Maia voice call handling failed", {
             organizationId: tenant.organizationId,
@@ -502,3 +517,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: true, statusUpdates, inboundQueued, ignoredInbound, humanEchoes, voiceCallsAccepted, voiceCallsIgnored, voiceCallsFailed });
 }
+
