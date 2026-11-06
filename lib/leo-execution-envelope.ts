@@ -122,7 +122,7 @@ export function createLeoExecutionEnvelope(input: {
   return { ...unsigned, signature: sign(unsigned) } satisfies LeoExecutionEnvelope;
 }
 
-export function verifyLeoExecutionEnvelope(value: unknown): {
+export function verifyLeoExecutionEnvelope(value: unknown, currentAccess?: { permissions?: string[] }): {
   envelope: LeoExecutionEnvelope;
   identity: LeoIdentity;
 } {
@@ -146,6 +146,7 @@ export function verifyLeoExecutionEnvelope(value: unknown): {
     membershipId: envelope.identity.membershipId || undefined,
     channel: envelope.channel,
     globalScope: Boolean(envelope.identity.globalScope),
+    permissions: currentAccess?.permissions,
   };
   assertLeoToolAllowed(identity, envelope.toolKey);
   if (identity.scope === "tenant") {

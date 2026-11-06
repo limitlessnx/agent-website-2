@@ -72,16 +72,16 @@ test("voice and chat tool calls share the same server permission gateway", () =>
   assert.match(toolGateway, /resolveLeoIdentity\(/);
   assert.match(toolGateway, /assertLeoToolAllowed\(identity, toolKey\)/);
   assert.match(toolGateway, /createLeoExecutionEnvelope\(/);
-  assert.match(toolGateway, /executeLeoEnvelopeViaN8n\(/);
+  assert.match(toolGateway, /dispatchLeoExecution\(/);
 });
 
 test("write tools require server-side confirmation enforcement", () => {
-  assert.match(toolGateway, /if \(!realEstateMutation && approval !== "none"\)/);
+  assert.match(toolGateway, /if \(!realEstateMutation && !triggerCrm && approval !== "none"\)/);
   assert.doesNotMatch(toolGateway, /body\.confirmed === true/);
   assert.doesNotMatch(toolGateway, /approval === "none" \|\| confirmed/);
   const confirmationGate = toolGateway.indexOf('approval !== "none"');
-  const n8nDispatch = toolGateway.lastIndexOf("executeLeoEnvelopeViaN8n(envelope)");
-  assert.ok(confirmationGate >= 0 && n8nDispatch > confirmationGate, "confirmation must be enforced before n8n dispatch");
+  const dispatch = toolGateway.lastIndexOf("dispatchLeoExecution(envelope)");
+  assert.ok(confirmationGate >= 0 && dispatch > confirmationGate, "confirmation must be enforced before provider dispatch");
   assert.match(internalExecutor, /!requiresRealEstateApproval && approval !== "none"/);
   const internalGate = internalExecutor.indexOf('approval !== "none"');
   const authorizedExecution = internalExecutor.indexOf("executeAuthorizedLeoTool(");

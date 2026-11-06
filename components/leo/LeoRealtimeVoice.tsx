@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Mic, MicOff, PhoneCall, PhoneOff, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
+import { executeLeoClientTool, type LeoClientApprovals } from "@/lib/leo-tool-client";
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
@@ -58,6 +59,7 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
+  const approvals = useRef<LeoClientApprovals>(new Map());
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RTCDataChannel | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -172,9 +174,8 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       if (event.name === "leo_manage_task") {
         output = await handleTaskCall(event, args) as Record<string, unknown>;
       } else if (event.name === "leo_execute_tool") {
-        const response = await fetch("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: "voice", sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments : {}, confirmed: args.confirmed === true }) });
-        const result = await response.json().catch(() => ({}));
-        output = response.ok ? result : { ok: false, error: result.error || "Leo tool execution failed." };
+        const { response, result } = await executeLeoClientTool({ channel: "voice", sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments as Record<string, unknown> : {}, confirmed: args.confirmed === true }, approvals.current);
+        output = result.status === "confirmation_required" ? { ...result, ok: true } : response.ok || result.executionId ? result : { ...result, ok: false, error: result.error || "Leo tool execution failed." };
       } else {
         return;
       }
