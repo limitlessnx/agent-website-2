@@ -3,11 +3,14 @@ import WebSocket from "ws";
 import { maiaEstateTools } from "@/lib/ai/maia-estate-tools";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
+import { terminateMaiaWhatsAppCall } from "@/lib/maia-whatsapp-calling";
 
 type Json = Record<string, unknown>;
 
 type MaiaSidebandPayload = {
   callId: string;
+  metaCallId: string;
+  phoneNumberId: string;
   organizationId: string;
   agentId: string;
   customerPhone: string;
@@ -65,8 +68,12 @@ function socketErrorDetails(error: unknown) {
 }
 
 async function runSideband(input: MaiaSidebandPayload) {
-  if (!input.callId || !input.organizationId || !input.agentId) throw new Error("Maia sideband requires callId, organizationId and agentId.");
+  if (!input.callId || !input.metaCallId || !input.phoneNumberId || !input.organizationId || !input.agentId) {
+    throw new Error("Maia sideband requires realtime call, WhatsApp call, phone number, organization and agent identifiers.");
+  }
   if (input.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) throw new Error("The Maia WhatsApp voice sideband is restricted to Limitless Realty.");
+  try {
+  if (!process.env.OPENAI_API_KEY?.trim()) throw new Error("OPENAI_API_KEY is missing from the Trigger.dev production environment.");
   const tools = toolsForVoice();
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const socket = new WebSocket(`wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(input.callId)}`, {
@@ -76,7 +83,7 @@ async function runSideband(input: MaiaSidebandPayload) {
     },
   });
 
-  return await new Promise<{ ok: true; callId: string; tools: string[] }>((resolve, reject) => {
+    return await new Promise<{ ok: true; callId: string; tools: string[] }>((resolve, reject) => {
     let settled = false;
     let greetingStarted = false;
     const finish = (error?: Error) => {
@@ -164,12 +171,26 @@ async function runSideband(input: MaiaSidebandPayload) {
       });
       finish();
     });
-  });
+    });
+  } catch (error) {
+    try {
+      await terminateMaiaWhatsAppCall({ organizationId: input.organizationId, phoneNumberId: input.phoneNumberId, callId: input.metaCallId });
+      logger.warn("Maia WhatsApp call terminated after sideband failure", { callId: input.metaCallId });
+    } catch (terminationError) {
+      logger.error("Maia WhatsApp call termination failed after sideband failure", {
+        callId: input.metaCallId,
+        errorType: terminationError instanceof Error ? terminationError.name : "unknown",
+        errorMessage: terminationError instanceof Error ? terminationError.message.slice(0, 500) : "Unknown termination failure",
+      });
+    }
+    throw error;
+  }
 }
 
 export const maiaWhatsAppCallSideband = task({
   id: "maia-whatsapp-call-sideband",
   maxDuration: 300,
-  retry: { maxAttempts: 2, minTimeoutInMs: 2_000, maxTimeoutInMs: 10_000, factor: 2 },
+  retry: { maxAttempts: 1 },
   run: async (payload: MaiaSidebandPayload) => runSideband(payload),
 });
+

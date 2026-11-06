@@ -73,14 +73,14 @@ function openAiSession(agentName: string, organizationId: string, contactName: s
   };
 }
 
-async function metaCallAction(input: { phoneNumberId: string; accessToken: string; graphVersion: string; callId: string; sdp: string; opaqueData: string }) {
-  const payload = {
+async function metaCallAction(input: { phoneNumberId: string; accessToken: string; graphVersion: string; callId: string; action: "accept" | "terminate"; sdp?: string; opaqueData?: string }) {
+  const payload: Record<string, unknown> = {
     messaging_product: "whatsapp",
     call_id: input.callId,
-    action: "accept",
-    session: { sdp_type: "answer", sdp: input.sdp },
-    biz_opaque_callback_data: input.opaqueData.slice(0, 512),
+    action: input.action,
   };
+  if (input.sdp) payload.session = { sdp_type: "answer", sdp: input.sdp };
+  if (input.opaqueData) payload.biz_opaque_callback_data = input.opaqueData.slice(0, 512);
   const response = await fetch(`https://graph.facebook.com/${input.graphVersion}/${encodeURIComponent(input.phoneNumberId)}/calls`, {
     method: "POST",
     headers: { Authorization: `Bearer ${input.accessToken}`, "Content-Type": "application/json" },
@@ -88,7 +88,7 @@ async function metaCallAction(input: { phoneNumberId: string; accessToken: strin
     cache: "no-store",
   });
   const body = await response.json().catch(() => ({})) as Json;
-  if (!response.ok) throw new Error(text((body.error as Json | undefined)?.message, 500) || `Meta rejected the WhatsApp call answer (${response.status}).`);
+  if (!response.ok) throw new Error(text((body.error as Json | undefined)?.message, 500) || `Meta rejected the WhatsApp call ${input.action} (${response.status}).`);
   return body;
 }
 
@@ -123,7 +123,17 @@ export async function acceptMaiaWhatsAppCall(call: WhatsAppCallEvent, target: Te
   if (!realtimeCallId) throw new Error("OpenAI accepted the Maia voice offer but did not return a realtime session identifier.");
 
   const opaqueData = JSON.stringify({ organizationId: target.organizationId, agentId: target.agentId, callId: call.id });
-  const metaResult = await metaCallAction({ phoneNumberId, accessToken, graphVersion, callId: call.id, sdp: answer, opaqueData });
+  const metaResult = await metaCallAction({ phoneNumberId, accessToken, graphVersion, callId: call.id, action: "accept", sdp: answer, opaqueData });
   await recordChargeableFluxAiUsage({ organizationId: target.organizationId, action: "leo_voice_minute", source: "maia_whatsapp_calling", provider: "openai", model: String(session.model), quantity: 1, metadata: { call_id: call.id, provider: "meta_whatsapp" } });
   return { ok: true, enabled: true, accepted: true, callId: call.id, realtimeCallId, model: session.model, voice: (session.audio as Json).output && text(((session.audio as Json).output as Json).voice), meta: metaResult } as const;
 }
+
+export async function terminateMaiaWhatsAppCall(input: { organizationId: string; phoneNumberId: string; callId: string }) {
+  const credentials = await getWhatsAppCredentials(input.organizationId);
+  const accessToken = text(credentials?.access_token || credentials?.accessToken);
+  const phoneNumberId = text(credentials?.phone_number_id || credentials?.phoneNumberId) || input.phoneNumberId;
+  const graphVersion = text(credentials?.graph_version) || process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+  if (!accessToken || !phoneNumberId || !input.callId) throw new Error("Meta call termination credentials or call ID are unavailable.");
+  return metaCallAction({ phoneNumberId, accessToken, graphVersion, callId: input.callId, action: "terminate" });
+}
+
