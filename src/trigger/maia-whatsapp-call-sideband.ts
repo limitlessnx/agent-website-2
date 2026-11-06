@@ -67,6 +67,20 @@ function socketErrorDetails(error: unknown) {
   };
 }
 
+function providerHandshakeError(body: string) {
+  try {
+    const parsed = JSON.parse(body) as Json;
+    const error = parsed.error && typeof parsed.error === "object" ? parsed.error as Json : {};
+    return {
+      providerErrorType: String(error.type || "").slice(0, 120) || undefined,
+      providerErrorCode: String(error.code || "").slice(0, 120) || undefined,
+      providerErrorMessage: String(error.message || "").slice(0, 500) || undefined,
+    };
+  } catch {
+    return { providerErrorBodyPresent: Boolean(body.trim()) };
+  }
+}
+
 async function runSideband(input: MaiaSidebandPayload) {
   if (!input.callId || !input.metaCallId || !input.phoneNumberId || !input.organizationId || !input.agentId) {
     throw new Error("Maia sideband requires realtime call, WhatsApp call, phone number, organization and agent identifiers.");
@@ -156,6 +170,31 @@ async function runSideband(input: MaiaSidebandPayload) {
       logger.info("Maia WhatsApp sideband attached", { callId: input.callId, organizationId: input.organizationId, tools: tools.map((tool) => tool.name) });
     });
     socket.on("message", (data) => void handleMessage(data));
+    socket.on("unexpected-response", (_request, response) => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => {
+        if (body.length < 4096) body += chunk.slice(0, 4096 - body.length);
+      });
+      response.on("end", () => {
+        logger.error("Maia OpenAI sideband handshake rejected", {
+          callId: input.callId,
+          statusCode: response.statusCode,
+          requestId: String(response.headers["x-request-id"] || "").slice(0, 120) || undefined,
+          ...providerHandshakeError(body),
+        });
+        finish(new Error(`Maia OpenAI sideband connection failed (HTTP ${response.statusCode || "unknown"}).`));
+      });
+      response.on("error", (error) => {
+        logger.error("Maia OpenAI sideband response read failed", {
+          callId: input.callId,
+          statusCode: response.statusCode,
+          requestId: String(response.headers["x-request-id"] || "").slice(0, 120) || undefined,
+          ...socketErrorDetails(error),
+        });
+        finish(new Error(`Maia OpenAI sideband connection failed (HTTP ${response.statusCode || "unknown"}).`));
+      });
+    });
     socket.on("error", (error) => {
       logger.error("Maia OpenAI sideband WebSocket failed", {
         callId: input.callId,
