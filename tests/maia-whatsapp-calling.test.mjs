@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const helper = readFileSync("lib/maia-whatsapp-calling.ts", "utf8");
 const webhook = readFileSync("app/api/whatsapp/webhook/route.ts", "utf8");
 const sideband = readFileSync("src/trigger/maia-whatsapp-call-sideband.ts", "utf8");
+const propertyTools = readFileSync("lib/ai/maia-property-tools.ts", "utf8");
 const env = readFileSync(".env.example", "utf8");
 const docs = readFileSync("docs/maia-whatsapp-calling-transport.md", "utf8");
 
@@ -32,6 +33,10 @@ test("The accepted call queues an OpenAI sideband with read-only Limitless tools
   assert.match(sideband, /\["search_properties", "get_property_media"\]/);
   assert.doesNotMatch(sideband, /send_property_media/);
   assert.match(sideband, /organizationId: input\.organizationId/);
+  assert.match(helper, /LIMITLESS_REALTY_ORGANIZATION_ID/);
+  assert.match(sideband, /LIMITLESS_REALTY_ORGANIZATION_ID/);
+  assert.match(propertyTools, /propertySearchText/);
+  assert.match(propertyTools, /\[%_\(\),\\\\\]/);
 });
 
 test("The call bridge is tenant scoped and does not route through ElevenLabs", () => {

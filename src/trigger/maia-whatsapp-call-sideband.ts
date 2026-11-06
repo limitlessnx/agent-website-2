@@ -2,6 +2,7 @@ import { logger, task } from "@trigger.dev/sdk";
 import WebSocket from "ws";
 import { maiaEstateTools } from "@/lib/ai/maia-estate-tools";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
+import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 
 type Json = Record<string, unknown>;
 
@@ -55,6 +56,7 @@ function send(socket: WebSocket, event: Json) {
 
 async function runSideband(input: MaiaSidebandPayload) {
   if (!input.callId || !input.organizationId || !input.agentId) throw new Error("Maia sideband requires callId, organizationId and agentId.");
+  if (input.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) throw new Error("The Maia WhatsApp voice sideband is restricted to Limitless Realty.");
   const tools = toolsForVoice();
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const socket = new WebSocket(`wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(input.callId)}`, {

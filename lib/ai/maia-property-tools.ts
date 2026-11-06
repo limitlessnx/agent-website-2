@@ -15,6 +15,7 @@ export type MaiaPropertyToolDefinition = {
 };
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+const propertySearchText = (value: unknown) => text(value).slice(0, 160).replace(/[%_(),\\]/g, " ").replace(/\s+/g, " ").trim();
 const object = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const uuidLike = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -36,6 +37,14 @@ function approvedMedia(metadata: unknown) {
 }
 
 async function resolveTrustedWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
+  type VerifiedConversation = {
+    id: string;
+    organization_id: string;
+    agent_id: string;
+    customer_id: string | null;
+    channel: string | null;
+    external_thread_key: string | null;
+  };
   const admin = createAdminClient();
   const { data: session, error: sessionError } = await admin
     .from("agent_runtime_sessions")
@@ -51,7 +60,7 @@ async function resolveTrustedWhatsAppRecipient(ctx: MaiaPropertyToolContext) {
   const externalId = text(session.external_conversation_id);
   if (!externalId) throw new Error("The WhatsApp session is not linked to a verified CRM conversation.");
 
-  let conversation: any = null;
+  let conversation: VerifiedConversation | null = null;
   if (uuidLike(externalId)) {
     const byId = await admin
       .from("agent_conversations")
@@ -128,7 +137,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
         required: ["query"],
       },
       execute: async (input, ctx) => {
-        const query = text(input.query).slice(0, 160).replace(/[%_]/g, "");
+        const query = propertySearchText(input.query);
         if (!query) return { match_status: "none", properties: [] };
         const limit = Math.max(1, Math.min(10, Number(input.limit || 8)));
         const admin = createAdminClient();

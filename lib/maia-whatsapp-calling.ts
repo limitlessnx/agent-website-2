@@ -1,6 +1,7 @@
 import { getWhatsAppCredentials } from "@/lib/whatsapp-integration";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 
 export type WhatsAppCallEvent = {
   id: string;
@@ -93,6 +94,7 @@ async function metaCallAction(input: { phoneNumberId: string; accessToken: strin
 
 export async function acceptMaiaWhatsAppCall(call: WhatsAppCallEvent, target: TenantVoiceTarget) {
   if (process.env.MAIA_WHATSAPP_CALLING_ENABLED !== "true") return { ok: false, enabled: false, reason: "feature_disabled" } as const;
+  if (target.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) return { ok: false, enabled: true, reason: "limitless_realty_only" } as const;
   if (!call.id || !call.from || !call.phoneNumberId) throw new Error("A WhatsApp call ID, caller and phone number ID are required.");
   if (call.event.toLowerCase() !== "connect" || call.session?.sdp_type?.toLowerCase() !== "offer" || !call.session.sdp?.trim()) {
     return { ok: true, enabled: true, ignored: true, reason: "not_an_inbound_offer" } as const;
