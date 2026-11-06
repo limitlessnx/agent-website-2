@@ -54,13 +54,26 @@ function send(socket: WebSocket, event: Json) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(event));
 }
 
+function socketErrorDetails(error: unknown) {
+  if (!error || typeof error !== "object") return { errorType: "unknown" };
+  const candidate = error as { name?: unknown; message?: unknown; code?: unknown };
+  return {
+    errorType: String(candidate.name || "Error").slice(0, 120),
+    errorMessage: String(candidate.message || "WebSocket connection failed.").slice(0, 500),
+    errorCode: candidate.code == null ? undefined : String(candidate.code).slice(0, 80),
+  };
+}
+
 async function runSideband(input: MaiaSidebandPayload) {
   if (!input.callId || !input.organizationId || !input.agentId) throw new Error("Maia sideband requires callId, organizationId and agentId.");
   if (input.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) throw new Error("The Maia WhatsApp voice sideband is restricted to Limitless Realty.");
   const tools = toolsForVoice();
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const socket = new WebSocket(`wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(input.callId)}`, {
-    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}` },
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
+      "OpenAI-Beta": "realtime=v1",
+    },
   });
 
   return await new Promise<{ ok: true; callId: string; tools: string[] }>((resolve, reject) => {
@@ -124,8 +137,21 @@ async function runSideband(input: MaiaSidebandPayload) {
       logger.info("Maia WhatsApp sideband attached", { callId: input.callId, organizationId: input.organizationId, tools: tools.map((tool) => tool.name) });
     });
     socket.on("message", (data) => void handleMessage(data));
-    socket.on("error", () => finish(new Error("Maia OpenAI sideband connection failed.")));
-    socket.on("close", () => finish());
+    socket.on("error", (error) => {
+      logger.error("Maia OpenAI sideband WebSocket failed", {
+        callId: input.callId,
+        ...socketErrorDetails(error),
+      });
+      finish(new Error("Maia OpenAI sideband connection failed."));
+    });
+    socket.on("close", (code, reason) => {
+      logger.info("Maia OpenAI sideband WebSocket closed", {
+        callId: input.callId,
+        closeCode: code,
+        closeReason: String(reason || "").slice(0, 500),
+      });
+      finish();
+    });
   });
 }
 
