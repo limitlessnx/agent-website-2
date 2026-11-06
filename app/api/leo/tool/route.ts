@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertLeoToolAllowed, leoApprovalFor, resolveLeoIdentity, type LeoChannel } from "@/lib/leo-core";
 import { createLeoExecutionEnvelope } from "@/lib/leo-execution-envelope";
-import { executeLeoEnvelopeViaN8n } from "@/lib/leo-n8n-executor";
+import { dispatchLeoExecution } from "@/lib/leo-execution/dispatcher";
+import { crmTriggerEnabled, CRM_FOLLOWUP_TOOL, principal } from "@/lib/leo-execution/contract";
+import { issueCrmApproval } from "@/lib/leo-execution/providers/trigger-crm";
 import { auditLeoEvent, getOrCreateLeoSession, updateLeoPublicLeadState, updateLeoVoiceWorkingContext, type LeoSessionState, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { capturePublicLeoLead } from "@/lib/leo-lead-capture";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,7 +23,7 @@ function approvalMaterial(body: Record<string, unknown>, args: Record<string, un
  const token = String(body.approvalToken || body.approval_token || nested.token || nested.approvalToken || "").trim();
  return approvalId && token ? { approvalId, token } : null;
 }
-function withoutApprovalMetadata(args: Record<string, unknown>) { const clean = { ...args }; delete clean._real_estate_approval; return clean; }
+function withoutApprovalMetadata(args: Record<string, unknown>) { const clean = { ...args }; delete clean._real_estate_approval; delete clean._crm_approval; return clean; }
 function sessionFor(identity: NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>, body: Record<string, unknown>, activeVoiceSession: LeoSessionState | null) { return String(body.sessionId || body.session_id || activeVoiceSession?.id || identity.userId || identity.email || `${identity.scope}:${identity.channel}`).trim(); }
 async function resolveLeoRealEstateTarget(args:Record<string,unknown>,identity:NonNullable<Awaited<ReturnType<typeof resolveLeoIdentity>>>,forceLimitless:boolean){
  const requested=requestedOrganizationId(args);
@@ -114,6 +116,13 @@ export async function POST(request: NextRequest) {
     throw new Error(`Unsupported consequential real-estate action: ${tool.key}`);
   }
   const approvalSessionId = sessionFor(identity, body, activeVoiceSession);
+  const triggerCrm = crmTriggerEnabled() && tool.key === CRM_FOLLOWUP_TOOL && !realEstateMutation;
+  const crmMaterial = triggerCrm ? approvalMaterial(body, {}) : null;
+  if (triggerCrm && !crmMaterial) {
+    const pending = await issueCrmApproval(identity, args, approvalSessionId);
+    await setVoicePending(identity, activeVoiceSession, tool.key, pending.arguments);
+    return NextResponse.json({ ...pending, sessionId: approvalSessionId, channel: identity.channel, scope: identity.scope }, { status: 409 });
+  }
   const material = realEstateMutation ? approvalMaterial(body, args) : null;
   if (realEstateMutation && !material) {
     await setVoicePending(identity, activeVoiceSession, tool.key, args);
@@ -136,7 +145,7 @@ export async function POST(request: NextRequest) {
   // A client-supplied `confirmed` boolean is not proof of human/admin approval.
   // Generic non-none approval modes remain blocked until a server-issued,
   // one-use approval record exists; real-estate mutations use their own store.
-  if (!realEstateMutation && approval !== "none") {
+  if (!realEstateMutation && !triggerCrm && approval !== "none") {
     await setVoicePending(identity, activeVoiceSession, tool.key, args);
     return NextResponse.json({
       ok: false,
@@ -212,14 +221,15 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
   }
   if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) { let result: Record<string, unknown>; if (tool.key === "leo.limitless.leads.read") result = await findLimitlessLeads(args); else if (tool.key === "leo.limitless.followup.prepare") result = await prepareLimitlessFollowup(args); else if (tool.key === "leo.limitless.followup.send") result = await sendLimitlessFollowup(request, args) as Record<string, unknown>; else if (tool.key === "leo.limitless.campaign.prepare") result = await prepareLimitlessCampaign(args); else if (tool.key === "leo.limitless.campaign.send") result = await sendThroughLimitlessCampaignRoute(request, args) as Record<string, unknown>; else throw new Error(`Unsupported Limitless Realty Leo tool: ${tool.key}`); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: String(result.status || "completed"), request_id: String(args.request_id || "") } }); return NextResponse.json({ ok: true, requestId: String(args.request_id || body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: String(result.status || "completed"), result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
-  const forwardedApproval = realEstateMutation && material ? true : approval === "none";
-  const requestId = realEstateMutation && material ? material.approvalId : String(body.requestId || body.request_id || randomUUID()).trim();
+  if (triggerCrm && crmMaterial) args = { ...args, _crm_approval: { ...crmMaterial, principal: principal(identity) } };
+  const forwardedApproval = Boolean(triggerCrm && crmMaterial) || (realEstateMutation && material ? true : approval === "none");
+  const requestId = triggerCrm && crmMaterial ? crmMaterial.approvalId : realEstateMutation && material ? material.approvalId : String(body.requestId || body.request_id || randomUUID()).trim();
   const sessionId = approvalSessionId || null;
   const envelope = createLeoExecutionEnvelope({ requestId, sessionId, identity, toolKey: tool.key, arguments: args, approvalGranted: forwardedApproval });
   await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_dispatched", toolKey: tool.key, details: { request_id: requestId, channel: identity.channel, approval } });
-  const result = await executeLeoEnvelopeViaN8n(envelope);
+  const result = await dispatchLeoExecution(envelope);
   if (result.ok) await setVoiceResult(identity, activeVoiceSession, tool.key, withoutApprovalMetadata(args), result as unknown as Record<string, unknown>);
-  return NextResponse.json({ ...result, approval, channel: identity.channel, scope: identity.scope }, { status: result.ok ? 200 : 502 });
+  return NextResponse.json({ ...result, approval, channel: identity.channel, scope: identity.scope }, { status: result.ok ? ["queued", "processing", "sending"].includes(result.status) ? 202 : 200 : 502 });
  } catch (error) {
   const message = error instanceof Error ? error.message : "Leo could not execute this action.";
   const status = /not permitted|Cross-tenant|Unauthorized/i.test(message) ? 403 : 500;

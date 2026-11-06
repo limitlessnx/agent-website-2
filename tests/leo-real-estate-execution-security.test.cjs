@@ -78,7 +78,9 @@ function routeMocks(state, toolKey) {
     "@/lib/leo-execution-envelope": {
       createLeoExecutionEnvelope: (input) => { state.envelopes.push(input); return { ...input, version: 2, issuedAt: Date.now(), expiresAt: Date.now() + 120000, channel: "chat", identity: identity(), signature: "signed" }; },
     },
-    "@/lib/leo-n8n-executor": { executeLeoEnvelopeViaN8n: async (envelope) => { state.forwarded.push(envelope); return { ok: true, status: "completed", requestId: envelope.requestId }; } },
+    "@/lib/leo-execution/dispatcher": { dispatchLeoExecution: async (envelope) => { state.forwarded.push(envelope); return { ok: true, status: state.crmEnabled ? "queued" : "completed", requestId: envelope.requestId }; } },
+    "@/lib/leo-execution/contract": { crmTriggerEnabled: () => Boolean(state.crmEnabled), CRM_FOLLOWUP_TOOL: "leo.crm.followup.send", principal: () => "admin:admin@example.test" },
+    "@/lib/leo-execution/providers/trigger-crm": { issueCrmApproval: async (_identity, args) => { state.created.push(args); return { status: "confirmation_required", approvalId: "crm-approval", approvalToken: "crm-token", arguments: args }; } },
     "@/lib/leo-session-store": { auditLeoEvent: async (event) => state.audits.push(event), getOrCreateLeoSession: async () => null, updateLeoPublicLeadState: async () => null, updateLeoVoiceWorkingContext: async () => undefined },
     "@/lib/leo-lead-capture": { capturePublicLeoLead: async () => ({ ok: true }) },
     "@/lib/supabase/admin": { createAdminClient: adminOrganizationMock },
@@ -99,6 +101,18 @@ async function postRoute(route, body) {
 function baseBody(toolKey, argumentsValue = { lead_id: "lead-1", message: "approved" }) {
   return { channel: "chat", toolKey, sessionId: "session-1", arguments: argumentsValue, confirmed: true };
 }
+
+test("Trigger CRM route ignores confirmed boolean, issues approval, then forwards signed proof with queued HTTP status", async () => {
+  const state = { crmEnabled: true, created: [], consumed: [], sent: [], forwarded: [], envelopes: [], audits: [] };
+  const route = loadCompiled(path.join(root, "app/api/leo/tool/route.ts"), routeMocks(state, "leo.crm.followup.send"));
+  const body = baseBody("leo.crm.followup.send", { organization_id: "generic-org", agent_id: "agent", customer_id: "customer", message: "approved" });
+  const pending = await postRoute(route, body);
+  assert.equal(pending.status, 409); assert.equal(state.forwarded.length, 0);
+  const queued = await postRoute(route, { ...body, approvalId: "crm-approval", approvalToken: "crm-token" });
+  assert.equal(queued.status, 202); assert.equal(queued.payload.status, "queued");
+  assert.equal(state.forwarded[0].requestId, "crm-approval");
+  assert.deepEqual(state.forwarded[0].arguments._crm_approval, { approvalId: "crm-approval", token: "crm-token", principal: "admin:admin@example.test" });
+});
 
 test("public direct Limitless send issues server approval and ignores confirmed boolean", async () => {
   const state = { created: [], consumed: [], consumedOnce: false, sent: [], forwarded: [], envelopes: [], audits: [] };

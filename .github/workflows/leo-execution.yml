@@ -1,0 +1,43 @@
+name: Leo controlled execution
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/leo-*.ts'
+      - 'lib/leo-execution/**'
+      - 'lib/whatsapp-delivery.ts'
+      - 'components/leo/**'
+      - 'app/api/leo/**'
+      - 'src/trigger/leo-crm-followup.ts'
+      - 'supabase/migrations/*leo_crm*'
+      - 'tests/leo-*'
+      - 'package.json'
+      - '.github/workflows/leo-execution.yml'
+  workflow_dispatch:
+jobs:
+  execution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Behavioral execution, approval and database tests
+        run: npm run test:leo-execution
+      - name: Support regressions
+        run: npm run test:support
+      - name: Maia regressions
+        if: ${{ !cancelled() }}
+        run: npm run test:maia
+      - name: Hotel regressions
+        if: ${{ !cancelled() }}
+        run: npm run test:hotel && npm run test:hotel-setup && npm run test:hotel-workspace
+      - name: TypeScript
+        if: ${{ !cancelled() }}
+        run: npx tsc --noEmit
+      - name: Production build
+        if: ${{ !cancelled() }}
+        run: npm run build

@@ -19,6 +19,8 @@ type SendInput = {
   strictTemplateContract?: { approvedVariableOrder: readonly string[] };
   templateHeaderImageUrl?: string;
   requireProviderApproval?: boolean;
+  /** Send only the explicitly approved text; do not infer property attachments. */
+  textOnly?: boolean;
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
 type MetaWhatsAppCredentials={providerFamily:"meta";phoneNumberId:string;accessToken:string;graphVersion:string;source:"tenant_vault"|"legacy_env"};
@@ -222,7 +224,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
       throw new Error(`No Twilio Content SID is configured for WhatsApp template ${config?.template_name||""}.`);
     }
 
-    if(!useTemplate){
+    if(!useTemplate && !input.textOnly){
       const suppliedVideos=(input.propertyVideoUrls||[]).filter(isDirectPublicVideoUrl).slice(0,3);
       const suppliedImages=(input.propertyImageUrls||[]).filter(isDirectPublicImageUrl).slice(0,3);
       const media=suppliedVideos.length||suppliedImages.length
@@ -294,7 +296,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
     requestPayload = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { preview_url: true, body: normalizedText } };
   }
 
-  if (!useTemplate) {
+  if (!useTemplate && !input.textOnly) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
     const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
     const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, normalizedText || "");

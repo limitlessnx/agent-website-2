@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { executeLeoClientTool, leoExecutionMessage, leoExecutionPending, type LeoClientApprovals } from "@/lib/leo-tool-client";
 
 export type LeoMessage = { role: "user" | "assistant"; content: string; source?: "chat" | "voice" };
 export type LeoToolCall = {
@@ -8,7 +9,7 @@ export type LeoToolCall = {
   reason: string;
   approval: "none" | "admin" | "confirm";
   arguments: Record<string, unknown>;
-  status: "proposed" | "executing" | "executed" | "failed" | "dismissed";
+  status: "proposed" | "executing" | "queued" | "executed" | "failed" | "dismissed";
   result?: unknown;
 };
 export type LeoOperationState = "ready" | "investigating" | "approval_required" | "executing" | "completed" | "error";
@@ -55,12 +56,13 @@ function normalizeTools(value: unknown): LeoToolCall[] {
     if (!toolKey) return [];
     const approval: LeoToolCall["approval"] = row.approval === "confirm" ? "confirm" : row.approval === "admin" ? "admin" : "none";
     const rawStatus = String(row.status || "proposed");
-    const status: LeoToolCall["status"] = ["executing", "executed", "failed", "dismissed"].includes(rawStatus) ? rawStatus as LeoToolCall["status"] : "proposed";
+    const status: LeoToolCall["status"] = ["executing", "queued", "executed", "failed", "dismissed"].includes(rawStatus) ? rawStatus as LeoToolCall["status"] : "proposed";
     return [{ toolKey, reason: String(row.reason || "Leo prepared an operational action."), approval, arguments: row.arguments && typeof row.arguments === "object" && !Array.isArray(row.arguments) ? row.arguments as Record<string, unknown> : {}, status, result: row.result }];
   }).slice(-8);
 }
 
 function executionSummary(tool: LeoToolCall, result: Record<string, unknown>) {
+  if (result.provider === "trigger_dev") return leoExecutionMessage(result);
   const title = tool.toolKey.split(".").slice(-2).join(" ").replaceAll("_", " ");
   if (result.ok === false) return `Action failed: ${String(result.error || result.message || title)}.`;
   if (result.status === "confirmation_required") return String(result.message || "Approval is required before Leo can execute this action.");
@@ -82,13 +84,45 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
   const [executingTool, setExecutingTool] = useState("");
   const [error, setError] = useState("");
   const [completed, setCompleted] = useState(false);
+  const approvals = useRef<LeoClientApprovals>(new Map());
 
   useEffect(() => {
-    try {
-      setSessionIdState(sessionStorage.getItem(SESSION_KEY) || "");
-      setMessages(safeStoredMessages(sessionStorage.getItem(MESSAGES_KEY)));
-      setToolCalls(normalizeTools(JSON.parse(sessionStorage.getItem(TOOLS_KEY) || "[]")));
-    } catch {}
+    const pending = toolCalls.filter(tool => tool.status === "queued");
+    if (!pending.length) return;
+    const controller = new AbortController();
+    let polling = false;
+    const timer = setInterval(() => {
+      if (polling) return;
+      polling = true;
+      void Promise.all(pending.map(async tool => {
+        const prior = tool.result as Record<string, unknown>;
+        if (!prior?.executionId) return;
+        try {
+          const response = await fetch(`/api/leo/executions/${encodeURIComponent(String(prior.executionId))}`, { cache: "no-store", signal: controller.signal });
+          if (!response.ok) return;
+          const result = await response.json() as Record<string, unknown>;
+          if (controller.signal.aborted) return;
+          if (leoExecutionPending(result)) return;
+          setToolCalls(current => current.map(item => item.toolKey === tool.toolKey && item.status === "queued" ? { ...item, status: result.status === "completed" ? "executed" : "failed", result } : item));
+          setMessages(current => [...current, { role: "assistant", content: leoExecutionMessage(result), source: "chat" } as LeoMessage].slice(-40));
+          setCompleted(result.status === "completed");
+        } catch { /* Keep the last known queued state until polling can resume. */ }
+      })).finally(() => { polling = false; });
+    }, 3000);
+    return () => { clearInterval(timer); controller.abort(); };
+  }, [toolCalls]);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        setSessionIdState(sessionStorage.getItem(SESSION_KEY) || "");
+        setMessages(safeStoredMessages(sessionStorage.getItem(MESSAGES_KEY)));
+        setToolCalls(normalizeTools(JSON.parse(sessionStorage.getItem(TOOLS_KEY) || "[]")));
+      } catch {}
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => { try { sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(messages.slice(-40))); } catch {} }, [messages]);
@@ -146,21 +180,17 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     setError("");
     setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executing" } : item));
     try {
-      const response = await fetch("/api/leo/tool", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toolKey: tool.toolKey, arguments: tool.arguments, sessionId: sessionIdState || undefined, channel: "chat", confirmed: tool.approval === "confirm" }),
-      });
-      const result = await response.json().catch(() => ({})) as Record<string, unknown>;
-      if (!response.ok || result.ok === false) throw new Error(String(result.error || result.message || "Leo could not execute this action."));
+      const { response, result } = await executeLeoClientTool({ toolKey: tool.toolKey, arguments: tool.arguments, sessionId: sessionIdState || undefined, channel: "chat", confirmed: tool.approval === "confirm" }, approvals.current);
       if (result.status === "confirmation_required") {
         setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "proposed", result } : item));
         return;
       }
-      setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executed", result } : item));
+      const queued = Boolean(result.executionId) && leoExecutionPending(result);
+      if ((!response.ok || result.ok === false) && !queued) throw new Error(String(result.error || result.message || "Leo could not execute this action."));
+      setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: queued ? "queued" : "executed", result } : item));
       const summary = executionSummary(tool, result);
       setMessages((current) => [...current, { role: "assistant", content: summary, source: "chat" } as LeoMessage].slice(-40));
-      setCompleted(true);
+      setCompleted(!queued);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Leo could not execute this action.";
       setError(message);
@@ -175,7 +205,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
   }, []);
 
   const hasApproval = toolCalls.some((tool) => tool.status === "proposed" && tool.approval === "confirm");
-  const operationState: LeoOperationState = error ? "error" : executingTool ? "executing" : busy ? "investigating" : completed ? "completed" : hasApproval ? "approval_required" : "ready";
+  const operationState: LeoOperationState = error ? "error" : executingTool || toolCalls.some(tool => tool.status === "queued") ? "executing" : busy ? "investigating" : completed ? "completed" : hasApproval ? "approval_required" : "ready";
 
   const value = useMemo<LeoConversationValue>(() => ({
     sessionId: sessionIdState,
