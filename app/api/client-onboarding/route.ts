@@ -1,3 +1,4 @@
+import { getIndustryExperience } from "@/lib/industryExperience";
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { ensureClientOnboardingProfile, getClientOnboardingProfile, saveClientOnboardingProfile, submitClientOnboarding, type SaveOnboardingInput } from "@/lib/client-workspace-onboarding";
@@ -56,6 +57,6 @@ export async function POST(request: NextRequest) {
     }
     const submitted = await submitClientOnboarding(session.organizationId, session.userId);
     if (!submitted) throw new Error("Your setup request could not be submitted.");
-    return NextResponse.json({ ok: true, status: submitted.status, next: "/portal" });
+    return NextResponse.json({ ok: true, status: submitted.status, next: getIndustryExperience(submitted.industry||profile.industry).slug==="hotels"?"/portal/hotel/setup":"/portal" });
   } catch (error) { return failure(error); }
 }

@@ -65,6 +65,8 @@ const expectedPendingVersions = [
   "20261105121746",
   "20261105125822",
   "20261105134815",
+  // Tenant readiness aggregate prepared for review; not applied.
+  "20261105163133",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
