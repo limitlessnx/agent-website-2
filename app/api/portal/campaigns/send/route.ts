@@ -18,7 +18,9 @@ export async function POST(request: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try { await requirePortalPermission(session, ["conversations.reply"]); } catch { return NextResponse.json({ error: "You do not have permission to send campaigns." }, { status: 403 }); }
   try { await assertFluxFeatureAccess(session.organizationId, "follow_ups"); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Campaign sending is not included in this plan." }, { status: 409 }); }
-  const body = await request.json().catch(() => ({})) as Body;
+  const raw = await request.json().catch(() => null);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return NextResponse.json({ error: "Provide a campaign request." }, { status: 400 });
+  const body = raw as Body;
   const templateName = String(body.templateName || "").trim();
   let templatePurpose = String(body.templatePurpose || "campaign").trim();
   const customerIds = Array.isArray(body.customerIds) ? [...new Set(body.customerIds.map(String).filter(Boolean))] : [];
@@ -32,13 +34,19 @@ export async function POST(request: Request) {
   if (contactIds.length && !xposure) return NextResponse.json({ error: "Contact audiences are available only in Xposure." }, { status: 403 });
   let variableKeys: string[] = [];
   if (xposure) {
+    try { await requirePortalPermission(session, ["customers.view", "customers.manage"]); }
+    catch { return NextResponse.json({ error: "You do not have permission to use campaign contacts." }, { status: 403 }); }
     try {
-      await requirePortalPermission(session, ["customers.view", "customers.manage"]);
       const inventory = await loadLinkedCampaignTemplates(session.organizationId);
       const selected = inventory.templates.find(item => item.name === templateName && item.language === body.languageCode && item.purpose === templatePurpose && ["campaign", "customer_follow_up"].includes(item.purpose));
       if (!selected) return NextResponse.json({ error: "Choose a linked, provider-approved campaign template and its language." }, { status: 409 });
       variableKeys = selected.variable_keys;
-    } catch { return NextResponse.json({ error: "Unable to verify campaign access or template approval. No messages were sent." }, { status: 403 }); }
+    } catch { return NextResponse.json({ error: "Unable to verify template approval. No messages were sent." }, { status: 503 }); }
+    if (variableKeys.some((key, index) => {
+      if (key === "customer_name") return false;
+      const value = body.variables?.[key] ?? body.variables?.[String(index + 1)];
+      return typeof value !== "string" || !value.trim() || value.length > 1024;
+    })) return NextResponse.json({ error: "Complete every template value before sending." }, { status: 400 });
   }
   let hotel = isHotelOrganization(organization.data);
   if (!hotel) {

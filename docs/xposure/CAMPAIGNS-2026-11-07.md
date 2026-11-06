@@ -22,7 +22,7 @@ The [Contact Picker API](https://developer.mozilla.org/en-US/docs/Web/API/Contac
 
 ## Checks
 
-- Campaign/contacts behavioral tests: 14 passing.
+- Campaign/contacts behavioral tests: 15 passing.
 - Xposure dashboard/tenant authorization: 26 passing.
 - Hotel regressions: 26 passing.
 - Maia regressions: 134 passing.

@@ -73,6 +73,10 @@ test('an uncertain submission failure is not labelled safe to retry', async () =
   const h = harness({ deliveryThrows: true }); const result = await h.route.POST(h.request());
   assert.equal(result.body.accepted, 0); assert.equal(result.body.failed, 0); assert.equal(result.body.unknown, 1); assert.equal(h.sent.length, 1);
 });
+test('missing template values and non-object requests are rejected before submission', async () => {
+  const h = harness(); assert.equal((await h.route.POST(h.request({ variables: {} }))).status, 400);
+  assert.equal((await h.route.POST({ json: async () => null })).status, 400); assert.equal(h.sent.length, 0);
+});
 
 test('inventory exposes only linked approved campaign templates with their message text', async () => {
   const filters = [];
