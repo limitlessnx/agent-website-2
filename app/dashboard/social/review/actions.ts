@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   approveSocialPostReview,
+  approveReelVoiceReview,
   rejectSocialPostReview,
   updateSocialPostReview,
 } from "@/lib/social-review";
@@ -38,5 +39,12 @@ export async function approveSocialPostReviewAction(formData: FormData) {
   const postId = String(formData.get("post_id") || "").trim();
   if (!postId) throw new Error("Post ID is missing.");
   await approveSocialPostReview(postId);
+  revalidateReview();
+}
+
+export async function approveReelVoiceReviewAction(formData: FormData) {
+  const postId = String(formData.get("post_id") || "").trim();
+  if (!postId) throw new Error("Post ID is missing.");
+  await approveReelVoiceReview(postId);
   revalidateReview();
 }
