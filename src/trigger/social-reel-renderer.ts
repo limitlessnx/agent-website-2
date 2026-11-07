@@ -130,7 +130,7 @@ export const fluxSocialRenderReel = task({
       });
 
       const mediaInfo = await getVideoMetadata(outputLocation);
-      if (!mediaInfo.audioCodec) throw new Error("Rendered Reel has no audio track; refusing to mark it ready.");
+      if (!mediaInfo.audioCodec || mediaInfo.audioCodec === "unknown") throw new Error("Rendered Reel has no verifiable audio track; refusing to mark it ready.");
       if (mediaInfo.durationInSeconds == null || !Number.isFinite(mediaInfo.durationInSeconds) || Math.abs(mediaInfo.durationInSeconds - narration.totalDurationSeconds) > 1.2) {
         throw new Error("Rendered Reel duration does not match the synchronized narration timeline.");
       }
@@ -203,6 +203,22 @@ export const fluxSocialRenderReel = task({
       if (updateError) throw updateError;
 
       return { postId: post.id, assetId: asset.id, storagePath };
+    } catch (renderError) {
+      // Preserve generated voice clips for preview, but never mark a failed MP4
+      // as ready or allow the previous approval to carry forward.
+      const message = renderError instanceof Error ? renderError.message : String(renderError);
+      await supabase.from("social_posts").update({
+        status: "review",
+        approved_at: null,
+        metadata: {
+          ...workingMetadata,
+          reel_render_status: "failed",
+          reel_audio_verified: false,
+          reel_render_error: message,
+          reel_voice_review_status: "pending",
+        },
+      }).eq("organization_id", payload.organizationId).eq("id", post.id);
+      throw renderError;
     } finally {
       await rm(outputLocation, { force: true }).catch(() => undefined);
     }
