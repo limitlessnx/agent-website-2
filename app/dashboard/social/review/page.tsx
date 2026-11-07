@@ -4,6 +4,7 @@ import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/act
 import {
   approveSocialPostReviewAction,
   approveReelVoiceReviewAction,
+  selectReelMusicAction,
   rejectSocialPostReviewAction,
   updateSocialPostReviewAction,
 } from "@/app/dashboard/social/review/actions";
@@ -32,6 +33,7 @@ function contentString(content: Record<string, unknown>, key: string) {
 export default async function SocialReviewPage() {
   const [allPosts, allAssets] = await Promise.all([listSocialPosts(200), listSocialAssets()]);
   const posts = allPosts.filter((post) => ["review", "approved"].includes(post.status));
+  const licensedTracks = allAssets.filter((asset) => asset.asset_type === "audio" && asset.status === "ready" && asset.metadata?.licensed_for_social_usage === true);
 
   const assetsByPost = new Map<string, typeof allAssets>();
   for (const asset of allAssets) {
@@ -149,6 +151,23 @@ export default async function SocialReviewPage() {
                       ) : null}
                     </div>
 
+                    {isReel ? (
+                      <form action={selectReelMusicAction} style={{ display: "grid", gap: 8, marginTop: 14 }}>
+                        <input type="hidden" name="post_id" value={post.id} />
+                        <label style={{ display: "grid", gap: 6 }}>
+                          <strong>Background music (licensed tracks only)</strong>
+                          <select name="music_asset_id" required style={inputStyle}
+                            defaultValue={typeof post.metadata?.reel_music_asset_id === "string" ? post.metadata.reel_music_asset_id : ""}>
+                            <option value="">Choose a licensed soundtrack</option>
+                            {licensedTracks.filter((asset) => asset.brand_id === post.brand_id).map((asset) => (
+                              <option key={asset.id} value={asset.id}>{asset.storage_path.split("/").pop() || asset.id}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button type="submit" className="admin-status" style={{ cursor: "pointer", justifySelf: "start" }}>Save soundtrack · rerender required</button>
+                        {!licensedTracks.length ? <span>Upload a rights-cleared music track in the Asset Library first.</span> : null}
+                      </form>
+                    ) : null}
                     {isReel && hasPlan ? (
                       <div className="admin-panel" style={{ marginTop: 16, display: "grid", gap: 10 }}>
                         <strong>Reel narration review · Premium male</strong>
