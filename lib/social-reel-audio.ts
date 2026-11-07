@@ -123,12 +123,12 @@ export async function createReelNarration(supabase: SupabaseClient, input: {
 }
 
 /** Music must already be stored by this organization and explicitly marked as licensed. */
-export async function getLicensedReelMusic(supabase: SupabaseClient, organizationId: string, preferredAssetId?: string | null) {
+export async function getLicensedReelMusic(supabase: SupabaseClient, organizationId: string, brandId: string, preferredAssetId?: string | null) {
   const musicAssetId = preferredAssetId || process.env.FLUX_SOCIAL_MUSIC_ASSET_ID;
   if (!musicAssetId) return null; // Generate a voice-only draft preview; publishing approval remains blocked until licensed music is configured.
   const { data: asset, error } = await supabase.from("social_assets")
-    .select("id,bucket_id,storage_path,mime_type,metadata,status,asset_type")
-    .eq("organization_id", organizationId).eq("id", musicAssetId).single();
+    .select("id,bucket_id,storage_path,mime_type,metadata,status,asset_type,brand_id")
+    .eq("organization_id", organizationId).eq("brand_id", brandId).eq("id", musicAssetId).single();
   if (error) throw error;
   const meta = (asset.metadata || {}) as Record<string, unknown>;
   if (asset.status !== "ready" || asset.asset_type === "video") throw new Error("Configured Reel music asset is not ready.");
