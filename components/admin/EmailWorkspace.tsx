@@ -6,6 +6,15 @@ import styles from "./EmailWorkspace.module.css";
 type Mail = {id:string;from:string;to:string[];subject:string;created_at:string;text?:string;html?:string;last_event?:string};
 type View = "inbox" | "sent" | "compose" | "drafts";
 type Draft = {id:string;sender:string;recipient:string;subject:string;body:string;template:string;updated_at:string};
+function statusDetails(raw?:string){
+  const state=(raw||"sent").toLowerCase().replace(/^email\./,"");
+  if(state==="bounced")return {label:"Bounced",tone:styles.deliveryFail,description:"The recipient server rejected this message. Review the detailed bounce event in Resend before retrying."};
+  if(state==="failed"||state==="suppressed")return {label:state==="failed"?"Failed":"Suppressed",tone:styles.deliveryFail,description:"This message was not delivered. Check Resend for the specific failure or suppression reason."};
+  if(state==="delivery_delayed")return {label:"Delayed",tone:styles.deliveryWarn,description:"Delivery is delayed. Check Resend's delivery event for the reason before intervening."};
+  if(state==="delivered")return {label:"Delivered",tone:styles.deliveryOk,description:"The receiving mail server accepted this email, but inbox placement is not guaranteed."};
+  if(state==="opened"||state==="clicked")return {label:state==="opened"?"Opened":"Clicked",tone:styles.deliveryOk,description:"Resend recorded this engagement event; it does not independently prove that a person read the message."};
+  return {label:state==="sent"?"Sent":state==="queued"?"Queued":state==="scheduled"?"Scheduled":"Processing",tone:styles.deliveryNeutral,description:"Resend has accepted or queued the email. Delivery has not yet been confirmed."};
+}
 const SENDERS = ["limitless@fluxknight.space","info@fluxknight.space"];
 const TEMPLATES: Record<string,{subject:string;text:string}> = {
   "blank":{subject:"",text:""},
@@ -173,16 +182,19 @@ export default function EmailWorkspace() {
       </li>)}</ul>}
     </section> : <div className={styles.columns}>
       <section className={styles.panel}>
-        <div className={styles.panelHeading}><h2>{view==="inbox"?"Inbox":"Sent messages"}</h2><button onClick={()=>void load()} disabled={loading}>Refresh</button></div>
+        <div className={styles.panelHeading}><h2>{view==="inbox"?"Inbox":"Sent messages"}</h2><button onClick={()=>void load()} disabled={loading}>Refresh statuses</button></div>
+        {view==="sent"&&<p className={styles.deliveryNotice}>Delivery is not confirmed when Resend accepts a send request. Open a message to inspect its latest event. For exact SMTP bounce explanations, inspect the message's event timeline in your Resend account.</p>}
         <label className={styles.searchBox}>Search loaded messages<input type="search" placeholder="Search sender, recipient or subject" value={search} onChange={e=>setSearch(e.target.value)} /></label>
         {loading&&rows.length===0?<p className={styles.empty}>Loading messages...</p>:rows.length===0?<p className={styles.empty}>No messages found for this mailbox in the most recent records.</p>:<ul className={styles.mailList}>{rows.filter(mail=>(mail.from+" "+mail.to.join(" ")+" "+mail.subject).toLowerCase().includes(search.toLowerCase())).map(mail=><li key={mail.id}><button className={selected?.id===mail.id?styles.selectedMail:""} onClick={()=>void openMail(mail)}>
-          <strong>{view==="inbox"?mail.from:mail.to.join(", ")}</strong><span>{mail.subject}</span><small>{mail.created_at?new Date(mail.created_at).toLocaleString():""} {mail.last_event||""}</small>
+          <strong>{view==="inbox"?mail.from:mail.to.join(", ")}</strong><span>{mail.subject}</span><small>{mail.created_at?new Date(mail.created_at).toLocaleString():""}</small>{view==="sent"&&<span className={`${styles.deliveryPill} ${statusDetails(mail.last_event).tone}`}>{statusDetails(mail.last_event).label}</span>}
         </button></li>)}</ul>}
         {more&&<div className={styles.loadMore}><button type="button" className={styles.secondary} disabled={loading||!cursor} onClick={()=>void load(true)}>{loading?"Loading...":"Load older messages"}</button></div>}
         <p className={styles.tip}>Search covers loaded messages. Use "Load older messages" to extend history.</p>
       </section>
       <section className={styles.panel}>
-        {selected?<div className={styles.message}><h2>{selected.subject}</h2><p>From: {selected.from}</p><p>To: {selected.to?.join(", ")}</p><hr/><pre>{selected.text||"This email has no plain-text body. HTML rendering is intentionally disabled for security."}</pre>
+        {selected?<div className={styles.message}><h2>{selected.subject}</h2><p>From: {selected.from}</p><p>To: {selected.to?.join(", ")}</p>
+          {view==="sent"&&<div className={styles.deliveryDetail}><span className={`${styles.deliveryPill} ${statusDetails(selected.last_event).tone}`}>{statusDetails(selected.last_event).label}</span><p>{statusDetails(selected.last_event).description}</p><small>Resend email ID: {selected.id}</small></div>}
+          <hr/><pre>{selected.text||"This email has no plain-text body. HTML rendering is intentionally disabled for security."}</pre>
           {view==="inbox"&&<button className={styles.secondary} onClick={()=>{setTo(selected.from);setSubject(selected.subject.startsWith("Re:")?selected.subject:"Re: "+selected.subject);setMessage("");setConfirmed(false);setView("compose");}}>Reply</button>}
         </div>:<div className={styles.empty}>Select a message to view its details.</div>}
       </section>
