@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getSocialBrand } from "@/lib/social";
+import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { uploadSocialAsset } from "@/lib/social-assets";
 import { requireTenant } from "@/lib/tenant";
 
@@ -13,6 +14,7 @@ function clampText(value: string, max: number) {
 
 function renderGraphic(input: {
   brandName: string;
+  logoUrl: string | null;
   hook: string;
   eyebrow?: string;
   footer?: string;
@@ -47,10 +49,12 @@ function renderGraphic(input: {
         />
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
-          <div style={{ display: "flex", gap: 2, alignItems: "baseline", fontSize: 28, letterSpacing: "0.16em", fontWeight: 800 }}>
-            <span>FLU</span>
-            <span style={{ color: "#8b5cf6" }}>X</span>
-            <span>KNIGHT</span>
+          <div style={{ width: 258, height: 76, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
+            {input.logoUrl ? (
+              <img src={input.logoUrl} alt={input.brandName} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} />
+            ) : (
+              <span style={{ fontSize: 27, letterSpacing: "0.06em", fontWeight: 800 }}>{input.brandName}</span>
+            )}
           </div>
           <div style={{ fontSize: 18, color: "#a1a1aa", letterSpacing: "0.08em" }}>AI BUSINESS SYSTEMS</div>
         </div>
@@ -108,8 +112,10 @@ export async function generateStaticGraphicForPost(postId: string) {
   const pillar = String(content.pillar || metadata.pillar || "AI automation");
   const objective = String(content.objective || metadata.objective || post.caption || "Smarter operations with Fluxknight.");
 
+  const logo = await getPrimaryLogoAsset(brand.id);
   const response = renderGraphic({
     brandName: brand.name,
+    logoUrl: logo?.signed_url || null,
     hook,
     eyebrow: pillar,
     footer: objective,

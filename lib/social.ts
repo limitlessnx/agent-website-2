@@ -280,6 +280,8 @@ export async function updateSocialBrand(input: {
   products: string[];
 }) {
   const { supabase, organizationId } = await requireTenant();
+  const brand = await getSocialBrand();
+  if (!brand) throw new Error("No Social Brand exists for this organization.");
   const { error } = await supabase
     .from("social_brands")
     .update({
@@ -290,7 +292,7 @@ export async function updateSocialBrand(input: {
       products: input.products,
     })
     .eq("organization_id", organizationId)
-    .eq("slug", "fluxknight");
+    .eq("id", brand.id);
 
   if (error) throw error;
 }

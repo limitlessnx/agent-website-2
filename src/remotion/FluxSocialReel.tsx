@@ -58,9 +58,9 @@ export const FluxSocialReel: React.FC<FluxSocialReelProps> = ({ plan, logoUrl, b
           </Sequence>
         );
       })}
-      <div style={{ position: "absolute", top: 40, left: 52, right: 52, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
+      <div style={{ position: "absolute", top: 52, left: 52, right: 52, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
         {/* Canonical logo asset only. Never redraw the logo in Remotion. */}
-        <img src={logoUrl} style={{ height: 54, width: "auto", objectFit: "contain" }} />
+        <div style={{ width: 250, height: 72, display: "flex", alignItems: "center", justifyContent: "flex-start" }}><img src={logoUrl} alt={`${brandName} logo`} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} /></div>
         <div style={{ color: "#e4e4e7", fontSize: 18, letterSpacing: "0.12em" }}>{brandName.toUpperCase()}</div>
       </div>
       <div style={{ position: "absolute", bottom: 38, left: 52, right: 52, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10, fontSize: 18, color: "#a78bfa" }}>
