@@ -23,7 +23,7 @@ export default async function SocialOverviewPage() {
           <p>Plan, review, approve, measure, schedule and publish Fluxknight branded content through its dedicated agentic social media system.</p>
         </div>
         <span className={failedJobs ? "admin-status warning" : "admin-status live"}>
-          {failedJobs ? `${failedJobs} publish issue${failedJobs === 1 ? "" : "s"}` : "Publishing healthy"}
+          {failedJobs ? `${failedJobs} publish issue${failedJobs === 1 ? "" : "s"}` : "No failed jobs in recent history"}
         </span>
       </header>
 
