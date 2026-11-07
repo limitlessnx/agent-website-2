@@ -127,7 +127,7 @@ export async function getLicensedReelMusic(supabase: SupabaseClient, organizatio
   const musicAssetId = process.env.FLUX_SOCIAL_MUSIC_ASSET_ID;
   if (!musicAssetId) throw new Error("Background music is enabled but FLUX_SOCIAL_MUSIC_ASSET_ID is not configured with a licensed track.");
   const { data: asset, error } = await supabase.from("social_assets")
-    .select("id,bucket_id,storage_path,mime_type,metadata,status")
+    .select("id,bucket_id,storage_path,mime_type,metadata,status,asset_type")
     .eq("organization_id", organizationId).eq("id", musicAssetId).single();
   if (error) throw error;
   const meta = (asset.metadata || {}) as Record<string, unknown>;
