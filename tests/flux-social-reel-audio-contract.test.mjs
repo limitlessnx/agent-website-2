@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("Reel narrator synthesizes timestamped ElevenLabs audio and keeps tracks private", () => {
+  const source = read("lib/social-reel-audio.ts");
+  assert.match(source, /\/with-timestamps/);
+  assert.match(source, /character_end_times_seconds/);
+  assert.match(source, /ELEVENLABS_API_KEY/);
+  assert.match(source, /ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID/);
+  assert.match(source, /storagePath =.*organizationId.*postId/);
+  assert.match(source, /licensed_for_social_usage !== true/);
+  assert.match(source, /\.eq\("brand_id", brandId\)/);
+});
+
+test("Reel Remotion render uses narration and licensed music and verifies the MP4", () => {
+  const render = read("src/trigger/social-reel-renderer.ts");
+  const composition = read("src/remotion/FluxSocialReel.tsx");
+  assert.match(render, /createReelNarration/);
+  assert.match(render, /getLicensedReelMusic/);
+  assert.match(render, /getVideoMetadata\(outputLocation\)/);
+  assert.match(render, /mediaInfo\.audioCodec/);
+  assert.match(render, /reel_voice_review_status: "pending"/);
+  assert.match(render, /approved_at: null/);
+  assert.match(composition, /<Audio/);
+  assert.match(composition, /musicUrl \? <Audio/);
+  assert.match(composition, /captionsEnabled = false/);
+});
+
+test("Voice previews require human approval and cannot bypass the general post transition", () => {
+  const review = read("lib/social-review.ts");
+  const transitions = read("lib/social.ts");
+  const reviewPage = read("app/dashboard/social/review/page.tsx");
+  assert.match(review, /reel_audio_verified !== true/);
+  assert.match(review, /reel_music_status !== "ready"/);
+  assert.match(review, /reel_voice_review_status !== "approved"/);
+  assert.match(review, /approveReelVoiceReview/);
+  assert.match(transitions, /Approve verified Reel narration/);
+  assert.match(reviewPage, /Voice previews/);
+  assert.match(reviewPage, /Approve narration and music/);
+});
