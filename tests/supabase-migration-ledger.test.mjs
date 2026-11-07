@@ -71,8 +71,6 @@ const expectedPendingVersions = [
   "20261106161658",
   // Manual Limitless follow-up activation: prepared for review, not applied.
   "20261106213418",
-  // PR #354 Fluxknight Email & Proposals: append-only, private draft storage; reviewed for this release.
-  "20261107144000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
