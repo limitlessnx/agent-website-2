@@ -125,7 +125,7 @@ export async function createReelNarration(supabase: SupabaseClient, input: {
 /** Music must already be stored by this organization and explicitly marked as licensed. */
 export async function getLicensedReelMusic(supabase: SupabaseClient, organizationId: string) {
   const musicAssetId = process.env.FLUX_SOCIAL_MUSIC_ASSET_ID;
-  if (!musicAssetId) throw new Error("Background music is enabled but FLUX_SOCIAL_MUSIC_ASSET_ID is not configured with a licensed track.");
+  if (!musicAssetId) return null; // Generate a voice-only draft preview; publishing approval remains blocked until licensed music is configured.
   const { data: asset, error } = await supabase.from("social_assets")
     .select("id,bucket_id,storage_path,mime_type,metadata,status,asset_type")
     .eq("organization_id", organizationId).eq("id", musicAssetId).single();
