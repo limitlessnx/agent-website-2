@@ -134,7 +134,7 @@ function renderSlide(input: {
     }}>
       <div style={{ position: "absolute", inset: 0, opacity: 0.08, backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
-        <div style={{ width: 258, height: 76, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
+        <div style={{ width: 210, height: 148, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
           {input.logoUrl ? (
             <img src={input.logoUrl} alt={input.brandName} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} />
           ) : (
