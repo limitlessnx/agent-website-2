@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { matchesCampaignGroupRules, type CampaignGroup } from "@/lib/campaign-groups";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
 import type { PropertyRecord } from "@/lib/limitless-data";
+import CampaignAiWriter from "@/components/CampaignAiWriter";
 
 type Props = { leads: ProgressiveLead[]; properties: PropertyRecord[]; groups: CampaignGroup[] };
 type AudienceMode = "all" | "manual" | "group" | "filters";
@@ -85,7 +86,8 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
   const recipientCount = audience.length + (audienceMode === "group" && selectedGroup?.groupType === "manual" ? selectedGroup.phones.length : 0);
   const composedUpdate = [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
   const relationshipMessage = [mainUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n");
-  const outboundMessage = isUpdateTemplate ? composedUpdate : isRelationshipCampaign || isReminderCampaign ? [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n") : message.trim();
+  const outboundMessage = isUpdateTemplate ? composedUpdate : isRelationshipCampaign ? relationshipMessage : isReminderCampaign ? [mainUpdate.trim(), supportingUpdate.trim(), responsePrompt.trim()].filter(Boolean).join("\n\n") : message.trim();
+  const aiValues: Record<string, string> = isEstateBrief ? { selling_point: message } : isRelationshipCampaign ? { greeting: mainUpdate, call_to_action: responsePrompt } : isReminderCampaign ? { followup_context: mainUpdate, property_details: supportingUpdate, next_step: responsePrompt } : { message };
   const requestPayload = { campaignType, topic, message: outboundMessage, mediaUrl: "", audienceMode, selectedLeadIds, campaignGroupId: groupId, state, interest, propertyId: campaignType === "direct_message" ? "" : propertyId, budgetMin, budgetMax };
   const canSend = Boolean(recipientCount && (isEstateBrief ? selectedProperty?.title && selectedProperty?.drive_photos_link && message.trim() : isUpdateTemplate || isReminderCampaign ? mainUpdate.trim() && supportingUpdate.trim() && responsePrompt.trim() : isRelationshipCampaign ? mainUpdate.trim() && responsePrompt.trim() : message.trim()) && !(audienceMode === "group" && !groupId) && !uncertain);
 
@@ -142,6 +144,13 @@ export default function WhatsAppCampaignCenterV2({ leads, properties, groups }: 
         <section className="campaign-card composer">
           <header><span>MESSAGE ENGINE</span><h2>Compose campaign</h2><small className="engine-note">Approved template routing · Maia delivery engine</small></header>
           <div className="campaign-type-grid">{campaignTypes.map((type) => <button key={type.value} type="button" disabled={type.unavailable} className={`${campaignType === type.value ? "active" : ""} ${type.unavailable ? "unavailable" : ""}`} onClick={() => { if (!type.unavailable) setCampaignType(type.value); }}><strong>{type.label}</strong><span>{type.description}</span>{type.template && <small>{type.template}</small>}</button>)}</div>
+
+          {!isUpdateTemplate && <CampaignAiWriter key={`${campaignType}:${propertyId}`} endpoint="/api/limitless/campaigns/writeup" context={{ campaignType, propertyId: campaignType === "direct_message" ? "" : propertyId }} values={aiValues} disabled={isPending || uncertain || (isEstateBrief && !selectedProperty)} onApply={suggested => {
+            if (isEstateBrief) setMessage(suggested.selling_point);
+            else if (isRelationshipCampaign) { setMainUpdate(suggested.greeting); setResponsePrompt(suggested.call_to_action); }
+            else if (isReminderCampaign) { setMainUpdate(suggested.followup_context); setSupportingUpdate(suggested.property_details); setResponsePrompt(suggested.next_step); }
+            else setMessage(suggested.message);
+          }} />}
 
           {isEstateBrief ? (
             <>

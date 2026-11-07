@@ -33,17 +33,36 @@ test('estate brief campaigns use the canonical provider gateway, five ordered va
  assert.equal(calls.length,1);
  assert.equal(calls[0].templatePurpose,'estate_brief_update');
  assert.equal(calls[0].requestedTemplateName,'estate_brief_update');
- assert.deepEqual(calls[0].strictTemplateContract.approvedVariableOrder,['customer_name','property_name','property_location','property_price','selling_point']);
- assert.deepEqual(calls[0].variables,{customer_name:'Greatness',property_name:'D Prince Builders Hilltop Estate',property_location:'Bénin City, Edo State',property_price:'₦1,200,000',selling_point:'Flexible six-month installment plan.'});
+ assert.deepEqual(Array.from(calls[0].strictTemplateContract.approvedVariableOrder),['customer_name','property_name','property_location','property_price','selling_point']);
+ assert.deepEqual(JSON.parse(JSON.stringify(calls[0].variables)),{customer_name:'Greatness',property_name:'D Prince Builders Hilltop Estate',property_location:'Bénin City, Edo State',property_price:'₦1,200,000',selling_point:'Flexible six-month installment plan.'});
  assert.equal(calls[0].templateHeaderImageUrl,'https://cdn.example.test/estate.jpg');
  assert.equal(result.accepted,1);
- assert.deepEqual(result.path,['campaign_api','whatsapp_delivery_gateway','meta_or_twilio_provider']);
+ assert.deepEqual(Array.from(result.path),['campaign_api','whatsapp_delivery_gateway','meta_or_twilio_provider']);
 });
 
-test("Limitless Realty relationship campaigns route the approved three-variable Meta template in exact order",async()=>{\n const {gateway,calls}=fixture();\n const result=await gateway.dispatchMaiaCampaignAction({\n  commandId:"campaign-relationship-1",\n  campaignType:"limitless_realty_relationship_campaign",\n  templateName:"limitless_realty_relationship_campaign",\n  topic:"November new month",\n  message:"Welcome to a new month!\\n\\nExplore our latest property opportunities and speak with our team.",\n  recipients:[{id:"lead-relationship-1",name:"Ada",phone:"2348012345678"}],\n });\n assert.equal(calls.length,1);\n assert.equal(calls[0].templatePurpose,"limitless_realty_relationship_campaign");\n assert.equal(calls[0].requestedTemplateName,"limitless_realty_relationship_campaign");\n assert.deepEqual(calls[0].strictTemplateContract.approvedVariableOrder,["customer_name","greeting","call_to_action"]);\n assert.deepEqual(calls[0].variables,{customer_name:"Ada",greeting:"Welcome to a new month!",call_to_action:"Explore our latest property opportunities and speak with our team."});\n assert.equal(result.templateName,"limitless_realty_relationship_campaign");\n assert.equal(result.accepted,1);\n});\n\ntest('unregistered campaign template types fail closed instead of falling back to n8n or another template',async()=>{
+test("Limitless Realty relationship campaigns route the approved three-variable Meta template in exact order",async()=>{
+ const {gateway,calls}=fixture();
+ const result=await gateway.dispatchMaiaCampaignAction({
+  commandId:"campaign-relationship-1",
+  campaignType:"limitless_realty_relationship_campaign",
+  templateName:"limitless_realty_relationship_campaign",
+  topic:"November new month",
+  message:"Welcome to a new month!\n\nExplore our latest property opportunities and speak with our team.",
+  recipients:[{id:"lead-relationship-1",name:"Ada",phone:"2348012345678"}],
+ });
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].templatePurpose,"limitless_realty_relationship_campaign");
+ assert.equal(calls[0].requestedTemplateName,"limitless_realty_relationship_campaign");
+ assert.deepEqual(Array.from(calls[0].strictTemplateContract.approvedVariableOrder),["customer_name","greeting","call_to_action"]);
+ assert.deepEqual(JSON.parse(JSON.stringify(calls[0].variables)),{customer_name:"Ada",greeting:"Welcome to a new month!",call_to_action:"Explore our latest property opportunities and speak with our team."});
+ assert.equal(result.templateSent,1);
+ assert.equal(result.accepted,1);
+});
+
+test('unregistered campaign template types fail closed instead of falling back to n8n or another template',async()=>{
  const {gateway,calls}=fixture();
  await assert.rejects(gateway.dispatchMaiaCampaignAction({
-  commandId:'campaign-2',campaignType:'limitless_realty_reminder',templateName:'limitless_realty_reminder',
+  commandId:'campaign-2',campaignType:'unregistered_template',templateName:'unregistered_template',
   topic:'Reminder',message:'A reminder',recipients:[{id:'lead-1',name:'Client',phone:'2348012345678'}],
  }),/no verified direct WhatsApp route/);
  assert.equal(calls.length,0);
