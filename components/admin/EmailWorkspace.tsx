@@ -44,6 +44,7 @@ export default function EmailWorkspace() {
   const [message,setMessage] = useState("");
   const [confirmed,setConfirmed] = useState(false);
   const [sending,setSending] = useState(false);
+  const [attachment,setAttachment] = useState<File | null>(null);
   const [more,setMore] = useState(false);
   const [template,setTemplate] = useState("blank");
   const load = useCallback(async () => {
@@ -73,11 +74,17 @@ export default function EmailWorkspace() {
     event.preventDefault();if(sending || !confirmed)return;
     setSending(true);setError("");setNotice("");
     try {
-      const response=await fetch("/api/dashboard/email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({from:sender,to,subject,text:message,confirmed:true})});
+      if (attachment && (attachment.type !== "application/pdf" || attachment.size > 4*1024*1024)) throw new Error("Attach a PDF no larger than 4 MB.");
+      let attachmentPayload: {filename:string;content:string}|undefined;
+      if(attachment){
+        const content=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||"").split(",")[1]||"");reader.onerror=()=>reject(new Error("Unable to read attachment."));reader.readAsDataURL(attachment);});
+        attachmentPayload={filename:attachment.name,content};
+      }
+      const response=await fetch("/api/dashboard/email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({from:sender,to,subject,text:message,confirmed:true,attachment:attachmentPayload})});
       const data=await response.json();
       if(!response.ok)throw new Error(data.error || "Message not sent.");
       setNotice("Email accepted by Resend. Delivery can be checked in Sent.");
-      setTo("");setSubject("");setMessage("");setConfirmed(false);setTemplate("blank");
+      setTo("");setSubject("");setMessage("");setConfirmed(false);setTemplate("blank");setAttachment(null);
       setView("sent");
     }catch(caught){setError(caught instanceof Error?caught.message:"Message not sent.");}
     finally{setSending(false);}
@@ -107,7 +114,8 @@ export default function EmailWorkspace() {
         <label>To<input type="email" required value={to} onChange={e=>{setTo(e.target.value);setConfirmed(false);}} placeholder="client@company.com" /></label>
         <label>Subject<input required maxLength={200} value={subject} onChange={e=>{setSubject(e.target.value);setConfirmed(false);}} placeholder="Your proposal subject" /></label>
         <label>Message<textarea required rows={14} maxLength={30000} value={message} onChange={e=>{setMessage(e.target.value);setConfirmed(false);}} placeholder="Write a personalized email or choose a template above." /></label>
-        <p className={styles.tip}>Replace every bracketed placeholder before sending. Never claim results that have not been verified. This first release sends plain-text proposals without attachments.</p>
+        <label>Proposal attachment (optional PDF, maximum 4 MB)<input type="file" accept="application/pdf,.pdf" onChange={e=>{setAttachment(e.target.files?.[0]||null);setConfirmed(false);}} /></label>
+        <p className={styles.tip}>Replace every bracketed placeholder before sending. Never claim results that have not been verified.</p>
         <label className={styles.confirm}><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>I reviewed the recipient and message, and this contact is eligible to receive this email.</span></label>
         <button className={styles.primary} disabled={sending||!confirmed} type="submit">{sending?"Sending...":"Send email"}</button>
       </form>
