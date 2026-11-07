@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { uploadSocialAssetAction, uploadPrimarySocialLogoAction } from "@/app/dashboard/social/assets/actions";
+import { uploadSocialAssetAction, uploadPrimarySocialLogoAction, uploadLicensedReelMusicAction } from "@/app/dashboard/social/assets/actions";
 import { getSocialBrand } from "@/lib/social";
 import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { listSocialAssets } from "@/lib/social-assets";
@@ -58,6 +58,26 @@ export default async function SocialAssetsPage() {
             <div><button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Upload and set as primary logo</button></div>
           </form>
         ) : <p>Create a Social Brand before registering its logo.</p>}
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Licensed Reel background music</h2>
+            <p>Upload a soundtrack only if you own it or have explicit permission for social-media publishing. Reels use music quietly beneath narration.</p>
+          </div>
+        </div>
+        <form action={uploadLicensedReelMusicAction} encType="multipart/form-data" style={{ display: "grid", gap: 12, maxWidth: 620 }}>
+          <label style={{ display: "grid", gap: 8 }}>
+            <strong>MP3, WAV or M4A · 20 MB maximum</strong>
+            <input type="file" name="music" accept="audio/mpeg,audio/wav,audio/mp4" required style={inputStyle} />
+          </label>
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <input type="checkbox" name="licensed_for_social_usage" value="yes" required />
+            <span>I own this audio or have a license that permits use in published social media videos.</span>
+          </label>
+          <div><button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Upload licensed soundtrack</button></div>
+        </form>
       </section>
 
       <section className="admin-grid two">
