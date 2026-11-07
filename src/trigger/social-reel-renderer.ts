@@ -68,10 +68,31 @@ export const fluxSocialRenderReel = task({
 
     // Narration is automatically generated before each draft render. The voice preview
     // is stored privately and remains unapproved until reviewed by a human.
-    const narration = await createReelNarration(supabase, {
-      organizationId: payload.organizationId, brandId: brand.id, postId: post.id, plan,
-    });
-    const music = await getLicensedReelMusic(supabase, payload.organizationId, brand.id, typeof metadata.reel_music_asset_id === "string" ? metadata.reel_music_asset_id : null);
+    let narration: Awaited<ReturnType<typeof createReelNarration>>;
+    let music: Awaited<ReturnType<typeof getLicensedReelMusic>>;
+    try {
+      narration = await createReelNarration(supabase, {
+        organizationId: payload.organizationId, brandId: brand.id, postId: post.id, plan,
+      });
+      music = await getLicensedReelMusic(supabase, payload.organizationId, brand.id,
+        typeof metadata.reel_music_asset_id === "string" ? metadata.reel_music_asset_id : null);
+    } catch (audioError) {
+      const message = audioError instanceof Error ? audioError.message : String(audioError);
+      await supabase.from("social_posts").update({
+        status: "review",
+        approved_at: null,
+        metadata: {
+          ...metadata,
+          reel_asset_id: null,
+          primary_asset_id: null,
+          reel_render_status: "failed",
+          reel_audio_verified: false,
+          reel_voice_review_status: "pending",
+          reel_render_error: message,
+        },
+      }).eq("organization_id", payload.organizationId).eq("id", post.id);
+      throw audioError;
+    }
     const workingMetadata = {
       ...metadata,
       reel_plan: narration.plan,
@@ -85,6 +106,7 @@ export const fluxSocialRenderReel = task({
       reel_voice_review_status: "pending",
       reel_audio_verified: false,
       reel_render_status: "rendering",
+      reel_render_error: null,
       reel_asset_id: null,
       primary_asset_id: null,
     };
