@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const { templates } = await loadLinkedCampaignTemplates(session.organizationId, true);
     const template = templates.find(item => item.name === body.templateName && item.language === body.language && item.purpose === body.templatePurpose && ["campaign", "customer_follow_up"].includes(item.purpose));
     if (!template) return json({ error: "Choose a linked, approved campaign template." }, 409);
-    const facts = organization.data.name ? { business_name: String(organization.data.name) } : {};
+    const facts: Record<string, string> = organization.data.name ? { business_name: String(organization.data.name) } : {};
     return json(await createCampaignWriteup(session.organizationId, { name: template.name, language: template.language, body: template.body, keys: template.variable_keys }, input, facts));
   } catch (error) {
     if (error instanceof CampaignWriteupError || error instanceof CampaignTemplateError) return json({ error: error.message }, error.status);
