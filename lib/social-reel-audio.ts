@@ -131,7 +131,7 @@ export async function getLicensedReelMusic(supabase: SupabaseClient, organizatio
     .eq("organization_id", organizationId).eq("brand_id", brandId).eq("id", musicAssetId).single();
   if (error) throw error;
   const meta = (asset.metadata || {}) as Record<string, unknown>;
-  if (asset.status !== "ready" || asset.asset_type === "video") throw new Error("Configured Reel music asset is not ready.");
+  if (asset.status !== "ready" || asset.asset_type !== "audio") throw new Error("Configured Reel music asset is not ready.");
   if (!["audio/mpeg", "audio/wav", "audio/mp4"].includes(asset.mime_type)) throw new Error("Background music must be a supported audio asset.");
   if (meta.licensed_for_social_usage !== true) throw new Error("Music asset must be explicitly licensed for social use.");
   const { data: signed, error: urlError } = await supabase.storage.from(asset.bucket_id).createSignedUrl(asset.storage_path, 3600);
