@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getSocialBrand } from "@/lib/social";
+import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { uploadSocialAsset } from "@/lib/social-assets";
 import { requireTenant } from "@/lib/tenant";
 
@@ -119,6 +120,7 @@ async function generateCarouselPlan(input: {
 
 function renderSlide(input: {
   brandName: string;
+  logoUrl: string | null;
   slide: CarouselSlide;
   index: number;
   total: number;
@@ -132,8 +134,12 @@ function renderSlide(input: {
     }}>
       <div style={{ position: "absolute", inset: 0, opacity: 0.08, backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "54px 54px" }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
-        <div style={{ display: "flex", gap: 2, alignItems: "baseline", fontSize: 28, letterSpacing: "0.16em", fontWeight: 800 }}>
-          <span>FLU</span><span style={{ color: "#8b5cf6" }}>X</span><span>KNIGHT</span>
+        <div style={{ width: 258, height: 76, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
+          {input.logoUrl ? (
+            <img src={input.logoUrl} alt={input.brandName} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} />
+          ) : (
+            <span style={{ fontSize: 27, letterSpacing: "0.06em", fontWeight: 800 }}>{input.brandName}</span>
+          )}
         </div>
         <div style={{ fontSize: 20, color: "#a1a1aa" }}>{String(input.index).padStart(2, "0")} / {String(input.total).padStart(2, "0")}</div>
       </div>
@@ -191,10 +197,11 @@ export async function generateCarouselForPost(postId: string) {
     audience: brand.audience,
   });
 
+  const logo = await getPrimaryLogoAsset(brand.id);
   const assets = [];
   for (let i = 0; i < plan.slides.length; i += 1) {
     const slide = plan.slides[i];
-    const response = renderSlide({ brandName: brand.name, slide, index: i + 1, total: plan.slides.length, pillar: contentPillar });
+    const response = renderSlide({ brandName: brand.name, logoUrl: logo?.signed_url || null, slide, index: i + 1, total: plan.slides.length, pillar: contentPillar });
     const bytes = new Uint8Array(await response.arrayBuffer());
     const asset = await uploadSocialAsset({
       postId: post.id,
