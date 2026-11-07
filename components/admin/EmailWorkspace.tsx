@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import styles from "./EmailWorkspace.module.css";
 
 type Mail = {id:string;from:string;to:string[];subject:string;created_at:string;text?:string;html?:string;last_event?:string};
-type View = "inbox" | "sent" | "compose";
+type View = "inbox" | "sent" | "compose" | "drafts";
+type Draft = {id:string;sender:string;recipient:string;subject:string;body:string;template:string;updated_at:string};
 const SENDERS = ["limitless@fluxknight.space","info@fluxknight.space"];
 const TEMPLATES: Record<string,{subject:string;text:string}> = {
   "blank":{subject:"",text:""},
@@ -47,17 +48,60 @@ export default function EmailWorkspace() {
   const [attachment,setAttachment] = useState<File | null>(null);
   const [more,setMore] = useState(false);
   const [template,setTemplate] = useState("blank");
-  const load = useCallback(async () => {
-    setLoading(true);setError("");setSelected(null);
+  const [drafts,setDrafts] = useState<Draft[]>([]);
+  const [draftId,setDraftId] = useState<string|null>(null);
+  const [saving,setSaving] = useState(false);
+  const [search,setSearch] = useState("");
+  const [cursor,setCursor] = useState<string|null>(null);
+  const load = useCallback(async (append=false) => {
+    setLoading(true);setError("");if(!append)setSelected(null);
     try {
-      const response = await fetch("/api/dashboard/email?kind="+view+"&sender="+encodeURIComponent(sender),{cache:"no-store"});
+      const response = await fetch("/api/dashboard/email?kind="+view+"&sender="+encodeURIComponent(sender)+(append&&cursor?"&after="+encodeURIComponent(cursor):""),{cache:"no-store"});
       const data = await response.json();
       if(!response.ok) throw new Error(data.error || "Unable to load messages.");
-      setRows(data.emails || []);setMore(Boolean(data.has_more));
+      setRows(previous=>append?[...previous,...(data.emails||[])]:data.emails||[]);setMore(Boolean(data.has_more));setCursor(data.next_cursor||null);
     } catch (caught) {setError(caught instanceof Error ? caught.message : "Unable to load mail.");}
     finally {setLoading(false);}
-  },[view,sender]);
-  useEffect(()=>{if(view!=="compose")void load();},[view,load]);
+  },[view,sender,cursor]);
+  useEffect(()=>{if(view==="inbox"||view==="sent"){setCursor(null);void load(false);}},[view,sender]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadDrafts = useCallback(async () => {
+    setLoading(true);setError("");
+    try{
+      const response=await fetch("/api/dashboard/email/drafts",{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"Unable to load drafts.");
+      setDrafts(data.drafts||[]);
+    }catch(caught){setError(caught instanceof Error?caught.message:"Unable to load drafts.");}
+    finally{setLoading(false);}
+  },[]);
+  useEffect(()=>{if(view==="drafts")void loadDrafts();},[view,loadDrafts]);
+  async function saveDraft(){
+    if(saving)return;
+    setSaving(true);setError("");setNotice("");
+    try{
+      const response=await fetch("/api/dashboard/email/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:draftId||undefined,sender,recipient:to,subject,body:message,template})});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"Unable to save draft.");
+      setDraftId(data.draft.id);setNotice("Draft saved securely. PDF attachments are not stored with drafts.");
+    }catch(caught){setError(caught instanceof Error?caught.message:"Unable to save draft.");}
+    finally{setSaving(false);}
+  }
+  async function removeDraft(id:string){
+    if(!window.confirm("Delete this draft permanently?"))return;
+    setError("");
+    try{
+      const response=await fetch("/api/dashboard/email/drafts",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+      const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to delete draft.");
+      setDrafts(prev=>prev.filter(d=>d.id!==id));if(draftId===id)setDraftId(null);
+    }catch(caught){setError(caught instanceof Error?caught.message:"Unable to delete draft.");}
+  }
+  function openDraft(draft:Draft){
+    setDraftId(draft.id);setSender(draft.sender);setTo(draft.recipient);setSubject(draft.subject);setMessage(draft.body);setTemplate(draft.template);setAttachment(null);setConfirmed(false);setView("compose");
+  }
+  function newMessage(){
+    setDraftId(null);setTo("");setSubject("");setMessage("");setTemplate("blank");setAttachment(null);setConfirmed(false);setSelected(null);setError("");setView("compose");
+  }
+
   async function openMail(mail:Mail){
     setError("");
     try {
@@ -84,7 +128,8 @@ export default function EmailWorkspace() {
       const data=await response.json();
       if(!response.ok)throw new Error(data.error || "Message not sent.");
       setNotice("Email accepted by Resend. Delivery can be checked in Sent.");
-      setTo("");setSubject("");setMessage("");setConfirmed(false);setTemplate("blank");setAttachment(null);
+      if(draftId)await fetch("/api/dashboard/email/drafts",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:draftId})}).catch(()=>null);
+      setDraftId(null);setTo("");setSubject("");setMessage("");setConfirmed(false);setTemplate("blank");setAttachment(null);
       setView("sent");
     }catch(caught){setError(caught instanceof Error?caught.message:"Message not sent.");}
     finally{setSending(false);}
@@ -92,7 +137,7 @@ export default function EmailWorkspace() {
   return <div className={styles.root}>
     <header className={styles.heading}>
       <div><div className={styles.eyebrow}>FLUXKNIGHT · SALES COMMUNICATION</div><h1>Email & Proposals</h1><p>Manage business correspondence and prepare tailored client proposals.</p></div>
-      <button type="button" className={styles.primary} onClick={()=>{setView("compose");setSelected(null);setError("");}}>+ Compose</button>
+      <button type="button" className={styles.primary} onClick={newMessage}>+ Compose</button>
     </header>
     <div className={styles.toolbar}>
       <label>Mailbox <select aria-label="Business mailbox" value={sender} onChange={event=>setSender(event.target.value)}>{SENDERS.map(address=><option key={address} value={address}>{address}</option>)}</select></label>
@@ -101,7 +146,8 @@ export default function EmailWorkspace() {
     <nav className={styles.tabs} aria-label="Email folders">
       <button className={view==="inbox"?styles.active:""} onClick={()=>setView("inbox")}>Inbox</button>
       <button className={view==="sent"?styles.active:""} onClick={()=>setView("sent")}>Sent</button>
-      <button className={view==="compose"?styles.active:""} onClick={()=>setView("compose")}>New proposal</button>
+      <button className={view==="drafts"?styles.active:""} onClick={()=>setView("drafts")}>Drafts</button>
+      <button className={view==="compose"?styles.active:""} onClick={newMessage}>New proposal</button>
     </nav>
     {error&&<div className={styles.error} role="alert">{error}</div>}
     {notice&&<div className={styles.success} role="status">{notice}</div>}
@@ -117,15 +163,23 @@ export default function EmailWorkspace() {
         <label>Proposal attachment (optional PDF, maximum 4 MB)<input type="file" accept="application/pdf,.pdf" onChange={e=>{setAttachment(e.target.files?.[0]||null);setConfirmed(false);}} /></label>
         <p className={styles.tip}>Replace every bracketed placeholder before sending. Never claim results that have not been verified.</p>
         <label className={styles.confirm}><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>I reviewed the recipient and message, and this contact is eligible to receive this email.</span></label>
-        <button className={styles.primary} disabled={sending||!confirmed} type="submit">{sending?"Sending...":"Send email"}</button>
+        <div className={styles.actions}><button type="button" className={styles.secondary} onClick={()=>void saveDraft()} disabled={saving}>{saving?"Saving...":draftId?"Update draft":"Save draft"}</button><button className={styles.primary} disabled={sending||!confirmed} type="submit">{sending?"Sending...":"Send email"}</button></div>
       </form>
+    </section> : view==="drafts" ? <section className={styles.panel}>
+      <div className={styles.panelHeading}><h2>Saved drafts</h2><button onClick={()=>void loadDrafts()} disabled={loading}>Refresh</button></div>
+      {loading?<p className={styles.empty}>Loading drafts...</p>:drafts.length===0?<p className={styles.empty}>No saved proposals yet.</p>:<ul className={styles.mailList}>{drafts.map(draft=><li key={draft.id} className={styles.draftRow}>
+        <button type="button" onClick={()=>openDraft(draft)}><strong>{draft.recipient||"No recipient yet"}</strong><span>{draft.subject||"Untitled proposal"}</span><small>{draft.sender} · Updated {new Date(draft.updated_at).toLocaleString()}</small></button>
+        <button type="button" className={styles.deleteDraft} onClick={()=>void removeDraft(draft.id)} aria-label={"Delete draft: "+(draft.subject||"Untitled")}>Delete</button>
+      </li>)}</ul>}
     </section> : <div className={styles.columns}>
       <section className={styles.panel}>
         <div className={styles.panelHeading}><h2>{view==="inbox"?"Inbox":"Sent messages"}</h2><button onClick={()=>void load()} disabled={loading}>Refresh</button></div>
-        {loading?<p className={styles.empty}>Loading messages...</p>:rows.length===0?<p className={styles.empty}>No messages found for this mailbox in the most recent records.</p>:<ul className={styles.mailList}>{rows.map(mail=><li key={mail.id}><button className={selected?.id===mail.id?styles.selectedMail:""} onClick={()=>void openMail(mail)}>
+        <label className={styles.searchBox}>Search loaded messages<input type="search" placeholder="Search sender, recipient or subject" value={search} onChange={e=>setSearch(e.target.value)} /></label>
+        {loading&&rows.length===0?<p className={styles.empty}>Loading messages...</p>:rows.length===0?<p className={styles.empty}>No messages found for this mailbox in the most recent records.</p>:<ul className={styles.mailList}>{rows.filter(mail=>(mail.from+" "+mail.to.join(" ")+" "+mail.subject).toLowerCase().includes(search.toLowerCase())).map(mail=><li key={mail.id}><button className={selected?.id===mail.id?styles.selectedMail:""} onClick={()=>void openMail(mail)}>
           <strong>{view==="inbox"?mail.from:mail.to.join(", ")}</strong><span>{mail.subject}</span><small>{mail.created_at?new Date(mail.created_at).toLocaleString():""} {mail.last_event||""}</small>
         </button></li>)}</ul>}
-        {more&&<p className={styles.tip}>More account history exists. Pagination and full-text search are planned for the next release.</p>}
+        {more&&<div className={styles.loadMore}><button type="button" className={styles.secondary} disabled={loading||!cursor} onClick={()=>void load(true)}>{loading?"Loading...":"Load older messages"}</button></div>}
+        <p className={styles.tip}>Search covers loaded messages. Use "Load older messages" to extend history.</p>
       </section>
       <section className={styles.panel}>
         {selected?<div className={styles.message}><h2>{selected.subject}</h2><p>From: {selected.from}</p><p>To: {selected.to?.join(", ")}</p><hr/><pre>{selected.text||"This email has no plain-text body. HTML rendering is intentionally disabled for security."}</pre>
