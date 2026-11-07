@@ -24,6 +24,7 @@ export const ADMIN_NAV_GROUPS:AdminNavGroup[]=[
   {id:"systems",label:"Systems",sections:[{items:[
     {href:"/dashboard/workflows",label:"Systems & Workflows"},
     {href:"/dashboard/agents",label:"Agents"},
+    {href:"/dashboard/email",label:"Email & Proposals"},
     {href:"/dashboard/integrations",label:"Integrations"},
   ]}]},
   {id:"operations",label:"Operations",sections:[{items:[

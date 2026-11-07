@@ -443,10 +443,10 @@ async function fluxknightSnapshot(scope: AdminOrganizationScope): Promise<Organi
       },
       {
         name: "Email Automation",
-        role: "Outbound Lead Nurture",
+        role: "Outbound Lead Nurture & Client Proposals",
         channel: "Fluxknight · Email",
         status: emailFailures ? "attention" : emailWorkflows.length ? "live" : "limited",
-        href: "/dashboard/workflows",
+        href: "/dashboard/email",
         note: emailWorkflows.length
           ? `${emailWorkflows.length} email workflow${emailWorkflows.length === 1 ? "" : "s"} · ${emailRuns.length} recent runs · ${emailFailures} failures`
           : "No Fluxknight email workflow is registered in the current organization scope.",
