@@ -67,7 +67,7 @@ export async function uploadPrimarySocialLogoAction(formData: FormData) {
   await upsertPrimaryLogoRegistry({
     brandId: brand.id,
     socialAssetId: asset.id,
-    name: "Flux Social primary brand logo",
+    name: `${brand.name} canonical primary logo`,
     variant: "transparent",
   });
 
