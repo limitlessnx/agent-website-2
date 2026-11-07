@@ -3,6 +3,7 @@ import { generateCarouselAction } from "@/app/dashboard/social/carousels/actions
 import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/actions";
 import {
   approveSocialPostReviewAction,
+  approveReelVoiceReviewAction,
   rejectSocialPostReviewAction,
   updateSocialPostReviewAction,
 } from "@/app/dashboard/social/review/actions";
@@ -79,6 +80,15 @@ export default async function SocialReviewPage() {
             const imageAsset = postAssets.find((asset) => asset.id === post.metadata?.primary_asset_id || asset.asset_type === "image");
             const hasPlan = Boolean(post.metadata?.reel_plan);
             const renderStatus = String(post.metadata?.reel_render_status || "");
+            const isReel = ["reel", "video"].includes(post.format);
+            const voiceReviewStatus = String(post.metadata?.reel_voice_review_status || "pending");
+            const musicReady = post.metadata?.reel_music_status === "ready";
+            const voiceVerified = post.metadata?.reel_audio_verified === true;
+            const narrationAssetIds = Array.isArray(post.metadata?.reel_narration_asset_ids)
+              ? post.metadata.reel_narration_asset_ids.filter((id): id is string => typeof id === "string") : [];
+            const voiceAssets = postAssets
+              .filter((asset) => asset.asset_type === "audio" && narrationAssetIds.includes(asset.id))
+              .sort((a, b) => Number(a.metadata?.scene_index || 0) - Number(b.metadata?.scene_index || 0));
 
             return (
               <article key={post.id} className={`admin-panel ${styles.reviewCard}`}>
@@ -139,6 +149,26 @@ export default async function SocialReviewPage() {
                       ) : null}
                     </div>
 
+                    {isReel && hasPlan ? (
+                      <div className="admin-panel" style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                        <strong>Reel narration review · Premium male</strong>
+                        <span>{voiceVerified ? "Audio verified in rendered MP4" : "Narration not yet verified"} · Captions off · {musicReady ? "Licensed background music ready" : "Licensed music missing"}</span>
+                        <span>Listen to the voice clips on the right, then approve this specific narration. Regeneration resets approval.</span>
+                        {voiceReviewStatus === "approved" ? (
+                          <span className="admin-status live">Narration approved</span>
+                        ) : (
+                          <form action={approveReelVoiceReviewAction}>
+                            <input type="hidden" name="post_id" value={post.id} />
+                            <button type="submit" className="admin-status live"
+                              disabled={!voiceVerified || !musicReady || !voiceAssets.length || post.status !== "review"}
+                              style={{ cursor: voiceVerified && musicReady ? "pointer" : "not-allowed" }}>
+                              Approve narration and music
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    ) : null}
+
                     <div className={styles.reviewActions}>
                       {post.status === "review" ? (
                         <form action={approveSocialPostReviewAction}>
@@ -167,6 +197,17 @@ export default async function SocialReviewPage() {
                           <div key={asset.id} className={styles.carouselItem}>
                             <img src={signedUrls.get(asset.id)} alt={`${post.title} slide ${index + 1}`}  />
                             <span>Slide {index + 1}</span>
+                          </div>
+                        ) : null)}
+                      </div>
+                    ) : null}
+                    {isReel && voiceAssets.length ? (
+                      <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+                        <strong>Voice previews</strong>
+                        {voiceAssets.map((asset, index) => signedUrls.get(asset.id) ? (
+                          <div key={asset.id} style={{ display: "grid", gap: 5 }}>
+                            <span>Scene {Number(asset.metadata?.scene_index ?? index) + 1} · Premium male</span>
+                            <audio controls preload="none" src={signedUrls.get(asset.id)} style={{ width: "100%" }} />
                           </div>
                         ) : null)}
                       </div>
