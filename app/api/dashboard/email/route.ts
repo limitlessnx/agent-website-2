@@ -57,14 +57,14 @@ export async function POST(request: NextRequest) {
       !subject || !text || to.length > 254 || subject.length > 200 || text.length > 30000) {
     return NextResponse.json({error:"Provide a valid sender, single recipient, subject and message."},{status:400});
   }
-  if (/\\[[^\\]\\n]{1,80}\\]/.test(subject + " " + text)) return NextResponse.json({error:"Replace proposal placeholders before sending."},{status:400});
+  if (/\[[^\]\n]{1,80}\]/.test(subject + " " + text)) return NextResponse.json({error:"Replace proposal placeholders before sending."},{status:400});
   if (body.confirmed !== true) return NextResponse.json({error:"Review and confirm the message before sending."},{status:400});
   const attachment = body.attachment && typeof body.attachment === "object" ? body.attachment as Record<string, unknown> : null;
   let attachments: Array<{filename:string;content:string}> | undefined;
   if (attachment) {
     const filename = String(attachment.filename || "");
     const content = String(attachment.content || "");
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,99}\\.pdf$/i.test(filename) ||
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,99}\.pdf$/i.test(filename) ||
         content.length > 5_600_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(content) ||
         !content.startsWith("JVBERi0")) {
       return NextResponse.json({error:"Only one PDF attachment up to 4 MB is supported."},{status:400});
