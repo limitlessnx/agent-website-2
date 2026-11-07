@@ -1,11 +1,12 @@
 import { task } from "@trigger.dev/sdk";
 import { bundle } from "@remotion/bundler";
-import { renderMedia, selectComposition } from "@remotion/renderer";
+import { getVideoMetadata, renderMedia, selectComposition } from "@remotion/renderer";
 import { readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReelPlan } from "@/lib/social-video-plan";
+import { createReelNarration, getLicensedReelMusic } from "@/lib/social-reel-audio";
 
 const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 
@@ -19,12 +20,13 @@ export const fluxSocialRenderReel = task({
 
     const { data: post, error: postError } = await supabase
       .from("social_posts")
-      .select("id,organization_id,brand_id,title,format,metadata")
+      .select("id,organization_id,brand_id,title,format,status,metadata")
       .eq("organization_id", payload.organizationId)
       .eq("id", payload.postId)
       .single();
     if (postError) throw postError;
     if (!["reel", "video"].includes(post.format)) throw new Error("Only Reel/video posts can be rendered.");
+    if (!["draft", "review", "approved"].includes(post.status)) throw new Error("Scheduled and published Reels cannot be regenerated.");
 
     const metadata = (post.metadata || {}) as Record<string, unknown>;
     const plan = metadata.reel_plan as ReelPlan | undefined;
@@ -64,8 +66,38 @@ export const fluxSocialRenderReel = task({
       .createSignedUrl(logoAsset.storage_path, 3600);
     if (signedLogoError) throw signedLogoError;
 
+    // Narration is automatically generated before each draft render. The voice preview
+    // is stored privately and remains unapproved until reviewed by a human.
+    const narration = await createReelNarration(supabase, {
+      organizationId: payload.organizationId, brandId: brand.id, postId: post.id, plan,
+    });
+    const music = await getLicensedReelMusic(supabase, payload.organizationId);
+    const workingMetadata = {
+      ...metadata,
+      reel_plan: narration.plan,
+      reel_narration_asset_ids: narration.clips.map((clip) => clip.assetId),
+      reel_narration_duration_seconds: narration.totalDurationSeconds,
+      reel_voice_profile: "premium-male",
+      reel_captions_enabled: false,
+      reel_music_enabled: true,
+      reel_music_status: music ? "ready" : "missing_licensed_track",
+      reel_music_asset_id: music?.assetId ?? null,
+      reel_voice_review_status: "pending",
+      reel_audio_verified: false,
+      reel_render_status: "rendering",
+      reel_asset_id: null,
+      primary_asset_id: null,
+    };
+    const { error: pendingError } = await supabase.from("social_posts").update({
+      status: "review", approved_at: null, metadata: workingMetadata,
+    }).eq("organization_id", payload.organizationId).eq("id", post.id);
+    if (pendingError) throw pendingError;
+
     const inputProps = {
-      plan,
+      plan: narration.plan,
+      narrationClips: narration.clips.map(({ sceneIndex, durationSeconds, signedUrl }) => ({ sceneIndex, durationSeconds, signedUrl })),
+      musicUrl: music?.signedUrl ?? null,
+      captionsEnabled: false,
       logoUrl: signedLogo.signedUrl,
       brandName: brand.name,
       website: "Fluxknight.space",
@@ -97,7 +129,13 @@ export const fluxSocialRenderReel = task({
         logLevel: "info",
       });
 
+      const mediaInfo = await getVideoMetadata(outputLocation);
+      if (!mediaInfo.audioCodec) throw new Error("Rendered Reel has no audio track; refusing to mark it ready.");
+      if (Math.abs(mediaInfo.durationInSeconds - narration.totalDurationSeconds) > 1.2) {
+        throw new Error("Rendered Reel duration does not match the synchronized narration timeline.");
+      }
       const bytes = await readFile(outputLocation);
+      if (bytes.byteLength < 20_000) throw new Error("Rendered Reel output is unexpectedly small.");
       const storagePath = `${payload.organizationId}/${post.id}/${crypto.randomUUID()}-fluxknight-reel.mp4`;
       const { error: uploadError } = await supabase.storage
         .from(SOCIAL_ASSET_BUCKET)
@@ -119,7 +157,7 @@ export const fluxSocialRenderReel = task({
           size_bytes: bytes.byteLength,
           width: 1080,
           height: 1920,
-          duration_ms: Math.round(plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0) * 1000),
+          duration_ms: Math.round(narration.totalDurationSeconds * 1000),
           metadata: {
             renderer: "remotion-4.0.523",
             composition: "FluxSocialReel",
@@ -128,6 +166,13 @@ export const fluxSocialRenderReel = task({
             illustrative_scenarios_allowed: true,
             render_machine: "large-1x",
             render_concurrency: 1,
+            voice_profile: "premium-male",
+            voice_track_asset_ids: narration.clips.map((clip) => clip.assetId),
+            audio_codec: mediaInfo.audioCodec,
+            audio_duration_verified: true,
+            music_asset_id: music?.assetId ?? null,
+            captions_enabled: false,
+            music_enabled: true,
           },
         })
         .select("id")
@@ -142,11 +187,13 @@ export const fluxSocialRenderReel = task({
         .from("social_posts")
         .update({
           metadata: {
-            ...metadata,
-            media_assets: [...priorAssets, asset.id],
+            ...workingMetadata,
+            media_assets: [...priorAssets, ...narration.clips.map((clip) => clip.assetId), asset.id],
             primary_asset_id: asset.id,
             reel_asset_id: asset.id,
             reel_render_status: "ready",
+            reel_audio_verified: true,
+            reel_voice_review_status: "pending",
             reel_rendered_at: new Date().toISOString(),
             reel_renderer: "remotion-4.0.523",
           },
