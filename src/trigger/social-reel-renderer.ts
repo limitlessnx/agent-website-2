@@ -71,7 +71,7 @@ export const fluxSocialRenderReel = task({
     const narration = await createReelNarration(supabase, {
       organizationId: payload.organizationId, brandId: brand.id, postId: post.id, plan,
     });
-    const music = await getLicensedReelMusic(supabase, payload.organizationId);
+    const music = await getLicensedReelMusic(supabase, payload.organizationId, typeof metadata.reel_music_asset_id === "string" ? metadata.reel_music_asset_id : null);
     const workingMetadata = {
       ...metadata,
       reel_plan: narration.plan,
