@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { ReelPlan } from "@/lib/social-video-plan";
 
 export type FluxSocialReelProps = {
@@ -25,7 +25,7 @@ function ReelScene({ plan, sceneIndex }: { plan: ReelPlan; sceneIndex: number })
   const frame = useCurrentFrame();
   const glow = interpolate(frame, [0, 30, 60], [0.18, 0.42, 0.2], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
-    <AbsoluteFill style={{ background: "#050507", color: "white", padding: "96px 70px 120px", fontFamily: "Arial, Helvetica, sans-serif" }}>
+    <AbsoluteFill style={{ background: "#050507", color: "white", padding: "240px 70px 120px", fontFamily: "Arial, Helvetica, sans-serif" }}>
       <AbsoluteFill style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px)", backgroundSize: "52px 52px" }} />
       <div style={{ position: "absolute", width: 720, height: 720, borderRadius: 999, right: -220, top: -180, background: `radial-gradient(circle, rgba(139,92,246,${glow}) 0%, rgba(139,92,246,0) 68%)` }} />
       <div style={{ position: "relative", display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
@@ -60,7 +60,7 @@ export const FluxSocialReel: React.FC<FluxSocialReelProps> = ({ plan, logoUrl, b
       })}
       <div style={{ position: "absolute", top: 52, left: 52, right: 52, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
         {/* Canonical logo asset only. Never redraw the logo in Remotion. */}
-        <div style={{ width: 250, height: 72, display: "flex", alignItems: "center", justifyContent: "flex-start" }}><img src={logoUrl} alt={`${brandName} logo`} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} /></div>
+        <div style={{ width: 210, height: 148, display: "flex", alignItems: "center", justifyContent: "flex-start" }}><Img src={logoUrl} alt={`${brandName} logo`} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} /></div>
         <div style={{ color: "#e4e4e7", fontSize: 18, letterSpacing: "0.12em" }}>{brandName.toUpperCase()}</div>
       </div>
       <div style={{ position: "absolute", bottom: 38, left: 52, right: 52, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10, fontSize: 18, color: "#a78bfa" }}>
