@@ -42,7 +42,7 @@ test("dashboard navigation and workforce email card lead to workspace",()=>{
 
 test("server-side drafts are owner-scoped and require same-origin writes",()=>{
   const route=read("app/api/dashboard/email/drafts/route.ts");
-  const migration=read("supabase/migrations/20261107_fluxknight_email_drafts.sql");
+  const migration=read("supabase/migrations/20261107145518_fluxknight_email_drafts.sql");
   assert.match(route,/getAdminSession/);
   assert.match(route,/organization\.id !== "fluxknight"/);
   assert.match(route,/\.eq\("owner_email",owner\)/);
@@ -59,4 +59,13 @@ test("mail workspace supports drafts and incremental history",()=>{
   assert.match(component,/type="search"/);
   assert.match(route,/next_cursor/);
   assert.match(route,/Invalid cursor/);
+});
+
+test("sent email UI differentiates accepted, delivered and bounced outcomes",()=>{
+  const component=read("components/admin/EmailWorkspace.tsx");
+  assert.match(component,/state==="bounced"/);
+  assert.match(component,/state==="delivered"/);
+  assert.match(component,/state==="delivery_delayed"/);
+  assert.match(component,/Delivery is not confirmed/);
+  assert.match(component,/Resend email ID/);
 });
