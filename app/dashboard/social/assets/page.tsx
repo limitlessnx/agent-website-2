@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { uploadSocialAssetAction } from "@/app/dashboard/social/assets/actions";
+import { uploadSocialAssetAction, uploadPrimarySocialLogoAction } from "@/app/dashboard/social/assets/actions";
+import { getSocialBrand } from "@/lib/social";
+import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { listSocialAssets } from "@/lib/social-assets";
 import { listSocialPosts } from "@/lib/social";
 
@@ -13,7 +15,8 @@ function formatBytes(value: number | null) {
 }
 
 export default async function SocialAssetsPage() {
-  const [assets, posts] = await Promise.all([listSocialAssets(), listSocialPosts(200)]);
+  const [assets, posts, brand] = await Promise.all([listSocialAssets(), listSocialPosts(200), getSocialBrand()]);
+  const currentLogo = brand ? await getPrimaryLogoAsset(brand.id) : null;
   const postById = new Map(posts.map((post) => [post.id, post]));
 
   return (
@@ -26,6 +29,36 @@ export default async function SocialAssetsPage() {
         </div>
         <Link href="/dashboard/social" className="admin-status">Back to Social</Link>
       </header>
+
+      <section className="admin-panel" aria-label="Primary brand logo">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Primary brand logo</h2>
+            <p>Upload the official transparent PNG used on generated graphics, carousels and Reels. The previous media file is retained for rollback.</p>
+          </div>
+          <span className={currentLogo?.social_asset_id ? "admin-status live" : "admin-status warning"}>
+            {currentLogo?.social_asset_id ? "Registered" : "Missing"}
+          </span>
+        </div>
+        {currentLogo?.signed_url ? (
+          <div style={{ marginBottom: 20, display: "grid", gap: 8 }}>
+            <strong>Currently registered logo</strong>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", maxWidth: 420, minHeight: 130, padding: 24, borderRadius: 12, border: "1px solid var(--admin-border, #2d2d35)", background: "#101017" }}>
+              <img src={currentLogo.signed_url} alt={`${brand?.name || "Brand"} current primary logo`} style={{ display: "block", maxWidth: "100%", maxHeight: 110, objectFit: "contain" }} />
+            </div>
+          </div>
+        ) : null}
+        {brand ? (
+          <form action={uploadPrimarySocialLogoAction} encType="multipart/form-data" style={{ display: "grid", gap: 14, maxWidth: 620 }}>
+            <label style={{ display: "grid", gap: 8 }}>
+              <strong>Replacement transparent PNG for {brand.name}</strong>
+              <input name="logo" type="file" required accept="image/png" style={inputStyle} />
+              <span>PNG only, up to 5 MB. Use the original brand artwork; do not redraw or distort the logo.</span>
+            </label>
+            <div><button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Upload and set as primary logo</button></div>
+          </form>
+        ) : <p>Create a Social Brand before registering its logo.</p>}
+      </section>
 
       <section className="admin-grid two">
         <div className="admin-panel compact"><strong>{assets.length}</strong><p>Tracked assets</p></div>
