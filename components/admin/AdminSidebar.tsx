@@ -41,6 +41,7 @@ const ICON_BY_HREF: Record<string, ComponentType<{ size?: number }>> = {
   "/dashboard/retention": ShieldCheck,
   "/dashboard/evaluations": ClipboardList,
   "/dashboard/agents": Bot,
+  "/dashboard/email": MessageSquareText,
   "/dashboard/conversations": MessageSquareText,
   "/dashboard/social": Megaphone,
   "/dashboard/activity": Activity,
