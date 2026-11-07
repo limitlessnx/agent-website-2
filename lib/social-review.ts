@@ -101,6 +101,13 @@ export async function updateSocialPostReview(input: {
       },
       metadata: {
         ...metadata,
+        ...(post.format === "reel" || post.format === "video" ? {
+          reel_voice_review_status: "pending",
+          reel_audio_verified: false,
+          reel_render_status: "needs_rerender",
+          reel_asset_id: null,
+          primary_asset_id: null,
+        } : {}),
         review_history: appendHistory(metadata, historyEntry("edited", { snapshot })),
         last_review_edit_at: new Date().toISOString(),
       },
