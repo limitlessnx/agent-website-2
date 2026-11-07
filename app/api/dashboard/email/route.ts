@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
   const kind = request.nextUrl.searchParams.get("kind") === "sent" ? "sent" : "inbox";
   const sender = request.nextUrl.searchParams.get("sender") || FLUXKNIGHT_SENDERS[0];
   if (!isFluxknightAddress(sender)) return NextResponse.json({error:"Invalid mailbox."},{status:400});
+  const cursor = request.nextUrl.searchParams.get("after");
+  if (cursor && !/^[0-9a-f-]{36}$/i.test(cursor)) return NextResponse.json({error:"Invalid cursor."},{status:400});
   const id = request.nextUrl.searchParams.get("id");
   if (id && !/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({error:"Invalid message id."},{status:400});
   try {
@@ -33,11 +35,13 @@ export async function GET(request: NextRequest) {
       }},{headers});
     }
     // Read a bounded account-wide page; filter on the server before responding.
-    const collection = await resendApi(kind === "inbox" ? "/emails/receiving?limit=100" : "/emails?limit=100");
+    const endpoint = kind === "inbox" ? "/emails/receiving?limit=100" : "/emails?limit=100";
+    const collection = await resendApi(endpoint + (cursor ? "&after=" + encodeURIComponent(cursor) : ""));
     const rows = asMailRows(collection).filter(row => kind === "inbox"
       ? row.to.some(to => to.toLowerCase() === sender)
       : row.from.toLowerCase().includes(sender));
-    return NextResponse.json({emails:rows, kind, sender, has_more:collection.has_more === true, note:"Showing matching messages from the most recent 100 account-wide records."},{headers});
+    const fullPage = asMailRows(collection);
+    return NextResponse.json({emails:rows, kind, sender, has_more:collection.has_more === true, next_cursor:fullPage.at(-1)?.id || null, note:"Search covers loaded pages; older messages can be loaded incrementally."},{headers});
   } catch (error) {
     return NextResponse.json({error:error instanceof Error ? error.message : "Unable to load email."},{status:502,headers});
   }
