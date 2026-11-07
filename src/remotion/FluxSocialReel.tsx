@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { ReelPlan } from "@/lib/social-video-plan";
 
 export type FluxSocialReelProps = {
@@ -7,6 +7,9 @@ export type FluxSocialReelProps = {
   logoUrl: string;
   brandName: string;
   website?: string;
+  narrationClips?: Array<{ sceneIndex: number; signedUrl: string; durationSeconds: number }>;
+  musicUrl?: string | null;
+  captionsEnabled?: boolean;
 };
 
 function SceneCard({ text, accent }: { text: string; accent?: boolean }) {
@@ -20,7 +23,7 @@ function SceneCard({ text, accent }: { text: string; accent?: boolean }) {
   );
 }
 
-function ReelScene({ plan, sceneIndex }: { plan: ReelPlan; sceneIndex: number }) {
+function ReelScene({ plan, sceneIndex, captionsEnabled }: { plan: ReelPlan; sceneIndex: number; captionsEnabled: boolean }) {
   const scene = plan.scenes[sceneIndex];
   const frame = useCurrentFrame();
   const glow = interpolate(frame, [0, 30, 60], [0.18, 0.42, 0.2], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -32,7 +35,7 @@ function ReelScene({ plan, sceneIndex }: { plan: ReelPlan; sceneIndex: number })
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           <div style={{ fontSize: 22, color: "#c4b5fd", letterSpacing: "0.18em", textTransform: "uppercase" }}>{scene.scene_type.replaceAll("_", " ")}</div>
           <SceneCard text={scene.on_screen_text} accent={scene.scene_type === "hook"} />
-          {scene.voiceover ? <div style={{ fontSize: 28, color: "#d4d4d8", lineHeight: 1.45, maxWidth: 820 }}>{scene.voiceover}</div> : null}
+          {captionsEnabled && scene.voiceover ? <div style={{ fontSize: 28, color: "#d4d4d8", lineHeight: 1.45, maxWidth: 820 }}>{scene.voiceover}</div> : null}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24 }}>
           <div style={{ fontSize: 19, color: "#a1a1aa", maxWidth: 720 }}>{scene.visual_direction}</div>
@@ -43,7 +46,7 @@ function ReelScene({ plan, sceneIndex }: { plan: ReelPlan; sceneIndex: number })
   );
 }
 
-export const FluxSocialReel: React.FC<FluxSocialReelProps> = ({ plan, logoUrl, brandName, website = "Fluxknight.space" }) => {
+export const FluxSocialReel: React.FC<FluxSocialReelProps> = ({ plan, logoUrl, brandName, website = "Fluxknight.space", narrationClips = [], musicUrl = null, captionsEnabled = false }) => {
   const { fps } = useVideoConfig();
   let cursor = 0;
   return (
@@ -54,10 +57,17 @@ export const FluxSocialReel: React.FC<FluxSocialReelProps> = ({ plan, logoUrl, b
         cursor += durationInFrames;
         return (
           <Sequence key={`${scene.order}-${index}`} from={from} durationInFrames={durationInFrames}>
-            <ReelScene plan={plan} sceneIndex={index} />
+            <ReelScene plan={plan} sceneIndex={index} captionsEnabled={captionsEnabled} />
+            {narrationClips.find((clip) => clip.sceneIndex === index) ? (
+              <Audio
+                src={narrationClips.find((clip) => clip.sceneIndex === index)!.signedUrl}
+                volume={1}
+              />
+            ) : null}
           </Sequence>
         );
       })}
+      {musicUrl ? <Audio src={musicUrl} loop volume={0.12} /> : null}
       <div style={{ position: "absolute", top: 52, left: 52, right: 52, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
         {/* Canonical logo asset only. Never redraw the logo in Remotion. */}
         <div style={{ width: 250, height: 72, display: "flex", alignItems: "center", justifyContent: "flex-start" }}><img src={logoUrl} alt={`${brandName} logo`} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} /></div>

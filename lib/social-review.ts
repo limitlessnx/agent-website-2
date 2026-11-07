@@ -28,9 +28,11 @@ function mediaReady(format: SocialPostFormat, metadata: Record<string, unknown>)
 
   if (format === "reel" || format === "video") {
     const ready = hasString(metadata.reel_asset_id) && metadata.reel_render_status === "ready";
-    return ready
-      ? { ready: true, reason: null }
-      : { ready: false, reason: "Render the final Reel/video before approval." };
+    if (!ready) return { ready: false, reason: "Render the final narrated Reel before approval." };
+    if (metadata.reel_audio_verified !== true) return { ready: false, reason: "Render verification must confirm a playable narration track." };
+    if (metadata.reel_music_status !== "ready") return { ready: false, reason: "Attach a licensed background music track before final approval." };
+    if (metadata.reel_voice_review_status !== "approved") return { ready: false, reason: "Listen to the voice previews and approve Reel narration first." };
+    return { ready: true, reason: null };
   }
 
   if (format === "story") {
@@ -99,6 +101,13 @@ export async function updateSocialPostReview(input: {
       },
       metadata: {
         ...metadata,
+        ...(post.format === "reel" || post.format === "video" ? {
+          reel_voice_review_status: "pending",
+          reel_audio_verified: false,
+          reel_render_status: "needs_rerender",
+          reel_asset_id: null,
+          primary_asset_id: null,
+        } : {}),
         review_history: appendHistory(metadata, historyEntry("edited", { snapshot })),
         last_review_edit_at: new Date().toISOString(),
       },
@@ -172,5 +181,44 @@ export async function approveSocialPostReview(postId: string) {
     })
     .eq("organization_id", organizationId)
     .eq("id", postId);
+  if (updateError) throw updateError;
+}
+
+/** Distinct approval gate for the exact narrated media that was rendered. */
+export async function approveReelVoiceReview(postId: string) {
+  const { supabase, organizationId } = await requireTenant();
+  const { data: post, error } = await supabase.from("social_posts")
+    .select("id,format,status,metadata")
+    .eq("organization_id", organizationId).eq("id", postId).single();
+  if (error) throw error;
+  if (!["reel", "video"].includes(post.format) || post.status !== "review") {
+    throw new Error("Only Reels currently in review may have their voice approved.");
+  }
+  const metadata = (post.metadata || {}) as Record<string, unknown>;
+  if (metadata.reel_render_status !== "ready" || metadata.reel_audio_verified !== true) {
+    throw new Error("Verify a final narrated Reel render before approving audio.");
+  }
+  if (metadata.reel_music_status !== "ready") {
+    throw new Error("Configure licensed background music and render again before approving.");
+  }
+  const ids = Array.isArray(metadata.reel_narration_asset_ids)
+    ? metadata.reel_narration_asset_ids.filter(hasString) : [];
+  if (!ids.length) throw new Error("There are no generated voice clips to approve.");
+  const { data: assets, error: assetsError } = await supabase.from("social_assets")
+    .select("id,status,asset_type")
+    .eq("organization_id", organizationId)
+    .eq("post_id", postId)
+    .in("id", ids);
+  if (assetsError) throw assetsError;
+  if (!assets || assets.length !== ids.length || assets.some((asset) => asset.status !== "ready" || asset.asset_type !== "audio")) {
+    throw new Error("One or more narration tracks are not ready.");
+  }
+  const { error: updateError } = await supabase.from("social_posts").update({
+    metadata: {
+      ...metadata,
+      reel_voice_review_status: "approved",
+      reel_voice_review_approved_at: new Date().toISOString(),
+    },
+  }).eq("organization_id", organizationId).eq("id", postId);
   if (updateError) throw updateError;
 }
