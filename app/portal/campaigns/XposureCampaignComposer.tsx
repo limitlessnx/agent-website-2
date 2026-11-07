@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
+import CampaignAiWriter from "@/components/CampaignAiWriter";
 
 type Template = { name: string; language: string; category: string; purpose: string; variable_keys: string[]; body: string };
 type Customer = { id: string; full_name: string; phone: string | null; email: string | null };
@@ -90,6 +91,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
           <div className={styles.templateMeta}><span>{template.category || "WhatsApp template"}</span><span>{template.language}</span><span>Linked to Xposure</span></div>
           <div className={styles.message} aria-label="WhatsApp message preview"><span>Message preview</span><p>{preview || "Message text is unavailable. Check the template with your administrator."}</p></div>
           <div className={styles.fields}>{template.variable_keys.map(key => key === "customer_name" ? <p key={key} className={styles.hint}>Customer name is filled for each recipient.</p> : <label key={key} className={styles.field}>{key.replaceAll("_", " ")}<input value={variables[key] || ""} disabled={sending} onChange={event => { setVariables(current => ({ ...current, [key]: event.target.value })); setReviewing(false); }} maxLength={1024} /></label>)}</div>
+          <CampaignAiWriter key={templateKey} endpoint="/api/portal/campaigns/writeup" context={{ templateName: template.name, templatePurpose: template.purpose, language: template.language }} values={variables} disabled={sending || reviewing} onApply={suggested => { setVariables(current => ({ ...current, ...suggested })); setReviewing(false); }} />
         </>}
         <div className={styles.sendbar}><div><strong>{recipients.length} recipient{recipients.length === 1 ? "" : "s"} selected</strong><small>Only contacts with marketing permission can be selected.</small></div><button type="button" className={styles.primary} onClick={() => { setReviewing(true); setNotice(""); setError(""); }} disabled={!complete || !recipients.length || sending || Boolean(contactError) || Boolean(templateError)}>Review campaign</button></div>
         {reviewing && <div className={styles.confirm} role="region" aria-label="Confirm campaign"><h3>Confirm your campaign</h3><p>Send <strong>{template?.name}</strong> to {recipients.length} selected contact{recipients.length === 1 ? "" : "s"}? Consent and template approval will be checked again.</p><div className={styles.importActions}><button type="button" className={styles.primary} onClick={() => void send()} disabled={sending}>{sending ? "Submitting…" : "Send campaign"}</button><button type="button" className={styles.secondary} disabled={sending} onClick={() => setReviewing(false)}>Cancel campaign</button></div></div>}

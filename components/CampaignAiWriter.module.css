@@ -1,0 +1,17 @@
+.writer { margin: 20px 0; padding: 18px; border: 1px solid var(--border, #424767); border-radius: 14px; background: var(--surface, #151a36); color: inherit; min-width: 0; }
+.heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.heading span, .hint { font-size: 13px; line-height: 1.6; opacity: .8; }
+.field { display: grid; gap: 8px; font-size: 14px; }
+.field textarea { width: 100%; box-sizing: border-box; min-width: 0; padding: 12px; border: 1px solid var(--border, #424767); border-radius: 9px; color: inherit; background: var(--surface, #10152d); font: inherit; resize: vertical; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.actions button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--border, #656b94); border-radius: 9px; color: inherit; background: transparent; font: inherit; cursor: pointer; transition: background .15s, transform .15s; }
+.actions button:hover:not(:disabled) { background: #ffffff12; transform: translateY(-1px); }
+.actions button:active:not(:disabled) { transform: translateY(0); }
+.actions button:disabled { opacity: .5; cursor: not-allowed; }
+.actions button:focus-visible, .field textarea:focus-visible { outline: 2px solid #b7a4ff; outline-offset: 3px; }
+.suggestion { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border, #424767); overflow-wrap: anywhere; }
+.suggestion > div > span { display: block; margin-top: 14px; font-size: 12px; opacity: .8; text-transform: capitalize; }
+.suggestion p { line-height: 1.65; white-space: pre-wrap; }
+.error { color: #ffb1b8; line-height: 1.6; }
+@media (max-width: 480px) { .writer { padding: 14px; } .actions button { flex: 1 1 100%; } }
+@media (prefers-reduced-motion: reduce) { .actions button { transition: none; } }

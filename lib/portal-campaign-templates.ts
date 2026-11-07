@@ -10,11 +10,11 @@ function placeholders(template: MetaTemplate) {
   return [...found].filter(Number.isInteger).sort((a, b) => a - b);
 }
 
-export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true) {
+export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes = ["campaign", "customer_follow_up", "hotel_campaign"]) {
   const admin = createAdminClient();
   const { data: linked, error: linkedError } = await admin.from("whatsapp_template_configs")
     .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active")
-    .in("purpose", ["campaign", "customer_follow_up", "hotel_campaign"]);
+    .in("purpose", purposes);
   if (linkedError) throw new CampaignTemplateError("Unable to read linked campaign templates.", 503);
   const { data: integration, error: integrationError } = await admin.from("organization_integrations").select("configuration,status").eq("organization_id", organizationId).eq("provider", "whatsapp").in("status", ["configured", "connected", "degraded"]).maybeSingle();
   if (integrationError) throw new CampaignTemplateError("Unable to read WhatsApp configuration.", 500);

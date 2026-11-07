@@ -11,6 +11,9 @@ on:
       - "app/dashboard/**"
       - "app/portal/**"
       - "app/api/portal/campaigns/**"
+      - "app/api/limitless/campaigns/writeup/**"
+      - "components/CampaignAiWriter*"
+      - "tests/campaign-ai-writeup.test.cjs"
       - "lib/campaign-*.ts"
       - "lib/portal-campaign-templates.ts"
       - "tests/xposure-campaign*.test.cjs"
@@ -93,6 +96,8 @@ jobs:
         run: npm run test:xposure-dashboard
       - name: Xposure campaigns and phone contacts
         run: npm run test:xposure-campaigns
+      - name: AI campaign writing and template contracts
+        run: npm run test:campaign-ai
       - name: Hotel campaign regressions
         run: npm run test:hotel
       - name: Manual follow-up activation and database guards
