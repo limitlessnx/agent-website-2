@@ -36,7 +36,9 @@ test("Strict Limitless template contract blocks blank variables, missing order m
   const helper = read("lib/whatsapp-delivery.ts");
   const route = read("app/api/limitless/maia/followups/route.ts");
   assert.match(route, /strictTemplateContract: \{ approvedVariableOrder:/);
-  assert.match(route, /No objection recorded/);
+  assert.match(route, /followup_context:/);
+  assert.match(route, /property_details:/);
+  assert.match(route, /next_step:/);
   assert.match(route, /Location details not listed/);
   assert.match(helper, /strictLimitlessLookup/);
   assert.match(helper, /approved_variable_order/);

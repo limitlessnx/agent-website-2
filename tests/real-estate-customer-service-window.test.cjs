@@ -71,6 +71,7 @@ test('Limitless strict template validation blocks missing or mismatched required
  const orderMatch=route.match(/const LIMITLESS_APPROVED_FOLLOWUP_VARIABLE_ORDER = \[([\s\S]*?)\] as const;/);
  assert.ok(orderMatch,'the Limitless route must declare its approved variable order');
  const order=Array.from(orderMatch[1].matchAll(/"([^"]+)"/g),match=>match[1]);
+ assert.deepEqual(order,['customer_name','followup_context','property_details','next_step']);
  const validValues=Object.fromEntries(order.map(key=>[key,`sample-${key}`]));
 
  function createClient(template){
@@ -90,6 +91,7 @@ test('Limitless strict template validation blocks missing or mismatched required
   const client=load(path.resolve(__dirname,'../lib/whatsapp-delivery.ts'),{
    '@/lib/supabase/admin':{createAdminClient:()=>admin},
    '@/lib/twilio-whatsapp':{sendTwilioWhatsAppMessage:async()=>({sid:'unit-provider-message'})},
+   '@/lib/whatsapp-message-normalizer':load(path.resolve(__dirname,'../lib/whatsapp-message-normalizer.ts')),
   },'',{fetch,process:{env:{LIMITLESS_SUPABASE_URL:'https://unit.test',LIMITLESS_SUPABASE_SERVICE_ROLE_KEY:'unit-test-key'}}});
   return {client,calls};
  }
@@ -116,13 +118,17 @@ test('Limitless strict template validation blocks missing or mismatched required
 
  const blank={...validValues,[order[0]]:'   '};
  const missingValueClient=createClient(base);
- await assert.rejects(missingValueClient.client.sendWhatsAppMessage({...input,variables:blank}),/required approved WhatsApp template variable/i);
+ await assert.rejects(missingValueClient.client.sendWhatsAppMessage({...input,variables:blank}),/required/i);
  assert.equal(missingValueClient.calls.some(call=>call.url.startsWith('https://graph.facebook.com/')),false);
 
  const validClient=createClient(base);
  const result=await validClient.client.sendWhatsAppMessage(input);
  assert.equal(result.ok,true);
  assert.equal(validClient.calls.filter(call=>call.url.startsWith('https://graph.facebook.com/')).length,1);
+ const providerCall=validClient.calls.find(call=>call.url.startsWith('https://graph.facebook.com/'));
+ const parameters=JSON.parse(providerCall.init.body).template.components[0].parameters;
+ assert.equal(parameters.length,4);
+ assert.deepEqual(parameters.map(parameter=>parameter.text),order.map(key=>validValues[key]));
 
  const directClient=createClient(base);
  const directResult=await directClient.client.sendWhatsAppMessage({

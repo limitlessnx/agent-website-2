@@ -13,8 +13,9 @@ import {
 } from "@/lib/campaign-groups";
 import ManualFollowupDialog from "./ManualFollowupDialog";
 import type { ProgressiveLead } from "@/lib/lead-profile-service";
+import type { LeadFollowupState } from "@/lib/lead-followup-state";
 
-type LeadsCrmProps = { leads: ProgressiveLead[]; groups: CampaignGroup[] };
+type LeadsCrmProps = { leads: ProgressiveLead[]; groups: CampaignGroup[]; followupStates?: Record<string, LeadFollowupState> | null; followupLoadError?: string };
 type GroupType = "manual" | "smart";
 type LeadDraft = Pick<ProgressiveLead,
   "name" | "phone" | "email" | "status" | "score" | "budget" | "location_preference" |
@@ -79,7 +80,7 @@ function describeRules(rules?: CampaignGroupRules) {
   return parts.length ? parts.join(" · ") : "No smart filters";
 }
 
-export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
+export default function LeadsCrm({ leads, groups, followupStates = null, followupLoadError }: LeadsCrmProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
@@ -119,7 +120,7 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
   const allVisibleSelected = visibleIds.length > 0 && visibleSelected === visibleIds.length;
   const hotLeads = leads.filter((lead) => normalize(lead.score) === "hot" || normalize(lead.status) === "qualified").length;
   const warmLeads = leads.filter((lead) => normalize(lead.score) === "warm").length;
-  const followUpLeads = leads.filter((lead) => Number(lead.follow_up_stage || 0) > 0).length;
+  const followUpLeads = followupStates ? Object.values(followupStates).filter(state => state.active).length : null;
   const qualifiedRate = leads.length ? Math.round((hotLeads / leads.length) * 100) : 0;
   const locationOptions = useMemo(
     () => [...new Set(leads.map((lead) => lead.location_preference).filter(Boolean) as string[])].sort(),
@@ -287,8 +288,11 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
         <div><span><UserCheck size={16} /></span><p>Total Leads</p><strong>{leads.length}</strong></div>
         <div><span><Star size={16} /></span><p>Hot / Qualified</p><strong>{hotLeads}</strong></div>
         <div><span><MessageCircle size={16} /></span><p>Warm Leads</p><strong>{warmLeads}</strong></div>
-        <div><span><Send size={16} /></span><p>In Follow-up</p><strong>{followUpLeads}</strong></div>
+        <div><span><Send size={16} /></span><p>In Follow-up</p><strong>{followUpLeads ?? "—"}</strong></div>
       </div>
+
+      {followupLoadError ? <p className="lead-feedback error" role="alert">{followupLoadError}</p> : null}
+      {followupStates && Object.values(followupStates).some(state => state.needsReview) ? <p className="lead-feedback error" role="alert">Some follow-ups need review. <a href="/dashboard/limitless/followups">Open Follow-up Control</a> to check message outcomes.</p> : null}
 
       <section className="admin-panel">
         <div className="admin-panel-header">
@@ -366,7 +370,7 @@ export default function LeadsCrm({ leads, groups }: LeadsCrmProps) {
                         {lead.purpose ? <span>{lead.purpose}</span> : null}
                       </div>
                       <div className="lead-card-bottom">
-                        <span>Follow-up stage {lead.follow_up_stage ?? 0}</span>
+                        <span>{!followupStates ? "Follow-up status unavailable" : followupStates[lead.id]?.active ? (followupStates[lead.id].needsReview ? "Follow-up active · needs review" : "Follow-up active") : followupStates[lead.id]?.paused ? "Follow-up paused" : "Not in follow-up"}</span>
                         <span>{formatDate(lead.last_contacted_at || lead.created_at)}</span>
                       </div>
                     </>
