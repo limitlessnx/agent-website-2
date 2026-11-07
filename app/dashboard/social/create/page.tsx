@@ -61,8 +61,9 @@ export default function CreateSocialPostPage() {
           <fieldset style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: 10 }}>
             <legend style={{ fontWeight: 700, marginBottom: 8 }}>Publish to</legend>
             <label><input type="checkbox" name="platforms" value="instagram" defaultChecked /> Instagram</label>
-            <label><input type="checkbox" name="platforms" value="facebook" defaultChecked /> Facebook</label>
-            <label><input type="checkbox" name="platforms" value="linkedin" defaultChecked /> LinkedIn</label>
+            <label><input type="checkbox" name="platforms" value="facebook" /> Facebook (draft planning only)</label>
+            <label><input type="checkbox" name="platforms" value="linkedin" /> LinkedIn (draft planning only)</label>
+            <small>Only Instagram is currently supported for scheduling and live publishing. Facebook and LinkedIn drafts cannot be published through this workflow yet.</small>
           </fieldset>
 
           <div>
