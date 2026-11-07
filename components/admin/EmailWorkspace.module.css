@@ -6,3 +6,13 @@
 .draftRow{display:flex;align-items:center;gap:6px}
 .draftRow>button:first-child{min-width:0;flex:1}
 .mailList .deleteDraft{width:auto;flex:0 0 auto;color:#ffb7c2;border:1px solid #714050;border-radius:8px;padding:8px 12px;margin-right:12px}
+
+.deliveryNotice{margin:0 16px 10px;padding:12px 14px;background:#26203f;color:#d9d0ef;border:1px solid #5a507e;border-radius:10px;font-size:12px;line-height:1.5}
+.deliveryPill{display:inline-flex;align-items:center;justify-content:center;width:max-content;font-size:11px;font-weight:750;border:1px solid transparent;padding:3px 9px;border-radius:999px}
+.deliveryFail{background:#4d243b;color:#ffc6c6;border-color:#944c63}
+.deliveryWarn{background:#55401e;color:#ffe1a7;border-color:#987340}
+.deliveryOk{background:#1b4036;color:#a6efd1;border-color:#478674}
+.deliveryNeutral{background:#293257;color:#cbd5ff;border-color:#4e5b93}
+.deliveryDetail{padding:14px 16px;margin:14px 0;background:#202849;border-radius:12px;border:1px solid #404d7a}
+.deliveryDetail p{margin:10px 0;line-height:1.5;color:#cdd4ee}
+.deliveryDetail small{color:#aab8d7;overflow-wrap:anywhere}
