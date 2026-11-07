@@ -39,3 +39,24 @@ test("dashboard navigation and workforce email card lead to workspace",()=>{
   assert.match(component,/Real Estate Automation/);
   assert.match(component,/type="file"/);
 });
+
+test("server-side drafts are owner-scoped and require same-origin writes",()=>{
+  const route=read("app/api/dashboard/email/drafts/route.ts");
+  const migration=read("supabase/migrations/20261107_fluxknight_email_drafts.sql");
+  assert.match(route,/getAdminSession/);
+  assert.match(route,/organization\.id !== "fluxknight"/);
+  assert.match(route,/\.eq\("owner_email",owner\)/);
+  assert.match(route,/sameOrigin\(request\)/);
+  assert.match(migration,/enable row level security/);
+  assert.match(migration,/revoke all on public\.fluxknight_email_drafts/);
+});
+test("mail workspace supports drafts and incremental history",()=>{
+  const component=read("components/admin/EmailWorkspace.tsx");
+  const route=read("app/api/dashboard/email/route.ts");
+  assert.match(component,/Save draft/);
+  assert.match(component,/Saved drafts/);
+  assert.match(component,/Load older messages/);
+  assert.match(component,/type="search"/);
+  assert.match(route,/next_cursor/);
+  assert.match(route,/Invalid cursor/);
+});
