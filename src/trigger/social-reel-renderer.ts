@@ -131,7 +131,7 @@ export const fluxSocialRenderReel = task({
 
       const mediaInfo = await getVideoMetadata(outputLocation);
       if (!mediaInfo.audioCodec) throw new Error("Rendered Reel has no audio track; refusing to mark it ready.");
-      if (Math.abs(mediaInfo.durationInSeconds - narration.totalDurationSeconds) > 1.2) {
+      if (mediaInfo.durationInSeconds == null || !Number.isFinite(mediaInfo.durationInSeconds) || Math.abs(mediaInfo.durationInSeconds - narration.totalDurationSeconds) > 1.2) {
         throw new Error("Rendered Reel duration does not match the synchronized narration timeline.");
       }
       const bytes = await readFile(outputLocation);
