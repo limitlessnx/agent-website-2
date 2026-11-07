@@ -172,6 +172,7 @@ export default async function SocialReviewPage() {
                       <div className="admin-panel" style={{ marginTop: 16, display: "grid", gap: 10 }}>
                         <strong>Reel narration review · Premium male</strong>
                         <span>{voiceVerified ? "Audio verified in rendered MP4" : "Narration not yet verified"} · Captions off · {musicReady ? "Licensed background music ready" : "Licensed music missing"}</span>
+                        {typeof post.metadata?.reel_render_error === "string" ? <span style={{ color: "#fca5a5" }}>{post.metadata.reel_render_error}</span> : null}
                         <span>Listen to the voice clips on the right, then approve this specific narration. Regeneration resets approval.</span>
                         {voiceReviewStatus === "approved" ? (
                           <span className="admin-status live">Narration approved</span>
