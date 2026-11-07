@@ -12,6 +12,10 @@ on:
       - "app/portal/**"
       - "components/admin/**"
       - "app/api/limitless/manual-followups/**"
+      - "app/api/limitless/maia/followups/**"
+      - "lib/lead-followup-state.ts"
+      - "tests/lead-followup-state.test.cjs"
+      - "tests/limitless-canonical-template-route.test.cjs"
       - "tests/limitless-manual-followup*.test.cjs"
       - "components/portal/**"
       - "lib/admin-organization-*.ts"
@@ -89,6 +93,8 @@ jobs:
         run: npm run test:xposure-dashboard
       - name: Manual follow-up activation and database guards
         run: npm run test:limitless-manual-followup
+      - name: Follow-up lead visibility and approved template delivery
+        run: npm run test:limitless-followup-state
       - name: Canonical follow-up regressions
         run: node --test tests/limitless-runtime-followup.test.cjs tests/limitless-maia-followup-migration.test.cjs tests/limitless-maia-followup-workstream.test.mjs tests/limitless-realty-followups-release.test.mjs
       - name: Dashboard regression contracts
