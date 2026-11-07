@@ -157,7 +157,7 @@ function renderSlide(input: {
 
       <div style={{ display: "flex", justifyContent: "space-between", position: "relative", fontSize: 21 }}>
         <span style={{ color: "#a1a1aa" }}>Business systems, not AI theatre.</span>
-        <span style={{ color: "#a78bfa", fontWeight: 700 }}>{input.brandName}.space</span>
+        <span style={{ color: "#a78bfa", fontWeight: 700 }}>{input.brandName === "Fluxknight" ? "fluxknight.space" : input.brandName}</span>
       </div>
     </div>,
     { width: WIDTH, height: HEIGHT },
