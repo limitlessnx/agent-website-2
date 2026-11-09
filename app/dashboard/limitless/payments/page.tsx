@@ -87,7 +87,7 @@ export default async function PaymentsPage() {
             <label>Next due date<input name="next_due_date" type="date" required /></label>
             <label>Final due date<input name="final_due_date" type="date" /></label>
             <input type="hidden" name="first_reminder_mode" value="due_date" />
-            <div className="payment-reminder-schedule-card"><strong>First reminder</strong><span>Derived from the next due date at 09:00 Africa/Lagos. Before/on/after timing is controlled by the saved reminder template.</span></div>
+            <div className="payment-reminder-schedule-card"><strong>First reminder</strong><span>Derived from the next due date at 19:30 Africa/Lagos. Before/on/after timing is controlled by the saved reminder template.</span></div>
             <textarea name="notes" placeholder="Notes" rows={3} />
             <label className="payment-check"><input name="reminders_enabled" type="checkbox" defaultChecked /> Enable reminders</label>
             <PaymentSubmitButton>Create plan</PaymentSubmitButton>
@@ -156,7 +156,8 @@ export default async function PaymentsPage() {
             const plan = planById.get(attempt.payment_plan_id);
             return <div key={attempt.id} className="admin-list-row compact payment-record-row">
               <span>{plan ? `${plan.client_name} · ${plan.property_title}` : "Installment plan"} · {attempt.scheduled_for}</span>
-              <form action={retryReminderAttemptAction}><input type="hidden" name="payment_plan_id" value={attempt.payment_plan_id}/><input type="hidden" name="reminder_attempt_id" value={attempt.id}/><PaymentSubmitButton className="admin-button secondary">Retry failed reminder</PaymentSubmitButton></form>
+              {attempt.error_message ? <span>{attempt.error_message}</span> : null}
+              {attempt.retry_block_reason ? <span role="status">{attempt.retry_block_reason}</span> : <form action={retryReminderAttemptAction}><input type="hidden" name="payment_plan_id" value={attempt.payment_plan_id}/><input type="hidden" name="reminder_attempt_id" value={attempt.id}/><PaymentSubmitButton className="admin-button secondary">Retry failed reminder</PaymentSubmitButton></form>}
             </div>;
           })}
           {!failedAttempts.length ? <p className="admin-empty">No explicit failed reminder attempts.</p> : null}
@@ -165,3 +166,4 @@ export default async function PaymentsPage() {
     </div>
   );
 }
+

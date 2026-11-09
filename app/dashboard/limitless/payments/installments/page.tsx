@@ -64,7 +64,7 @@ export default async function InstallmentsPage({ searchParams }: { searchParams?
         <label>Final due date<input name="final_due_date" type="date" /></label>
         <div className="payment-reminder-schedule-card">
           <strong>First reminder</strong>
-          <span>Derived from the next due date at 09:00 Africa/Lagos. Before/on/after timing is controlled by the saved reminder template.</span>
+          <span>Derived from the next due date at 19:30 Africa/Lagos. Before/on/after timing is controlled by the saved reminder template.</span>
         </div>
         <input type="hidden" name="first_reminder_mode" value="due_date" />
         <input type="hidden" name="handover_agent_name" value="Limitless Realty Handover" />
@@ -168,3 +168,4 @@ export default async function InstallmentsPage({ searchParams }: { searchParams?
     </section>
   </div>;
 }
+
