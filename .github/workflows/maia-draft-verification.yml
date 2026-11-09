@@ -38,11 +38,11 @@ jobs:
       - name: Hotel catalog, private media and agent retrieval regressions
         run: npm run test:hotel-catalog
       - name: Hotel catalog lint
-        run: npx eslint app/api/portal/hotel/catalog/route.ts app/portal/hotel/catalog/page.tsx lib/hotel-catalog*.ts lib/ai/maia-hotel-tools.ts tests/hotel-catalog*.test.mjs
+        run: npx eslint app/api/portal/hotel/catalog/route.ts app/portal/hotel/catalog/page.tsx lib/hotel-catalog*.ts lib/hotel-service-rules.ts lib/ai/maia-hotel-tools.ts tests/hotel-catalog*.test.mjs
       - name: Hotel overview, timezone and permission regressions
         run: npm run test:hotel-overview
       - name: Hotel overview lint
-        run: npx eslint app/api/portal/hotel/overview/route.ts lib/hotel-overview*.ts tests/hotel-overview*.test.mjs
+        run: npx eslint app/api/portal/hotel/overview/route.ts lib/hotel-overview*.ts lib/hotel-trends*.ts lib/hotel-client-activity.ts tests/hotel-overview*.test.mjs tests/hotel-dashboard-trends.test.mjs tests/hotel-client-activity.test.mjs app/portal/hotel/reports/page.tsx app/portal/hotel/inbox/page.tsx "app/portal/hotel/inbox/[id]/page.tsx" app/portal/hotel/followups/page.tsx app/portal/layout.tsx app/portal/campaigns/CampaignComposer.tsx app/api/portal/campaigns/send/route.ts lib/whatsapp-delivery.ts
       - run: npm run test:maia
       - run: npm run build
 

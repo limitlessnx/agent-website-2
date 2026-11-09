@@ -1,4 +1,6 @@
 import type { HotelReservation } from "./hotel-booking-contract";
+import type { HotelOverviewDetails } from "./hotel-overview-details";
+import type { HotelTrends } from "./hotel-trends-contract";
 export type HotelDailyStay = Pick<HotelReservation,"id"|"revision"|"status"|"arrival_date"|"departure_date"|"guest_count"> & {guest_name:string;room_name:string|null;room_type:string|null};
 export type HotelOverviewCore = {
   arrivals_count:number;departures_count:number;occupied_rooms:number;active_rooms:number;enquiries_count:number;overdue_departures:number;
@@ -9,6 +11,8 @@ export type HotelOverviewData = HotelOverviewCore & {
   day:string;timeZone:string;timeZoneFallback:boolean;checkedAt:string;range:{arrival:string;departure:string;guests:number};
   pendingPayments:number|null;pendingRecords:Array<{id:string;booking_id:string}>;handoffs:number|null;conversations:Array<{id:string;guest_name:string;channel:string;status:string;updated_at:string;preview:string}>|null;
   canManage:boolean;canViewPayments:boolean;canViewConversations:boolean;canViewHandoffs:boolean;
+  details?: HotelOverviewDetails | null;
+  trends?: HotelTrends | null;
 };
 export function hotelLocalDay(timeZone:unknown,now=new Date()) {
   let zone=typeof timeZone==="string"?timeZone.trim():"",fallback=false;

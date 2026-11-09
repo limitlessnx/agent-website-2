@@ -32,3 +32,5 @@ test('hotel templates map existing composer numbered values to configured named 
  const {api,calls}=fixture('meta');await api.sendWhatsAppMessage({...input,variables:{'1':'Ada'}});
  assert.equal(calls[0].template.components[0].parameters[0].text,'Ada');
 });
+
+test('an explicitly selected hotel template language cannot silently send another language',async()=>{const {api,calls}=fixture('meta');await assert.rejects(api.sendWhatsAppMessage({...input,requestedTemplateLanguage:'fr'}),/language/);assert.equal(calls.length,0);await api.sendWhatsAppMessage({...input,requestedTemplateLanguage:'en'});assert.equal(calls[0].template.language.code,'en');});

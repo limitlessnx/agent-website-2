@@ -71,6 +71,10 @@ const expectedPendingVersions = [
   "20261106161658",
   // Manual Limitless follow-up activation: prepared for review, not applied.
   "20261106213418",
+  // Hotel service operating instructions: additive, prepared for review; not applied.
+  "20261109073001",
+  // Hotel dashboard trends and inbox index: prepared for review, not applied.
+  "20261109090514",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

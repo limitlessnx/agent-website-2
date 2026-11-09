@@ -104,11 +104,12 @@ export async function POST(request: Request) {
         requireProviderApproval: hotel,
         templatePurpose,
         requestedTemplateName: templateName,
+        ...(hotel && body.languageCode ? { requestedTemplateLanguage: String(body.languageCode) } : {}),
         variables: xposure
           ? Object.fromEntries(variableKeys.map((key, index) => [key, key === "customer_name" ? customer.full_name || "" : body.variables?.[key] ?? body.variables?.[String(index + 1)] ?? ""]))
           : { customer_name: customer.full_name || "", ...(body.variables || {}) },
       });
-      if (xposure && !delivery?.providerMessageId) {
+      if ((xposure || hotel) && !delivery?.providerMessageId) {
         unknown += 1;
         results.push({ customerId: String(customer.id), status: "unknown", error: "No provider receipt was returned. Reconcile this attempt before sending again." });
         continue;
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
       accepted += 1;
       results.push({ customerId: String(customer.id), status: "accepted" });
     } catch (error) {
-      if (xposure && submissionStarted) {
+      if ((xposure || hotel) && submissionStarted) {
         unknown += 1;
         results.push({ customerId: String(customer.id), status: "unknown", error: "Provider submission was not confirmed. Check delivery records before sending again." });
         continue;
