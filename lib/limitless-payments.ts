@@ -71,6 +71,7 @@ export type ReminderAttempt = {
   error_message?: string | null;
   retry_count?: number;
   last_retry_at?: string | null;
+  retry_block_reason?: string;
 };
 
 function scope(organizationId: string) {
@@ -99,9 +100,36 @@ export async function getReminderTemplates(organizationId: string) {
 }
 
 export async function getReminderAttempts(organizationId: string, status = "failed", limit = 100) {
-  return supabaseServerRequest<ReminderAttempt[]>(
+  const attempts = await supabaseServerRequest<ReminderAttempt[]>(
     `reminder_attempts?organization_id=eq.${scope(organizationId)}&status=eq.${encodeURIComponent(status)}&select=*&order=created_at.desc&limit=${limit}`,
   );
+  // Provider acceptance is persisted as "sent". Read receipts separately without
+  // reopening attempts or changing the scheduler's duplicate protection.
+  if (organizationId !== "b15f21b4-5697-4d21-9421-8a34eae3476d" || status !== "failed") return attempts;
+  const accepted = await supabaseServerRequest<ReminderAttempt[]>(
+    `reminder_attempts?organization_id=eq.${scope(organizationId)}&status=eq.sent&select=*&order=created_at.desc&limit=500`,
+  );
+  const messageIds = [...new Set(accepted.map((attempt) => attempt.provider_reference).filter((id): id is string => Boolean(id)))];
+  if (!messageIds.length) return attempts;
+  type Receipt = { provider_message_id: string; status: string; error_code: string | null; error_message: string | null };
+  const receipts: Receipt[] = [];
+  for (let offset = 0; offset < messageIds.length; offset += 25) {
+    const ids = encodeURIComponent(`(${messageIds.slice(offset, offset + 25).map((id) => JSON.stringify(id)).join(",")})`);
+    receipts.push(...await supabaseServerRequest<Receipt[]>(
+      `whatsapp_delivery_attempts?organization_id=eq.${scope(organizationId)}&provider_message_id=in.${ids}&select=provider_message_id,status,error_code,error_message`,
+    ));
+  }
+  const received = new Set(receipts.filter((receipt) => ["delivered", "read"].includes(receipt.status)).map((receipt) => receipt.provider_message_id));
+  const failures = new Map(receipts.filter((receipt) => receipt.status === "failed" && !received.has(receipt.provider_message_id)).map((receipt) => [receipt.provider_message_id, receipt]));
+  const providerFailures = accepted.flatMap((attempt) => {
+    const receipt = failures.get(attempt.provider_reference || "");
+    if (!receipt) return [];
+    return [{ ...attempt, error_message: [receipt.error_code, receipt.error_message].filter(Boolean).join(": "),
+      retry_block_reason: receipt.error_code === "131042"
+        ? "Recovery blocked until Meta billing eligibility and duplicate protection are verified."
+        : "Provider delivery failed. Reconcile this accepted attempt before recovery." }];
+  });
+  return [...providerFailures, ...attempts].sort((a, b) => b.scheduled_for.localeCompare(a.scheduled_for)).slice(0, limit);
 }
 
 export async function createPaymentPlan(payload: Record<string, unknown>) {
