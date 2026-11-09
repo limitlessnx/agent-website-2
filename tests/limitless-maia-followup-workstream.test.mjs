@@ -287,12 +287,11 @@ test("rolling nurture creation is idempotent and uses the approved variable orde
   assert.match(route, /\.eq\("sequence_step_key", sequenceStepKey\)/);
   assert.match(route, /templatePurpose: FOLLOWUP_TEMPLATE_PURPOSE/);
   assert.match(route, /customer_name: String\(lead\?\.name \|\| ""\)/);
-  assert.match(route, /last_topic: String\(property\.title \|\| "your property enquiry"\)/);
-  assert.match(route, /property_name:/);
-  assert.match(route, /property_location:/);
-  assert.match(route, /customer_interest:/);
-  assert.match(route, /customer_goal:/);
-  assert.match(route, /objection:/);
+  // Current main (#357) uses the provider-approved four-variable reminder contract.
+  assert.match(route, /"customer_name",\s*"followup_context",\s*"property_details",\s*"next_step"/);
+  assert.match(route, /followup_context:/);
+  assert.match(route, /property_details:/);
+  assert.match(route, /next_step:/);
   assert.doesNotMatch(ai, /maia_limitless_followup_day/);
 });
 

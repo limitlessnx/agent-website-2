@@ -24,3 +24,5 @@ This change does not apply migrations, merge main, send WhatsApp messages, impor
 ## Verification
 
 Targeted service/catalog/overview tests cover input limits, two-hotel isolation, published-only retrieval, fresh rules/media, service-slot uncertainty, manager/preview access, stale revisions, request replay, PostgreSQL constraints and published editing protection. Existing hotel regressions and shared Maia/Realty/Xposure checks are run separately. TypeScript, lint, production build and final CI evidence are recorded in the PR. Browser review uses clearly synthetic hotel data and never sends a customer message; it is not authenticated production verification.
+
+The first CI run identified two issues: this PR's new migration needed listing in the pending-migration review gate, and current main's canonical follow-up workstream test still asserted the retired seven-variable contract despite #357 changing delivery to four variables. The gate now explicitly lists this unapplied migration, and only the stale test assertion is aligned with current main. No follow-up delivery implementation is changed by this PR.
