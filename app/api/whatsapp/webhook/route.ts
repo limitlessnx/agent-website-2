@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 import { syncHandoffNotificationStatus } from "@/lib/human-operations";
 import { syncRealEstateProviderStatus } from "@/lib/real-estate-provider-status";
+import { syncLimitlessInstallmentRecoveryReceipt } from "@/lib/limitless-installment-recovery-receipts";
 import { acceptMaiaWhatsAppCall, terminateMaiaWhatsAppCall, type WhatsAppCallEvent } from "@/lib/maia-whatsapp-calling";
 
 export const dynamic = "force-dynamic";
@@ -319,12 +320,19 @@ export async function POST(request: NextRequest) {
         const errorData = record(firstError.error_data);
         const nextStatus = ["delivered", "read", "sent", "failed"].includes(state) ? state : null;
         if (!nextStatus) continue;
-        const ok = await updateAttempt(providerMessageId, {
+        const patch = {
           status: nextStatus,
           error_code: firstError?.code != null ? String(firstError.code) : null,
           error_message: firstError?.title || firstError?.message || null,
           response_payload: body,
-        }).catch(() => false);
+        };
+        const recoveryHandled = await syncLimitlessInstallmentRecoveryReceipt({
+          organizationId: String(tenant?.organizationId || ""),
+          callbackData: status.biz_opaque_callback_data,
+          providerMessageId,
+          patch,
+        });
+        const ok = recoveryHandled || await updateAttempt(providerMessageId, patch).catch(() => false);
         if (ok) statusUpdates += 1;
         const providerTimestamp=Number(status?.timestamp);
         await syncRealEstateProviderStatus({
