@@ -13,7 +13,7 @@ function harness(options={}) {
     '@/lib/portal-access':{requirePortalPermission:async()=>{if(options.denied)throw Error('revoked')}},
     '@/lib/flux-credits':{assertFluxFeatureAccess:async()=>{}},
     '@/lib/supabase/admin':{createAdminClient:()=>admin},
-    '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async input=>state.sent.push(input)},
+    '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async input=>{state.sent.push(input);if(options.sendError)throw Error("uncertain");return options.noReceipt?{}:{providerMessageId:"meta-receipt"}}},
     '@/lib/portal-campaign-templates':{loadLinkedCampaignTemplates:async()=>{throw Error('Hotel sending must retain its existing template policy')}},
     '@/lib/hotel-communication-policy':policy,
     '@/lib/hotel-communications':{loadHotelAudience:async()=>{if(options.readError)throw Error('offline');return {guests:[guest],bookings:options.bookings||[]}},hotelConversationState:async()=>({handoff:!!options.handoff})},
@@ -47,3 +47,5 @@ test('existing campaign composer selects the hotel template purpose without a ne
   const {route,state}=harness();const response=await route.POST(request({templatePurpose:undefined}));
   assert.equal(response.body.accepted,1);assert.equal(state.sent[0].templatePurpose,'hotel_campaign');
 });
+
+test('hotel campaigns retain selected language and uncertain submissions never claim acceptance',async()=>{for(const options of [{noReceipt:true},{sendError:true}]){const {route,state}=harness(options);const response=await route.POST(request({languageCode:'fr'}));assert.equal(response.body.accepted,0);assert.equal(response.body.unknown,1);assert.equal(state.sent[0].requestedTemplateLanguage,'fr');}});

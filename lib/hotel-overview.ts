@@ -6,6 +6,7 @@ import { HotelWorkspaceError } from "@/lib/hotel-booking-service";
 import { isCalendarDate,stayNights } from "@/lib/hotel-booking-contract";
 import { hotelLocalDay,hotelNextDay,type HotelOverviewCore,type HotelOverviewData } from "@/lib/hotel-overview-contract";
 import { loadHotelOverviewDetails } from "@/lib/hotel-overview-details";
+import { loadHotelTrends } from "@/lib/hotel-trends";
 export async function hotelOverviewAccess(){
   const session=await getClientSession();if(!session)throw new HotelWorkspaceError("Sign in to this workspace.",401);
   try {const access=session.isAdminPreview?{permissions:new Set(["customers.view","billing.view","conversations.view","handoffs.view"])}:await requirePortalPermission(session,["customers.view","customers.manage"]);await requireHotelOrganization(session.organizationId);return {session,permissions:access.permissions};}
@@ -34,6 +35,6 @@ export async function loadHotelOverview(org:string,permissions:Set<string>,previ
   }));
   const summary=core.data as HotelOverviewCore;
   // A photo/details failure must not erase the authoritative operational summary.
-  const details=await loadHotelOverviewDetails(org,summary.availability.slice(0,6).map(type=>type.id)).catch(()=>null);
-  return {...summary,...calendar,checkedAt:now.toISOString(),range:selected,pendingPayments:payments.count??null,pendingRecords:payments.data||[],handoffs:handoffs.count??null,conversations:previews,canManage:!preview&&permissions.has("customers.manage"),canViewPayments,canViewConversations,canViewHandoffs,details};
+  const [details,trends]=await Promise.all([loadHotelOverviewDetails(org,summary.availability.slice(0,6).map(type=>type.id)).catch(()=>null),loadHotelTrends(org,calendar.day,calendar.timeZone,canViewPayments).catch(()=>null)]);
+  return {...summary,...calendar,checkedAt:now.toISOString(),range:selected,pendingPayments:payments.count??null,pendingRecords:payments.data||[],handoffs:handoffs.count??null,conversations:previews,canManage:!preview&&permissions.has("customers.manage"),canViewPayments,canViewConversations,canViewHandoffs,details,trends};
 }

@@ -18,7 +18,8 @@ import {
   Zap,
 } from "@/components/admin/ServerIcons";
 import FluxLogo from "@/components/FluxLogo";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import HotelBottomNav from "@/components/portal/hotel/HotelBottomNav";
 import type { IndustryExperience } from "@/lib/industryExperience";
 
 export type PortalNavCapabilities = {
@@ -63,10 +64,11 @@ export default function PortalSidebar({
         <Link href="/portal" className={active("/portal",true)?"active":""} onClick={close}><LayoutDashboard size={18}/><span>Overview</span></Link>
         <Link href="/portal/notifications" className={active("/portal/notifications")?"active":""} onClick={close}><Bell size={18}/><span>Needs Attention</span>{unreadNotifications>0?<small>{unreadNotifications>99?"99+":unreadNotifications}</small>:null}</Link>
         {capabilities.customers?<Link href="/portal/customers" className={active("/portal/customers")?"active":""} onClick={close}><Users size={18}/><span>{experience.customerLabel}</span><span className="sr-only">Customers</span></Link>:null}
-        {capabilities.conversations?<Link href="/portal/conversations" className={active("/portal/conversations")?"active":""} onClick={close}><MessageSquareText size={18}/><span>Conversations</span></Link>:null}
+        {capabilities.conversations?<Link href={experience.slug === "hotels"?"/portal/hotel/inbox":"/portal/conversations"} className={active(experience.slug === "hotels"?"/portal/hotel/inbox":"/portal/conversations")?"active":""} onClick={close}><MessageSquareText size={18}/><span>Conversations</span></Link>:null}
         {capabilities.systems?<Link href="/portal/systems" className={active("/portal/systems")?"active":""} onClick={close}><Workflow size={18}/><span>Systems</span></Link>:null}
         {capabilities.customers&&experience.slug === "hotels"?<><Link href="/portal/hotel" className={active("/portal/hotel",true)?"active":""} onClick={close}><Clock3 size={18}/><span>Hotel workspace</span></Link><Link href="/portal/hotel/catalog" className={active("/portal/hotel/catalog")?"active":""} onClick={close}><Workflow size={18}/><span>Hotel Catalog</span></Link></>:null}
         {capabilities.appointments&&experience.features.appointments&&experience.slug !== "hotels"?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
+        {capabilities.customers&&experience.slug === "hotels"?<><Link href="/portal/hotel/reports" className={active("/portal/hotel/reports")?"active":""} onClick={close}><Activity size={18}/><span>Hotel reports</span></Link><Link href="/portal/hotel/followups" className={active("/portal/hotel/followups")?"active":""} onClick={close}><Clock3 size={18}/><span>Follow-ups & reminders</span></Link></>:null}
         {experience.slug === "photography-studio"?<Link href="/portal/catalogue" className={active("/portal/catalogue")?"active":""} onClick={close}><Workflow size={18}/><span>Studio Catalogue</span></Link>:null}
         {capabilities.conversations && ["photography-studio", "hotels"].includes(experience.slug)?<Link href="/portal/campaigns" className={active("/portal/campaigns")?"active":""} onClick={close}><Zap size={18}/><span>Campaigns</span></Link>:null}
         {capabilities.analytics?<Link href="/portal/analytics" className={active("/portal/analytics")?"active":""} onClick={close}><Activity size={18}/><span>Analytics</span></Link>:null}
@@ -81,5 +83,6 @@ export default function PortalSidebar({
 
       <div className="portal-sidebar-note"><span>Workspace status</span><strong><i/> Tenant secured</strong></div>
     </aside>
+    {experience.slug === "hotels" ? <Suspense fallback={null}><HotelBottomNav customers={capabilities.customers} open={open} onMore={()=>setOpen(true)}/></Suspense> : null}
   </>;
 }

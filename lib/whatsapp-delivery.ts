@@ -13,6 +13,7 @@ type SendInput = {
   forceTemplate?: boolean;
   templatePurpose?: string;
   requestedTemplateName?: string;
+  requestedTemplateLanguage?: string;
   variables?: Record<string, string | number | null | undefined>;
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
@@ -99,9 +100,9 @@ async function resolveWhatsAppCredentials(organizationId: string): Promise<Whats
 
   throw new Error("WhatsApp credentials are not configured for this organization.");
 }
-async function getTemplateConfig(organizationId: string, purpose: string, requestedTemplateName?: string, strictTemplateContract?: SendInput["strictTemplateContract"]): Promise<TemplateConfig | null> {
+async function getTemplateConfig(organizationId: string, purpose: string, requestedTemplateName?: string, strictTemplateContract?: SendInput["strictTemplateContract"], requestedTemplateLanguage?: string): Promise<TemplateConfig | null> {
   const strictLimitlessLookup = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && Boolean(strictTemplateContract);
-  const templateFilter = requestedTemplateName && !strictLimitlessLookup ? `&template_name=eq.${encodeURIComponent(requestedTemplateName)}` : "";
+  const templateFilter = (requestedTemplateName && !strictLimitlessLookup ? `&template_name=eq.${encodeURIComponent(requestedTemplateName)}` : "") + (requestedTemplateLanguage ? `&language_code=eq.${encodeURIComponent(requestedTemplateLanguage)}` : "");
   const limit = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID ? 2 : 1;
   const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active${templateFilter}&select=template_name,language_code,variable_keys,metadata,status&limit=${limit}`);
   if (organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && rows.length !== 1) return null;
@@ -196,9 +197,10 @@ export async function sendWhatsAppMessage(input: SendInput) {
   if (requestedMode === "direct" && outsideWindow) throw new Error("Direct WhatsApp messages are only available while the customer's 24-hour service window is open.");
 
   const config=useTemplate
-    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h",input.requestedTemplateName,input.strictTemplateContract)
+    ? await getTemplateConfig(input.organizationId,input.templatePurpose||"follow_up_outside_24h",input.requestedTemplateName,input.strictTemplateContract,input.requestedTemplateLanguage)
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
+  if(useTemplate && input.requestedTemplateLanguage && config?.language_code !== input.requestedTemplateLanguage) throw new Error("The requested template language is not configured.");
   const templateValues = input.requireProviderApproval
     ? Object.fromEntries((config?.variable_keys || []).map((key, index) => [key, input.variables?.[key] ?? input.variables?.[String(index + 1)]]))
     : input.variables || {};
