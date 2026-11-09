@@ -216,3 +216,4 @@ export function formatMoney(value: number | string | null | undefined, currency 
 export function formatNaira(value: number | string | null | undefined) {
   return formatMoney(value, "NGN");
 }
+

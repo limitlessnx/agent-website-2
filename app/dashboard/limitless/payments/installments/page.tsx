@@ -168,3 +168,4 @@ export default async function InstallmentsPage({ searchParams }: { searchParams?
     </section>
   </div>;
 }
+

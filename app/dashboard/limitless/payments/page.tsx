@@ -166,3 +166,4 @@ export default async function PaymentsPage() {
     </div>
   );
 }
+
