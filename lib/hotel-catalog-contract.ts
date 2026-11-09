@@ -1,4 +1,5 @@
 import type { HotelRoomType } from "./hotel-booking-contract";
+import type { HotelServiceRules } from "./hotel-service-rules";
 export const HOTEL_CATALOG_BUCKET = "hotel-catalog";
 export const HOTEL_MEDIA_LIMIT = 16 * 1024 * 1024;
 export const HOTEL_IMAGE_LIMIT = 6 * 1024 * 1024;
@@ -7,11 +8,11 @@ export type HotelCatalogItem = {
   id: string; kind: "room" | "service"; room_type_id: string | null; title: string; description: string;
   amenities: string[]; bed_options: string; pricing: "included" | "paid" | "confirm";
   price_minor: string | number | null; currency: string | null; price_unit: string;
-  opening_hours: string; booking_instructions: string; status: "draft" | "published" | "archived"; revision: number;
+  opening_hours: string; booking_instructions: string; service_rules?: HotelServiceRules; status: "draft" | "published" | "archived"; revision: number;
 };
 export type HotelCatalogMedia = { id: string; item_id: string; mime_type: string; caption: string; status: "pending" | "ready" | "removed"; position: number; url?: string };
 export type HotelCatalogData = { items: HotelCatalogItem[]; roomTypes: HotelRoomType[]; media: HotelCatalogMedia[]; canManage: boolean;defaultCurrency?:string;mediaExpiresAt?:string };
-export type HotelGuestCatalogPreview={hotel?:Record<string,string|null>;entries:Array<{id:string;kind:string;title:string;description:string;amenities:string[];bed_options:string;capacity?:number;price:{mode:string;nightly?:string;stay_room_charge?:string|null;amount?:string|null;unit?:string};opening_hours:string;booking_instructions:string;media:Array<{kind:string;caption:string;url?:string}>}>;more_results:boolean};
+export type HotelGuestCatalogPreview={hotel?:Record<string,string|null>;entries:Array<{id:string;kind:string;title:string;description:string;amenities:string[];bed_options:string;capacity?:number;price:{mode:string;nightly?:string;stay_room_charge?:string|null;amount?:string|null;unit?:string};opening_hours:string;booking_instructions:string;service_rules?:HotelServiceRules;media:Array<{kind:string;caption:string;url?:string}>}>;more_results:boolean};
 export function catalogTitle(item: HotelCatalogItem, types: HotelRoomType[]) { return item.kind === "room" ? types.find(type => type.id === item.room_type_id)?.name || "Room type unavailable" : item.title; }
 export function validateHotelMedia(type: string, size: number) {
   if (!HOTEL_MEDIA_TYPES[type]) throw new Error("Choose a JPG, PNG, WebP image or MP4 video.");

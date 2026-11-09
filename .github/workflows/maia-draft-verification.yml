@@ -38,7 +38,7 @@ jobs:
       - name: Hotel catalog, private media and agent retrieval regressions
         run: npm run test:hotel-catalog
       - name: Hotel catalog lint
-        run: npx eslint app/api/portal/hotel/catalog/route.ts app/portal/hotel/catalog/page.tsx lib/hotel-catalog*.ts lib/ai/maia-hotel-tools.ts tests/hotel-catalog*.test.mjs
+        run: npx eslint app/api/portal/hotel/catalog/route.ts app/portal/hotel/catalog/page.tsx lib/hotel-catalog*.ts lib/hotel-service-rules.ts lib/ai/maia-hotel-tools.ts tests/hotel-catalog*.test.mjs
       - name: Hotel overview, timezone and permission regressions
         run: npm run test:hotel-overview
       - name: Hotel overview lint
