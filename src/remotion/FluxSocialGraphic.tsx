@@ -63,7 +63,7 @@ export const FluxSocialGraphic: React.FC<FluxSocialGraphicProps> = ({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Img
             src={logoUrl}
-            style={{ width: 250, height: 72, objectFit: "contain", objectPosition: "left center", flexShrink: 0 }}
+            style={{ width: 210, height: 148, objectFit: "contain", objectPosition: "left center", flexShrink: 0 }}
           />
           <div
             style={{

@@ -49,7 +49,7 @@ function renderGraphic(input: {
         />
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
-          <div style={{ width: 258, height: 76, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
+          <div style={{ width: 210, height: 148, display: "flex", alignItems: "center", justifyContent: "flex-start", flexShrink: 0 }}>
             {input.logoUrl ? (
               <img src={input.logoUrl} alt={input.brandName} style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "left center" }} />
             ) : (
