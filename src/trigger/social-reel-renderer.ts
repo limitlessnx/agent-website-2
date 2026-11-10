@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk";
+import { AbortTaskRunError, task } from "@trigger.dev/sdk";
 import { bundle } from "@remotion/bundler";
 import { getVideoMetadata, renderMedia, selectComposition } from "@remotion/renderer";
 import { readFile, rm } from "node:fs/promises";
@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReelPlan } from "@/lib/social-video-plan";
-import { createReelNarration, getLicensedReelMusic } from "@/lib/social-reel-audio";
+import { createReelNarration, getLicensedReelMusic, ReelNarrationProviderError } from "@/lib/social-reel-audio";
 
 const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 
@@ -91,6 +91,12 @@ export const fluxSocialRenderReel = task({
           reel_render_error: message,
         },
       }).eq("organization_id", payload.organizationId).eq("id", post.id);
+      // Billing, entitlement and malformed request failures are not transient.
+      // Retrying these requests cannot fix a workspace restriction, and can
+      // accidentally repeat paid scene generation.
+      if (audioError instanceof ReelNarrationProviderError && !audioError.retryable) {
+        throw new AbortTaskRunError(message);
+      }
       throw audioError;
     }
     const workingMetadata = {
