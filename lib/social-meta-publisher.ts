@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { metaConnectionReadiness } from "@/lib/meta-connection";
 
 type Json = Record<string, unknown>;
 
@@ -9,6 +10,8 @@ export type MetaPublisherConfig = {
   instagramBusinessAccountId?: string;
   instagramAccessToken?: string;
   instagramGraphHost?: string;
+  facebookPublishingReady?: boolean;
+  instagramPublishingReady?: boolean;
 };
 
 export type MetaPublishAsset = {
@@ -523,6 +526,8 @@ export async function publishMetaPost(input: {
   platform: "facebook" | "instagram";
   assets: MetaPublishAsset[];
 }) {
+  if (input.platform === "facebook" && input.config.facebookPublishingReady === false) throw new Error("Reconnect Facebook with Page publishing permissions before publishing.");
+  if (input.platform === "instagram" && input.config.instagramPublishingReady === false) throw new Error("Reconnect Instagram with publishing permissions before publishing.");
   const orderedAssets = [...input.assets].sort((a, b) => a.position - b.position);
   const images = imageAssets(orderedAssets);
   const videos = videoAssets(orderedAssets);
@@ -618,7 +623,7 @@ export async function metaPublisherConfigFromIntegration(
   supabase: SupabaseClient,
   organizationId: string,
 ): Promise<MetaPublisherConfig> {
-  const rpcClient = supabase as any;
+  const rpcClient = supabase;
 
   const [
     { data: credentials, error: credentialError },
@@ -652,25 +657,23 @@ export async function metaPublisherConfigFromIntegration(
       : "";
   const pageId = typeof config.page_id === "string" ? config.page_id : "";
 
-  if (!accessToken || !pageId) {
+  const readiness = metaConnectionReadiness(config, secret, integration.status);
+  if (!readiness.facebookReady && !readiness.instagramDirectReady && !readiness.instagramViaFacebookReady) {
     throw new Error("Meta publishing credentials are incomplete.");
   }
 
   return {
     accessToken,
-    apiVersion:
-      typeof config.api_version === "string" ? config.api_version : "v24.0",
+    apiVersion: readiness.instagramDirectReady && typeof config.instagram_api_version === "string"
+      ? config.instagram_api_version : typeof config.api_version === "string" ? config.api_version : "v24.0",
     pageId,
-    instagramBusinessAccountId:
-      typeof secret.instagram_login_user_id === "string"
-        ? secret.instagram_login_user_id
-        : typeof config.instagram_login_user_id === "string"
-          ? config.instagram_login_user_id
-          : typeof config.instagram_business_account_id === "string"
-            ? config.instagram_business_account_id
-            : undefined,
-    instagramAccessToken: instagramAccessToken || undefined,
-    instagramGraphHost: instagramAccessToken
+    facebookPublishingReady: readiness.facebookReady,
+    instagramPublishingReady: readiness.instagramDirectReady || readiness.instagramViaFacebookReady,
+    instagramBusinessAccountId: readiness.instagramDirectReady
+      ? String(secret.instagram_login_user_id || config.instagram_login_user_id)
+      : typeof config.instagram_business_account_id === "string" ? config.instagram_business_account_id : undefined,
+    instagramAccessToken: readiness.instagramDirectReady ? instagramAccessToken : undefined,
+    instagramGraphHost: readiness.instagramDirectReady
       ? "graph.instagram.com"
       : "graph.facebook.com",
   };
