@@ -41,3 +41,15 @@ test("Voice previews require human approval and cannot bypass the general post t
   assert.match(reviewPage, /Voice previews/);
   assert.match(reviewPage, /Approve narration and music/);
 });
+
+test("ElevenLabs 402 is actionable and terminal; rate limits remain retryable", () => {
+  const narration = read("lib/social-reel-audio.ts");
+  const renderer = read("src/trigger/social-reel-renderer.ts");
+  assert.match(narration, /statusCode === 402/);
+  assert.match(narration, /remaining credits and API-key credit limits/);
+  assert.match(narration, /parseProviderErrorCode\(response\)/);
+  assert.match(narration, /statusCode === 429 \|\| statusCode >= 500/);
+  assert.match(renderer, /ReelNarrationProviderError/);
+  assert.match(renderer, /AbortTaskRunError\(message\)/);
+  assert.match(renderer, /reel_render_status: "failed"/);
+});
