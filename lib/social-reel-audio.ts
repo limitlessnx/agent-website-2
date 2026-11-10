@@ -10,6 +10,51 @@ type TimingResponse = {
   normalized_alignment?: { character_end_times_seconds?: number[] } | null;
 };
 
+/** Provider errors are safe to present in Review; never store raw provider bodies. */
+export class ReelNarrationProviderError extends Error {
+  readonly statusCode: number;
+  readonly providerCode: string | null;
+  readonly retryable: boolean;
+
+  constructor(statusCode: number, providerCode: string | null, sceneIndex: number) {
+    const code = providerCode?.toLowerCase() ?? "";
+    const reason = statusCode === 402
+      ? "ElevenLabs needs additional speech credits or the API key has reached its credit limit. Check the ElevenLabs subscription, remaining credits and API-key credit limits."
+      : statusCode === 401
+        ? "ElevenLabs rejected the configured API key. Check the Trigger.dev secret and its text-to-speech permissions."
+        : statusCode === 403
+          ? "ElevenLabs denied access to the chosen model or voice. Verify workspace access, API-key permissions and plan entitlements."
+          : statusCode === 429
+            ? "ElevenLabs is rate-limiting requests. Try again after the rate limit resets."
+            : statusCode >= 500
+              ? "ElevenLabs is temporarily unavailable. Try again after the provider recovers."
+              : "ElevenLabs rejected this narration request. Check the chosen voice, model and request permissions.";
+    super(`Scene ${sceneIndex + 1}: ${reason} (HTTP ${statusCode}${code ? `, code ${code}` : ""}).`);
+    this.name = "ReelNarrationProviderError";
+    this.statusCode = statusCode;
+    this.providerCode = providerCode;
+    this.retryable = statusCode === 429 || statusCode >= 500;
+  }
+}
+
+async function parseProviderErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body = await response.json() as {
+      detail?: { code?: unknown; status?: unknown; type?: unknown } | string;
+      code?: unknown;
+    };
+    const detail = body.detail;
+    const candidate = (typeof detail === "object" && detail !== null
+      ? detail.code ?? detail.status ?? detail.type
+      : body.code);
+    // Only persist safe diagnostic codes, never raw provider messages or headers.
+    return typeof candidate === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(candidate)
+      ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
 export type ReelAudioClip = {
   sceneIndex: number;
   assetId: string;
@@ -100,7 +145,7 @@ export async function createReelNarration(supabase: SupabaseClient, input: {
       }),
       signal: AbortSignal.timeout(90_000),
     });
-    if (!response.ok) throw new Error(`ElevenLabs narration failed for scene ${index + 1} (HTTP ${response.status}).`);
+    if (!response.ok) throw new ReelNarrationProviderError(response.status, await parseProviderErrorCode(response), index);
     const data = await response.json() as TimingResponse;
     if (!data.audio_base64) throw new Error(`ElevenLabs returned no audio for scene ${index + 1}.`);
     const durationSeconds = speechDuration(data);
