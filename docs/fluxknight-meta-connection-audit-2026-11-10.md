@@ -1,63 +1,79 @@
 # Fluxknight Meta connection audit — 2026-11-10
 
-## Baseline and verified production evidence
+## Baseline and code scope
 
-Started from main `ad67d9a5440451cc6712a3e081718686602e43e2`, which includes merged PR #361 (the current-main integration of #355). The older hotel checkout was left untouched.
+Started from current main `ad67d9a5440451cc6712a3e081718686602e43e2`, which includes merged voiceover PR #361. The older hotel checkout was left untouched. PR #362 changes only Meta connection code, its controls, tests, CI and this audit. No Maia, hotel, Trigger task, package, schema or schedule definitions change.
 
-Read-only production database inspection found:
+## Production findings and repairs
 
-- Meta app ID `1624965062683468`; Chrome's existing developer dashboard identifies it as **FLUXKNIGHT**.
-- Facebook Page **Fluxknight Systems**, ID `581576128370387`, linked to Instagram professional account **@flux_knight**, ID `17841443218064774`.
-- Separate Instagram Login app ID `1629175728667135`; its secret and webhook verify token are configured, but **no direct Instagram user token is stored**.
-- Facebook authorization has `pages_show_list`, `pages_read_engagement`, and `instagram_basic`, but lacks **`pages_manage_posts` and `instagram_content_publish`**. The record's connected/healthy status was last checked September 26 and did not establish publishing readiness.
-- Existing Chrome Instagram OAuth tab displays **“Insufficient Developer Role”**. This blocks authorization before the callback; a code patch alone cannot grant app roles.
+- Parent Meta app: **FLUXKNIGHT**, ID `1624965062683468`. Instagram Login product: **FLUXKNIGHT-IG**, ID `1629175728667135`. Both IDs match the credentials configured in Fluxknight. Secrets remained hidden.
+- Facebook Page **Fluxknight Systems**, ID `581576128370387`, is linked to Instagram account ID `17841443218064774`. The stored username was stale: the live account is now **@fluxknight.space**, previously stored as @flux_knight. Confirmed the same ID in Meta's account picker and the active Instagram profile, then corrected only `configuration.instagram_username` in the production integration record.
+- The existing Instagram OAuth tab showed **Insufficient Developer Role**. The app is unpublished and initially had no Instagram testers. With explicit user approval, added @fluxknight.space as an Instagram Tester and accepted the FLUXKNIGHT-IG invitation, including its displayed Platform Terms and Developer Policies. Instagram visibly confirmed authorization.
+- The Facebook Business Login configuration `1045071945197499` contained 16 permissions but omitted `pages_manage_posts` and `instagram_content_publish`. With explicit user approval, added those two and verified the saved list has all 18. The other 16 were preserved.
+- Facebook Client OAuth and Web OAuth are enabled, HTTPS and strict redirect matching are enforced, and the production callback is registered.
+- The Instagram product allowed both its OAuth callback and its webhook as OAuth redirects. Its generated embed URL incorrectly chose the webhook. Removed the webhook entry from the OAuth allowlist and verified the generated login URL now uses the correct callback. The actual webhook configuration was left intact.
+- The Instagram webhook URL is configured correctly. Deauthorization and data-deletion request URLs are blank in Instagram Business Login settings; those remain app-review configuration requirements before broader public use.
 
-No token or secret values were printed. No production database, schedule, Meta configuration, or publishing setting was changed during this audit.
+**Token authorization remains separate from app configuration.** At the last database inspection the saved Facebook grants still lacked the two publishing permissions and there was no direct Instagram user token. Production account reauthorization requires the pending explicit user approval; saving requested scopes does not change existing tokens. Historical connected/healthy labels alone do not prove current publishing capability.
 
-## Code fixes
+## Exact production URLs
 
-- Handle both documented `data[0]` and historical flat Instagram token exchange responses. Use the unversioned long-token exchange and renewal endpoints. Require a valid long-lived token and expiry; never substitute requested scopes for actual grants.
-- Bind Instagram OAuth to the initiating browser's HTTP-only, SameSite cookie and require an admin session on callback. Remove the predictable state-signing secret fallback. Use production host-only cookies and redirect to the canonical host before starting OAuth.
-- Enumerate paginated Facebook Pages, require an unambiguous target, validate both Page and linked Instagram preferences, and reject missing Page tokens rather than substituting a user token.
-- Pair direct Instagram IDs with direct tokens and the Instagram Graph host; pair Facebook-linked IDs with Page tokens and the Facebook Graph host. Direct Instagram publishing no longer requires Facebook credentials. Check per-platform recorded grants and token expiry.
-- Distinguish configured, linked, and publishing-authorized states. Saving app settings no longer marks a fresh app-only integration healthy/connected. OAuth navigation uses ordinary anchors so prefetch cannot create an authorization state.
-- Add an explicit admin connection check that only reads provider identity/permissions, and explicit Instagram token renewal. No new cron or automatic renewal schedule is introduced.
-- Authenticate webhook POST bodies with `X-Hub-Signature-256` before accepting notifications. This webhook is an authenticated acknowledgement endpoint; it does not implement messaging automation or publishing.
+- Facebook OAuth: `https://fluxknight.space/api/integrations/meta/callback`
+- Instagram OAuth: `https://fluxknight.space/api/integrations/meta/instagram/callback`
+- Instagram webhook: `https://fluxknight.space/api/integrations/meta/instagram/webhook`
 
-## Required Meta dashboard verification
+The webhook is not an OAuth authorization-code receiver. The parent Facebook and Instagram product settings are separate allowlists. Production OAuth starts on the canonical host so host-only browser state cookies reach the callback.
 
-For app **FLUXKNIGHT**, confirm the IDs above refer to the intended app/products. The display name is not an OAuth credential.
+## Code fixes in PR #362
 
-1. Facebook Login / Facebook Login for Business must allow exactly:
-   `https://fluxknight.space/api/integrations/meta/callback`
-2. Instagram product → API setup with Instagram Login → Business login settings must allow exactly:
-   `https://fluxknight.space/api/integrations/meta/instagram/callback`
-   Use the Instagram product's App ID and secret, not an assumed copy of the parent Meta app credentials. Avoid trailing-slash mismatches.
-3. Confirm HTTPS, App Domain `fluxknight.space`, website URL, privacy policy, and data-deletion instructions are correct in the app dashboard. A Vercel preview is not the production OAuth callback host.
-4. The saved Facebook Business Login configuration ID is `1045071945197499`. When `config_id` is used, Meta controls its permissions/assets in that configuration. Add/approve the required publishing grants there; the code's classic `scope` list does not override that configuration.
-5. Facebook path: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`; Instagram through Facebook additionally needs `instagram_basic` and `instagram_content_publish`. Confirm Page management/content-creation access and that the intended professional Instagram account is linked to that Page.
-6. Direct Instagram path: request `instagram_business_basic` and `instagram_business_content_publish`. A Facebook Page is not required for this path. For development/Standard Access, add the intended professional account under the app's Instagram tester/role settings and accept the invitation in Instagram. Verify the account performing consent is the invited account. Accounts outside owned/managed test assets require the applicable Live mode, app review/Advanced Access and business verification required by Meta.
-7. Webhook URL: `https://fluxknight.space/api/integrations/meta/instagram/webhook`. Configure the matching private verify token and correct signing app secret. GET challenge verification and signed POST delivery must both be tested. No messaging scopes are requested by this publishing-only flow.
-8. Reconnect the intended accounts and run **Check connection (no publishing)**. A successful OAuth redirect alone is not proof of publishing permission. Inspect per-platform authorization and token expiry in the UI.
+- Accept both documented `data[0]` and historical flat Instagram token exchange responses. Use unversioned long-token exchange/renewal endpoints and require a valid long-lived token with expiry. Do not infer granted permissions from requested scopes.
+- Bind Instagram OAuth to the initiating browser's HTTP-only SameSite cookie and require an admin session on callback. Remove the predictable state-signing secret fallback.
+- Enumerate paginated Facebook Pages, require an unambiguous target, validate Page and Instagram preferences together, and reject missing Page tokens instead of substituting a user token.
+- Pair direct Instagram IDs/tokens with the Instagram Graph host, and Facebook-linked Instagram IDs/Page tokens with the Facebook Graph host. Direct Instagram no longer requires Facebook credentials. Check per-platform recorded grants, intended account and token expiry.
+- Distinguish configured, linked and publishing-authorized states. Settings-only saves no longer claim successful OAuth or health checks. Ordinary anchors prevent connection links from being prefetched.
+- Add an explicit admin connection check that only reads provider identity/permissions and an explicit Instagram renewal control. No new cron or automatic renewal schedule is introduced.
+- Authenticate webhook POST bodies with `X-Hub-Signature-256`. This endpoint acknowledges authenticated notifications; it does not publish or implement messaging automation.
+- Vault credential RPCs remain server-only and restricted to service_role. No secret values are rendered to the client.
 
-Long-lived Instagram tokens can be renewed only while valid and at least 24 hours old. The new manual renewal control extends a valid token; expired/revoked tokens need OAuth again. Facebook's long-lived user/Page tokens are a different token family: do not send them to the Instagram refresh endpoint. Use reconnection and the GET-only identity/permission check for revocation/access changes.
+Long-lived Instagram tokens can be renewed only while valid and at least 24 hours old. Expired/revoked tokens require OAuth again. Facebook user/Page tokens are a different token family and must not be sent to the Instagram refresh endpoint.
 
-## Trigger.dev Reel and voiceover readiness
+## Trigger.dev deployment and voiceover runtime
 
-User confirms the voiceover environment variables have been added. Source on main includes task `flux-social-render-reel` and private ElevenLabs narration, licensed music selection, audio/duration verification, and human narration approval. Project config targets `proj_ckweruqrgwndssqpjdvg`, Node 24, Remotion 4.0.523, copied Remotion sources and Linux Chromium/font dependencies. Required runtime variables include `ELEVENLABS_API_KEY`, `ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID`, optional `ELEVENLABS_SOCIAL_MODEL`, and the existing Supabase service credentials; source presence does not prove production has the current task build.
+Recovered Chrome access and verified production deployment **20261110.2**, commit **ad67d9a5440451cc6712a3e081718686602e43e2**, Node **24.22.1**, with **24 tasks**. The Reel renderer is present; Maia and the four existing scheduled reminder tasks remain present. No deployment or schedule was changed.
 
-The production Trigger dashboard was visible in Chrome inventory at `https://cloud.trigger.dev/orgs/fluxknight-6833/projects/fluxknight-k7ol/env/prod`, but browser tab reads repeatedly timed out, including after the user reconnected Chrome. Therefore the deployed task version, production variable presence, provider authentication, private uploads, actual rendered MP4, and narration playback remain **unverified**. No deployment or task was started.
+Verified these names in Trigger.dev **Production**, with all values kept hidden:
 
-Before a production deploy, compare the current deployment's task inventory with the proposed artifact so all Maia/reminder tasks and live schedule bindings are retained. Deploying only a reduced task directory can remove scheduled tasks from the current deployment. Do not change schedule definitions or activate automation as part of the connection repair.
+- `ELEVENLABS_API_KEY` (stored as a secret)
+- `ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID`
+- `ELEVENLABS_SOCIAL_MODEL`
 
-End-to-end completion requires an explicitly selected, unscheduled review/draft Reel with a licensed soundtrack: render privately, listen to narration, inspect the combined MP4, and leave publishing approval to the user. Do not run the publisher, create a Meta media container, or post a test Reel without separate explicit consent.
+A real private voice-only render was attempted through `flux-social-render-reel`, using a separate probe draft copied from an existing storyboard. The original approved Reel was not regenerated. Probe `79ae5123-4731-4d00-aa5f-3988286763d1` has **no publishing platforms and zero schedules**. The run used one maximum attempt and an idempotency key.
+
+**Result: failed at scene 1 with ElevenLabs HTTP 402.** This confirms the deployed task reaches the narration provider, but successful audio generation, private MP3 upload and combined MP4 rendering remain blocked. ElevenLabs documents HTTP 402 as payment/insufficient-credit related. The raw provider body was not exposed, so the exact workspace balance or key-level allowance was not established. No billing, subscription, API key, or spending configuration was changed.
+
+[Private test run](https://cloud.trigger.dev/orgs/fluxknight-6833/projects/fluxknight-k7ol/env/prod/runs/run_06gsb8pngt38cl08jfgvni31a2)
+
+The failed probe remains in review with no approval; no content was posted. No licensed audio asset exists for this brand, so full narration-plus-music release verification also needs a rights-cleared soundtrack. The source intentionally permits a voice-only private preview while blocking publication approval without licensed music.
+
+## Remaining release checks
+
+1. Complete the explicitly approved production account authorization, then verify the saved grants and intended Page/Instagram identity without posting.
+2. Review/merge PR #362 separately; no merge has been performed.
+3. Resolve the ElevenLabs 402 for the actual project key, then rerun the same private probe once. Confirm private audio storage, synchronized MP4 audio/duration and listening playback.
+4. Select a licensed soundtrack and obtain human narration/content approval before any scheduling or publishing test.
+5. Preserve the complete current task inventory and live schedule bindings in any later Trigger deployment. Deploying a reduced task directory can remove scheduled tasks from the current deployment.
+
+## Validation
+
+- All **16 focused runtime/OAuth/voiceover tests** passed locally.
+- TypeScript `--noEmit`, scoped ESLint and `git diff --check` passed.
+- GitHub **Meta connection verification**, **Dashboard Final QA**, **Maia Draft Verification** passed; **Vercel preview succeeded** on code commit `71ac93d53efbdd4b5c624159564282d977a48cc4`.
+- The local Windows schedule-allowlist assertion differs only in slash direction. The corresponding Ubuntu CI check passed; no schedule source file changes.
+- Uploaded code tree matched the locally tested tree exactly: `129ab759637e22c87538f0f36ddec4f0d133c0c4`. Subsequent audit-only edits do not change that tested implementation.
 
 ## References
 
 - [Meta Instagram Business Login, token response and renewal](https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-instagram-login/business-login)
-- [Meta permissions reference](https://developers.facebook.com/documentation/development/permissions)
+- [Meta permission reference](https://developers.facebook.com/documentation/development/permissions)
 - [Trigger.dev scheduled task deployment behavior](https://trigger.dev/docs/tasks/scheduled)
-
-## Validation
-
-Behavioral tests cover both Instagram response formats, missing grants, expired/missing direct tokens, Page targeting ambiguity/mismatch, wrong token-family/ID pairing, webhook forgery, and GET-only secret-free connection checks. Voiceover approval contracts and Meta OAuth URL contracts are included. Local Windows schedule-allowlist test has a pre-existing slash-normalization failure: the actual four scheduled task filenames match the expected four names, with backslashes instead of forward slashes. No schedule source files are changed.
+- [ElevenLabs TTS status-code troubleshooting](https://elevenlabs.io/blog/how-to-integrate-text-to-speech)
