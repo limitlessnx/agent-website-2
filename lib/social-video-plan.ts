@@ -80,12 +80,13 @@ export async function generateReelPlanForPost(postId: string) {
 
   const { data: post, error } = await supabase
     .from("social_posts")
-    .select("id,title,caption,format,content,metadata")
+    .select("id,title,caption,format,status,content,metadata")
     .eq("organization_id", organizationId)
     .eq("id", postId)
     .single();
   if (error) throw error;
   if (!["reel", "video"].includes(post.format)) throw new Error("Only Reel/video posts can generate a video plan.");
+  if (!["draft", "review", "approved"].includes(post.status)) throw new Error("Scheduled and published Reels cannot be edited.");
 
   const model = process.env.OPENAI_SOCIAL_MODEL || "gpt-5.6-luna";
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -129,8 +130,15 @@ export async function generateReelPlanForPost(postId: string) {
   const { error: updateError } = await supabase
     .from("social_posts")
     .update({
+      status: "review",
+      approved_at: null,
       metadata: {
         ...(post.metadata || {}),
+        reel_asset_id: null,
+        primary_asset_id: null,
+        reel_render_status: "needs_rerender",
+        reel_voice_review_status: "pending",
+        reel_audio_verified: false,
         reel_plan: plan,
         reel_plan_model: model,
         reel_plan_phase: "3.5",
