@@ -21,23 +21,38 @@ export async function renderReelAction(formData: FormData) {
   const { supabase, organizationId } = await requireTenant();
   const { data: post, error } = await supabase
     .from("social_posts")
-    .select("id,format,metadata")
+    .select("id,format,status,metadata")
     .eq("organization_id", organizationId)
     .eq("id", postId)
     .single();
   if (error) throw error;
   if (!["reel", "video"].includes(post.format)) throw new Error("Only Reel/video posts can be rendered.");
+  if (!["draft", "review", "approved"].includes(post.status)) throw new Error("Scheduled or published Reels cannot be regenerated.");
 
   const metadata = (post.metadata || {}) as Record<string, unknown>;
   if (!metadata.reel_plan) throw new Error("Generate the Reel storyboard before rendering.");
 
-  const run = await tasks.trigger("flux-social-render-reel", { organizationId, postId });
-
-  await supabase
+  const { error: queueError } = await supabase
     .from("social_posts")
-    .update({ metadata: { ...metadata, reel_render_status: "queued", reel_render_run_id: run.id } })
+    .update({
+      status: "review",
+      approved_at: null,
+      metadata: {
+        ...metadata,
+        reel_render_status: "queued",
+        reel_audio_verified: false,
+        reel_voice_review_status: "pending",
+        reel_asset_id: null,
+        primary_asset_id: null,
+      },
+    })
     .eq("organization_id", organizationId)
     .eq("id", postId);
+  if (queueError) throw queueError;
+
+  // Update the draft state BEFORE triggering. Do not perform a second metadata
+  // write that might overwrite a faster render worker's completed result.
+  await tasks.trigger("flux-social-render-reel", { organizationId, postId });
 
   revalidatePath("/dashboard/social/posts");
   revalidatePath("/dashboard/social/assets");
