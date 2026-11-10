@@ -14,7 +14,9 @@ Started from current main `ad67d9a5440451cc6712a3e081718686602e43e2`, which incl
 - The Instagram product allowed both its OAuth callback and its webhook as OAuth redirects. Its generated embed URL incorrectly chose the webhook. Removed the webhook entry from the OAuth allowlist and verified the generated login URL now uses the correct callback. The actual webhook configuration was left intact.
 - The Instagram webhook URL is configured correctly. Deauthorization and data-deletion request URLs are blank in Instagram Business Login settings; those remain app-review configuration requirements before broader public use.
 
-**Token authorization remains separate from app configuration.** At the last database inspection the saved Facebook grants still lacked the two publishing permissions and there was no direct Instagram user token. Production account reauthorization requires the pending explicit user approval; saving requested scopes does not change existing tokens. Historical connected/healthy labels alone do not prove current publishing capability.
+**Direct Instagram reauthorization succeeded.** With explicit user approval, completed Instagram consent for @fluxknight.space. The production callback exchanged the token, read the account profile and stored it in Vault. Verified actual recorded grants `instagram_business_basic` and `instagram_business_content_publish`, direct Instagram-scoped ID `29288597700776232`, and expiry **2027-01-09T13:35:58.099Z**. This ID is distinct from the Facebook-linked account ID, so token-family/ID pairing matters. Recorded the verified callback time as the token issue time for the new renewal control. No token value was exposed. The production UI shows Instagram publishing ready.
+
+**Facebook refresh is paused at final consent.** User approved preserving all existing asset access and the publishing additions. Meta's review also requires accepting Meta Business Tools and Product Catalog Terms; that final legal acceptance remains pending. No replacement Facebook token has been stored yet. Existing business, Instagram and WhatsApp asset selections were preserved in the prepared consent flow. Historical connected/healthy labels alone do not prove Facebook publishing capability until that flow completes.
 
 ## Exact production URLs
 
@@ -57,9 +59,9 @@ The failed probe remains in review with no approval; no content was posted. No l
 
 ## Remaining release checks
 
-1. Complete the explicitly approved production account authorization, then verify the saved grants and intended Page/Instagram identity without posting.
+1. Complete the final Facebook terms acceptance and token refresh, then verify the stored Facebook grants and intended Page/Instagram identity without posting. Direct Instagram consent is already complete.
 2. Review/merge PR #362 separately; no merge has been performed.
-3. Resolve the ElevenLabs 402 for the actual project key, then rerun the same private probe once. Confirm private audio storage, synchronized MP4 audio/duration and listening playback.
+3. Resolve the ElevenLabs 402 for the actual project key, then rerun the same private probe once using a new run/idempotency key. Confirm private audio storage, synchronized MP4 audio/duration and listening playback.
 4. Select a licensed soundtrack and obtain human narration/content approval before any scheduling or publishing test.
 5. Preserve the complete current task inventory and live schedule bindings in any later Trigger deployment. Deploying a reduced task directory can remove scheduled tasks from the current deployment.
 
