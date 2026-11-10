@@ -14,6 +14,7 @@ import { getSocialReviewReadiness } from "@/lib/social-review";
 import { listSocialPosts } from "@/lib/social";
 import styles from "./review.module.css";
 import { ReviewSubmitButton } from "./ReviewSubmitButton";
+import { ReviewStatusRefresh } from "./ReviewStatusRefresh";
 
 const inputStyle = {
   width: "100%",
@@ -134,7 +135,7 @@ export default async function SocialReviewPage() {
                           : renderError}</p>
                       </div>
                     ) : null}
-                    {isRendering ? <p className={styles.progressMessage} role="status">Reel generation is {renderStatus}. You can return to this page to check its progress.</p> : null}
+                    {isRendering ? <div className={styles.progressControls}><p className={styles.progressMessage} role="status">Reel generation is {renderStatus}. You can check its progress here.</p><ReviewStatusRefresh /></div> : null}
                   </div>
                 ) : null}
                 <div className={styles.reviewLayout}>
