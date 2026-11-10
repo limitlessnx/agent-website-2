@@ -13,6 +13,8 @@ import { createSocialAssetSignedUrl, listSocialAssets } from "@/lib/social-asset
 import { getSocialReviewReadiness } from "@/lib/social-review";
 import { listSocialPosts } from "@/lib/social";
 import styles from "./review.module.css";
+import { ReviewSubmitButton } from "./ReviewSubmitButton";
+import { ReviewStatusRefresh } from "./ReviewStatusRefresh";
 
 const inputStyle = {
   width: "100%",
@@ -88,6 +90,8 @@ export default async function SocialReviewPage() {
             const voiceVerified = post.metadata?.reel_audio_verified === true;
             const narrationAssetIds = Array.isArray(post.metadata?.reel_narration_asset_ids)
               ? post.metadata.reel_narration_asset_ids.filter((id): id is string => typeof id === "string") : [];
+            const renderError = typeof post.metadata?.reel_render_error === "string" ? post.metadata.reel_render_error : "";
+            const isRendering = ["queued", "rendering"].includes(renderStatus);
             const voiceAssets = postAssets
               .filter((asset) => asset.asset_type === "audio" && narrationAssetIds.includes(asset.id))
               .sort((a, b) => Number(a.metadata?.scene_index || 0) - Number(b.metadata?.scene_index || 0));
@@ -111,47 +115,79 @@ export default async function SocialReviewPage() {
                   </div>
                 ) : null}
 
+                {isReel ? (
+                  <div className={styles.productionOverview}>
+                    <div className={styles.overviewHeading}>
+                      <div><strong>Reel production</strong><p>Prepare the script, generate media, and review before publishing.</p></div>
+                      <span className={styles.overviewState}>{isRendering ? "In progress" : renderError ? "Action needed" : readiness.ready ? "Ready to approve" : "In review"}</span>
+                    </div>
+                    <div className={styles.productionSteps} aria-label="Reel production stages">
+                      <span className={hasPlan ? styles.stepComplete : styles.stepPending}>1. Storyboard</span>
+                      <span className={renderStatus === "ready" && voiceVerified ? styles.stepComplete : isRendering ? styles.stepActive : styles.stepPending}>2. Render</span>
+                      <span className={voiceReviewStatus === "approved" ? styles.stepComplete : styles.stepPending}>3. Audio review</span>
+                      <span className={readiness.ready ? styles.stepComplete : styles.stepPending}>4. Approval</span>
+                    </div>
+                    {renderError ? (
+                      <div className={styles.inlineAlert} role="alert">
+                        <strong>Reel generation needs attention</strong>
+                        <p>{renderError.includes("HTTP 402")
+                          ? "ElevenLabs declined narration generation (HTTP 402). Check ElevenLabs billing, available credits and API access before trying again."
+                          : renderError}</p>
+                      </div>
+                    ) : null}
+                    {isRendering ? <div className={styles.progressControls}><p className={styles.progressMessage} role="status">Reel generation is {renderStatus}. You can check its progress here.</p><ReviewStatusRefresh /></div> : null}
+                  </div>
+                ) : null}
                 <div className={styles.reviewLayout}>
                   <div className={styles.editorColumn}>
+                    <details className={styles.workflowSection}>
+                      <summary><span><strong>Content & copy</strong><small>Title, hook, caption and CTA</small></span></summary>
                     <form action={updateSocialPostReviewAction} className={styles.editorForm}>
                       <input type="hidden" name="post_id" value={post.id} />
                       <label className={styles.field}><span>Title</span><input className={styles.input} style={inputStyle} name="title" defaultValue={post.title} /></label>
                       <label className={styles.field}><span>Hook</span><textarea className={styles.textarea} style={textareaStyle} name="hook" defaultValue={hook} /></label>
                       <label className={styles.field}><span>Caption</span><textarea className={`${styles.textarea} ${styles.caption}`} style={{ ...textareaStyle, minHeight: 180 }} name="caption" defaultValue={post.caption} /></label>
                       <label className={styles.field}><span>CTA</span><input className={styles.input} style={inputStyle} name="cta" defaultValue={cta} /></label>
-                      <button type="submit" className="admin-status" style={{ cursor: "pointer", justifySelf: "start" }}>Save edits</button>
+                      <ReviewSubmitButton pendingLabel="Saving edits…" kind="primary">Save edits</ReviewSubmitButton>
                     </form>
+                    </details>
 
+                    <section className={styles.productionActions} aria-label="Generate media">
+                      <div className={styles.sectionHeading}><strong>Production actions</strong><span>Generate your creative before approving it.</span></div>
                     <div className={styles.generationActions}>
                       {post.format === "image" ? (
                         <form action={generateStaticGraphicAction}>
                           <input type="hidden" name="post_id" value={post.id} />
-                          <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Regenerate graphic</button>
+                          <ReviewSubmitButton kind="secondary" pendingLabel="Generating graphic…">Regenerate graphic</ReviewSubmitButton>
                         </form>
                       ) : null}
                       {post.format === "carousel" ? (
                         <form action={generateCarouselAction}>
                           <input type="hidden" name="post_id" value={post.id} />
-                          <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Regenerate carousel</button>
+                          <ReviewSubmitButton kind="secondary" pendingLabel="Generating carousel…">Regenerate carousel</ReviewSubmitButton>
                         </form>
                       ) : null}
                       {["reel", "video"].includes(post.format) ? (
                         <>
                           <form action={generateReelPlanAction}>
                             <input type="hidden" name="post_id" value={post.id} />
-                            <button type="submit" className="admin-status" style={{ cursor: "pointer" }}>{hasPlan ? "Regenerate storyboard" : "Generate storyboard"}</button>
+                            <ReviewSubmitButton kind="secondary" pendingLabel="Generating storyboard…">{hasPlan ? "Regenerate storyboard" : "Generate storyboard"}</ReviewSubmitButton>
                           </form>
                           {hasPlan ? (
                             <form action={renderReelAction}>
                               <input type="hidden" name="post_id" value={post.id} />
-                              <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>{renderStatus === "ready" ? "Render new Reel" : renderStatus === "queued" ? "Render queued" : "Render Reel"}</button>
+                              <ReviewSubmitButton kind="primary" disabled={isRendering} pendingLabel="Queueing Reel…">{renderStatus === "ready" ? "Render new Reel" : isRendering ? "Render in progress" : "Render Reel"}</ReviewSubmitButton>
                             </form>
                           ) : null}
                         </>
                       ) : null}
                     </div>
 
+                    </section>
+
                     {isReel ? (
+                      <details className={styles.workflowSection} open={Boolean(renderError)}>
+                        <summary><span><strong>Voice & soundtrack</strong><small>Premium male · Captions off · {musicReady ? "Music ready" : "Music not selected"}</small></span></summary>
                       <form action={selectReelMusicAction} style={{ display: "grid", gap: 8, marginTop: 14 }}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <label style={{ display: "grid", gap: 6 }}>
@@ -164,36 +200,34 @@ export default async function SocialReviewPage() {
                             ))}
                           </select>
                         </label>
-                        <button type="submit" className="admin-status" style={{ cursor: "pointer", justifySelf: "start" }}>Save soundtrack · rerender required</button>
+                        <ReviewSubmitButton pendingLabel="Saving soundtrack…">Save soundtrack</ReviewSubmitButton>
                         {!licensedTracks.length ? <span>Upload a rights-cleared music track in the Asset Library first.</span> : null}
                       </form>
+                      </details>
                     ) : null}
                     {isReel && hasPlan ? (
-                      <div className="admin-panel" style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                      <div className={styles.audioReviewCompact}>
                         <strong>Reel narration review · Premium male</strong>
                         <span>{voiceVerified ? "Audio verified in rendered MP4" : "Narration not yet verified"} · Captions off · {musicReady ? "Licensed background music ready" : "Licensed music missing"}</span>
-                        {typeof post.metadata?.reel_render_error === "string" ? <span style={{ color: "#fca5a5" }}>{post.metadata.reel_render_error}</span> : null}
+
                         <span>Listen to the voice clips on the right, then approve this specific narration. Regeneration resets approval.</span>
                         {voiceReviewStatus === "approved" ? (
                           <span className="admin-status live">Narration approved</span>
                         ) : (
                           <form action={approveReelVoiceReviewAction}>
                             <input type="hidden" name="post_id" value={post.id} />
-                            <button type="submit" className="admin-status live"
-                              disabled={!voiceVerified || !musicReady || !voiceAssets.length || post.status !== "review"}
-                              style={{ cursor: voiceVerified && musicReady ? "pointer" : "not-allowed" }}>
-                              Approve narration and music
-                            </button>
+                            <ReviewSubmitButton kind="primary" pendingLabel="Approving audio…" disabled={!voiceVerified || !musicReady || !voiceAssets.length || post.status !== "review"}>Approve narration and music</ReviewSubmitButton>
                           </form>
                         )}
                       </div>
                     ) : null}
 
-                    <div className={styles.reviewActions}>
+                    <section className={styles.reviewActions} aria-label="Final approval">
+                      <div className={styles.sectionHeading}><strong>Final approval</strong><span>No content is published automatically.</span></div>
                       {post.status === "review" ? (
                         <form action={approveSocialPostReviewAction}>
                           <input type="hidden" name="post_id" value={post.id} />
-                          <button type="submit" className={readiness.ready ? "admin-status live" : "admin-status warning"} style={{ cursor: readiness.ready ? "pointer" : "not-allowed" }} disabled={!readiness.ready}>Approve</button>
+                          <ReviewSubmitButton kind="primary" disabled={!readiness.ready} pendingLabel="Approving post…">Approve post</ReviewSubmitButton>
                           {!readiness.ready ? <p style={{ marginTop: 6 }}>{readiness.reason}</p> : null}
                         </form>
                       ) : <span className="admin-status live">Approved</span>}
@@ -201,9 +235,9 @@ export default async function SocialReviewPage() {
                       <form action={rejectSocialPostReviewAction} className={styles.rejectForm}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <textarea style={{ ...textareaStyle, minHeight: 76 }} name="reason" placeholder="What should change before approval?" required />
-                        <button type="submit" className={`admin-status warning ${styles.rejectButton}`} style={{ cursor: "pointer" }}>Reject to draft</button>
+                        <ReviewSubmitButton kind="danger" className={styles.rejectButton} pendingLabel="Returning to draft…">Return to draft</ReviewSubmitButton>
                       </form>
-                    </div>
+                    </section>
                   </div>
 
                   <div className={styles.previewColumn}>

@@ -12,6 +12,7 @@ export async function generateReelPlanAction(formData: FormData) {
 
   await generateReelPlanForPost(postId);
   revalidatePath("/dashboard/social/posts");
+  revalidatePath("/dashboard/social/review");
 }
 
 export async function renderReelAction(formData: FormData) {
@@ -55,5 +56,6 @@ export async function renderReelAction(formData: FormData) {
   await tasks.trigger("flux-social-render-reel", { organizationId, postId });
 
   revalidatePath("/dashboard/social/posts");
+  revalidatePath("/dashboard/social/review");
   revalidatePath("/dashboard/social/assets");
 }

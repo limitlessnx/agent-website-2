@@ -53,3 +53,65 @@
   .previewMedia,.video{width:100%;max-width:100%}
   .carouselGrid{grid-template-columns:1fr}
 }
+
+/* Flux Social production studio: less card nesting, clear actions, and responsive feedback. */
+.productionOverview{display:grid;gap:14px;margin:0 0 20px;padding:18px;border:1px solid var(--admin-border,#303451);border-radius:16px;background:rgba(110,83,222,.045);min-width:0}
+.overviewHeading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.overviewHeading strong{font-size:1rem}
+.overviewHeading p,.sectionHeading span{color:var(--fk-text-muted,#a7a9bb);font-size:.81rem;line-height:1.45;margin:5px 0 0}
+.overviewState{font-size:.75rem;font-weight:700;color:#c4b5fd;border:1px solid #6f5ab9;border-radius:999px;padding:6px 10px;white-space:nowrap}
+.productionSteps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.productionSteps span{font-size:.72rem;line-height:1.3;text-align:center;padding:10px 5px;border-radius:8px;min-width:0}
+.stepComplete{background:rgba(52,211,153,.12);color:#6ee7b7}
+.stepActive{background:rgba(167,139,250,.18);color:#d8b4fe}
+.stepPending{background:rgba(148,163,184,.09);color:var(--fk-text-muted,#999cba)}
+.inlineAlert{border:1px solid rgba(248,113,113,.5);border-radius:12px;background:rgba(185,28,28,.09);padding:13px 15px;overflow-wrap:anywhere}
+.inlineAlert strong{font-size:.88rem;color:#fca5a5}
+.inlineAlert p{font-size:.82rem;color:#fecaca;line-height:1.5;margin:5px 0 0}
+.progressMessage{margin:0;font-size:.83rem;color:#c4b5fd}
+.workflowSection{border:1px solid var(--admin-border,#343858);border-radius:14px;background:rgba(20,25,57,.45);min-width:0;overflow:hidden;margin-bottom:14px}
+.workflowSection summary{display:flex;align-items:center;cursor:pointer;padding:16px;list-style:none;min-height:56px;user-select:none}
+.workflowSection summary::-webkit-details-marker{display:none}
+.workflowSection summary::after{content:"⌄";margin-left:auto;font-size:1.5rem;color:#b3a3f6;transition:transform .18s ease}
+.workflowSection[open] summary::after{transform:rotate(180deg)}
+.workflowSection summary span{display:grid;gap:4px}
+.workflowSection summary strong{font-size:.93rem}
+.workflowSection summary small{font-size:.76rem;color:var(--fk-text-muted,#a7a9bb);font-weight:400}
+.workflowSection>form{margin:0 16px 16px!important}
+.workflowSection[open] summary{border-bottom:1px solid var(--admin-border,#343858);margin-bottom:16px}
+.productionActions,.audioReviewCompact{display:grid;gap:12px;margin:0 0 18px;min-width:0}
+.sectionHeading{display:grid;gap:1px}
+.sectionHeading strong{font-size:.93rem}
+.audioReviewCompact{padding:14px 16px;background:rgba(20,25,57,.42);border:1px solid var(--admin-border,#343858);border-radius:14px}
+.audioReviewCompact>span{font-size:.82rem;line-height:1.45;color:var(--fk-text-muted,#b0b2c6)}
+.actionButton{appearance:none;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:11px;min-height:44px;padding:10px 16px;font:inherit;font-size:.86rem;font-weight:700;line-height:1.3;cursor:pointer;transition:transform .16s ease,background-color .16s ease,box-shadow .16s ease,opacity .16s ease;max-width:100%;text-align:center}
+.actionButton:active:not(:disabled){transform:scale(.965)}
+.actionButton:focus-visible{outline:2px solid #c4b5fd;outline-offset:3px}
+.actionButton:disabled{opacity:.46;cursor:not-allowed;filter:saturate(.6)}
+.actionButton[data-pending="true"]{opacity:.75;cursor:progress}
+.primary{background:linear-gradient(105deg,#7c3aed,#9f78ee);color:white;box-shadow:0 4px 16px rgba(124,58,237,.18)}
+.primary:hover:not(:disabled){box-shadow:0 6px 20px rgba(124,58,237,.3)}
+.secondary{background:rgba(116,85,205,.13);border-color:rgba(167,139,250,.45);color:#dfd3ff}
+.secondary:hover:not(:disabled){background:rgba(116,85,205,.24)}
+.danger{border-color:rgba(248,113,113,.38);background:rgba(248,113,113,.08);color:#fda4af}
+.danger:hover:not(:disabled){background:rgba(248,113,113,.17)}
+.loadingSpinner{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:reviewSpin .8s linear infinite;flex:none}
+@keyframes reviewSpin{to{transform:rotate(360deg)}}
+.reviewPage{padding-bottom:clamp(100px,16vh,150px)}
+@media(max-width:900px){
+  .productionOverview{padding:14px;gap:11px}
+  .overviewHeading{flex-direction:column;gap:8px}
+  .productionSteps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .generationActions{margin-top:0}
+  .generationActions form,.generationActions .actionButton,.reviewActions form,.reviewActions .actionButton{width:100%}
+  .workflowSection summary{padding:14px}
+  .reviewPage{padding-bottom:155px}
+  .actionButton{min-height:48px}
+}
+@media(prefers-reduced-motion:reduce){
+  .actionButton,.workflowSection summary::after{transition:none}
+  .loadingSpinner{animation-duration:1.8s}
+}
+
+.progressControls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.progressControls .actionButton{min-height:36px;padding:7px 12px;font-size:.78rem}
