@@ -112,3 +112,6 @@
   .actionButton,.workflowSection summary::after{transition:none}
   .loadingSpinner{animation-duration:1.8s}
 }
+
+.progressControls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.progressControls .actionButton{min-height:36px;padding:7px 12px;font-size:.78rem}
