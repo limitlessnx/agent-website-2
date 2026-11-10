@@ -41,6 +41,7 @@ export async function renderReelAction(formData: FormData) {
       metadata: {
         ...metadata,
         reel_render_status: "queued",
+        reel_render_error: null,
         reel_audio_verified: false,
         reel_voice_review_status: "pending",
         reel_asset_id: null,
