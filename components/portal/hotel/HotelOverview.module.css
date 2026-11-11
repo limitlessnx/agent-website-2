@@ -9,3 +9,6 @@
 @media(max-width:360px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:'arrivals' 'rooms' 'recent' 'inbox' 'attention'}.quickNav a{font-size:9px}.hotelHeader{grid-template-columns:minmax(0,1fr) 39%}}
 
 .dashboard{padding:0}.conversations>div:not(.conversationList){padding:18px 12px}.conversations>div:not(.conversationList)>h3{font-size:14px}.conversations>div:not(.conversationList)>p{font-size:11px;margin-bottom:0}@media(max-width:900px){.hotelHeader h1{font-size:clamp(20px,4.5vw,29px)}.hotelHeader .overviewActions{margin-bottom:0}.recentPanel .recentBookings strong{font-size:12px}.relationshipLinks{order:0}}
+
+/* Keep operational cards legible on phone-sized viewports. */
+@media(max-width:760px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:'arrivals' 'rooms' 'recent' 'inbox' 'attention'}.recentPanel,.conversations,.attention{min-width:0}.recentPanel .panelHeader h2,.conversations .panelHeader h2{font-size:18px}.recentPanel .panelFooter,.conversations .panelFooter{font-size:12px}.recentPanel .panelHeader,.conversations .panelHeader{padding:18px}.recentPanel .panelHeader a{font-size:12px}.recentPanel .recentBookings,.conversations .conversationList{padding:0 18px}.attention .clear{padding:16px 18px}.attention .clear p{line-height:1.5}}
