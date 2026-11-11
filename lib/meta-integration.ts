@@ -15,7 +15,7 @@ export async function getFluxknightOrganization() {
 }
 
 export async function getMetaCredentials(organizationId: string) {
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
   const { data, error } = await admin.rpc("get_organization_integration_credentials", {
     p_organization_id: organizationId,
     p_provider: "meta",
@@ -47,7 +47,7 @@ export async function saveMetaCredentials(input: {
   instagramAppSecret?: string;
   instagramWebhookVerifyToken?: string;
 }) {
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
   const existingIntegration = await getMetaIntegration(input.organizationId);
   const existingCredentials = await getMetaCredentials(input.organizationId);
   const configuration = (existingIntegration?.configuration || {}) as Json;
@@ -105,4 +105,13 @@ export async function saveMetaCredentials(input: {
     },
   });
   if (error) throw error;
+  // The legacy Vault RPC marks every write connected, including app-only setup.
+  // Saving configuration must not claim a successful OAuth exchange or health check.
+  const { error: stateError } = await admin.from("organization_integrations").update({
+    status: existingIntegration?.status || "configured",
+    health: existingIntegration?.health || { status: "pending", message: "Authorize and check the connection." },
+    last_connected_at: existingIntegration?.last_connected_at || null,
+    last_checked_at: existingIntegration?.last_checked_at || null,
+  }).eq("organization_id", input.organizationId).eq("provider", "meta");
+  if (stateError) throw stateError;
 }

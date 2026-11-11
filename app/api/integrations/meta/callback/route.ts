@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { selectMetaPage } from "@/lib/meta-connection";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -8,7 +9,7 @@ import {
   getMetaIntegration,
 } from "@/lib/meta-integration";
 
-const COOKIE = "__Host-flux_meta_oauth_state";
+const COOKIE = process.env.NODE_ENV === "production" ? "__Host-flux_meta_oauth_state" : "flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
 type Json = Record<string, unknown>;
 
@@ -82,7 +83,7 @@ function selectPage(pages: MetaPage[], preferences: Json) {
     if (byInstagram) return byInstagram;
   }
 
-  return pages.find((page) => page.instagram_business_account?.id) || pages[0];
+  return undefined;
 }
 
 async function fetchPreferredPageDirectly(input: {
@@ -139,7 +140,7 @@ async function refreshSelectedPageIdentity(input: {
       body.instagram_business_account &&
       typeof body.instagram_business_account === "object"
         ? (body.instagram_business_account as MetaInstagramAccount)
-        : input.page.instagram_business_account,
+        : undefined,
   } satisfies MetaPage;
 }
 
@@ -262,6 +263,14 @@ export async function GET(request: Request) {
     pagesUrl.searchParams.set("access_token", userAccessToken);
     const pagesBody = await metaJson(pagesUrl);
     const pages = (Array.isArray(pagesBody.data) ? pagesBody.data : []) as MetaPage[];
+    let paging = pagesBody.paging as { cursors?: { after?: string }; next?: string } | undefined;
+    for (let batch = 0; paging?.next; batch++) {
+      if (batch >= 20 || !paging.cursors?.after) throw new Error("Unable to enumerate all authorized Pages. Narrow the assets in Meta Login.");
+      pagesUrl.searchParams.set("after", paging.cursors.after);
+      const next = await metaJson(pagesUrl);
+      pages.push(...(Array.isArray(next.data) ? next.data : []) as MetaPage[]);
+      paging = next.paging as typeof paging;
+    }
 
     const preferredPageId = String(preferences.preferred_page_id || "").trim();
     let selected = selectPage(pages, preferences);
@@ -277,6 +286,8 @@ export async function GET(request: Request) {
       });
       if (directPage) selected = directPage;
     }
+
+    if (!selected && !preferredPageId) selected = selectMetaPage(pages, preferences);
 
     if (!selected?.id) {
       const available = pages.map(pageLabel).join("; ") || "none";
@@ -295,12 +306,15 @@ export async function GET(request: Request) {
       );
     }
 
-    const pageToken = selected.access_token || userAccessToken;
+    const pageToken = selected.access_token;
+    if (!pageToken) throw new Error("Meta did not return a Page access token. Reauthorize Page access.");
     const resolvedPage = await refreshSelectedPageIdentity({
       apiVersion,
       page: selected,
       pageToken,
     });
+
+    selectMetaPage([resolvedPage], preferences);
 
     const preferredInstagramAccount = String(
       preferences.preferred_instagram_account ||
@@ -349,9 +363,10 @@ export async function GET(request: Request) {
       api_version: apiVersion,
       oauth_connected_at: new Date().toISOString(),
       identity_refreshed_at: new Date().toISOString(),
+      user_token_expires_at: Number(longToken.expires_in) > 0 ? new Date(Date.now() + Number(longToken.expires_in) * 1000).toISOString() : null,
     };
 
-    const admin = createAdminClient() as any;
+    const admin = createAdminClient();
     const { error: storeError } = await admin.rpc(
       "store_organization_integration_credentials",
       {
