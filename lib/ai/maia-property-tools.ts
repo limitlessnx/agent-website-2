@@ -6,6 +6,7 @@ export type MaiaPropertyToolContext = {
   agentId: string;
   sessionId: string;
   conversationId?: string;
+  requestedPropertyMediaTypes?: string[];
 };
 
 export type MaiaPropertyToolDefinition = {
@@ -111,11 +112,11 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
         required: ["query"],
       },
       execute: async (input, ctx) => {
-        const query = text(input.query).slice(0, 160).replace(/[%_]/g, "");
+        const query = text(input.query).slice(0, 160).replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim();
         if (!query) return { match_status: "none", properties: [] };
         const limit = Math.max(1, Math.min(10, Number(input.limit || 8)));
         const admin = createAdminClient();
-        const { data, error } = await admin
+        const { data: matched, error } = await admin
           .from("properties")
           .select("id,title,type,location_city,location_area,price,status,features,description,cover_image_url,drive_photos_link,drive_brochure_link,updated_at")
           .eq("organization_id", ctx.organizationId)
@@ -123,6 +124,25 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
           .order("updated_at", { ascending: false, nullsFirst: false })
           .limit(limit);
         if (error) throw error;
+        let data = matched;
+        // Buyers often combine a location with a generic word such as "estate".
+        // Retry meaningful words across fields instead of requiring one full phrase.
+        if (!data?.length) {
+          const tokens = query.toLowerCase().split(/\s+/).filter((word) => word.length > 1 && !new Set(["estate", "estates", "property", "properties", "please", "show", "me", "your", "the", "in", "at", "of", "details", "about", "located", "want", "would", "like", "to", "get", "on"]).has(word));
+          if (tokens.length) {
+            const fallback = await admin.from("properties")
+              .select("id,title,type,location_city,location_area,price,status,features,description,cover_image_url,drive_photos_link,drive_brochure_link,updated_at")
+              .eq("organization_id", ctx.organizationId)
+              .or(tokens.flatMap((word) => ["title", "location_city", "location_area"].map((field) => `${field}.ilike.%${word}%`)).join(","))
+              .order("updated_at", { ascending: false, nullsFirst: false })
+              .limit(100);
+            if (fallback.error) throw fallback.error;
+            data = (fallback.data || []).filter((row) => {
+              const words = [row.title, row.location_city, row.location_area].map(text).join(" ").toLowerCase().split(/[^\p{L}\p{N}]+/u);
+              return tokens.every((token) => words.some((word) => word === token || (token.length >= 4 && word.length === token.length && [...token].filter((letter, index) => letter !== word[index]).length === 1)));
+            }).slice(0, limit);
+          }
+        }
         const properties = data || [];
         const normalized = query.toLowerCase();
         const exact = properties.filter((row) => text(row.title).toLowerCase() === normalized);
@@ -197,6 +217,11 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
           },
           assets,
           catalog_links: catalogLinks,
+          available_media_types: [...new Set([
+            ...assets.map((asset) => asset.media_type),
+            ...catalogLinks.map((asset) => asset.media_type === "image_or_gallery" ? "image" : asset.media_type),
+          ])],
+          delivery_requires_customer_choice: true,
           has_registered_media: assets.length > 0,
           warning: assets.length === 0 && catalogLinks.length === 0 ? "No approved media is registered for this property." : null,
         };
@@ -204,7 +229,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
     },
     {
       name: "send_property_media",
-      description: "Send one registered, approved property image, video or document to the verified customer in the current WhatsApp conversation. Use only an asset ID returned by get_property_media. The recipient, property ownership, asset URL and 24-hour service window are verified server-side and cannot be supplied by the model.",
+      description: "Only after the customer explicitly requests or accepts the offered media type for this property, send one registered, approved property image, video or document to the verified customer in the current WhatsApp conversation. Use only an asset ID returned by get_property_media. The recipient, property ownership, asset URL and 24-hour service window are verified server-side and cannot be supplied by the model.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -228,6 +253,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
         if (!approvedMedia(asset.metadata)) throw new Error("The requested media asset is not approved for customer delivery.");
 
         const kind = mediaKind(asset.mime_type, asset.metadata);
+        if (!ctx.requestedPropertyMediaTypes?.includes(kind)) throw new Error("Ask which available property media the customer wants and wait for their choice before sending.");
         if (!["image", "video", "document"].includes(kind)) throw new Error(`Unsupported WhatsApp property media type: ${kind}.`);
 
         const { data: property, error: propertyError } = await admin
