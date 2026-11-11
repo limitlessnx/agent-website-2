@@ -53,6 +53,17 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
       const nextStep=Math.min(5,step+1);await save(nextStep);setStep(nextStep);
     }catch(e){setError(e instanceof Error?e.message:"Unable to continue.");}
   }
+  async function skipToDashboard(){
+    // Keep the organization active and setup incomplete; do not mark the wizard submitted.
+    try {
+      await save(step);
+      router.push("/portal");
+      router.refresh();
+    } catch(e) {
+      setError(e instanceof Error ? e.message : "Unable to save your progress.");
+    }
+  }
+
   async function submit(){
     try{
       setSaving(true);setError("");await save(5);
@@ -116,7 +127,9 @@ export default function OnboardingForm({initialProfile}:{initialProfile:ClientOn
     </section>}
 
     {error&&<p className="onboarding-error" role="alert">{error}</p>}
+    <p className="onboarding-skip-note">You can finish these details later from your workspace. Skipping does not activate your AI or submit your setup.</p>
     <div className="onboarding-actions">
+      <button type="button" className="back" disabled={saving} onClick={skipToDashboard}>Skip for now · Open dashboard</button>
       <button type="button" className="back" disabled={step===1||saving} onClick={()=>setStep(Math.max(1,step-1))}>
         <ArrowLeft size={17}/> Back
       </button>
