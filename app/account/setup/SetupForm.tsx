@@ -56,7 +56,17 @@ export default function SetupForm() {
         Business type
         <select name="industry_slug" defaultValue="real-estate" required>
           <option value="real-estate">Real estate</option>
-          <option value="service-businesses">Service business</option>
+          <option value="hotels">Hotels & hospitality</option>
+          <option value="photography-studio">Photography studio</option>
+          <option value="restaurants">Restaurants & dining</option>
+          <option value="beauty-salons">Beauty salons & spas</option>
+          <option value="auto-shops">Car dealerships & auto services</option>
+          <option value="gyms">Gyms & fitness</option>
+          <option value="clinics">Clinics</option>
+          <option value="ecommerce">E-commerce</option>
+          <option value="sales-companies">Sales companies</option>
+          <option value="professional-services">Professional services</option>
+          <option value="service-businesses">Other service business</option>
           <option value="other">Other</option>
         </select>
       </label>

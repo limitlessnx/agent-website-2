@@ -5,8 +5,6 @@ import { supabaseRest } from "@/lib/supabase-server-rest";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
 import { activatePaidTrialSubscription } from "@/lib/payments/activate-paid-trial";
 import { ensureClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
-import OnboardingForm from "./OnboardingForm";
-import "./onboarding.css";
 
 export const metadata: Metadata = {
   title: "Set Up Your Workspace",
@@ -119,11 +117,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     email: session.email,
   });
 
-  if (profile.status !== "in_progress") redirect("/portal");
+  // Workspace creation is complete; onboarding continues inside the industry dashboard.
+  // Keep this route as a compatibility entry point for paid checkout verification.
+  redirect("/portal");
 
-  return (
-    <main className="onboarding-page">
-      <OnboardingForm initialProfile={profile} />
-    </main>
-  );
 }
