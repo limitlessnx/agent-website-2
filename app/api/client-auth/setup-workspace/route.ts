@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       issuedAt: Date.now(),
     });
 
-    const redirectTo = new URL(safeInternalPath(pending.nextPath, "/onboarding"), "https://fluxknight.local");
+    const redirectTo = new URL(safeInternalPath(pending.txRef ? "/onboarding" : "/portal", "/portal"), "https://fluxknight.local");
     if (pending.txRef) redirectTo.searchParams.set("tx_ref", pending.txRef);
     if (pending.trialPlan) redirectTo.searchParams.set("trial_plan", pending.trialPlan);
 
