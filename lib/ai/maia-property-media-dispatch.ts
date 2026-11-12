@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export type MaiaPropertyMediaDispatch = {
@@ -30,6 +32,24 @@ export async function dispatchMaiaPropertyMedia(command: MaiaPropertyMediaDispat
     throw new Error("Direct document delivery is not yet supported by the canonical Maia WhatsApp media gateway.");
   }
 
+  // Claim before calling Meta. A unique database key protects concurrent workers and retries.
+  // On an ambiguous provider failure, retain the claim rather than risk a second image.
+  const commandKey = createHash("sha256").update(command.commandId).digest("hex");
+  const admin = createAdminClient();
+  const { error: claimError } = await admin.from("maia_media_send_claims").insert({
+    organization_id: command.organizationId,
+    command_key: commandKey,
+    asset_id: command.assetId,
+    recipient: phone,
+    status: "claimed",
+  });
+  if (claimError) {
+    if (claimError.code === "23505") {
+      return { accepted: false, status: "duplicate_suppressed", asset_id: command.assetId, property_id: command.propertyId, media_type: command.mediaType, provider_message_id: null, provider: "meta", message: "This media asset was already claimed for this customer request." };
+    }
+    throw claimError; // Fail closed if the claim table is missing or inaccessible.
+  }
+
   const caption = String(command.caption || command.propertyTitle || "Property media").trim().slice(0, 900);
   const delivery = await sendWhatsAppMessage({
     organizationId: command.organizationId,
@@ -41,6 +61,8 @@ export async function dispatchMaiaPropertyMedia(command: MaiaPropertyMediaDispat
       ? { propertyImageUrls: [command.mediaUrl] }
       : { propertyVideoUrls: [command.mediaUrl] }),
   });
+
+  await admin.from("maia_media_send_claims").update({ status: delivery.ok ? "accepted" : "failed", provider_message_id: delivery.providerMessageId || null }).eq("organization_id", command.organizationId).eq("command_key", commandKey);
 
   return {
     accepted: Boolean(delivery.ok),
