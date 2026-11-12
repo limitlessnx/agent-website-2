@@ -390,7 +390,7 @@ export default async function GencouvWorkspacePage() {
             </div>
             <span className="admin-status warning">not connected</span>
           </div>
-          <div className="admin-checklist">
+          <div style={{display:"grid",gridTemplateColumns:"1fr",gap:10,minWidth:0,overflowWrap:"anywhere"}}>
             <span>Add GENCOUV_DASHBOARD_SECRET to the Flux Knight server environment</span>
             <span>Keep email sequence sending disabled until approved</span>
           </div>
@@ -503,7 +503,7 @@ export default async function GencouvWorkspacePage() {
         </div>
       </section>
 
-      <div id="email-control">
+      <div id="email-control" style={{scrollMarginTop:100}}>
         <GencouvEmailControls
           dailyLimit={settings.daily_send_limit || data?.email_controls?.daily_send_limit || 10}
           maxDailyLimit={30}
@@ -521,9 +521,9 @@ export default async function GencouvWorkspacePage() {
         </div>
       </section>
 
-      <GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} />
+      <div id="lead-contacts" style={{scrollMarginTop:100}}><GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} /></div>
 
-      <GencouvInbox messages={emailMessages} />
+      <div id="email-inbox" style={{scrollMarginTop:100}}><GencouvInbox messages={emailMessages} /></div>
 
       <section id="daily-cohort-summary" className="admin-panel">
         <div className="admin-panel-header">
