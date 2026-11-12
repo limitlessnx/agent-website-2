@@ -110,6 +110,10 @@ test('Xposure single-message composer preserves fixed Meta wording and consent s
   assert.match(composer, /setReviewing\(false\)/);
   assert.match(composer, /contact\.whatsapp_consent === "opted_in"/);
   assert.match(composer, /Review campaign/);
+  assert.match(composer, /values=\{variables\} message=\{messageDraft\}/);
+  const writer = fs.readFileSync(path.join(root, 'components/CampaignAiWriter.tsx'), 'utf8');
+  assert.match(writer, /const brief = inline \? \(hasText \? "" : message\)/);
+  assert.match(writer, /if \(inline\) \{\s*onApply\(payload\.variables\)/);
 });
 
 
