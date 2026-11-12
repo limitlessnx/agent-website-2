@@ -79,6 +79,7 @@ function executionSummary(tool: LeoToolCall, result: Record<string, unknown>) {
 export function LeoConversationProvider({ children, tenantScope }: { children: React.ReactNode; tenantScope?: string }) {
   const scopeSuffix = tenantScope ? `:${tenantScope}` : "";
   const tenantSurface = Boolean(tenantScope);
+  const [storageReady, setStorageReady] = useState(false);
   const [sessionIdState, setSessionIdState] = useState("");
   const [messages, setMessages] = useState<LeoMessage[]>([]);
   const [toolCalls, setToolCalls] = useState<LeoToolCall[]>([]);
@@ -123,12 +124,13 @@ export function LeoConversationProvider({ children, tenantScope }: { children: R
         setMessages(safeStoredMessages(sessionStorage.getItem(MESSAGES_KEY + scopeSuffix)));
         setToolCalls(normalizeTools(JSON.parse(sessionStorage.getItem(TOOLS_KEY + scopeSuffix) || "[]")));
       } catch {}
+      setStorageReady(true);
     });
     return () => { cancelled = true; };
   }, [scopeSuffix]);
 
-  useEffect(() => { try { sessionStorage.setItem(MESSAGES_KEY + scopeSuffix, JSON.stringify(messages.slice(-40))); } catch {} }, [messages, scopeSuffix]);
-  useEffect(() => { try { sessionStorage.setItem(TOOLS_KEY + scopeSuffix, JSON.stringify(toolCalls.slice(-8))); } catch {} }, [toolCalls, scopeSuffix]);
+  useEffect(() => { if (!storageReady) return; try { sessionStorage.setItem(MESSAGES_KEY + scopeSuffix, JSON.stringify(messages.slice(-40))); } catch {} }, [messages, scopeSuffix, storageReady]);
+  useEffect(() => { if (!storageReady) return; try { sessionStorage.setItem(TOOLS_KEY + scopeSuffix, JSON.stringify(toolCalls.slice(-8))); } catch {} }, [toolCalls, scopeSuffix, storageReady]);
 
   const setSessionId = useCallback((sessionId: string) => {
     const clean = String(sessionId || "").trim();
