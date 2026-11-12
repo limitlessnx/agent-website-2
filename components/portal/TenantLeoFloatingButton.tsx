@@ -37,7 +37,7 @@ export default function TenantLeoFloatingButton() {
     <button ref={launcher} type="button" className="leo-launcher fixed bottom-6 right-6 z-[120] flex h-12 items-center gap-2 rounded-full border border-violet-300/30 bg-slate-950 px-4 text-sm font-semibold text-white shadow-2xl" aria-expanded={open} aria-controls={open ? "tenant-leo-chat" : undefined} onClick={() => open ? close() : setOpen(true)}><Bot size={18}/>Super Leo</button>
     {open && <aside id="tenant-leo-chat" aria-label="Tenant Super Leo" onKeyDown={event => { if (event.key === "Escape") close(); }} className="fixed inset-x-3 bottom-20 z-[121] flex h-[min(640px,calc(100dvh-100px))] min-h-0 flex-col overflow-hidden rounded-2xl border border-violet-300/25 bg-slate-950 text-white shadow-2xl sm:left-auto sm:right-6 sm:w-[420px]">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
-        <div><strong className="block text-base">Super Leo</strong><small className="text-slate-400">Workspace support</small></div>
+        <div><strong className="block text-base">Super Leo</strong><small className="block text-xs leading-4 text-slate-400">Leo is locked to this organization and your current permissions.</small></div>
         <div className="flex gap-1">
           <button type="button" onClick={() => setVoice(!voice)} aria-pressed={voice} className="grid h-11 min-w-11 place-items-center rounded-lg px-2 text-sm hover:bg-white/10" aria-label={voice ? "Return to messages" : "Open voice controls"}>{voice ? "Chat" : <Mic size={18}/>}</button>
           <button type="button" onClick={close} aria-label="Close Super Leo" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/10"><X size={18}/></button>
