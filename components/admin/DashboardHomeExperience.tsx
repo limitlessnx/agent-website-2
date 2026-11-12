@@ -88,7 +88,7 @@ function LegacyOrganizationView({ metrics, notices, agents }: { metrics: Metric[
       <div className={styles.metrics} aria-label="Business metrics">
         {metrics.map((metric) => {
           const Icon = icons[metric.icon];
-          return <article key={metric.label} className={styles.metricCard}><span className={styles.metricIcon}><Icon size={18} /></span><strong>{metric.value}</strong><span>{metric.label}</span><small>{metric.detail}</small></article>;
+          return <Link key={metric.label} href={/email/i.test(metric.label) ? "/dashboard/gencouv#email-inbox" : /follow/i.test(metric.label) ? "/dashboard/gencouv#email-control" : /conversation/i.test(metric.label) ? "/dashboard/gencouv#email-inbox" : "/dashboard/gencouv#lead-board"} className={styles.metricCard}><span className={styles.metricIcon}><Icon size={18} /></span><strong>{metric.value}</strong><span>{metric.label}</span><small>{metric.detail}</small></Link>;
         })}
       </div>
       <section className={styles.attentionPanel}>
