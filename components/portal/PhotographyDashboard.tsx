@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import StudioCatalogueCover from "./StudioCatalogueCover";
 import {
   Activity,
   AlertTriangle,
@@ -101,7 +101,7 @@ export default function PhotographyDashboard({ data }: Props) {
 
     <section className="exposure-panel exposure-pipeline-panel"><header><div><p className="portal-kicker">Clients & enquiries</p><h2>Client pipeline</h2><p>Move conversations from enquiry to booked session.</p></div><Link href="/portal/customers">View all <ChevronRight size={14} /></Link></header><div className="exposure-pipeline" role="list" aria-label="Client pipeline stages">{stages.map((stage) => <div className="exposure-pipeline-column" key={stage} role="listitem"><header><span>{stage}</span><strong>{data.customers.filter((customer) => photographyCustomerStage(customer) === stage).length}</strong></header>{data.customers.filter((customer) => photographyCustomerStage(customer) === stage).slice(0, 3).map((customer) => <Link href={`/portal/customers/${customer.id}`} key={customer.id}><strong>{customer.full_name}</strong><small>{customer.phone || customer.email || "Client details pending"}</small></Link>)}{!data.customers.some((customer) => photographyCustomerStage(customer) === stage) ? <small className="exposure-muted">No records</small> : null}</div>)}</div></section>
 
-    <section className="exposure-panel exposure-supporting-panel"><header><div><p className="portal-kicker">Studio catalogue</p><h2>Showcase your shoot ideas</h2><p>Organize packages, categories and sample work for the team.</p></div><Link href="/portal/catalogue">Open catalogue <ChevronRight size={14} /></Link></header><div className="exposure-catalogue-grid">{data.catalogueCategories.map((category) => <Link href={`/portal/catalogue?category=${encodeURIComponent(category.name)}`} key={category.name}><Image className="exposure-catalogue-art" src={category.image} alt="" width={47} height={47} /><span><strong>{category.name}</strong><small>{category.itemCount} studio items <ChevronRight size={13} /></small></span></Link>)}</div></section>
+    <section className="exposure-panel exposure-supporting-panel"><header><div><p className="portal-kicker">Studio catalogue</p><h2>Showcase your shoot ideas</h2><p>Organize packages, categories and sample work for the team.</p></div><Link href="/portal/catalogue">Open catalogue <ChevronRight size={14} /></Link></header><div className="exposure-catalogue-grid">{data.catalogueCategories.map((category) => <Link href={`/portal/catalogue?category=${encodeURIComponent(category.name)}`} key={category.name}><StudioCatalogueCover source={category.image} /><span><strong>{category.name}</strong><small>{category.itemCount} studio items <ChevronRight size={13} /></small></span></Link>)}</div></section>
     <section className="exposure-footer-row"><div><span>Plan</span><strong>{data.planCode || "Free workspace"}</strong></div><Link className="portal-button secondary" href="/portal/billing">View plan <ChevronRight size={15} /></Link></section>
   </main>;
 }

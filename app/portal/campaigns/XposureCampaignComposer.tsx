@@ -47,7 +47,6 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   const [templates, setTemplates] = useState<Template[]>([]);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
   const [templateKey, setTemplateKey] = useState("");
-  const [variables, setVariables] = useState<Record<string, string>>({});
   const [messageDraft, setMessageDraft] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,8 +65,8 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Unable to verify linked templates.");
         if (!controller.signal.aborted) {
-          const available: Template[] = (payload.templates || []).filter((item: Template) => ["campaign", "customer_follow_up"].includes(item.purpose));
-          setTemplates(available); setTemplateKey(available[0] ? keyFor(available[0]) : ""); setMessageDraft(available[0] ? messageSkeleton(available[0]) : ""); setTemplateError("");
+          const available: Template[] = (payload.templates || []).filter((item: Template) => ["campaign", "customer_follow_up", "campaign_promotion"].includes(item.purpose));
+          setTemplates(available); setTemplateKey(available[0] ? keyFor(available[0]) : ""); setMessageDraft(""); setTemplateError("");
         }
       } catch (reason) { if (!controller.signal.aborted) setTemplateError(reason instanceof Error ? reason.message : "Unable to load templates."); }
       finally { if (!controller.signal.aborted) setLoading(false); }
@@ -91,12 +90,15 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   ];
   const eligible = audience.filter(contact => contact.phone && contact.whatsapp_consent === "opted_in");
   const recipients = eligible.filter(contact => selected.includes(contact.key));
-  const complete = template && mapApprovedMessage(template, messageDraft) !== null && template.variable_keys.every(key => key === "customer_name" || variables[key]?.trim());
+  const parsedVariables = template ? mapApprovedMessage(template, messageDraft) : null;
+  const variables = parsedVariables ?? {};
+  const complete = template && parsedVariables !== null
+    && template.variable_keys.every(key => key === "customer_name" || variables[key]?.trim());
   const preview = template?.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (match, number) => {
     const key = template.variable_keys[Number(number) - 1];
     return key === "customer_name" ? recipients[0]?.full_name || "{{customer_name}}" : variables[key] || match;
   });
-  function selectTemplate(value: string) { setTemplateKey(value); setVariables({}); setMessageDraft(messageSkeleton(templates.find(item => keyFor(item) === value)!)); setReviewing(false); setNotice(""); }
+  function selectTemplate(value: string) { setTemplateKey(value); setMessageDraft(""); setReviewing(false); setNotice(""); }
   async function send() {
     if (!template || !recipients.length || !complete) return;
     setSending(true); setError(""); setNotice("");
@@ -123,9 +125,13 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         <label className={styles.field}>Linked template<select value={templateKey} disabled={sending || loading || !templates.length} onChange={event => selectTemplate(event.target.value)}><option value="" disabled>Choose a linked template</option>{templates.map(item => <option key={keyFor(item)} value={keyFor(item)}>{item.name} · {item.language}</option>)}</select></label>
         {template && <>
           <div className={styles.templateMeta}><span>{template.category || "WhatsApp template"}</span><span>{template.language}</span><span>Linked to Xposure</span></div>
-          <div className={styles.message} aria-label="WhatsApp message preview"><span>Message preview</span><p>{preview || "Message text is unavailable. Check the template with your administrator."}</p></div>
-          <div className={styles.fields}><label className={styles.field}>Campaign message<textarea rows={6} value={messageDraft} disabled={sending} onChange={event => { const next = event.target.value; setMessageDraft(next); setVariables(mapApprovedMessage(template, next) || {}); setReviewing(false); }} aria-describedby="approved-message-hint" /></label><p id="approved-message-hint" className={styles.hint}>Write your message in one box. Approved template wording must stay unchanged; edit only the variable slots. Keep the customer-name placeholder for automatic personalization. The preview shows the exact message format.</p>{!mapApprovedMessage(template, messageDraft) && <p className={styles.error} role="alert">This text does not match the approved WhatsApp template. Restore the fixed wording and complete the editable sections before sending.</p>}</div>
-          <CampaignAiWriter key={templateKey} endpoint="/api/portal/campaigns/writeup" context={{ templateName: template.name, templatePurpose: template.purpose, language: template.language }} values={variables} disabled={sending || reviewing} onApply={suggested => { const next = template.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, index: string) => { const key = template.variable_keys[Number(index) - 1]; return key === "customer_name" ? "{{customer_name}}" : suggested[key] || variables[key] || ""; }); setMessageDraft(next); setVariables(mapApprovedMessage(template, next) || {}); setReviewing(false); }} />
+          {parsedVariables && <div className={styles.message} aria-label="WhatsApp message preview"><span>Message preview</span><p>{preview}</p></div>}
+          <div className={styles.fields}>
+            <label className={styles.field}>Campaign message<textarea rows={6} value={messageDraft} maxLength={4000} disabled={sending} placeholder="Write or paste the message you want clients to receive." onChange={event => { setMessageDraft(event.target.value); setReviewing(false); }} aria-describedby="approved-message-hint" /></label>
+            <p id="approved-message-hint" className={styles.hint}>{parsedVariables ? "Review the preview. Each client’s name is filled in automatically." : "Write your message, then choose Fit to WhatsApp template before reviewing the campaign."}</p>
+            {!messageDraft && <button type="button" className={styles.secondary} disabled={sending} onClick={() => setMessageDraft(messageSkeleton(template))}>Start from template</button>}
+          </div>
+          <CampaignAiWriter key={templateKey} endpoint="/api/portal/campaigns/writeup" context={{ templateName: template.name, templatePurpose: template.purpose, language: template.language }} values={variables} message={messageDraft} disabled={sending || reviewing} onApply={suggested => { const next = template.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, index: string) => { const key = template.variable_keys[Number(index) - 1]; return key === "customer_name" ? "{{customer_name}}" : suggested[key] || variables[key] || ""; }); setMessageDraft(next); setReviewing(false); }} />
         </>}
         <div className={styles.sendbar}><div><strong>{recipients.length} recipient{recipients.length === 1 ? "" : "s"} selected</strong><small>Only contacts with marketing permission can be selected.</small></div><button type="button" className={styles.primary} onClick={() => { setReviewing(true); setNotice(""); setError(""); }} disabled={!complete || !recipients.length || sending || Boolean(contactError) || Boolean(templateError)}>Review campaign</button></div>
         {reviewing && <div className={styles.confirm} role="region" aria-label="Confirm campaign"><h3>Confirm your campaign</h3><p>Send <strong>{template?.name}</strong> to {recipients.length} selected contact{recipients.length === 1 ? "" : "s"}? Consent and template approval will be checked again.</p><div className={styles.importActions}><button type="button" className={styles.primary} onClick={() => void send()} disabled={sending}>{sending ? "Submitting…" : "Send campaign"}</button><button type="button" className={styles.secondary} disabled={sending} onClick={() => setReviewing(false)}>Cancel campaign</button></div></div>}

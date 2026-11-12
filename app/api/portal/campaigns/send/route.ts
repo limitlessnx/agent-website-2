@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     catch { return NextResponse.json({ error: "You do not have permission to use campaign contacts." }, { status: 403 }); }
     try {
       const inventory = await loadLinkedCampaignTemplates(session.organizationId);
-      const selected = inventory.templates.find(item => item.name === templateName && item.language === body.languageCode && item.purpose === templatePurpose && ["campaign", "customer_follow_up"].includes(item.purpose));
+      const selected = inventory.templates.find(item => item.name === templateName && item.language === body.languageCode && item.purpose === templatePurpose && ["campaign", "customer_follow_up", "campaign_promotion"].includes(item.purpose));
       if (!selected) return NextResponse.json({ error: "Choose a linked, provider-approved campaign template and its language." }, { status: 409 });
       variableKeys = selected.variable_keys;
     } catch { return NextResponse.json({ error: "Unable to verify template approval. No messages were sent." }, { status: 503 }); }

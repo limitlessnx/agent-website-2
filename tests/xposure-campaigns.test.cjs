@@ -25,7 +25,7 @@ function harness(options = {}) {
     '@/lib/whatsapp-delivery': { sendWhatsAppMessage: async input => { sent.push(input); if(options.deliveryThrows) throw Error('network timeout'); return { providerMessageId: options.noReceipt ? null : 'fixture-message' }; } },
     '@/lib/portal-campaign-templates': { loadLinkedCampaignTemplates: async () => {
       if (options.inventoryError) throw Error('Meta offline');
-      return { templates: options.unapproved ? [] : [{ name: 'follow_up', language: 'en', purpose: 'customer_follow_up', variable_keys: ['customer_name', 'business_name'] }] };
+      return { templates: options.unapproved ? [] : options.templates ?? [{ name: 'follow_up', language: 'en', purpose: 'customer_follow_up', variable_keys: ['customer_name', 'business_name'] }] };
     } },
     '@/lib/hotel-communication-policy': { isHotelOrganization: () => false },
     '@/lib/hotel-communications': {},
@@ -105,8 +105,38 @@ test('Xposure single-message composer preserves fixed Meta wording and consent s
   assert.match(composer, /function mapApprovedMessage\(/);
   assert.match(composer, /const \[messageDraft, setMessageDraft\]/);
   assert.match(composer, /<textarea rows=\{6\}/);
-  assert.match(composer, /mapApprovedMessage\(template, messageDraft\) !== null/);
+  assert.match(composer, /const parsedVariables = template \? mapApprovedMessage\(template, messageDraft\)/);
+  assert.match(composer, /const variables = parsedVariables \?\? \{\}/);
   assert.match(composer, /setReviewing\(false\)/);
   assert.match(composer, /contact\.whatsapp_consent === "opted_in"/);
   assert.match(composer, /Review campaign/);
+  assert.match(composer, /values=\{variables\} message=\{messageDraft\}/);
+  const writer = fs.readFileSync(path.join(root, 'components/CampaignAiWriter.tsx'), 'utf8');
+  assert.match(writer, /const brief = inline \? \(hasText \? "" : message\)/);
+  assert.match(writer, /if \(inline\) \{\s*onApply\(payload\.variables\)/);
+});
+
+
+test('Xposure sends the promotion only with all campaign fields and the recipient name', async () => {
+  const promotion = {
+    name: 'xposure_studio_promotion',
+    language: 'en',
+    purpose: 'campaign_promotion',
+    variable_keys: ['customer_name', 'offer_title', 'offer_details', 'availability', 'booking_action'],
+  };
+  const h = harness({ templates: [promotion] });
+  const request = { templateName: promotion.name, templatePurpose: promotion.purpose };
+  const variables = {
+    customer_name: 'Ignore this supplied name',
+    offer_title: 'Portrait offer',
+    offer_details: 'Five edited photos',
+    availability: 'Selected weekends',
+    booking_action: 'reply with your preferred date',
+  };
+  const incomplete = await h.route.POST(h.request({ ...request, variables: { ...variables, availability: '' } }));
+  assert.equal(incomplete.status, 400);
+  assert.equal(h.sent.length, 0);
+  const result = await h.route.POST(h.request({ ...request, variables }));
+  assert.equal(result.body.accepted, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.sent[0].variables)), { ...variables, customer_name: 'Ada' });
 });
