@@ -76,7 +76,10 @@ function executionSummary(tool: LeoToolCall, result: Record<string, unknown>) {
   return `Executed: ${title || "the requested action"}. The execution completed successfully; external delivery or post-condition verification may still be pending.`;
 }
 
-export function LeoConversationProvider({ children }: { children: React.ReactNode }) {
+export function LeoConversationProvider({ children, tenantScope }: { children: React.ReactNode; tenantScope?: string }) {
+  const scopeSuffix = tenantScope ? `:${tenantScope}` : "";
+  const tenantSurface = Boolean(tenantScope);
+  const [storageReady, setStorageReady] = useState(false);
   const [sessionIdState, setSessionIdState] = useState("");
   const [messages, setMessages] = useState<LeoMessage[]>([]);
   const [toolCalls, setToolCalls] = useState<LeoToolCall[]>([]);
@@ -98,7 +101,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
         const prior = tool.result as Record<string, unknown>;
         if (!prior?.executionId) return;
         try {
-          const response = await fetch(`/api/leo/executions/${encodeURIComponent(String(prior.executionId))}`, { cache: "no-store", signal: controller.signal });
+          const response = await fetch(`/api/leo/executions/${encodeURIComponent(String(prior.executionId))}`, { cache: "no-store", signal: controller.signal, headers: tenantSurface ? { "x-leo-surface": "tenant" } : undefined });
           if (!response.ok) return;
           const result = await response.json() as Record<string, unknown>;
           if (controller.signal.aborted) return;
@@ -110,37 +113,36 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
       })).finally(() => { polling = false; });
     }, 3000);
     return () => { clearInterval(timer); controller.abort(); };
-  }, [toolCalls]);
+  }, [toolCalls, tenantSurface]);
 
   useEffect(() => {
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
       try {
-        setSessionIdState(sessionStorage.getItem(SESSION_KEY) || "");
-        setMessages(safeStoredMessages(sessionStorage.getItem(MESSAGES_KEY)));
-        setToolCalls(normalizeTools(JSON.parse(sessionStorage.getItem(TOOLS_KEY) || "[]")));
+        setSessionIdState(sessionStorage.getItem(SESSION_KEY + scopeSuffix) || "");
+        setMessages(safeStoredMessages(sessionStorage.getItem(MESSAGES_KEY + scopeSuffix)));
+        setToolCalls(normalizeTools(JSON.parse(sessionStorage.getItem(TOOLS_KEY + scopeSuffix) || "[]")));
       } catch {}
+      setStorageReady(true);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [scopeSuffix]);
 
-  useEffect(() => { try { sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(messages.slice(-40))); } catch {} }, [messages]);
-  useEffect(() => { try { sessionStorage.setItem(TOOLS_KEY, JSON.stringify(toolCalls.slice(-8))); } catch {} }, [toolCalls]);
+  useEffect(() => { if (!storageReady) return; try { sessionStorage.setItem(MESSAGES_KEY + scopeSuffix, JSON.stringify(messages.slice(-40))); } catch {} }, [messages, scopeSuffix, storageReady]);
+  useEffect(() => { if (!storageReady) return; try { sessionStorage.setItem(TOOLS_KEY + scopeSuffix, JSON.stringify(toolCalls.slice(-8))); } catch {} }, [toolCalls, scopeSuffix, storageReady]);
 
   const setSessionId = useCallback((sessionId: string) => {
     const clean = String(sessionId || "").trim();
     if (!clean) return;
     setSessionIdState(clean);
-    try { sessionStorage.setItem(SESSION_KEY, clean); } catch {}
-  }, []);
+    try { sessionStorage.setItem(SESSION_KEY + scopeSuffix, clean); } catch {}
+  }, [scopeSuffix]);
 
   const appendTranscript = useCallback((message: { role: "user" | "assistant"; content: string }) => {
     const content = String(message.content || "").trim();
     if (!content) return;
     setMessages((current) => {
-      const previous = current[current.length - 1];
-      if (previous?.role === message.role && previous.content === content) return current;
       const next: LeoMessage = { role: message.role, content, source: "voice" };
       return [...current, next].slice(-40);
     });
@@ -157,7 +159,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     try {
       const response = await fetch("/api/leo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) },
         body: JSON.stringify({ message: clean, sessionId: sessionIdState || undefined, pageContext, channel: "chat" }),
       });
       const result = await response.json().catch(() => ({}));
@@ -171,7 +173,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     } finally {
       setBusy(false);
     }
-  }, [busy, executingTool, sessionIdState, setSessionId]);
+  }, [busy, executingTool, sessionIdState, setSessionId, tenantSurface]);
 
   const executeTool = useCallback(async (tool: LeoToolCall) => {
     if (busy || executingTool || tool.status !== "proposed") return;
@@ -180,7 +182,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     setError("");
     setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "executing" } : item));
     try {
-      const { response, result } = await executeLeoClientTool({ toolKey: tool.toolKey, arguments: tool.arguments, sessionId: sessionIdState || undefined, channel: "chat", confirmed: tool.approval === "confirm" }, approvals.current);
+      const { response, result } = await executeLeoClientTool({ toolKey: tool.toolKey, arguments: tool.arguments, sessionId: sessionIdState || undefined, channel: "chat", tenantSurface, confirmed: tool.approval === "confirm" }, approvals.current);
       if (result.status === "confirmation_required") {
         setToolCalls((current) => current.map((item) => item.toolKey === tool.toolKey ? { ...item, status: "proposed", result } : item));
         return;
@@ -198,7 +200,7 @@ export function LeoConversationProvider({ children }: { children: React.ReactNod
     } finally {
       setExecutingTool("");
     }
-  }, [busy, executingTool, sessionIdState]);
+  }, [busy, executingTool, sessionIdState, tenantSurface]);
 
   const dismissTool = useCallback((toolKey: string) => {
     setToolCalls((current) => current.map((item) => item.toolKey === toolKey && item.status === "proposed" ? { ...item, status: "dismissed" } : item));

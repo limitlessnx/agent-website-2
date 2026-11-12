@@ -4,8 +4,8 @@ import { currentCrmIdentity } from "@/lib/leo-execution/authorization";
 import { executionResult, principal } from "@/lib/leo-execution/contract";
 import { loadExecution } from "@/lib/leo-execution/store";
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ executionId: string }> }) {
-  const identity = await resolveLeoIdentity({ allowPublic: false });
+export async function GET(request: NextRequest, context: { params: Promise<{ executionId: string }> }) {
+  const identity = await resolveLeoIdentity({ allowPublic: false, request });
   if (!identity) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   try {
     const row = await loadExecution((await context.params).executionId);

@@ -225,3 +225,21 @@ test("Limitless message sending requires preparedToken and refuses non-Limitless
   });
   await assert.rejects(() => messaging.sendThroughLimitlessCampaignRoute({ url: "https://test.invalid", headers: { get: () => "" } }, { organization_id: LIMITLESS_ORG, message: "approved" }, "lead-1"), /preparedToken/i);
 });
+
+test("a claimed campaign with unknown delivery stays unverified in Leo", async () => {
+  const state = { created: [], consumed: [], sent: [], forwarded: [], envelopes: [], audits: [] };
+  const key = "leo.limitless.campaign.send";
+  const mocks = routeMocks(state, key);
+  mocks["@/lib/leo-limitless-messaging"].sendThroughLimitlessCampaignRoute = async () => ({
+    ok: false, status: "unknown", campaignId: "campaign-1", message: "Check the delivery report before retrying.",
+  });
+  const route = loadCompiled(path.join(root, "app/api/leo/tool/route.ts"), mocks);
+  const pending = await postRoute(route, baseBody(key));
+  assert.equal(pending.status, 409);
+  const result = await postRoute(route, { ...baseBody(key), approvalId: "approval-1", approvalToken: "token-1" });
+  assert.equal(result.status, 202);
+  assert.equal(result.payload.ok, false);
+  assert.equal(result.payload.status, "unknown");
+  assert.equal(result.payload.result.campaignId, "campaign-1");
+  assert.equal(state.audits.at(-1).eventType, "tool_execution_unverified");
+});

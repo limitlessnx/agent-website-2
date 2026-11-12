@@ -60,7 +60,7 @@ type RuntimeToolCall = {
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const channel = validChannel(body.channel);
-  const identity = await resolveLeoIdentity({ channel, allowPublic: true });
+  const identity = await resolveLeoIdentity({ channel, allowPublic: true, request });
   if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved." }, { status: 401 });
   const message = String(body.message || "").trim().slice(0, 8000);
   if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });

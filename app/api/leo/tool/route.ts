@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
   diagnosticChannel = channel(body.channel);
   diagnosticToolKey = String(body.toolKey || body.tool_key || "").trim();
   diagnosticSessionId = String(body.sessionId || body.session_id || "").trim();
-  const identity = await resolveLeoIdentity({ channel: diagnosticChannel, allowPublic: true });
+  const identity = await resolveLeoIdentity({ channel: diagnosticChannel, allowPublic: true, request });
   if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved.", diagnosticId }, { status: 401 });
   auditIdentity = identity;
   const toolKey = diagnosticToolKey;
@@ -220,7 +220,29 @@ export async function POST(request: NextRequest) {
       scope: identity.scope,
     }, { status: 200 });
   }
-  if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) { let result: Record<string, unknown>; if (tool.key === "leo.limitless.leads.read") result = await findLimitlessLeads(args); else if (tool.key === "leo.limitless.followup.prepare") result = await prepareLimitlessFollowup(args); else if (tool.key === "leo.limitless.followup.send") result = await sendLimitlessFollowup(request, args) as Record<string, unknown>; else if (tool.key === "leo.limitless.campaign.prepare") result = await prepareLimitlessCampaign(args); else if (tool.key === "leo.limitless.campaign.send") result = await sendThroughLimitlessCampaignRoute(request, args) as Record<string, unknown>; else throw new Error(`Unsupported Limitless Realty Leo tool: ${tool.key}`); await setVoiceResult(identity, activeVoiceSession, tool.key, args, result); await auditLeoEvent({ identity, session: activeVoiceSession || undefined, eventType: "tool_execution_completed", toolKey: tool.key, details: { channel: identity.channel, approval, workspace: "limitless_realty", status: String(result.status || "completed"), request_id: String(args.request_id || "") } }); return NextResponse.json({ ok: true, requestId: String(args.request_id || body.requestId || body.request_id || randomUUID()), toolKey: tool.key, status: String(result.status || "completed"), result, approval, channel: identity.channel, scope: identity.scope }, { status: 200 }); }
+  if (identity.scope === "super_admin" && tool.key.startsWith("leo.limitless.")) {
+    let result: Record<string, unknown>;
+    if (tool.key === "leo.limitless.leads.read") result = await findLimitlessLeads(args);
+    else if (tool.key === "leo.limitless.followup.prepare") result = await prepareLimitlessFollowup(args);
+    else if (tool.key === "leo.limitless.followup.send") result = await sendLimitlessFollowup(request, args) as Record<string, unknown>;
+    else if (tool.key === "leo.limitless.campaign.prepare") result = await prepareLimitlessCampaign(args);
+    else if (tool.key === "leo.limitless.campaign.send") result = await sendThroughLimitlessCampaignRoute(request, args) as Record<string, unknown>;
+    else throw new Error(`Unsupported Limitless Realty Leo tool: ${tool.key}`);
+
+    const status = String(result.status || (tool.readOnly ? "completed" : "unknown"));
+    const ok = result.ok === true && status !== "unknown" && status !== "failed";
+    const requestId = String(args.request_id || body.requestId || body.request_id || randomUUID());
+    await setVoiceResult(identity, activeVoiceSession, tool.key, args, result);
+    await auditLeoEvent({
+      identity, session: activeVoiceSession || undefined, toolKey: tool.key,
+      eventType: ok ? "tool_execution_completed" : status === "unknown" ? "tool_execution_unverified" : "tool_execution_failed",
+      details: { channel: identity.channel, approval, workspace: "limitless_realty", status, request_id: requestId },
+    });
+    return NextResponse.json({
+      ok, requestId, toolKey: tool.key, status, result, approval, channel: identity.channel, scope: identity.scope,
+      ...(!ok && { error: String(result.message || result.error || "The action outcome could not be verified.") }),
+    }, { status: ok ? 200 : status === "unknown" ? 202 : 502 });
+  }
   if (triggerCrm && crmMaterial) args = { ...args, _crm_approval: { ...crmMaterial, principal: principal(identity) } };
   const forwardedApproval = Boolean(triggerCrm && crmMaterial) || (realEstateMutation && material ? true : approval === "none");
   const requestId = triggerCrm && crmMaterial ? crmMaterial.approvalId : realEstateMutation && material ? material.approvalId : String(body.requestId || body.request_id || randomUUID()).trim();

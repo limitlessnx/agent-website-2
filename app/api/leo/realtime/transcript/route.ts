@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const identity = await resolveLeoIdentity({ channel: "voice", allowPublic: true });
+  const identity = await resolveLeoIdentity({ channel: "voice", allowPublic: true, request });
   if (!identity) return NextResponse.json({ error: "Leo identity could not be resolved." }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
