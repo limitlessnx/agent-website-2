@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import GencouvCohorts from "@/components/gencouv/GencouvCohorts";
@@ -509,6 +510,16 @@ export default async function GencouvWorkspacePage() {
           sendingEnabled={Boolean(settings.sending_enabled || data?.email_controls?.sending_enabled)}
         />
       </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Lead categories</h2>
+            <p>Create and manage your own lead categories for future audience filtering and reporting.</p>
+          </div>
+          <Link href="/dashboard/gencouv/categories" className="admin-status">Manage categories →</Link>
+        </div>
+      </section>
 
       <GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} />
 
