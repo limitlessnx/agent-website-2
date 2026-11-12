@@ -14,7 +14,10 @@ create unique index if not exists crm_lead_categories_org_name_uq
   on public.crm_lead_categories (organization_id, lower(trim(name)));
 create index if not exists crm_lead_categories_org_idx on public.crm_lead_categories (organization_id);
 
-create unique index if not exists crm_customers_id_org_unique_idx\n  on public.crm_customers (id, organization_id);\n\ncreate table if not exists public.crm_customer_category_assignments (
+create unique index if not exists crm_customers_id_org_unique_idx
+  on public.crm_customers (id, organization_id);
+
+create table if not exists public.crm_customer_category_assignments (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   customer_id uuid not null,
   category_id uuid not null,
