@@ -9,7 +9,7 @@ test("phase 5 preserves client authentication onboarding and tenant isolation", 
   const data = read("lib/client-portal-data.ts");
   assert.match(layout, /getClientSession\(\)/);
   assert.match(layout, /redirect\("\/account\/login"\)/);
-  assert.match(layout, /profile\.status\s*===\s*"in_progress"/);
+  assert.match(layout, /if\(!profile\)redirect\("\/onboarding"\)/);
   assert.match(layout, /redirect\("\/onboarding"\)/);
   assert.match(data, /getClientPortalSummary\(organizationId: string\)/);
   assert.match(data, /organization_id=eq\.\$\{encodeURIComponent\(organizationId\)\}/);

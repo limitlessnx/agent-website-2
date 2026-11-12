@@ -163,7 +163,7 @@ test("F1 switching between Google and email preserves invitation context",()=>{
 test("F1 workspace setup returns the preserved post-auth destination",()=>{
   const route=read("app/api/client-auth/setup-workspace/route.ts");
   const form=read("app/account/setup/SetupForm.tsx");
-  assert.match(route,/pending\.nextPath/);
+  assert.match(route,/safeInternalPath\(pending\.txRef \? "\/onboarding" : "\/portal", "\/portal"\)/);
   assert.match(route,/pending\.txRef/);
   assert.match(route,/pending\.trialPlan/);
   assert.match(route,/url\.origin !== "https:\/\/fluxknight\.local"/);

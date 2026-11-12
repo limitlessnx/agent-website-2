@@ -10,11 +10,45 @@ type Customer = { id: string; full_name: string; phone: string | null; email: st
 const keyFor = (template: Template) => `${template.purpose}:${template.name}:${template.language}`;
 const digits = (phone: string | null) => (phone || "").replace(/\D/g, "");
 
+
+// A single composer may only fill approved variable slots. Fixed Meta template text is immutable.
+const escapeRegex = (value: string) => value.replace(/[^a-zA-Z0-9]/g, char => "\\" + char);
+function mapApprovedMessage(template: Template, message: string): Record<string, string> | null {
+  const parts = template.body.split(/(\{\{\s*\d+\s*\}\})/g);
+  const captureKeys: string[] = [];
+  let pattern = "^";
+  for (const part of parts) {
+    const match = /^\{\{\s*(\d+)\s*\}\}$/.exec(part);
+    if (!match) { pattern += escapeRegex(part); continue; }
+    const key = template.variable_keys[Number(match[1]) - 1];
+    if (!key) return null;
+    if (key === "customer_name") pattern += escapeRegex("{{customer_name}}");
+    else { captureKeys.push(key); pattern += "([\\s\\S]*?)"; }
+  }
+  const result = new RegExp(pattern + "$").exec(message);
+  if (!result) return null;
+  const values: Record<string, string> = {};
+  for (let i = 0; i < captureKeys.length; i++) {
+    const value = result[i + 1]?.trim() || "";
+    if (!value || value.length > 1024 || /\{\{/.test(value)) return null;
+    if (values[captureKeys[i]] && values[captureKeys[i]] !== value) return null;
+    values[captureKeys[i]] = value;
+  }
+  return values;
+}
+function messageSkeleton(template: Template) {
+  return template.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, index: string) => {
+    const key = template.variable_keys[Number(index) - 1];
+    return key === "customer_name" ? "{{customer_name}}" : "";
+  });
+}
+
 export default function XposureCampaignComposer({ customers, canManageContacts }: { customers: Customer[]; canManageContacts: boolean }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
   const [templateKey, setTemplateKey] = useState("");
   const [variables, setVariables] = useState<Record<string, string>>({});
+  const [messageDraft, setMessageDraft] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [templateError, setTemplateError] = useState("");
@@ -33,7 +67,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         if (!response.ok) throw new Error(payload.error || "Unable to verify linked templates.");
         if (!controller.signal.aborted) {
           const available: Template[] = (payload.templates || []).filter((item: Template) => ["campaign", "customer_follow_up"].includes(item.purpose));
-          setTemplates(available); setTemplateKey(available[0] ? keyFor(available[0]) : ""); setTemplateError("");
+          setTemplates(available); setTemplateKey(available[0] ? keyFor(available[0]) : ""); setMessageDraft(available[0] ? messageSkeleton(available[0]) : ""); setTemplateError("");
         }
       } catch (reason) { if (!controller.signal.aborted) setTemplateError(reason instanceof Error ? reason.message : "Unable to load templates."); }
       finally { if (!controller.signal.aborted) setLoading(false); }
@@ -57,12 +91,12 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   ];
   const eligible = audience.filter(contact => contact.phone && contact.whatsapp_consent === "opted_in");
   const recipients = eligible.filter(contact => selected.includes(contact.key));
-  const complete = template && template.variable_keys.every(key => key === "customer_name" || variables[key]?.trim());
+  const complete = template && mapApprovedMessage(template, messageDraft) !== null && template.variable_keys.every(key => key === "customer_name" || variables[key]?.trim());
   const preview = template?.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (match, number) => {
     const key = template.variable_keys[Number(number) - 1];
     return key === "customer_name" ? recipients[0]?.full_name || "{{customer_name}}" : variables[key] || match;
   });
-  function selectTemplate(value: string) { setTemplateKey(value); setVariables({}); setReviewing(false); setNotice(""); }
+  function selectTemplate(value: string) { setTemplateKey(value); setVariables({}); setMessageDraft(messageSkeleton(templates.find(item => keyFor(item) === value)!)); setReviewing(false); setNotice(""); }
   async function send() {
     if (!template || !recipients.length || !complete) return;
     setSending(true); setError(""); setNotice("");
@@ -90,8 +124,8 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         {template && <>
           <div className={styles.templateMeta}><span>{template.category || "WhatsApp template"}</span><span>{template.language}</span><span>Linked to Xposure</span></div>
           <div className={styles.message} aria-label="WhatsApp message preview"><span>Message preview</span><p>{preview || "Message text is unavailable. Check the template with your administrator."}</p></div>
-          <div className={styles.fields}>{template.variable_keys.map(key => key === "customer_name" ? <p key={key} className={styles.hint}>Customer name is filled for each recipient.</p> : <label key={key} className={styles.field}>{key.replaceAll("_", " ")}<input value={variables[key] || ""} disabled={sending} onChange={event => { setVariables(current => ({ ...current, [key]: event.target.value })); setReviewing(false); }} maxLength={1024} /></label>)}</div>
-          <CampaignAiWriter key={templateKey} endpoint="/api/portal/campaigns/writeup" context={{ templateName: template.name, templatePurpose: template.purpose, language: template.language }} values={variables} disabled={sending || reviewing} onApply={suggested => { setVariables(current => ({ ...current, ...suggested })); setReviewing(false); }} />
+          <div className={styles.fields}><label className={styles.field}>Campaign message<textarea rows={6} value={messageDraft} disabled={sending} onChange={event => { const next = event.target.value; setMessageDraft(next); setVariables(mapApprovedMessage(template, next) || {}); setReviewing(false); }} aria-describedby="approved-message-hint" /></label><p id="approved-message-hint" className={styles.hint}>Write your message in one box. Approved template wording must stay unchanged; edit only the variable slots. Keep the customer-name placeholder for automatic personalization. The preview shows the exact message format.</p>{!mapApprovedMessage(template, messageDraft) && <p className={styles.error} role="alert">This text does not match the approved WhatsApp template. Restore the fixed wording and complete the editable sections before sending.</p>}</div>
+          <CampaignAiWriter key={templateKey} endpoint="/api/portal/campaigns/writeup" context={{ templateName: template.name, templatePurpose: template.purpose, language: template.language }} values={variables} disabled={sending || reviewing} onApply={suggested => { const next = template.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, index: string) => { const key = template.variable_keys[Number(index) - 1]; return key === "customer_name" ? "{{customer_name}}" : suggested[key] || variables[key] || ""; }); setMessageDraft(next); setVariables(mapApprovedMessage(template, next) || {}); setReviewing(false); }} />
         </>}
         <div className={styles.sendbar}><div><strong>{recipients.length} recipient{recipients.length === 1 ? "" : "s"} selected</strong><small>Only contacts with marketing permission can be selected.</small></div><button type="button" className={styles.primary} onClick={() => { setReviewing(true); setNotice(""); setError(""); }} disabled={!complete || !recipients.length || sending || Boolean(contactError) || Boolean(templateError)}>Review campaign</button></div>
         {reviewing && <div className={styles.confirm} role="region" aria-label="Confirm campaign"><h3>Confirm your campaign</h3><p>Send <strong>{template?.name}</strong> to {recipients.length} selected contact{recipients.length === 1 ? "" : "s"}? Consent and template approval will be checked again.</p><div className={styles.importActions}><button type="button" className={styles.primary} onClick={() => void send()} disabled={sending}>{sending ? "Submitting…" : "Send campaign"}</button><button type="button" className={styles.secondary} disabled={sending} onClick={() => setReviewing(false)}>Cancel campaign</button></div></div>}

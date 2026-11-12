@@ -27,7 +27,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
     getPortalCapabilities(session),
     session.role === "manager" ? getActiveManagerOrganizations(session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
-  if(!profile||profile.status==="in_progress")redirect("/onboarding");
+  if(!profile)redirect("/onboarding");
   const experience=getIndustryExperience(profile.industry);
 
   await syncLifecycleDashboardNotifications(session.organizationId).catch(()=>undefined);
