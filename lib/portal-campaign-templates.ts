@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export class CampaignTemplateError extends Error { constructor(message: string, public status = 503) { super(message); } }
 type MetaTemplate = { name?: string; status?: string; language?: string; category?: string; components?: Array<{ type?: string; text?: string }> };
-type MetaResponse = { data?: MetaTemplate[]; paging?: { next?: string }; error?: { message?: string; code?: number } };
+type MetaResponse = { data?: MetaTemplate[]; paging?: { next?: string }; error?: { message?: string; code?: number; error_subcode?: number; type?: string; fbtrace_id?: string } };
 
 function placeholders(template: MetaTemplate) {
   const found = new Set<number>();
@@ -31,9 +31,25 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   nextUrl.searchParams.set("fields", "name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
   const rows: MetaTemplate[] = []; let pageCount = 0;
   while (nextUrl && pageCount < 10) {
-    const response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    let response: Response;
+    try {
+      response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    } catch (error) {
+      console.error("[campaign-template-inventory] Meta request transport failure", {
+        organizationId, page: pageCount + 1,
+        errorType: error instanceof Error ? error.name : "unknown",
+      });
+      throw new CampaignTemplateError("Meta template inventory request failed to connect. Try again later.", 503);
+    }
     const payload = await response.json().catch(() => ({})) as MetaResponse;
     if (!response.ok) {
+      console.error("[campaign-template-inventory] Meta request rejected", {
+        organizationId, page: pageCount + 1, httpStatus: response.status,
+        metaCode: typeof payload.error?.code === "number" ? payload.error.code : null,
+        metaSubcode: typeof payload.error?.error_subcode === "number" ? payload.error.error_subcode : null,
+        metaType: typeof payload.error?.type === "string" ? payload.error.type : null,
+        fbTraceId: typeof payload.error?.fbtrace_id === "string" ? payload.error.fbtrace_id : null,
+      });
       const metaCode = typeof payload.error?.code === "number" ? payload.error.code : null;
       const safeReason = response.status === 401 || metaCode === 190
         ? "Meta authentication failed. Reconnect the WhatsApp business account."
