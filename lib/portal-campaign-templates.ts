@@ -33,7 +33,19 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   while (nextUrl && pageCount < 10) {
     const response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
     const payload = await response.json().catch(() => ({})) as MetaResponse;
-    if (!response.ok) throw new CampaignTemplateError("Meta could not return the template inventory.", 502);
+    if (!response.ok) {
+      const metaCode = typeof payload.error?.code === "number" ? payload.error.code : null;
+      const safeReason = response.status === 401 || metaCode === 190
+        ? "Meta authentication failed. Reconnect the WhatsApp business account."
+        : response.status === 403 || metaCode === 10 || metaCode === 200
+          ? "Meta denied template access. Verify WhatsApp Business permissions and WABA access."
+          : response.status === 429
+            ? "Meta is rate limiting template requests. Try again later."
+            : response.status >= 500
+              ? "Meta template service is temporarily unavailable. Try again later."
+              : "Meta rejected the template inventory request. Verify the linked WhatsApp Business Account.";
+      throw new CampaignTemplateError(safeReason, response.status === 429 ? 503 : 502);
+    }
     rows.push(...(payload.data || []));
     const next = payload.paging?.next;
     if (!next) nextUrl = null;
