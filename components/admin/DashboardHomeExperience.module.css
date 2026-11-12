@@ -147,3 +147,17 @@
 }
 
 .businessActions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.businessActions a{display:grid;gap:8px;min-width:0;padding:12px;border:1px solid var(--fk-border);border-radius:13px;background:var(--fk-surface);color:inherit;text-decoration:none}.businessActions a:hover{border-color:var(--fk-brand);background:var(--fk-surface-raised)}.businessActions a>svg{color:var(--fk-brand-hover)}.businessActions strong,.businessActions small{display:block}.businessActions strong{font-size:10px}.businessActions small{margin-top:3px;color:var(--fk-text-muted);font-size:8px}.pipelineGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}.pipelineColumn{min-width:0;padding:8px;border:1px solid var(--fk-border);border-radius:11px;background:var(--fk-surface-raised)}.pipelineColumn>header{display:flex;justify-content:space-between;gap:4px;margin-bottom:5px;color:var(--fk-text-secondary);font-size:8px}.pipelineColumn>header b{color:var(--fk-brand-hover)}.pipelineColumn>a{display:block;padding:8px 0;border-top:1px solid var(--fk-border);color:inherit;text-decoration:none}.pipelineColumn>a strong,.pipelineColumn>a small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pipelineColumn>a strong{font-size:9px}.pipelineColumn>a small{margin-top:3px;color:var(--fk-text-muted);font-size:7px}.pipelineEmpty{display:block;padding:9px 0;color:var(--fk-text-muted);font-size:8px}@media(max-width:900px){.businessActions{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.pipelineGrid{grid-template-columns:1fr 1fr}}@media(max-width:430px){.businessActions{grid-template-columns:repeat(2,minmax(0,1fr))}.pipelineGrid{grid-template-columns:1fr}}
+
+/* Keep legacy metric cards balanced on narrow screens, including four-card Gencouv views. */
+.metricCard{display:flex;flex-direction:column;align-items:flex-start;color:inherit;text-decoration:none;min-width:0}
+.metricCard>span,.metricCard>small{overflow-wrap:anywhere}
+.metricCard:hover{border-color:var(--fk-brand-hover)}
+.metricCard:focus-visible{outline:2px solid var(--fk-brand-hover);outline-offset:3px}
+@media(max-width:720px){
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .metricCard{padding:14px;min-height:150px}
+  .metricCard>strong{font-size:clamp(24px,7vw,32px);margin-top:14px}
+  .metricCard>span{font-size:12px;line-height:1.3}
+  .metricCard>small{font-size:11px;line-height:1.35}
+  .attentionPanel,.teamSection{padding:14px}
+}

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
+import GencouvWorkspaceSwitcher from "@/components/gencouv/GencouvWorkspaceSwitcher";
 import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import GencouvCohorts from "@/components/gencouv/GencouvCohorts";
@@ -273,6 +275,7 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export default async function GencouvWorkspacePage() {
+  const selectedWorkspace = await getAdminOrganizationContext();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const [organizations, dashboard, emailMessages, campaignEnrollments, rawLeads, rejectedLeads, qualifiedLeads, dailyCohorts, campaignSettings, websiteEvents] = await Promise.all([
@@ -372,32 +375,40 @@ export default async function GencouvWorkspacePage() {
 
   return (
     <main className="admin-page">
-      <header className="admin-page-header">
-        <div>
+      <header className="admin-page-header" style={{alignItems:"flex-start",gap:12,minWidth:0}}>
+        <div style={{minWidth:0}}>
           <p className="admin-kicker">Gencouv Workspace</p>
-          <h1>Trading and Client Operations</h1>
-          <p>Monitor Gencouv leads, copy-trading interest, website conversion, onboarding movement, broker mix, and email sequence readiness from one Flux Knight control room.</p>
+          <h1 style={{fontSize:"clamp(1.4rem, 5vw, 2rem)",lineHeight:1.15}}>Trading operations</h1>
+          <p>Manage prospects, conversations, emails and follow-ups.</p>
         </div>
         <span className="admin-status live">{organization?.status || "active"}</span>
       </header>
 
+      {(selectedWorkspace.kind !== "system" || selectedWorkspace.id !== "gencouv") && <GencouvWorkspaceSwitcher />}
+
+      <nav aria-label="Gencouv workspace sections" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,margin:"14px 0 22px"}}>
+        {[
+          {label:"Leads & CRM",href:"#lead-contacts",detail:"Contact records"},
+          {label:"Email inbox",href:"#email-inbox",detail:"Messages and replies"},
+          {label:"Follow-ups",href:"#email-control",detail:"Sequence controls"},
+          {label:"Categories",href:"/dashboard/gencouv/categories",detail:"Custom lead tags"},
+          {label:"Analytics",href:"#website-funnel",detail:"Website performance"},
+          {label:"Priority leads",href:"#lead-board",detail:"Prospects to contact"},
+        ].map(item=><Link key={item.label} href={item.href} style={{display:"flex",flexDirection:"column",gap:5,minWidth:0,padding:"14px",border:"1px solid var(--fk-border)",borderRadius:14,background:"var(--fk-surface)",color:"var(--fk-text)",textDecoration:"none",overflowWrap:"anywhere"}}>
+          <strong style={{fontSize:14}}>{item.label} ↗</strong>
+          <small style={{fontSize:12,color:"var(--fk-text-muted)"}}>{item.detail}</small>
+        </Link>)}
+      </nav>
+
       {dashboard.error ? (
-        <section className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <h2>Dashboard feed setup needed</h2>
-              <p>{dashboard.error}</p>
-            </div>
-            <span className="admin-status warning">not connected</span>
-          </div>
-          <div className="admin-checklist">
-            <span>Add GENCOUV_DASHBOARD_SECRET to the Flux Knight server environment</span>
-            <span>Keep email sequence sending disabled until approved</span>
-          </div>
-        </section>
+        <details style={{marginBottom:18,padding:"12px 14px",border:"1px solid var(--fk-border)",borderRadius:12,background:"var(--fk-surface)",minWidth:0}}>
+          <summary style={{cursor:"pointer",fontWeight:600,overflowWrap:"anywhere"}}>Dashboard feed unavailable · View setup details</summary>
+          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>{dashboard.error}</p>
+          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>Configure GENCOUV_DASHBOARD_SECRET on the server. Email sequences must remain disabled until approved.</p>
+        </details>
       ) : null}
 
-      <section id="website-funnel" className="admin-panel">
+      <section id="website-funnel" style={{scrollMarginTop:100}} className="admin-panel">
         <div className="admin-panel-header">
           <div>
             <h2><LineChart size={18} /> Website funnel analytics</h2>
@@ -503,7 +514,7 @@ export default async function GencouvWorkspacePage() {
         </div>
       </section>
 
-      <div id="email-control">
+      <div id="email-control" style={{scrollMarginTop:100}}>
         <GencouvEmailControls
           dailyLimit={settings.daily_send_limit || data?.email_controls?.daily_send_limit || 10}
           maxDailyLimit={30}
@@ -521,9 +532,9 @@ export default async function GencouvWorkspacePage() {
         </div>
       </section>
 
-      <GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} />
+      <div id="lead-contacts" style={{scrollMarginTop:100}}><GencouvMailLeads leads={uniqueMailLeads} messages={emailMessages} /></div>
 
-      <GencouvInbox messages={emailMessages} />
+      <div id="email-inbox" style={{scrollMarginTop:100}}><GencouvInbox messages={emailMessages} /></div>
 
       <section id="daily-cohort-summary" className="admin-panel">
         <div className="admin-panel-header">
@@ -554,7 +565,7 @@ export default async function GencouvWorkspacePage() {
         <Breakdown title="Lead source" items={data?.breakdowns?.source} />
       </div>
 
-      <section id="lead-board" className="admin-panel">
+      <section id="lead-board" style={{scrollMarginTop:100}} className="admin-panel">
         <div className="admin-panel-header">
           <div>
             <h2><Bot size={18} /> High-priority leads</h2>

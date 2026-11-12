@@ -147,7 +147,7 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
   const systemOrganizations = [
     { id: "fluxknight", href: "/dashboard", label: "Fluxknight", meta: "System organization" },
     { id: "limitless-realty", href: "/dashboard", label: "Limitless Realty", meta: "System organization" },
-    { id: "gencouv", href: "/dashboard", label: "Gencouv", meta: "System organization" },
+    { id: "gencouv", href: "/dashboard/gencouv", label: "Gencouv", meta: "System organization" },
   ];
 
   async function switchOrganization(kind: "system" | "tenant", id: string, href: string) {
