@@ -19,8 +19,9 @@ export default function MobileBottomNav() {
 
   return (
     <nav className={styles.nav} aria-label="Mobile primary navigation">
-      {items.map((item) => {
-        const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+      {navigationItems.map((item) => {
+        const route = item.href.split("#")[0];
+        const active = item.exact ? pathname === route : !item.href.includes("#") && (pathname === route || pathname.startsWith(`${route}/`));
         return (
           <Link key={item.label} href={item.href} className={active ? styles.active : ""} aria-current={active ? "page" : undefined}>
             <item.icon size={18} aria-hidden="true" />
