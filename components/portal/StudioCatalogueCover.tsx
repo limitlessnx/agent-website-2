@@ -9,7 +9,7 @@ const originalCoverIds = {
   "family": "c8335b55-b572-4b49-9a15-e45ff5308c79",
   "creative-sets": "f1817634-6c77-4c9f-9a9a-58b8999bc02e",
 };
-const bundledCovers = new Map(Object.entries(originalCoverIds).flatMap(([category, id]) => {
+const bundledCovers = new Map<string, string>(Object.entries(originalCoverIds).flatMap(([category, id]) => {
   const cover = `/exposure/${category}-v2.webp`;
   return [
     [`${legacyCoverBase}${id}.jpg`, cover],
