@@ -16,6 +16,13 @@ const items = [
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const { open, openMenu } = useMobileNavigation();
+  const gencouv = pathname.startsWith("/dashboard/gencouv");
+  const navigationItems = gencouv ? [
+    { href: "/dashboard/gencouv", label: "Home", icon: Home, exact: true },
+    { href: "/dashboard/gencouv#lead-contacts", label: "Leads", icon: Bot },
+    { href: "/dashboard/gencouv#email-inbox", label: "Inbox", icon: MessageSquareText },
+    { href: "/dashboard/gencouv#website-funnel", label: "Analytics", icon: Activity },
+  ] : items;
 
   return (
     <nav className={styles.nav} aria-label="Mobile primary navigation">
