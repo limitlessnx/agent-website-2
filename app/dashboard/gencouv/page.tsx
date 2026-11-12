@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
+import GencouvWorkspaceSwitcher from "@/components/gencouv/GencouvWorkspaceSwitcher";
 import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import GencouvCohorts from "@/components/gencouv/GencouvCohorts";
@@ -273,6 +275,7 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export default async function GencouvWorkspacePage() {
+  const selectedWorkspace = await getAdminOrganizationContext();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const [organizations, dashboard, emailMessages, campaignEnrollments, rawLeads, rejectedLeads, qualifiedLeads, dailyCohorts, campaignSettings, websiteEvents] = await Promise.all([
@@ -380,6 +383,8 @@ export default async function GencouvWorkspacePage() {
         </div>
         <span className="admin-status live">{organization?.status || "active"}</span>
       </header>
+
+      {(selectedWorkspace.kind !== "system" || selectedWorkspace.id !== "gencouv") && <GencouvWorkspaceSwitcher />}
 
       <nav aria-label="Gencouv workspace sections" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,margin:"14px 0 22px"}}>
         {[
