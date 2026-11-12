@@ -98,3 +98,15 @@ test('inventory exposes only linked approved campaign templates with their messa
   assert.ok(filters.some(([,k,v]) => k === 'organization_id' && v === 'tenant-a'));
   assert.ok(!JSON.stringify(inventory).includes('fixture-only'));
 });
+
+test('Xposure single-message composer preserves fixed Meta wording and consent safeguards', () => {
+  const fs = require('node:fs');
+  const composer = fs.readFileSync(path.join(root, 'app/portal/campaigns/XposureCampaignComposer.tsx'), 'utf8');
+  assert.match(composer, /function mapApprovedMessage\(/);
+  assert.match(composer, /const \[messageDraft, setMessageDraft\]/);
+  assert.match(composer, /<textarea rows=\{6\}/);
+  assert.match(composer, /mapApprovedMessage\(template, messageDraft\) !== null/);
+  assert.match(composer, /setReviewing\(false\)/);
+  assert.match(composer, /contact\.whatsapp_consent === "opted_in"/);
+  assert.match(composer, /Review campaign/);
+});
