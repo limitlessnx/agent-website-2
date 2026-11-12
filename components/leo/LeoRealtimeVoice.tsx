@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Mic, MicOff, PhoneCall, PhoneOff, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
-import { executeLeoClientTool, type LeoClientApprovals } from "@/lib/leo-tool-client";
+import { executeLeoClientTool, leoExecutionMessage, leoExecutionPending, type LeoClientApprovals } from "@/lib/leo-tool-client";
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
@@ -12,12 +12,15 @@ type RealtimeToolEvent = {
   name?: string;
   call_id?: string;
   event_id?: string;
+  item_id?: string;
+  content_index?: number;
   arguments?: string;
   transcript?: string;
   error?: { type?: string; code?: string; message?: string; event_id?: string };
 };
 type LeoRealtimeVoiceProps = {
   sessionId?: string;
+  tenantSurface?: boolean;
   pageContext?: Record<string, unknown>;
   mode?: "panel" | "orb";
   onCallEnded?: () => void;
@@ -55,7 +58,7 @@ function openingInstruction(sessionId: string) {
   return `Open the call now. The user's local daypart is ${period}. Address the user as boss. Start with exactly: "Good ${period}, boss." If ACTIVE OPERATIONAL TASK exists, briefly mention the task and ask whether to continue it or handle something else. If there is no active task, follow with exactly: "What would you like me to assist you with this ${period}?" Keep this opening concise and do not add generic customer-support language.`;
 }
 
-export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel", onCallEnded, onSessionId, onTranscript }: LeoRealtimeVoiceProps) {
+export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext, mode = "panel", onCallEnded, onSessionId, onTranscript }: LeoRealtimeVoiceProps) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
@@ -88,7 +91,7 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
   function reportLifecycle(event: "connected" | "canceled" | "ended" | "dropped" | "backgrounded" | "resumed" | "error", details: Record<string, unknown> = {}) {
     const activeSessionId = activeSessionIdRef.current;
     if (!activeSessionId) return;
-    void fetch("/api/leo/realtime/lifecycle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: activeSessionId, event, details }), keepalive: true }).catch(() => null);
+    void fetch("/api/leo/realtime/lifecycle", { method: "POST", headers: { "content-type": "application/json", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) }, body: JSON.stringify({ sessionId: activeSessionId, event, details }), keepalive: true }).catch(() => null);
   }
 
   function clearDisconnectTimer() {
@@ -116,22 +119,24 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     reportLifecycle("dropped", { reason });
   }
 
-  async function persistTranscript(role: "user" | "assistant", content: string) {
-    const clean = content.trim();
+  async function persistTranscript(role: "user" | "assistant", event: RealtimeToolEvent) {
+    const clean = event.transcript?.trim();
     const activeSessionId = activeSessionIdRef.current;
     if (!clean || !activeSessionId) return;
-    const key = `${role}:${clean.replace(/\s+/g, " ").toLowerCase()}`;
-    if (transcriptKeysRef.current.has(key)) return;
-    transcriptKeysRef.current.add(key);
-    if (transcriptKeysRef.current.size > 80) transcriptKeysRef.current = new Set(Array.from(transcriptKeysRef.current).slice(-50));
+    const key = event.item_id ? `${role}:${event.item_id}:${event.content_index ?? 0}` : event.event_id;
+    if (key) {
+      if (transcriptKeysRef.current.has(key)) return;
+      transcriptKeysRef.current.add(key);
+      if (transcriptKeysRef.current.size > 80) transcriptKeysRef.current = new Set(Array.from(transcriptKeysRef.current).slice(-50));
+    }
     onTranscriptRef.current?.({ role, content: clean });
-    try { await fetch("/api/leo/realtime/transcript", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: activeSessionId, role, content: clean }) }); } catch {}
+    try { await fetch("/api/leo/realtime/transcript", { method: "POST", headers: { "content-type": "application/json", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) }, body: JSON.stringify({ sessionId: activeSessionId, role, content: clean }) }); } catch {}
   }
 
   async function handleTaskCall(event: RealtimeToolEvent, args: Record<string, unknown>) {
     const response = await fetch("/api/leo/tasks", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) },
       body: JSON.stringify({
         action: String(args.action || "active"),
         sessionId: activeSessionIdRef.current || undefined,
@@ -172,9 +177,19 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     let output: Record<string, unknown>;
     try {
       if (event.name === "leo_manage_task") {
+        if (tenantSurface) throw new Error("Super Admin tasks are unavailable in this workspace.");
         output = await handleTaskCall(event, args) as Record<string, unknown>;
+      } else if (event.name === "leo_check_execution") {
+        const executionId = String(args.execution_id || "").trim();
+        if (!executionId) throw new Error("An execution ID is required.");
+        const response = await fetch(`/api/leo/executions/${encodeURIComponent(executionId)}`, {
+          cache: "no-store",
+          headers: tenantSurface ? { "x-leo-surface": "tenant" } : undefined,
+        });
+        output = await response.json();
+        if (!response.ok) output = { ok: false, error: output.error || "Leo could not verify that execution." };
       } else if (event.name === "leo_execute_tool") {
-        const { response, result } = await executeLeoClientTool({ channel: "voice", sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments as Record<string, unknown> : {}, confirmed: args.confirmed === true }, approvals.current);
+        const { response, result } = await executeLeoClientTool({ channel: "voice", tenantSurface, sessionId: activeSessionIdRef.current || undefined, toolKey: String(args.tool_key || ""), arguments: args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments) ? args.arguments as Record<string, unknown> : {}, confirmed: args.confirmed === true }, approvals.current);
         output = result.status === "confirmation_required" ? { ...result, ok: true } : response.ok || result.executionId ? result : { ...result, ok: false, error: result.error || "Leo tool execution failed." };
       } else {
         return;
@@ -184,7 +199,8 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     } finally {
       inFlightToolSignaturesRef.current.delete(signature);
     }
-    if (output.ok === false) {
+    if (leoExecutionPending(output)) output = { ...output, message: leoExecutionMessage(output) };
+    if (output.ok === false && !leoExecutionPending(output)) {
       reportLifecycle("error", {
         source: "leo_tool",
         code: String(output.error_code || "TOOL_EXECUTION_FAILED"),
@@ -244,8 +260,14 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
         try {
           const event = JSON.parse(String(message.data)) as RealtimeToolEvent;
           if (event.type === "response.function_call_arguments.done") void handleToolCall(event);
-          else if (event.type === "conversation.item.input_audio_transcription.completed" && event.transcript) void persistTranscript("user", event.transcript);
-          else if (event.type === "response.output_audio_transcript.done" && event.transcript) void persistTranscript("assistant", event.transcript);
+          else if (event.type === "conversation.item.input_audio_transcription.completed") {
+            setError("");
+            void persistTranscript("user", event);
+          } else if (event.type === "response.output_audio_transcript.done") void persistTranscript("assistant", event);
+          else if (event.type === "conversation.item.input_audio_transcription.failed") {
+            setError("Leo couldn’t transcribe that turn. Repeat the request or continue in chat.");
+            reportLifecycle("error", { source: "openai_realtime_transcription", code: event.error?.code ?? null });
+          }
           else if (event.type === "error") {
             const realtimeError = event.error || {};
             const details = {
@@ -270,7 +292,7 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
       dataChannel.onerror = () => handleUnexpectedDrop("Leo voice connection encountered an error. You can reconnect or continue by message.");
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
-      const headers: Record<string, string> = { "content-type": "application/sdp" };
+      const headers: Record<string, string> = { "content-type": "application/sdp", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) };
       if (activeSessionIdRef.current) headers["x-leo-session-id"] = activeSessionIdRef.current;
       if (pageContext) headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify(pageContext));
       headers["x-leo-timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
@@ -343,6 +365,6 @@ export default function LeoRealtimeVoice({ sessionId, pageContext, mode = "panel
     <div className={`${styles.orbStage} ${live ? styles.live : ""}`}><div className={`${styles.ring} ${styles.ringOne}`} /><div className={`${styles.ring} ${styles.ringTwo}`} /><div className={`${styles.ring} ${styles.ringThree}`} /><div className={styles.orb}><PhoneCall size={28} /></div><div className={`${styles.pulse} ${styles.pulseOne}`} /><div className={`${styles.pulse} ${styles.pulseTwo}`} /></div>
     <div className={styles.identity}><h3>Leo</h3><p>{live ? "I'm listening. Speak naturally." : "Establishing secure voice connection…"}</p></div>
     <div className={styles.controls}><button type="button" className={`${styles.control} ${muted ? styles.activeControl : ""}`} onClick={toggleMute} aria-pressed={muted} aria-label={muted ? "Unmute microphone" : "Mute microphone"} disabled={!live}><span className={styles.controlIcon}>{muted ? <MicOff size={20} /> : <Mic size={20} />}</span><span>{muted ? "Unmute" : "Mute"}</span></button>{state === "connecting" ? <button type="button" className={styles.cancelCall} onClick={() => stop("canceled")} aria-label="Cancel Leo voice call"><X size={20} /><span>Cancel</span></button> : <button type="button" className={styles.endCall} onClick={() => stop("ended")} aria-label="End Leo voice call"><PhoneOff size={20} /><span>End call</span></button>}</div>
-    <p className={styles.hint}>Leo can use authorized Fluxknight tools during the call.</p>{state === "connecting" ? <LoaderCircle size={16} className={styles.spinner} aria-label="Connecting" /> : null}
+    {error && <p className={styles.hint} role="status">{error}</p>}{state === "connecting" ? <LoaderCircle size={16} className={styles.spinner} aria-label="Connecting" /> : null}
   </section>;
 }

@@ -11,7 +11,7 @@ class HotelWorkspaceError extends Error{constructor(message,status=400){super(me
 const uuid=(value)=>{if(typeof value!=='string'||!/[0-9a-f-]{36}/.test(value))throw new HotelWorkspaceError('ID required');return value;};
 function fixture(options={}){
  const row={id:published,organization_id:org,kind:'room',room_type_id:type,title:'',description:'Bright double room',amenities:['Wi-Fi'],bed_options:'King',pricing:'confirm',price_minor:null,currency:null,price_unit:'per session',opening_hours:'',booking_instructions:'Manager confirms',status:'published',revision:1};
- const state={writes:[],signed:[],rpc:[],permissions:new Set(options.permissions||['customers.view','customers.manage']),session:options.anonymous?null:{organizationId:org,userId:actor,isAdminPreview:options.preview||false},hotel:options.hotel!==false,uploadBytes:new Uint8Array([255,216,255,0]),tables:{hotel_settings:[],hotel_catalog_items:[row,{...row,id:draft,status:'draft',description:'SECRET DRAFT'},{...row,id:randomUUID(),organization_id:other,description:'OTHER TENANT'}],hotel_room_types:[{id:type,organization_id:org,name:'Garden Double',capacity:2,nightly_rate_minor:10000,currency:'NGN'}],hotel_rooms:[{id:'room-a',organization_id:org,room_type_id:type,active:true},{id:'room-b',organization_id:org,room_type_id:type,active:true}],hotel_catalog_media:[{id:randomUUID(),organization_id:org,item_id:published,status:'ready',mime_type:'image/jpeg',storage_path:`${org}/${published}/image.jpg`,position:0,caption:'Garden room'},{id:randomUUID(),organization_id:org,item_id:draft,status:'ready',mime_type:'image/jpeg',storage_path:'SECRET-PATH',position:0,caption:'SECRET'}]}};
+ const state={writes:[],signed:[],rpc:[],permissions:new Set(options.permissions||['customers.view','customers.manage']),session:options.anonymous?null:{organizationId:org,userId:options.preview?"admin-preview:operator@example.invalid":actor,email:"operator@example.invalid",isAdminPreview:options.preview||false},hotel:options.hotel!==false,uploadBytes:new Uint8Array([255,216,255,0]),tables:{hotel_settings:[],hotel_catalog_items:[row,{...row,id:draft,status:'draft',description:'SECRET DRAFT'},{...row,id:randomUUID(),organization_id:other,description:'OTHER TENANT'}],hotel_room_types:[{id:type,organization_id:org,name:'Garden Double',capacity:2,nightly_rate_minor:10000,currency:'NGN'}],hotel_rooms:[{id:'room-a',organization_id:org,room_type_id:type,active:true},{id:'room-b',organization_id:org,room_type_id:type,active:true}],hotel_catalog_media:[{id:randomUUID(),organization_id:org,item_id:published,status:'ready',mime_type:'image/jpeg',storage_path:`${org}/${published}/image.jpg`,position:0,caption:'Garden room'},{id:randomUUID(),organization_id:org,item_id:draft,status:'ready',mime_type:'image/jpeg',storage_path:'SECRET-PATH',position:0,caption:'SECRET'}]}};
  const admin={from(table){let filters=[],operation=null,values;const q={select(){return q},eq(k,v){filters.push(row=>row[k]===v);return q},neq(k,v){filters.push(row=>row[k]!==v);return q},in(k,v){filters.push(row=>v.includes(row[k]));return q},order(){return q},update(v){operation='update';values=v;return q},insert(v){operation='insert';values=v;return q},single(){return run(true)},maybeSingle(){return run(true)},then(resolve,reject){return run(false).then(resolve,reject)}};async function run(single){const rows=state.tables[table];let matches=rows.filter(row=>filters.every(f=>f(row)));if(operation==='insert'){if(rows.some(row=>row.id===values.id))return{data:null,error:{code:'23505'}};const row={status:table==='hotel_catalog_items'?'draft':'pending',revision:1,...values};rows.push(row);matches=[row];state.writes.push([table,{...values}]);}if(operation==='update'){matches.forEach(row=>Object.assign(row,values));state.writes.push([table,{...values}]);}return{data:single?matches[0]||null:matches,error:null};}return q;},rpc:async(name,args)=>{state.rpc.push([name,args]);return{data:[{room_id:'room-a',available:false},{room_id:'room-b',available:true}],error:null}},storage:{from(bucket){return{createSignedUrl:async(path,ttl)=>{state.signed.push({path,ttl,bucket});return{data:{signedUrl:'https://storage.example.invalid/'+path},error:null}},createSignedUploadUrl:async path=>({data:{signedUrl:'https://storage.example.invalid/upload/'+path},error:null}),download:async()=>({data:new Blob([state.uploadBytes]),error:null})}}}};
  const workspace={'HotelWorkspaceError':HotelWorkspaceError,hotelUuid:uuid};
  const service=load('lib/hotel-catalog.ts',{'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/hotel-booking-service':workspace,'@/lib/hotel-booking-contract':booking,'@/lib/hotel-catalog-contract':contract,'@/lib/hotel-setup-contract':setupContract,'@/lib/hotel-service-rules':load('lib/hotel-service-rules.ts')});
@@ -21,9 +21,9 @@ function fixture(options={}){
  const tools=load('lib/ai/maia-hotel-tools.ts',{'@/lib/hotel-communications':hotel,'@/lib/hotel-catalog':service});
  return{state,service,route,tool:tools.maiaHotelTools()[0],post:body=>route.POST({json:async()=>body})};
 }
-test('catalog access is tenant/session scoped; anonymous, read-only, preview, revoked and non-hotel writes fail',async()=>{
- for(const options of [{anonymous:true},{permissions:['customers.view']},{preview:true},{permissions:[]},{hotel:false}]){const f=fixture(options);assert.ok([401,403].includes((await f.post({action:'set_status',itemId:draft,status:'published',revision:1})).status));assert.equal(f.state.writes.length,0);}
- const f=fixture({preview:true});const result=await f.route.GET();assert.equal(result.status,200);assert.equal(result.body.canManage,false);assert.equal(result.body.items.some(item=>item.organization_id===other),false);
+test('catalog access is tenant/session scoped; anonymous, read-only, revoked and non-hotel writes fail',async()=>{
+ for(const options of [{anonymous:true},{permissions:['customers.view']},{permissions:[]},{hotel:false},{preview:true,hotel:false}]){const f=fixture(options);assert.ok([401,403].includes((await f.post({action:'set_status',itemId:draft,status:'published',revision:1})).status));assert.equal(f.state.writes.length,0);}
+ const f=fixture({preview:true});const result=await f.route.GET();assert.equal(result.status,200);assert.equal(result.body.canManage,true);assert.equal(result.body.items.some(item=>item.organization_id===other),false);
 });
 test('room/service saves retain server identity and currency precision; stale edits and changed request replays fail',async()=>{
  const f=fixture(),id=randomUUID();const input={action:'save',kind:'service',requestId:id,title:'Gym session',description:'Access with manager confirmation',pricing:'paid',price:'12.50',currency:'NGN',organizationId:other,updated_by:'forged'};
@@ -75,3 +75,25 @@ test('guest preview uses the published agent projection and metadata writes reta
 });
 
 test('hotel policies are retrieved fresh even without catalog matches and private contacts never reach guest answers',async()=>{const f=fixture();f.state.tables.hotel_settings.push({organization_id:org,values:{business_name:'Garden Hotel',check_in:'14:00',cancellation_policy:'Manager confirms refunds',escalation_email:'PRIVATE_CONTACT',escalation_phone:'PRIVATE_PHONE'}},{organization_id:other,values:{business_name:'FOREIGN HOTEL'}});const result=await f.tool.execute({query:'no matching room'},{organizationId:org});assert.equal(result.entries.length,0);assert.equal(result.hotel.check_in,'14:00');assert.equal(JSON.stringify(result).includes('PRIVATE'),false);assert.equal(JSON.stringify(result).includes('FOREIGN HOTEL'),false);f.state.tables.hotel_settings[0].values.check_in='15:00';assert.equal((await f.tool.execute({query:''},{organizationId:org})).hotel.check_in,'15:00');});
+
+test("trusted hotel preview can create, edit and publish in its selected hotel; Maia only sees published entries", async () => {
+  const f = fixture({ preview: true });
+  const id = randomUUID();
+  const input = { action: "save", requestId: id, kind: "service", pricing: "included", title: "Atrium breakfast", description: "Breakfast served daily", organizationId: other, updated_by: actor };
+  const created = await f.post(input);
+  assert.equal(created.status, 200);
+  assert.equal(created.body.item.organization_id, org);
+  assert.match(created.body.item.updated_by, /^[\da-f]{8}-[\da-f]{4}-8[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/);
+  assert.equal((await f.post(input)).body.item.updated_by, created.body.item.updated_by);
+  assert.equal((await f.post({ ...input, itemId: id, revision: 1, description: "Breakfast in the atrium" })).status, 200);
+
+  const context = { organizationId: org };
+  const lookup = () => f.tool.execute({ query: "Atrium breakfast" }, context);
+  assert.equal((await lookup()).entries.length, 0);
+  assert.equal((await f.post({ action: "set_status", itemId: id, status: "published", revision: 1, organizationId: other })).status, 200);
+  const result = await lookup();
+  assert.equal(result.entries.length, 1);
+  assert.equal(result.entries[0].description, "Breakfast in the atrium");
+  const foreignId = f.state.tables.hotel_catalog_items.find(item => item.organization_id === other).id;
+  assert.equal((await f.post({ action: "set_status", itemId: foreignId, status: "draft", revision: 1 })).status, 404);
+});

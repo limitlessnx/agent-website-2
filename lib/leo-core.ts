@@ -483,8 +483,12 @@ async function identityFromClient(session: ClientSession, channel: LeoChannel): 
   };
 }
 
-export async function resolveLeoIdentity(input: { channel?: LeoChannel; allowPublic?: boolean } = {}): Promise<LeoIdentity | null> {
+export async function resolveLeoIdentity(input: { channel?: LeoChannel; allowPublic?: boolean; request?: Request } = {}): Promise<LeoIdentity | null> {
   const channel = input.channel || "chat";
+  if (input.request?.headers?.get("x-leo-surface") === "tenant") {
+    const tenant = await getClientSession();
+    return tenant && !tenant.isAdminPreview ? identityFromClient(tenant, channel) : null;
+  }
   const admin = await getAdminSession();
   if (admin) {
     return {

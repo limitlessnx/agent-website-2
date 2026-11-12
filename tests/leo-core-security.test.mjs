@@ -63,7 +63,7 @@ test("unified reasoning gateway proposes tools without executing them", () => {
 });
 
 test("voice sessions resolve the same Leo identity and allowed tool registry", () => {
-  assert.match(realtime, /resolveLeoIdentity\(\{ channel: "voice", allowPublic: true \}\)/);
+  assert.match(realtime, /resolveLeoIdentity\(\{ channel: "voice", allowPublic: true, request \}\)/);
   assert.match(realtime, /listLeoToolsForIdentity\(identity\)/);
   assert.match(realtime, /leo_execute_tool/);
 });

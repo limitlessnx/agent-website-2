@@ -129,7 +129,7 @@ export async function sendThroughLimitlessCampaignRoute(request: Request, args: 
   if (!previewResponse.ok || !preview.approval?.approvalId || !preview.approval?.token) throw new Error(String(preview.error || `Campaign preparation returned HTTP ${previewResponse.status}.`));
   const response = await sendStep("send", { approvalId: String(preview.approval.approvalId), token: String(preview.approval.token) });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(String(result.error || result.reason || `Limitless Realty campaign returned HTTP ${response.status}.`));
+  if (!response.ok && result.status !== "unknown") throw new Error(String(result.error || result.reason || `Limitless Realty campaign returned HTTP ${response.status}.`));
   return { ...result, workspace: "Limitless Realty", audience: audienceDescription(args), authoritativeTemplate: UPDATE_TEMPLATE, preparedTokenValidated: prepared.tokenValidated };
 }
 export async function sendLimitlessFollowup(request: Request, args: Record<string, unknown>) { const lead = await resolveLead(args); if (!contactable(lead)) throw new Error("That lead is not currently eligible for campaign messaging."); return sendThroughLimitlessCampaignRoute(request, args, String(lead.id)); }

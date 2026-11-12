@@ -1,4 +1,4 @@
-type ToolInput = { toolKey: string; arguments: Record<string, unknown>; sessionId?: string; channel: "chat" | "voice"; confirmed: boolean };
+type ToolInput = { toolKey: string; arguments: Record<string, unknown>; sessionId?: string; channel: "chat" | "voice"; confirmed: boolean; tenantSurface?: boolean };
 type Approval = { approvalId: string; approvalToken: string };
 export type LeoClientApprovals = Map<string, Approval>;
 function canonical(value: unknown): string {
@@ -10,15 +10,17 @@ function canonical(value: unknown): string {
 export async function executeLeoClientTool(input: ToolInput, approvals: LeoClientApprovals, fetcher: typeof fetch = fetch) {
   const key = canonical({ toolKey: input.toolKey, arguments: input.arguments, sessionId: input.sessionId || "", channel: input.channel });
   const proof = input.confirmed ? approvals.get(key) : undefined;
-  const response = await fetcher("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, ...proof }) });
+  const response = await fetcher("/api/leo/tool", { method: "POST", headers: { "content-type": "application/json", ...(input.tenantSurface ? { "x-leo-surface": "tenant" } : {}) }, body: JSON.stringify({ ...input, ...proof }) });
   const raw = await response.json().catch(() => ({})) as Record<string, unknown>;
-  if (input.toolKey === "leo.crm.followup.send" && raw.status === "confirmation_required" && typeof raw.approvalToken === "string" && typeof raw.approvalId === "string") {
-    approvals.set(key, { approvalId: raw.approvalId, approvalToken: raw.approvalToken });
+  const approvalToken = raw.approvalToken ?? raw.token;
+  if (raw.status === "confirmation_required" && typeof approvalToken === "string" && typeof raw.approvalId === "string") {
+    approvals.set(key, { approvalId: raw.approvalId, approvalToken });
   }
   // Keep proof for an ambiguous enqueue retry. The server maps it to the same execution.
-  if (response.ok && raw.executionId) approvals.delete(key);
+  if (proof && response.ok && raw.status !== "confirmation_required") approvals.delete(key);
   const result = { ...raw };
-  if (input.toolKey === "leo.crm.followup.send" && raw.approvalToken) delete result.approvalToken;
+  delete result.approvalToken;
+  if (raw.status === "confirmation_required") delete result.token;
   return { response, result };
 }
 export function leoExecutionPending(result: Record<string, unknown>) {

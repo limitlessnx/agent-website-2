@@ -169,3 +169,47 @@ test('canonical CRM binding checks retain tenant filters and reject specialized 
   for(const table of ['agents','crm_customers','client_onboarding_profiles','hotel_guest_profiles','human_handoffs']) assert.ok(filters.some(f=>f.table===table&&f.key==='organization_id'&&f.value===org));
   for(variant of ['hotel','profileHotel','realEstate','profileRealEstate','guest','handoff','optOut','paused']) await assert.rejects(api.validateCrmBindings(action));
 });
+
+test("voice caches exact-action real estate approval proof and withholds it from tool results", async () => {
+  const { executeLeoClientTool } = load("lib/leo-tool-client.ts");
+  const approvals = new Map();
+  const requests = [];
+  const fetcher = async (_, init) => {
+    const request = JSON.parse(init.body);
+    requests.push(request);
+    return request.approvalToken
+      ? new Response(JSON.stringify({ ok: true, status: "saved" }))
+      : new Response(JSON.stringify({ status: "confirmation_required", approvalId: "approval-id", token: "secret" }), { status: 409 });
+  };
+  const input = { toolKey: "leo.crm.leads.update", channel: "voice", sessionId: "session-id", arguments: { workspace: "limitless_realty", name: "Ada" }, confirmed: false };
+  const first = await executeLeoClientTool(input, approvals, fetcher);
+  assert.equal(first.result.token, undefined);
+  await executeLeoClientTool({ ...input, confirmed: true, arguments: { ...input.arguments, name: "Nneka" } }, approvals, fetcher);
+  assert.equal(requests[1].approvalToken, undefined);
+  const result = await executeLeoClientTool({ ...input, confirmed: true }, approvals, fetcher);
+  assert.equal(requests[2].approvalToken, "secret");
+  assert.equal(result.result.status, "saved");
+  await executeLeoClientTool({ ...input, confirmed: true }, approvals, fetcher);
+  assert.equal(requests[3].approvalToken, undefined);
+});
+
+test("tenant Leo uses tenant permissions even with an admin cookie and rejects preview or missing membership", async () => {
+  let client = { userId: "user", organizationId: org, role: "viewer" };
+  const core = load("lib/leo-core.ts", {
+    "@/lib/admin-auth": { getAdminSession: async () => ({ email: "admin@example.invalid" }) },
+    "@/lib/client-auth": { getClientSession: async () => client },
+    "@/lib/organization-membership": { getOrganizationAccessContext: async () => ({ permissions: new Set(["customers.view"]) }) },
+  });
+  const request = new Request("https://fluxknight.invalid/api/leo", { headers: { "x-leo-surface": "tenant" } });
+  const tenant = await core.resolveLeoIdentity({ channel: "voice", allowPublic: true, request });
+  assert.equal(tenant.scope, "tenant");
+  assert.equal(tenant.organizationId, org);
+  assert.equal(core.isLeoToolAllowed(tenant, "leo.crm.leads.read"), true);
+  assert.equal(core.isLeoToolAllowed(tenant, "leo.crm.leads.update"), false);
+  assert.equal(core.isLeoToolAllowed(tenant, "leo.platform.tenant.pause"), false);
+  assert.equal((await core.resolveLeoIdentity({ channel: "voice" })).scope, "super_admin");
+  client = { ...client, isAdminPreview: true };
+  assert.equal(await core.resolveLeoIdentity({ allowPublic: true, request }), null);
+  client = null;
+  assert.equal(await core.resolveLeoIdentity({ allowPublic: true, request }), null);
+});

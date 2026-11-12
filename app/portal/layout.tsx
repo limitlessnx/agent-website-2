@@ -11,7 +11,7 @@ import PortalSidebar from "./PortalSidebar";
 import ManagerWorkspaceSwitcher from "./ManagerWorkspaceSwitcher";
 import ClientLogoutButton from "./ClientLogoutButton";
 import FluxLogo from "@/components/FluxLogo";
-import { Bell } from "lucide-react";
+import { Bell, LifeBuoy } from "lucide-react";
 import hotelStyles from "@/components/portal/hotel/HotelMobileShell.module.css";
 import "./portal.css";
 import "./marketplace.css";
@@ -33,7 +33,8 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
   await syncLifecycleDashboardNotifications(session.organizationId).catch(()=>undefined);
   const unreadNotifications=await getOrganizationUnreadNotificationCount(session.organizationId,session.userId).catch(()=>0);
 
-  return <LeoConversationProvider>
+  const leoScope = `${session.organizationId}:${session.userId}`;
+  return <LeoConversationProvider key={leoScope} tenantScope={leoScope}>
     <div className={`portal-shell ${experience.slug==="hotels"?hotelStyles.shell:""}`}>
       <PortalSidebar
         organization={profile.business_name||session.organizationSlug}
@@ -55,7 +56,9 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
         <header className="portal-topbar">{experience.slug==="hotels"?<Link href="/portal" className={hotelStyles.mobileBrand} aria-label="Fluxknight hotel home"><FluxLogo/><small>Hotel &amp; Hospitality</small></Link>:null}<div className={experience.slug==="hotels"?hotelStyles.desktopIdentity:undefined}><span>{experience.name} workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><div className="portal-topbar-actions">{experience.slug==="hotels"?<><Link href="/portal/notifications" className={hotelStyles.mobileAction} aria-label={`${unreadNotifications} unread notifications`}><Bell size={20}/>{unreadNotifications>0?<em>{unreadNotifications>99?"99+":unreadNotifications}</em>:null}</Link><Link href="/portal/settings" className={`${hotelStyles.mobileAction} ${hotelStyles.avatar}`} aria-label="Hotel settings">{(profile.business_name||session.organizationSlug).split(/\s+/).slice(0,2).map(word=>word[0]||"").join("").toUpperCase()}</Link></>:null}{session.isAdminPreview ? <Link prefetch={false} className="portal-button secondary" href="/dashboard/preview/exit">Exit tenant preview</Link> : null}{session.role === "manager" ? <ManagerWorkspaceSwitcher organizations={managerOrganizations} currentOrganizationId={session.organizationId}/> : null}{session.isAdminPreview ? null : <ClientLogoutButton/>}</div></header>
         {children}
       </section>
-      {session.isAdminPreview ? null : <TenantLeoFloatingButton/>}
+      {session.isAdminPreview
+        ? experience.slug === "hotels" && <Link prefetch={false} className="leo-launcher fixed bottom-6 right-6 z-[120] flex min-h-12 items-center gap-2 rounded-full border border-violet-300/30 bg-slate-950 px-4 text-sm text-white shadow-2xl" href="/dashboard/preview/exit?destination=support"><LifeBuoy size={17}/>Exit preview to open Leo</Link>
+        : <TenantLeoFloatingButton/>}
     </div>
   </LeoConversationProvider>;
 }
