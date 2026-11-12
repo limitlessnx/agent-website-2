@@ -82,13 +82,13 @@ function PropertyCard({ property }: { property: LimitlessDashboardData["properti
   );
 }
 
-function LegacyOrganizationView({ metrics, notices, agents }: { metrics: Metric[]; notices: Notice[]; agents: Agent[] }) {
+function LegacyOrganizationView({ metrics, notices, agents, isGencouv }: { metrics: Metric[]; notices: Notice[]; agents: Agent[]; isGencouv: boolean }) {
   return (
     <>
       <div className={styles.metrics} aria-label="Business metrics">
         {metrics.map((metric) => {
           const Icon = icons[metric.icon];
-          return <Link key={metric.label} href={/email/i.test(metric.label) ? "/dashboard/gencouv#email-inbox" : /follow/i.test(metric.label) ? "/dashboard/gencouv#email-control" : /conversation/i.test(metric.label) ? "/dashboard/gencouv#email-inbox" : "/dashboard/gencouv#lead-board"} className={styles.metricCard}><span className={styles.metricIcon}><Icon size={18} /></span><strong>{metric.value}</strong><span>{metric.label}</span><small>{metric.detail}</small></Link>;
+          return <Link key={metric.label} href={!isGencouv ? "/dashboard" : /email/i.test(metric.label) ? "/dashboard/gencouv#email-inbox" : /follow/i.test(metric.label) ? "/dashboard/gencouv#email-control" : /conversation/i.test(metric.label) ? "/dashboard/gencouv#email-inbox" : "/dashboard/gencouv#lead-board"} className={styles.metricCard}><span className={styles.metricIcon}><Icon size={18} /></span><strong>{metric.value}</strong><span>{metric.label}</span><small>{metric.detail}</small></Link>;
         })}
       </div>
       <section className={styles.attentionPanel}>
@@ -230,7 +230,7 @@ export default function DashboardHomeExperience({
             </div>
           </section>
         </>
-      ) : <LegacyOrganizationView metrics={metrics} notices={notices} agents={agents} />}
+      ) : <LegacyOrganizationView metrics={metrics} notices={notices} agents={agents} isGencouv={/gencouv/i.test(workspaceName || name)} />}
       {realEstateWorkspace && !xposureDashboard && !limitless ? <section className={styles.sectionCard} aria-label="Real estate management">
         <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>REAL ESTATE OPERATIONS</span><h2>Estate Catalog & Operations</h2><p>Tenant-scoped listings, viewing requests, human handover, Leo approvals and delivery status.</p></div><Link href="/dashboard/real-estate">Open operations hub <ChevronRight size={14} /></Link></header>
         <div className={styles.businessActions}>
