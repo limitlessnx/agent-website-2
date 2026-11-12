@@ -12,7 +12,7 @@ const digits = (phone: string | null) => (phone || "").replace(/\D/g, "");
 
 
 // A single composer may only fill approved variable slots. Fixed Meta template text is immutable.
-const escapeRegex = (value: string) => value.replace(/[.*+?^$\x7b\x7d()|[\]\\]/g, "\\export default function XposureCampaignComposer");
+const escapeRegex = (value: string) => value.replace(/[^a-zA-Z0-9]/g, char => "\\" + char);
 function mapApprovedMessage(template: Template, message: string): Record<string, string> | null {
   const parts = template.body.split(/(\{\{\s*\d+\s*\}\})/g);
   const captureKeys: string[] = [];
