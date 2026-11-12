@@ -10,31 +10,31 @@ const bottom = read("components/admin/MobileBottomNav.tsx");
 const sidebar = read("components/admin/AdminSidebar.tsx");
 const rail = read("components/admin/WorkspaceRail.tsx");
 
-test("Gencouv page section navigation points to real targets", () => {
-  const anchors = new Set([...page.matchAll(/\\bid="([^"]+)"/g)].map(x => x[1]));
-  const targets = [...page.matchAll(/href:"(#.*?)"/g)].map(x => x[1].slice(1));
-  assert.ok(targets.length >= 5);
-  for (const target of targets) assert.ok(anchors.has(target), "Missing section: " + target);
-  assert.match(page, /href:"\\/dashboard\\/gencouv\\/categories"/);
+test("Gencouv section navigation targets exist", () => {
+  for (const anchor of ["lead-contacts","email-inbox","email-control","website-funnel","lead-board"]) {
+    assert.ok(page.includes('id="' + anchor + '"'), "Missing section: " + anchor);
+    assert.ok(page.includes('href:"#' + anchor + '"'), "Missing navigation: " + anchor);
+  }
+  assert.ok(page.includes('href:"/dashboard/gencouv/categories"'));
 });
 
-test("mobile workspace header and bottom nav follow Gencouv routes", () => {
-  assert.match(header, /pathname\\.startsWith\\("\\/dashboard\\/gencouv"\\)/);
-  assert.match(header, /const label = isGencouv/);
-  assert.match(bottom, /const navigationItems = gencouv/);
-  assert.match(bottom, /\\/dashboard\\/gencouv#email-inbox/);
-  assert.match(sidebar, /id: "gencouv", href: "\\/dashboard\\/gencouv"/);
-  assert.match(rail, /\\/dashboard\\/gencouv#email-inbox/);
+test("mobile header and navigation route to Gencouv", () => {
+  assert.ok(header.includes('pathname.startsWith("/dashboard/gencouv")'));
+  assert.ok(header.includes("const label = isGencouv"));
+  assert.ok(bottom.includes("const navigationItems = gencouv"));
+  assert.ok(bottom.includes("/dashboard/gencouv#email-inbox"));
+  assert.ok(sidebar.includes('id: "gencouv", href: "/dashboard/gencouv"'));
+  assert.ok(rail.includes("/dashboard/gencouv#email-inbox"));
 });
 
-test("mobile metric cards use balanced columns and navigable targets", () => {
-  assert.match(css, /grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\)/);
-  assert.match(home, /isGencouv/);
-  assert.match(home, /\\/dashboard\\/gencouv#email-inbox/);
+test("metric grid is balanced and card destinations exist", () => {
+  assert.ok(css.includes("grid-template-columns:repeat(2,minmax(0,1fr))"));
+  assert.ok(home.includes("isGencouv"));
+  assert.ok(home.includes("/dashboard/gencouv#email-inbox"));
 });
 
-test("feed warning is compact and safe on mobile", () => {
-  assert.match(page, /<details/);
-  assert.match(page, /overflowWrap:"anywhere"/);
-  assert.doesNotMatch(page, /Dashboard feed setup needed/);
+test("feed warning is compact and wraps on mobile", () => {
+  assert.ok(page.includes("<details"));
+  assert.ok(page.includes('overflowWrap:"anywhere"'));
+  assert.ok(!page.includes("Dashboard feed setup needed"));
 });
