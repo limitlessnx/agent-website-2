@@ -528,7 +528,7 @@ export default async function GencouvWorkspacePage() {
             <h2>Lead categories</h2>
             <p>Create and manage your own lead categories for future audience filtering and reporting.</p>
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><Link href="/dashboard/gencouv/contacts" className="admin-status live">Import email contacts →</Link><Link href="/dashboard/gencouv/categories" className="admin-status">Manage categories →</Link></div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><Link href="/dashboard/gencouv/contacts" className="admin-status live">Import email contacts →</Link><Link href="/dashboard/gencouv/marketing" className="admin-status live">Email & proposals →</Link><Link href="/dashboard/gencouv/categories" className="admin-status">Manage categories →</Link></div>
         </div>
       </section>
 
