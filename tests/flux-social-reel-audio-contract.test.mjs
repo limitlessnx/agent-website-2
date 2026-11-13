@@ -53,3 +53,13 @@ test("ElevenLabs 402 is actionable and terminal; rate limits remain retryable", 
   assert.match(renderer, /AbortTaskRunError\(message\)/);
   assert.match(renderer, /reel_render_status: "failed"/);
 });
+
+
+test("Reel narration uses the free-plan built-in George voice by default", () => {
+  const narration = read("lib/social-reel-audio.ts");
+  const renderer = read("src/trigger/social-reel-renderer.ts");
+  assert.match(narration, /JBFqnCBsd6RMkjVDRZzb/);
+  assert.match(narration, /ELEVENLABS_FLUX_SOCIAL_VOICE_ID/);
+  assert.match(narration, /Do not reuse the legacy PREMIUM_MALE_VOICE_ID/);
+  assert.match(renderer, /voice_profile: "standard-male"/);
+});
