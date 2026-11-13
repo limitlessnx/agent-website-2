@@ -37,11 +37,15 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({error:"Unable to load audience."},{status:503,headers});
   const rows = data || [];
   const addresses = rows.map(row=>String(row.email||"").trim().toLowerCase()).filter(Boolean);
-  const {data:stopped,error:suppressionError} = addresses.length
-    ? await db.from("gencouv_suppression_list").select("normalized_email").eq("organization_id",organizationId).in("normalized_email",addresses)
-    : {data:[],error:null};
-  if (suppressionError) return NextResponse.json({error:"Suppression check unavailable. Audience withheld."},{status:503,headers});
-  const suppressed = new Set((stopped||[]).map(row=>String(row.normalized_email).toLowerCase()));
+  // Keep PostgREST query strings bounded when reviewing a full 500-contact audience.
+  const suppressed = new Set<string>();
+  for (let i = 0; i < addresses.length; i += 75) {
+    const batch = addresses.slice(i, i + 75);
+    const {data:stopped,error:suppressionError} = await db.from("gencouv_suppression_list")
+      .select("normalized_email").eq("organization_id",organizationId).in("normalized_email",batch);
+    if (suppressionError) return NextResponse.json({error:"Suppression check unavailable. Audience withheld."},{status:503,headers});
+    for (const row of stopped || []) suppressed.add(String(row.normalized_email).toLowerCase());
+  }
   const stats={eligible:0,unverified:0,suppressed:0};
   const contacts = rows.map(row=>{
     const email=String(row.email||"").trim().toLowerCase();
