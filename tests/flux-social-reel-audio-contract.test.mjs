@@ -9,7 +9,7 @@ test("Reel narrator synthesizes timestamped ElevenLabs audio and keeps tracks pr
   assert.match(source, /\/with-timestamps/);
   assert.match(source, /character_end_times_seconds/);
   assert.match(source, /ELEVENLABS_API_KEY/);
-  assert.match(source, /ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID/);
+  assert.match(source, /ELEVENLABS_FLUX_SOCIAL_VOICE_ID/);
   assert.match(source, /storagePath =.*organizationId.*postId/);
   assert.match(source, /licensed_for_social_usage !== true/);
   assert.match(source, /\.eq\("brand_id", brandId\)/);
