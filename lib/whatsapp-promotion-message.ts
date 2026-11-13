@@ -82,9 +82,9 @@ export function formatPromotionMessage(template: PromotionTemplate, draft: unkno
   if (contentKeys.length > 1 || actionKeys.length > 1 || !contentKeys.length) {
     return { error: "This promotion has multiple distinct fields. Ask an administrator to configure automatic field extraction for this approved template." };
   }
-  const actionMatch = text.match(/(?:^|[.!?]\\s+|\\n)(?:book|reserve|reply|call|message|contact|dm|visit|schedule|secure|send|reach out)\\b[^\\n.!?]*(?:[.!?]|$)/im);
+  const actionMatch = text.match(/(?:^|[.!?]\s+|\n)(?:book|reserve|reply|call|message|contact|dm|visit|schedule|secure|send|reach out)\b[^\n.!?]*(?:[.!?]|$)/im);
   let offer = text;
-  if (actionKeys.length && actionMatch) offer = text.replace(actionMatch[0], " ").replace(/\\s+/g, " ").trim();
+  if (actionKeys.length && actionMatch) offer = text.replace(actionMatch[0], " ").replace(/\s+/g, " ").trim();
   if (!offer) offer = text;
   try {
     values[contentKeys[0]] = normalizeTemplateParameter(offer, { maxLength: 1024, fieldName: fieldLabel(contentKeys[0]) });
