@@ -902,6 +902,10 @@
     {
       "version": "20261107145518",
       "name": "fluxknight_email_drafts"
+    },
+    {
+      "version": "20261113071933",
+      "name": "crm_custom_lead_categories"
     }
   ]
 }
