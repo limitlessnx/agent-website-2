@@ -15,7 +15,7 @@ export default async function SocialCalendarPage() {
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Publishing calendar</h1>
-          <p>Scheduled posts, Trigger.dev queue state and platform-level publish results.</p>
+          <p>Scheduled posts, Trigger.dev queue state and platform-level publish results. Simulated test jobs are identified separately from real publishing outcomes.</p>
         </div>
         <Link href="/dashboard/social/posts" className="admin-status">Manage posts</Link>
       </header>
@@ -32,7 +32,15 @@ export default async function SocialCalendarPage() {
                   <strong>{post?.title || "Unknown post"}</strong>
                   <span>{new Date(schedule.scheduled_for).toLocaleString()} · {schedule.timezone}</span>
                   <span>{post?.platforms.join(", ") || "No platforms"}</span>
-                  {scheduleJobs.length ? <span>Jobs: {scheduleJobs.map((job) => `${job.platform} ${job.status}`).join(" · ")}</span> : <span>Jobs will be created when the schedule becomes due.</span>}
+                  {scheduleJobs.length ? (
+                    <span>Jobs: {scheduleJobs.map((job) => {
+                      const isMock = job.metadata?.publisher === "mock-v1";
+                      return `${job.platform} ${isMock ? "simulated test" : job.status}`;
+                    }).join(" · ")}</span>
+                  ) : <span>Jobs will be created when the schedule becomes due.</span>}
+                  {scheduleJobs.some((job) => job.metadata?.publisher === "mock-v1") ? (
+                    <span style={{ color: "var(--admin-warning, #d69e31)" }}>These were mock publishing jobs. They do not confirm a live social-media post.</span>
+                  ) : null}
                   {schedule.last_error ? <span>Last error: {schedule.last_error}</span> : null}
                 </div>
                 <em>{schedule.status}</em>
