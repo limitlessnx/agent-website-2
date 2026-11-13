@@ -14,7 +14,7 @@ function harness(options={}) {
     '@/lib/flux-credits':{assertFluxFeatureAccess:async()=>{}},
     '@/lib/supabase/admin':{createAdminClient:()=>admin},
     '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async input=>{state.sent.push(input);if(options.sendError)throw Error("uncertain");return options.noReceipt?{}:{providerMessageId:"meta-receipt"}}},
-    '@/lib/portal-campaign-templates':{loadLinkedCampaignTemplates:async()=>{throw Error('Hotel sending must retain its existing template policy')}},
+    '@/lib/portal-whatsapp-promotion':{runPortalPromotion:async()=>{throw Error('Hotel sending must retain its existing template policy')}},
     '@/lib/hotel-communication-policy':policy,
     '@/lib/hotel-communications':{loadHotelAudience:async()=>{if(options.readError)throw Error('offline');return {guests:[guest],bookings:options.bookings||[]}},hotelConversationState:async()=>({handoff:!!options.handoff})},
   });
