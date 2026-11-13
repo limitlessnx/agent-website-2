@@ -45,13 +45,17 @@ export async function POST(request: NextRequest) {
       from:"Gencouv <"+sender+">",to:[recipient],subject,text:message,reply_to:sender
     })});
     const providerId = typeof reply.id === "string" ? reply.id : null;
-    try {
-      await db.from("gencouv_email_messages").insert({
-        organization_id:org,recipient_email:recipient,recipient_name:null,
-        subject,status:"sent",provider:"resend",provider_email_id:providerId,
-        sent_at:new Date().toISOString(),metadata:{source:"gencouv_manual_proposal",sender}
-      });
-    } catch { /* Resend accepted the message; report provider ID regardless of ledger persistence. */ }
-    return NextResponse.json({ok:true,id:providerId,note:"Resend accepted this individual email; inbox delivery is not yet confirmed."},{status:201,headers});
+    const {error:ledgerError} = await db.from("gencouv_email_messages").insert({
+      organization_id:org,recipient_email:recipient,recipient_name:null,
+      subject,status:"sent",provider:"resend",provider_email_id:providerId,
+      sent_at:new Date().toISOString(),metadata:{source:"gencouv_manual_proposal",sender}
+    });
+    return NextResponse.json({
+      ok:true,id:providerId,
+      tracked:!ledgerError,
+      note:ledgerError
+        ? "Resend accepted the email, but Gencouv history could not be saved. Check provider ID before retrying."
+        : "Resend accepted this individual email; inbox delivery is not yet confirmed."
+    },{status:201,headers});
   } catch (error) {return fail(error instanceof Error?error.message:"Resend send failed.",502);}
 }
