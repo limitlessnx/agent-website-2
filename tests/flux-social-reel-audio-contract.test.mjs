@@ -9,7 +9,7 @@ test("Reel narrator synthesizes timestamped ElevenLabs audio and keeps tracks pr
   assert.match(source, /\/with-timestamps/);
   assert.match(source, /character_end_times_seconds/);
   assert.match(source, /ELEVENLABS_API_KEY/);
-  assert.match(source, /ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID/);
+  assert.match(source, /ELEVENLABS_FLUX_SOCIAL_VOICE_ID/);
   assert.match(source, /storagePath =.*organizationId.*postId/);
   assert.match(source, /licensed_for_social_usage !== true/);
   assert.match(source, /\.eq\("brand_id", brandId\)/);
@@ -52,4 +52,14 @@ test("ElevenLabs 402 is actionable and terminal; rate limits remain retryable", 
   assert.match(renderer, /ReelNarrationProviderError/);
   assert.match(renderer, /AbortTaskRunError\(message\)/);
   assert.match(renderer, /reel_render_status: "failed"/);
+});
+
+
+test("Reel narration uses the free-plan built-in George voice by default", () => {
+  const narration = read("lib/social-reel-audio.ts");
+  const renderer = read("src/trigger/social-reel-renderer.ts");
+  assert.match(narration, /JBFqnCBsd6RMkjVDRZzb/);
+  assert.match(narration, /ELEVENLABS_FLUX_SOCIAL_VOICE_ID/);
+  assert.match(narration, /Do not reuse the legacy PREMIUM_MALE_VOICE_ID/);
+  assert.match(renderer, /voice_profile: "standard-male"/);
 });
