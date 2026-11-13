@@ -99,7 +99,7 @@ async function storeAudio(supabase: SupabaseClient, input: {
     metadata: {
       purpose: "reel_voiceover",
       scene_index: input.sceneIndex,
-      voice_profile: "premium-male",
+      voice_profile: "standard-male",
       provider_voice_id: input.voiceId,
       generated_with_alignment: true,
       approved_for_publishing: false,
@@ -122,9 +122,12 @@ export async function createReelNarration(supabase: SupabaseClient, input: {
   plan: ReelPlan;
 }) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const voiceId = process.env.ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID;
-  if (!apiKey || !voiceId) {
-    throw new Error("Configure ELEVENLABS_API_KEY and ELEVENLABS_FLUX_SOCIAL_PREMIUM_MALE_VOICE_ID in Trigger.dev before automatic Reel narration.");
+  // Free-tier API access does not include professional Voice Library voices.
+  // George is an ElevenLabs built-in "premade" voice, not a Voice Library voice.
+  // Do not reuse the legacy PREMIUM_MALE_VOICE_ID, even if it remains set in Trigger.dev.
+  const voiceId = process.env.ELEVENLABS_FLUX_SOCIAL_VOICE_ID?.trim() || "JBFqnCBsd6RMkjVDRZzb";
+  if (!apiKey) {
+    throw new Error("Configure ELEVENLABS_API_KEY in Trigger.dev Production before automatic Reel narration.");
   }
 
   const clips: ReelAudioClip[] = [];
