@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mapPromotionMessage, promotionDraft, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
+import { type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
 
@@ -62,15 +62,15 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   const eligibleIds = new Set(eligible.map(contact => contact.id));
   const recipients = selected.filter(id => eligibleIds.has(id));
   const crmOnly = customers.filter(customer => !phoneCounts.has(digits(customer.phone)));
-  const mapped = template ? mapPromotionMessage(template, message) : null;
+  const messageReady = message.trim().length > 0 && message.length <= 4000;
   const issues = [
     !loading && !template && !templateError && "The approved WhatsApp promotion is unavailable.",
-    template && mapped?.error,
+    !messageReady && "Write a promotional message to continue.",
     !loading && !contactError && !eligible.length && "Add contacts with recorded WhatsApp marketing permission.",
     !loading && !contactError && eligible.length > 0 && !recipients.length && "Select at least one eligible contact.",
     recipients.length > 0 && !consent && "Confirm marketing consent for the selected contacts.",
   ].filter((issue): issue is string => typeof issue === "string" && Boolean(issue));
-  const canReview = Boolean(template && mapped?.values && recipients.length && consent && !loading && !templateError && !contactError);
+  const canReview = Boolean(template && messageReady && recipients.length && consent && !loading && !templateError && !contactError);
 
   function changeSelection(next: string[]) {
     setSelected(next);
@@ -125,13 +125,13 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   return <div className={styles.workspace}>
     <div className={styles.promotionColumns}>
       <section className={`${styles.card} ${styles.promotionMessage}`} aria-labelledby="campaign-message-heading">
-        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Write your offer using the approved WhatsApp wording.</p></div></div>
+        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Write your promotion naturally. We automatically format it using your approved WhatsApp promotional template.</p></div></div>
         {loading && <p role="status">Checking the assigned promotion and loading contacts…</p>}
         {templateError && <p className={styles.error} role="alert">{templateError}</p>}
         {template && <div className={styles.promotionFields}>
           <label className={styles.field}>Message<textarea rows={7} value={message} maxLength={4000} disabled={Boolean(pending)} onChange={event => changeMessage(event.target.value)} aria-describedby="promotion-message-hint" /></label>
-          <p id="promotion-message-hint" className={styles.hint}>Replace the marked fields with your offer. Keep the approved wording{template.variable_keys.includes("customer_name") ? " and {{customer_name}}" : ""}.</p>
-          <button type="button" className={styles.secondary} disabled={Boolean(pending)} onClick={() => changeMessage(promotionDraft(template))}>Use approved wording</button>
+          <p id="promotion-message-hint" className={styles.hint}>Your message is automatically formatted on the server. You will see the approved WhatsApp preview before sending.</p>
+
         </div>}
         {(contactError || templateError || error) && <div className={styles.importActions}><button type="button" className={styles.secondary} disabled={loading || Boolean(pending)} onClick={refresh}>Refresh campaign information</button></div>}
       </section>
