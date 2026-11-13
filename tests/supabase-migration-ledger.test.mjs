@@ -75,6 +75,8 @@ const expectedPendingVersions = [
   "20261109073001",
   // Hotel dashboard trends and inbox index: prepared for review, not applied.
   "20261109090514",
+  // Gencouv custom CRM category tables explicitly reviewed for PR #381; pending production migration.
+  "20261112230000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
