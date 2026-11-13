@@ -49,3 +49,13 @@ test("webhook claim and completion are fenced by the worker token", () => {
   assert.match(code, /processing_token=eq\.\$\{claimToken\}/);
   assert.match(code, /completed\.length !== 1/);
 });
+
+test("verified checkout identity and amount are enforced across activation paths", () => {
+  const callback = source("app/api/payments/callback/route.ts");
+  const webhook = source("app/api/webhooks/flutterwave/route.ts");
+  const activation = source("lib/payments/activate-paid-trial.ts");
+  assert.match(callback, /payment\.customer\?\.email\?\.trim\(\)\.toLowerCase\(\) === session\.customer_email/);
+  assert.match(webhook, /payment\.customer\.email\.trim\(\)\.toLowerCase\(\) !== session\.customer_email/);
+  assert.match(activation, /payment\.currency !== expectedCurrency/);
+  assert.match(activation, /Number\(payment\.amount\) < Number\(plan\.recurringFee\)/);
+});
