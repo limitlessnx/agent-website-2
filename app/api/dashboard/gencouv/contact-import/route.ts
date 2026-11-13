@@ -94,10 +94,13 @@ export async function POST(request: NextRequest) {
     if (error || !data) return fail("Select a valid Gencouv category.");
   }
   const emails = parsed.contacts.map(c => c.email);
-  const { data: existing, error: lookupError } = await db.from("crm_customers")
-    .select("id,email").eq("organization_id", organizationId).in("email", emails);
-  if (lookupError) return fail("Unable to check existing contacts.", 500);
-  const found = new Map((existing || []).map(row => [normalize(row.email), row.id]));
+  const found = new Map<string, string>();
+  for (let i = 0; i < emails.length; i += 75) {
+    const { data: existing, error: lookupError } = await db.from("crm_customers")
+      .select("id,email").eq("organization_id", organizationId).in("email", emails.slice(i, i + 75));
+    if (lookupError) return fail("Unable to check existing contacts.", 500);
+    for (const row of existing || []) found.set(normalize(row.email), row.id);
+  }
   const fresh = parsed.contacts.filter(c => !found.has(c.email));
   const preview = form?.get("preview") !== "false";
   if (preview) return NextResponse.json({
