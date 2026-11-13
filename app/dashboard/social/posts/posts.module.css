@@ -1,0 +1,22 @@
+.postsPage{min-width:0;overflow-x:hidden;padding-bottom:180px}
+.postsSection{min-width:0}
+.postsList{display:grid;gap:14px}
+.postCard{min-width:0;padding:20px;border:1px solid var(--admin-border,#343858);border-radius:17px;background:var(--admin-card,#151a38);overflow:hidden}
+.postBody{display:grid;gap:12px;min-width:0}
+.cardHeading{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.postTitle{font-size:1.09rem;line-height:1.3;letter-spacing:-.01em;flex-basis:100%;overflow-wrap:anywhere}
+.postMeta{margin:0;color:var(--fk-text-muted,#9da4be);font-size:.81rem;line-height:1.4}
+.postState{color:#d2c5ff;text-transform:capitalize;font-weight:650}
+.captionPreview{margin:0;color:var(--fk-text-muted,#aeb5cb);font-size:.89rem;line-height:1.5;overflow-wrap:anywhere}
+.metaBadge,.statusSuccess{font-size:.73rem;font-weight:650;padding:5px 9px;border-radius:7px;line-height:1.3;display:inline-flex;align-items:center;border:1px solid rgba(158,168,191,.23);background:rgba(150,161,191,.09);color:#b7bfd3}
+.statusSuccess{border-color:rgba(110,231,183,.25);background:rgba(110,231,183,.07);color:#85dcbf}
+.postDetails{border-top:1px solid var(--admin-border,#343858);border-bottom:1px solid var(--admin-border,#343858);margin:1px 0}
+.postDetails>summary{cursor:pointer;color:#d8caff;padding:13px 3px;min-height:45px;font-weight:600;font-size:.83rem}
+.postDetails>summary:focus-visible{outline:2px solid #ad8bff;outline-offset:3px}
+.detailsContent{padding:0 4px 12px;display:grid;gap:8px;color:var(--fk-text-muted,#aeb5cb);font-size:.85rem;line-height:1.5}
+.detailsContent p{margin:0;overflow-wrap:anywhere}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:2px}
+.actions form{min-width:0}
+.scheduleForm{display:grid;gap:12px;padding:15px;border:1px solid var(--admin-border,#343858);border-radius:12px;margin-top:8px}
+.scheduleForm input,.scheduleForm select{min-height:44px;max-width:100%;min-width:0}
+@media(max-width:640px){.postsPage{padding-bottom:190px}.postCard{padding:16px;border-radius:14px}.postTitle{font-size:1.02rem}.actions{display:grid;grid-template-columns:minmax(0,1fr);gap:9px}.actions form,.actions button,.scheduleForm button{width:100%}.scheduleForm{padding:12px}.scheduleForm>div{display:grid!important;grid-template-columns:minmax(0,1fr);gap:10px!important}.scheduleForm input,.scheduleForm select{width:100%;font-size:16px}.captionPreview{font-size:.84rem}}
