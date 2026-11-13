@@ -148,13 +148,19 @@ test('inventory transport errors stay distinct and exclude private details', asy
   assert.doesNotMatch(result.body.error, /private transport information|fixture-secret/);
 });
 
-test('only approved body slots can change, and missing fields are named', async () => {
+test('freeform copy is formatted into the approved promotion without changing fixed wording', async () => {
+  const h = harness();
+  const result = await h.request({ message: 'Studio portraits this weekend. Reply today to book.' });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.message, 'Hi Ada! Offer: Studio portraits this weekend. Book: Reply today to book.');
+  assert.equal(h.state.sent.length, 0);
+});
+
+test('invalid and overlong copy cannot be sent', async () => {
   const h = harness();
   for (const [value, expected] of [
-    ['A totally different offer', /does not fit/],
-    [draft.replace('Hi ', 'Hello '), /does not fit/],
-    [draft.replace('{{customer_name}}', 'Someone else'), /each recipient/],
-    [draft.replace('Studio portraits', '{{offer_title}}'), /Enter the offer title/],
+    ['', /Write a promotional message/],
+    ['x'.repeat(4001), /Write a promotional message/],
     [draft.replace('Studio portraits', 'x'.repeat(1025)), /too long/],
   ]) {
     const result = await h.request({ message: value });

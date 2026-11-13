@@ -61,6 +61,49 @@ export function mapPromotionMessage(template: PromotionTemplate, draft: unknown)
   return { values };
 }
 
+/**
+ * Convert ordinary promotional copy into the assigned Meta template's editable
+ * parameters. The approved template's fixed text is never changed.
+ * Keep the strict parser first for existing reviewed drafts.
+ */
+export function formatPromotionMessage(template: PromotionTemplate, draft: unknown) {
+  const exact = mapPromotionMessage(template, draft);
+  if (exact.values) return exact;
+  if (typeof draft !== "string" || !draft.trim() || draft.length > 4000) {
+    return { error: "Write a promotional message of up to 4,000 characters." };
+  }
+  const editable = template.variable_keys.filter(key => key !== "customer_name");
+  if (!editable.length) return { error: "The assigned promotional template has no editable message fields." };
+  const text = lineEndings(draft).trim();
+  const values: Record<string, string> = {};
+  const actionKeys = editable.filter(key => /action|cta|booking|reply|contact|next_step/i.test(key));
+  const contentKeys = editable.filter(key => !actionKeys.includes(key));
+  // Never guess values for dates, prices or other structured placeholders.
+  if (contentKeys.length > 1 || actionKeys.length > 1 || !contentKeys.length) {
+    return { error: "This promotion has multiple distinct fields. Ask an administrator to configure automatic field extraction for this approved template." };
+  }
+  const actionMatch = actionKeys.length
+    ? text.match(/(?:^|[.!?]\s+|\n)(?:book|reserve|reply|call|message|contact|dm|visit|schedule|secure|send|reach out)\b[^\n.!?]*(?:[.!?]|$)/im)
+    : null;
+  const clean = (value: string) => value.trim().replace(/^[\s.!?]+|[\s.!?]+$/g, "").trim();
+  const action = actionMatch ? clean(actionMatch[0]) : "";
+  let offer = actionMatch ? clean(text.replace(actionMatch[0], " ")) : clean(text);
+  if (!offer) offer = clean(text);
+  try {
+    values[contentKeys[0]] = normalizeTemplateParameter(offer, { maxLength: 1024, fieldName: fieldLabel(contentKeys[0]) });
+    if (actionKeys.length) {
+      values[actionKeys[0]] = normalizeTemplateParameter(
+        action || "Reply to this message for details",
+        { maxLength: 1024, fieldName: fieldLabel(actionKeys[0]) },
+      );
+    }
+  } catch (error) {
+    if (error instanceof WhatsAppMessageValidationError) return { error: error.message };
+    throw error;
+  }
+  return { values };
+}
+
 export function renderPromotionMessage(template: PromotionTemplate, values: Record<string, string>) {
   return template.body.replace(placeholder, (_, index) => values[template.variable_keys[Number(index) - 1]]);
 }

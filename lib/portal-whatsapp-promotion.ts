@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerSupabaseConfig } from "@/lib/supabase-server-rest";
 import { CampaignTemplateError, loadAssignedPromotion } from "@/lib/portal-campaign-templates";
 import { normalizeTemplateParameter } from "@/lib/whatsapp-message-normalizer";
-import { mapPromotionMessage, renderPromotionMessage } from "@/lib/whatsapp-promotion-message";
+import { formatPromotionMessage, renderPromotionMessage } from "@/lib/whatsapp-promotion-message";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export type PromotionRequest = {
@@ -42,8 +42,8 @@ export async function runPortalPromotion(
   } catch (reason) {
     return reason instanceof CampaignTemplateError ? error(reason.message, reason.status) : error("Unable to verify the WhatsApp promotion. Try again later.", 503);
   }
-  const mapped = mapPromotionMessage(template, body.message);
-  if (!mapped.values) return error(mapped.error, 400);
+  const mapped = formatPromotionMessage(template, body.message);
+  if (!("values" in mapped) || !mapped.values) return error(mapped.error || "Unable to format this promotion.", 400);
   const { values } = mapped;
 
   const contacts = await admin.from("tenant_customer_contacts").select("id,full_name,phone,whatsapp_consent")
