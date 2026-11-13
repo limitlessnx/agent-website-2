@@ -115,3 +115,32 @@
 
 .progressControls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .progressControls .actionButton{min-height:36px;padding:7px 12px;font-size:.78rem}
+
+/* Distinguish status text from interactive buttons and reduce mobile card chrome. */
+.readinessReady,.readinessPending{display:inline-block;font-size:.78rem;font-weight:650;line-height:1.4;border:0;background:transparent;padding:0;white-space:normal}
+.readinessReady{color:#85dcbf}
+.readinessPending{color:#f0c277}
+.reviewCard{background:var(--admin-card,#131935);border:1px solid var(--admin-border,#303451)}
+.productionOverview{background:transparent;border:0;border-top:1px solid var(--admin-border,#303451);border-bottom:1px solid var(--admin-border,#303451);border-radius:0;padding:17px 0}
+.overviewState{padding:0;border:0;background:transparent;color:#c8b9e9;border-radius:0;font-size:.78rem;white-space:normal}
+.productionSteps span{border:0;border-radius:6px;font-size:.73rem}
+.stepComplete{background:rgba(94,209,167,.075)}
+.stepActive{background:rgba(167,139,250,.09)}
+.stepPending{background:rgba(148,163,184,.045)}
+.inlineAlert{background:rgba(243,165,75,.035);border:1px solid rgba(222,170,106,.28);padding:0;border-radius:10px}
+.inlineAlert summary{font-size:.8rem;font-weight:650;color:#e5bb8b;cursor:pointer;padding:12px 14px;line-height:1.45;min-height:44px}
+.inlineAlert summary:focus-visible{outline:2px solid #b99dff;outline-offset:2px}
+.inlineAlert p{padding:0 14px 13px;margin:0;color:#c9b5ac;font-size:.8rem}
+.audioReviewCompact{background:transparent;border:0;border-top:1px solid var(--admin-border,#303451);padding:16px 0;border-radius:0}
+.workflowSection{background:transparent}
+@media(max-width:900px){
+ .reviewPage{padding-bottom:max(210px,calc(env(safe-area-inset-bottom) + 165px))}
+ .reviewCard{padding:15px!important;border-radius:14px!important}
+ .productionOverview{padding:14px 0;margin-bottom:15px}
+ .productionSteps{gap:5px}
+ .productionSteps span{padding:8px 4px;font-size:.7rem}
+ .reviewLayout{gap:14px}
+ .previewColumn{order:0}
+ .editorColumn{order:1}
+ .overviewHeading p{font-size:.79rem}
+}

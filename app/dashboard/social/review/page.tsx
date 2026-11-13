@@ -103,7 +103,7 @@ export default async function SocialReviewPage() {
                     <h2>{post.title || "Untitled post"}</h2>
                     <p>{post.format} · {post.platforms.join(", ")} · {post.status}</p>
                   </div>
-                  <span className={readiness.ready ? "admin-status live" : "admin-status warning"}>
+                  <span className={readiness.ready ? styles.readinessReady : styles.readinessPending}>
                     {readiness.ready ? "Creative ready" : "Creative incomplete"}
                   </span>
                 </div>
@@ -116,10 +116,10 @@ export default async function SocialReviewPage() {
                 ) : null}
 
                 {isReel ? (
-                  <div className={styles.productionOverview}>
+                  <section className={styles.productionOverview} aria-label="Reel production status">
                     <div className={styles.overviewHeading}>
                       <div><strong>Reel production</strong><p>Prepare the script, generate media, and review before publishing.</p></div>
-                      <span className={styles.overviewState}>{isRendering ? "In progress" : renderError ? "Action needed" : readiness.ready ? "Ready to approve" : "In review"}</span>
+                      <span className={styles.overviewState}>{isRendering ? "Rendering" : renderError ? "Render blocked" : readiness.ready ? "Ready" : "Preparing"}</span>
                     </div>
                     <div className={styles.productionSteps} aria-label="Reel production stages">
                       <span className={hasPlan ? styles.stepComplete : styles.stepPending}>1. Storyboard</span>
@@ -128,15 +128,15 @@ export default async function SocialReviewPage() {
                       <span className={readiness.ready ? styles.stepComplete : styles.stepPending}>4. Approval</span>
                     </div>
                     {renderError ? (
-                      <div className={styles.inlineAlert} role="alert">
-                        <strong>Reel generation needs attention</strong>
+                      <details className={styles.inlineAlert}>
+                        <summary>Last render failed · View error details</summary>
                         <p>{renderError.includes("HTTP 402")
-                          ? "ElevenLabs declined narration generation (HTTP 402). Check ElevenLabs billing, available credits and API access before trying again."
+                          ? "Voice generation is currently unavailable. Reel narration is on hold. You can continue reviewing other content."
                           : renderError}</p>
-                      </div>
+                      </details>
                     ) : null}
                     {isRendering ? <div className={styles.progressControls}><p className={styles.progressMessage} role="status">Reel generation is {renderStatus}. You can check its progress here.</p><ReviewStatusRefresh /></div> : null}
-                  </div>
+                  </section>
                 ) : null}
                 <div className={styles.reviewLayout}>
                   <div className={styles.editorColumn}>
@@ -153,7 +153,7 @@ export default async function SocialReviewPage() {
                     </details>
 
                     <section className={styles.productionActions} aria-label="Generate media">
-                      <div className={styles.sectionHeading}><strong>Production actions</strong><span>Generate your creative before approving it.</span></div>
+                      <div className={styles.sectionHeading}><strong>Next action</strong><span>Choose a button below to generate media. Status labels above are not buttons.</span></div>
                     <div className={styles.generationActions}>
                       {post.format === "image" ? (
                         <form action={generateStaticGraphicAction}>
@@ -171,7 +171,7 @@ export default async function SocialReviewPage() {
                         <>
                           <form action={generateReelPlanAction}>
                             <input type="hidden" name="post_id" value={post.id} />
-                            <ReviewSubmitButton kind="secondary" pendingLabel="Generating storyboard…">{hasPlan ? "Regenerate storyboard" : "Generate storyboard"}</ReviewSubmitButton>
+                            <ReviewSubmitButton kind={hasPlan ? "secondary" : "primary"} pendingLabel="Generating storyboard…">{hasPlan ? "Regenerate storyboard" : "Generate storyboard"}</ReviewSubmitButton>
                           </form>
                           {hasPlan ? (
                             <form action={renderReelAction}>
@@ -241,7 +241,7 @@ export default async function SocialReviewPage() {
                   </div>
 
                   <div className={styles.previewColumn}>
-                    <strong className={styles.previewTitle}>Creative preview</strong>
+                    <strong className={styles.previewTitle}>Media preview</strong>
                     {imageAsset && signedUrls.get(imageAsset.id) ? (
                       <img src={signedUrls.get(imageAsset.id)} alt={post.title} className={styles.previewMedia} />
                     ) : null}
