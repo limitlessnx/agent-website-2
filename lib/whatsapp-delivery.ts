@@ -14,6 +14,7 @@ type SendInput = {
   templatePurpose?: string;
   requestedTemplateName?: string;
   requestedTemplateLanguage?: string;
+  expectedMetaVariableKeys?: readonly string[];
   variables?: Record<string, string | number | null | undefined>;
   propertyImageUrls?: string[];
   propertyVideoUrls?: string[];
@@ -201,6 +202,10 @@ export async function sendWhatsAppMessage(input: SendInput) {
     : null;
   if(useTemplate&&!config) throw new Error(`No active approved WhatsApp template is configured for ${input.organizationId}.`);
   if(useTemplate && input.requestedTemplateLanguage && config?.language_code !== input.requestedTemplateLanguage) throw new Error("The requested template language is not configured.");
+  if (input.expectedMetaVariableKeys && (credentials.providerFamily !== "meta" ||
+      !useTemplate || !exactVariableOrder(config?.variable_keys || [], input.expectedMetaVariableKeys))) {
+    throw new Error("The approved Meta template configuration changed. Review the promotion again.");
+  }
   const templateValues = input.requireProviderApproval
     ? Object.fromEntries((config?.variable_keys || []).map((key, index) => [key, input.variables?.[key] ?? input.variables?.[String(index + 1)]]))
     : input.variables || {};

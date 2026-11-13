@@ -1,153 +1,183 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { mapPromotionMessage, promotionDraft, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
-import CampaignAiWriter from "@/components/CampaignAiWriter";
 
-type Template = { name: string; language: string; category: string; purpose: string; variable_keys: string[]; body: string };
-type Customer = { id: string; full_name: string; phone: string | null; email: string | null };
-const keyFor = (template: Template) => `${template.purpose}:${template.name}:${template.language}`;
-const digits = (phone: string | null) => (phone || "").replace(/\D/g, "");
-
-
-// A single composer may only fill approved variable slots. Fixed Meta template text is immutable.
-const escapeRegex = (value: string) => value.replace(/[^a-zA-Z0-9]/g, char => "\\" + char);
-function mapApprovedMessage(template: Template, message: string): Record<string, string> | null {
-  const parts = template.body.split(/(\{\{\s*\d+\s*\}\})/g);
-  const captureKeys: string[] = [];
-  let pattern = "^";
-  for (const part of parts) {
-    const match = /^\{\{\s*(\d+)\s*\}\}$/.exec(part);
-    if (!match) { pattern += escapeRegex(part); continue; }
-    const key = template.variable_keys[Number(match[1]) - 1];
-    if (!key) return null;
-    if (key === "customer_name") pattern += escapeRegex("{{customer_name}}");
-    else { captureKeys.push(key); pattern += "([\\s\\S]*?)"; }
-  }
-  const result = new RegExp(pattern + "$").exec(message);
-  if (!result) return null;
-  const values: Record<string, string> = {};
-  for (let i = 0; i < captureKeys.length; i++) {
-    const value = result[i + 1]?.trim() || "";
-    if (!value || value.length > 1024 || /\{\{/.test(value)) return null;
-    if (values[captureKeys[i]] && values[captureKeys[i]] !== value) return null;
-    values[captureKeys[i]] = value;
-  }
-  return values;
-}
-function messageSkeleton(template: Template) {
-  return template.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, index: string) => {
-    const key = template.variable_keys[Number(index) - 1];
-    return key === "customer_name" ? "{{customer_name}}" : "";
-  });
-}
+type Customer = { id: string; full_name: string; phone: string | null };
+type Review = {
+  campaignId: string;
+  reviewFingerprint: string;
+  recipientCount: number;
+  sampleName: string;
+  message: string;
+  header: string;
+  footer: string;
+  buttonLabels: string[];
+};
+const digits = (phone: string | null) => (phone || "").replace(/^\+/, "");
 
 export default function XposureCampaignComposer({ customers, canManageContacts }: { customers: Customer[]; canManageContacts: boolean }) {
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [template, setTemplate] = useState<PromotionTemplate | null>(null);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
-  const [templateKey, setTemplateKey] = useState("");
-  const [messageDraft, setMessageDraft] = useState("");
+  const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [templateError, setTemplateError] = useState("");
   const [contactError, setContactError] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [sending, setSending] = useState(false);
-  const [reviewing, setReviewing] = useState(false);
+  const [pending, setPending] = useState<"review" | "send" | null>(null);
+  const [review, setReview] = useState<Review | null>(null);
   const [reload, setReload] = useState(0);
+
   useEffect(() => {
     const controller = new AbortController();
-    async function loadTemplates() {
-      try {
-        const response = await fetch("/api/portal/campaigns/meta-templates", { cache: "no-store", signal: controller.signal });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Unable to verify linked templates.");
-        if (!controller.signal.aborted) {
-          const available: Template[] = (payload.templates || []).filter((item: Template) => ["campaign", "customer_follow_up", "campaign_promotion"].includes(item.purpose));
-          setTemplates(available); setTemplateKey(available[0] ? keyFor(available[0]) : ""); setMessageDraft(""); setTemplateError("");
-        }
-      } catch (reason) { if (!controller.signal.aborted) setTemplateError(reason instanceof Error ? reason.message : "Unable to load templates."); }
-      finally { if (!controller.signal.aborted) setLoading(false); }
+    async function load(path: string) {
+      const response = await fetch(`/api/portal/campaigns/${path}`, { cache: "no-store", signal: controller.signal });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to load campaign information.");
+      return payload;
     }
-    async function loadContacts() {
-      try {
-        const response = await fetch("/api/portal/campaigns/contacts", { cache: "no-store", signal: controller.signal });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Unable to load contacts.");
-        if (!controller.signal.aborted) { setContacts(payload.contacts || []); setContactError(""); }
-      } catch (reason) { if (!controller.signal.aborted) setContactError(reason instanceof Error ? reason.message : "Unable to load contacts."); }
-    }
-    void Promise.all([loadTemplates(), loadContacts()]);
+    void Promise.allSettled([load("meta-templates"), load("contacts")]).then(([promotion, audience]) => {
+      if (controller.signal.aborted) return;
+      setTemplate(promotion.status === "fulfilled" ? promotion.value.promotion : null);
+      setTemplateError(promotion.status === "rejected" ? promotion.reason.message : "");
+      setContacts(audience.status === "fulfilled" ? audience.value.contacts : []);
+      setContactError(audience.status === "rejected" ? audience.reason.message : "");
+      setLoading(false);
+    });
     return () => controller.abort();
   }, [reload]);
-  const template = templates.find(item => keyFor(item) === templateKey);
-  const importedPhones = new Set(contacts.map(contact => digits(contact.phone)).filter(Boolean));
-  const audience = [
-    ...contacts.map(contact => ({ ...contact, key: `contact:${contact.id}`, source: "contact" })),
-    ...customers.filter(customer => !importedPhones.has(digits(customer.phone))).map(customer => ({ ...customer, whatsapp_consent: "unknown", key: `customer:${customer.id}`, source: "customer" })),
-  ];
-  const eligible = audience.filter(contact => contact.phone && contact.whatsapp_consent === "opted_in");
-  const recipients = eligible.filter(contact => selected.includes(contact.key));
-  const parsedVariables = template ? mapApprovedMessage(template, messageDraft) : null;
-  const variables = parsedVariables ?? {};
-  const complete = template && parsedVariables !== null
-    && template.variable_keys.every(key => key === "customer_name" || variables[key]?.trim());
-  const preview = template?.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (match, number) => {
-    const key = template.variable_keys[Number(number) - 1];
-    return key === "customer_name" ? recipients[0]?.full_name || "{{customer_name}}" : variables[key] || match;
-  });
-  function selectTemplate(value: string) { setTemplateKey(value); setMessageDraft(""); setReviewing(false); setNotice(""); }
-  async function send() {
-    if (!template || !recipients.length || !complete) return;
-    setSending(true); setError(""); setNotice("");
+
+  const phoneCounts = new Map<string, number>();
+  for (const contact of contacts) {
+    const phone = digits(contact.phone);
+    if (phone) phoneCounts.set(phone, (phoneCounts.get(phone) || 0) + 1);
+  }
+  const eligible = contacts.filter(contact => contact.whatsapp_consent === "opted_in" &&
+    /^[1-9]\d{7,14}$/.test(digits(contact.phone)) && phoneCounts.get(digits(contact.phone)) === 1);
+  const eligibleIds = new Set(eligible.map(contact => contact.id));
+  const recipients = selected.filter(id => eligibleIds.has(id));
+  const crmOnly = customers.filter(customer => !phoneCounts.has(digits(customer.phone)));
+  const mapped = template ? mapPromotionMessage(template, message) : null;
+  const issues = [
+    !loading && !template && !templateError && "The approved WhatsApp promotion is unavailable.",
+    template && mapped?.error,
+    !loading && !contactError && !eligible.length && "Add contacts with recorded WhatsApp marketing permission.",
+    !loading && !contactError && eligible.length > 0 && !recipients.length && "Select at least one eligible contact.",
+    recipients.length > 0 && !consent && "Confirm marketing consent for the selected contacts.",
+  ].filter((issue): issue is string => typeof issue === "string" && Boolean(issue));
+  const canReview = Boolean(template && mapped?.values && recipients.length && consent && !loading && !templateError && !contactError);
+
+  function changeSelection(next: string[]) {
+    setSelected(next);
+    setConsent(false);
+    setReview(null);
+    setError("");
+    setNotice("");
+  }
+
+  function changeMessage(next: string) {
+    setMessage(next);
+    setReview(null);
+    setError("");
+    setNotice("");
+  }
+
+  function refresh() {
+    changeSelection([]);
+    setLoading(true);
+    setReload(current => current + 1);
+  }
+
+  async function submit(action: "review" | "send") {
+    if (!canReview || pending || (action === "send" && !review)) return;
+    setPending(action);
+    setError("");
+    setNotice("");
     try {
-      const response = await fetch("/api/portal/campaigns/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        templateName: template.name, templatePurpose: template.purpose, languageCode: template.language, variables,
-        contactIds: recipients.filter(contact => contact.source === "contact").map(contact => contact.id),
-        customerIds: recipients.filter(contact => contact.source === "customer").map(contact => contact.id),
-      }) });
+      const response = await fetch("/api/portal/campaigns/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action, message, contactIds: recipients, whatsappConsentConfirmed: consent,
+          campaignId: review?.campaignId, reviewFingerprint: review?.reviewFingerprint,
+        }),
+      });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Campaign request failed.");
-      setNotice(`${payload.accepted} accepted by WhatsApp, ${payload.failed} failed, ${payload.skipped || 0} skipped.${payload.unknown ? ` ${payload.unknown} outcome(s) unknown; check provider records before sending again.` : ""} Acceptance does not confirm delivery.`);
-      setSelected([]); setReviewing(false);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Campaign request failed. Check the result before sending again."); }
-    finally { setSending(false); }
+      if (action === "review") {
+        setReview(payload);
+        return;
+      }
+      changeSelection([]);
+      setNotice(`${payload.accepted} accepted by WhatsApp, ${payload.skipped} skipped.${payload.unknown ? ` ${payload.unknown} unconfirmed. Check delivery records before trying again.` : ""}`);
+    } catch (reason) {
+      setReview(null);
+      setError(reason instanceof Error ? reason.message : "Campaign request failed. Check the result before trying again.");
+    } finally {
+      setPending(null);
+    }
   }
+
   return <div className={styles.workspace}>
-    <div className={styles.columns}>
-      <section className={styles.card} aria-labelledby="campaign-template-heading">
-        <div className={styles.heading}><div><p className={styles.eyebrow}>WhatsApp campaign</p><h2 id="campaign-template-heading">Your linked template</h2><p>Templates linked to Xposure and approved by WhatsApp.</p></div>{template && <span className={styles.badge}>Approved</span>}</div>
-        {loading && <p role="status">Checking linked templates…</p>}
+    <div className={styles.promotionColumns}>
+      <section className={`${styles.card} ${styles.promotionMessage}`} aria-labelledby="campaign-message-heading">
+        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Write your offer using the approved WhatsApp wording.</p></div></div>
+        {loading && <p role="status">Checking the assigned promotion and loading contacts…</p>}
         {templateError && <p className={styles.error} role="alert">{templateError}</p>}
-        {!loading && !templateError && !templates.length && <p className={styles.hint}>No linked, approved campaign template is available. Ask your administrator to link a campaign or customer follow-up template.</p>}
-        <label className={styles.field}>Linked template<select value={templateKey} disabled={sending || loading || !templates.length} onChange={event => selectTemplate(event.target.value)}><option value="" disabled>Choose a linked template</option>{templates.map(item => <option key={keyFor(item)} value={keyFor(item)}>{item.name} · {item.language}</option>)}</select></label>
-        {template && <>
-          <div className={styles.templateMeta}><span>{template.category || "WhatsApp template"}</span><span>{template.language}</span><span>Linked to Xposure</span></div>
-          {parsedVariables && <div className={styles.message} aria-label="WhatsApp message preview"><span>Message preview</span><p>{preview}</p></div>}
-          <div className={styles.fields}>
-            <label className={styles.field}>Campaign message<textarea rows={6} value={messageDraft} maxLength={4000} disabled={sending} placeholder="Write or paste the message you want clients to receive." onChange={event => { setMessageDraft(event.target.value); setReviewing(false); }} aria-describedby="approved-message-hint" /></label>
-            <p id="approved-message-hint" className={styles.hint}>{parsedVariables ? "Review the preview. Each client’s name is filled in automatically." : "Write your message, then choose Fit to WhatsApp template before reviewing the campaign."}</p>
-            {!messageDraft && <button type="button" className={styles.secondary} disabled={sending} onClick={() => setMessageDraft(messageSkeleton(template))}>Start from template</button>}
-          </div>
-          <CampaignAiWriter key={templateKey} endpoint="/api/portal/campaigns/writeup" context={{ templateName: template.name, templatePurpose: template.purpose, language: template.language }} values={variables} message={messageDraft} disabled={sending || reviewing} onApply={suggested => { const next = template.body.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, index: string) => { const key = template.variable_keys[Number(index) - 1]; return key === "customer_name" ? "{{customer_name}}" : suggested[key] || variables[key] || ""; }); setMessageDraft(next); setReviewing(false); }} />
-        </>}
-        <div className={styles.sendbar}><div><strong>{recipients.length} recipient{recipients.length === 1 ? "" : "s"} selected</strong><small>Only contacts with marketing permission can be selected.</small></div><button type="button" className={styles.primary} onClick={() => { setReviewing(true); setNotice(""); setError(""); }} disabled={!complete || !recipients.length || sending || Boolean(contactError) || Boolean(templateError)}>Review campaign</button></div>
-        {reviewing && <div className={styles.confirm} role="region" aria-label="Confirm campaign"><h3>Confirm your campaign</h3><p>Send <strong>{template?.name}</strong> to {recipients.length} selected contact{recipients.length === 1 ? "" : "s"}? Consent and template approval will be checked again.</p><div className={styles.importActions}><button type="button" className={styles.primary} onClick={() => void send()} disabled={sending}>{sending ? "Submitting…" : "Send campaign"}</button><button type="button" className={styles.secondary} disabled={sending} onClick={() => setReviewing(false)}>Cancel campaign</button></div></div>}
-        {notice && <p className={styles.success} role="status">{notice}</p>}{error && <p className={styles.error} role="alert">{error}</p>}
+        {template && <div className={styles.promotionFields}>
+          <label className={styles.field}>Message<textarea rows={7} value={message} maxLength={4000} disabled={Boolean(pending)} onChange={event => changeMessage(event.target.value)} aria-describedby="promotion-message-hint" /></label>
+          <p id="promotion-message-hint" className={styles.hint}>Replace the marked fields with your offer. Keep the approved wording{template.variable_keys.includes("customer_name") ? " and {{customer_name}}" : ""}.</p>
+          <button type="button" className={styles.secondary} disabled={Boolean(pending)} onClick={() => changeMessage(promotionDraft(template))}>Use approved wording</button>
+        </div>}
+        {(contactError || templateError || error) && <div className={styles.importActions}><button type="button" className={styles.secondary} disabled={loading || Boolean(pending)} onClick={refresh}>Refresh campaign information</button></div>}
       </section>
-      <section className={styles.card} aria-labelledby="campaign-audience-heading">
-        <div className={styles.heading}><div><p className={styles.eyebrow}>Audience</p><h2 id="campaign-audience-heading">Studio contacts</h2><p>{eligible.length} eligible · {audience.length} total contacts</p></div><button type="button" className={styles.textButton} disabled={sending || !eligible.length} onClick={() => { setSelected(recipients.length === eligible.length ? [] : eligible.map(contact => contact.key)); setReviewing(false); }}>{recipients.length === eligible.length && eligible.length ? "Clear selection" : "Select eligible"}</button></div>
+
+      <section className={`${styles.card} ${styles.promotionAudience}`} aria-labelledby="campaign-audience-heading">
+        <div className={styles.heading}><div><h2 id="campaign-audience-heading">Studio contacts</h2><p>{eligible.length} eligible · {contacts.length + crmOnly.length} total</p></div>
+          <button type="button" className={styles.textButton} disabled={loading || Boolean(pending) || !eligible.length} onClick={() => changeSelection(recipients.length === eligible.length ? [] : eligible.map(contact => contact.id))}>{recipients.length === eligible.length && eligible.length ? "Clear selection" : "Select eligible"}</button>
+        </div>
         {contactError && <p className={styles.error} role="alert">{contactError}</p>}
-        <div className={styles.audience}>{audience.map(contact => <label className={styles.contact} key={contact.key}>
-          <input type="checkbox" checked={selected.includes(contact.key)} disabled={sending || !contact.phone || contact.whatsapp_consent !== "opted_in"} onChange={event => { setSelected(current => event.target.checked ? [...current, contact.key] : current.filter(key => key !== contact.key)); setReviewing(false); }} />
-          <span><strong>{contact.full_name}</strong><small>{contact.phone || "No phone number"}</small><small className={contact.whatsapp_consent === "opted_in" ? styles.optedIn : ""}>{contact.whatsapp_consent === "opted_in" ? "Marketing permission recorded" : contact.whatsapp_consent === "opted_out" ? "Opted out · excluded" : "No marketing permission · excluded"}</small></span>
-        </label>)}</div>
-        {!audience.length && !contactError && <p className={styles.empty}>No studio contacts yet. Add contacts below to build your audience.</p>}
-        {(contactError || templateError) && <button type="button" className={styles.secondary} onClick={() => setReload(current => current + 1)}>Retry loading</button>}
+        <div className={styles.audience}>
+          {contacts.map(contact => <label className={styles.contact} key={contact.id}>
+            <input type="checkbox" checked={eligibleIds.has(contact.id) && selected.includes(contact.id)} disabled={loading || Boolean(pending) || !eligibleIds.has(contact.id)} onChange={event => changeSelection(event.target.checked ? [...selected, contact.id] : selected.filter(id => id !== contact.id))} />
+            <span><strong>{contact.full_name}</strong><small>{contact.phone || "No phone number"}</small><small className={eligibleIds.has(contact.id) ? styles.optedIn : ""}>{eligibleIds.has(contact.id) ? "Marketing permission recorded" : contact.whatsapp_consent === "opted_out" ? "Opted out · excluded" : contact.whatsapp_consent === "opted_in" ? "Invalid or duplicate number · excluded" : "No marketing permission · excluded"}</small></span>
+          </label>)}
+          {crmOnly.map(customer => <div className={styles.contact} key={`crm:${customer.id}`}><span><strong>{customer.full_name}</strong><small>{customer.phone || "No phone number"}</small><small>No marketing permission · excluded</small></span></div>)}
+        </div>
+        {!contacts.length && !crmOnly.length && !contactError && !loading && <p className={styles.empty}>No studio contacts yet. Add contacts below to build your audience.</p>}
+      </section>
+
+      <section className={`${styles.card} ${styles.promotionReview}`} aria-labelledby="campaign-review-heading" aria-busy={Boolean(pending)}>
+        <div className={styles.heading}><div><h2 id="campaign-review-heading">Review and send</h2><p>{recipients.length} selected</p></div></div>
+        <label className={styles.consent}>
+          <input type="checkbox" checked={consent} disabled={loading || Boolean(pending) || !recipients.length} onChange={event => { setConsent(event.target.checked); setReview(null); setError(""); }} />
+          <span>I confirm that the selected contacts gave Xposure permission to send them marketing messages on WhatsApp.</span>
+        </label>
+        {issues.length > 0 && <ul id="promotion-review-issues" className={styles.reviewIssues} aria-live="polite">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
+        {(templateError || contactError) && <p className={styles.hint}>Refresh campaign information before reviewing.</p>}
+        {!review && <button type="button" className={styles.primary} disabled={!canReview || Boolean(pending)} aria-describedby={issues.length ? "promotion-review-issues" : undefined} onClick={() => void submit("review")}>{pending === "review" ? "Checking campaign…" : "Review campaign"}</button>}
+        {review && <div className={styles.confirm} role="region" aria-label="Final campaign preview" tabIndex={-1} ref={element => { element?.focus(); }}>
+          <h3>Final WhatsApp preview</h3>
+          <p>Preview for {review.sampleName} · {review.recipientCount} selected</p>
+          <div className={styles.message}>
+            {review.header && <strong>{review.header}</strong>}
+            <p>{review.message}</p>
+            {review.footer && <small>{review.footer}</small>}
+            {review.buttonLabels.map((label, index) => <span className={styles.previewButton} key={index}>{label}</span>)}
+          </div>
+          <div className={styles.importActions}>
+            <button type="button" className={styles.primary} disabled={Boolean(pending)} onClick={() => void submit("send")}>{pending === "send" ? "Submitting…" : "Send campaign"}</button>
+            <button type="button" className={styles.secondary} disabled={Boolean(pending)} onClick={() => setReview(null)}>Back to editing</button>
+          </div>
+        </div>}
+        {notice && <p className={styles.success} role="status">{notice}</p>}
+        {error && <p className={styles.error} role="alert">{error}</p>}
       </section>
     </div>
-    {canManageContacts ? <CampaignContactImport onImported={added => { setContacts(current => [...added, ...current.filter(contact => !added.some(item => item.id === contact.id))]); setReviewing(false); }} /> : <p className={styles.hint}>A team member with contact-management permission can add phone contacts here.</p>}
+    {canManageContacts ? <fieldset className={styles.promotionImport} disabled={Boolean(pending)}><CampaignContactImport onImported={added => { setContacts(current => [...added, ...current.filter(contact => !added.some(item => item.id === contact.id))]); changeSelection([]); }} /></fieldset> : <p className={styles.hint}>A team member with contact-management permission can add phone contacts here.</p>}
   </div>;
 }

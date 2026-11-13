@@ -18,25 +18,30 @@ test("photography organizations use Xposure vocabulary and dashboard composition
 
 test("Xposure campaign APIs remain tenant scoped and do not expose Meta credentials", () => {
   const templates = read("app/api/portal/campaigns/meta-templates/route.ts");
+  const inventory = read("lib/portal-campaign-templates.ts");
   const send = read("app/api/portal/campaigns/send/route.ts");
+  const promotion = read("lib/portal-whatsapp-promotion.ts");
   assert.match(templates, /getClientSession/);
-  assert.match(templates, /organization_id.*session\.organizationId/);
-  assert.match(templates, /get_organization_integration_credentials/);
-  assert.match(templates, /Authorization: `Bearer \$\{accessToken\}`/);
+  assert.match(templates, /loadAssignedPromotion\(session\.organizationId\)/);
+  assert.match(inventory, /get_organization_integration_credentials/);
+  assert.match(inventory, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.doesNotMatch(templates, /NextResponse\.json\([^\n]*accessToken/);
   assert.match(send, /requirePortalPermission/);
   assert.match(send, /assertFluxFeatureAccess/);
   assert.match(send, /crm_customers/);
   assert.match(send, /\.eq\("organization_id", session\.organizationId\)/);
-  assert.match(send, /whatsapp_delivery_attempts/);
+  assert.match(promotion, /\.eq\("organization_id", organizationId\)/);
+  assert.match(promotion, /campaign\.whatsapp_marketing_consent_confirmed/);
 });
 
 test("Xposure campaign UI uses approved templates and explicit send confirmation", () => {
-  const page = read("app/portal/campaigns/CampaignComposer.tsx");
+  const page = read("app/portal/campaigns/XposureCampaignComposer.tsx");
   const route = read("app/portal/campaigns/page.tsx");
   assert.match(page, /meta-templates/);
-  assert.match(page, /approved Meta templates/);
-  assert.match(page, /window\.confirm/);
+  assert.match(page, /approved WhatsApp wording/);
+  assert.match(page, /whatsappConsentConfirmed/);
+  assert.match(page, /Final WhatsApp preview/);
+  assert.doesNotMatch(page, /Fit to WhatsApp template|CampaignAiWriter/);
   assert.match(page, /aria-busy/);
   assert.match(route, /requirePortalPermission/);
   assert.match(route, /photography-studio/);

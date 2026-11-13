@@ -82,7 +82,7 @@ function routeHarness(kind, options = {}) {
   const request = extra => ({ json: async () => ({ ...input, campaignType: 'limitless_realty_reminder', templateName: template.name, language: template.language, templatePurpose: template.purpose, organizationId: 'forged', body: 'forged template', ...extra }) });
   return { route, state, request };
 }
-for (const kind of ['portal', 'limitless']) {
+for (const kind of ['limitless']) {
   test(`${kind}: anonymous, inactive, and other workspaces cannot draft`, async () => {
     for (const [options, status] of [[{ anonymous: true }, 401], [{ inactive: true }, 403], [{ otherTenant: true }, 403], ...(kind === 'portal' ? [[{ denied: true }, 403]] : [])]) {
       const h = routeHarness(kind, options); assert.equal((await h.route.POST(h.request())).status, status); assert.equal(h.state.drafts.length, 0);
