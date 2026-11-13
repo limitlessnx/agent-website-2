@@ -187,7 +187,7 @@ export default async function SocialReviewPage() {
 
                     {isReel ? (
                       <details className={styles.workflowSection} open={Boolean(renderError)}>
-                        <summary><span><strong>Voice & soundtrack</strong><small>Premium male · Captions off · {musicReady ? "Music ready" : "Music not selected"}</small></span></summary>
+                        <summary><span><strong>Voice & soundtrack</strong><small>George (built-in) · Captions off · {musicReady ? "Music ready" : "Music not selected"}</small></span></summary>
                       <form action={selectReelMusicAction} style={{ display: "grid", gap: 8, marginTop: 14 }}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <label style={{ display: "grid", gap: 6 }}>
@@ -207,7 +207,7 @@ export default async function SocialReviewPage() {
                     ) : null}
                     {isReel && hasPlan ? (
                       <div className={styles.audioReviewCompact}>
-                        <strong>Reel narration review · Premium male</strong>
+                        <strong>Reel narration review · George (built-in)</strong>
                         <span>{voiceVerified ? "Audio verified in rendered MP4" : "Narration not yet verified"} · Captions off · {musicReady ? "Licensed background music ready" : "Licensed music missing"}</span>
 
                         <span>Listen to the voice clips on the right, then approve this specific narration. Regeneration resets approval.</span>
@@ -260,7 +260,7 @@ export default async function SocialReviewPage() {
                         <strong>Voice previews</strong>
                         {voiceAssets.map((asset, index) => signedUrls.get(asset.id) ? (
                           <div key={asset.id} style={{ display: "grid", gap: 5 }}>
-                            <span>Scene {Number(asset.metadata?.scene_index ?? index) + 1} · Premium male</span>
+                            <span>Scene {Number(asset.metadata?.scene_index ?? index) + 1} · George (built-in)</span>
                             <audio controls preload="none" src={signedUrls.get(asset.id)} style={{ width: "100%" }} />
                           </div>
                         ) : null)}
