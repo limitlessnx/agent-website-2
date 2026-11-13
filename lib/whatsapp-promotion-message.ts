@@ -82,15 +82,18 @@ export function formatPromotionMessage(template: PromotionTemplate, draft: unkno
   if (contentKeys.length > 1 || actionKeys.length > 1 || !contentKeys.length) {
     return { error: "This promotion has multiple distinct fields. Ask an administrator to configure automatic field extraction for this approved template." };
   }
-  const actionMatch = text.match(/(?:^|[.!?]\s+|\n)(?:book|reserve|reply|call|message|contact|dm|visit|schedule|secure|send|reach out)\b[^\n.!?]*(?:[.!?]|$)/im);
-  let offer = text;
-  if (actionKeys.length && actionMatch) offer = text.replace(actionMatch[0], " ").replace(/\s+/g, " ").trim();
-  if (!offer) offer = text;
+  const actionMatch = actionKeys.length
+    ? text.match(/(?:^|[.!?]\s+|\n)(?:book|reserve|reply|call|message|contact|dm|visit|schedule|secure|send|reach out)\b[^\n.!?]*(?:[.!?]|$)/im)
+    : null;
+  const clean = (value: string) => value.trim().replace(/^[\s.!?]+|[\s.!?]+$/g, "").trim();
+  const action = actionMatch ? clean(actionMatch[0]) : "";
+  let offer = actionMatch ? clean(text.replace(actionMatch[0], " ")) : clean(text);
+  if (!offer) offer = clean(text);
   try {
     values[contentKeys[0]] = normalizeTemplateParameter(offer, { maxLength: 1024, fieldName: fieldLabel(contentKeys[0]) });
     if (actionKeys.length) {
       values[actionKeys[0]] = normalizeTemplateParameter(
-        actionMatch?.[0]?.trim() || "Reply to this message for details",
+        action || "Reply to this message for details",
         { maxLength: 1024, fieldName: fieldLabel(actionKeys[0]) },
       );
     }
