@@ -69,6 +69,7 @@ export type SocialPublishJob = {
   max_attempts: number;
   external_post_id: string | null;
   last_error: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
