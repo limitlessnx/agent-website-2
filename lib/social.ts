@@ -197,7 +197,6 @@ export async function transitionSocialPost(postId: string, nextStatus: SocialPos
   }
 
   const patch: Record<string, unknown> = { status: nextStatus };
-  if (nextStatus === "approved") patch.approved_at = new Date().toISOString();
   if (nextStatus === "draft" || nextStatus === "review") patch.approved_at = null;
 
   const { error } = await supabase
