@@ -41,6 +41,49 @@ async function updateAttempt(providerMessageId: string, patch: Record<string, un
   return !error;
 }
 
+/**
+ * Persist provider-dispatch acceptance separately from worker execution.
+ * A successful tasks.trigger only means the queue accepted the request; it
+ * cannot establish that Maia started or sent a reply.
+ * Do not put the customer message, phone number or credentials in this log.
+ */
+async function recordWhatsAppTriggerDispatch(input: {
+  requestId: string;
+  organizationId: string;
+  agentId: string;
+  messageId: string;
+  taskId: string;
+  triggerRunId?: string | null;
+  outcome: "accepted" | "failed";
+  errorType?: string;
+}) {
+  try {
+    const { error } = await createAdminClient().from("whatsapp_webhook_event_logs").insert({
+      request_id: input.requestId,
+      event_type: input.outcome === "accepted" ? "trigger_dispatch_accepted" : "trigger_dispatch_failed",
+      organization_id: input.organizationId,
+      provider_message_id: input.messageId,
+      http_status: input.outcome === "accepted" ? 202 : 500,
+      details: {
+        agent_id: input.agentId,
+        task_id: input.taskId,
+        trigger_run_id: input.triggerRunId || null,
+        outcome: input.outcome,
+        ...(input.errorType ? { error_type: input.errorType } : {}),
+      },
+    });
+    if (error) console.error("[whatsapp-webhook] dispatch audit unavailable", {
+      organizationId: input.organizationId,
+      errorCode: error.code || "unknown",
+    });
+  } catch (auditError) {
+    console.error("[whatsapp-webhook] dispatch audit write threw", {
+      organizationId: input.organizationId,
+      errorType: auditError instanceof Error ? auditError.name : "unknown",
+    });
+  }
+}
+
 async function resolveWhatsAppTenant(phoneNumberId: string) {
   const admin = createAdminClient();
   const { data: integrations, error: integrationsError } = await admin
@@ -505,18 +548,49 @@ export async function POST(request: NextRequest) {
           // the runtime's durable event ledger. Meta may redeliver the same webhook;
           // this prevents needless duplicate Trigger runs before the ledger is reached.
           const idempotencyKey = `whatsapp-inbound:${tenant.organizationId}:${tenant.agentId}:${messageId}`;
-          if (tenant.mode === "maia") {
-            await tasks.trigger("maia-process-inbound-message", inboundPayload, { idempotencyKey });
-          } else {
-            await tasks.trigger("tenant-whatsapp-process-inbound-message", {
+          const taskId = tenant.mode === "maia"
+            ? "maia-process-inbound-message"
+            : "tenant-whatsapp-process-inbound-message";
+          const handle = tenant.mode === "maia"
+            ? await tasks.trigger("maia-process-inbound-message", inboundPayload, { idempotencyKey })
+            : await tasks.trigger("tenant-whatsapp-process-inbound-message", {
               ...inboundPayload,
               sourceSystemId: tenant.sourceSystemId,
             }, { idempotencyKey });
-          }
+          await recordWhatsAppTriggerDispatch({
+            requestId: request.headers.get("x-vercel-id") || messageId,
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            messageId,
+            taskId,
+            triggerRunId: handle.id,
+            outcome: "accepted",
+          });
           inboundQueued += 1;
-          console.info("[whatsapp-webhook] inbound dispatched", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, messageIdPresent: Boolean(messageId) });
+          console.info("[whatsapp-webhook] inbound dispatched", {
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            mode: tenant.mode,
+            triggerRunId: handle.id,
+            messageIdPresent: Boolean(messageId),
+            workerStarted: false,
+          });
         } catch (error) {
-          console.error("[whatsapp-webhook] inbound dispatch failed", { organizationId: tenant.organizationId, agentId: tenant.agentId, mode: tenant.mode, errorType: error instanceof Error ? error.name : "unknown" });
+          await recordWhatsAppTriggerDispatch({
+            requestId: request.headers.get("x-vercel-id") || messageId,
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            messageId,
+            taskId: tenant.mode === "maia" ? "maia-process-inbound-message" : "tenant-whatsapp-process-inbound-message",
+            outcome: "failed",
+            errorType: error instanceof Error ? error.name : "unknown",
+          });
+          console.error("[whatsapp-webhook] inbound dispatch failed", {
+            organizationId: tenant.organizationId,
+            agentId: tenant.agentId,
+            mode: tenant.mode,
+            errorType: error instanceof Error ? error.name : "unknown",
+          });
           throw error;
         }
       }
