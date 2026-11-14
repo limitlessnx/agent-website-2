@@ -224,6 +224,9 @@ export async function scheduleSocialPost(input: {
   const { supabase, organizationId } = await requireTenant();
   const scheduledAt = new Date(input.scheduledFor);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error("Choose a valid publication time.");
+  if (scheduledAt.getTime() <= Date.now()) {
+    throw new Error("Choose a future publication time. Past times cannot be scheduled.");
+  }
 
   const { data: post, error: postError } = await supabase
     .from("social_posts")
@@ -239,14 +242,14 @@ export async function scheduleSocialPost(input: {
   const postPlatforms = asStringArray(post.platforms);
   if (!postPlatforms.length) throw new Error("Choose at least one publishing platform.");
 
-  const requestedPlatforms = (input.platforms || []).filter(
+  // Explicit platform selection is required. Falling back to every platform
+  // when a checkbox is unchecked can accidentally schedule an unintended target.
+  const publishPlatforms = [...new Set(input.platforms || [])].filter(
     (platform) => postPlatforms.includes(platform),
   );
-  const publishPlatforms = requestedPlatforms.length
-    ? requestedPlatforms
-    : (postPlatforms as SocialPlatform[]);
-
-  if (!publishPlatforms.length) throw new Error("Choose at least one publishing platform.");
+  if (!publishPlatforms.length) {
+    throw new Error("Select Instagram before scheduling this post.");
+  }
 
   const unsupported = publishPlatforms.filter(
     (platform) => platform !== "instagram",

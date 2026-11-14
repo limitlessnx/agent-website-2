@@ -124,7 +124,7 @@ export default async function SocialPostsPage() {
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
                         {post.platforms.includes("facebook") ? (
                           <span className="admin-status">
-                            Facebook handled by Instagram auto-share
+                            Facebook delivery depends on your Instagram-to-Facebook sharing settings; verify on Facebook.
                           </span>
                         ) : null}
                         {post.platforms.includes("instagram") ? (
