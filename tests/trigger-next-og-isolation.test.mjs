@@ -6,12 +6,14 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 test("Trigger carousel worker never bundles Next.js RSC-only OG wrapper", () => {
   const worker = read("src/trigger/social-carousel-renderer.tsx");
-  const renderer = read("lib/social-carousels.tsx");
+  const renderer = read("lib/social-carousel-core.tsx");
   assert.match(worker, /generateCarouselPlan, renderSlide/);
   assert.doesNotMatch(renderer, /from ["']next\/og["']/);
-  assert.match(renderer, /from "next\/dist\/compiled\/@vercel\/og\/index\.node\.js"/);
+  assert.match(renderer, /await import\("next\/dist\/compiled\/@vercel\/og\/index\.node\.js"\)/);
   assert.match(renderer, /FLUX_SOCIAL_CAROUSEL_TEMPLATE = "fluxknight-social-carousel-v1"/);
   assert.match(renderer, /width: WIDTH, height: HEIGHT/);
+  assert.match(worker, /from "@\/lib\/social-carousel-core"/);
+  assert.doesNotMatch(worker, /from "@\/lib\/social-carousels"/);
 });
 
 test("Standalone Node ImageResponse API remains typed without runtime Next imports", () => {
