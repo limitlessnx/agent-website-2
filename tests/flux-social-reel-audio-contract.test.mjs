@@ -37,7 +37,7 @@ test("Voice previews require human approval and cannot bypass the general post t
   assert.match(review, /reel_music_status !== "ready"/);
   assert.match(review, /reel_voice_review_status !== "approved"/);
   assert.match(review, /approveReelVoiceReview/);
-  assert.match(transitions, /Approve verified Reel narration/);
+  assert.match(transitions, /Open Review & Approval to inspect the final media before approving/);
   assert.match(reviewPage, /Voice previews/);
   assert.match(reviewPage, /Approve narration and music/);
 });

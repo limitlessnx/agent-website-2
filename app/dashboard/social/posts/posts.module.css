@@ -20,3 +20,7 @@
 .scheduleForm{display:grid;gap:12px;padding:15px;border:1px solid var(--admin-border,#343858);border-radius:12px;margin-top:8px}
 .scheduleForm input,.scheduleForm select{min-height:44px;max-width:100%;min-width:0}
 @media(max-width:640px){.postsPage{padding-bottom:190px}.postCard{padding:16px;border-radius:14px}.postTitle{font-size:1.02rem}.actions{display:grid;grid-template-columns:minmax(0,1fr);gap:9px}.actions form,.actions button,.scheduleForm button{width:100%}.scheduleForm{padding:12px}.scheduleForm>div{display:grid!important;grid-template-columns:minmax(0,1fr);gap:10px!important}.scheduleForm input,.scheduleForm select{width:100%;font-size:16px}.captionPreview{font-size:.84rem}}
+
+.reviewLink{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 16px;border-radius:11px;background:linear-gradient(105deg,#7c3aed,#9f78ee);color:white;font-size:.86rem;font-weight:750;text-decoration:none;max-width:max-content}
+.reviewLink:focus-visible{outline:2px solid #c4b5fd;outline-offset:3px}
+@media(max-width:640px){.reviewLink{width:100%;max-width:100%}}
