@@ -161,15 +161,16 @@ export const fluxSocialRenderCarousel = task({
       const message = error instanceof Error ? error.message : String(error);
       // Remove only assets created in this attempt. Existing or previously
       // approved media is not touched, even when a retry is requested.
+      const cleanupErrors: string[] = [];
       if (insertedAssetIds.length) {
         const { error: cleanupError } = await supabase.from("social_assets").delete()
           .eq("organization_id", payload.organizationId)
           .eq("post_id", post.id).in("id", insertedAssetIds);
-        if (cleanupError) throw new Error(`Carousel failed: ${message}. Asset cleanup failed: ${cleanupError.message}`);
+        if (cleanupError) cleanupErrors.push(`Asset cleanup: ${cleanupError.message}`);
       }
       if (uploadedPaths.length) {
         const { error: storageCleanupError } = await supabase.storage.from(BUCKET).remove(uploadedPaths);
-        if (storageCleanupError) throw new Error(`Carousel failed: ${message}. Storage cleanup failed: ${storageCleanupError.message}`);
+        if (storageCleanupError) cleanupErrors.push(`Storage cleanup: ${storageCleanupError.message}`);
       }
       // Retain any prior approved asset set. A failed new render never passes review.
       const { data: currentPost } = await supabase.from("social_posts").select("metadata")
@@ -178,7 +179,7 @@ export const fluxSocialRenderCarousel = task({
         metadata: {
           ...((currentPost?.metadata || {}) as Record<string, unknown>),
           carousel_render_status: "failed",
-          carousel_render_error: message,
+          carousel_render_error: [message, ...cleanupErrors].join("; "),
         },
       }).eq("organization_id", payload.organizationId).eq("id", post.id)
         .in("status", ["draft", "review"]);
