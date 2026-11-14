@@ -285,7 +285,7 @@ export default async function SocialReviewPage() {
                     ) : null}
 
                     <section className={styles.reviewActions} aria-label="Final approval">
-                      <div className={styles.sectionHeading}><strong>2. Final decision</strong><span>Approval is available only after the complete media preview is ready. Scheduling is a separate step.</span></div>
+                      <div className={styles.sectionHeading}><strong>2. Final decision</strong><span>Approval requires the complete preview. Approved Fluxknight Instagram posts are scheduled automatically; other destinations retain manual scheduling.</span></div>
                       {post.status === "review" ? (
                         <form action={approveSocialPostReviewAction}>
                           <input type="hidden" name="post_id" value={post.id} />
