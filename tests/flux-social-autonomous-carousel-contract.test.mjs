@@ -13,11 +13,11 @@ test("weekly Flux Social plan automatically queues carousels but not publishing"
 });
 
 test("Fluxknight carousel template and ordering are preserved", () => {
-  const renderer = read("lib/social-carousels.tsx");
+  const renderer = read("lib/social-carousel-core.tsx");
   const worker = read("src/trigger/social-carousel-renderer.tsx");
   const publisher = read("src/trigger/social-publisher.ts");
   assert.match(renderer, /FLUX_SOCIAL_CAROUSEL_TEMPLATE = "fluxknight-social-carousel-v1"/);
-  assert.match(renderer, /position: i \+ 1/);
+  assert.match(read("lib/social-carousels.tsx"), /position: i \+ 1/);
   assert.match(worker, /FLUX_SOCIAL_CAROUSEL_TEMPLATE/);
   assert.match(worker, /carousel_asset_ids: ids/);
   assert.match(worker, /status: "review", approved_at: null/);
