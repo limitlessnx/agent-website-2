@@ -75,7 +75,7 @@ function publishTargets(schedule: ScheduledPost, post: SocialPost) {
 }
 
 function assetPosition(asset: SocialAssetRow) {
-  const value = Number(asset.metadata?.position);
+  const value = Number(asset.metadata?.position ?? asset.metadata?.carousel_index);
   return Number.isFinite(value) ? value : 0;
 }
 
@@ -201,7 +201,20 @@ export const fluxSocialPublishPost = task({
       .eq("status", "ready");
 
     if (assetError) throw assetError;
-    const assets = normalizeAssets((rawAssets || []) as SocialAssetRow[]);
+    const availableAssets = (rawAssets || []) as SocialAssetRow[];
+    const activeCarouselIds = stringArray(post.metadata?.carousel_asset_ids);
+    if (post.format === "carousel" && activeCarouselIds.length < 2) {
+      throw new Error("Carousel has no approved active slide set. Return it to Review.");
+    }
+    // Regenerations may leave old slide objects in storage for rollback. Publish
+    // only the slide IDs attached to the approved post, in their planned order.
+    const selectedAssets = post.format === "carousel"
+      ? availableAssets.filter((asset) => activeCarouselIds.includes(asset.id))
+      : availableAssets;
+    const assets = normalizeAssets(selectedAssets);
+    if (post.format === "carousel" && assets.length !== activeCarouselIds.length) {
+      throw new Error("The approved carousel slide set is incomplete; refusing to publish stale slides.");
+    }
 
     const metaConfig = await metaPublisherConfigFromIntegration(
       supabase,
