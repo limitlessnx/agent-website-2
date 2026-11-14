@@ -58,7 +58,9 @@ export async function approveSocialPostReviewAction(formData: FormData) {
   // Roll out to the Fluxknight brand first. Other tenants retain their
   // existing manual workflow until their own publishing policy is configured.
   const settings = (brand.metadata || {}) as Record<string, unknown>;
-  if (brand.name === "Fluxknight" && settings.auto_schedule_enabled !== false &&
+  if (organizationId === "15046426-e520-438b-8694-7662a6986efb" &&
+      brand.id === "a330b65a-d5b2-45f3-b211-451616f2fa8d" &&
+      settings.auto_schedule_enabled !== false &&
       post.status === "approved") {
     const platforms = Array.isArray(post.platforms) ? post.platforms : [];
     if (platforms.includes("instagram")) {
