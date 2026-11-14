@@ -4,8 +4,9 @@ import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { uploadSocialAsset } from "@/lib/social-assets";
 import { requireTenant } from "@/lib/tenant";
 
-const WIDTH = 1080;
-const HEIGHT = 1350;
+export const WIDTH = 1080;
+export const HEIGHT = 1350;
+export const FLUX_SOCIAL_CAROUSEL_TEMPLATE = "fluxknight-social-carousel-v1";
 
 export type CarouselSlide = {
   type: "hook" | "problem" | "insight" | "example" | "solution" | "cta";
@@ -65,7 +66,7 @@ function clamp(value: string, max: number) {
   return text.length <= max ? text : `${text.slice(0, max - 1).trim()}…`;
 }
 
-async function generateCarouselPlan(input: {
+export async function generateCarouselPlan(input: {
   title: string;
   hook: string;
   caption: string;
@@ -118,7 +119,7 @@ async function generateCarouselPlan(input: {
   return { plan: parsed, model };
 }
 
-function renderSlide(input: {
+export function renderSlide(input: {
   brandName: string;
   logoUrl: string | null;
   slide: CarouselSlide;
@@ -216,8 +217,9 @@ export async function generateCarouselForPost(postId: string) {
       height: HEIGHT,
       metadata: {
         renderer: "next-image-response-v1",
-        template: "fluxknight-social-carousel-v1",
+        template: FLUX_SOCIAL_CAROUSEL_TEMPLATE,
         carousel_index: i + 1,
+        position: i + 1,
         carousel_total: plan.slides.length,
         slide_type: slide.type,
         generated_from: slide,
@@ -239,7 +241,7 @@ export async function generateCarouselForPost(postId: string) {
         carousel_asset_ids: carouselAssetIds,
         primary_asset_id: carouselAssetIds[0] || null,
         carousel_plan: plan,
-        carousel_template: "fluxknight-social-carousel-v1",
+        carousel_template: FLUX_SOCIAL_CAROUSEL_TEMPLATE,
         carousel_generated_at: new Date().toISOString(),
       },
     })

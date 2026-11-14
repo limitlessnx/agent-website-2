@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { tasks } from "@trigger.dev/sdk";
 import { redirect } from "next/navigation";
 import { generateWeeklySocialPlan } from "@/lib/social-ai";
 import {
@@ -162,18 +163,45 @@ export async function generateWeeklySocialPlanAction() {
       model,
       generation_phase: "3.1",
       generated_at: generatedAt,
+      ...(post.format === "carousel" ? {
+        carousel_render_status: "queued",
+        carousel_template: "fluxknight-social-carousel-v1",
+      } : {}),
     },
   }));
 
-  const { error: postsError } = await supabase.from("social_posts").insert(posts);
+  const { data: createdPosts, error: postsError } = await supabase.from("social_posts")
+    .insert(posts).select("id,format");
   if (postsError) {
     await supabase.from("social_content_plans").delete().eq("organization_id", organizationId).eq("id", savedPlan.id);
     throw postsError;
   }
 
+  // Carousel creation is autonomous after planning. Trigger runs the existing
+  // Fluxknight v1 renderer in the background and leaves the finished slides in
+  // Review. A queue failure must never discard the saved weekly plan.
+  for (const created of createdPosts || []) {
+    if (created.format !== "carousel") continue;
+    try {
+      await tasks.trigger("flux-social-render-carousel", { organizationId, postId: created.id });
+    } catch (queueError) {
+      const message = queueError instanceof Error ? queueError.message : String(queueError);
+      const source = posts.find((post) => post.format === "carousel")?.metadata || {};
+      const { error: markError } = await supabase.from("social_posts").update({
+        metadata: {
+          ...source,
+          carousel_render_status: "queue_failed",
+          carousel_render_error: message,
+        },
+      }).eq("organization_id", organizationId).eq("id", created.id);
+      if (markError) throw markError;
+    }
+  }
+
   revalidatePath("/dashboard/social");
   revalidatePath("/dashboard/social/create");
   revalidatePath("/dashboard/social/posts");
+  revalidatePath("/dashboard/social/review");
   redirect("/dashboard/social/posts?weekly_plan=generated");
 }
 

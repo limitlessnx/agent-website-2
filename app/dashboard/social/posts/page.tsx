@@ -49,6 +49,9 @@ export default async function SocialPostsPage() {
             const aiGenerated = post.metadata?.ai_generated === true;
             const hasPrimaryAsset = typeof post.metadata?.primary_asset_id === "string";
             const carouselAssetIds = Array.isArray(post.metadata?.carousel_asset_ids) ? post.metadata.carousel_asset_ids : [];
+            const carouselRenderStatus = String(post.metadata?.carousel_render_status || "");
+            const carouselGenerating = ["queued", "rendering"].includes(carouselRenderStatus);
+            const carouselFailed = ["failed", "queue_failed"].includes(carouselRenderStatus);
             const canGenerateStatic = post.format === "image" && ["draft", "review", "approved"].includes(post.status);
             const canGenerateCarousel = post.format === "carousel" && ["draft", "review", "approved"].includes(post.status);
             const canGenerateReel = ["reel", "video"].includes(post.format) && ["draft", "review", "approved"].includes(post.status);
@@ -63,6 +66,8 @@ export default async function SocialPostsPage() {
                     <strong className={styles.postTitle}>{post.title || "Untitled post"}</strong>
                     {aiGenerated ? <span className={styles.metaBadge}>AI-assisted</span> : null}
                     {post.format === "carousel" && carouselAssetIds.length ? <span className={styles.statusSuccess}>Carousel ready · {carouselAssetIds.length} slides</span> : null}
+                    {post.format === "carousel" && carouselGenerating ? <span className={styles.metaBadge}>Carousel generating automatically</span> : null}
+                    {post.format === "carousel" && carouselFailed ? <span className={styles.metaBadge}>Carousel generation needs attention</span> : null}
                     {post.format === "image" && hasPrimaryAsset ? <span className={styles.statusSuccess}>Graphic ready</span> : null}
                     {canGenerateReel && hasReelPlan ? <span className={styles.metaBadge}>Storyboard ready</span> : null}
                     {canGenerateReel && reelRenderStatus === "queued" ? <span className={styles.metaBadge}>Reel queued</span> : null}
@@ -99,7 +104,7 @@ export default async function SocialPostsPage() {
                     {canGenerateCarousel ? (
                       <form action={generateCarouselAction}>
                         <input type="hidden" name="post_id" value={post.id} />
-                        <ReviewSubmitButton kind="primary" pendingLabel="Generating carousel…">{carouselAssetIds.length ? "Regenerate carousel" : "Generate carousel"}</ReviewSubmitButton>
+                        <ReviewSubmitButton kind={carouselAssetIds.length ? "secondary" : "primary"} disabled={carouselGenerating} pendingLabel="Generating carousel…">{carouselGenerating ? "Generating automatically" : carouselAssetIds.length ? "Regenerate carousel" : "Generate carousel manually"}</ReviewSubmitButton>
                       </form>
                     ) : null}
                     {canGenerateReel ? (
