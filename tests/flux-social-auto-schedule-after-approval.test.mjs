@@ -10,7 +10,8 @@ test("automatic scheduling is downstream of explicit final review approval", () 
   const schedule = reviewActions.indexOf("await scheduleSocialPost({");
   assert.ok(approval >= 0 && schedule > approval);
   assert.match(reviewActions, /post.status === "approved"/);
-  assert.match(reviewActions, /brand.name === "Fluxknight"/);
+  assert.match(reviewActions, /organizationId === "15046426-e520-438b-8694-7662a6986efb"/);
+  assert.match(reviewActions, /brand.id === "a330b65a-d5b2-45f3-b211-451616f2fa8d"/);
 });
 
 test("do not activate other tenants or unsupported publishing destinations", () => {
