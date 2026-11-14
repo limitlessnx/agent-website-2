@@ -10,10 +10,10 @@ import { listSocialPosts, listSocialSchedules, type SocialPostStatus } from "@/l
 const NEXT_ACTIONS: Partial<Record<SocialPostStatus, Array<{ status: SocialPostStatus; label: string }>>> = {
   idea: [{ status: "draft", label: "Move to draft" }],
   draft: [{ status: "review", label: "Send to review" }],
-  review: [{ status: "draft", label: "Return to draft" }, { status: "approved", label: "Approve" }],
+  review: [{ status: "draft", label: "Return to draft" }],
   approved: [{ status: "review", label: "Reopen review" }],
   scheduled: [{ status: "approved", label: "Unschedule" }],
-  failed: [{ status: "approved", label: "Approve retry" }],
+  failed: [{ status: "review", label: "Send back to review" }],
 };
 
 const inputStyle = { padding: "9px 11px", borderRadius: 9, border: "1px solid var(--admin-border, #2d2d35)", background: "transparent", color: "inherit" } as const;
@@ -85,6 +85,9 @@ export default async function SocialPostsPage() {
                         {creativeBrief ? <p><strong>Creative brief:</strong> {creativeBrief}</p> : null}
                       </div>
                     </details>
+                  ) : null}
+                  {post.status === "review" ? (
+                    <Link href="/dashboard/social/review" className={styles.reviewLink}>Preview media & approve</Link>
                   ) : null}
                   <div className={styles.actions} aria-label={`Actions for ${post.title || "post"}`}>
 
