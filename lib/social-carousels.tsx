@@ -1,4 +1,7 @@
-import { ImageResponse } from "next/og";
+// The Trigger.dev Node bundler cannot load Next.js 16's next/og wrapper:
+ // it pulls server-only react-server-dom-webpack aliases only defined by Next.
+ // Use the exact @vercel/og renderer already bundled with the pinned Next.js runtime.
+import { ImageResponse } from "next/dist/compiled/@vercel/og/index.node.js";
 import { getSocialBrand } from "@/lib/social";
 import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { uploadSocialAsset } from "@/lib/social-assets";
