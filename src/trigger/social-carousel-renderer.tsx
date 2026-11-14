@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   FLUX_SOCIAL_CAROUSEL_TEMPLATE, HEIGHT, WIDTH,
   generateCarouselPlan, renderSlide,
-} from "@/lib/social-carousels";
+} from "@/lib/social-carousel-core";
 
 const BUCKET = "flux-social-assets";
 
@@ -75,7 +75,7 @@ export const fluxSocialRenderCarousel = task({
       const ids: string[] = [];
       for (let i = 0; i < plan.slides.length; i += 1) {
         const slide = plan.slides[i];
-        const response = renderSlide({
+        const response = await renderSlide({
           brandName: brand.name, logoUrl, slide, index: i + 1,
           total: plan.slides.length,
           pillar: String(content.content_pillar || "Business automation"),
