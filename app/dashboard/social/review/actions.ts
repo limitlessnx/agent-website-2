@@ -14,6 +14,7 @@ function revalidateReview() {
   revalidatePath("/dashboard/social");
   revalidatePath("/dashboard/social/review");
   revalidatePath("/dashboard/social/posts");
+  revalidatePath("/dashboard/social/calendar");
 }
 
 export async function updateSocialPostReviewAction(formData: FormData) {
