@@ -15,6 +15,7 @@ import { listSocialPosts } from "@/lib/social";
 import styles from "./review.module.css";
 import { ReviewSubmitButton } from "./ReviewSubmitButton";
 import { ReviewStatusRefresh } from "./ReviewStatusRefresh";
+import { CarouselMediaPreview } from "./CarouselMediaPreview";
 
 const inputStyle = {
   width: "100%",
@@ -85,8 +86,14 @@ export default async function SocialReviewPage() {
             const carouselRenderStatus = String(post.metadata?.carousel_render_status || "");
             const carouselRenderError = typeof post.metadata?.carousel_render_error === "string"
               ? post.metadata.carousel_render_error : "";
-            const videoAsset = postAssets.find((asset) => ["reel", "video"].includes(asset.asset_type));
-            const imageAsset = postAssets.find((asset) => asset.id === post.metadata?.primary_asset_id || asset.asset_type === "image");
+            const videoAsset = postAssets.find((asset) => asset.id === post.metadata?.reel_asset_id && ["reel", "video"].includes(asset.asset_type));
+            const imageAsset = postAssets.find((asset) => asset.id === post.metadata?.primary_asset_id && asset.asset_type === "image");
+            const visibleCarouselAssets = carouselAssets.filter((asset) => signedUrls.has(asset.id));
+            const mediaPreviewReady = post.format === "text" ||
+              (post.format === "carousel" && carouselAssets.length >= 2 && visibleCarouselAssets.length === carouselAssets.length) ||
+              (["image", "story"].includes(post.format) && Boolean(imageAsset && signedUrls.has(imageAsset.id))) ||
+              (["reel", "video"].includes(post.format) && Boolean(videoAsset && signedUrls.has(videoAsset.id)));
+            const approvalReady = readiness.ready && mediaPreviewReady;
             const hasPlan = Boolean(post.metadata?.reel_plan);
             const renderStatus = String(post.metadata?.reel_render_status || "");
             const isReel = ["reel", "video"].includes(post.format);
@@ -108,8 +115,8 @@ export default async function SocialReviewPage() {
                     <h2>{post.title || "Untitled post"}</h2>
                     <p>{post.format} · {post.platforms.join(", ")} · {post.status}</p>
                   </div>
-                  <span className={readiness.ready ? styles.readinessReady : styles.readinessPending}>
-                    {readiness.ready ? "Creative ready" : "Creative incomplete"}
+                  <span className={approvalReady ? styles.readinessReady : styles.readinessPending}>
+                    {approvalReady ? "Preview ready" : "Preview required"}
                   </span>
                 </div>
 
@@ -241,8 +248,8 @@ export default async function SocialReviewPage() {
                       {post.status === "review" ? (
                         <form action={approveSocialPostReviewAction}>
                           <input type="hidden" name="post_id" value={post.id} />
-                          <ReviewSubmitButton kind="primary" disabled={!readiness.ready} pendingLabel="Approving post…">Approve post</ReviewSubmitButton>
-                          {!readiness.ready ? <p style={{ marginTop: 6 }}>{readiness.reason}</p> : null}
+                          <ReviewSubmitButton kind="primary" disabled={!approvalReady} pendingLabel="Approving post…">Approve post</ReviewSubmitButton>
+                          {!approvalReady ? <p style={{ marginTop: 6 }}>{readiness.reason || "The complete media preview is not available. Approval is disabled."}</p> : null}
                         </form>
                       ) : <span className="admin-status live">Approved</span>}
 
@@ -255,19 +262,15 @@ export default async function SocialReviewPage() {
                   </div>
 
                   <div className={styles.previewColumn}>
-                    <strong className={styles.previewTitle}>Media preview</strong>
+                    <div className={styles.previewHeading}><strong className={styles.previewTitle}>Preview your final media</strong><span>Check every slide, image or video before approval.</span></div>
                     {imageAsset && signedUrls.get(imageAsset.id) ? (
                       <img src={signedUrls.get(imageAsset.id)} alt={post.title} className={styles.previewMedia} />
                     ) : null}
-                    {carouselAssets.length ? (
-                      <div className={styles.carouselGrid}>
-                        {carouselAssets.map((asset, index) => signedUrls.get(asset.id) ? (
-                          <div key={asset.id} className={styles.carouselItem}>
-                            <img src={signedUrls.get(asset.id)} alt={`${post.title} slide ${index + 1}`}  />
-                            <span>Slide {index + 1}</span>
-                          </div>
-                        ) : null)}
-                      </div>
+                    {visibleCarouselAssets.length ? (
+                      <CarouselMediaPreview title={post.title || "Fluxknight carousel"}
+                        slides={visibleCarouselAssets.map((asset, index) => ({
+                          id: asset.id, src: signedUrls.get(asset.id)!, label: `Slide ${index + 1}`,
+                        }))} />
                     ) : null}
                     {isReel && voiceAssets.length ? (
                       <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
@@ -283,9 +286,20 @@ export default async function SocialReviewPage() {
                     {videoAsset && signedUrls.get(videoAsset.id) ? (
                       <video controls preload="metadata" className={styles.video} src={signedUrls.get(videoAsset.id)} />
                     ) : null}
-                    {!imageAsset && !carouselAssets.length && !videoAsset ? (
-                      <div className="admin-list-row"><div><strong>No final media yet</strong><span>Generate the creative before approval.</span></div><em>waiting</em></div>
+                    {!mediaPreviewReady && post.format !== "text" ? (
+                      <div className={styles.previewMissing} role="status">
+                        <strong>{["queued", "rendering"].includes(carouselRenderStatus) ? "Generating preview…" : "Final preview unavailable"}</strong>
+                        <span>{["queued", "rendering"].includes(carouselRenderStatus) ? "Flux Social is preparing your slides. Approval will unlock when the complete preview is ready." : "The complete media is not accessible yet. Generate or restore the creative before approving."}</span>
+                        <ReviewStatusRefresh />
+                      </div>
                     ) : null}
+                    {post.format === "text" ? <p>Text-only post. Review the copy and CTA before approving.</p> : null}
+                    <div className={styles.previewCopy}>
+                      <strong>Post caption</strong>
+                      <p>{post.caption || "No caption provided"}</p>
+                      {cta ? <p><strong>CTA:</strong> {cta}</p> : null}
+                      <span>Platforms: {post.platforms.join(", ")}</span>
+                    </div>
                   </div>
                 </div>
               </article>

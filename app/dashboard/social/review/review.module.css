@@ -144,3 +144,40 @@
  .editorColumn{order:1}
  .overviewHeading p{font-size:.79rem}
 }
+
+/* Preview-first approval: media stays above decisions on desktop and mobile. */
+.previewColumn{order:-1;min-width:0}
+.editorColumn{order:1;min-width:0}
+.previewHeading{display:grid;gap:4px;margin-bottom:14px}
+.previewHeading .previewTitle{margin:0;color:inherit;font-size:1rem;font-weight:750}
+.previewHeading>span{font-size:.8rem;color:var(--fk-text-muted,#a9b1c7);line-height:1.45}
+.previewCopy{border-top:1px solid var(--admin-border,#343858);margin-top:18px;padding-top:14px;display:grid;gap:8px;font-size:.85rem;line-height:1.5;overflow-wrap:anywhere}
+.previewCopy>p{margin:0;white-space:pre-wrap}
+.previewCopy>span{color:var(--fk-text-muted,#9da4be)}
+.previewMissing{border:1px dashed rgba(183,164,235,.45);background:rgba(132,95,225,.05);border-radius:14px;padding:18px;display:grid;gap:10px;min-height:130px;align-content:center}
+.previewMissing strong{font-size:.95rem}
+.previewMissing span{font-size:.83rem;line-height:1.45;color:var(--fk-text-muted,#abb2c9)}
+.carouselViewer{min-width:0;display:grid;gap:12px}
+.carouselStage{display:flex;align-items:center;justify-content:center;background:#090a11;border:1px solid var(--admin-border,#343858);border-radius:14px;overflow:hidden;min-width:0}
+.carouselHero{display:block;width:100%;max-width:520px;height:auto;aspect-ratio:4/5;object-fit:contain}
+.carouselNavigation{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.carouselNavButton{cursor:pointer;min-height:44px;padding:10px 13px;border:1px solid rgba(167,139,250,.55);border-radius:10px;background:rgba(119,84,207,.16);color:#e2d7ff;font:inherit;font-size:.83rem;font-weight:700}
+.carouselNavButton:disabled{opacity:.35;cursor:not-allowed}
+.carouselNavButton:focus-visible,.carouselThumb:focus-visible{outline:2px solid #c4b5fd;outline-offset:2px}
+.carouselCount{white-space:nowrap;font-size:.8rem;color:var(--fk-text-muted,#a9b1c7);font-variant-numeric:tabular-nums}
+.carouselThumbs{display:flex;gap:9px;overflow-x:auto;padding:3px 2px 8px;scrollbar-width:thin}
+.carouselThumb{position:relative;flex:none;width:66px;aspect-ratio:4/5;padding:0;border:2px solid transparent;border-radius:9px;overflow:hidden;background:#111426;cursor:pointer}
+.carouselThumbSelected{border-color:#b99aff;box-shadow:0 0 0 1px #b99aff}
+.carouselThumb img{width:100%;height:100%;object-fit:cover}
+.carouselThumb span{position:absolute;right:3px;bottom:3px;padding:2px 5px;border-radius:5px;background:rgba(0,0,0,.8);color:white;font-size:.66rem}
+@media(max-width:900px){
+  .reviewLayout{display:grid;grid-template-columns:minmax(0,1fr)}
+  .previewColumn{order:-1}
+  .editorColumn{order:1}
+  .carouselHero{max-width:420px}
+}
+@media(max-width:480px){
+ .carouselNavButton{font-size:.76rem;padding:9px 10px}
+ .carouselCount{font-size:.73rem}
+ .carouselThumb{width:56px}
+}

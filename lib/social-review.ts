@@ -20,6 +20,9 @@ function mediaReady(format: SocialPostFormat, metadata: Record<string, unknown>)
   }
 
   if (format === "carousel") {
+    if (["queued", "rendering", "failed", "queue_failed"].includes(String(metadata.carousel_render_status || ""))) {
+      return { ready: false, reason: "Carousel generation is not finished. Preview the final slides before approval." };
+    }
     const ids = Array.isArray(metadata.carousel_asset_ids) ? metadata.carousel_asset_ids.filter(hasString) : [];
     return ids.length >= 2
       ? { ready: true, reason: null }
@@ -164,6 +167,46 @@ export async function approveSocialPostReview(postId: string) {
   const typedPost = post as SocialPost;
   const readiness = getSocialReviewReadiness(typedPost);
   if (!readiness.ready) throw new Error(readiness.reason || "Finish the creative before approval.");
+
+  // An asset ID in metadata is not proof that the finished media still exists.
+  // Verify the exact current media set before accepting a final approval.
+  const media = (typedPost.metadata || {}) as Record<string, unknown>;
+  const mediaIds = typedPost.format === "carousel"
+    ? (Array.isArray(media.carousel_asset_ids) ? media.carousel_asset_ids.filter(hasString) : [])
+    : ["image", "story"].includes(typedPost.format)
+      ? [media.primary_asset_id].filter(hasString)
+      : ["reel", "video"].includes(typedPost.format)
+        ? [media.reel_asset_id].filter(hasString)
+        : [];
+  if (mediaIds.length) {
+    if (new Set(mediaIds).size !== mediaIds.length) {
+      throw new Error("The media preview contains duplicate assets. Regenerate the creative.");
+    }
+    const { data: mediaAssets, error: mediaError } = await supabase.from("social_assets")
+      .select("id,asset_type,status,bucket_id,storage_path")
+      .eq("organization_id", organizationId)
+      .eq("post_id", postId)
+      .eq("brand_id", typedPost.brand_id)
+      .in("id", mediaIds);
+    if (mediaError) throw mediaError;
+    const allowedTypes = typedPost.format === "carousel" ? ["carousel_slide"]
+      : ["reel", "video"].includes(typedPost.format) ? ["reel", "video"]
+      : ["image", "thumbnail", "story"];
+    if (!mediaAssets || mediaAssets.length !== mediaIds.length ||
+        mediaAssets.some((asset) => asset.status !== "ready" ||
+          !allowedTypes.includes(asset.asset_type) || !asset.bucket_id || !asset.storage_path)) {
+      throw new Error("Final media preview is incomplete or unavailable. Regenerate or restore it before approval.");
+    }
+    // A signed URL is the delivery mechanism used by Review. If storage cannot
+    // serve even one active asset, approving the post would be a blind action.
+    const links = await Promise.all(mediaAssets.map((asset) =>
+      supabase.storage.from(asset.bucket_id).createSignedUrl(asset.storage_path, 300)));
+    if (links.some(({ data, error }) => error || !data?.signedUrl)) {
+      throw new Error("One or more media previews cannot be opened. Approval is blocked.");
+    }
+  } else if (typedPost.format !== "text") {
+    throw new Error("Generate final media before approval.");
+  }
 
   const metadata = (typedPost.metadata || {}) as Record<string, unknown>;
   const approvedAt = new Date().toISOString();
