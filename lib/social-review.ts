@@ -20,6 +20,9 @@ function mediaReady(format: SocialPostFormat, metadata: Record<string, unknown>)
   }
 
   if (format === "carousel") {
+    if (["queued", "rendering", "failed", "queue_failed"].includes(String(metadata.carousel_render_status || ""))) {
+      return { ready: false, reason: "Carousel generation is not finished. Preview the final slides before approval." };
+    }
     const ids = Array.isArray(metadata.carousel_asset_ids) ? metadata.carousel_asset_ids.filter(hasString) : [];
     return ids.length >= 2
       ? { ready: true, reason: null }
