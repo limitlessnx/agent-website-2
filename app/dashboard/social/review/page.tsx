@@ -77,9 +77,14 @@ export default async function SocialReviewPage() {
             const hook = contentString(post.content, "hook");
             const cta = contentString(post.content, "cta");
             const rejection = typeof post.metadata?.review_rejection_reason === "string" ? post.metadata.review_rejection_reason : "";
+            const activeCarouselIds = Array.isArray(post.metadata?.carousel_asset_ids)
+              ? post.metadata.carousel_asset_ids.filter((id): id is string => typeof id === "string") : [];
             const carouselAssets = postAssets
-              .filter((asset) => asset.asset_type === "carousel_slide")
-              .sort((a, b) => Number(a.metadata?.position || 0) - Number(b.metadata?.position || 0));
+              .filter((asset) => asset.asset_type === "carousel_slide" && activeCarouselIds.includes(asset.id))
+              .sort((a, b) => activeCarouselIds.indexOf(a.id) - activeCarouselIds.indexOf(b.id));
+            const carouselRenderStatus = String(post.metadata?.carousel_render_status || "");
+            const carouselRenderError = typeof post.metadata?.carousel_render_error === "string"
+              ? post.metadata.carousel_render_error : "";
             const videoAsset = postAssets.find((asset) => ["reel", "video"].includes(asset.asset_type));
             const imageAsset = postAssets.find((asset) => asset.id === post.metadata?.primary_asset_id || asset.asset_type === "image");
             const hasPlan = Boolean(post.metadata?.reel_plan);
@@ -153,7 +158,16 @@ export default async function SocialReviewPage() {
                     </details>
 
                     <section className={styles.productionActions} aria-label="Generate media">
-                      <div className={styles.sectionHeading}><strong>Next action</strong><span>Choose a button below to generate media. Status labels above are not buttons.</span></div>
+                      <div className={styles.sectionHeading}><strong>Next action</strong><span>Flux Social generates new weekly carousels automatically. Regeneration is an optional manual override.</span></div>
+                      {post.format === "carousel" && ["queued", "rendering"].includes(carouselRenderStatus) ? (
+                        <div className={styles.progressControls}>
+                          <span role="status">Carousel slides are being generated automatically.</span>
+                          <ReviewStatusRefresh />
+                        </div>
+                      ) : null}
+                      {post.format === "carousel" && ["failed", "queue_failed"].includes(carouselRenderStatus) ? (
+                        <div className={styles.inlineAlert}><p>Carousel generation needs attention: {carouselRenderError || "Please try again."}</p></div>
+                      ) : null}
                     <div className={styles.generationActions}>
                       {post.format === "image" ? (
                         <form action={generateStaticGraphicAction}>
@@ -164,7 +178,7 @@ export default async function SocialReviewPage() {
                       {post.format === "carousel" ? (
                         <form action={generateCarouselAction}>
                           <input type="hidden" name="post_id" value={post.id} />
-                          <ReviewSubmitButton kind="secondary" pendingLabel="Generating carousel…">Regenerate carousel</ReviewSubmitButton>
+                          <ReviewSubmitButton kind="secondary" disabled={["queued", "rendering"].includes(carouselRenderStatus)} pendingLabel="Generating carousel…">{carouselAssets.length ? "Regenerate carousel" : "Generate carousel manually"}</ReviewSubmitButton>
                         </form>
                       ) : null}
                       {["reel", "video"].includes(post.format) ? (
