@@ -171,14 +171,17 @@ export async function createSocialPost(input: {
 const MANUAL_TRANSITIONS: Record<SocialPostStatus, SocialPostStatus[]> = {
   idea: ["draft"],
   draft: ["review"],
-  review: ["draft", "approved"],
+  review: ["draft"],
   approved: ["review"],
   scheduled: ["approved"],
   published: [],
-  failed: ["approved"],
+  failed: ["review"],
 };
 
 export async function transitionSocialPost(postId: string, nextStatus: SocialPostStatus) {
+  if (nextStatus === "approved") {
+    throw new Error("Open Review & Approval to inspect the final media before approving.");
+  }
   const { supabase, organizationId } = await requireTenant();
   const { data: post, error: readError } = await supabase
     .from("social_posts")
@@ -193,15 +196,6 @@ export async function transitionSocialPost(postId: string, nextStatus: SocialPos
     throw new Error(`Invalid social post transition: ${currentStatus} -> ${nextStatus}`);
   }
 
-  if (nextStatus === "approved" && ["reel", "video"].includes(post.format)) {
-    const metadata = (post.metadata || {}) as Record<string, unknown>;
-    if (metadata.reel_render_status !== "ready" ||
-        metadata.reel_audio_verified !== true ||
-        metadata.reel_music_status !== "ready" ||
-        metadata.reel_voice_review_status !== "approved") {
-      throw new Error("Approve verified Reel narration and licensed music in Review before approving this post.");
-    }
-  }
   const patch: Record<string, unknown> = { status: nextStatus };
   if (nextStatus === "approved") patch.approved_at = new Date().toISOString();
   if (nextStatus === "draft" || nextStatus === "review") patch.approved_at = null;
