@@ -50,12 +50,18 @@ function socialMediaRuntimeAssets() {
       target: "dev" | "deploy" | "unmanaged";
       addLayer: (layer: {
         id: string;
+        commands?: string[];
         image: { instructions?: string[] };
       }) => void;
     }) {
       if (context.target === "dev") return;
       context.addLayer({
         id: "flux-social-runtime-assets",
+        // Trigger 4.8.1 logs and swallows onBuildComplete exceptions. These
+        // commands execute in /app after COPY and fail the actual image build.
+        commands: [
+          "test -s /app/Geist-Regular.ttf && test -s /app/resvg.wasm && sha256sum /app/Geist-Regular.ttf /app/resvg.wasm",
+        ],
         image: {
           instructions: [
             "RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2 libglib2.0-0 libx11-6 libxcb1 libxext6 && rm -rf /var/lib/apt/lists/*",

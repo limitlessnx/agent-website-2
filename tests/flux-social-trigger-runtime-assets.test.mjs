@@ -19,6 +19,7 @@ test("Trigger worker build fails if runtime font or WASM are not available", () 
   assert.match(config, /await access\(sourceResvg\)/);
   assert.match(config, /await access\(bundledFont\)/);
   assert.match(config, /await access\(bundledResvg\)/);
+  assert.match(config, /test -s \/app\/Geist-Regular\.ttf && test -s \/app\/resvg\.wasm/);
   assert.doesNotMatch(config, /ImageResponse resvg runtime was not available during Trigger artifact preparation/);
 });
 
