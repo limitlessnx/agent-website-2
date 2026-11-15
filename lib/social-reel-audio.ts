@@ -63,6 +63,34 @@ export type ReelAudioClip = {
   signedUrl: string;
 };
 
+/** A visual-only repair reuses this post's private aligned narration. */
+export async function reuseReelNarration(supabase: SupabaseClient, input: {
+  organizationId: string; brandId: string; postId: string; plan: ReelPlan; assetIds: string[];
+}) {
+  if (input.assetIds.length !== input.plan.scenes.length || new Set(input.assetIds).size !== input.assetIds.length) {
+    throw new Error("Visual repair requires one existing narration clip per scene.");
+  }
+  const { data: assets, error } = await supabase.from("social_assets")
+    .select("id,bucket_id,storage_path,status,asset_type,duration_ms,metadata")
+    .eq("organization_id", input.organizationId).eq("brand_id", input.brandId)
+    .eq("post_id", input.postId).in("id", input.assetIds);
+  if (error) throw error;
+  const clips: ReelAudioClip[] = [];
+  for (const [sceneIndex, assetId] of input.assetIds.entries()) {
+    const asset = assets.find((row) => row.id === assetId);
+    if (!asset || asset.status !== "ready" || asset.asset_type !== "audio" ||
+        asset.metadata?.purpose !== "reel_voiceover" || asset.metadata?.scene_index !== sceneIndex ||
+        !asset.duration_ms || asset.duration_ms / 1000 > input.plan.scenes[sceneIndex].duration_seconds) {
+      throw new Error(`Existing narration for scene ${sceneIndex + 1} is missing or does not match the timeline.`);
+    }
+    const { data: signed, error: signedError } = await supabase.storage.from(asset.bucket_id).createSignedUrl(asset.storage_path, 3600);
+    if (signedError) throw signedError;
+    clips.push({ sceneIndex, assetId, durationSeconds: asset.duration_ms / 1000,
+      storagePath: asset.storage_path, signedUrl: signed.signedUrl });
+  }
+  return { plan: input.plan, clips, totalDurationSeconds: input.plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0) };
+}
+
 function speechDuration(data: TimingResponse) {
   const times = data.normalized_alignment?.character_end_times_seconds || data.alignment?.character_end_times_seconds || [];
   const seconds = times.length ? times[times.length - 1] : 0;
