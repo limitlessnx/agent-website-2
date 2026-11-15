@@ -17,7 +17,7 @@ function remotionSourceFiles() {
       const bundledFont = path.join(manifest.outputPath, "Geist-Regular.ttf");
       const bundledResvg = path.join(manifest.outputPath, "resvg.wasm");
       const sourceResvg = path.join(
-        manifest.outputPath,
+        context.workingDir,
         "node_modules",
         "next",
         "dist",

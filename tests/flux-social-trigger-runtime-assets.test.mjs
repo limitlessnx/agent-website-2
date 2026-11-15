@@ -10,6 +10,8 @@ test("Trigger production bundles required renderer artifacts at worker image roo
   assert.match(config, /path\.join\(manifest\.outputPath, "resvg\.wasm"\)/);
   assert.match(config, /await copyFile\(systemFont, bundledFont\)/);
   assert.match(config, /await copyFile\(sourceResvg, bundledResvg\)/);
+  // Next is bundled, so its original node_modules tree is absent in outputPath.
+  assert.match(config, /const sourceResvg = path\.join\(\s*context\.workingDir,/);
 });
 
 test("Trigger worker build fails if runtime font or WASM are not available", () => {
