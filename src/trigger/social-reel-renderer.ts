@@ -6,7 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReelPlan } from "@/lib/social-video-plan";
-import { createReelNarration, getLicensedReelMusic, ReelNarrationProviderError } from "@/lib/social-reel-audio";
+import { createReelNarration, reuseReelNarration, getLicensedReelMusic, ReelNarrationProviderError } from "@/lib/social-reel-audio";
+import { getReelVisual } from "@/src/remotion/reel-visual-model";
 
 const SOCIAL_ASSET_BUCKET = "flux-social-assets";
 
@@ -15,7 +16,7 @@ export const fluxSocialRenderReel = task({
   machine: "large-1x",
   maxDuration: 900,
   retry: { maxAttempts: 2, minTimeoutInMs: 10_000, maxTimeoutInMs: 60_000, factor: 2 },
-  run: async (payload: { organizationId: string; postId: string }) => {
+  run: async (payload: { organizationId: string; postId: string; reuseNarration?: boolean }) => {
     const supabase = createAdminClient();
 
     const { data: post, error: postError } = await supabase
@@ -31,6 +32,11 @@ export const fluxSocialRenderReel = task({
     const metadata = (post.metadata || {}) as Record<string, unknown>;
     const plan = metadata.reel_plan as ReelPlan | undefined;
     if (!plan?.scenes?.length) throw new Error("Generate a Reel storyboard before rendering.");
+    // Validate visuals before paid narration or changes to the current preview.
+    plan.scenes.forEach(getReelVisual);
+    if (payload.reuseNarration && !["draft", "review"].includes(post.status)) {
+      throw new AbortTaskRunError("Visual-only repairs require an unapproved draft or Review post.");
+    }
 
     const { data: brand, error: brandError } = await supabase
       .from("social_brands")
@@ -71,7 +77,10 @@ export const fluxSocialRenderReel = task({
     let narration: Awaited<ReturnType<typeof createReelNarration>>;
     let music: Awaited<ReturnType<typeof getLicensedReelMusic>>;
     try {
-      narration = await createReelNarration(supabase, {
+      narration = payload.reuseNarration ? await reuseReelNarration(supabase, {
+        organizationId: payload.organizationId, brandId: brand.id, postId: post.id, plan,
+        assetIds: Array.isArray(metadata.reel_narration_asset_ids) ? metadata.reel_narration_asset_ids as string[] : [],
+      }) : await createReelNarration(supabase, {
         organizationId: payload.organizationId, brandId: brand.id, postId: post.id, plan,
       });
       music = await getLicensedReelMusic(supabase, payload.organizationId, brand.id,
@@ -90,7 +99,8 @@ export const fluxSocialRenderReel = task({
           reel_voice_review_status: "pending",
           reel_render_error: message,
         },
-      }).eq("organization_id", payload.organizationId).eq("id", post.id);
+      }).eq("organization_id", payload.organizationId).eq("id", post.id)
+        .in("status", payload.reuseNarration ? ["draft", "review"] : ["draft", "review", "approved"]);
       // Billing, entitlement and malformed request failures are not transient.
       // Retrying these requests cannot fix a workspace restriction, and can
       // accidentally repeat paid scene generation.
@@ -116,10 +126,13 @@ export const fluxSocialRenderReel = task({
       reel_asset_id: null,
       primary_asset_id: null,
     };
-    const { error: pendingError } = await supabase.from("social_posts").update({
+    const { data: pendingPost, error: pendingError } = await supabase.from("social_posts").update({
       status: "review", approved_at: null, metadata: workingMetadata,
-    }).eq("organization_id", payload.organizationId).eq("id", post.id);
+    }).eq("organization_id", payload.organizationId).eq("id", post.id)
+      .in("status", payload.reuseNarration ? ["draft", "review"] : ["draft", "review", "approved"])
+      .select("id").maybeSingle();
     if (pendingError) throw pendingError;
+    if (!pendingPost) throw new AbortTaskRunError("Post status changed before rendering; refusing to replace its media.");
 
     const inputProps = {
       plan: narration.plan,
@@ -211,7 +224,7 @@ export const fluxSocialRenderReel = task({
       }
 
       const priorAssets = Array.isArray(metadata.media_assets) ? metadata.media_assets : [];
-      const { error: updateError } = await supabase
+      const { data: updatedPost, error: updateError } = await supabase
         .from("social_posts")
         .update({
           metadata: {
@@ -227,8 +240,9 @@ export const fluxSocialRenderReel = task({
           },
         })
         .eq("organization_id", payload.organizationId)
-        .eq("id", post.id);
+        .eq("id", post.id).in("status", ["draft", "review"]).select("id").maybeSingle();
       if (updateError) throw updateError;
+      if (!updatedPost) throw new Error("Post left Review while rendering; refusing to replace approved media.");
 
       return { postId: post.id, assetId: asset.id, storagePath };
     } catch (renderError) {
@@ -245,7 +259,7 @@ export const fluxSocialRenderReel = task({
           reel_render_error: message,
           reel_voice_review_status: "pending",
         },
-      }).eq("organization_id", payload.organizationId).eq("id", post.id);
+      }).eq("organization_id", payload.organizationId).eq("id", post.id).in("status", ["draft", "review"]);
       throw renderError;
     } finally {
       await rm(outputLocation, { force: true }).catch(() => undefined);

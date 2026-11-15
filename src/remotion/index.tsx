@@ -30,6 +30,7 @@ const Root = () => (
               on_screen_text: "A better follow-up system starts here.",
               visual_direction: "Fluxknight UI and motion graphics.",
               source_media: "motion_graphics",
+              visual: { kind: "pipeline", title: "A clear next step", items: ["Customer enquiry", "Assigned owner", "Follow-up"] },
             },
           ],
         },

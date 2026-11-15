@@ -14,6 +14,11 @@ on:
     # changes. Keep the worker deployment aligned with every pushed commit.
   workflow_dispatch:
     inputs:
+      controlled_reel_repair:
+        description: "Repair only the unapproved support Reel from the reported recording"
+        required: false
+        default: false
+        type: boolean
       controlled_carousel_test:
         description: "Run PR 399's single review-only carousel test after deployment"
         required: false
@@ -87,3 +92,17 @@ jobs:
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
         run: node scripts/verify-controlled-social-carousel.mjs
+
+      - name: Controlled review-only support Reel repair
+        if: github.event_name == 'workflow_dispatch' && inputs.controlled_reel_repair && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-controlled-social-reel.mjs
+
+      - name: Save private corrected Reel preview
+        if: github.event_name == 'workflow_dispatch' && inputs.controlled_reel_repair && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corrected-support-reel
+          path: /tmp/corrected-support-reel/
+          retention-days: 7
