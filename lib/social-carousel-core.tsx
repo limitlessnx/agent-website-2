@@ -142,7 +142,7 @@ export async function renderSlide(input: {
             <span style={{ fontSize: 27, letterSpacing: "0.06em", fontWeight: 800 }}>{input.brandName}</span>
           )}
         </div>
-        <div style={{ fontSize: 20, color: "#a1a1aa" }}>{String(input.index).padStart(2, "0")} / {String(input.total).padStart(2, "0")}</div>
+        <div style={{ display: "flex", fontSize: 20, color: "#a1a1aa" }}>{String(input.index).padStart(2, "0")} / {String(input.total).padStart(2, "0")}</div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28, position: "relative", maxWidth: 900 }}>

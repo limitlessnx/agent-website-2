@@ -39,7 +39,7 @@ async function readPost() {
 await readPost();
 configure({ secretKey: environment.apiKey });
 const handle = await tasks.trigger("flux-social-render-carousel", { organizationId, postId }, {
-  idempotencyKey: "pr399-controlled-review-carousel-v1",
+  idempotencyKey: "pr399-controlled-review-carousel-v2",
 });
 console.log(JSON.stringify({ triggerRunId: handle.id, postId }));
 let completed;
