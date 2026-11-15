@@ -14,6 +14,11 @@ on:
     # changes. Keep the worker deployment aligned with every pushed commit.
   workflow_dispatch:
     inputs:
+      controlled_carousel_test:
+        description: "Run PR 399's single review-only carousel test after deployment"
+        required: false
+        default: false
+        type: boolean
       external_deployment_id:
         description: "Optional external deployment ID for a one-time version recovery"
         required: false
@@ -76,3 +81,9 @@ jobs:
         run: |
           echo "::error title=Trigger.dev deploy failed::See trigger-deploy-diagnostics artifact for the complete CLI output."
           exit 1
+
+      - name: Controlled review-only Flux Social carousel verification
+        if: github.event_name == 'workflow_dispatch' && inputs.controlled_carousel_test && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-controlled-social-carousel.mjs
