@@ -15,6 +15,17 @@ function remotionSourceFiles() {
       // @vercel/og resolves its default font from the task image root
       // (/app/Geist-Regular.ttf), not from the package directory.
       const bundledFont = path.join(manifest.outputPath, "Geist-Regular.ttf");
+      const bundledResvg = path.join(manifest.outputPath, "resvg.wasm");
+      const sourceResvg = path.join(
+        manifest.outputPath,
+        "node_modules",
+        "next",
+        "dist",
+        "compiled",
+        "@vercel",
+        "og",
+        "resvg.wasm",
+      );
       try {
         await access(systemFont);
         await mkdir(path.dirname(bundledFont), { recursive: true });
@@ -22,6 +33,13 @@ function remotionSourceFiles() {
         context.logger.log("Bundled Flux Social ImageResponse runtime font into the Trigger artifact.");
       } catch {
         context.logger.log("System font was not available during Trigger artifact preparation; ImageResponse font fallback was not bundled.");
+      }
+      try {
+        await access(sourceResvg);
+        await copyFile(sourceResvg, bundledResvg);
+        context.logger.log("Bundled Flux Social ImageResponse resvg runtime into the Trigger artifact.");
+      } catch {
+        context.logger.log("The @vercel/og resvg runtime was not available during Trigger artifact preparation.");
       }
     },
   };
