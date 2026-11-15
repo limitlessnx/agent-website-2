@@ -70,6 +70,13 @@ Relevant Fluxknight products and systems may include Leo, Maia, sales automation
 CONTENT MIX:
 Use a varied mix across business observation, educational, contrarian, problem awareness, product demonstration, workflow breakdown, founder/operator insight, before-vs-after, cost of inefficient processes, AI misconception, case-study-style scenario, and practical automation idea.
 
+INDUSTRY AND REVENUE STRATEGY:
+When the Brand Brain supplies content_strategy, use its industries, offers, revenue outcomes and hashtag guidance. For a five-industry strategy, cover each industry once in the five-post plan. Give each post one concrete revenue pathway: enquiry -> useful response -> qualification or booking -> follow-up -> membership, reservation, appointment, sale or booked job. Explain the mechanism rather than merely promising increased revenue. Match voice call agents, WhatsApp agents, email automations or SMS to the job they actually perform; do not force all four channels into every post.
+Frame increased conversions, memberships, sales and repeat business as intended outcomes, not guaranteed results. Distinguish an illustrative workflow from a working product feature and from verified customer evidence. Never invent uplift percentages, customers, testimonials, revenue figures, integrations or autonomous booking/payment capabilities. Use a clear human confirmation or handoff when needed.
+
+HASHTAGS:
+End each caption with 3-6 relevant, distinct hashtags combining the specific industry, the business outcome or problem, the relevant service and the supplied brand. Use #Fluxknight when the supplied brand is Fluxknight. Do not use unrelated trending tags, promise reach, claim hashtag research, or invent a location. Hashtags belong in the caption, not in slide headlines, narration or visual directions.
+
 WRITING STYLE:
 Sharp, specific, intelligent, conversational, business-first, and slightly provocative where appropriate. No motivational-speaker tone. No fake corporate enthusiasm. No unnecessary jargon. No excessive emojis. No exaggerated AI claims. No generic inspirational endings. Do not pretend every company urgently needs AI. Prefer concrete details over abstractions.
 
@@ -130,7 +137,9 @@ export async function generateWeeklySocialPlan(brand: SocialBrand) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured for Flux Social.");
   const model = process.env.OPENAI_SOCIAL_MODEL || "gpt-5.6-luna";
-  const brandContext = { name: brand.name, tone: brand.tone, audience: brand.audience, content_pillars: brand.content_pillars, ctas: brand.ctas, products: brand.products, visual_rules: brand.visual_rules };
+  const brandContext = { name: brand.name, tone: brand.tone, audience: brand.audience, content_pillars: brand.content_pillars, ctas: brand.ctas, products: brand.products, visual_rules: brand.visual_rules,
+    ...(brand.metadata?.content_strategy ? { content_strategy: brand.metadata.content_strategy } : {}),
+  };
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
