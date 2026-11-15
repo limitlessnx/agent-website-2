@@ -15,8 +15,12 @@ async function api(path, token) {
 }
 const environment = await api(`/api/v1/projects/${project}/prod`, process.env.TRIGGER_ACCESS_TOKEN);
 const { variables } = await api(`/api/v1/projects/${project}/envvars`, environment.apiKey);
-const url = variables.LIMITLESS_SUPABASE_URL || variables.SUPABASE_URL || variables.NEXT_PUBLIC_SUPABASE_URL
+let url = variables.LIMITLESS_SUPABASE_URL || variables.SUPABASE_URL || variables.NEXT_PUBLIC_SUPABASE_URL
   || "https://tacxegmlppngnuvldojy.supabase.co";
+// Match getServerSupabaseConfig's existing retired-project normalization.
+if (new URL(url).hostname === "fwhwsvetndbjaljzghpg.supabase.co") {
+  url = "https://tacxegmlppngnuvldojy.supabase.co";
+}
 assert.equal(new URL(url).hostname, "tacxegmlppngnuvldojy.supabase.co");
 const serviceKey = variables.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY || variables.SUPABASE_SERVICE_ROLE_KEY || variables.SUPABASE_SECRET_KEY;
 assert.ok(serviceKey, "Worker requires its existing Supabase service credential");
