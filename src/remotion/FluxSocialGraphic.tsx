@@ -121,7 +121,7 @@ export const FluxSocialGraphic: React.FC<FluxSocialGraphicProps> = ({
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 21 }}>
           <div style={{ color: isCarousel ? "#a1a1aa" : "#d4d4d8", maxWidth: 720, lineHeight: 1.35 }}>
-            {isCarousel ? "Business systems, not AI theatre." : footer.slice(0, 120)}
+            {isCarousel ? "Turn enquiries into sales opportunities." : footer.slice(0, 120)}
           </div>
           <div style={{ color: "#a78bfa", fontWeight: 700 }}>Fluxknight.space</div>
         </div>
