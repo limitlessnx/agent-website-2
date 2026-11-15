@@ -26,21 +26,19 @@ function remotionSourceFiles() {
         "og",
         "resvg.wasm",
       );
-      try {
-        await access(systemFont);
-        await mkdir(path.dirname(bundledFont), { recursive: true });
-        await copyFile(systemFont, bundledFont);
-        context.logger.log("Bundled Flux Social ImageResponse runtime font into the Trigger artifact.");
-      } catch {
-        context.logger.log("System font was not available during Trigger artifact preparation; ImageResponse font fallback was not bundled.");
-      }
-      try {
-        await access(sourceResvg);
-        await copyFile(sourceResvg, bundledResvg);
-        context.logger.log("Bundled Flux Social ImageResponse resvg runtime into the Trigger artifact.");
-      } catch {
-        context.logger.log("The @vercel/og resvg runtime was not available during Trigger artifact preparation.");
-      }
+      // Do not allow a worker image with missing rendering dependencies to
+      // deploy successfully. Vercel READY does not validate Trigger task images.
+      // The paths below are resolved by the image renderer at runtime.
+      await access(systemFont);
+      await mkdir(path.dirname(bundledFont), { recursive: true });
+      await copyFile(systemFont, bundledFont);
+      await access(bundledFont);
+      context.logger.log("Verified Flux Social runtime font: /app/Geist-Regular.ttf");
+
+      await access(sourceResvg);
+      await copyFile(sourceResvg, bundledResvg);
+      await access(bundledResvg);
+      context.logger.log("Verified Flux Social runtime WASM: /app/resvg.wasm");
     },
   };
 }
