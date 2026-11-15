@@ -14,6 +14,11 @@ on:
     # changes. Keep the worker deployment aligned with every pushed commit.
   workflow_dispatch:
     inputs:
+      publish_first_instagram_post:
+        description: "Publish the user-approved seven-slide CRM carousel to @fluxknight.space only"
+        required: false
+        default: false
+        type: boolean
       controlled_reel_repair:
         description: "Repair only the unapproved support Reel from the reported recording"
         required: false
@@ -92,6 +97,12 @@ jobs:
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
         run: node scripts/verify-controlled-social-carousel.mjs
+
+      - name: Publish explicitly authorized first Instagram carousel
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_first_instagram_post && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/publish-first-instagram-carousel.mjs
 
       - name: Controlled review-only support Reel repair
         if: github.event_name == 'workflow_dispatch' && inputs.controlled_reel_repair && steps.trigger_deploy.outcome == 'success'
