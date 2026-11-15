@@ -47,13 +47,12 @@ function ReelScene({ plan, sceneIndex, captionsEnabled }: { plan: ReelPlan; scen
 
 export const FluxSocialReel: React.FC<FluxSocialReelProps> = ({ plan, logoUrl, brandName, website = "Fluxknight.space", narrationClips = [], musicUrl = null, captionsEnabled = false }) => {
   const { fps } = useVideoConfig();
-  let cursor = 0;
   return (
     <AbsoluteFill style={{ backgroundColor: "#050507", fontFamily: "Arial, Helvetica, sans-serif" }}>
       {plan.scenes.map((scene, index) => {
         const durationInFrames = Math.max(1, Math.round(scene.duration_seconds * fps));
-        const from = cursor;
-        cursor += durationInFrames;
+        const from = plan.scenes.slice(0, index).reduce((sum, prior) =>
+          sum + Math.max(1, Math.round(prior.duration_seconds * fps)), 0);
         return (
           <Sequence key={`${scene.order}-${index}`} from={from} durationInFrames={durationInFrames}>
             <ReelScene plan={plan} sceneIndex={index} captionsEnabled={captionsEnabled} />
