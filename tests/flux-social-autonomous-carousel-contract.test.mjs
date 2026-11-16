@@ -5,7 +5,7 @@ import { test } from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("weekly Flux Social plan automatically queues carousels but not publishing", () => {
-  const actions = read("app/dashboard/social/actions.ts");
+  const actions = read("lib/social-weekly-plan.ts");
   assert.match(actions, /created\.format !== "carousel"/);
   assert.match(actions, /tasks\.trigger\("flux-social-render-carousel"/);
   assert.match(actions, /carousel_render_status: "queued"/);

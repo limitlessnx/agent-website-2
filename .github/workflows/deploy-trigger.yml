@@ -14,6 +14,11 @@ on:
     # changes. Keep the worker deployment aligned with every pushed commit.
   workflow_dispatch:
     inputs:
+      prepare_review_week:
+        description: "Prepare the current Fluxknight review-only weekly batch; never approve or publish"
+        required: false
+        default: false
+        type: boolean
       repair_legacy_lead_reel:
         description: "Regenerate only the reported old lead-handoff Reel with canonical logo and narration"
         required: false
@@ -125,3 +130,9 @@ jobs:
           name: corrected-support-reel
           path: /tmp/corrected-support-reel/
           retention-days: 7
+
+      - name: Prepare the Fluxknight review-only weekly batch
+        if: github.event_name == 'workflow_dispatch' && inputs.prepare_review_week && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/prepare-social-review-week.mjs

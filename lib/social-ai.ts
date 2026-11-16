@@ -1,3 +1,4 @@
+import { socialWeeklyPostCount } from "@/lib/social-week";
 import type { SocialBrand, SocialPlatform, SocialPostFormat } from "@/lib/social";
 
 export type WeeklySocialPostIdea = {
@@ -19,7 +20,7 @@ export type WeeklySocialPlan = {
   posts: WeeklySocialPostIdea[];
 };
 
-const PLAN_SCHEMA = {
+const planSchema = (postCount: number) => ({
   type: "object",
   additionalProperties: false,
   required: ["strategy_summary", "weekly_objective", "audience_angle", "posts"],
@@ -29,8 +30,8 @@ const PLAN_SCHEMA = {
     audience_angle: { type: "string" },
     posts: {
       type: "array",
-      minItems: 5,
-      maxItems: 5,
+      minItems: postCount,
+      maxItems: postCount,
       items: {
         type: "object",
         additionalProperties: false,
@@ -46,7 +47,7 @@ const PLAN_SCHEMA = {
       },
     },
   },
-} as const;
+} as const);
 
 const CONTENT_BRAIN_PROMPT = `You are the senior content strategist and direct-response copywriter for Fluxknight, an AI automation company that builds practical business systems for sales, customer support, lead follow-up, CRM workflows, real estate automation, WhatsApp automation, and AI agents such as Leo and Maia.
 
@@ -79,10 +80,15 @@ A better sentence identifies an actual process failure and explains what changes
 CAPTION STRUCTURE:
 Where appropriate: hook -> specific situation -> insight/problem -> explanation -> Fluxknight/system relevance -> practical conclusion -> natural CTA. Do not force this structure when a shorter post is stronger.
 
+INDUSTRY AND REVENUE STRATEGY:
+Follow content_strategy in the Brand Brain. For Fluxknight cover gyms, hotels, beauty and spas, real estate and service businesses once each. In a seven-post week add one workflow demo and one FAQ or practical insight. Explain a concrete voice call, WhatsApp, email or SMS workflow and how it can support memberships, reservations, appointments, qualified leads or booked jobs. Revenue outcomes are goals, never guarantees. Label illustrative scenarios; never invent results, customer testimonials or integrations. Show actual diagrams rather than production instructions. End captions with 3-6 distinct relevant industry, problem/outcome and service hashtags, including #Fluxknight.
+
 CTA RULES:
+Where relevant invite readers to talk to Leo, Fluxknight’s website agent, about their business, needs and current workflow so he can suggest suitable automation opportunities. Use https://fluxknight.space/#talk-to-leo; Instagram captions can direct readers to the website link in the bio and choose Talk to Leo. Do not promise instant implementation or guaranteed revenue. Tailor the invitation to the industry and post.
 CTAs should feel like the natural next step rather than an advertisement. Prefer CTAs supported by the Brand Brain, such as See pricing, See how Fluxknight works, Explore Fluxknight, Book a demo, See the workflow, or See what this looks like inside Fluxknight. Avoid generic urgency and inspirational sales language.
 
 FORMAT RULES:
+Follow weekly_format_guidance in visual_rules when supplied; it restricts the formats and platforms for this batch.
 Choose among static image, carousel, product demo reel, educational reel, text/video/story only when useful. No premium cinematic or generative-video concepts. Reels/video concepts must be achievable with Fluxknight UI footage, screenshots, motion graphics, captions, and optional voiceover. Carousels and images must be feasible with deterministic branded templates.
 
 QUALITY CONTROL BEFORE RETURNING EACH POST:
@@ -93,7 +99,7 @@ QUALITY CONTROL BEFORE RETURNING EACH POST:
 5. Does Fluxknight sound like software looking for a problem? If yes, rewrite from the customer's problem first.
 6. Would an intelligent founder learn something even if they never buy Fluxknight? If no, strengthen the insight.
 
-Create one coherent weekly strategy and exactly five posts. Do not repeat the same angle within the five-post plan. Use only claims, CTAs, products and positioning supported by the supplied Brand Brain.`;
+Create one coherent weekly strategy with exactly the requested post count. Do not repeat the same angle within the weekly plan. Use only claims, CTAs, products and positioning supported by the supplied Brand Brain.`;
 
 function extractResponseText(payload: unknown) {
   if (!payload || typeof payload !== "object") return "";
@@ -113,10 +119,10 @@ function extractResponseText(payload: unknown) {
   return "";
 }
 
-function assertPlan(value: unknown): asserts value is WeeklySocialPlan {
+function assertPlan(value: unknown, postCount: number): asserts value is WeeklySocialPlan {
   if (!value || typeof value !== "object") throw new Error("AI returned an invalid weekly content plan.");
   const plan = value as WeeklySocialPlan;
-  if (!Array.isArray(plan.posts) || plan.posts.length !== 5) throw new Error("AI must return exactly five social posts.");
+  if (!Array.isArray(plan.posts) || plan.posts.length !== postCount) throw new Error(`AI must return exactly ${postCount} social posts.`);
   const formats = new Set(["text", "image", "carousel", "video", "reel", "story"]);
   const platforms = new Set(["instagram", "facebook", "linkedin"]);
   for (const post of plan.posts) {
@@ -127,10 +133,11 @@ function assertPlan(value: unknown): asserts value is WeeklySocialPlan {
 }
 
 export async function generateWeeklySocialPlan(brand: SocialBrand) {
+  const postCount = socialWeeklyPostCount(brand.metadata);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured for Flux Social.");
   const model = process.env.OPENAI_SOCIAL_MODEL || "gpt-5.6-luna";
-  const brandContext = { name: brand.name, tone: brand.tone, audience: brand.audience, content_pillars: brand.content_pillars, ctas: brand.ctas, products: brand.products, visual_rules: brand.visual_rules };
+  const brandContext = { name: brand.name, tone: brand.tone, audience: brand.audience, content_pillars: brand.content_pillars, ctas: brand.ctas, products: brand.products, visual_rules: brand.visual_rules, content_strategy: brand.metadata?.content_strategy };
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -138,9 +145,9 @@ export async function generateWeeklySocialPlan(brand: SocialBrand) {
       model, store: false, reasoning: { effort: "low" },
       input: [
         { role: "system", content: [{ type: "input_text", text: CONTENT_BRAIN_PROMPT }] },
-        { role: "user", content: [{ type: "input_text", text: `Build the next five-post weekly plan from this Brand Brain:\n${JSON.stringify(brandContext)}` }] },
+        { role: "user", content: [{ type: "input_text", text: `Build the next ${postCount}-post weekly plan from this Brand Brain:\n${JSON.stringify(brandContext)}` }] },
       ],
-      text: { format: { type: "json_schema", name: "flux_social_weekly_plan", description: "A five-post weekly social strategy for Fluxknight Social.", strict: true, schema: PLAN_SCHEMA } },
+      text: { format: { type: "json_schema", name: "flux_social_weekly_plan", description: `A ${postCount}-post weekly social strategy for Fluxknight Social.`, strict: true, schema: planSchema(postCount) } },
     }),
   });
   const payload = await response.json().catch(() => null);
@@ -152,6 +159,6 @@ export async function generateWeeklySocialPlan(brand: SocialBrand) {
   if (!raw) throw new Error("OpenAI returned no structured content plan.");
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { throw new Error("OpenAI returned malformed structured content."); }
-  assertPlan(parsed);
+  assertPlan(parsed, postCount);
   return { plan: parsed, model };
 }
