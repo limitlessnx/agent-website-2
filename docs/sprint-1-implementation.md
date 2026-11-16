@@ -22,6 +22,7 @@ Reviewed open PRs before editing, including #238 (invitation handoffs), #170 (le
 - `app/dashboard/clients/OrganizationCreationWizard.tsx`: retain request identity across response loss, show partial outcomes, continue into saved tenant setup, prevent repeated creation after a known success, derive industry from template.
 - `app/dashboard/clients/StarterProvisioningRetry.tsx`: retry existing starter setup with accessible progress feedback.
 - `app/dashboard/clients/[organizationId]/setup/page.tsx`: explicitly authorize before service-role reads; show readiness progress and next actions using existing dashboard components; preserve configuration/testing/launch controls.
+- `tests/supabase-migration-ledger.test.mjs`: register the new migration as pending review without altering the production snapshot.
 - `tests/admin-organization-creation-retry.test.cjs`, `tests/tenant-onboarding-reliability.test.cjs`: local database and mocked provider/route tests. No messages, paid services or customer records used.
 
 ## Validation
@@ -32,12 +33,21 @@ Reviewed open PRs before editing, including #238 (invitation handoffs), #170 (le
 - Hotel setup suite: passed, 11 test files.
 - Xposure dashboard suite: passed, 6 test files.
 - Real Estate suite: 48/49 test files passed. `real-estate-customer-service-window.test.cjs` also fails on untouched main in a separate worktree.
-- New mocked reliability and local PGlite migration suites: passed. Cover scalar/array RPC responses, auth before side effects, partial transfer failure/recovery, uncertain creation, concurrent claims, missing provider configuration, all seven states, tenant filters, fail-closed evidence, three industry templates, parameter conflict and function ACL.
+- New mocked reliability, mapped legacy preservation, migration ledger and local PGlite migration suites: passed. Cover scalar/array RPC responses, auth before side effects, partial transfer failure/recovery, uncertain creation, concurrent claims, missing provider configuration, all seven states, tenant filters, fail-closed evidence, three industry templates, parameter conflict and function ACL.
 - Focused ESLint and `git diff --check`: passed.
 - Full repository ESLint: fails with 501 errors and 77 warnings across existing files; not a clean baseline.
-- Initial TypeScript check passed. Webpack-generated route types later flagged an existing optional hotel GET request parameter; clean Turbopack verification recorded separately below.
-- Webpack fallback build: fails on existing CSS-module global selectors in Leo Voice and HotelWelcomeTour. The sandboxed Turbopack attempt stalled and was stopped; normal build retried outside the restricted sandbox.
+- TypeScript passed on clean native Turbopack output. A Webpack experiment generated incompatible types for an existing optional hotel GET parameter; removing those generated temporary files restored the native check.
+- Normal Turbopack production build: passed outside the restricted sandbox with synthetic database settings. Webpack fallback fails on existing CSS-module global selectors in Leo Voice and HotelWelcomeTour; the sandboxed Turbopack attempt stalled and was stopped.
 - Synthetic local browser evidence: `sprint-1-evidence/responsive.json` and screenshots at 360, 430, 768, 1024, 1440 and 1920 px. All six returned HTTP 200 with no page-level horizontal overflow or browser errors. External browser requests blocked. Existing voice/allocation widgets use incomplete synthetic fixtures; this is not proof of live provider functionality.
+
+## Review links and visual evidence
+
+- [Draft PR #406](https://github.com/limitlessnx/agent-website-2/pull/406)
+- [Code preview](https://limitlessnx-agent-website-2-6rvbnbqvj-fluxagents.vercel.app) — code commit `70edf7d2`; build status checked separately from local rendering.
+- Local fixture screenshots: [360](sprint-1-evidence/setup-360.png), [430](sprint-1-evidence/setup-430.png), [768](sprint-1-evidence/setup-768.png), [1024](sprint-1-evidence/setup-1024.png), [1440](sprint-1-evidence/setup-1440.png), [1920](sprint-1-evidence/setup-1920.png).
+- [Machine-readable responsive results](sprint-1-evidence/responsive.json).
+
+Supabase project discovery found the active production project and an **inactive** Limitless Realty Staging project. No active isolated staging database was identified. The inactive project was not resumed, and no hosted database was changed.
 
 ## Release and recovery limitations
 
@@ -52,3 +62,7 @@ Readiness is a conservative reporting projection. Existing activation gates rema
 Hosted 12ui visual refinement was blocked by automatic approval review because sharing the workflow brief with the external service requires user approval. Existing styling is retained; this visual refinement is not claimed complete. The local screenshots document functional responsive rendering, not full visual acceptance.
 
 **Production modified: no.** No production deployment, schema migration, customer-data write, merge, live message or billable test request was performed.
+
+## Hosted verification status
+
+The first preview build completed successfully according to Vercel build events. The updated code preview was then building. The connected Vercel fetch tool could not pass deployment authentication (HTTP 401, including its temporary-share-link retry); no Vercel CLI fallback is installed. Authenticated browser acceptance and preview creation against a migrated isolated database are not claimed. The GitHub hotel concurrency job passed. Maia verification initially stopped at the pending-migration ledger gate; the new migration is now explicitly listed as pending review and the ledger suite passes locally. Final hosted checks remain recorded in the PR.

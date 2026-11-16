@@ -75,6 +75,8 @@ const expectedPendingVersions = [
   "20261109073001",
   // Hotel dashboard trends and inbox index: prepared for review, not applied.
   "20261109090514",
+  // Sprint 1 idempotent admin creation: local tests only; production application requires approval.
+  "20261116104101",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
