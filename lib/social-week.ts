@@ -12,3 +12,14 @@ export function validSocialWeek(value: unknown): value is string {
 export function socialWeeklyPostCount(metadata: Record<string, unknown> | undefined): 5 | 7 {
   return metadata?.weekly_post_count === 7 ? 7 : 5;
 }
+
+export function socialWeeklyFormatMix(metadata: Record<string, unknown>, weekStart: string) {
+  const configured = metadata.weekly_format_mix;
+  if (!configured) return null;
+  if (typeof configured !== "object" || Array.isArray(configured)) throw new Error("Invalid weekly format mix.");
+  const mix = configured as Record<string, unknown>;
+  if (!validSocialWeek(mix.effective_week_start) || mix.carousel !== 4 || mix.reel !== 3) {
+    throw new Error("Weekly format mix requires four carousels, three Reels and a valid starting Monday.");
+  }
+  return weekStart >= mix.effective_week_start ? { carousel: 4, reel: 3 } : null;
+}

@@ -19,3 +19,11 @@ test('seven is opt-in per brand and unsupported counts keep the five-post defaul
   assert.equal(exports.socialWeeklyPostCount({ weekly_post_count: 7 }), 7);
   for (const metadata of [{}, undefined, { weekly_post_count: 99 }, { weekly_post_count: "7" }]) assert.equal(exports.socialWeeklyPostCount(metadata), 5);
 });
+
+test('the mixed format policy starts on the configured Monday and rejects invalid mixes', () => {
+  const metadata = { weekly_format_mix: { effective_week_start: '2026-11-23', carousel: 4, reel: 3 } };
+  assert.equal(exports.socialWeeklyFormatMix(metadata, '2026-11-16'), null);
+  assert.equal(exports.socialWeeklyFormatMix(metadata, '2026-11-23').carousel, 4);
+  assert.equal(exports.socialWeeklyFormatMix(metadata, '2026-11-30').reel, 3);
+  assert.throws(() => exports.socialWeeklyFormatMix({ weekly_format_mix: { effective_week_start: '2026-11-24', carousel: 4, reel: 3 } }, '2026-11-30'), /valid starting Monday/);
+});
