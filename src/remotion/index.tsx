@@ -58,14 +58,14 @@ const Root = () => (
       durationInFrames={90 * FPS}
       defaultProps={{
         scenes: [
-          { id: "first-inquiry", title: "Every relationship starts somewhere", description: "Discovery and first contact", durationSeconds: 13, mediaKind: "customer" as const },
-          { id: "maia", title: "Meet Maia", description: "Immediate assistance and qualification", durationSeconds: 15, mediaKind: "customer" as const },
-          { id: "crm", title: "Every conversation has context", description: "Capture interests and next steps", durationSeconds: 14, mediaKind: "customer" as const },
-          { id: "nurture", title: "Stay connected", description: "Thoughtful follow-ups before a purchase", durationSeconds: 15, mediaKind: "customer" as const },
-          { id: "conversion", title: "Turn interest into action", description: "Inspections, bookings and sales handovers", durationSeconds: 15, mediaKind: "customer" as const },
-          { id: "retention", title: "Relationships continue", description: "Support after the first transaction", durationSeconds: 14, mediaKind: "customer" as const },
-          { id: "return", title: "Create reasons to return", description: "Re-engagement and repeat business", durationSeconds: 14, mediaKind: "customer" as const },
-          { id: "outro", title: "Fluxknight", description: "Automate for speed, scale without boundaries.", durationSeconds: 10, mediaKind: "brand" as const },
+          { id: "first-inquiry", title: "Every relationship starts somewhere", description: "Discovery and first contact", durationSeconds: 10, mediaKind: "customer" as const },
+          { id: "maia", title: "Meet Maia", description: "Immediate assistance and qualification", durationSeconds: 12, mediaKind: "customer" as const },
+          { id: "crm", title: "Every conversation has context", description: "Capture interests and next steps", durationSeconds: 12, mediaKind: "customer" as const },
+          { id: "nurture", title: "Stay connected", description: "Thoughtful follow-ups before a purchase", durationSeconds: 11, mediaKind: "customer" as const },
+          { id: "conversion", title: "Turn interest into action", description: "Inspections, bookings and sales handovers", durationSeconds: 12, mediaKind: "customer" as const },
+          { id: "retention", title: "Relationships continue", description: "Support after the first transaction", durationSeconds: 10, mediaKind: "customer" as const },
+          { id: "return", title: "Create reasons to return", description: "Re-engagement and repeat business", durationSeconds: 12, mediaKind: "customer" as const },
+          { id: "outro", title: "Fluxknight", description: "Automate for speed, scale without boundaries.", durationSeconds: 6.92, mediaKind: "brand" as const },
         ],
         logoUrl: "",
         musicUrl: null,
