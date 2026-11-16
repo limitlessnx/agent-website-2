@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/admin-auth";
+import { getTenantReadiness } from "@/lib/tenant-readiness-server";
+import { tenantStageLabels } from "@/lib/tenant-readiness";
+import StarterProvisioningRetry from "../../StarterProvisioningRetry";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Bot, BrainCircuit, Building2, CheckCircle2, CircleDashed, FlaskConical, PlugZap, Rocket, Workflow } from "@/components/admin/ServerIcons";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -60,7 +65,9 @@ function knowledgeEntries(value: Record<string, unknown> | null | undefined) {
 }
 
 export default async function TenantSetupPage({ params }: SetupPageProps) {
+  if (!await getAdminSession()) redirect("/login?next=/dashboard/clients");
   const { organizationId } = await params;
+  const tenantReadiness = await getTenantReadiness(organizationId);
   const admin = createAdminClient();
 
   const [
@@ -108,17 +115,15 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
   const whatsappConnected = integrations.some((item) => item.provider === "whatsapp" && item.status === "connected");
   const agentsAllocated = agents.length > 0;
   const agentsConfigured = agents.length > 0 && agents.every((agent) => Boolean(agent.system_prompt?.trim()));
-  const modelsAssigned = currentModelIds.length > 0;
   const testsReady = agents.length > 0 && readiness.length === agents.length && readiness.every((item) => Number(item.readiness_score || 0) >= 100);
-  const isLive = profile?.status === "live";
 
   const steps = [
     { label: "Review brief", complete: businessComplete && briefComplete && knowledgeComplete },
     { label: "Build AI team", complete: agentsAllocated },
     { label: "Configure", complete: agentsConfigured },
     { label: "Connect WhatsApp", complete: whatsappConnected },
-    { label: "Test", complete: testsReady },
-    { label: "Launch", complete: isLive },
+    { label: "Test", complete: Boolean(tenantReadiness.checks.find(check => check.key === "tests")?.ready) },
+    { label: "Launch", complete: tenantReadiness.stage === "active" },
   ];
 
   return (
@@ -127,10 +132,19 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
         <div>
           <p className="admin-kicker">Client setup</p>
           <h1>{profile?.business_name || organization.name}</h1>
-          <p>Turn the client's business brief into a tested AI system. The client supplied the business context. Fluxknight handles the technical build.</p>
+          <p>Turn the client&apos;s business brief into a tested AI system. The client supplied the business context. Fluxknight handles the technical build.</p>
         </div>
         <Link className="admin-button secondary" href="/dashboard/clients"><ArrowLeft size={15} /> Back to clients</Link>
       </header>
+
+      <section className="admin-panel" aria-labelledby="onboarding-progress">
+        <div className="admin-panel-header"><div><p className="admin-kicker">Onboarding progress</p><h2 id="onboarding-progress">{tenantStageLabels[tenantReadiness.stage]}</h2><p>{tenantReadiness.checks.filter(check => check.ready).length} of {tenantReadiness.checks.length} readiness checks complete. Review blockers before activation.</p></div></div>
+        <progress aria-label="Tenant readiness" max={tenantReadiness.checks.length} value={tenantReadiness.checks.filter(check => check.ready).length} style={{ width: "100%", accentColor: "#a78bfa" }} />
+        <div className="admin-list" style={{ marginTop: 16 }}>
+          {tenantReadiness.checks.map(check => <div key={check.key} className="admin-list-row compact" style={{ flexWrap: "wrap", overflowWrap: "anywhere" }}><div><strong>{check.label}</strong><span>{check.ready ? "Verified from saved setup evidence" : check.action}</span></div>{check.ready ? <span className="admin-status live">Complete</span> : <Link className="admin-button secondary" href={check.href}>Review</Link>}</div>)}
+        </div>
+        <StarterProvisioningRetry organizationId={organizationId} />
+      </section>
 
       <section className="admin-panel">
         <div className="admin-list" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", display: "grid" }}>
@@ -165,7 +179,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
 
       <section className="admin-panel" id="whatsapp">
         <div className="admin-panel-header">
-          <div><p className="admin-kicker">Channel</p><h2>WhatsApp</h2><p>Connect the customer's WhatsApp Business number. Credentials and provider configuration remain behind the platform boundary.</p></div>
+          <div><p className="admin-kicker">Channel</p><h2>WhatsApp</h2><p>Connect the customer&apos;s WhatsApp Business number. Credentials and provider configuration remain behind the platform boundary.</p></div>
           <span className={stageState(whatsappConnected)}>{whatsappConnected ? "Connected" : "Awaiting connection"}</span>
         </div>
         <div className="admin-list-row">
@@ -180,13 +194,13 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
       </section>
 
       <section className="admin-panel" id="agents">
-        <div className="admin-panel-header"><div><p className="admin-kicker">Build</p><h2>AI team</h2><p>Choose the reusable AI workers that match the client's requested outcomes. Fluxknight owns the technical provisioning.</p></div><Bot size={18} /></div>
+        <div className="admin-panel-header"><div><p className="admin-kicker">Build</p><h2>AI team</h2><p>Choose the reusable AI workers that match the client&apos;s requested outcomes. Fluxknight owns the technical provisioning.</p></div><Bot size={18} /></div>
         <AgentAllocationControl organizationId={organizationId} embedded />
         {agents.length ? <div className="admin-list" style={{ marginTop: 16 }}>{agents.map((agent) => <div className="admin-list-row compact" key={agent.id}><Bot size={15} /><div><strong>{agent.name}</strong><span>{humanize(agent.agent_type || "general agent")}</span></div><em className={agent.status === "active" ? "good" : "muted"}>{humanize(agent.status)}</em></div>)}</div> : <p className="admin-empty">No AI workers have been assigned yet.</p>}
       </section>
 
       <section className="admin-panel" id="configuration">
-        <div className="admin-panel-header"><div><p className="admin-kicker">Configure</p><h2>Make the AI behave like this business</h2><p>Build each agent's instructions from the submitted brief, then review channels and automation routes.</p></div><Workflow size={18} /></div>
+        <div className="admin-panel-header"><div><p className="admin-kicker">Configure</p><h2>Make the AI behave like this business</h2><p>Build each agent&apos;s instructions from the submitted brief, then review channels and automation routes.</p></div><Workflow size={18} /></div>
         <AgentConfigurationControl organizationId={organizationId} />
       </section>
 
@@ -201,7 +215,7 @@ export default async function TenantSetupPage({ params }: SetupPageProps) {
       </section>
 
       <section className="admin-panel" id="models">
-        <div className="admin-panel-header"><div><p className="admin-kicker">Platform</p><h2>Approved AI models</h2><p>Assign the approved models this tenant's agents may use. Provider credentials remain centralized.</p></div><BrainCircuit size={18} /></div>
+        <div className="admin-panel-header"><div><p className="admin-kicker">Platform</p><h2>Approved AI models</h2><p>Assign the approved models this tenant&apos;s agents may use. Provider credentials remain centralized.</p></div><BrainCircuit size={18} /></div>
         <ClientModelAssignmentControl organizationId={organizationId} models={models} currentModelIds={currentModelIds} />
       </section>
 

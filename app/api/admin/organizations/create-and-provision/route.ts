@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
+    const requestId = String(body.requestId || "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) return NextResponse.json({ error: "A valid creation request ID is required." }, { status: 400 });
     const name = String(body.name || "").trim();
     const templateSlug = String(body.templateSlug || "").trim();
     const industry = String(body.industry || "").trim();
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Enter a valid business email." }, { status: 400 });
     }
 
-    const rows = await supabaseServerRequest<ProvisionedResult[]>(
+    const rows = await supabaseServerRequest<ProvisionedResult | ProvisionedResult[]>(
       "rpc/create_and_provision_organization",
       {
         method: "POST",
@@ -42,11 +44,13 @@ export async function POST(request: NextRequest) {
           p_country: country || "Nigeria",
           p_timezone: timezone || "Africa/Lagos",
           p_actor_user_id: null,
+          p_request_id: requestId,
         }),
       },
     );
 
-    const result = rows[0];
+    // PostgREST returns a jsonb scalar as an object, not a table result.
+    const result = Array.isArray(rows) ? rows[0] : rows;
     if (!result?.organization_id || !result.organization_name || !result.organization_slug) {
       throw new Error("Organization provisioning did not return the required organization details.");
     }
@@ -62,18 +66,18 @@ export async function POST(request: NextRequest) {
         },
         { timezone },
       );
-    } catch (error) {
+    } catch {
       n8nProvisioning = {
-        configured: true,
-        created: false,
-        error: error instanceof Error ? error.message : "n8n project provisioning failed.",
+        status: "needs_attention",
+        complete: false,
+        message: "Organization saved. Unable to confirm automation provisioning. Open setup to review before retrying.",
       };
     }
 
-    return NextResponse.json({ ok: true, result, n8n: n8nProvisioning });
-  } catch (error) {
+    return NextResponse.json({ ok: n8nProvisioning.complete === true, organization_created: true, result, provisioning: n8nProvisioning }, { status: 201 });
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create and provision organization." },
+      { error: "Unable to confirm organization creation. Review the client list before submitting again." },
       { status: 400 },
     );
   }
