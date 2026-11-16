@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { tasks } from "@trigger.dev/sdk";
+import { socialWeeklyFormatMix } from "@/lib/social-week";
 import { generateWeeklySocialPlan } from "@/lib/social-ai";
 import type { SocialBrand } from "@/lib/social";
 
-// Saves review-only drafts and queues the verified v1 carousel renderer.
+// Saves review-only drafts and queues the verified carousel and narrated Reel pipelines.
 // This module never approves, schedules or publishes content.
 export async function prepareSocialReviewWeek(supabase: SupabaseClient, organizationId: string, weekStart: string, brandId?: string) {
   let brandQuery = supabase
@@ -39,13 +40,23 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
   if (metricError) throw metricError;
   const latestMetrics = [...new Map((metricRows || []).slice().reverse().map((row) => [`${row.post_id}:${row.platform}`, row])).values()];
   const isFluxknight = organizationId === "15046426-e520-438b-8694-7662a6986efb" && brand.id === "a330b65a-d5b2-45f3-b211-451616f2fa8d";
+  const formatMix = isFluxknight ? socialWeeklyFormatMix(brand.metadata || {}, weekStart) : null;
   const planningBrand = { ...brand, visual_rules: { ...brand.visual_rules,
     weekly_context: { recent_posts: recentPosts, latest_metrics: latestMetrics,
       instruction: "Avoid repeated hooks and angles. Treat small samples as exploratory; do not infer sales or revenue without tracked attribution." },
-    ...(isFluxknight ? { weekly_format_guidance: "For this review batch use Instagram carousels. The workflow demo can be a step-by-step illustrative walkthrough with no invented results. Preserve human approval before scheduling or publishing." } : {}) } } as SocialBrand;
+    ...(isFluxknight ? { weekly_format_guidance: formatMix
+      ? "Create exactly four Instagram carousels and three narrated Instagram Reels (format reel). Make the workflow demo one of the Reels; vary industry coverage across the other formats. All seven retain Leo CTAs and relevant hashtags. Reels need structured illustrative diagrams, readable text and voiceover; use licensed brand background music when available. Never invent results. Human approval is required before scheduling or publishing."
+      : "For this review batch use Instagram carousels. The workflow demo can be a step-by-step illustrative walkthrough with no invented results. Preserve human approval before scheduling or publishing." } : {}) } } as SocialBrand;
   const { plan, model } = await generateWeeklySocialPlan(planningBrand);
-  if (isFluxknight && plan.posts.some((post) => post.format !== "carousel" || post.platforms.some((platform) => platform !== "instagram"))) {
-    throw new Error("Weekly review batches currently require Instagram carousels.");
+  if (isFluxknight) {
+    const carousels = plan.posts.filter((post) => post.format === "carousel").length;
+    const reels = plan.posts.filter((post) => post.format === "reel").length;
+    if (formatMix ? (plan.posts.length !== 7 || carousels !== 4 || reels !== 3) : carousels !== plan.posts.length) {
+      throw new Error(formatMix ? "Weekly review requires exactly four carousels and three narrated Reels." : "Weekly review batches currently require Instagram carousels.");
+    }
+    if (plan.posts.some((post) => post.platforms.some((platform) => platform !== "instagram"))) {
+      throw new Error("Fluxknight weekly review supports Instagram only.");
+    }
   }
   const generatedAt = new Date().toISOString();
 
@@ -63,7 +74,7 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
       },
       model,
       generated_at: generatedAt,
-      metadata: { source: "flux_social_ai", phase: "3.1", post_count: plan.posts.length },
+      metadata: { source: "flux_social_ai", phase: "3.1", post_count: plan.posts.length, ...(formatMix ? { format_mix: formatMix } : {}) },
     })
     .select("id")
     .single();
@@ -107,6 +118,7 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
         carousel_render_status: "queued",
         carousel_template: "fluxknight-social-carousel-v1",
       } : {}),
+      ...(post.format === "reel" && formatMix ? { reel_render_status: "queued", reel_audio_verified: false, reel_voice_review_status: "pending" } : {}),
     },
   }));
 
@@ -117,21 +129,26 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
     throw postsError;
   }
 
-  // Carousel creation is autonomous after planning. Trigger runs the existing
-  // Fluxknight v1 renderer in the background and leaves the finished slides in
+  // Media preparation runs in the background and leaves each completed post in
   // Review. A queue failure must never discard the saved weekly plan.
   for (const created of createdPosts || []) {
-    if (created.format !== "carousel") continue;
+    if (created.format !== "carousel" && !(created.format === "reel" && formatMix)) continue;
     try {
-      await tasks.trigger("flux-social-render-carousel", { organizationId, postId: created.id }, { idempotencyKey: `weekly-carousel:${created.id}` });
+      const options = { idempotencyKey: `weekly-${created.format}:${created.id}` };
+      if (created.format === "reel") {
+        await tasks.trigger("flux-social-prepare-reel", { organizationId, postId: created.id }, options);
+      } else {
+        await tasks.trigger("flux-social-render-carousel", { organizationId, postId: created.id }, options);
+      }
     } catch (queueError) {
       const message = queueError instanceof Error ? queueError.message : String(queueError);
-      const source = posts.find((post) => post.format === "carousel")?.metadata || {};
+      const source = posts.find((post) => post.format === created.format)?.metadata || {};
       const { error: markError } = await supabase.from("social_posts").update({
         metadata: {
           ...source,
-          carousel_render_status: "queue_failed",
-          carousel_render_error: message,
+          ...(created.format === "reel" ? { reel_render_status: "failed", reel_render_error: message } : {
+            carousel_render_status: "queue_failed", carousel_render_error: message,
+          }),
         },
       }).eq("organization_id", organizationId).eq("id", created.id);
       if (markError) throw markError;
