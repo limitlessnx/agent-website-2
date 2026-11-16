@@ -16,6 +16,7 @@ export type FluxknightBrandFilmProps = {
   scenes: BrandFilmScene[];
   logoUrl: string;
   musicUrl?: string | null;
+  voiceoverUrl?: string | null;
   website?: string;
   tagline?: string;
 };
@@ -25,6 +26,7 @@ export const brandFilmDuration = (scenes: BrandFilmScene[], fps = 30) =>
 export function validateBrandFilm(props: FluxknightBrandFilmProps) {
   if (!props.logoUrl || !/^https:\/\//.test(props.logoUrl)) throw new Error("Approved canonical HTTPS logo required.");
   if (!props.scenes.length) throw new Error("Brand film requires scenes.");
+  if (props.voiceoverUrl && !/^https:\/\//.test(props.voiceoverUrl)) throw new Error("Master narration must use a signed HTTPS URL.");
   if (props.scenes.some(s => !s.id || !s.title || !Number.isFinite(s.durationSeconds) || s.durationSeconds <= 0))
     throw new Error("Brand film scenes must have a title, ID and positive duration.");
   if (new Set(props.scenes.map(s => s.id)).size !== props.scenes.length) throw new Error("Scene IDs must be unique.");
@@ -73,6 +75,7 @@ export const FluxknightBrandFilm: React.FC<FluxknightBrandFilmProps> = (props) =
         {scene.narrationUrl ? <Audio src={scene.narrationUrl} /> : null}
       </Sequence>;
     })}
+    {props.voiceoverUrl ? <Audio src={props.voiceoverUrl} /> : null}
     {props.musicUrl ? <Audio src={props.musicUrl} loop volume={0.09} /> : null}
     <div style={{ position: "absolute", top: 48, left: 100, right: 100, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
       <Img src={props.logoUrl} style={{ height: 100, maxWidth: 285, objectFit: "contain", objectPosition: "left" }} />
