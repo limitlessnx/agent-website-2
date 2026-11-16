@@ -1,3 +1,4 @@
+import { MediaActionForm } from "@/app/dashboard/social/review/MediaActionForm";
 import Link from "next/link";
 import { generateCarouselAction } from "@/app/dashboard/social/carousels/actions";
 import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/actions";
@@ -218,28 +219,28 @@ export default async function SocialReviewPage() {
                       ) : null}
                     <div className={styles.generationActions}>
                       {post.format === "image" ? (
-                        <form action={generateStaticGraphicAction}>
+                        <MediaActionForm action={generateStaticGraphicAction}>
                           <input type="hidden" name="post_id" value={post.id} />
                           <ReviewSubmitButton kind="secondary" pendingLabel="Generating graphic…">Regenerate graphic</ReviewSubmitButton>
-                        </form>
+                        </MediaActionForm>
                       ) : null}
                       {post.format === "carousel" ? (
-                        <form action={generateCarouselAction}>
+                        <MediaActionForm action={generateCarouselAction}>
                           <input type="hidden" name="post_id" value={post.id} />
                           <ReviewSubmitButton kind="secondary" disabled={["queued", "rendering"].includes(carouselRenderStatus)} pendingLabel="Generating carousel…">{carouselAssets.length ? "Regenerate carousel" : "Generate carousel manually"}</ReviewSubmitButton>
-                        </form>
+                        </MediaActionForm>
                       ) : null}
                       {["reel", "video"].includes(post.format) ? (
                         <>
-                          <form action={generateReelPlanAction}>
+                          <MediaActionForm action={generateReelPlanAction}>
                             <input type="hidden" name="post_id" value={post.id} />
                             <ReviewSubmitButton kind={hasPlan ? "secondary" : "primary"} pendingLabel="Generating storyboard…">{hasPlan ? "Regenerate storyboard" : "Generate storyboard"}</ReviewSubmitButton>
-                          </form>
+                          </MediaActionForm>
                           {hasPlan ? (
-                            <form action={renderReelAction}>
+                            <MediaActionForm action={renderReelAction}>
                               <input type="hidden" name="post_id" value={post.id} />
                               <ReviewSubmitButton kind="primary" disabled={isRendering} pendingLabel="Queueing Reel…">{renderStatus === "ready" ? "Render new Reel" : isRendering ? "Render in progress" : "Render Reel"}</ReviewSubmitButton>
-                            </form>
+                            </MediaActionForm>
                           ) : null}
                         </>
                       ) : null}
@@ -263,7 +264,8 @@ export default async function SocialReviewPage() {
                           </select>
                         </label>
                         <ReviewSubmitButton pendingLabel="Saving soundtrack…">Save soundtrack</ReviewSubmitButton>
-                        {!licensedTracks.length ? <span>Upload a rights-cleared music track in the Asset Library first.</span> : null}
+                        <Link href="/dashboard/social/assets">Upload background music or set a reusable brand default</Link>
+                        <span>A track selected for this Reel overrides the brand default. A new render is required to change the sound.</span>
                       </form>
                       </details>
                     ) : null}

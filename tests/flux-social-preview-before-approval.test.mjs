@@ -8,7 +8,7 @@ test("Review presents real media preview and copy before final approval", () => 
   const page = read("app/dashboard/social/review/page.tsx");
   const css = read("app/dashboard/social/review/review.module.css");
   assert.match(page, /CarouselMediaPreview/);
-  assert.match(page, /Preview your final media/);
+  assert.match(page, /Review generated media/);
   assert.match(page, /Post caption/);
   assert.match(page, /mediaPreviewReady/);
   assert.match(page, /disabled=\{!approvalReady\}/);

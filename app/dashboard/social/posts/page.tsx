@@ -1,3 +1,4 @@
+import { MediaActionForm } from "@/app/dashboard/social/review/MediaActionForm";
 import Link from "next/link";
 import { ReviewSubmitButton } from "@/app/dashboard/social/review/ReviewSubmitButton";
 import styles from "./posts.module.css";
@@ -99,28 +100,28 @@ export default async function SocialPostsPage() {
                       </form>
                     ))}
                     {canGenerateStatic ? (
-                      <form action={generateStaticGraphicAction}>
+                      <MediaActionForm action={generateStaticGraphicAction}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <ReviewSubmitButton kind="primary" pendingLabel="Generating graphic…">{hasPrimaryAsset ? "Regenerate graphic" : "Generate graphic"}</ReviewSubmitButton>
-                      </form>
+                      </MediaActionForm>
                     ) : null}
                     {canGenerateCarousel ? (
-                      <form action={generateCarouselAction}>
+                      <MediaActionForm action={generateCarouselAction}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <ReviewSubmitButton kind={carouselAssetIds.length ? "secondary" : "primary"} disabled={carouselGenerating} pendingLabel="Generating carousel…">{carouselGenerating ? "Generating automatically" : carouselAssetIds.length ? "Regenerate carousel" : "Generate carousel manually"}</ReviewSubmitButton>
-                      </form>
+                      </MediaActionForm>
                     ) : null}
                     {canGenerateReel ? (
                       <>
-                        <form action={generateReelPlanAction}>
+                        <MediaActionForm action={generateReelPlanAction}>
                           <input type="hidden" name="post_id" value={post.id} />
                           <ReviewSubmitButton kind={hasReelPlan ? "secondary" : "primary"} pendingLabel="Generating storyboard…">{hasReelPlan ? "Regenerate storyboard" : "Generate storyboard"}</ReviewSubmitButton>
-                        </form>
+                        </MediaActionForm>
                         {hasReelPlan ? (
-                          <form action={renderReelAction}>
+                          <MediaActionForm action={renderReelAction}>
                             <input type="hidden" name="post_id" value={post.id} />
                             <ReviewSubmitButton kind="primary" disabled={reelRenderStatus === "queued" || reelRenderStatus === "rendering"} pendingLabel="Queueing Reel…">{reelReady ? "Render again" : ["queued", "rendering"].includes(reelRenderStatus) ? "Render in progress" : "Render Reel"}</ReviewSubmitButton>
-                          </form>
+                          </MediaActionForm>
                         ) : null}
                       </>
                     ) : null}

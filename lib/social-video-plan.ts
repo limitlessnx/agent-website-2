@@ -1,5 +1,6 @@
 import { requireTenant } from "@/lib/tenant";
 import { getSocialBrand } from "@/lib/social";
+import type { ReelVisual } from "@/src/remotion/reel-visual-model";
 
 export type ReelScene = {
   order: number;
@@ -9,6 +10,7 @@ export type ReelScene = {
   on_screen_text: string;
   visual_direction: string;
   source_media: "fluxknight_ui" | "screenshot" | "motion_graphics" | "uploaded_media";
+  visual?: ReelVisual;
 };
 
 export type ReelPlan = {
@@ -37,7 +39,7 @@ const REEL_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["order", "duration_seconds", "scene_type", "voiceover", "on_screen_text", "visual_direction", "source_media"],
+        required: ["order", "duration_seconds", "scene_type", "voiceover", "on_screen_text", "visual_direction", "source_media", "visual"],
         properties: {
           order: { type: "integer", minimum: 1 },
           duration_seconds: { type: "number", minimum: 1, maximum: 20 },
@@ -45,6 +47,14 @@ const REEL_SCHEMA = {
           voiceover: { type: "string" },
           on_screen_text: { type: "string" },
           visual_direction: { type: "string" },
+          visual: {
+            type: "object", additionalProperties: false, required: ["kind", "title", "items"],
+            properties: {
+              kind: { type: "string", enum: ["inbox", "question_router", "answer", "capture", "handoff", "overview", "pipeline"] },
+              title: { type: "string", maxLength: 48 },
+              items: { type: "array", minItems: 2, maxItems: 5, items: { type: "string", maxLength: 80 } },
+            },
+          },
           source_media: { type: "string", enum: ["fluxknight_ui", "screenshot", "motion_graphics", "uploaded_media"] },
         },
       },
@@ -108,6 +118,10 @@ export async function generateReelPlanForPost(postId: string) {
             "When illustrative metrics appear, frame them visually and contextually as examples, scenarios, simulated states or targets rather than verified client history.",
             "The first 2 seconds must earn attention with a specific operational problem or sharp observation.",
             "Keep every scene visually actionable for a Remotion renderer.",
+            "Supply structured visual data using the supported inbox, question_router, answer, capture, handoff, overview or pipeline components. The title and items are short audience-facing labels, never production instructions.",
+            "question_router needs two branch labels. answer needs two customer questions and one configured-answer description. handoff needs sender, human recipient and context label. capture needs field labels. Other kinds use ordered card labels.",
+            "Do not request screenshots, footage or custom illustrations that are not supplied. These visuals are illustrative diagrams and interface examples, not actual product screenshots.",
+            "Use real line breaks in on_screen_text, never literal backslash-n sequences. Proofread spelling and grammar before returning the plan.",
             "Use the exact supplied post idea. Do not replace it with generic AI messaging.",
             "End with a natural Fluxknight CTA supported by the post.",
           ].join(" ") }],

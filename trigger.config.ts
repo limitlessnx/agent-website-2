@@ -17,7 +17,7 @@ function remotionSourceFiles() {
       const bundledFont = path.join(manifest.outputPath, "Geist-Regular.ttf");
       const bundledResvg = path.join(manifest.outputPath, "resvg.wasm");
       const sourceResvg = path.join(
-        manifest.outputPath,
+        context.workingDir,
         "node_modules",
         "next",
         "dist",
@@ -26,21 +26,19 @@ function remotionSourceFiles() {
         "og",
         "resvg.wasm",
       );
-      try {
-        await access(systemFont);
-        await mkdir(path.dirname(bundledFont), { recursive: true });
-        await copyFile(systemFont, bundledFont);
-        context.logger.log("Bundled Flux Social ImageResponse runtime font into the Trigger artifact.");
-      } catch {
-        context.logger.log("System font was not available during Trigger artifact preparation; ImageResponse font fallback was not bundled.");
-      }
-      try {
-        await access(sourceResvg);
-        await copyFile(sourceResvg, bundledResvg);
-        context.logger.log("Bundled Flux Social ImageResponse resvg runtime into the Trigger artifact.");
-      } catch {
-        context.logger.log("The @vercel/og resvg runtime was not available during Trigger artifact preparation.");
-      }
+      // Do not allow a worker image with missing rendering dependencies to
+      // deploy successfully. Vercel READY does not validate Trigger task images.
+      // The paths below are resolved by the image renderer at runtime.
+      await access(systemFont);
+      await mkdir(path.dirname(bundledFont), { recursive: true });
+      await copyFile(systemFont, bundledFont);
+      await access(bundledFont);
+      context.logger.log("Verified Flux Social runtime font: /app/Geist-Regular.ttf");
+
+      await access(sourceResvg);
+      await copyFile(sourceResvg, bundledResvg);
+      await access(bundledResvg);
+      context.logger.log("Verified Flux Social runtime WASM: /app/resvg.wasm");
     },
   };
 }
@@ -52,12 +50,18 @@ function socialMediaRuntimeAssets() {
       target: "dev" | "deploy" | "unmanaged";
       addLayer: (layer: {
         id: string;
+        commands?: string[];
         image: { instructions?: string[] };
       }) => void;
     }) {
       if (context.target === "dev") return;
       context.addLayer({
         id: "flux-social-runtime-assets",
+        // Trigger 4.8.1 logs and swallows onBuildComplete exceptions. These
+        // commands execute in /app after COPY and fail the actual image build.
+        commands: [
+          "test -s /app/Geist-Regular.ttf && test -s /app/resvg.wasm && sha256sum /app/Geist-Regular.ttf /app/resvg.wasm",
+        ],
         image: {
           instructions: [
             "RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2 libglib2.0-0 libx11-6 libxcb1 libxext6 && rm -rf /var/lib/apt/lists/*",

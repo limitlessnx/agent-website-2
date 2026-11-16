@@ -1,0 +1,72 @@
+{
+  "cta": "Explore Fluxknight and see how Maia approaches customer support.",
+  "hook": "When customers ask the same five questions every day, the problem is usually not employee performance—it is missing support structure.",
+  "title": "Support teams should not answer the same question from memory",
+  "scenes": [
+    {
+      "order": 1,
+      "voiceover": "When customers ask the same five questions every day, the problem is usually not employee performance—it is missing support structure.",
+      "scene_type": "hook",
+      "source_media": "motion_graphics",
+      "on_screen_text": "Same questions. Every day.\\nThe problem is support structure.",
+      "duration_seconds": 7.933333333333334,
+      "visual_direction": "Open on a near-black background with five violet-and-white enquiry cards rapidly stacking: “Availability?”, “Pricing?”, “How do I book?”, “Which documents?”, “Opening hours?” Add a subtle alert pulse and quick zoom toward the overloaded support inbox. Use premium white sans-serif typography and the Fluxknight purple accent."
+    },
+    {
+      "order": 2,
+      "voiceover": "Each answer feels small. Together, they interrupt deeper work and make response quality depend on who is online.",
+      "scene_type": "problem",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Small questions create\\nconstant interruptions.",
+      "duration_seconds": 7.5,
+      "visual_direction": "Show a Fluxknight-style support workspace with incoming enquiry cards appearing over a task board. A human operator’s task cards dim as repeat questions cover the interface. Keep the UI illustrative and clearly framed as a workflow scenario, not a historical performance claim."
+    },
+    {
+      "order": 3,
+      "voiceover": "The first useful automation step is not replacing the support team.",
+      "scene_type": "workflow",
+      "source_media": "motion_graphics",
+      "on_screen_text": "Start with structure.\\nNot replacement.",
+      "duration_seconds": 4.366666666666666,
+      "visual_direction": "Transition to a clean workflow diagram on black: “Customer enquiry” flows into two violet branches labeled “Defined question” and “Needs judgment.” Animate the split with a crisp violet line and restrained glow."
+    },
+    {
+      "order": 4,
+      "voiceover": "Maia can handle defined questions, such as availability, pricing, booking steps, documents, and opening hours.",
+      "scene_type": "ui_demo",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Maia handles defined questions",
+      "duration_seconds": 7.333333333333333,
+      "visual_direction": "Show a polished simulated Maia interface. A customer message enters: “Is the property available, and what documents do I need?” Maia highlights the defined topics, retrieves approved answer blocks, and displays a concise response preview. Include subtle “Configured answer” labels to clarify that the business controls the information."
+    },
+    {
+      "order": 5,
+      "voiceover": "It can also collect the relevant details before the next step.",
+      "scene_type": "ui_demo",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Capture the details\\nthat matter",
+      "duration_seconds": 4,
+      "visual_direction": "Animate a structured capture panel beside the conversation with fields such as “Enquiry type,” “Preferred date,” “Customer name,” and “Contact details.” Fields populate one at a time, with a violet completion indicator. Avoid presenting any invented customer data as a real result."
+    },
+    {
+      "order": 6,
+      "voiceover": "And when a request needs judgment, Maia directs it to the right person instead of guessing.",
+      "scene_type": "workflow",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Repeatable information → Maia\\nHuman decisions → Your team",
+      "duration_seconds": 5.333333333333333,
+      "visual_direction": "Show an exception message: “Request needs review.” The workflow routes it from Maia to a human-assignee card labeled “Support team,” with a visible handoff status and conversation context attached. Use a clean animated connector and a human-review icon."
+    },
+    {
+      "order": 7,
+      "voiceover": "Good support automation creates a clearer boundary between repeatable information and human decisions.",
+      "scene_type": "benefit",
+      "source_media": "motion_graphics",
+      "on_screen_text": "Clearer boundaries.\\nBetter support workflows.",
+      "duration_seconds": 6.633333333333334,
+      "visual_direction": "Pull back to the complete workflow: enquiry, Maia response, detail capture, human handoff. Add a restrained Fluxknight wordmark lockup with the X highlighted in violet. Keep the background black and the composition spacious."
+    }
+  ],
+  "objective": "Educate operators that practical support automation separates predictable enquiries from cases requiring human judgment, while introducing Maia’s structured customer-support workflow.",
+  "target_duration_seconds": 26
+}

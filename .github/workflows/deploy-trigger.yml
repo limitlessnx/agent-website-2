@@ -14,6 +14,21 @@ on:
     # changes. Keep the worker deployment aligned with every pushed commit.
   workflow_dispatch:
     inputs:
+      repair_legacy_lead_reel:
+        description: "Regenerate only the reported old lead-handoff Reel with canonical logo and narration"
+        required: false
+        default: false
+        type: boolean
+      controlled_reel_repair:
+        description: "Repair only the unapproved support Reel from the reported recording"
+        required: false
+        default: false
+        type: boolean
+      controlled_carousel_test:
+        description: "Run PR 399's single review-only carousel test after deployment"
+        required: false
+        default: false
+        type: boolean
       external_deployment_id:
         description: "Optional external deployment ID for a one-time version recovery"
         required: false
@@ -76,3 +91,37 @@ jobs:
         run: |
           echo "::error title=Trigger.dev deploy failed::See trigger-deploy-diagnostics artifact for the complete CLI output."
           exit 1
+
+      - name: Controlled review-only Flux Social carousel verification
+        if: github.event_name == 'workflow_dispatch' && inputs.controlled_carousel_test && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-controlled-social-carousel.mjs
+
+      - name: Controlled review-only support Reel repair
+        if: github.event_name == 'workflow_dispatch' && inputs.controlled_reel_repair && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-controlled-social-reel.mjs
+
+      - name: Repair reported legacy lead-handoff Reel
+        if: github.event_name == 'workflow_dispatch' && inputs.repair_legacy_lead_reel && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-legacy-lead-reel.mjs
+
+      - name: Save private repaired legacy Reel
+        if: github.event_name == 'workflow_dispatch' && inputs.repair_legacy_lead_reel && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corrected-legacy-reel
+          path: /tmp/corrected-legacy-reel/
+          retention-days: 7
+
+      - name: Save private corrected Reel preview
+        if: github.event_name == 'workflow_dispatch' && inputs.controlled_reel_repair && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corrected-support-reel
+          path: /tmp/corrected-support-reel/
+          retention-days: 7

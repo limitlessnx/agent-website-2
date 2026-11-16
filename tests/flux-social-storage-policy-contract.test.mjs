@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const migration = fs.readFileSync(
-  "supabase/migrations/20261027001500_fix_flux_social_storage_tenant_folder_policy.sql",
+  "supabase/migrations/20261027180755_fix_flux_social_storage_tenant_folder_policy.sql",
   "utf8",
 );
 

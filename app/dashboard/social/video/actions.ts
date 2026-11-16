@@ -44,8 +44,6 @@ export async function renderReelAction(formData: FormData) {
         reel_render_error: null,
         reel_audio_verified: false,
         reel_voice_review_status: "pending",
-        reel_asset_id: null,
-        primary_asset_id: null,
       },
     })
     .eq("organization_id", organizationId)
@@ -54,7 +52,15 @@ export async function renderReelAction(formData: FormData) {
 
   // Update the draft state BEFORE triggering. Do not perform a second metadata
   // write that might overwrite a faster render worker's completed result.
-  await tasks.trigger("flux-social-render-reel", { organizationId, postId });
+  try {
+    await tasks.trigger("flux-social-render-reel", { organizationId, postId });
+  } catch {
+    await supabase.from("social_posts").update({ metadata: {
+      ...metadata, reel_render_status: "failed", reel_render_error: "The render could not be queued. Please try again.",
+      reel_audio_verified: false, reel_voice_review_status: "pending",
+    } }).eq("organization_id", organizationId).eq("id", postId).eq("status", "review");
+    throw new Error("The Reel could not be queued. Please try again.");
+  }
 
   revalidatePath("/dashboard/social/posts");
   revalidatePath("/dashboard/social/review");
