@@ -17,12 +17,14 @@ export async function generateCarouselForPost(postId: string) {
 
   const { data: post, error } = await supabase
     .from("social_posts")
-    .select("id,brand_id,title,caption,format,content,metadata")
+    .select("id,brand_id,title,caption,format,status,content,metadata")
     .eq("organization_id", organizationId)
     .eq("id", postId)
     .single();
   if (error) throw error;
   if (post.format !== "carousel") throw new Error("This post is not configured as a carousel.");
+  if (!["draft", "review", "approved"].includes(post.status)) throw new Error("Scheduled and published carousels cannot be regenerated.");
+  if (post.brand_id !== brand.id) throw new Error("This post does not belong to the active social brand.");
 
   const content = (post.content || {}) as Record<string, unknown>;
   const metadata = (post.metadata || {}) as Record<string, unknown>;
@@ -80,6 +82,7 @@ export async function generateCarouselForPost(postId: string) {
   const { error: updateError } = await supabase
     .from("social_posts")
     .update({
+      status: "review", approved_at: null,
       metadata: {
         ...metadata,
         media_assets: [...existingAssetIds, ...carouselAssetIds],
@@ -88,10 +91,11 @@ export async function generateCarouselForPost(postId: string) {
         carousel_plan: plan,
         carousel_template: FLUX_SOCIAL_CAROUSEL_TEMPLATE,
         carousel_generated_at: new Date().toISOString(),
+        carousel_render_status: "ready", carousel_render_error: null,
       },
     })
     .eq("organization_id", organizationId)
-    .eq("id", post.id);
+    .eq("id", post.id).in("status", ["draft", "review", "approved"]);
   if (updateError) throw updateError;
 
   return { assets, plan, model };

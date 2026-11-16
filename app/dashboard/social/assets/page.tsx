@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { uploadSocialAssetAction, uploadPrimarySocialLogoAction, uploadLicensedReelMusicAction } from "@/app/dashboard/social/assets/actions";
+import { uploadSocialAssetAction, uploadPrimarySocialLogoAction } from "@/app/dashboard/social/assets/actions";
 import { getSocialBrand } from "@/lib/social";
 import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
-import { listSocialAssets } from "@/lib/social-assets";
+import { MusicUploadForm } from "./MusicUploadForm";
+import { listSocialAssets, createSocialAssetSignedUrl } from "@/lib/social-assets";
 import { listSocialPosts } from "@/lib/social";
 
 const inputStyle = { width: "100%", padding: "11px 13px", borderRadius: 10, border: "1px solid var(--admin-border, #2d2d35)", background: "transparent", color: "inherit" } as const;
@@ -17,6 +18,8 @@ function formatBytes(value: number | null) {
 export default async function SocialAssetsPage() {
   const [assets, posts, brand] = await Promise.all([listSocialAssets(), listSocialPosts(200), getSocialBrand()]);
   const currentLogo = brand ? await getPrimaryLogoAsset(brand.id) : null;
+  const defaultMusic = assets.find((asset) => asset.id === brand?.metadata?.default_reel_music_asset_id && asset.brand_id === brand?.id && asset.status === "ready");
+  const defaultMusicUrl = defaultMusic ? await createSocialAssetSignedUrl(defaultMusic.id).catch(() => null) : null;
   const postById = new Map(posts.map((post) => [post.id, post]));
 
   return (
@@ -64,20 +67,12 @@ export default async function SocialAssetsPage() {
         <div className="admin-panel-header">
           <div>
             <h2>Licensed Reel background music</h2>
-            <p>Upload a soundtrack only if you own it or have explicit permission for social-media publishing. Reels use music quietly beneath narration.</p>
+            <p>Upload a soundtrack only if you own it or have explicit permission for social-media publishing. Choose a default for new Reel renders, or choose a different track for an individual post in Review. Music plays quietly beneath narration. Existing published media is unchanged.</p>
           </div>
         </div>
-        <form action={uploadLicensedReelMusicAction} encType="multipart/form-data" style={{ display: "grid", gap: 12, maxWidth: 620 }}>
-          <label style={{ display: "grid", gap: 8 }}>
-            <strong>MP3, WAV or M4A · 20 MB maximum</strong>
-            <input type="file" name="music" accept="audio/mpeg,audio/wav,audio/mp4" required style={inputStyle} />
-          </label>
-          <label style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <input type="checkbox" name="licensed_for_social_usage" value="yes" required />
-            <span>I own this audio or have a license that permits use in published social media videos.</span>
-          </label>
-          <div><button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>Upload licensed soundtrack</button></div>
-        </form>
+        {brand ? <MusicUploadForm brandId={brand.id} /> : <p>Create a Social Brand before uploading a soundtrack.</p>}
+        {defaultMusic ? <p style={{ marginTop: 16 }}>Default track: {String(defaultMusic.metadata.original_file_name || defaultMusic.storage_path.split("/").pop())}</p> : <p>No default soundtrack selected yet.</p>}
+        {defaultMusicUrl ? <audio controls preload="metadata" src={defaultMusicUrl} aria-label="Preview default background track" /> : null}
       </section>
 
       <section className="admin-grid two">

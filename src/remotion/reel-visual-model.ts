@@ -19,6 +19,15 @@ export function getReelVisual(scene: ReelScene): ReelVisual {
   // Compatibility for the specific older support storyboard. Never display the
   // director's prose as copy or pretend arbitrary media instructions were met.
   const direction = scene.visual_direction.toLowerCase();
+  if (/enquiry cards.*(website|email|social)|website form notification/.test(direction)) {
+    return { kind: "inbox", title: "Enquiries across channels", items: ["Website enquiry", "Email enquiry", "Social message"] };
+  }
+  if (/lead cards.*inconsistent paths/.test(direction)) {
+    return { kind: "pipeline", title: "Without a shared next action", items: ["New enquiry", "Qualification unclear", "Owner unassigned", "Follow-up waiting"] };
+  }
+  if (/workflow board|pipeline view|connected workflow behind the logo/.test(direction)) {
+    return { kind: "pipeline", title: "Make the next action visible", items: ["Capture", "Qualify", "Assign", "Follow up", "Track"] };
+  }
   if (/five.*enquiry cards|repeat questions|incoming enquiry/.test(direction)) {
     return { kind: "inbox", title: "Customer enquiries", items: ["Availability?", "Pricing?", "How do I book?", "Which documents?", "Opening hours?"] };
   }
