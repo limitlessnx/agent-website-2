@@ -111,6 +111,7 @@ export async function transitionSocialPostAction(formData: FormData) {
 
   revalidatePath("/dashboard/social");
   revalidatePath("/dashboard/social/posts");
+  revalidatePath("/dashboard/social/review");
   revalidatePath("/dashboard/social/calendar");
 }
 

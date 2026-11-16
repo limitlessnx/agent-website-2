@@ -315,7 +315,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
 
                       {post.status === "draft" ? <form action={transitionSocialPostAction}>
                         <input type="hidden" name="post_id" value={post.id} />
-                        <input type="hidden" name="status" value="review" />
+                        <input type="hidden" name="next_status" value="review" />
                         <ReviewSubmitButton kind="primary">Send revised draft to review</ReviewSubmitButton>
                       </form> : null}
                       <form action={rejectSocialPostReviewAction} className={styles.rejectForm}>
