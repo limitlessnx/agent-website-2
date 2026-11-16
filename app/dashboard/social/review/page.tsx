@@ -264,7 +264,8 @@ export default async function SocialReviewPage() {
                           </select>
                         </label>
                         <ReviewSubmitButton pendingLabel="Saving soundtrack…">Save soundtrack</ReviewSubmitButton>
-                        {!licensedTracks.length ? <span>Upload a rights-cleared music track in the Asset Library first.</span> : null}
+                        <Link href="/dashboard/social/assets">Upload background music or set a reusable brand default</Link>
+                        <span>A track selected for this Reel overrides the brand default. A new render is required to change the sound.</span>
                       </form>
                       </details>
                     ) : null}

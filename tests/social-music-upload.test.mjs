@@ -9,7 +9,7 @@ function load(file, overrides = {}) {
   const exports = {};
   const js = ts.transpileModule(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  vm.runInNewContext(js, { exports, require: (id) => overrides[id] || require(id), Buffer, Date, process: { env: {} } });
+  vm.runInNewContext(js, { exports, require: (id) => overrides[id] || require(id), Buffer, Date, URL, process: { env: {} } });
   return exports;
 }
 const music = load("lib/social-music-upload.ts");
@@ -32,6 +32,25 @@ test("audio header checks reject an image pretending to be music", () => {
   assert.equal(music.isAudioSignature(Buffer.from("RIFF0000WAVE"), "audio/wav"), true);
   assert.equal(music.isAudioSignature(Buffer.from("0000ftypM4A"), "audio/mp4"), true);
   assert.equal(music.isAudioSignature(Buffer.from("not an audio file"), "audio/mpeg"), false);
+});
+test("upload preparation returns a private destination without sending file bytes through the route", async () => {
+  let authenticated = 0;
+  let destination;
+  const db = { from() { return { select() { return this; }, eq() { return this; }, async single() { return { data: { id: "brand-a" }, error: null }; } }; },
+    storage: { from() { return { async createSignedUploadUrl(path) { destination = path; return { data: { signedUrl: "https://example.invalid/private-upload" }, error: null }; } }; } } };
+  const route = load("app/api/social/music-upload/route.ts", {
+    "@/lib/tenant": { requireTenant: async () => { authenticated++; return { supabase: db, organizationId: "org-a" }; } },
+    "@/lib/supabase-server-rest": { getServerSupabaseConfig: () => ({ key: "test-only" }) },
+    "@/lib/social-assets": { SOCIAL_ASSET_BUCKET: "private" }, "@/lib/social-music-upload": music,
+  });
+  const rejected = await route.POST(new Request("https://example.test/api/social/music-upload", { method: "POST", headers: { origin: "https://other.test" } }));
+  assert.equal(rejected.status, 403); assert.equal(authenticated, 0);
+  const response = await route.POST(new Request("https://example.test/api/social/music-upload", { method: "POST", headers: { origin: "https://example.test", "content-type": "application/json" },
+    body: JSON.stringify({ phase: "prepare", size: 10 * 1024 * 1024, mimeType: "audio/mpeg", licensed: true, makeDefault: true, brandId: "brand-a", fileName: "music.mp3" }) }));
+  assert.equal(response.status, 200); assert.equal(authenticated, 1);
+  const result = await response.json(); assert.equal(result.uploadUrl, "https://example.invalid/private-upload");
+  assert.ok(destination.startsWith("org-a/music/"));
+  assert.equal(music.verifyMusicTicket(result.receipt, "test-only", "org-a").brandId, "brand-a");
 });
 test("brand default is used only after a per-post override and stays tenant scoped", async () => {
   const audio = load("lib/social-reel-audio.ts");
