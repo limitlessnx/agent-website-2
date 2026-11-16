@@ -22,13 +22,14 @@ Reviewed open PRs before editing, including #238 (invitation handoffs), #170 (le
 - `app/dashboard/clients/OrganizationCreationWizard.tsx`: retain request identity across response loss, show partial outcomes, continue into saved tenant setup, prevent repeated creation after a known success, derive industry from template.
 - `app/dashboard/clients/StarterProvisioningRetry.tsx`: retry existing starter setup with accessible progress feedback.
 - `app/dashboard/clients/[organizationId]/setup/page.tsx`: explicitly authorize before service-role reads; show readiness progress and next actions using existing dashboard components; preserve configuration/testing/launch controls.
+- `package.json`: include both new reliability suites in the existing support regression command used by CI.
 - `tests/supabase-migration-ledger.test.mjs`: register the new migration as pending review without altering the production snapshot.
 - `tests/admin-organization-creation-retry.test.cjs`, `tests/tenant-onboarding-reliability.test.cjs`: local database and mocked provider/route tests. No messages, paid services or customer records used.
 
 ## Validation
 
 - Locked dependency installation passed.
-- Support regression suite: passed, 64 test files.
+- Support regression suite: passed, 66 test files, including both new reliability suites.
 - Onboarding/workspace regression selection: passed, 4 test files.
 - Hotel setup suite: passed, 11 test files.
 - Xposure dashboard suite: passed, 6 test files.
@@ -43,7 +44,7 @@ Reviewed open PRs before editing, including #238 (invitation handoffs), #170 (le
 ## Review links and visual evidence
 
 - [Draft PR #406](https://github.com/limitlessnx/agent-website-2/pull/406)
-- [Code preview](https://limitlessnx-agent-website-2-6rvbnbqvj-fluxagents.vercel.app) — code commit `70edf7d2`; build status checked separately from local rendering.
+- [Code preview](https://limitlessnx-agent-website-2-6rvbnbqvj-fluxagents.vercel.app) — code commit `70edf7d2`; build status checked separately from local rendering. [Latest branch preview](https://limitlessnx-agent-website-2-git-feat-sprint-1-90a335-fluxagents.vercel.app).
 - Local fixture screenshots: [360](sprint-1-evidence/setup-360.png), [430](sprint-1-evidence/setup-430.png), [768](sprint-1-evidence/setup-768.png), [1024](sprint-1-evidence/setup-1024.png), [1440](sprint-1-evidence/setup-1440.png), [1920](sprint-1-evidence/setup-1920.png).
 - [Machine-readable responsive results](sprint-1-evidence/responsive.json).
 
