@@ -27,6 +27,7 @@ export default async function ClientsPage() {
           <h1>Tenant Organizations</h1>
           <p>Switch into a tenant workspace for day-to-day operations, or open setup when you need to change its configuration.</p>
         </div>
+        <Link className="admin-button primary-button" href="/dashboard/clients/create">Create organization</Link>
       </div>
 
       <div className="admin-metric-grid">

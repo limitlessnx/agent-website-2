@@ -142,3 +142,21 @@ test('marked QA projects never call any provider operation', async()=>{
   assert.equal(project.metadata.qa_outbound_disabled,true);
   assert.equal(project.metadata.onboarding_sync_running,false);
 });
+
+test('saved-tenant retry reads existing metadata timezone and scopes the starter project',async()=>{
+  const calls=[];let invoked;
+  const api=load(path.join(root,'app/api/admin/organizations/[organizationId]/n8n/sync/route.ts'),{
+    'next/server':{NextResponse:{json:(data,options)=>({data,status:options?.status||200})}},
+    '@/lib/admin-auth':{getAdminSession:async()=>({email:'qa@example.test'})},
+    '@/lib/supabase-server-rest':{supabaseServerRequest:async url=>{
+      calls.push(url);assert.ok(!url.includes('settings'));
+      if(url.startsWith('organizations?'))return [{id:ORG,name:'QA',slug:'qa',metadata:{timezone:'Europe/London'}}];
+      assert.ok(url.includes('organization_id=eq.'+ORG));assert.ok(url.includes('slug=eq.platform-starter'));
+      return [{id:'project-1'}];
+    }},
+    '@/lib/n8n-organization-provisioning':{provisionOrganizationN8nProject:async(org,options)=>{invoked={org,options};return {complete:false,status:'needs_attention',message:'QA blocked'};}},
+  });
+  const result=await api.POST({json:async()=>({})},{params:Promise.resolve({organizationId:ORG})});
+  assert.equal(result.status,200);assert.equal(result.data.ok,false);
+  assert.equal(invoked.options.timezone,'Europe/London');assert.equal(invoked.org.provisioning.project_id,'project-1');assert.equal(calls.length,2);
+});

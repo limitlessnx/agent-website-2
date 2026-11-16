@@ -17,9 +17,9 @@ export async function POST(
       id: string;
       name: string;
       slug: string;
-      settings?: Record<string, unknown> | null;
+      metadata?: Record<string, unknown> | null;
     }>>(
-      `organizations?select=id,name,slug,settings&id=eq.${encodeURIComponent(organizationId)}&limit=1`,
+      `organizations?select=id,name,slug,metadata&id=eq.${encodeURIComponent(organizationId)}&limit=1`,
     );
     const organization = rows[0];
     if (!organization) return NextResponse.json({ error: "Organization not found." }, { status: 404 });
@@ -37,7 +37,7 @@ export async function POST(
         provisioning: { project_id: projects[0].id },
       },
       {
-        timezone: String(organization.settings?.timezone || "Africa/Lagos"),
+        timezone: String(organization.metadata?.timezone || "Africa/Lagos"),
         force: Boolean(body.force),
       },
     );
