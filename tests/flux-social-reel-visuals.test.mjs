@@ -17,6 +17,11 @@ test("all seven recorded scenes resolve to actual illustrations", () => {
   assert.deepEqual(plan.scenes.map((scene) => getReelVisual(scene).kind),
     ["inbox", "inbox", "question_router", "answer", "capture", "handoff", "overview"]);
 });
+test("the reported old six-scene lead Reel resolves to actual diagrams", () => {
+  const legacy = JSON.parse(readFileSync(new URL("./fixtures/flux-social-legacy-lead-reel.json", import.meta.url)));
+  assert.deepEqual(legacy.scenes.map((scene) => getReelVisual(scene).kind),
+    ["inbox", "inbox", "pipeline", "pipeline", "pipeline", "pipeline"]);
+});
 test("unsupported production instructions fail before generating an empty preview", () => {
   assert.throws(() => getReelVisual({ visual_direction: "Show an unavailable screenshot" }), /structured visual data/);
 });

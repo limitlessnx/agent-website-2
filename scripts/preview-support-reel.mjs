@@ -4,9 +4,10 @@ import { readFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
-const output = "/workspace/reel-repair-preview";
+const output = process.argv.find((arg) => arg.startsWith("--output="))?.slice(9) || "/workspace/reel-repair-preview";
 await mkdir(output, { recursive: true });
-const plan = JSON.parse(await readFile("tests/fixtures/flux-social-support-reel.json", "utf8"));
+const fixture = process.argv.find((arg) => arg.startsWith("--plan="))?.slice(7) || "tests/fixtures/flux-social-support-reel.json";
+const plan = JSON.parse(await readFile(fixture, "utf8"));
 const logo = await readFile("public/fluxknight-mark.svg", "utf8");
 const inputProps = { plan, logoUrl: `data:image/svg+xml;base64,${Buffer.from(logo).toString("base64")}`, brandName: "Fluxknight" };
 const serveUrl = await bundle({ entryPoint: path.join(root, "src/remotion/index.tsx"),

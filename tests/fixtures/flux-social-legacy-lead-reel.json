@@ -1,0 +1,63 @@
+{
+  "cta": "See pricing",
+  "hook": "If your team cannot reliably process the leads it already has, more lead generation may increase the mess—not the revenue.",
+  "title": "More Leads Won’t Fix a Broken Handoff",
+  "scenes": [
+    {
+      "order": 1,
+      "voiceover": "If your team cannot reliably process the leads it already has, more lead generation may increase the mess—not the revenue.",
+      "scene_type": "hook",
+      "source_media": "motion_graphics",
+      "on_screen_text": "More leads won’t fix a broken handoff.",
+      "duration_seconds": 3,
+      "visual_direction": "Open on a dark Fluxknight-style interface. Three animated enquiry cards enter from separate channels labelled Website, Email and Social. They move toward different disconnected boxes, with one card visibly pausing between them. Use sharp kinetic typography and a subtle warning accent."
+    },
+    {
+      "order": 2,
+      "voiceover": "Marketing generates enquiries. Sales receives them across different channels.",
+      "scene_type": "problem",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Enquiries arrive everywhere. Ownership is unclear.",
+      "duration_seconds": 5,
+      "visual_direction": "Show a deterministic UI composition with a website form notification, email inbox card and social message card appearing in sequence. Animate each toward separate columns labelled Marketing, Sales and Shared Inbox, then leave the cards unassigned."
+    },
+    {
+      "order": 3,
+      "voiceover": "Nobody has a consistent qualification process. Follow-ups are handled differently by each person.",
+      "scene_type": "problem",
+      "source_media": "motion_graphics",
+      "on_screen_text": "Different process. Different follow-up. Same lost visibility.",
+      "duration_seconds": 5,
+      "visual_direction": "Display three lead cards moving through inconsistent paths: one marked New, one marked Waiting, one marked Follow up later. Add small status labels and a calendar reminder that remains unscheduled. Keep the visual explanatory rather than implying verified performance data."
+    },
+    {
+      "order": 4,
+      "voiceover": "A practical sales automation system brings the steps into one operating flow.",
+      "scene_type": "workflow",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Capture → Qualify → Assign → Follow up → Track",
+      "duration_seconds": 6,
+      "visual_direction": "Transition the disconnected cards into a single Fluxknight-style workflow board. Animate each stage lighting up in sequence. Show a lead record with source, qualification questions, owner, next action and status fields. Use Fluxknight UI footage or a representative deterministic interface mockup."
+    },
+    {
+      "order": 5,
+      "voiceover": "That gives the team a process to improve before increasing the volume entering it.",
+      "scene_type": "benefit",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Make the handoff visible before adding more volume.",
+      "duration_seconds": 5,
+      "visual_direction": "Show a clean pipeline view with columns for New, Qualified, Assigned, Follow-up and Closed. Animate one lead moving through the stages while the activity history and next action remain visible. Use restrained motion graphics and premium business-first styling."
+    },
+    {
+      "order": 6,
+      "voiceover": "Fluxknight builds business automation systems around operational gaps like these. See pricing.",
+      "scene_type": "cta",
+      "source_media": "fluxknight_ui",
+      "on_screen_text": "Fix the flow before scaling the volume. See pricing.",
+      "duration_seconds": 6,
+      "visual_direction": "End on a composed Fluxknight brand screen with the connected workflow behind the logo. Bring in a clear See pricing button and supporting line: Capture. Qualify. Assign. Follow up. Track. Hold the final frame long enough for the CTA to be read."
+    }
+  ],
+  "objective": "Reframe lead generation as an operational-flow problem and show how Fluxknight connects capture, qualification, ownership, follow-up and visibility without overclaiming results.",
+  "target_duration_seconds": 30
+}
