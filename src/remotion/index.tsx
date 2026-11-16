@@ -2,6 +2,7 @@ import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { FluxSocialReel } from "./FluxSocialReel";
 import { FluxSocialGraphic } from "./FluxSocialGraphic";
+import { FluxknightBrandFilm, brandFilmDuration } from "./FluxknightBrandFilm";
 
 const FPS = 30;
 
@@ -45,6 +46,32 @@ const Root = () => (
             props.plan.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0) * FPS,
           ),
         ),
+        props,
+      })}
+    />
+    <Composition
+      id="FluxknightBrandFilm"
+      component={FluxknightBrandFilm}
+      width={1920}
+      height={1080}
+      fps={FPS}
+      durationInFrames={90 * FPS}
+      defaultProps={{
+        scenes: [
+          { id: "first-inquiry", title: "Every relationship starts somewhere", description: "Discovery and first contact", durationSeconds: 13, mediaKind: "customer" as const },
+          { id: "maia", title: "Meet Maia", description: "Immediate assistance and qualification", durationSeconds: 15, mediaKind: "customer" as const },
+          { id: "crm", title: "Every conversation has context", description: "Capture interests and next steps", durationSeconds: 14, mediaKind: "customer" as const },
+          { id: "nurture", title: "Stay connected", description: "Thoughtful follow-ups before a purchase", durationSeconds: 15, mediaKind: "customer" as const },
+          { id: "conversion", title: "Turn interest into action", description: "Inspections, bookings and sales handovers", durationSeconds: 15, mediaKind: "customer" as const },
+          { id: "retention", title: "Relationships continue", description: "Support after the first transaction", durationSeconds: 14, mediaKind: "customer" as const },
+          { id: "return", title: "Create reasons to return", description: "Re-engagement and repeat business", durationSeconds: 14, mediaKind: "customer" as const },
+          { id: "outro", title: "Fluxknight", description: "Automate for speed, scale without boundaries.", durationSeconds: 10, mediaKind: "brand" as const },
+        ],
+        logoUrl: "",
+        musicUrl: null,
+      }}
+      calculateMetadata={({ props }) => ({
+        durationInFrames: Math.max(1, brandFilmDuration(props.scenes, FPS)),
         props,
       })}
     />
