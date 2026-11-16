@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { PGlite } = require('@electric-sql/pglite');
-const migration = fs.readFileSync('supabase/migrations/20261116104101_admin_organization_creation_retry_safe.sql','utf8');
+const migration = fs.readFileSync('supabase/migrations/20261116120507_admin_organization_creation_retry_safe.sql','utf8');
 test('creation request replay returns the same tenant, rejects changed input, and restricts execution', async()=>{
   const db = new PGlite();
   try {

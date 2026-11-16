@@ -1,7 +1,7 @@
 {
   "capturedAt": "2026-10-30",
   "projectRef": "tacxegmlppngnuvldojy",
-  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation. Incremental update: hotel_shared_communications was verified applied to production on 2026-11-05 with user approval; other baseline entries retain their original capture date. Fluxknight email draft storage migration 20261107145518 verified applied 2026-11-07.",
+  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation. Incremental update: hotel_shared_communications was verified applied to production on 2026-11-05 with user approval; other baseline entries retain their original capture date. Fluxknight email draft storage migration 20261107145518 verified applied 2026-11-07. Incremental update: admin_organization_creation_retry_safe 20261116120507 applied with explicit user approval on 2026-11-16; original creation and template-provisioner checksums verified unchanged.",
   "migrations": [
     {
       "version": "20260724",
@@ -906,6 +906,10 @@
     {
       "version": "20261113071933",
       "name": "crm_custom_lead_categories"
+    },
+    {
+      "version": "20261116120507",
+      "name": "admin_organization_creation_retry_safe"
     }
   ]
 }

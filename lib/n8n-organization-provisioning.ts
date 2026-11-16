@@ -310,8 +310,13 @@ export async function provisionOrganizationN8nProject(
   if (!claimed.length) return { status: "provisioning_in_progress", complete: false, message: "Setup changed. Refresh before retrying." };
   let outcome: OrganizationProvisioningOutcome;
   try {
-    const result = await provisionProject(organization, options);
-    outcome = result.configured
+    // QA projects in the shared database must never reach an external provider.
+    // This is a fail-closed block, not a simulated successful deployment.
+    const qaOutboundBlocked = project.metadata?.qa_outbound_disabled === true;
+    const result = qaOutboundBlocked ? { configured: false } : await provisionProject(organization, options);
+    outcome = qaOutboundBlocked
+      ? { status: "needs_attention", complete: false, message: "QA tenant: external provisioning is blocked. Organization saved; no provider request was made." }
+      : result.configured
       ? { status: "awaiting_customer_configuration", complete: true, message: "Starter automation deployed. Customer configuration, testing and approval are still required." }
       : { status: "needs_attention", complete: false, message: "Automation provider is not configured. Ask a platform administrator to configure it, then retry setup." };
   } catch {

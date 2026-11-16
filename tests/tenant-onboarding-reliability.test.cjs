@@ -6,8 +6,8 @@ const load = require('./helpers/load-typescript.cjs');
 const root = path.resolve(__dirname, '..');
 const ORG = '10000000-0000-4000-8000-000000000001';
 const organization = { organization_id: ORG, organization_name: 'Same Business', organization_slug: 'same-business', provisioning: { project_id: 'project-1' } };
-function harness({ configured = true, failTransfer = false, failCreate = false, running = false } = {}) {
-  const project = { id: 'project-1', name: 'Starter', organization_id: ORG, metadata: running ? { onboarding_sync_running: true } : {} };
+function harness({ configured = true, failTransfer = false, failCreate = false, running = false, qaBlocked = false } = {}) {
+  const project = { id: 'project-1', name: 'Starter', organization_id: ORG, metadata: running ? { onboarding_sync_running: true } : qaBlocked ? { qa_outbound_disabled: true } : {} };
   const row = { id: 'registry-1', organization_uuid: ORG, workflow_key: 'intake', name: 'Intake', metadata: {} };
   const state = { projects: [], workflows: [], creates: 0, transfers: 0, writes: [] };
   const db = async (url, init) => {
@@ -130,4 +130,15 @@ test('retry preserves mapped legacy workflow contents and name', async()=>{
   assert.equal(result.complete,true);assert.equal(state.creates,1);
   assert.equal(state.workflows[0].name,'Customer-owned legacy name');
   assert.equal(state.workflows[0].nodes[0].id,'existing-customer-node');
+});
+
+test('marked QA projects never call any provider operation', async()=>{
+  const {api,state,project}=harness({qaBlocked:true});
+  const first=await api.provisionOrganizationN8nProject(organization);
+  const retry=await api.provisionOrganizationN8nProject(organization);
+  assert.equal(first.status,'needs_attention');assert.equal(retry.complete,false);
+  assert.match(first.message,/QA tenant.*blocked/);
+  assert.equal(state.creates,0);assert.equal(state.transfers,0);assert.equal(state.projects.length,0);
+  assert.equal(project.metadata.qa_outbound_disabled,true);
+  assert.equal(project.metadata.onboarding_sync_running,false);
 });
