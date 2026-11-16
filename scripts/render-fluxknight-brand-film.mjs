@@ -22,12 +22,14 @@ if (!https(manifest.logoUrl)) throw new Error("Approved canonical Fluxknight log
 if (!Array.isArray(manifest.scenes) || manifest.scenes.length < 2) throw new Error("At least two approved scenes are required.");
 const ids = manifest.scenes.map((s) => s.id);
 if (new Set(ids).size !== ids.length) throw new Error("Duplicate scene ID.");
+if (!https(manifest.voiceoverUrl) && !manifest.scenes.every(scene => https(scene.narrationUrl)))
+  throw new Error("An approved master voiceover or one narration clip per scene is required.");
 for (const scene of manifest.scenes) {
   if (!scene.id || !scene.title || !(scene.durationSeconds > 0) || !Number.isFinite(scene.durationSeconds))
     throw new Error("Invalid scene metadata.");
   if (!https(scene.mediaUrl) || !["video", "image"].includes(scene.mediaType))
     throw new Error(`Scene ${scene.id} is missing approved visual footage.`);
-  if (!https(scene.narrationUrl)) throw new Error(`Scene ${scene.id} is missing its narration clip.`);
+  if (!manifest.voiceoverUrl && !https(scene.narrationUrl)) throw new Error(`Scene ${scene.id} is missing its narration clip.`);
 }
 if (manifest.musicUrl && !https(manifest.musicUrl)) throw new Error("Background music must be an approved HTTPS asset.");
 const entryPoint = resolve("src/remotion/index.tsx");
