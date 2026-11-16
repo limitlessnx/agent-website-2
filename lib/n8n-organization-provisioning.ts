@@ -254,7 +254,7 @@ async function provisionProject(
       await saveWorkflowMapping(row, workflow.id, n8nProject.id, true);
       await transferN8nWorkflow(workflow.id, n8nProject.id);
       created = true;
-    } else if (options.force || workflow.name !== desired.name) {
+    } else if (options.force) {
       workflow = await updateN8nWorkflow(workflow.id, desired);
     }
 

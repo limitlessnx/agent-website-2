@@ -119,3 +119,15 @@ test('readiness reads are tenant scoped and database errors fail closed', async(
   assert.equal(result.stage,'needs_attention');assert.ok(result.blockers.some(c=>c.key==='evidence'));
   for(const call of calls) assert.ok(call.filters.some(([key,value])=>key===(call.table==='organizations'?'id':'organization_id')&&value===ORG),call.table);
 });
+
+test('retry preserves mapped legacy workflow contents and name', async()=>{
+  const {api,state,row}=harness();
+  await api.provisionOrganizationN8nProject(organization);
+  state.workflows[0].name='Customer-owned legacy name';
+  state.workflows[0].nodes=[{id:'existing-customer-node'}];
+  row.metadata.n8n_workflow_id=state.workflows[0].id;
+  const result=await api.provisionOrganizationN8nProject(organization);
+  assert.equal(result.complete,true);assert.equal(state.creates,1);
+  assert.equal(state.workflows[0].name,'Customer-owned legacy name');
+  assert.equal(state.workflows[0].nodes[0].id,'existing-customer-node');
+});
