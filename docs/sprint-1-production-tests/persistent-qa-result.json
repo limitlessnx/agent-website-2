@@ -1,0 +1,68 @@
+{
+  "verified_at_utc": "2026-11-16T17:20:34Z",
+  "authorization": "User explicitly approved permanent migration and a retained synthetic QA tenant for preview tests.",
+  "migration": {
+    "version": "20261116120507",
+    "name": "admin_organization_creation_retry_safe",
+    "applied": true,
+    "original_creation_function_unchanged": true,
+    "template_provisioner_unchanged": true,
+    "anon_execute": false,
+    "authenticated_execute": false,
+    "service_role_execute": true
+  },
+  "qa_tenant": {
+    "id": "48b68a88-bd0a-48d9-b6e2-604e8f1bab9d",
+    "project_id": "d4bbffaf-bd80-42c8-adcf-a4d54c61c6a5",
+    "name": "FLUXKNIGHT QA \u2014 Sprint 1",
+    "count": 1,
+    "draft_agents": 4,
+    "workflows": 7,
+    "non_draft_agents": 0,
+    "connected_integrations": 0,
+    "subscriptions": 0,
+    "provisioning_jobs": 0,
+    "external_workflow_mappings": 0,
+    "external_project_mapping": false,
+    "outbound_guard": true,
+    "worker_running": false,
+    "sync_status": "needs_attention"
+  },
+  "hosted_validation": {
+    "code_commit": "069e002340463fa74fb83a8e1d2546c47bfefce7",
+    "deployment": "https://limitlessnx-agent-website-2-1ocbdiwbp-fluxagents.vercel.app",
+    "wizard_replay": "passed",
+    "saved_retry": "passed",
+    "readiness_endpoint": "passed",
+    "in_flight_feedback_scenario": "passed; QA marker only; no worker started",
+    "widths": [
+      360,
+      430,
+      768,
+      1024,
+      1440,
+      1920
+    ],
+    "page_overflow": false,
+    "browser_errors": []
+  },
+  "production_application_deployed": false,
+  "existing_customer_records_mutated": false,
+  "messages_sent": false,
+  "paid_provider_requests": false,
+  "cleanup": {
+    "qa_in_flight_marker_reset": true,
+    "active_feature_branch_temporary_login_overrides": 0,
+    "temporary_auth_values_rotated": true,
+    "retirement_branch_deleted": true,
+    "dormant_sensitive_env_records": 3,
+    "private_credential_files_deleted": true,
+    "active_browser_test_access_links_revoked_or_absent": true
+  },
+  "limitations": [
+    "External-provider recovery is mocked locally; QA blocks live calls.",
+    "Browser creation replays the approved retained request.",
+    "Hotel/Photography templates and hotel inventory-readiness RPC remain deployment prerequisites.",
+    "Production app release and full activation are not approved."
+  ]
+}

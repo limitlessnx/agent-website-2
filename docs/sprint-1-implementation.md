@@ -1,77 +1,71 @@
-# Sprint 1: tenant onboarding reliability
+# Sprint 1: tenant onboarding implementation and production-backed QA
 
-Branch: `feat/sprint-1-tenant-readiness`. Baseline: `main` at `967f2821`.
+[Draft PR #406](https://github.com/limitlessnx/agent-website-2/pull/406). Branch: `feat/sprint-1-tenant-readiness`. Initial main baseline: `967f2821`.
 
-## Architecture and findings
+**Current production impact:** the explicitly approved additive database migration is installed, and one explicitly approved synthetic QA organization is retained. The production application has not been deployed or merged. Existing customer records were not mutation targets. No messages, paid-provider requests or external automation deployment were performed in these tests.
 
-The admin wizard calls the service-role `create_and_provision_organization` RPC, which atomically creates a tenant and starter template assets. It does not assign an owner or prove activation readiness. The route then calls the existing n8n starter provisioner. Despite Trigger.dev handling active background tasks, this legacy starter deployment path still exists on main. This change preserves that boundary rather than replacing Maia, Leo, Flux Social or tenant system execution.
+## Existing architecture and defects
 
-The route treated a JSONB RPC result as a table array. It caught external automation errors and returned `ok: true`; the wizard ignored the external result and displayed “ready”. Project lookup by business name also risked collisions between tenants with identical names. A lost creation response could cause a duplicate organization on resubmission.
+The admin creation API calls the atomic `create_and_provision_organization` RPC, then the existing legacy n8n starter provisioner. Trigger.dev continues to run the existing application background tasks; this work does not replace Maia, Leo, Flux Social or industry operations. Readiness is derived from existing memberships, templates/families, entitlements, agents/runtime evidence, catalogs, system jobs, tests and approvals.
 
-Reviewed open PRs before editing, including #238 (invitation handoffs), #170 (legacy n8n removal), #332 (subscriptions), #228 (dashboard styling), and the open Flux Social work. No PR was merged or cherry-picked.
+Confirmed defects corrected:
 
-## Changes
+1. The route read scalar JSONB RPC output as an array.
+2. External provisioning errors still returned full success, and the wizard displayed ready.
+3. A lost response could create another tenant on replay.
+4. Business-name-based remote lookup could collide between tenants; remote IDs were persisted too late for safe retries.
+5. The original template provisioner uses a shared template slug in a registry unique on `(organization_id text, workflow_key)`. Production inspection found all seven Real Estate keys already claimed. Another tenant could silently receive no workflow rows. The new overload completes missing rows under the new tenant UUID and verifies completeness without changing existing tenants.
+6. The creation wizard was not mounted by any route. It is now reachable at `/dashboard/clients/create`, linked from the clients page.
+7. Saved-tenant retry queried a nonexistent `organizations.settings` column; it now reads the saved timezone from `metadata`.
+8. Template availability was labeled “Provisioning ready”; the final copy says “Templates available” to avoid implying tenant readiness.
 
-- `app/api/admin/organizations/create-and-provision/route.ts`: accept scalar JSONB results; require a durable creation request ID; return `organization_created` independently of automation completion; use sanitized failure feedback.
-- `supabase/migrations/20261116120507_admin_organization_creation_retry_safe.sql`: add an eight-argument overload of the existing RPC. Transaction advisory locking and a saved request fingerprint/result make replay safe. Delegate starter creation to the original RPC; complete missing tenant workflow rows under a tenant-specific namespace and verify the required count. Validate industry against the selected active template. Only service_role can execute. **Not applied to production.**
-- `lib/n8n-organization-provisioning.ts`: use tenant-specific project/workflow names, tenant filters, compare-and-set claims in existing project metadata, incremental remote identity persistence, and fail-closed reconciliation of ambiguous creates. Keep workflows inactive. Do not treat missing provider configuration as success.
-- `app/api/admin/organizations/[organizationId]/n8n/sync/route.ts`: reuse the saved starter project for retries and return truthful outcomes.
-- `lib/tenant-readiness.ts`: pure seven-state projection with blockers and required next actions.
-- `lib/tenant-readiness-server.ts`: aggregate existing memberships, template assignments/families, subscription/effective entitlements, agents/runtime readiness, industry catalogs, systems/jobs, latest tests and approvals. Database errors fail closed. An existing “live” tenant with blockers is shown as needing attention.
-- `app/api/admin/organizations/[organizationId]/readiness/route.ts`: authenticated, tenant-scoped read-only snapshot endpoint.
-- `app/dashboard/clients/OrganizationCreationWizard.tsx`: retain request identity across response loss, show partial outcomes, continue into saved tenant setup, prevent repeated creation after a known success, derive industry from template.
-- `app/dashboard/clients/StarterProvisioningRetry.tsx`: retry existing starter setup with accessible progress feedback.
-- `app/dashboard/clients/[organizationId]/setup/page.tsx`: explicitly authorize before service-role reads; show readiness progress and next actions using existing dashboard components; preserve configuration/testing/launch controls.
-- `package.json`: include both new reliability suites in the existing support regression command used by CI.
-- `tests/supabase-migration-ledger.test.mjs`: register the new migration as pending review without altering the production snapshot.
-- `tests/admin-organization-creation-retry.test.cjs`, `tests/tenant-onboarding-reliability.test.cjs`: local database and mocked provider/route tests. No messages, paid services or customer records used.
+Relevant open invitation, legacy n8n removal, subscription, dashboard styling and Flux Social PRs were inspected before editing. None was merged or cherry-picked.
 
-## Validation
+## Files and reasons
 
-- Locked dependency installation passed.
-- Support regression suite: passed, 66 test files, including both new reliability suites.
-- Onboarding/workspace regression selection: passed, 4 test files.
-- Hotel setup suite: passed, 11 test files.
-- Xposure dashboard suite: passed, 6 test files.
-- Real Estate suite: 48/49 test files passed. `real-estate-customer-service-window.test.cjs` also fails on untouched main in a separate worktree.
-- New mocked reliability, mapped legacy preservation, migration ledger and local PGlite migration suites: passed. Cover scalar/array RPC responses, auth before side effects, partial transfer failure/recovery, uncertain creation, concurrent claims, missing provider configuration, all seven states, tenant filters, fail-closed evidence, three industry templates, parameter conflict and function ACL.
-- Focused ESLint and `git diff --check`: passed.
-- Full repository ESLint: fails with 501 errors and 77 warnings across existing files; not a clean baseline.
-- TypeScript passed on clean native Turbopack output. A Webpack experiment generated incompatible types for an existing optional hotel GET parameter; removing those generated temporary files restored the native check.
-- Normal Turbopack production build: passed outside the restricted sandbox with synthetic database settings. Webpack fallback fails on existing CSS-module global selectors in Leo Voice and HotelWelcomeTour; the sandboxed Turbopack attempt stalled and was stopped.
-- Synthetic local browser evidence: `sprint-1-evidence/responsive.json` and screenshots at 360, 430, 768, 1024, 1440 and 1920 px. All six returned HTTP 200 with no page-level horizontal overflow or browser errors. External browser requests blocked. Existing voice/allocation widgets use incomplete synthetic fixtures; this is not proof of live provider functionality.
+- `app/api/admin/organizations/create-and-provision/route.ts`: durable request ID, scalar JSONB support, separate creation/provisioning outcomes, sanitized errors.
+- `app/api/admin/organizations/[organizationId]/n8n/sync/route.ts`: retry the saved tenant starter project, use the actual metadata schema, report complete/in-progress/attention truthfully.
+- `app/api/admin/organizations/[organizationId]/readiness/route.ts`: authorized, tenant-scoped read-only readiness endpoint.
+- `lib/n8n-organization-provisioning.ts`: tenant-specific identities, conditional retry claims, incremental mapping persistence, preserve mapped legacy workflows, fail closed on ambiguous creates. QA-marked projects are blocked before provider operations; no simulated successful deployment is reported.
+- `lib/tenant-readiness.ts`, `lib/tenant-readiness-server.ts`: seven states, blockers and next actions from existing evidence; query failures fail closed and incomplete live tenants show needs attention.
+- `app/dashboard/clients/OrganizationCreationWizard.tsx`: persist request identity, truthful partial results, continue saved setup, prevent duplicate submission after known creation, derive industry from template.
+- `app/dashboard/clients/StarterProvisioningRetry.tsx`: accessible saved-tenant retry feedback.
+- `app/dashboard/clients/[organizationId]/setup/page.tsx`: authorize before privileged reads and add readiness progress while preserving operational controls.
+- `app/dashboard/clients/create/page.tsx`, `app/dashboard/clients/page.tsx`: mount and link the existing wizard without replacing the existing client onboarding queue.
+- `supabase/migrations/20261116120507_admin_organization_creation_retry_safe.sql`: reviewed service-role-only overload reusing the original atomic provisioner, request serialization/replay, template/industry validation and complete per-tenant registry rows. Applied with explicit approval. Supabase assigned version `20261116120507`; the local file was renamed from its originally prepared `20261116104101` version without changing the reviewed SQL.
+- `supabase/migration-ledger.production-snapshot.json`, `tests/supabase-migration-ledger.test.mjs`: record the actual applied version and remove it from the pending-review list.
+- `tests/admin-organization-creation-retry.test.cjs`, `tests/tenant-onboarding-reliability.test.cjs`: PGlite and mocked provider/route checks for replay, collisions, ACL, tenant scope, retries, QA guard and readiness states. `package.json` includes both in the existing support CI command.
+- `docs/sprint-1-production-tests/`: approved historical rollback SQL/results, current retained-QA evidence, hosted screenshots and machine-readable browser checks. `docs/sprint-1-evidence/` retains the earlier local synthetic visual checks.
 
-## Review links and visual evidence
+## Tests and results
 
-- [Draft PR #406](https://github.com/limitlessnx/agent-website-2/pull/406)
-- [Code preview](https://limitlessnx-agent-website-2-6rvbnbqvj-fluxagents.vercel.app) — code commit `70edf7d2`; build status checked separately from local rendering. [Latest branch preview](https://limitlessnx-agent-website-2-git-feat-sprint-1-90a335-fluxagents.vercel.app).
-- Local fixture screenshots: [360](sprint-1-evidence/setup-360.png), [430](sprint-1-evidence/setup-430.png), [768](sprint-1-evidence/setup-768.png), [1024](sprint-1-evidence/setup-1024.png), [1440](sprint-1-evidence/setup-1440.png), [1920](sprint-1-evidence/setup-1920.png).
-- [Machine-readable responsive results](sprint-1-evidence/responsive.json).
+- Normal native Turbopack production build: passed for the functional code. Clean TypeScript, focused lint and diff checks passed.
+- Support regression command: **66 test files passed**, including new creation/retry/ACL/QA-guard coverage. Additional retry-schema coverage passed in that command after the hosted finding.
+- Onboarding/workspace selection: 4 files passed. Hotel setup: 11 passed. Xposure dashboard: 6 passed. GitHub disposable PostgreSQL hotel concurrency passed.
+- Real Estate suite: 48/49 files passed; the customer-service-window failure was also reproduced on untouched main.
+- Repository-wide lint has baseline failures (501 errors/77 warnings at the original check). Webpack fallback has existing CSS-module global-selector incompatibilities; the normal native build passes.
+- Approved rollback-only test against the actual production database: passed creation/replay/conflict rejection, draft/disconnected assets, complete workflow rows for two separate tenants and function ACL. Everything in that transaction rolled back; independent cleanup verification passed. [Historical evidence](sprint-1-production-tests/rollback-result.json).
+- Approved persistent migration: installed and verified. Original creation/template-provisioner hashes are unchanged. New overload permits service_role and denies anon/authenticated.
+- Authenticated Vercel preview (`069e0023`) using the retained QA tenant: passed wizard replay with HTTP 201, `organization_created=true`, `ok=false`, needs-attention status and explicit blocked-provider feedback; the saved setup link works and repeated creation stays disabled. Retry returned HTTP 200 with needs attention and preserved the saved tenant. The readiness endpoint returned HTTP 200 with real setup blockers and no evidence-query error.
+- Hosted 360/430/768/1024/1440/1920 checks: passed with no page-level horizontal overflow or browser errors. [Browser results](sprint-1-production-tests/hosted/results.json).
+- Hosted in-progress check: a temporary QA-only in-flight marker produced the correct progress display and HTTP 202 retry response without starting a worker. The marker was reset afterward. [Evidence](sprint-1-production-tests/hosted/in-progress.json).
 
-Supabase project discovery found the active production project and an **inactive** Limitless Realty Staging project. No active isolated staging database was identified. The inactive project was not resumed, and no hosted database was changed.
+## Screenshots and preview
 
-## Release and recovery limitations
+[Latest branch preview](https://limitlessnx-agent-website-2-git-feat-sprint-1-90a335-fluxagents.vercel.app).
 
-The user has chosen production-backed testing to avoid paid staging. The exact rollback-only procedure and read-only production findings are documented in [the production test runbook](sprint-1-production-tests/README.md). The retry-safety migration remains unapplied; the exact temporary production schema/grant test was subsequently explicitly approved, executed successfully, and rolled back. Persistent migration/application release remains unapproved. This code intentionally fails rather than silently falling back to non-idempotent creation if the overload is absent.
+Hosted screenshots use the synthetic retained QA organization against the real database: [partial-result wizard](sprint-1-production-tests/hosted/wizard-partial-failure.png), [in progress](sprint-1-production-tests/hosted/provisioning-in-progress.png), [360](sprint-1-production-tests/hosted/setup-360.png), [430](sprint-1-production-tests/hosted/setup-430.png), [768](sprint-1-production-tests/hosted/setup-768.png), [1024](sprint-1-production-tests/hosted/setup-1024.png), [1440](sprint-1-production-tests/hosted/setup-1440.png), [1920](sprint-1-production-tests/hosted/setup-1920.png). They were captured before the final template-availability badge wording change.
 
-Ambiguous remote create responses require administrator reconciliation. If the remote resource exists, retry resolves its stable tenant-specific name and persists it. If it cannot be found, do not clear the pending marker until absence is verified. Interrupted worker claims are not automatically stolen: after 15 minutes the readiness snapshot reports needs attention. After confirming no worker is running and reconciling pending remote operations, an administrator may clear `onboarding_sync_running` in that tenant's project metadata, then retry. No production reconciliation was performed.
+Preview access used a temporary deployment share link and the Vercel `_vercel_share` cookie exchange. App login used credentials scoped only to the feature preview; production credentials were unchanged. Temporary overrides were rotated and detached from the active branch, the temporary retirement branch was deleted, and private credential/session files were deleted. Three dormant sensitive-variable records remain scoped to that deleted retirement branch because the connector does not expose deletion and Vercel forbids renaming sensitive variables. They do not override active preview or production settings. Active browser-test share links were revoked or confirmed absent. One earlier temporary preview-access token was exposed in a diagnostic and immediately revoked; no production credential was exposed.
 
-Existing legacy projects keep saved mappings. Unmapped old resources are not adopted by business name; an administrator must verify and bind their identities before retrying to avoid guessing tenant ownership.
+## Retained QA state and limitations
 
-Readiness is a conservative reporting projection. Existing activation gates remain authoritative; this change does not enable a new background task, send a test message, start a paid integration, or approve/activate a tenant. Catalog checks establish tenant-owned active inventory presence (hotel also checks published room information); content completeness still requires operational review. Configuration changes outside agent rows may require rerunning tests even if the agent timestamp did not change.
+QA organization: `48b68a88-bd0a-48d9-b6e2-604e8f1bab9d`, **FLUXKNIGHT QA — Sprint 1**. Project: `d4bbffaf-bd80-42c8-adcf-a4d54c61c6a5`. Request: `c7dc530d-1863-4c62-a91a-f74a6c443ff7`.
 
-Hosted 12ui visual refinement was blocked by automatic approval review because sharing the workflow brief with the external service requires user approval. Existing styling is retained; this visual refinement is not claimed complete. The local screenshots document functional responsive rendering, not full visual acceptance.
+Final checks confirm exactly one QA tenant, four draft agents, seven workflow rows, no connected integrations, no subscription, no queued provisioning jobs and no remote workflow/project mappings. The outbound guard remains enabled and the in-flight test marker is cleared. Use this existing tenant's setup/retry screen for further manual QA; arbitrary new unmarked tenants are outside the guarded test path.
 
-**Persistent production changes: none.** The separately approved rollback-only test temporarily created a function, grants and synthetic tenant rows, then rolled them back. No application release, permanent migration, merge, live message or billable-provider test request was performed. Independent verification confirmed no test organizations or temporary overload remain.
+Readiness is a conservative report. Existing activation gates remain authoritative. Actual provider failure/transfer/recovery remains mocked locally; no live external automation, paid model call or message was used to prove delivery. The browser creation test replayed the approved retained request; fresh creation was exercised by the real database tests, not by creating another unmarked tenant through the browser.
 
-## Hosted verification status
+Hotel/Photography starter templates are absent from the live legacy template catalog, and the existing hotel inventory-readiness RPC is not installed. Those prerequisites still need a concrete reviewed rollout. Configuration changes outside agent rows may require rerunning tests even when the agent timestamp is unchanged. Ambiguous remote creates and interrupted real-worker claims still require verified administrator reconciliation; claims are not automatically stolen.
 
-The first preview build completed successfully according to Vercel build events. The updated code preview for `70edf7d2` reached READY; subsequent commits only update test integration, migration review bookkeeping and documentation. The connected Vercel fetch tool could not pass deployment authentication (HTTP 401, including its temporary-share-link retry); no Vercel CLI fallback is installed. Authenticated browser acceptance and preview creation against a migrated isolated database are not claimed. The GitHub hotel concurrency job passed. Maia verification initially stopped at the pending-migration ledger gate; the new migration is now explicitly listed as pending review and the ledger suite passes locally. Final hosted checks remain recorded in the PR.
-
-## Production-backed test preflight update
-
-Read-only production inspection found a shared workflow-registry uniqueness collision that can silently omit a new tenant's workflows. The unapplied overload now completes and verifies the new tenant's own registry rows. Local tests reproduce the actual unique-index conflict across two tenants in each industry. Hotel/Photography templates are absent from the live legacy catalog, and the existing hotel inventory-readiness RPC is not installed; these are explicit deployment prerequisites, not passing production onboarding checks. See the [runbook and exact blocked rollback-only SQL](sprint-1-production-tests/README.md). The first attempted temporary-schema test was rejected before execution. After explicit user approval, the exact test passed and rolled back; an independent read-only follow-up confirmed no test tenant or overload exists and the original function permissions remain restricted.
-
-## Approved production database rollback test
-
-Passed on 16 November 2026 after explicit approval. This verifies real-schema creation/replay, conflicting request rejection and complete per-tenant workflow registries for two distinct synthetic Real Estate tenants. The test transaction and an independent follow-up both verify zero retained test tenants and no temporary overload. Original creation-function permissions remain unchanged. See [evidence and script hash](sprint-1-production-tests/rollback-result.json). Hosted browser acceptance, external-provider recovery, Hotel/Photography prerequisites and persistent rollout remain open.
+Hosted visual rendering is now verified at the required widths. The separately requested 12ui/iOS-style visual refinement remains incomplete because approval to share the design brief with that external service was not received. Full production application release, merge and activation remain unapproved. The PR stays draft.

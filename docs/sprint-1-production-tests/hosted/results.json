@@ -1,0 +1,87 @@
+{
+  "deployment": "https://limitlessnx-agent-website-2-1ocbdiwbp-fluxagents.vercel.app",
+  "qaOrganizationId": "48b68a88-bd0a-48d9-b6e2-604e8f1bab9d",
+  "syntheticData": true,
+  "login": {
+    "status": 200,
+    "ok": true
+  },
+  "creation": {
+    "httpStatus": 201,
+    "organizationCreated": true,
+    "provisioning": "needs_attention",
+    "ok": false,
+    "replayedExistingQaTenant": true
+  },
+  "retry": {
+    "httpStatus": 200,
+    "provisioning": "needs_attention",
+    "ok": false
+  },
+  "readiness": {
+    "status": 200,
+    "stage": "needs_attention",
+    "blockers": [
+      "owner",
+      "subscription",
+      "agents",
+      "integrations",
+      "knowledge",
+      "catalog",
+      "automation",
+      "tests",
+      "approval"
+    ]
+  },
+  "widths": [
+    {
+      "width": 360,
+      "viewport": 360,
+      "documentWidth": 360,
+      "stage": "Needs attention"
+    },
+    {
+      "width": 430,
+      "viewport": 430,
+      "documentWidth": 430,
+      "stage": "Needs attention"
+    },
+    {
+      "width": 768,
+      "viewport": 768,
+      "documentWidth": 768,
+      "stage": "Needs attention"
+    },
+    {
+      "width": 1024,
+      "viewport": 1024,
+      "documentWidth": 1024,
+      "stage": "Needs attention"
+    },
+    {
+      "width": 1440,
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "stage": "Needs attention"
+    },
+    {
+      "width": 1920,
+      "viewport": 1920,
+      "documentWidth": 1920,
+      "stage": "Needs attention"
+    }
+  ],
+  "blocked": [
+    {
+      "kind": "external_browser_origin",
+      "host": "vercel.live",
+      "path": "/_next-live/feedback/feedback.js"
+    },
+    {
+      "kind": "external_browser_origin",
+      "host": "vercel.live",
+      "path": "/_next-live/feedback/feedback.js"
+    }
+  ],
+  "errorKinds": []
+}

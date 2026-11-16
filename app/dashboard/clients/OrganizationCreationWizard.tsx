@@ -96,7 +96,7 @@ export default function OrganizationCreationWizard({ templates }: { templates: T
           <p>Create the tenant and starter workspace, then track automation setup separately.</p>
         </div>
         <span className={templates.length ? "admin-status live" : "admin-status warning"}>
-          {templates.length ? "Provisioning ready" : "No templates"}
+          {templates.length ? "Templates available" : "No templates"}
         </span>
       </div>
 
