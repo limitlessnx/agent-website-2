@@ -1,3 +1,4 @@
+import { transitionSocialPostAction } from "@/app/dashboard/social/actions";
 import { MediaActionForm } from "@/app/dashboard/social/review/MediaActionForm";
 import Link from "next/link";
 import { generateCarouselAction } from "@/app/dashboard/social/carousels/actions";
@@ -12,6 +13,7 @@ import {
 import { generateReelPlanAction, renderReelAction } from "@/app/dashboard/social/video/actions";
 import { createSocialAssetSignedUrl, listSocialAssets } from "@/lib/social-assets";
 import { getSocialReviewReadiness } from "@/lib/social-review";
+import { socialWeekStart, validSocialWeek } from "@/lib/social-week";
 import { listSocialPosts } from "@/lib/social";
 import styles from "./review.module.css";
 import { ReviewSubmitButton } from "./ReviewSubmitButton";
@@ -34,9 +36,14 @@ function contentString(content: Record<string, unknown>, key: string) {
   return typeof value === "string" ? value : "";
 }
 
-export default async function SocialReviewPage() {
+export default async function SocialReviewPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
+  const { week: requestedWeek } = await searchParams;
+  const selectedWeek = requestedWeek === "all" ? "all" : validSocialWeek(requestedWeek) ? requestedWeek : socialWeekStart();
   const [allPosts, allAssets] = await Promise.all([listSocialPosts(200), listSocialAssets()]);
-  const posts = allPosts.filter((post) => ["review", "approved"].includes(post.status));
+  const weeks = [...new Set([socialWeekStart(), ...allPosts.map((post) => String(post.content?.week_start || "")).filter(validSocialWeek)])].sort().reverse();
+  const posts = allPosts.filter((post) => ["draft", "review", "approved"].includes(post.status) &&
+    (selectedWeek === "all" || post.content?.week_start === selectedWeek))
+    .sort((a, b) => Number(a.content?.planned_index || 999) - Number(b.content?.planned_index || 999));
   const licensedTracks = allAssets.filter((asset) => asset.asset_type === "audio" && asset.status === "ready" && asset.metadata?.licensed_for_social_usage === true);
 
   const assetsByPost = new Map<string, typeof allAssets>();
@@ -71,7 +78,17 @@ export default async function SocialReviewPage() {
         <Link href="/dashboard/social/posts" className="admin-status">All posts</Link>
       </header>
 
-      <section className="admin-panel">
+      <section className="admin-panel" aria-label="Weekly post review">
+        <form method="get" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", padding: 16 }}>
+          <label>Week starting (UTC) <select name="week" defaultValue={selectedWeek} style={inputStyle}>
+            {weeks.map((week) => <option key={week} value={week}>{week}</option>)}
+            <option value="all">All weeks and standalone posts</option>
+          </select></label>
+          <button type="submit" className="admin-status">Show posts</button>
+          <span>{posts.length} posts · {posts.filter((post) => post.status === "approved").length} approved · {posts.filter((post) => post.status === "draft").length} drafts</span>
+          <Link href="/dashboard/social/create">Prepare this week</Link>
+        </form>
+        <p style={{ padding: "0 16px" }}>Review each post, approve it or return it to draft with feedback. Approval does not publish it.</p>
         <div className={`admin-list ${styles.reviewQueue}`}>
           {posts.map((post) => {
             const readiness = getSocialReviewReadiness(post);
@@ -294,8 +311,13 @@ export default async function SocialReviewPage() {
                           <ReviewSubmitButton kind="primary" disabled={!approvalReady} pendingLabel="Approving post…">Approve post</ReviewSubmitButton>
                           {!approvalReady ? <p style={{ marginTop: 6 }}>{readiness.reason || "The complete media preview is not available. Approval is disabled."}</p> : null}
                         </form>
-                      ) : <span className="admin-status live">Approved</span>}
+                      ) : <span className="admin-status">{post.status === "approved" ? "Approved" : "Draft — revise before resubmitting"}</span>}
 
+                      {post.status === "draft" ? <form action={transitionSocialPostAction}>
+                        <input type="hidden" name="post_id" value={post.id} />
+                        <input type="hidden" name="next_status" value="review" />
+                        <ReviewSubmitButton kind="primary">Send revised draft to review</ReviewSubmitButton>
+                      </form> : null}
                       <form action={rejectSocialPostReviewAction} className={styles.rejectForm}>
                         <input type="hidden" name="post_id" value={post.id} />
                         <textarea style={{ ...textareaStyle, minHeight: 76 }} name="reason" placeholder="What should change before approval?" required />
@@ -308,7 +330,7 @@ export default async function SocialReviewPage() {
             );
           })}
           {!posts.length ? (
-            <div className="admin-list-row"><div><strong>Review queue is empty</strong><span>AI-generated posts enter Review once created.</span></div><em>clear</em></div>
+            <div className="admin-list-row"><div><strong>Review queue is empty</strong><span>Prepare this week’s batch or select another week.</span></div><em>clear</em></div>
           ) : null}
         </div>
       </section>

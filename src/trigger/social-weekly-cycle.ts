@@ -173,7 +173,7 @@ export const fluxSocialWeeklyCycle = task({
             },
             model,
             generated_at: generatedAt,
-            metadata: { source: "flux_social_weekly_cycle", phase: "3.8", post_count: 5, weekly_run_id: run.id },
+            metadata: { source: "flux_social_weekly_cycle", phase: "3.8", post_count: plan.posts.length, weekly_run_id: run.id },
           })
           .select("id")
           .single();

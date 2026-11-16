@@ -1,17 +1,21 @@
+import { getSocialBrand } from "@/lib/social";
+import { socialWeeklyPostCount } from "@/lib/social-week";
 import Link from "next/link";
 import { createSocialPostAction, generateWeeklySocialPlanAction } from "@/app/dashboard/social/actions";
 
 const fieldStyle = { display: "grid", gap: 8 } as const;
 const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 10, border: "1px solid var(--admin-border, #2d2d35)", background: "transparent", color: "inherit" } as const;
 
-export default function CreateSocialPostPage() {
+export default async function CreateSocialPostPage() {
+  const brand = await getSocialBrand();
+  const postCount = socialWeeklyPostCount(brand?.metadata);
   return (
     <main className="admin-page">
       <header className="admin-page-header">
         <div>
           <p className="admin-kicker">Fluxknight Social</p>
           <h1>Create content</h1>
-          <p>Create one controlled draft or let the Phase 3.1 Content Brain build the next five-post weekly plan from the Brand Brain.</p>
+          <p>Create one controlled draft or prepare the next weekly review batch from the Brand Brain.</p>
         </div>
         <Link href="/dashboard/social" className="admin-status">Back to Social</Link>
       </header>
@@ -22,15 +26,15 @@ export default function CreateSocialPostPage() {
             <p className="admin-kicker">Phase 3.1</p>
             <h2 style={{ marginTop: 4 }}>AI Content Brain</h2>
             <p style={{ maxWidth: 760 }}>
-              Reads the active Fluxknight Brand Brain and creates one weekly strategy plus exactly five review-ready post drafts with hooks, captions, CTAs, formats, platforms and creative briefs.
+              Reads the active Fluxknight Brand Brain and creates one weekly strategy plus {postCount} post drafts with hooks, captions, CTAs, formats, platforms and creative briefs.
             </p>
           </div>
           <form action={generateWeeklySocialPlanAction}>
             <button type="submit" className="admin-status live" style={{ cursor: "pointer" }}>
-              Generate this week&apos;s 5 posts
+              Generate this week&apos;s {postCount} posts
             </button>
           </form>
-          <small style={{ opacity: 0.7 }}>Generation is idempotent per brand/week, so repeated clicks will not create duplicate weekly plans.</small>
+          <small style={{ opacity: 0.7 }}>One batch per brand/week. Slides are prepared in the background; review and approval are required before scheduling.</small>
         </div>
       </section>
 
