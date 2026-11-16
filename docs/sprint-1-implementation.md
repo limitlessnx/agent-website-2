@@ -52,7 +52,7 @@ Supabase project discovery found the active production project and an **inactive
 
 ## Release and recovery limitations
 
-The user has chosen production-backed testing to avoid paid staging. The exact rollback-only procedure and read-only production findings are documented in [the production test runbook](sprint-1-production-tests/README.md). The retry-safety migration remains unapplied; temporary production schema/grant changes in that test require explicit approval following an automatic approval rejection. This code intentionally fails rather than silently falling back to non-idempotent creation if the overload is absent.
+The user has chosen production-backed testing to avoid paid staging. The exact rollback-only procedure and read-only production findings are documented in [the production test runbook](sprint-1-production-tests/README.md). The retry-safety migration remains unapplied; the exact temporary production schema/grant test was subsequently explicitly approved, executed successfully, and rolled back. Persistent migration/application release remains unapproved. This code intentionally fails rather than silently falling back to non-idempotent creation if the overload is absent.
 
 Ambiguous remote create responses require administrator reconciliation. If the remote resource exists, retry resolves its stable tenant-specific name and persists it. If it cannot be found, do not clear the pending marker until absence is verified. Interrupted worker claims are not automatically stolen: after 15 minutes the readiness snapshot reports needs attention. After confirming no worker is running and reconciling pending remote operations, an administrator may clear `onboarding_sync_running` in that tenant's project metadata, then retry. No production reconciliation was performed.
 
@@ -62,7 +62,7 @@ Readiness is a conservative reporting projection. Existing activation gates rema
 
 Hosted 12ui visual refinement was blocked by automatic approval review because sharing the workflow brief with the external service requires user approval. Existing styling is retained; this visual refinement is not claimed complete. The local screenshots document functional responsive rendering, not full visual acceptance.
 
-**Production modified: no.** No production deployment, schema migration, customer-data write, merge, live message or billable test request was performed.
+**Persistent production changes: none.** The separately approved rollback-only test temporarily created a function, grants and synthetic tenant rows, then rolled them back. No application release, permanent migration, merge, live message or billable-provider test request was performed. Independent verification confirmed no test organizations or temporary overload remain.
 
 ## Hosted verification status
 
@@ -70,4 +70,8 @@ The first preview build completed successfully according to Vercel build events.
 
 ## Production-backed test preflight update
 
-Read-only production inspection found a shared workflow-registry uniqueness collision that can silently omit a new tenant's workflows. The unapplied overload now completes and verifies the new tenant's own registry rows. Local tests reproduce the actual unique-index conflict across two tenants in each industry. Hotel/Photography templates are absent from the live legacy catalog, and the existing hotel inventory-readiness RPC is not installed; these are explicit deployment prerequisites, not passing production onboarding checks. See the [runbook and exact blocked rollback-only SQL](sprint-1-production-tests/README.md). The attempted temporary-schema test was rejected before execution; a read-only follow-up confirmed no test tenant or overload exists.
+Read-only production inspection found a shared workflow-registry uniqueness collision that can silently omit a new tenant's workflows. The unapplied overload now completes and verifies the new tenant's own registry rows. Local tests reproduce the actual unique-index conflict across two tenants in each industry. Hotel/Photography templates are absent from the live legacy catalog, and the existing hotel inventory-readiness RPC is not installed; these are explicit deployment prerequisites, not passing production onboarding checks. See the [runbook and exact blocked rollback-only SQL](sprint-1-production-tests/README.md). The first attempted temporary-schema test was rejected before execution. After explicit user approval, the exact test passed and rolled back; an independent read-only follow-up confirmed no test tenant or overload exists and the original function permissions remain restricted.
+
+## Approved production database rollback test
+
+Passed on 16 November 2026 after explicit approval. This verifies real-schema creation/replay, conflicting request rejection and complete per-tenant workflow registries for two distinct synthetic Real Estate tenants. The test transaction and an independent follow-up both verify zero retained test tenants and no temporary overload. Original creation-function permissions remain unchanged. See [evidence and script hash](sprint-1-production-tests/rollback-result.json). Hosted browser acceptance, external-provider recovery, Hotel/Photography prerequisites and persistent rollout remain open.

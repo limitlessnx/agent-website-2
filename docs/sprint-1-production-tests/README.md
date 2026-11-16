@@ -21,13 +21,18 @@ The unapplied retry-safe overload now completes missing workflow rows using the 
 
 [rollback-creation.sql](rollback-creation.sql) contains the exact test. It temporarily creates the reviewed overload and restricted grants within one transaction, creates two clearly named synthetic Real Estate tenants, asserts replay/conflict handling, draft/disconnected assets and per-tenant workflow completeness, then rolls everything back. Short lock and statement timeouts are set. It does not invoke the HTTP API, n8n, Trigger.dev, billing, Auth signup, or any messaging service. No existing customer row is selected as a mutation target. The final query verifies neither test tenant nor the overload remains.
 
-**Not executed.** Automatic approval review rejected the first proposed rollback-only execution because it included production `CREATE OR REPLACE FUNCTION` and `REVOKE/GRANT`; production testing authorization did not explicitly cover temporary schema and privilege changes. No alternate route was used to apply that SQL. Explicit approval for this exact temporary test is required.
+## Approved execution result
 
-A separate read-only query after rejection confirmed zero test organizations and that the overload remains absent. No persistent production schema, grant, customer-data, or application change was performed.
+The first attempt was rejected by automatic approval review because temporary production schema/grant changes were not explicitly authorized. The user subsequently approved this exact test. It executed successfully as one SQL request on 16 November 2026; the SQL file is retained unchanged from that approval, including its historical BLOCKED comment.
 
-## After approval
+All test assertions passed: request replay returned the same tenant/result, conflicting input was rejected, the starter project and agents existed, both distinct test tenants had their required workflow rows, checked agents/workflows stayed draft and integrations disconnected, and anon/authenticated execution was denied.
 
-1. Execute the reviewed SQL as one request and verify rollback results. Do not apply any other pending migration.
-2. Stop on failed assertions and fix the branch locally.
-3. Prepare a separate concrete request for a persistent migration/preview test tenant if needed for browser-based failure/retry tests. Database rollback tests cannot prove external-provider retries or browser feedback.
-4. Keep Hotel/Photography catalog prerequisites explicit; do not copy configuration or business data from existing customers.
+The transaction ended with `ROLLBACK`. Its final verification returned zero test organizations and no temporary overload. An independent read-only query confirmed the same, plus the original seven-argument function and its restricted permissions remained intact. [Machine-readable evidence and exact script hash](rollback-result.json).
+
+**Persistent production changes: none.** The test temporarily created function/grant/test rows within its transaction and rolled them back. No application deployment, external automation call, customer-data mutation target, messaging request or paid-provider request occurred. The migration remains unapplied permanently.
+
+## Remaining work
+
+1. Prepare a separately reviewed persistent migration and preview test tenant if needed for browser-based failure/retry tests. This rollback-only approval does not authorize those changes.
+2. Database rollback assertions do not prove external-provider retries or browser feedback. Keep these acceptance checks open.
+3. Keep Hotel/Photography catalog prerequisites explicit; do not copy configuration or business data from existing customers.

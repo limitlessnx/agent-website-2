@@ -1,0 +1,38 @@
+{
+  "verified_at_utc": "2026-11-16T11:37:02Z",
+  "environment": "existing production Supabase project",
+  "authorization": "User explicitly approved the exact rollback-only test after temporary schema and permission changes were explained.",
+  "script": "rollback-creation.sql",
+  "script_sha256": "eed02bbaf27e8bd91867c50548d9fbe546710d2a2657dbc47721c681710febcb",
+  "execution": "passed as one SQL request ending in rollback",
+  "assertions_passed": [
+    "same creation request returns identical result and one tenant",
+    "starter project and agents exist",
+    "required workflow rows exist for each of two distinct test tenants",
+    "checked test agents/workflows stay draft and integrations disconnected",
+    "anon and authenticated cannot execute the temporary overload",
+    "changed parameters with the same request ID are rejected"
+  ],
+  "transaction_final_verification": {
+    "temporary_overload_remaining": false,
+    "test_organizations_remaining": 0
+  },
+  "independent_follow_up": {
+    "temporary_overload_remaining": false,
+    "test_organizations_remaining": 0,
+    "original_creation_function_present": true,
+    "original_anon_execute": false,
+    "original_authenticated_execute": false,
+    "original_service_role_execute": true
+  },
+  "persistent_production_changes": false,
+  "application_deployed": false,
+  "external_automation_invoked": false,
+  "messages_sent": false,
+  "paid_provider_requests": false,
+  "limits": [
+    "Database-only test; no hosted browser or external-provider retry acceptance.",
+    "Persistent migration remains unapplied.",
+    "Hotel/Photography template and hotel readiness-function prerequisites remain unresolved."
+  ]
+}
