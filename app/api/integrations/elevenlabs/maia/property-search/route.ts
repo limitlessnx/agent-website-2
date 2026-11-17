@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400, headers: responseHeaders });
   }
   const query = clean(body.query).slice(0, 120);
-  if (query.length < 2 || !/^[\\p{L}\\p{N}\\s\x27-]+$/u.test(query)) {
+  if (query.length < 2 || !/^[\\p{L}\\p{N} -]+$/u.test(query)) {
     return NextResponse.json({ error: "invalid_query" }, { status: 400, headers: responseHeaders });
   }
 
