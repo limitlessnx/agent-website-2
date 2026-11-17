@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/DashboardPrimitives";
 import Link from "next/link";
 import { getIndustryExperience } from "@/lib/industryExperience";
 import { Building2, Mail, Phone, ShieldCheck, User, Users } from "@/components/admin/ServerIcons";
@@ -18,44 +19,41 @@ export default async function PortalSettingsPage() {
   if (!session) return null;
   const access=await getOrganizationAccessContext(session.organizationId,session.userId);
   const org=encodeURIComponent(session.organizationId);
+  const unavailableSections: string[] = [];
   const [summary, account, stages, members, notificationPreferences, handoffRules, businessValueSettings] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getAccountAdministrationSnapshot(session.organizationId),
     supabaseServerRequest<Array<{id:string;key:string;name:string;category:string;position:number;is_terminal:boolean;follow_up_default_minutes?:number|null}>>(
       "organization_customer_stages?organization_id=eq."+org+"&status=eq.active&select=id,key,name,category,position,is_terminal,follow_up_default_minutes&order=position.asc&limit=100",
-    ).catch(()=>[]),
-    listOrganizationMembers(session.organizationId,session.userId).catch(()=>[]),
+    ).catch(()=>{ unavailableSections.push("Customer stages"); return []; }),
+    listOrganizationMembers(session.organizationId,session.userId).catch(()=>{ unavailableSections.push("Workspace members"); return []; }),
     supabaseServerRequest<Array<{membership_id:string;whatsapp_phone?:string|null;notify_whatsapp_handoffs:boolean;metadata?:Record<string,unknown>|null}>>(
       "organization_member_notification_preferences?organization_id=eq."+org+"&select=membership_id,whatsapp_phone,notify_whatsapp_handoffs,metadata&limit=200",
-    ).catch(()=>[]),
+    ).catch(()=>{ unavailableSections.push("Supervisor preferences"); return []; }),
     supabaseServerRequest<Array<{id:string;name:string;category?:string|null;assigned_membership_id:string;priority:number;notify_whatsapp:boolean;status:string}>>(
       "handoff_assignment_rules?organization_id=eq."+org+"&select=id,name,category,assigned_membership_id,priority,notify_whatsapp,status&order=priority.asc&limit=200",
-    ).catch(()=>[]),
+    ).catch(()=>{ unavailableSections.push("Supervisor assignment rules"); return []; }),
     supabaseServerRequest<Array<{
       enabled:boolean;currency?:string|null;human_hourly_value?:number|null;
       minutes_per_ai_handled_conversation?:number|null;minutes_per_follow_up?:number|null;
       minutes_per_appointment?:number|null;minutes_per_handoff_triage?:number|null;
     }>>(
       "organization_business_value_settings?organization_id=eq."+org+"&select=enabled,currency,human_hourly_value,minutes_per_ai_handled_conversation,minutes_per_follow_up,minutes_per_appointment,minutes_per_handoff_triage&limit=1",
-    ).then((rows)=>rows[0]||null).catch(()=>null),
+    ).then((rows)=>rows[0]||null).catch(()=>{ unavailableSections.push("Business-value assumptions"); return null; }),
   ]);
   const profile = summary.onboarding;
 
   return (
-    <main className="portal-page">
-      <header className="portal-section-title"><h1>Settings</h1><p>Workspace identity, members, ownership, account state, and security scope.</p></header>
+    <main className="portal-page portal-settings fk-motion-enter">
+      <PageHeader title="Settings" description="Workspace identity, members, ownership, account state, and security scope." />
       {getIndustryExperience(profile?.industry).slug==="hotels"?<p><Link className="portal-button secondary" href="/portal/hotel/setup">Edit hotel information & policies</Link></p>:null}
       <section className="portal-grid">
         <article className="portal-card">
           <div className="portal-card-head"><div><h2><Building2 size={17} /> Business profile</h2><p>Captured during onboarding.</p></div></div>
-          <div className="portal-form-grid">
-            <div className="portal-field"><label>Business name</label><input readOnly value={profile?.business_name || ""} /></div>
-            <div className="portal-field"><label>Industry</label><input readOnly value={profile?.industry || ""} /></div>
-            <div className="portal-field"><label>Business email</label><input readOnly value={profile?.business_email || session.email} /></div>
-            <div className="portal-field"><label>Phone</label><input readOnly value={profile?.phone || ""} /></div>
-            <div className="portal-field"><label>Country</label><input readOnly value={profile?.country || ""} /></div>
-            <div className="portal-field"><label>Time zone</label><input readOnly value={profile?.timezone || ""} /></div>
-          </div>
+          <p className="settings-readonly-note">Read-only business information captured during onboarding.</p>
+          <dl className="settings-readonly-grid">
+            {[["Business name", profile?.business_name], ["Industry", profile?.industry], ["Business email", profile?.business_email || session.email], ["Phone", profile?.phone], ["Country", profile?.country], ["Time zone", profile?.timezone]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "Not provided"}</dd></div>)}
+          </dl>
         </article>
         <article className="portal-card">
           <div className="portal-card-head"><div><h2><User size={17} /> Human handoff</h2><p>The person agents escalate sensitive or high-intent cases to.</p></div></div>
@@ -66,6 +64,8 @@ export default async function PortalSettingsPage() {
           </div>
         </article>
       </section>
+
+      {unavailableSections.length > 0 && <p role="alert" className="settings-feedback-error">Some settings could not be loaded: {unavailableSections.join(", ")}. Reload this page before relying on the displayed configuration.</p>}
 
       <CustomerStagesPanel initialStages={stages} canManage={access.permissions.has("customers.manage")} />
 

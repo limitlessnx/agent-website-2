@@ -1,0 +1,7 @@
+  ✓  1 [chromium-360] › tests/responsive/dashboard.spec.ts:262:1 › shared component states and keyboard interactions (7.3s)
+  ✓  2 [chromium-430] › tests/responsive/dashboard.spec.ts:262:1 › shared component states and keyboard interactions (5.6s)
+  ✓  3 [chromium-768] › tests/responsive/dashboard.spec.ts:262:1 › shared component states and keyboard interactions (6.6s)
+  ✓  4 [chromium-1024] › tests/responsive/dashboard.spec.ts:262:1 › shared component states and keyboard interactions (6.2s)
+  ✓  5 [chromium-1440] › tests/responsive/dashboard.spec.ts:262:1 › shared component states and keyboard interactions (6.6s)
+  ✓  6 [chromium-1920] › tests/responsive/dashboard.spec.ts:262:1 › shared component states and keyboard interactions (7.9s)
+  6 passed (47.5s)

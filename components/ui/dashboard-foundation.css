@@ -167,3 +167,53 @@
 [data-flux-ui].portal-shell:has(.portal-sidebar.is-open) .leo-launcher {
   visibility: hidden;
 }
+
+/* Settings and configuration: shared tokens, scoped to these existing surfaces. */
+[data-flux-ui] .settings-page .settings-layout { display:grid; grid-template-columns: minmax(170px,210px) minmax(0,1fr); gap:var(--fk-space-5); align-items:start; }
+[data-flux-ui] .settings-page .settings-content { min-width:0; display:grid; gap:var(--fk-space-5); }
+[data-flux-ui] .settings-page .settings-nav { position:sticky; top:var(--fk-space-4); display:grid; gap:var(--fk-space-2); overflow:visible; }
+[data-flux-ui] .settings-page .settings-nav a { display:flex; align-items:center; gap:var(--fk-space-2); min-height:var(--fk-touch); padding:8px 12px; border-radius:var(--fk-radius-sm); white-space:normal; overflow-wrap:anywhere; }
+[data-flux-ui] .settings-page :is(section[id],.admin-panel[id]) { scroll-margin-top:96px; }
+[data-flux-ui] .settings-workflow-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--fk-space-3); }
+[data-flux-ui] :is(.settings-page,.portal-settings) :is(.admin-list-row,.portal-list-row,.admin-panel-header,.portal-card-head) > div { min-width:0; }
+[data-flux-ui] :is(.settings-page,.portal-settings) :is(.admin-inline-actions,.portal-card-head) { flex-wrap:wrap; gap:var(--fk-space-3); }
+[data-flux-ui] :is(.settings-page,.portal-settings) :is(button,.admin-button,.portal-button) { flex-shrink:0; min-height:var(--fk-touch); padding:10px 16px; white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
+[data-flux-ui] .settings-control-row { display:flex; flex-wrap:wrap; align-items:center; gap:var(--fk-space-4); }
+[data-flux-ui] .settings-control-row > div:first-child { flex:1 1 240px; }
+[data-flux-ui] .settings-control-actions { display:flex; flex-wrap:wrap; align-items:center; gap:var(--fk-space-2); }
+[data-flux-ui] .settings-control-actions input { inline-size:96px; min-width:80px; }
+[data-flux-ui] .settings-readonly-note { color:var(--fk-text-secondary); font-size:var(--fk-font-sm); }
+[data-flux-ui] .settings-readonly-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--fk-space-4); margin:var(--fk-space-4) 0 0; }
+[data-flux-ui] .settings-readonly-grid > div { min-width:0; border-bottom:1px solid var(--fk-border); padding-bottom:var(--fk-space-3); }
+[data-flux-ui] .settings-readonly-grid dt { color:var(--fk-text-secondary); font-size:var(--fk-font-sm); margin-bottom:6px; }
+[data-flux-ui] .settings-readonly-grid dd { margin:0; color:var(--fk-text); overflow-wrap:anywhere; line-height:1.6; }
+[data-flux-ui] .portal-settings input:is([type="checkbox"],[type="radio"]) { width:20px!important; min-width:20px!important; height:20px!important; min-height:20px!important; padding:0!important; flex-shrink:0; accent-color:var(--fk-brand); }
+[data-flux-ui] .portal-settings label:has(>input[type="checkbox"]) { display:flex; align-items:center; gap:var(--fk-space-3); min-height:var(--fk-touch); }
+[data-flux-ui] .settings-account-actions > .portal-list-row { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--fk-space-4); }
+[data-flux-ui] .settings-account-actions :is(input,textarea) { box-sizing:border-box; min-width:0; max-width:100%; }
+[data-flux-ui] .settings-account-actions button { justify-self:start; border:1px solid var(--fk-border); border-radius:var(--fk-radius-control); background:var(--fk-surface-raised); color:var(--fk-text); }
+[data-flux-ui] .exposure-template-grid button { min-width:0; max-width:100%; min-height:var(--fk-touch); height:auto; }
+[data-flux-ui] .exposure-template-grid strong { min-width:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.5; }
+[data-flux-ui] .exposure-template-grid :is(span,small) { white-space:normal; overflow-wrap:anywhere; }
+@media(max-width:1024px) { [data-flux-ui] .settings-page .settings-layout { grid-template-columns:minmax(0,1fr); } [data-flux-ui] .settings-page .settings-nav { position:static; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); } [data-flux-ui] .settings-page .settings-nav > .admin-kicker { grid-column:1/-1; } }
+@media(max-width:600px) { [data-flux-ui] :is(.settings-workflow-metrics,.settings-readonly-grid) { grid-template-columns:minmax(0,1fr); } [data-flux-ui] .settings-control-actions { width:100%; } [data-flux-ui] .settings-control-actions button { flex:1 1 auto; } [data-flux-ui] .settings-page .admin-form-grid { grid-template-columns:minmax(0,1fr); } }
+[data-flux-ui] .settings-feedback-error { border:1px solid var(--fk-danger); border-radius:var(--fk-radius-sm); padding:var(--fk-space-3); color:var(--fk-danger); overflow-wrap:anywhere; }
+[data-flux-ui] .settings-feedback-success { color:var(--fk-success); overflow-wrap:anywhere; }
+
+/* Flux Motion: transitions are opt-in or attached to existing interactive controls. */
+[data-flux-ui] { --fk-motion-press:100ms; --fk-motion-hover:160ms; --fk-motion-card:220ms; --fk-motion-overlay:260ms; --fk-motion-page:280ms; --fk-motion-chart:600ms; --fk-ease-exit:cubic-bezier(.4,0,1,1); }
+[data-flux-ui] :is(.admin-button,.portal-button,.settings-nav a,.exposure-template-grid button) { transition:background-color var(--fk-motion-hover) var(--fk-ease),border-color var(--fk-motion-hover) var(--fk-ease),box-shadow var(--fk-motion-hover) var(--fk-ease),transform var(--fk-motion-press) var(--fk-ease); }
+[data-flux-ui] :is(.admin-button,.portal-button):active:not(:disabled) { transform:translateY(1px); }
+[data-flux-ui] .fk-motion-enter { animation:fk-content-enter var(--fk-motion-page) var(--fk-ease) both; }
+[data-flux-ui] :is(.settings-feedback-error,.settings-feedback-success) { animation:fk-feedback-enter var(--fk-motion-card) var(--fk-ease) both; }
+[data-flux-ui] :is(.leo-launcher,#leo-assistant-panel) { transition-duration:var(--fk-motion-overlay); }
+[data-flux-ui] #leo-assistant-panel :is(button,textarea) { min-height:44px; }
+@keyframes fk-content-enter { from {opacity:0;transform:translateY(4px)} to {opacity:1;transform:none} }
+@keyframes fk-feedback-enter { from {opacity:.4;transform:translateY(2px)} to {opacity:1;transform:none} }
+@media(prefers-reduced-motion:reduce) { [data-flux-ui] :is(.fk-motion-enter,.settings-feedback-error,.settings-feedback-success) { animation:none!important;transform:none!important; } [data-flux-ui] :is(.admin-button,.portal-button,.settings-nav a,.exposure-template-grid button,.leo-launcher,#leo-assistant-panel) { transition:none!important;transform:none!important; } }
+[data-flux-ui] .exposure-campaign-card > header { flex-wrap:wrap; gap:var(--fk-space-3); }
+[data-flux-ui] .exposure-campaign-card > header button { min-height:var(--fk-touch); min-width:var(--fk-touch); padding:8px 12px; flex-shrink:0; white-space:normal; }
+/* Outrank the legacy admin-list-row child grid only within settings. */
+[data-flux-ui] .settings-page .settings-control-actions { display:flex; flex-direction:row; }
+[data-flux-ui] .settings-page .admin-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--fk-space-4); }
+@media(max-width:600px) { [data-flux-ui] .settings-page .admin-form-grid { grid-template-columns:minmax(0,1fr); } }

@@ -461,3 +461,7 @@
   color: var(--metric-accent);
   background: var(--fk-brand-soft);
 }
+
+.dialog[open] { animation: overlayEnter var(--fk-motion-overlay,260ms) var(--fk-ease,cubic-bezier(.2,.8,.2,1)) both; }
+@keyframes overlayEnter { from {opacity:0;transform:translateY(6px)} to {opacity:1;transform:none} }
+@media(prefers-reduced-motion:reduce) { .dialog[open] { animation:none;transform:none; } }

@@ -1,0 +1,2 @@
+  ✓  1 [chromium-768] › tests/responsive/dashboard.spec.ts:157:3 › admin /dashboard/clients (9.1s)
+  1 passed (19.1s)

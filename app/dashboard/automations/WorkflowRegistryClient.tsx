@@ -1,5 +1,7 @@
 "use client";
 
+import { MetricCard } from "@/components/ui/DashboardPrimitives";
+
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { WorkflowRecord, WorkflowRun } from "@/lib/workflow-registry";
@@ -166,10 +168,10 @@ export default function WorkflowRegistryClient({ initialWorkflows, initialRuns, 
 
   return (
     <>
-      <section className="admin-stat-grid">
-        <article className="admin-stat-card"><span>Registered</span><strong>{counts.total}</strong></article>
-        <article className="admin-stat-card"><span>Active</span><strong>{counts.active}</strong></article>
-        <article className="admin-stat-card"><span>Needs attention</span><strong>{counts.attention}</strong></article>
+      <section className="settings-workflow-metrics" aria-label="Workflow status">
+        <MetricCard label="Registered" value={counts.total} />
+        <MetricCard label="Active" value={counts.active} />
+        <MetricCard label="Needs attention" value={counts.attention} />
       </section>
 
       <section className="admin-panel">

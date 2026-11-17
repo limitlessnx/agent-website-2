@@ -161,3 +161,7 @@
   .metricCard>small{font-size:11px;line-height:1.35}
   .attentionPanel,.teamSection{padding:14px}
 }
+
+.financeChart { animation: chartReveal var(--fk-motion-chart,600ms) var(--fk-ease,cubic-bezier(.2,.8,.2,1)) both; }
+@keyframes chartReveal { from {opacity:0;transform:translateY(3px)} to {opacity:1;transform:none} }
+@media(prefers-reduced-motion:reduce) { .financeChart { animation:none;transform:none; } }

@@ -1,3 +1,4 @@
+import { PageHeader, MetricCard } from "@/components/ui/DashboardPrimitives";
 import Link from "next/link";
 import { Database, KeyRound, PlugZap, Settings2, Workflow } from "@/components/admin/ServerIcons";
 import { getSupabaseReadiness } from "@/lib/limitless-data";
@@ -28,7 +29,8 @@ const settings = [
 export default async function SettingsPage() {
   const [supabase, registry] = await Promise.all([
     getSupabaseReadiness(),
-    getWorkflowRegistrySummary().catch(() => ({
+    getWorkflowRegistrySummary().then(value => ({ ...value, loadFailed: false })).catch(() => ({
+      loadFailed: true,
       configured: false,
       workflows: [],
       runs: [],
@@ -39,31 +41,23 @@ export default async function SettingsPage() {
     })),
   ]);
 
+  const registryLoadFailed = registry.loadFailed;
   const configuredSettings = settings.filter((setting) => setting.keys.some((key) => process.env[key])).length;
 
   return (
-    <main className="admin-page dashboard-v2-page settings-page">
-      <header className="admin-page-header">
-        <div>
-          <p className="admin-kicker">Platform Control</p>
-          <h1>Settings</h1>
-          <p>Manage connections, workflow mapping, environment readiness and database visibility without changing the underlying platform behavior.</p>
-        </div>
-        <span className={supabase.ready ? "admin-status live" : "admin-status warning"}>
-          {supabase.ready ? "Database live" : "Database schema pending"}
-        </span>
-      </header>
-
+    <main className="admin-page dashboard-v2-page settings-page fk-motion-enter">
+      <PageHeader kicker="Platform control" title="Settings" description="Manage integrations, appointment rules, automation and platform readiness." actions={<span className={supabase.ready ? "admin-status live" : "admin-status warning"}>{supabase.ready ? "Database live" : "Database schema pending"}</span>} />
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><Settings2 size={15} /> Environment</p><strong>{configuredSettings}/{settings.length}</strong><span>Required values currently set</span></article>
-        <article className="admin-metric-card"><p><Workflow size={15} /> Workflows</p><strong>{registry.workflows.length}</strong><span>{registry.active} active · {registry.paused} paused</span></article>
-        <article className="admin-metric-card"><p><Database size={15} /> Database tables</p><strong>{supabase.tables.filter((table) => table.ready).length}</strong><span>{supabase.tables.length} tracked readiness checks</span></article>
-        <article className="admin-metric-card"><p><PlugZap size={15} /> Connections</p><strong>Manage</strong><span>Workspace and platform integrations</span></article>
+        <MetricCard label="Environment" value={`${configuredSettings}/${settings.length}`} detail="Required values currently set" icon={Settings2} />
+        <MetricCard label="Workflows" value={registryLoadFailed ? "—" : registry.workflows.length} detail={registryLoadFailed ? "Status unavailable" : `${registry.active} active · ${registry.paused} paused`} icon={Workflow} />
+        <MetricCard label="Database tables" value={supabase.tables.filter(table => table.ready).length} detail={`${supabase.tables.length} tracked readiness checks`} icon={Database} />
+        <MetricCard label="Connections" value="Manage" detail="Workspace and platform integrations" icon={PlugZap} />
       </div>
 
       <div className="settings-layout">
         <aside className="settings-nav admin-panel" aria-label="Settings sections">
-          <span className="admin-kicker">SETTINGS</span>
+          <span className="admin-kicker">On this page</span>
+          <a href="#appointment-capacity"><Settings2 size={15} /> Appointment capacity</a>
           <a href="#integrations"><PlugZap size={15} /> Integrations</a>
           <a href="#automation"><Workflow size={15} /> Automation</a>
           <a href="#environment"><KeyRound size={15} /> Environment</a>
@@ -88,11 +82,11 @@ export default async function SettingsPage() {
             <p>Workflow 3 currently expects the key <strong>crm_follow_up_v3</strong> mapped to external workflow ID <strong>n153Nrwf90vI1SJ2</strong>.</p>
           </section>
 
-          <WorkflowRegistryClient
+          {registryLoadFailed ? <section className="admin-panel" role="alert"><h2>Workflow status unavailable</h2><p>Workflow configuration could not be loaded. Reload this page to retry. Other settings remain available.</p></section> : <WorkflowRegistryClient
             initialWorkflows={registry.workflows}
             initialRuns={registry.runs}
             configured={registry.configured}
-          />
+          />}
 
           <section className="admin-panel" id="environment">
             <div className="admin-panel-header">

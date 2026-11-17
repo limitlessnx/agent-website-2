@@ -1,0 +1,168 @@
+{
+  "synthetic": true,
+  "productionWrites": false,
+  "results": [
+    {
+      "name": "platform-billing",
+      "width": 360,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 430,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 768,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 1024,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 1440,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 1920,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    }
+  ]
+}
