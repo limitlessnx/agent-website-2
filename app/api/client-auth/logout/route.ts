@@ -1,12 +1,17 @@
+import { clearAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
-import { clearClientSession, clearClientOAuthContext, clearPendingClientSetupSession } from "@/lib/client-auth";
-import { createClient } from "@/lib/supabase/server";
+import {
+  clearClientSession,
+  clearClientOAuthContext,
+  clearPendingClientSetupSession,
+} from "@/lib/client-auth";
+import { signOutAccount } from "@/lib/supabase/server";
 
 export async function POST() {
-  const supabase=await createClient();
-  await supabase.auth.signOut().catch(()=>undefined);
+  await signOutAccount("global").catch(() => undefined);
   await Promise.all([
     clearClientSession(),
+    clearAdminSession(),
     clearPendingClientSetupSession(),
     clearClientOAuthContext(),
   ]);

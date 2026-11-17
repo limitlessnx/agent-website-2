@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const load = require('./helpers/load-typescript.cjs');
@@ -50,9 +51,14 @@ function signupRoute(overrides = {}) {
 function loginRoute(overrides = {}) {
   const calls = { provision: [], pendingWrites: [], sessions: [], lifecycle: [] };
   const route = load('app/api/client-auth/login/route.ts', {
+    '@/lib/auth-navigation': load('lib/auth-navigation.ts',{},'',{URL}),
+    '@/lib/platform-admin-access': { isVerifiedPlatformAdmin:async()=>false, establishAccountSession:async()=>undefined },
+    '@/lib/admin-auth': { clearAdminSession:async()=>undefined },
     'next/server': nextServer,
     '@/lib/client-onboarding': { provisionClientOrganization: async input => calls.provision.push(input) },
     '@/lib/client-auth': {
+      clearClientSession:async()=>undefined,
+      clearPendingClientSetupSession:async()=>undefined,
       signInClient: async () => overrides.auth || { user: { id: 'auth-user-id', email: 'owner@example.test', user_metadata: {} } },
       getPendingClientSetupSession: async () => overrides.pending || null,
       getPrimaryMembership: async () => overrides.membership || null,

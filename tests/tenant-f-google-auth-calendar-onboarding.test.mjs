@@ -132,7 +132,8 @@ test("F1 invited Google users join the invited tenant before primary-membership 
 
 test("F1 logout clears Supabase and Fluxknight auth state",()=>{
   const route=read("app/api/client-auth/logout/route.ts");
-  assert.match(route,/supabase\.auth\.signOut/);
+  assert.match(route,/signOutAccount\("global"\)/);
+  assert.match(read("lib/supabase/server.ts"),/supabase\.auth\.signOut/);
   assert.match(route,/clearClientSession/);
   assert.match(route,/clearPendingClientSetupSession/);
   assert.match(route,/clearClientOAuthContext/);
@@ -140,8 +141,10 @@ test("F1 logout clears Supabase and Fluxknight auth state",()=>{
 
 test("F1 Google start validates redirect destination and keeps provider scopes separate from Calendar",()=>{
   const start=read("app/api/client-auth/google/start/route.ts");
-  assert.match(start,/startsWith\("\/"\)/);
-  assert.match(start,/startsWith\("\/\/"\)/);
+  assert.match(start,/safeAuthPath/);
+  const navigation=read("lib/auth-navigation.ts");
+  assert.match(navigation,/startsWith\("\/"\)/);
+  assert.match(navigation,/startsWith\("\/\/"\)/);
   assert.match(start,/new URL\("\/auth\/callback",url\.origin\)/);
   assert.doesNotMatch(start,/GOOGLE_CALENDAR_CLIENT_ID|GOOGLE_CALENDAR_CLIENT_SECRET/);
 });

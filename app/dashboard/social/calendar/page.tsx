@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { listSocialPosts, listSocialPublishJobs, listSocialSchedules } from "@/lib/social";
+import { getSocialBrand, listSocialPosts, listSocialPublishJobs, listSocialSchedules } from "@/lib/social";
 
 export default async function SocialCalendarPage() {
-  const [posts, schedules, jobs] = await Promise.all([
+  const [posts, schedules, jobs, brand] = await Promise.all([
     listSocialPosts(250),
     listSocialSchedules(250),
     listSocialPublishJobs(500),
+    getSocialBrand(),
   ]);
+  const automatic = (brand?.metadata.daily_publishing as { enabled?: boolean } | undefined)?.enabled === true;
   const postById = new Map(posts.map((post) => [post.id, post]));
 
   return (
@@ -20,6 +22,7 @@ export default async function SocialCalendarPage() {
         <Link href="/dashboard/social/posts" className="admin-status">Manage posts</Link>
       </header>
 
+      {automatic ? <p>Automatic Instagram publishing is on: one approved post daily at 6 p.m. WAT (5 p.m. UTC). Future approvals receive the next free daily slot within a few minutes. Drafts and rejected posts are excluded.</p> : null}
       <section className="admin-panel">
         <div className="admin-panel-header"><div><h2>Schedule</h2><p>Times are stored as UTC while preserving the requested timezone.</p></div></div>
         <div className="admin-list">
@@ -30,7 +33,7 @@ export default async function SocialCalendarPage() {
               <div key={schedule.id} className="admin-list-row" style={{ alignItems: "flex-start" }}>
                 <div>
                   <strong>{post?.title || "Unknown post"}</strong>
-                  <span>{new Date(schedule.scheduled_for).toLocaleString()} · {schedule.timezone}</span>
+                  <span>{new Date(schedule.scheduled_for).toLocaleString("en-GB", { timeZone: schedule.timezone, dateStyle: "medium", timeStyle: "short" })} · {schedule.timezone === "Africa/Lagos" ? "WAT (UTC+1)" : schedule.timezone}</span>
                   <span>{post?.platforms.join(", ") || "No platforms"}</span>
                   {scheduleJobs.length ? (
                     <span>Jobs: {scheduleJobs.map((job) => {
