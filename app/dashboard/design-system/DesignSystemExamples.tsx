@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import AIPresence from "@/components/ui/AIPresence";
+import { aiPresenceLabels, type AIPresenceState } from "@/lib/ai-presence";
 import {
   Button,
   CardHeader,
@@ -252,6 +254,12 @@ export default function DesignSystemExamples() {
         <NavigationItem href="/dashboard/clients">
           Organization management
         </NavigationItem>
+      </DashboardCard>
+      <DashboardCard aria-label="Synthetic AI presence examples">
+        <CardHeader title="AI presence states" description="Synthetic examples only. No agent is connected, listening, speaking or executing from this page." />
+        <div className="settings-readonly-grid">
+          {(Object.keys(aiPresenceLabels) as AIPresenceState[]).map(state => <AIPresence key={state} state={state} name="Example agent" />)}
+        </div>
       </DashboardCard>
       <Dialog
         open={dialog}

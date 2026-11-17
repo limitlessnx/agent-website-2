@@ -14,7 +14,8 @@ export default function CustomerStagesPanel({initialStages,canManage}:{initialSt
     event.preventDefault();
     if(!canManage) return;
     setBusy(true);setMessage("");
-    const form=new FormData(event.currentTarget);
+    const formElement=event.currentTarget;
+    const form=new FormData(formElement);
     const payload={
       name:String(form.get("name")||""),
       category:String(form.get("category")||"active"),
@@ -30,7 +31,7 @@ export default function CustomerStagesPanel({initialStages,canManage}:{initialSt
       });
       const body=await res.json().catch(()=>({}));
       if(!res.ok) throw new Error(body.error||"Unable to create stage");
-      event.currentTarget.reset();
+      formElement.reset();
       setMessage("Stage saved.");
       router.refresh();
     }catch(err){setMessage(err instanceof Error?err.message:"Unable to create stage");}
@@ -67,16 +68,16 @@ export default function CustomerStagesPanel({initialStages,canManage}:{initialSt
     </div>
 
     {canManage?<form onSubmit={submit} className="portal-form-grid" style={{marginTop:18}}>
-      <div className="portal-field"><label>Stage name</label><input name="name" required placeholder="Inspection Booked" /></div>
-      <div className="portal-field"><label>Category</label><select name="category" defaultValue="active">
+      <div className="portal-field"><label htmlFor="stage-name">Stage name</label><input id="stage-name" name="name" required placeholder="Inspection Booked" /></div>
+      <div className="portal-field"><label htmlFor="stage-category">Category</label><select id="stage-category" name="category" defaultValue="active">
         <option value="active">Active</option>
         <option value="follow_up">Needs follow-up</option>
         <option value="won">Won / completed</option>
         <option value="lost">Lost</option>
         <option value="closed">Closed</option>
       </select></div>
-      <div className="portal-field"><label>Position</label><input name="position" type="number" defaultValue="50" /></div>
-      <div className="portal-field"><label>Default follow-up minutes</label><input name="followUpDefaultMinutes" type="number" placeholder="1440" /></div>
+      <div className="portal-field"><label htmlFor="stage-position">Position</label><input id="stage-position" name="position" type="number" defaultValue="50" /></div>
+      <div className="portal-field"><label htmlFor="stage-followUpDefaultMinutes">Default follow-up minutes</label><input id="stage-followUpDefaultMinutes" name="followUpDefaultMinutes" type="number" placeholder="1440" /></div>
       <label><input name="isTerminal" type="checkbox" /> Terminal stage</label>
       <div><button type="submit" disabled={busy}>{busy?"Saving...":"Add stage"}</button></div>
     </form>:null}

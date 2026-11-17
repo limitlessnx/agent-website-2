@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AIPresence from "@/components/ui/AIPresence";
+import { type AIPresenceState } from "@/lib/ai-presence";
 import { BrainCircuit, CheckCircle2, Cpu, ShieldCheck, Zap } from "lucide-react";
 
 type Props = { organizationId: string; agentId: string; agentName: string };
@@ -17,44 +19,56 @@ export default function MaiaRuntimeControl({ organizationId, agentId, agentName 
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [feedbackState, setFeedbackState] = useState<AIPresenceState>("idle");
 
-  async function load() {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/admin/maia-runtime?organizationId=${encodeURIComponent(organizationId)}&agentId=${encodeURIComponent(agentId)}`, { cache: "no-store" });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "Unable to load agentic runtime.");
-      setProfile({ ...defaultProfile, ...(result.profile || {}) });
-      setModels(result.models || []);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load agentic runtime."); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { void load(); }, [organizationId, agentId]);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadedFor, setLoadedFor] = useState("");
+  const [hasProfile, setHasProfile] = useState(false);
+  const loadKey = `${organizationId}:${agentId}`;
+  useEffect(() => {
+    let active = true;
+    async function loadRuntime() {
+      try {
+        const response = await fetch(`/api/admin/maia-runtime?organizationId=${encodeURIComponent(organizationId)}&agentId=${encodeURIComponent(agentId)}`, { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || "Unable to load agentic runtime.");
+        if (!active) return;
+        setProfile({ ...defaultProfile, ...(result.profile || {}) });
+        setModels(result.models || []); setHasProfile(Boolean(result.profile)); setLoadFailed(false); setFeedbackState("idle");
+      } catch (error) {
+        if (active) { setLoadFailed(true); setFeedbackState("error"); setMessage(error instanceof Error ? error.message : "Unable to load agentic runtime."); }
+      } finally { if (active) { setLoading(false); setLoadedFor(loadKey); } }
+    }
+    void loadRuntime();
+    return () => { active = false; };
+  }, [organizationId, agentId, loadAttempt, loadKey]);
 
   async function save() {
-    setSaving(true); setMessage("");
+    setSaving(true); setMessage(""); setFeedbackState("executing");
     try {
       const response = await fetch("/api/admin/maia-runtime", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ organizationId, agentId, enabled: profile.enabled, autonomyMode: profile.autonomy_mode, maxSteps: profile.max_steps, modelStrategy: profile.model_strategy, memoryEnabled: profile.memory_enabled, toolPolicy: profile.tool_policy }) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Unable to save agentic runtime.");
-      setProfile(result.profile);
+      setProfile(result.profile); setHasProfile(true); setFeedbackState("completed");
       setMessage(`${agentName} agentic runtime saved.`);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to save agentic runtime."); }
+    } catch (error) { setFeedbackState("error"); setMessage(error instanceof Error ? error.message : "Unable to save agentic runtime."); }
     finally { setSaving(false); }
   }
 
-  if (loading) return <p className="admin-empty">Loading agentic intelligence controls...</p>;
+  if (loading || loadedFor !== loadKey) return <AIPresence state="processing" name={agentName} label="Loading runtime configuration" />;
+  if (loadFailed) return <div className="maia-runtime-controls"><AIPresence state="error" name={agentName} label="Runtime configuration unavailable" /><p role="alert">{message}</p><button type="button" className="admin-button secondary" onClick={() => { setLoading(true); setMessage(""); setFeedbackState("processing"); setLoadAttempt(value => value + 1); }}>Retry runtime configuration</button></div>;
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="maia-runtime-controls" style={{ display: "grid", gap: 14 }} onChange={() => setFeedbackState("idle")}>
+      <AIPresence state={feedbackState} name={agentName} label={saving ? "Saving runtime settings" : feedbackState === "completed" ? "Runtime settings saved" : feedbackState === "error" ? "Settings could not be saved" : !hasProfile ? "Default runtime configuration" : profile.enabled ? "Runtime enabled in configuration" : "Runtime disabled in configuration"} />
       <div className="admin-list-row" style={{ alignItems: "flex-start" }}>
         <BrainCircuit size={18} />
         <div style={{ flex: 1 }}>
           <strong>{agentName} · Agentic Intelligence</strong>
           <span>Models, memory, tools and autonomous execution are selected by the runtime. You do not configure Supabase, n8n or platform API credentials here.</span>
         </div>
-        <em className={profile.enabled ? "good" : "muted"}>{profile.enabled ? "enabled" : "paused"}</em>
+        <em className={profile.enabled ? "good" : "muted"}>{!hasProfile ? "defaults" : profile.enabled ? "enabled" : "paused"}</em>
       </div>
 
       <div className="admin-form-grid">
@@ -80,7 +94,7 @@ export default function MaiaRuntimeControl({ organizationId, agentId, agentName 
       </div>
 
       <button className="admin-button" type="button" disabled={saving} onClick={save}>{saving ? "Saving runtime..." : "Save agentic intelligence"}</button>
-      {message ? <p className="admin-form-message">{message}</p> : null}
+      {message ? <p className="admin-form-message" role={feedbackState === "error" ? "alert" : "status"}>{message}</p> : null}
     </div>
   );
 }

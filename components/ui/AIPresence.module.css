@@ -1,0 +1,20 @@
+.presence { display:inline-flex; align-items:center; gap:12px; min-width:0; max-width:100%; color:var(--fk-text,#f8f7ff); }
+.orb { position:relative; display:grid; place-items:center; width:36px; height:36px; flex:0 0 auto; border:1px solid var(--fk-metallic,#b6aaff); border-radius:50%; background:radial-gradient(circle at 35% 25%,#9c74e0,#54299c 75%); box-shadow:inset 0 1px 3px #fff2; }
+.halo { position:absolute; inset:-5px; border:1px solid var(--fk-border,#393151); border-radius:50%; }
+.wave { display:flex; align-items:center; justify-content:center; gap:3px; height:18px; }
+.wave i { width:2px; height:4px; background:#fff; border-radius:2px; }
+.caption { display:grid; gap:2px; min-width:0; overflow-wrap:anywhere; line-height:1.5; font-size:13px; }
+.caption strong { font-size:14px; }.caption>span { color:var(--fk-text-secondary,#c2bafa); }
+.hero { flex-direction:column; text-align:center; gap:18px; padding:20px; }
+.hero .orb { width:80px; height:80px; }.hero .halo { inset:-12px; }.hero .wave { transform:scale(1.5); }
+.presence[data-state="listening"] .wave i,.presence[data-state="speaking"] .wave i { animation:wave 650ms ease-in-out infinite alternate; }
+.presence[data-state="listening"] .wave i:nth-child(2),.presence[data-state="speaking"] .wave i:nth-child(2) { animation-delay:100ms; }
+.presence[data-state="listening"] .wave i:nth-child(3),.presence[data-state="speaking"] .wave i:nth-child(3) { animation-delay:220ms; }
+.presence[data-state="listening"] .wave i:nth-child(4),.presence[data-state="speaking"] .wave i:nth-child(4) { animation-delay:140ms; }
+.presence[data-state="processing"] .halo,.presence[data-state="executing"] .halo { border-top-color:var(--fk-metallic,#b6aaff); animation:orbit 1800ms linear infinite; }
+.presence[data-state="completed"] .orb { background:var(--fk-success,#6ee7b7); border-color:var(--fk-success,#6ee7b7); }.presence[data-state="completed"] .wave i { background:#12392f; }
+.presence[data-state="error"] .orb { background:#522336; border-color:var(--fk-danger,#fda4af); }
+.presence[data-state="disconnected"] .orb { background:var(--fk-surface-raised,#1b1737); border-color:var(--fk-text-muted,#aaa3c4); }
+@keyframes wave { from {transform:scaleY(1)} to {transform:scaleY(3)} }
+@keyframes orbit { to {transform:rotate(360deg)} }
+@media(prefers-reduced-motion:reduce) { .presence .wave i,.presence .halo { animation:none!important; transform:none!important; } }

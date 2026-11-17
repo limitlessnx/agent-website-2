@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Mic, MicOff, PhoneCall, PhoneOff, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
 import { executeLeoClientTool, leoExecutionMessage, leoExecutionPending, type LeoClientApprovals } from "@/lib/leo-tool-client";
+import AIPresence from "@/components/ui/AIPresence";
+import { voicePresenceForEvent, toolPresenceForResult, type AIPresenceState } from "@/lib/ai-presence";
 import styles from "./LeoRealtimeVoice.module.css";
 
 type VoiceState = "idle" | "connecting" | "live" | "error";
@@ -62,6 +64,8 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
+  const [activity, setActivity] = useState<AIPresenceState>("idle");
+  const mutedRef = useRef(false);
   const approvals = useRef<LeoClientApprovals>(new Map());
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RTCDataChannel | null>(null);
@@ -107,7 +111,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
     peerRef.current?.close(); peerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null;
     if (audioRef.current) { audioRef.current.srcObject = null; audioRef.current.remove(); audioRef.current = null; }
-    setMuted(false);
+    setMuted(false); mutedRef.current = false; setActivity("disconnected");
     startingRef.current = false;
   }
 
@@ -174,6 +178,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
       return;
     }
     inFlightToolSignaturesRef.current.add(signature);
+    setActivity("executing");
     let output: Record<string, unknown>;
     try {
       if (event.name === "leo_manage_task") {
@@ -199,6 +204,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
     } finally {
       inFlightToolSignaturesRef.current.delete(signature);
     }
+    setActivity(toolPresenceForResult(output, leoExecutionPending(output)));
     if (leoExecutionPending(output)) output = { ...output, message: leoExecutionMessage(output) };
     if (output.ok === false && !leoExecutionPending(output)) {
       reportLifecycle("error", {
@@ -222,7 +228,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
     processedToolCallIdsRef.current.clear();
     inFlightToolSignaturesRef.current.clear();
     clearDisconnectTimer();
-    setState("connecting"); setError(""); setMuted(false);
+    setState("connecting"); setError(""); setMuted(false); mutedRef.current = false; setActivity("processing");
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Microphone access is not supported in this browser.");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: getLeoMicrophoneConstraints() });
@@ -259,6 +265,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
       dataChannel.onmessage = (message) => {
         try {
           const event = JSON.parse(String(message.data)) as RealtimeToolEvent;
+          if (channelRef.current === dataChannel) setActivity(current => voicePresenceForEvent(current, event.type, mutedRef.current));
           if (event.type === "response.function_call_arguments.done") void handleToolCall(event);
           else if (event.type === "conversation.item.input_audio_transcription.completed") {
             setError("");
@@ -285,7 +292,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
       };
       dataChannel.onopen = () => {
         startingRef.current = false;
-        setState("live");
+        setState("live"); setActivity("idle");
         reportLifecycle("connected");
         sendEvent({ type: "response.create", response: { instructions: openingInstruction(activeSessionIdRef.current) } });
       };
@@ -321,7 +328,8 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
   function toggleMute() {
     const next = !muted;
     streamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; });
-    setMuted(next);
+    setMuted(next); mutedRef.current = next;
+    if (next) setActivity(current => current === "listening" ? "idle" : current);
   }
 
   useEffect(() => {
@@ -353,17 +361,17 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
 
   if (mode === "orb") {
     if (state === "error") return <div className={styles.orbError} role="alert"><span>{error}</span><button type="button" onClick={() => void start()}>Try again</button></div>;
-    if (state === "idle") return <button type="button" className={styles.orbLauncher} onClick={() => void start()} aria-label="Start Leo voice call"><span className={styles.orbStage}><span className={`${styles.ring} ${styles.ringOne}`} /><span className={`${styles.ring} ${styles.ringTwo}`} /><span className={`${styles.ring} ${styles.ringThree}`} /><span className={styles.orb}><PhoneCall size={30} /><span className={styles.orbShimmer} /></span><span className={`${styles.pulse} ${styles.pulseOne}`} /><span className={`${styles.pulse} ${styles.pulseTwo}`} /></span><span className={styles.orbLabel}>Call Leo</span><span className={styles.orbHint}>Tap to talk</span></button>;
+    if (state === "idle") return <button type="button" className={styles.orbLauncher} onClick={() => void start()} aria-label="Start Leo voice call"><AIPresence state="idle" name="Leo" label="Call not started" hero /><span className={styles.orbLabel}>Call Leo</span><span className={styles.orbHint}>Tap to talk</span></button>;
   }
 
   if (state === "error") return <div className={styles.errorCard} role="alert"><span>{error}</span><div className={styles.errorActions}><button type="button" onClick={() => void start()}>Reconnect</button><button type="button" onClick={() => stop("ended")}>Use messages</button></div></div>;
   if (state === "idle") return <div className={styles.voiceStart}><div><strong>Voice conversation</strong><small>Talk naturally with Leo</small></div><button type="button" className={styles.startCall} onClick={() => void start()} aria-label="Start Leo voice call"><PhoneCall size={17} /><span>Call Leo</span></button></div>;
 
   const live = state === "live";
+  const presenceLabel = !live ? "Connecting" : activity === "idle" ? (muted ? "Microphone muted" : "Connected · microphone ready") : undefined;
   return <section className={`${styles.voicePanel} ${mode === "orb" ? styles.embeddedVoicePanel : ""}`} aria-label="Leo voice call">
-    <div className={styles.topbar}><div><span className={styles.statusDot} /> {live ? "Leo is listening" : "Connecting to Leo"}</div><span className={styles.liveBadge}>{live ? "LIVE" : "CONNECTING"}</span></div>
-    <div className={`${styles.orbStage} ${live ? styles.live : ""}`}><div className={`${styles.ring} ${styles.ringOne}`} /><div className={`${styles.ring} ${styles.ringTwo}`} /><div className={`${styles.ring} ${styles.ringThree}`} /><div className={styles.orb}><PhoneCall size={28} /></div><div className={`${styles.pulse} ${styles.pulseOne}`} /><div className={`${styles.pulse} ${styles.pulseTwo}`} /></div>
-    <div className={styles.identity}><h3>Leo</h3><p>{live ? "I'm listening. Speak naturally." : "Establishing secure voice connection…"}</p></div>
+    <div className={styles.topbar}><div><span className={styles.statusDot} /> {live ? (muted ? "Microphone muted" : "Call connected") : "Connecting to Leo"}</div><span className={styles.liveBadge}>{live ? "LIVE" : "CONNECTING"}</span></div>
+    <AIPresence state={activity} name="Leo" label={presenceLabel} hero />
     <div className={styles.controls}><button type="button" className={`${styles.control} ${muted ? styles.activeControl : ""}`} onClick={toggleMute} aria-pressed={muted} aria-label={muted ? "Unmute microphone" : "Mute microphone"} disabled={!live}><span className={styles.controlIcon}>{muted ? <MicOff size={20} /> : <Mic size={20} />}</span><span>{muted ? "Unmute" : "Mute"}</span></button>{state === "connecting" ? <button type="button" className={styles.cancelCall} onClick={() => stop("canceled")} aria-label="Cancel Leo voice call"><X size={20} /><span>Cancel</span></button> : <button type="button" className={styles.endCall} onClick={() => stop("ended")} aria-label="End Leo voice call"><PhoneOff size={20} /><span>End call</span></button>}</div>
     {error && <p className={styles.hint} role="status">{error}</p>}{state === "connecting" ? <LoaderCircle size={16} className={styles.spinner} aria-label="Connecting" /> : null}
   </section>;
