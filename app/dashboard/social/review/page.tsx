@@ -14,7 +14,7 @@ import { generateReelPlanAction, renderReelAction } from "@/app/dashboard/social
 import { createSocialAssetSignedUrl, listSocialAssets } from "@/lib/social-assets";
 import { getSocialReviewReadiness } from "@/lib/social-review";
 import { socialWeekStart, validSocialWeek } from "@/lib/social-week";
-import { listSocialPosts } from "@/lib/social";
+import { getSocialBrand, listSocialPosts } from "@/lib/social";
 import styles from "./review.module.css";
 import { ReviewSubmitButton } from "./ReviewSubmitButton";
 import { ReviewStatusRefresh } from "./ReviewStatusRefresh";
@@ -39,10 +39,11 @@ function contentString(content: Record<string, unknown>, key: string) {
 export default async function SocialReviewPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const { week: requestedWeek } = await searchParams;
   const selectedWeek = requestedWeek === "all" ? "all" : validSocialWeek(requestedWeek) ? requestedWeek : socialWeekStart();
-  const [allPosts, allAssets] = await Promise.all([listSocialPosts(200), listSocialAssets()]);
+  const [allPosts, allAssets, brand] = await Promise.all([listSocialPosts(200), listSocialAssets(), getSocialBrand()]);
+  const automatic = (brand?.metadata.daily_publishing as { enabled?: boolean } | undefined)?.enabled === true;
   const weeks = [...new Set([socialWeekStart(), ...allPosts.map((post) => String(post.content?.week_start || "")).filter(validSocialWeek)])].sort().reverse();
-  const posts = allPosts.filter((post) => ["draft", "review", "approved"].includes(post.status) &&
-    (selectedWeek === "all" || post.content?.week_start === selectedWeek))
+  const weeklyPosts = allPosts.filter((post) => selectedWeek === "all" || post.content?.week_start === selectedWeek);
+  const posts = weeklyPosts.filter((post) => ["draft", "review", "approved"].includes(post.status))
     .sort((a, b) => Number(a.content?.planned_index || 999) - Number(b.content?.planned_index || 999));
   const licensedTracks = allAssets.filter((asset) => asset.asset_type === "audio" && asset.status === "ready" && asset.metadata?.licensed_for_social_usage === true);
 
@@ -85,10 +86,11 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
             <option value="all">All weeks and standalone posts</option>
           </select></label>
           <button type="submit" className="admin-status">Show posts</button>
-          <span>{posts.length} posts · {posts.filter((post) => post.status === "approved").length} approved · {posts.filter((post) => post.status === "draft").length} drafts</span>
+          <span>{weeklyPosts.length} posts · {weeklyPosts.filter((post) => post.status === "scheduled").length} scheduled · {weeklyPosts.filter((post) => post.status === "published").length} published · {posts.filter((post) => post.status === "approved").length} approved · {posts.filter((post) => post.status === "draft").length} drafts</span>
+          <Link href="/dashboard/social/calendar">View publishing calendar</Link>
           <Link href="/dashboard/social/create">Prepare this week</Link>
         </form>
-        <p style={{ padding: "0 16px" }}>Review each post, approve it or return it to draft with feedback. Approval does not publish it.</p>
+        <p style={{ padding: "0 16px" }}>Review each post, approve it or return it to draft with feedback. {automatic ? "Approved Instagram posts join the daily publishing queue for the next available 6 p.m. WAT slot." : "Approval does not publish it."}</p>
         <div className={`admin-list ${styles.reviewQueue}`}>
           {posts.map((post) => {
             const readiness = getSocialReviewReadiness(post);
@@ -304,7 +306,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
                     ) : null}
 
                     <section className={styles.reviewActions} aria-label="Final approval">
-                      <div className={styles.sectionHeading}><strong>2. Final decision</strong><span>Approval is available only after the complete media preview is ready. Scheduling is a separate step.</span></div>
+                      <div className={styles.sectionHeading}><strong>2. Final decision</strong><span>{automatic ? "Approval requires the complete media preview. Approved Instagram posts are automatically scheduled within a few minutes for the next free 6 p.m. WAT slot." : "Approval is available only after the complete media preview is ready. Scheduling is a separate step."}</span></div>
                       {post.status === "review" ? (
                         <form action={approveSocialPostReviewAction}>
                           <input type="hidden" name="post_id" value={post.id} />
@@ -330,7 +332,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
             );
           })}
           {!posts.length ? (
-            <div className="admin-list-row"><div><strong>Review queue is empty</strong><span>Prepare this week’s batch or select another week.</span></div><em>clear</em></div>
+            <div className="admin-list-row"><div><strong>Review queue is empty</strong><span>{weeklyPosts.length ? "No posts await review. Scheduled and published posts are listed in the publishing calendar." : "Prepare this week’s batch or select another week."}</span></div><em>clear</em></div>
           ) : null}
         </div>
       </section>
