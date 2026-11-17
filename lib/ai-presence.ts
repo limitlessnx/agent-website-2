@@ -20,7 +20,7 @@ export function voicePresenceForEvent(current: AIPresenceState, type?: string, m
   }
 }
 export function toolPresenceForResult(result: Record<string, unknown>, pending: boolean): AIPresenceState {
-  if (pending) return "executing";
+  if (pending) return ["running", "executing", "in_progress"].includes(String(result.status)) ? "executing" : "processing";
   if (result.ok === false || ["failed", "error"].includes(String(result.status))) return "error";
   // Acceptance, queued work and approval requests are never completion evidence.
   return ["completed", "succeeded"].includes(String(result.status)) ? "completed" : "idle";
