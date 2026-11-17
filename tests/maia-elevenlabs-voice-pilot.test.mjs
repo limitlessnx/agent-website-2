@@ -31,3 +31,9 @@ test("ElevenLabs pilot accepts a raw Authorization secret or Bearer token with c
   assert.match(route, /received\.length === expected\.length && timingSafeEqual\(received, expected\)/);
   assert.match(route, /if \(!secret \|\| secret\.length < 32\) return false/);
 });
+
+test("Voice property lookup handles comma-separated area and city without widening tenant access", () => {
+  assert.match(route, /clean\(body\.query\)\.split\(","\)\[0\]\.trim\(\)\.slice\(0, 120\)/);
+  assert.match(route, /\/\^\[\\p\{L\}\\p\{N\} -\]\+\$\/u/);
+  assert.match(route, /\.eq\("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID\)/);
+});

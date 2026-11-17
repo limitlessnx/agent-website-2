@@ -39,7 +39,9 @@ export async function POST(request: NextRequest) {
   if (!body || Array.isArray(body) || typeof body !== "object") {
     return NextResponse.json({ error: "invalid_request" }, { status: 400, headers: responseHeaders });
   }
-  const query = clean(body.query).slice(0, 120);
+  // Voice agents often send an area and city together, e.g. "Apo Wasa, Abuja".
+  // Search the first (more specific) place to preserve a safe PostgREST filter.
+  const query = clean(body.query).split(",")[0].trim().slice(0, 120);
   if (query.length < 2 || !/^[\p{L}\p{N} -]+$/u.test(query)) {
     return NextResponse.json({ error: "invalid_query" }, { status: 400, headers: responseHeaders });
   }
