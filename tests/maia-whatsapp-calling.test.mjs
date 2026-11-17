@@ -82,3 +82,12 @@ test("Maia retries only transient 404 sideband attach failures with bounded atte
   assert.match(sideband, /attempt \* 350/);
   assert.match(sideband, /"attach_retry"/);
 });
+
+
+test("Failed optional sideband cannot terminate the already accepted WhatsApp media call", () => {
+  assert.doesNotMatch(sideband, /terminateMaiaWhatsAppCall/);
+  assert.match(sideband, /media_session_preserved: true/);
+  assert.match(sideband, /preserving accepted WhatsApp call/);
+  assert.match(sideband, /throw error/);
+  assert.match(sideband, /"failed"/);
+});
