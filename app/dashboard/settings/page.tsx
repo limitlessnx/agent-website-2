@@ -27,9 +27,10 @@ const settings = [
 ];
 
 export default async function SettingsPage() {
+  let registryLoadFailed = false;
   const [supabase, registry] = await Promise.all([
     getSupabaseReadiness(),
-    getWorkflowRegistrySummary().catch(() => ({
+    getWorkflowRegistrySummary().catch(() => { registryLoadFailed = true; return ({
       configured: false,
       workflows: [],
       runs: [],
@@ -37,7 +38,7 @@ export default async function SettingsPage() {
       paused: 0,
       failures: 0,
       successRate: 0,
-    })),
+    }); }),
   ]);
 
   const configuredSettings = settings.filter((setting) => setting.keys.some((key) => process.env[key])).length;
@@ -47,7 +48,7 @@ export default async function SettingsPage() {
       <PageHeader kicker="Platform control" title="Settings" description="Manage integrations, appointment rules, automation and platform readiness." actions={<span className={supabase.ready ? "admin-status live" : "admin-status warning"}>{supabase.ready ? "Database live" : "Database schema pending"}</span>} />
       <div className="admin-metric-grid">
         <MetricCard label="Environment" value={`${configuredSettings}/${settings.length}`} detail="Required values currently set" icon={Settings2} />
-        <MetricCard label="Workflows" value={registry.workflows.length} detail={`${registry.active} active · ${registry.paused} paused`} icon={Workflow} />
+        <MetricCard label="Workflows" value={registryLoadFailed ? "—" : registry.workflows.length} detail={registryLoadFailed ? "Status unavailable" : `${registry.active} active · ${registry.paused} paused`} icon={Workflow} />
         <MetricCard label="Database tables" value={supabase.tables.filter(table => table.ready).length} detail={`${supabase.tables.length} tracked readiness checks`} icon={Database} />
         <MetricCard label="Connections" value="Manage" detail="Workspace and platform integrations" icon={PlugZap} />
       </div>
@@ -80,11 +81,11 @@ export default async function SettingsPage() {
             <p>Workflow 3 currently expects the key <strong>crm_follow_up_v3</strong> mapped to external workflow ID <strong>n153Nrwf90vI1SJ2</strong>.</p>
           </section>
 
-          <WorkflowRegistryClient
+          {registryLoadFailed ? <section className="admin-panel" role="alert"><h2>Workflow status unavailable</h2><p>Workflow configuration could not be loaded. Reload this page to retry. Other settings remain available.</p></section> : <WorkflowRegistryClient
             initialWorkflows={registry.workflows}
             initialRuns={registry.runs}
             configured={registry.configured}
-          />
+          />}
 
           <section className="admin-panel" id="environment">
             <div className="admin-panel-header">

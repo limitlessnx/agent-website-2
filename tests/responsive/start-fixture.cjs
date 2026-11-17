@@ -53,6 +53,8 @@ server.listen(fixturePort, "127.0.0.1", () => {
   const app = spawn(
     process.execPath,
     [
+      "--require",
+      require.resolve("./fixed-clock.cjs"),
       "node_modules/next/dist/bin/next",
       "dev",
       "--port",

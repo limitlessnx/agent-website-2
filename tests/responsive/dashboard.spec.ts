@@ -13,11 +13,13 @@ const tenants = [
 ] as const;
 function token(payload: Record<string, unknown>) {
   const value = Buffer.from(
-    JSON.stringify({ ...payload, issuedAt: Date.now() }),
+    JSON.stringify({ ...payload, issuedAt: Date.parse("2026-11-17T08:00:00Z") }),
   ).toString("base64url");
   return `${value}.${createHmac("sha256", secret).update(value).digest("base64url")}`;
 }
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, page }) => {
+  // Keep time-of-day greetings deterministic without masking product content.
+  await page.clock.setFixedTime(new Date("2026-11-17T08:00:00Z"));
   await context.route("**/*", (route) => {
     const request = route.request();
     const url = new URL(request.url());

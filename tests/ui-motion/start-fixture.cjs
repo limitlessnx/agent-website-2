@@ -4,8 +4,16 @@ const http = require("node:http");
 const { spawn } = require("node:child_process");
 const { fixture } = require("../responsive/fixture-data.cjs");
 const fixturePort = 4401;
+let workflowUnavailable = false;
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, "http://127.0.0.1");
+  if (url.pathname === "/__qa/workflow-unavailable") {
+    workflowUnavailable = url.searchParams.get("value") === "1";
+    response.writeHead(200,{"Content-Type":"application/json"}); return response.end(JSON.stringify({ok:true}));
+  }
+  if (workflowUnavailable && ["/rest/v1/workflow_registry","/rest/v1/workflow_runs"].includes(url.pathname)) {
+    response.writeHead(503,{"Content-Type":"application/json"}); return response.end(JSON.stringify({message:"Synthetic workflow outage"}));
+  }
   // These RPCs are simulated locally; nothing is forwarded or persisted.
   if (url.pathname === "/rest/v1/rpc/ensure_flux_credit_wallet") {
     response.writeHead(200,{"Content-Type":"application/json"});
