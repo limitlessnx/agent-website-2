@@ -124,7 +124,7 @@ async function runSideband(input: MaiaSidebandPayload) {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
     },
   });
-
+  try {
     return await new Promise<{ ok: true; callId: string; tools: string[] }>((resolve, reject) => {
     let settled = false;
     let greetingStarted = false;
