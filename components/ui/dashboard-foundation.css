@@ -213,3 +213,7 @@
 @media(prefers-reduced-motion:reduce) { [data-flux-ui] :is(.fk-motion-enter,.settings-feedback-error,.settings-feedback-success) { animation:none!important;transform:none!important; } [data-flux-ui] :is(.admin-button,.portal-button,.settings-nav a,.exposure-template-grid button,.leo-launcher,#leo-assistant-panel) { transition:none!important;transform:none!important; } }
 [data-flux-ui] .exposure-campaign-card > header { flex-wrap:wrap; gap:var(--fk-space-3); }
 [data-flux-ui] .exposure-campaign-card > header button { min-height:var(--fk-touch); min-width:var(--fk-touch); padding:8px 12px; flex-shrink:0; white-space:normal; }
+/* Outrank the legacy admin-list-row child grid only within settings. */
+[data-flux-ui] .settings-page .settings-control-actions { display:flex; flex-direction:row; }
+[data-flux-ui] .settings-page .admin-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--fk-space-4); }
+@media(max-width:600px) { [data-flux-ui] .settings-page .admin-form-grid { grid-template-columns:minmax(0,1fr); } }

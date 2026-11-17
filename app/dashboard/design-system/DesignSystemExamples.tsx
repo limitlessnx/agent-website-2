@@ -261,6 +261,14 @@ export default function DesignSystemExamples() {
           {(Object.keys(aiPresenceLabels) as AIPresenceState[]).map(state => <AIPresence key={state} state={state} name="Example agent" />)}
         </div>
       </DashboardCard>
+      <DashboardCard aria-label="Synthetic long property title example">
+        <CardHeader title="Long content containment" description="Synthetic property, organization and email values for shared table verification." />
+        <DataTable label="Long content example">
+          <caption>Example records only; no customer data</caption>
+          <thead><tr><th scope="col">Property</th><th scope="col">Organization</th><th scope="col">Contact</th></tr></thead>
+          <tbody><tr><td>Marina Heights Waterfront Family Residence and Executive Business Suites — Phase Three North Wing</td><td>International Customer Experience and Business Operations Group</td><td>customer-experience-and-reservations-supervisor@example.test</td></tr></tbody>
+        </DataTable>
+      </DashboardCard>
       <Dialog
         open={dialog}
         onClose={() => setDialog(false)}
