@@ -118,6 +118,7 @@ async function runSideband(input: MaiaSidebandPayload) {
   if (!process.env.OPENAI_API_KEY?.trim()) throw new Error("OPENAI_API_KEY is missing from the Trigger.dev production environment.");
   const tools = toolsForVoice();
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
   const socket = new WebSocket(`wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(input.callId)}`, {
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
@@ -255,6 +256,16 @@ async function runSideband(input: MaiaSidebandPayload) {
       else finish();
     });
     });
+  } catch (connectionError) {
+    // The WebRTC call can become visible to the sideband shortly after
+    // signaling completes. Retry only a missing session, never auth/other errors.
+    if (attempt >= 3 || !String(connectionError).includes("HTTP 404")) throw connectionError;
+    logger.warn("Maia sideband attach returned 404; retrying briefly", { attempt });
+    await auditSideband(input, "attach_retry", { attempt, http_status: 404 });
+    await new Promise((resolve) => setTimeout(resolve, attempt * 350));
+  }
+  }
+  throw new Error("Maia voice sideband attachment retries were exhausted.");
   } catch (error) {
     await auditSideband(input, "failed", { error_type: error instanceof Error ? error.name : "unknown" });
     try {
