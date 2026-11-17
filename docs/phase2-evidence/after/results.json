@@ -1,0 +1,634 @@
+{
+  "syntheticData": true,
+  "sourceCommit": "72cdb036",
+  "stats": {
+    "startTime": "2026-11-17T01:23:17.026Z",
+    "duration": 145086.49099999998,
+    "expected": 42,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "results": [
+    {
+      "title": "admin /dashboard",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "admin-dashboard-chromium-360.png",
+      "states": [
+        "admin-dashboard-chromium-360-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "b24f0d2811ff8ce5dcf29b0f2e43b4cb22f4bdc5e709aaf28a215c9caa75eef5"
+    },
+    {
+      "title": "admin /dashboard",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "admin-dashboard-chromium-430.png",
+      "states": [
+        "admin-dashboard-chromium-430-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "9ca65b22895ac4c7cca23300e849dab6a5f72c9a3df321ee9cc5278f18ed1260"
+    },
+    {
+      "title": "admin /dashboard",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "admin-dashboard-chromium-768.png",
+      "states": [
+        "admin-dashboard-chromium-768-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "88a2f752643ec9050aaac02b31cfdbed4164d0625d6d628364ccb733844b5cab"
+    },
+    {
+      "title": "admin /dashboard",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "admin-dashboard-chromium-1024.png",
+      "states": [],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "dc1f2273614705dd19d5be151ffbd57e5122ff9b08aaaa1a12b15e5070e8e173"
+    },
+    {
+      "title": "admin /dashboard",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "admin-dashboard-chromium-1440.png",
+      "states": [],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "7bb7f2b1783fe8baf61b0cad58375c71f7bee46472728c2746030f5e49fb0959"
+    },
+    {
+      "title": "admin /dashboard",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "admin-dashboard-chromium-1920.png",
+      "states": [],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "5c1b441d4d9229e31f136c8b00c3c167b2712545f456ae8110af3bddc3855a59"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "admin-dashboard-clients-chromium-360.png",
+      "states": [
+        "admin-dashboard-clients-chromium-360-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "f67bbffad6d6840f0ea8ff0cef14a9369931a80ce2b723c5c17d79deaef7f6a9"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "admin-dashboard-clients-chromium-430.png",
+      "states": [
+        "admin-dashboard-clients-chromium-430-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "a0fdab22ec9d5360a27101f4c19c107a7041b66ee1c5a8009a1c37a537b6be21"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "admin-dashboard-clients-chromium-768.png",
+      "states": [
+        "admin-dashboard-clients-chromium-768-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "1fb32b3cb3f413cc6472f9ad81b5a3ecee81645af3c476e643259223b1a1f7b4"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "admin-dashboard-clients-chromium-1024.png",
+      "states": [],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "64858ece64f176be460165d269d5d97ef301727ad979836a96ad30013e5c3a3e"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "admin-dashboard-clients-chromium-1440.png",
+      "states": [],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "f9cf5043a401780a101ac4ae03ae35f9e50f292545b1f03b76ec6bba8ff1a0a5"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "admin-dashboard-clients-chromium-1920.png",
+      "states": [],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "4e5e19152d45bb1d40b080b955662d8a7b92a8735613c1152053446ed46548b4"
+    },
+    {
+      "title": "tenant general",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "tenant-general-chromium-360.png",
+      "states": [
+        "tenant-general-chromium-360-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "871bc0e5c29e1a0b13f238abfc6f726eec96aa1d56923c81623518bba8bf32ae"
+    },
+    {
+      "title": "tenant general",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "tenant-general-chromium-430.png",
+      "states": [
+        "tenant-general-chromium-430-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "b3fa2301aef0b817755871757cc475b3510c4a9bb9bf812066dffe2c97060219"
+    },
+    {
+      "title": "tenant general",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "tenant-general-chromium-768.png",
+      "states": [
+        "tenant-general-chromium-768-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "277b26cea21a915793d114f22066fd3a3d0a14ecca8916d39e07d40d1c0e444c"
+    },
+    {
+      "title": "tenant general",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "tenant-general-chromium-1024.png",
+      "states": [],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "932d848d8ad74128ca2cd8b56aa1e8f83ab349e3a43393f7759febb66e9cbc35"
+    },
+    {
+      "title": "tenant general",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "tenant-general-chromium-1440.png",
+      "states": [],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "76a29afe4f526bfc926f0e8181ea75f12fc3674089bcc40902d759804295845b"
+    },
+    {
+      "title": "tenant general",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "tenant-general-chromium-1920.png",
+      "states": [],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "b78fe30a8c2943597cbb41535250f1f5c36fcb42ddcb91c1fc871519c35cd37b"
+    },
+    {
+      "title": "tenant real-estate",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "tenant-real-estate-chromium-360.png",
+      "states": [
+        "tenant-real-estate-chromium-360-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "6d5978bd0efc10eef998c63d9d23db75cecfbb2be6418be94f67db2cab52b922"
+    },
+    {
+      "title": "tenant real-estate",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "tenant-real-estate-chromium-430.png",
+      "states": [
+        "tenant-real-estate-chromium-430-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "94cf640f564ba55fbf3b0a7661d3478229b9e2cf899af9011c70d67f08d44b86"
+    },
+    {
+      "title": "tenant real-estate",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "tenant-real-estate-chromium-768.png",
+      "states": [
+        "tenant-real-estate-chromium-768-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "062662e952e6a917f82129d8843cb177fd9a7ad924f3f43abd5888f35cc4fd76"
+    },
+    {
+      "title": "tenant real-estate",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "tenant-real-estate-chromium-1024.png",
+      "states": [],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "083f94b4f880a8c23629b3414dfb19c8c15e41443ea1cd577157dea32a994844"
+    },
+    {
+      "title": "tenant real-estate",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "tenant-real-estate-chromium-1440.png",
+      "states": [],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "83ddddf3c9ebeb855121876b3a7501c71070472fd5478700eb8e0313121befea"
+    },
+    {
+      "title": "tenant real-estate",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "tenant-real-estate-chromium-1920.png",
+      "states": [],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "af9cacf16d3944d0105d36ebd85f2cad111383c544aa020448f54c5cb10325bf"
+    },
+    {
+      "title": "tenant photography-studio",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "tenant-photography-studio-chromium-360.png",
+      "states": [
+        "tenant-photography-studio-chromium-360-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "316beedc7f7d76d8ee2314c38e25c1f34b0dba83d7f3cc8eb22d2e8a51b2c2eb"
+    },
+    {
+      "title": "tenant photography-studio",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "tenant-photography-studio-chromium-430.png",
+      "states": [
+        "tenant-photography-studio-chromium-430-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "e6d7ba6bf8022c0f445277d1cdf982a969faa151950f4531635539e25c980d7a"
+    },
+    {
+      "title": "tenant photography-studio",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "tenant-photography-studio-chromium-768.png",
+      "states": [
+        "tenant-photography-studio-chromium-768-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "dcfbc25062d26170fbfdbbaa33cd6f7d65ae47dd8adcc617f582a5e2a8b47352"
+    },
+    {
+      "title": "tenant photography-studio",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "tenant-photography-studio-chromium-1024.png",
+      "states": [],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "3ae90a4f010bcb5290a8a2699dee02310692649c064e8210042d1670c382c17d"
+    },
+    {
+      "title": "tenant photography-studio",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "tenant-photography-studio-chromium-1440.png",
+      "states": [],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "a3343da5e42e66078fa51b3109a9800be4e85e690785d108ba8eebdc81461cb7"
+    },
+    {
+      "title": "tenant photography-studio",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "tenant-photography-studio-chromium-1920.png",
+      "states": [],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "9a83a3e644936a21bd5b42d5660864ac1e385a875ba1841658d4f65c23b1c121"
+    },
+    {
+      "title": "tenant hotels",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "tenant-hotels-chromium-360.png",
+      "states": [
+        "tenant-hotels-chromium-360-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "633c981c833e9324f98ebd2d7db4ed53f688db57871f77736b086c242b60e264"
+    },
+    {
+      "title": "tenant hotels",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "tenant-hotels-chromium-430.png",
+      "states": [
+        "tenant-hotels-chromium-430-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "2fde62864aa781ad2e018edeedd26f6d1c948358e9ffd88eac3688a564b656d6"
+    },
+    {
+      "title": "tenant hotels",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "tenant-hotels-chromium-768.png",
+      "states": [
+        "tenant-hotels-chromium-768-mobile-navigation.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "1366aca07281504e94751955161d5ae987e10bb51940f6a26743ba779a50db26"
+    },
+    {
+      "title": "tenant hotels",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "tenant-hotels-chromium-1024.png",
+      "states": [],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "2ab864e0fd66033af69834c83b3f956d742eabe8184a8269bb5a98af41d4bc43"
+    },
+    {
+      "title": "tenant hotels",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "tenant-hotels-chromium-1440.png",
+      "states": [],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "9ed30437ef131d27db03e1ca17372e8bd021947c4b2501f38186489cd4507e32"
+    },
+    {
+      "title": "tenant hotels",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "tenant-hotels-chromium-1920.png",
+      "states": [],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "768467f0e98751e520f96e60169533594755156219b899f0bacb6039d82d9414"
+    },
+    {
+      "title": "shared component states and keyboard interactions",
+      "project": "chromium-360",
+      "result": "expected",
+      "screenshot": "shared-component-states-and-keyboard-interactions-chromium-360.png",
+      "states": [
+        "shared-component-states-and-keyboard-interactions-chromium-360-dialog.png",
+        "shared-component-states-and-keyboard-interactions-chromium-360-drawer.png",
+        "shared-component-states-and-keyboard-interactions-chromium-360-empty-state.png",
+        "shared-component-states-and-keyboard-interactions-chromium-360-loading-state.png"
+      ],
+      "layout": {
+        "viewport": 360,
+        "documentWidth": 360,
+        "overflowing": []
+      },
+      "sha256": "21042bf23cadad46264f778d19a5ed51eb0d0930b273608f74c131bd8ac1710b"
+    },
+    {
+      "title": "shared component states and keyboard interactions",
+      "project": "chromium-430",
+      "result": "expected",
+      "screenshot": "shared-component-states-and-keyboard-interactions-chromium-430.png",
+      "states": [
+        "shared-component-states-and-keyboard-interactions-chromium-430-dialog.png",
+        "shared-component-states-and-keyboard-interactions-chromium-430-drawer.png",
+        "shared-component-states-and-keyboard-interactions-chromium-430-empty-state.png",
+        "shared-component-states-and-keyboard-interactions-chromium-430-loading-state.png"
+      ],
+      "layout": {
+        "viewport": 430,
+        "documentWidth": 430,
+        "overflowing": []
+      },
+      "sha256": "68e2efc0a1f5d94dd46980074374cf2ae5e4e2e3d24a8ead2754f081ae0b9f15"
+    },
+    {
+      "title": "shared component states and keyboard interactions",
+      "project": "chromium-768",
+      "result": "expected",
+      "screenshot": "shared-component-states-and-keyboard-interactions-chromium-768.png",
+      "states": [
+        "shared-component-states-and-keyboard-interactions-chromium-768-dialog.png",
+        "shared-component-states-and-keyboard-interactions-chromium-768-drawer.png",
+        "shared-component-states-and-keyboard-interactions-chromium-768-empty-state.png",
+        "shared-component-states-and-keyboard-interactions-chromium-768-loading-state.png"
+      ],
+      "layout": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "overflowing": []
+      },
+      "sha256": "444c20edd1413aba0ecb305038ef821eaab04944eba0876a03a261b164202170"
+    },
+    {
+      "title": "shared component states and keyboard interactions",
+      "project": "chromium-1024",
+      "result": "expected",
+      "screenshot": "shared-component-states-and-keyboard-interactions-chromium-1024.png",
+      "states": [
+        "shared-component-states-and-keyboard-interactions-chromium-1024-dialog.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1024-drawer.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1024-empty-state.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1024-loading-state.png"
+      ],
+      "layout": {
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "overflowing": []
+      },
+      "sha256": "9b40b6c8606f84d6cf792c20c4ad1b9a7c524892092debe8a5d8ed8bd19d330d"
+    },
+    {
+      "title": "shared component states and keyboard interactions",
+      "project": "chromium-1440",
+      "result": "expected",
+      "screenshot": "shared-component-states-and-keyboard-interactions-chromium-1440.png",
+      "states": [
+        "shared-component-states-and-keyboard-interactions-chromium-1440-dialog.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1440-drawer.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1440-empty-state.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1440-loading-state.png"
+      ],
+      "layout": {
+        "viewport": 1440,
+        "documentWidth": 1440,
+        "overflowing": []
+      },
+      "sha256": "64d187112aacec33aaa93ad529b0039fe75a5a9d84aef6ef09a740654dc16211"
+    },
+    {
+      "title": "shared component states and keyboard interactions",
+      "project": "chromium-1920",
+      "result": "expected",
+      "screenshot": "shared-component-states-and-keyboard-interactions-chromium-1920.png",
+      "states": [
+        "shared-component-states-and-keyboard-interactions-chromium-1920-dialog.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1920-drawer.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1920-empty-state.png",
+        "shared-component-states-and-keyboard-interactions-chromium-1920-loading-state.png"
+      ],
+      "layout": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "overflowing": []
+      },
+      "sha256": "5c618ac044e56eccb9660968d95c3aab7b34e63da786be2f9dccfb9839bc7fda"
+    }
+  ],
+  "componentCaptureStats": {
+    "startTime": "2026-11-17T01:26:14.381Z",
+    "duration": 38191.178,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

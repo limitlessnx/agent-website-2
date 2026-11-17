@@ -7,13 +7,14 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 0,
+  updateSnapshots: "none",
   reporter: [
     ["list"],
     ["json", { outputFile: "test-results/responsive-results.json" }],
     ["html", { open: "never", outputFolder: "playwright-report" }],
   ],
   outputDir: "test-results/responsive",
-  snapshotPathTemplate: "{testDir}/../../docs/phase2-evidence/after/{arg}",
+  snapshotPathTemplate: "{testDir}/../../docs/phase2-evidence/after/{arg}{ext}",
   use: {
     baseURL: "http://127.0.0.1:4400",
     headless: true,

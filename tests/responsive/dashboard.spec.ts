@@ -26,6 +26,35 @@ test.beforeEach(async ({ context }) => {
     return route.continue();
   });
 });
+async function captureState(
+  page: import("@playwright/test").Page,
+  testInfo: import("@playwright/test").TestInfo,
+  state: string,
+) {
+  await testInfo.attach(state, {
+    body: await page.screenshot({
+      animations: "disabled",
+      style: screenshotStyle,
+    }),
+    contentType: "image/png",
+  });
+  if (process.env.FLUX_VISUAL_COMPARE === "1") {
+    const review = JSON.parse(
+      readFileSync(
+        join(process.cwd(), "tests/responsive/visual-review.json"),
+        "utf8",
+      ),
+    );
+    expect(review.status).toBe("reviewed");
+    const name = `${testInfo.title.replace(/[^a-z0-9]+/gi, "-").replace(/-$/, "")}-${testInfo.project.name}-${state}.png`;
+    await expect(page).toHaveScreenshot(name, {
+      animations: "disabled",
+      stylePath: join(process.cwd(), "tests/responsive/visual-stability.css"),
+      maxDiffPixelRatio: 0.002,
+    });
+  }
+}
+
 async function audit(
   page: import("@playwright/test").Page,
   testInfo: import("@playwright/test").TestInfo,
@@ -148,13 +177,7 @@ for (const route of ["/dashboard", "/dashboard/clients"]) {
       await expect(
         page.getByRole("dialog", { name: "Admin navigation" }),
       ).toBeVisible();
-      await testInfo.attach("mobile-navigation", {
-        body: await page.screenshot({
-          animations: "disabled",
-          style: screenshotStyle,
-        }),
-        contentType: "image/png",
-      });
+      await captureState(page, testInfo, "mobile-navigation");
       await page.keyboard.press("Escape");
       await expect(menu).toBeFocused();
     }
@@ -220,13 +243,7 @@ for (const [index, [industry, name]] of tenants.entries()) {
           .locator(".portal-sidebar")
           .evaluate((el) => el.contains(document.activeElement)),
       ).toBe(true);
-      await testInfo.attach("mobile-navigation", {
-        body: await page.screenshot({
-          animations: "disabled",
-          style: screenshotStyle,
-        }),
-        contentType: "image/png",
-      });
+      await captureState(page, testInfo, "mobile-navigation");
       const settings = page
         .getByRole("navigation", { name: "Client dashboard navigation" })
         .getByRole("link", { name: "Settings", exact: true });
@@ -296,13 +313,7 @@ test("shared component states and keyboard interactions", async ({
   await expect(
     page.getByRole("dialog", { name: "Example dialog" }),
   ).toBeVisible();
-  await testInfo.attach("dialog", {
-    body: await page.screenshot({
-      animations: "disabled",
-      style: screenshotStyle,
-    }),
-    contentType: "image/png",
-  });
+  await captureState(page, testInfo, "dialog");
   for (let index = 0; index < 4; index++) {
     await page.keyboard.press("Tab");
     expect(
@@ -324,13 +335,7 @@ test("shared component states and keyboard interactions", async ({
   await expect(
     page.getByRole("dialog", { name: "Example drawer" }),
   ).toBeVisible();
-  await testInfo.attach("drawer", {
-    body: await page.screenshot({
-      animations: "disabled",
-      style: screenshotStyle,
-    }),
-    contentType: "image/png",
-  });
+  await captureState(page, testInfo, "drawer");
   await page.keyboard.press("Escape");
   await expect(drawerTrigger).toBeFocused();
   await page.getByRole("tab", { name: "Table", exact: true }).focus();
@@ -341,10 +346,12 @@ test("shared component states and keyboard interactions", async ({
   await expect(
     page.getByRole("heading", { name: "No test results yet" }),
   ).toBeVisible();
+  await captureState(page, testInfo, "empty-state");
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("status", { name: "Loading example cards" }),
   ).toBeVisible();
+  await captureState(page, testInfo, "loading-state");
   await page.keyboard.press("Home");
   await expect(
     page.getByRole("region", { name: "Synthetic organizations" }),
