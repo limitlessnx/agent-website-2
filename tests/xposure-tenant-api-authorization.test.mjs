@@ -8,9 +8,10 @@ test("Xposure tenant API authorization verifies active Xposure membership and re
   const auth = read("lib/xposure-tenant-authorization.ts");
   assert.match(auth, /getClientSession\(\)/);
   assert.match(auth, /organization\.status !== "active"/);
-  assert.match(auth, /organization\.slug !== "xposure"/);
+  assert.match(auth, /!isPhotographyOrganization\(organization\)/);
   assert.match(auth, /requirePortalPermission\(session, \[permission\]\)/);
-  assert.match(auth, /scope\.kind !== "tenant" \|\| scope\.slug !== "xposure"/);
+  assert.match(auth, /scope\.kind !== "tenant"/);
+  assert.match(auth, /!isPhotographyOrganization\(organizations\[0\]\)/);
 });
 
 test("catalogue reads and mutations require separate system permissions and tenant scoping", () => {

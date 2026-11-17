@@ -17,15 +17,15 @@ export async function POST(
       id: string;
       name: string;
       slug: string;
-      settings?: Record<string, unknown> | null;
+      metadata?: Record<string, unknown> | null;
     }>>(
-      `organizations?select=id,name,slug,settings&id=eq.${encodeURIComponent(organizationId)}&limit=1`,
+      `organizations?select=id,name,slug,metadata&id=eq.${encodeURIComponent(organizationId)}&limit=1`,
     );
     const organization = rows[0];
     if (!organization) return NextResponse.json({ error: "Organization not found." }, { status: 404 });
 
     const projects = await supabaseServerRequest<Array<{ id: string }>>(
-      `projects?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&order=created_at.asc&limit=1`,
+      `projects?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&slug=eq.platform-starter&order=created_at.asc&limit=1`,
     );
     if (!projects[0]) return NextResponse.json({ error: "Organization project not found." }, { status: 404 });
 
@@ -37,15 +37,15 @@ export async function POST(
         provisioning: { project_id: projects[0].id },
       },
       {
-        timezone: String(organization.settings?.timezone || "Africa/Lagos"),
+        timezone: String(organization.metadata?.timezone || "Africa/Lagos"),
         force: Boolean(body.force),
       },
     );
 
-    return NextResponse.json({ ok: true, result });
-  } catch (error) {
+    return NextResponse.json({ ok: result.complete, result }, { status: result.status === "provisioning_in_progress" ? 202 : 200 });
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to synchronize organization with n8n." },
+      { error: "Unable to confirm automation setup. Refresh setup before retrying." },
       { status: 400 },
     );
   }

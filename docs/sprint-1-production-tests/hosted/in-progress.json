@@ -1,0 +1,7 @@
+{
+  "qaOrganizationId": "48b68a88-bd0a-48d9-b6e2-604e8f1bab9d",
+  "httpStatus": 202,
+  "stage": "provisioning_in_progress",
+  "duplicateWorkerStarted": false,
+  "explanation": "The QA-only in-flight marker was set temporarily; this tests duplicate-worker feedback without starting an external worker."
+}

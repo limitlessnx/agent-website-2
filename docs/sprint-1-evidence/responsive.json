@@ -1,0 +1,54 @@
+{
+  "syntheticData": true,
+  "results": [
+    {
+      "width": 360,
+      "status": 200,
+      "title": "Needs attention",
+      "bodyWidth": 360,
+      "viewport": 360,
+      "overflow": []
+    },
+    {
+      "width": 430,
+      "status": 200,
+      "title": "Needs attention",
+      "bodyWidth": 430,
+      "viewport": 430,
+      "overflow": []
+    },
+    {
+      "width": 768,
+      "status": 200,
+      "title": "Needs attention",
+      "bodyWidth": 768,
+      "viewport": 768,
+      "overflow": []
+    },
+    {
+      "width": 1024,
+      "status": 200,
+      "title": "Needs attention",
+      "bodyWidth": 1024,
+      "viewport": 1024,
+      "overflow": []
+    },
+    {
+      "width": 1440,
+      "status": 200,
+      "title": "Needs attention",
+      "bodyWidth": 1440,
+      "viewport": 1440,
+      "overflow": []
+    },
+    {
+      "width": 1920,
+      "status": 200,
+      "title": "Needs attention",
+      "bodyWidth": 1920,
+      "viewport": 1920,
+      "overflow": []
+    }
+  ],
+  "errors": []
+}
