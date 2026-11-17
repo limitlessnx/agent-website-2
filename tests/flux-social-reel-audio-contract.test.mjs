@@ -30,7 +30,7 @@ test("Reel Remotion render uses narration and licensed music and verifies the MP
 });
 
 test("Voice previews require human approval and cannot bypass the general post transition", () => {
-  const review = read("lib/social-review.ts");
+  const review = read("lib/social-review.ts") + read("lib/social-review-readiness.ts");
   const transitions = read("lib/social.ts");
   const reviewPage = read("app/dashboard/social/review/page.tsx");
   assert.match(review, /reel_audio_verified !== true/);

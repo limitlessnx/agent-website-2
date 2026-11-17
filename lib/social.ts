@@ -223,7 +223,7 @@ export async function scheduleSocialPost(input: {
 
   const { data: post, error: postError } = await supabase
     .from("social_posts")
-    .select("id,status,platforms")
+    .select("id,brand_id,status,platforms,approved_at")
     .eq("organization_id", organizationId)
     .eq("id", input.postId)
     .single();
@@ -253,6 +253,15 @@ export async function scheduleSocialPost(input: {
     );
   }
 
+  let automaticMetadata: Record<string, unknown> = {};
+  if (organizationId === "15046426-e520-438b-8694-7662a6986efb" && post.brand_id === "a330b65a-d5b2-45f3-b211-451616f2fa8d") {
+    const { data: existingSchedule, error: existingError } = await supabase.from("social_schedules").select("metadata")
+      .eq("organization_id", organizationId).eq("post_id", input.postId).maybeSingle();
+    if (existingError) throw existingError;
+    if (existingSchedule?.metadata?.source === "fluxknight-daily-instagram-v1") {
+      automaticMetadata = { ...existingSchedule.metadata, approval_snapshot: post.approved_at, manual_schedule_override: true };
+    }
+  }
   const { error: scheduleError } = await supabase
     .from("social_schedules")
     .upsert({
@@ -264,7 +273,7 @@ export async function scheduleSocialPost(input: {
       claimed_at: null,
       completed_at: null,
       last_error: null,
-      metadata: { publish_platforms: publishPlatforms },
+      metadata: { ...automaticMetadata, publish_platforms: publishPlatforms },
     }, { onConflict: "organization_id,post_id" });
 
   if (scheduleError) throw scheduleError;

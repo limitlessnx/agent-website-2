@@ -26,7 +26,7 @@ test("Carousel preview supports next, previous, thumbnail selection, and count",
 });
 
 test("Final approval validates active media assets and blocks unfinished renders", () => {
-  const code = read("lib/social-review.ts");
+  const code = read("lib/social-review.ts") + read("lib/social-review-readiness.ts");
   assert.match(code, /carousel_render_status/);
   assert.match(code, /Preview the final slides before approval/);
   assert.match(code, /new Set\(mediaIds\)/);
