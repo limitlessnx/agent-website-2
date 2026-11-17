@@ -1,5 +1,6 @@
 "use client";
 
+import { adminAuthDestination } from "@/lib/auth-navigation";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LockKeyhole } from "@/components/admin/ServerIcons";
@@ -27,7 +28,7 @@ export default function LoginForm() {
       setError(data.message || "Login failed.");
       return;
     }
-    router.push(searchParams.get("next") || "/dashboard");
+    router.push(adminAuthDestination(searchParams.get("next")));
     router.refresh();
   }
 

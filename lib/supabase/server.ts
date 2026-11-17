@@ -26,3 +26,17 @@ export async function createClient() {
     },
   );
 }
+
+/** Always clear this application's provider cookies, even if remote revocation is unavailable. */
+export async function signOutAccount(scope: "local" | "global" = "local") {
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut({ scope });
+  } finally {
+    const store = await cookies();
+    for (const cookie of store.getAll()) {
+      if (/^sb-.+-auth-token(?:\.\d+)?$/.test(cookie.name))
+        store.delete(cookie.name);
+    }
+  }
+}

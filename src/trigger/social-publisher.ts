@@ -1,10 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { logger, task } from "@trigger.dev/sdk";
+import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import {
   metaPublisherConfigFromIntegration,
   publishMetaPost,
   type MetaPublishAsset,
 } from "@/lib/social-meta-publisher";
+
+import { DAILY_SOURCE, DAILY_BRAND, DAILY_ORGANIZATION, dailyPolicy, eligibleDailyPost, lagosDay, sameApproval, type DailyPost } from "@/lib/social-daily-policy";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
 const META_PLATFORMS = new Set(["instagram"]);
@@ -27,6 +29,10 @@ type SocialPost = {
   format: string;
   status: string;
   platforms: string[];
+  approved_at: string | null;
+  published_at: string | null;
+  content: Record<string, unknown>;
+  created_at: string;
   metadata: Record<string, unknown>;
 };
 
@@ -151,10 +157,14 @@ export const fluxSocialPublishPost = task({
       };
     }
 
+    if (!Number.isFinite(Date.parse(schedule.scheduled_for))) throw new AbortTaskRunError("Invalid publication time.");
+    if (Date.parse(schedule.scheduled_for) > Date.now()) return { scheduleId: schedule.id, skipped: true, reason: "not_due" };
+    const automatic = schedule.metadata?.source === DAILY_SOURCE;
+
     const { data: rawPost, error: postError } = await supabase
       .from("social_posts")
       .select(
-        "id,organization_id,brand_id,title,caption,format,status,platforms,metadata",
+        "id,organization_id,brand_id,title,caption,format,status,platforms,metadata,approved_at,published_at,content,created_at",
       )
       .eq("organization_id", schedule.organization_id)
       .eq("id", schedule.post_id)
@@ -177,6 +187,20 @@ export const fluxSocialPublishPost = task({
         skipped: true,
         reason: `post_${post.status}`,
       };
+    }
+
+    if (automatic) {
+      if (schedule.organization_id !== DAILY_ORGANIZATION || post.brand_id !== DAILY_BRAND) throw new AbortTaskRunError("Automatic publishing is scoped to Fluxknight only.");
+      const [{ data: brand, error: brandError }, { data: organization, error: organizationError }] = await Promise.all([
+        supabase.from("social_brands").select("metadata").eq("organization_id", DAILY_ORGANIZATION).eq("id", DAILY_BRAND).single(),
+        supabase.from("organizations").select("status").eq("id", DAILY_ORGANIZATION).single(),
+      ]);
+      if (brandError) throw brandError;
+      if (organizationError) throw organizationError;
+      const policy = dailyPolicy(brand.metadata || {});
+      if (!policy || organization.status !== "active") throw new AbortTaskRunError("Automatic publishing is disabled for this brand or organization.");
+      if (lagosDay(new Date(schedule.scheduled_for)) !== lagosDay(new Date())) throw new AbortTaskRunError("Missed daily slots must be rescheduled, not published in a catch-up burst.");
+      if (!eligibleDailyPost(post as DailyPost, policy) || !sameApproval(post as DailyPost, schedule)) throw new AbortTaskRunError("The approved media or approval snapshot changed. Return this post to Review.");
     }
 
     const platforms = publishTargets(schedule, post);
@@ -210,11 +234,17 @@ export const fluxSocialPublishPost = task({
     // only the slide IDs attached to the approved post, in their planned order.
     const selectedAssets = post.format === "carousel"
       ? availableAssets.filter((asset) => activeCarouselIds.includes(asset.id))
-      : availableAssets;
+      : ["reel", "video"].includes(post.format)
+        ? availableAssets.filter((asset) => asset.id === post.metadata?.reel_asset_id)
+        : ["image", "story"].includes(post.format)
+          ? availableAssets.filter((asset) => asset.id === post.metadata?.primary_asset_id)
+          : availableAssets;
     const assets = normalizeAssets(selectedAssets);
     if (post.format === "carousel" && assets.length !== activeCarouselIds.length) {
       throw new Error("The approved carousel slide set is incomplete; refusing to publish stale slides.");
     }
+
+    if (["reel", "video", "image"].includes(post.format) && assets.length !== 1) throw new AbortTaskRunError("The approved active media asset is unavailable.");
 
     const metaConfig = await metaPublisherConfigFromIntegration(
       supabase,
@@ -261,8 +291,14 @@ export const fluxSocialPublishPost = task({
         throw new Error(`${platform} publish attempts exhausted.`);
       }
 
+      if (automatic && job.metadata?.automatic_delivery_started_at) {
+        // A crash or ambiguous provider response may have already published.
+        // Do not create a second public post automatically.
+        await supabase.from("social_schedules").update({ status: "failed", last_error: "A previous delivery started. Check Instagram before retrying to avoid a duplicate." }).eq("id", schedule.id);
+        throw new AbortTaskRunError("Previous automatic delivery requires reconciliation before another attempt.");
+      }
       const nextAttempt = Number(job.attempt_count || 0) + 1;
-      await supabase
+      const runningQuery = supabase
         .from("social_publish_jobs")
         .update({
           status: "running",
@@ -273,9 +309,14 @@ export const fluxSocialPublishPost = task({
             ...(job.metadata || {}),
             publisher: "meta-graph-api",
             attempt: nextAttempt,
+            ...(automatic ? { automatic_delivery_started_at: now } : {}),
           },
         })
-        .eq("id", job.id);
+        .eq("id", job.id).eq("status", job.status).eq("attempt_count", job.attempt_count)
+        .select("id").maybeSingle();
+      const { data: running, error: runningError } = await runningQuery;
+      if (runningError) throw runningError;
+      if (!running) throw new AbortTaskRunError("Publish job was already claimed.");
 
       try {
         const result = await publishMetaPost({
@@ -321,12 +362,12 @@ export const fluxSocialPublishPost = task({
           .from("social_publish_jobs")
           .update({
             status:
-              nextAttempt >= job.max_attempts
+              automatic || nextAttempt >= job.max_attempts
                 ? "failed"
                 : "retry_scheduled",
             last_error: message,
             next_attempt_at:
-              nextAttempt >= job.max_attempts
+              automatic || nextAttempt >= job.max_attempts
                 ? null
                 : new Date(
                     Date.now() + 60_000 * nextAttempt,
@@ -337,12 +378,13 @@ export const fluxSocialPublishPost = task({
         await supabase
           .from("social_schedules")
           .update({
-            status: "pending",
+            status: automatic ? "failed" : "pending",
             claimed_at: null,
             last_error: message,
           })
           .eq("id", schedule.id);
 
+        if (automatic) throw new AbortTaskRunError(`Automatic delivery stopped: ${message}. Check Instagram before retrying.`);
         throw error;
       }
     }
