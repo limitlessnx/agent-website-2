@@ -25,3 +25,9 @@ test("Voice pilot caps response size, avoids exposing internal property media or
   assert.doesNotMatch(route, /select\([^)]*customer|select\([^)]*access_token/);
   assert.match(route, /does not reserve or book properties/);
 });
+
+test("ElevenLabs pilot accepts a raw Authorization secret or Bearer token with constant-time validation", () => {
+  assert.match(route, /supplied\.startsWith\("Bearer "\) \? supplied\.slice\("Bearer "\.length\) : supplied/);
+  assert.match(route, /received\.length === expected\.length && timingSafeEqual\(received, expected\)/);
+  assert.match(route, /if \(!secret \|\| secret\.length < 32\) return false/);
+});
