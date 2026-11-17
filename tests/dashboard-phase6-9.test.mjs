@@ -91,10 +91,12 @@ test("canonical Fluxknight palette and dashboard home composition are locked", (
   const home = read("components/admin/DashboardHomeExperience.tsx");
   const preview = read("app/dashboard-preview/page.tsx");
 
-  assert.match(fidelity, /--fk-canvas:#0B0F24/);
-  assert.match(fidelity, /--fk-surface:#12193A/);
-  assert.match(fidelity, /--fk-surface-raised:#1A2454/);
-  assert.match(fidelity, /--fk-brand:#7c3aed/i);
+  const tokens = read("components/ui/dashboard-foundation.css");
+  assert.match(tokens, /--fk-canvas:\s*#07031a/i);
+  assert.match(tokens, /--fk-surface:\s*#12102a/i);
+  assert.match(tokens, /--fk-surface-raised:\s*#1b1737/i);
+  assert.match(tokens, /--fk-brand:\s*#7c3aed/i);
+  assert.doesNotMatch(fidelity, /--fk-(canvas|surface|brand):/);
   assert.doesNotMatch(fidelity, /data-dashboard-theme="light"/);
   assert.doesNotMatch(fidelity, /--fk-canvas:#F6F7FF/);
   assert.match(dashboard, /DashboardHomeExperience/);

@@ -26,7 +26,9 @@
     "test:leo-execution": "node --test tests/leo-crm-execution.test.cjs tests/leo-crm-execution-database.test.mjs tests/leo-real-estate-execution-security.test.cjs tests/leo-action-approval.test.mjs tests/leo-core-security.test.mjs",
     "test:xposure-campaigns": "node --test tests/xposure-campaigns.test.cjs tests/xposure-campaign-contacts.test.cjs",
     "test:limitless-manual-followup": "node --test tests/limitless-manual-followup-api.test.cjs tests/limitless-manual-followup-database.test.cjs",
-    "test:campaign-ai": "node --test tests/campaign-ai-writeup.test.cjs tests/estate-brief-campaign.test.cjs tests/maia-campaign-direct-delivery.test.cjs"
+    "test:campaign-ai": "node --test tests/campaign-ai-writeup.test.cjs tests/estate-brief-campaign.test.cjs tests/maia-campaign-direct-delivery.test.cjs",
+    "test:responsive": "playwright test",
+    "test:responsive:list": "playwright test --list"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.523",
@@ -44,6 +46,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -52,7 +56,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@electric-sql/pglite": "^0.3.14"
+    "typescript": "^5"
   }
 }

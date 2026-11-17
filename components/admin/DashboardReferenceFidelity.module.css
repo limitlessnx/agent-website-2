@@ -1,33 +1,4 @@
 .referenceFidelity{
-  --fk-canvas:#0B0F24;
-  --fk-canvas-accent:#12193A;
-  --fk-surface:#12193A;
-  --fk-surface-raised:#1A2454;
-  --fk-surface-hover:#202B61;
-  --fk-surface-overlay:#12193A;
-  --fk-border:rgba(172,160,214,.14);
-  --fk-border-strong:rgba(181,166,232,.24);
-  --fk-text:#f8f7ff;
-  --fk-text-secondary:#A3AED0;
-  --fk-text-muted:#7F89AF;
-  --fk-brand:#7c3aed;
-  --fk-brand-hover:#a78bfa;
-  --fk-brand-strong:#6d28d9;
-  --fk-brand-soft:rgba(124,58,237,.12);
-  --fk-brand-glow:rgba(124,58,237,.18);
-  --fk-shadow-soft:0 18px 50px rgba(2,0,15,.18);
-  --fk-shadow-float:0 26px 70px rgba(2,0,15,.28);
-  --fk-radius-card:14px;
-  --fk-radius-panel:16px;
-  --fk-radius-control:10px;
-  --fk-page-gutter:32px;
-  --fk-section-gap:18px;
-  --fk-type-display:34px;
-  --fk-type-title:30px;
-  --fk-type-section:16px;
-  --fk-type-body:13px;
-  --fk-type-label:11px;
-  --fk-touch:44px;
   color:var(--fk-text);
   background:
     radial-gradient(circle at 72% -8%,rgba(124,58,237,.08),transparent 30rem),

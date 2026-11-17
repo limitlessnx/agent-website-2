@@ -44,3 +44,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local Playwright evidence and authentication artifacts
+/playwright-report/
+/test-results/
+/playwright/.auth/

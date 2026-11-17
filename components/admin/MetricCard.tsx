@@ -1,3 +1,4 @@
+import styles from "@/components/ui/DashboardPrimitives.module.css";
 import type { ComponentType } from "react";
 
 export default function MetricCard({
@@ -6,7 +7,7 @@ export default function MetricCard({
   detail,
   trend,
   icon: Icon,
-  tone = "cyan",
+  tone = "violet",
 }: {
   label: string;
   value: string | number;
@@ -16,10 +17,10 @@ export default function MetricCard({
   tone?: "cyan" | "emerald" | "amber" | "rose" | "violet";
 }) {
   return (
-    <div className={`admin-metric-card tone-${tone}`}>
-      <div className="admin-metric-topline">
+    <div className={`${styles.card} ${styles.metric}`} data-tone={tone}>
+      <div className={styles.metricTopline}>
         {Icon ? (
-          <span className="admin-metric-icon">
+          <span className={styles.metricIcon} aria-hidden="true">
             <Icon size={17} />
           </span>
         ) : null}

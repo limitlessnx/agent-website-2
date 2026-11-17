@@ -1,0 +1,107 @@
+/* Shared Fluxknight dashboard tokens. Admin and tenant authorization stays in their layouts.
+   Reference: inspected 12ui B and its HTML export; original Fluxknight purple retained. */
+[data-flux-ui] {
+  color-scheme: dark;
+  --fk-canvas: #07031a;
+  --fk-canvas-accent: #0d0730;
+  --fk-surface: #12102a;
+  --fk-surface-raised: #1b1737;
+  --fk-surface-hover: #242043;
+  --fk-surface-overlay: #211b40;
+  --fk-border: #393151;
+  --fk-border-strong: #62517e;
+  --fk-text: #f8f7ff;
+  --fk-text-secondary: #c2bafa;
+  --fk-text-muted: #aaa3c4;
+  --fk-text-disabled: #817993;
+  --fk-brand: #7c3aed;
+  --fk-brand-hover: #6d28d9;
+  --fk-brand-strong: #6d28d9;
+  --fk-metallic: #b6aaff;
+  --fk-brand-soft: rgb(139 92 246 / 14%);
+  --fk-brand-glow: rgb(139 92 246 / 12%);
+  --fk-info: #93c5fd;
+  --fk-success: #6ee7b7;
+  --fk-warning: #fcd38a;
+  --fk-danger: #fda4af;
+  --fk-focus: #c4b5fd;
+  --fk-input: #0d0922;
+  --fk-table-head: #17112d;
+  --fk-row-hover: rgb(167 139 250 / 7%);
+  --fk-shadow: 0 12px 32px rgb(2 0 15 / 20%);
+  --fk-shadow-soft: var(--fk-shadow);
+  --fk-shadow-float: 0 24px 64px rgb(2 0 15 / 36%);
+  --fk-brand-gradient: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  --fk-bg: var(--fk-canvas);
+  --fk-accent: var(--fk-brand);
+  --fk-accent-hover: var(--fk-brand-hover);
+  --fk-accent-soft: var(--fk-brand-soft);
+  --fk-font-xs: 12px;
+  --fk-font-sm: 13px;
+  --fk-font-md: 14px;
+  --fk-font-lg: 16px;
+  --fk-font-section: 20px;
+  --fk-font-page: clamp(24px, 2.2vw, 32px);
+  --fk-line-tight: 1.2;
+  --fk-line-body: 1.5;
+  --fk-space-1: 4px;
+  --fk-space-2: 8px;
+  --fk-space-3: 12px;
+  --fk-space-4: 16px;
+  --fk-space-5: 24px;
+  --fk-space-6: 32px;
+  --fk-space-7: 48px;
+  --fk-radius-sm: 8px;
+  --fk-radius-md: 12px;
+  --fk-radius-lg: 16px;
+  --fk-radius-card: 16px;
+  --fk-radius-panel: 16px;
+  --fk-radius-control: 12px;
+  --fk-control-sm: 44px;
+  --fk-control-md: 44px;
+  --fk-control-lg: 48px;
+  --fk-touch: 44px;
+  --fk-motion-fast: 140ms;
+  --fk-motion-base: 200ms;
+  --fk-ease: cubic-bezier(.2, .8, .2, 1);
+  --fk-content-max: 1600px;
+  --fk-page-gutter: clamp(16px, 2.2vw, 32px);
+  --fk-section-gap: 24px;
+  --fk-type-display: var(--fk-font-page);
+  --fk-type-title: var(--fk-font-page);
+  --fk-type-section: 18px;
+  --fk-type-body: 14px;
+  --fk-type-label: 12px;
+  min-width: 0;
+  color: var(--fk-text);
+  background: var(--fk-canvas);
+}
+[data-flux-ui] *, [data-flux-ui] *::before, [data-flux-ui] *::after { box-sizing: border-box; }
+[data-flux-ui] :focus-visible { outline: 2px solid var(--fk-focus); outline-offset: 3px; }
+[data-flux-ui] :is(input, select, textarea, button) { font: inherit; }
+[data-flux-ui] :is(h1, h2, h3, p) { overflow-wrap: anywhere; }
+[data-flux-ui] :is(.admin-main, .portal-main) { min-width: 0; }
+[data-flux-ui] :is(.admin-page-header, .exposure-page-title) { flex-wrap: wrap; gap: 16px; }
+[data-flux-ui] :is(.admin-page-header, .exposure-page-title) > div { min-width: 0; }
+[data-flux-ui] :is(.admin-page-header, .exposure-page-title) h1 { line-height: var(--fk-line-tight); }
+[data-flux-ui].portal-shell { background: var(--fk-canvas); color: var(--fk-text); }
+[data-flux-ui] .portal-sidebar { background: var(--fk-canvas-accent); border-color: var(--fk-border); }
+[data-flux-ui] .portal-topbar { min-height: 62px; height: auto; gap: 16px; flex-wrap: wrap; }
+[data-flux-ui] .portal-topbar > div { min-width: 0; }
+[data-flux-ui] :is(.portal-topbar strong, .admin-breadcrumb strong) { overflow-wrap: anywhere; }
+[data-flux-ui] :is(.portal-mobile-toggle, .portal-mobile-head button) { min-width: 44px; min-height: 44px; }
+/* Existing mobile navigation stays at 820px until industry shells migrate together.
+   Foundation compositions: small <600px, tablet <1024px, desktop >=1024px, wide >=1600px.
+   CSS variables cannot be used in media conditions; keep these literal conditions documented. */
+@media (max-width: 599px) {
+  [data-flux-ui] :is(input, select, textarea) { font-size: 16px; }
+  [data-flux-ui] .portal-main { padding-inline: 16px; }
+  [data-flux-ui] .portal-topbar > div { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-flux-ui] { --fk-motion-fast: 0ms; --fk-motion-base: 0ms; }
+  [data-flux-ui] *, [data-flux-ui] *::before, [data-flux-ui] *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+}

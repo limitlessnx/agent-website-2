@@ -1,3 +1,6 @@
+import { PageHeader, MetricCard, StatusBadge, EmptyState, DashboardCard, CardHeader, Button } from "@/components/ui/DashboardPrimitives";
+import { DropdownMenu } from "@/components/ui/DashboardInteractions";
+import styles from "./page.module.css";
 import Link from "next/link";
 import { Bot, Building2, Clock3, Mail, Settings2, Users } from "@/components/admin/ServerIcons";
 import { listClientOnboardingProfiles, type ClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
@@ -21,39 +24,34 @@ export default async function ClientsPage() {
 
   return (
     <main className="admin-page dashboard-v2-page">
-      <div className="admin-page-header">
-        <div>
-          <p className="admin-kicker">Client operations</p>
-          <h1>Tenant Organizations</h1>
-          <p>Switch into a tenant workspace for day-to-day operations, or open setup when you need to change its configuration.</p>
-        </div>
-        <Link className="admin-button primary-button" href="/dashboard/clients/create">Create organization</Link>
-      </div>
-
+      <PageHeader kicker="Client operations" title="Tenant Organizations"
+        description="Switch into a tenant workspace for day-to-day operations, or open setup when you need to change its configuration."
+        actions={<Link className="admin-button primary-button" href="/dashboard/clients/create">Create organization</Link>}/>
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><Users size={15} /> Client accounts</p><strong>{profiles.length}</strong><span>Visible client accounts</span></article>
-        <article className="admin-metric-card"><p><Clock3 size={15} /> In progress</p><strong>{inProgress}</strong><span>Still completing onboarding</span></article>
-        <article className="admin-metric-card"><p><Bot size={15} /> Configured</p><strong>{configured}</strong><span>{testing} testing or approving</span></article>
-        <article className="admin-metric-card"><p><Building2 size={15} /> Live</p><strong>{live}</strong><span>Client systems launched</span></article>
+        <MetricCard label="Client accounts" value={profiles.length} detail="Visible client accounts" icon={Users}/>
+        <MetricCard label="In progress" value={inProgress} detail="Still completing onboarding" icon={Clock3}/>
+        <MetricCard label="Configured" value={configured} detail={`${testing} testing or approving`} icon={Bot}/>
+        <MetricCard label="Live" value={live} detail="Client systems launched" icon={Building2}/>
       </div>
 
-      <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div><h2>Client workspaces</h2><p>Open a client only when you need to review or manage that workspace.</p></div>
-        </div>
-        {error ? <p className="admin-empty">{error}</p> : null}
-        <div className="admin-list">
+      <DashboardCard>
+        <CardHeader title="Client workspaces" description="Open a client only when you need to review or manage that workspace."/>
+        {error ? <p className="admin-empty" role="alert">{error}</p> : null}
+        <div className={styles.list}>
+          {!error && profiles.length === 0 ? <EmptyState title="No organizations yet" description="Create an organization to begin its setup." action={<Link className="admin-button primary-button" href="/dashboard/clients/create">Create organization</Link>}/> : null}
           {profiles.map((profile) => (
-            <div key={profile.id} className="admin-list-row" style={{ alignItems: "center", gap: 18 }}>
-              <div style={{ flex: 1 }}>
+            <div key={profile.id} className={styles.row}>
+              <div className={styles.details}>
                 <strong>{profile.business_name || "Unnamed organization"}</strong>
                 <span><Mail size={13} /> {profile.business_email || "No business email"} · {profile.industry || "Industry not selected"}</span>
-                <span>Status: {profile.status.replaceAll("_", " ")} · Created {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(profile.created_at))}</span>
+                <span><StatusBadge tone={profile.status === "live" ? "success" : "neutral"}>{profile.status.replaceAll("_", " ")}</StatusBadge> · Created {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(profile.created_at))}</span>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-<Link className="admin-button primary-button" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/manage`}>
+              <div className={styles.actions}>
+<Button href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/manage`}>
                   <Settings2 size={15} /> Manage organization
-                </Link>
+                </Button>
+                <Button variant="outline" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/setup`}><Settings2 size={15} /> Setup</Button>
+                <DropdownMenu label="More workspace actions">
                 <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/inspect`}>
                   <Building2 size={15} /> Inspect read-only
                 </Link>
@@ -63,15 +61,12 @@ export default async function ClientsPage() {
                 <Link prefetch={false} className="admin-button secondary" href={`/dashboard/switch/tenant/${encodeURIComponent(profile.organization_id)}`}>
                   <Building2 size={15} /> Open workspace (admin)
                 </Link>
-                <Link className="admin-button secondary" href={`/dashboard/clients/${encodeURIComponent(profile.organization_id)}/setup`}>
-                  <Settings2 size={15} /> Setup
-                </Link>
+                </DropdownMenu>
               </div>
             </div>
           ))}
-          {!profiles.length && !error ? <p className="admin-empty">No client workspaces exist yet. Use Client Onboarding → New Client.</p> : null}
         </div>
-      </section>
+      </DashboardCard>
     </main>
   );
 }
