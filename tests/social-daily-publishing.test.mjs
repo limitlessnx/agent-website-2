@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { memoryDb } from './helpers/social-memory-db.mjs';
-const load = (file, dependencies = {}) => {
+const load = (file, dependencies = {}, globals = {}) => {
   const exports = {};
-  vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText, {exports,Date,Map,Set,require:(name)=>{if (!(name in dependencies)) throw new Error(name);return dependencies[name];}});
+  vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText, {exports,Date,Map,Set,require:(name)=>{if (!(name in dependencies)) throw new Error(name);return dependencies[name];},...globals});
   return exports;
 };
 const readiness=load('lib/social-review-readiness.ts');
@@ -95,7 +95,7 @@ test('competing schedule claims cannot dispatch the same slot twice',async()=>{
 });
 test('manually changing an automatic date preserves its delivery and approval metadata',async()=>{
  const db=setup();await service.runDailyPublishing(db,morning,true,async()=>{});
- const social=load('lib/social.ts',{'@/lib/tenant':{requireTenant:async()=>({supabase:db,organizationId:policy.DAILY_ORGANIZATION})}});
+ const social=load('lib/social.ts',{'@/lib/tenant':{requireTenant:async()=>({supabase:db,organizationId:policy.DAILY_ORGANIZATION})}}, {Date:class extends Date {static now(){return Date.parse('2026-11-17T08:00:00Z');}}});
  await social.scheduleSocialPost({postId:'post-1',scheduledFor:'2026-12-01T17:00:00Z',timezone:'Africa/Lagos',platforms:['instagram']});
  const schedule=db.tables.social_schedules.find((slot)=>slot.post_id==='post-1');
  assert.equal(schedule.metadata.source,policy.DAILY_SOURCE);assert.equal(schedule.metadata.manual_schedule_override,true);
