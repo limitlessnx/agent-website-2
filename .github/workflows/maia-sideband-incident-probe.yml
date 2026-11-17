@@ -32,13 +32,25 @@ jobs:
             const id = item.id || item.runId;
             console.log("RUN", id, "status", item.status, "created", item.createdAt || item.created_at, "started", item.startedAt || "");
             if (!id) continue;
-            const detailUrl = "https://api.trigger.dev/api/v1/runs/" + encodeURIComponent(id);
-            const detailResponse = await fetch(detailUrl,{headers:{Authorization:"Bearer "+token,Accept:"application/json"}});
-            if(!detailResponse.ok){console.log("DETAIL_STATUS", detailResponse.status);continue;}
-            const d=await detailResponse.json();
-            const attemptList=Array.isArray(d.attempts)?d.attempts:[];
-            for(const a of attemptList.slice(-3)) {
-              console.log("ATTEMPT", a.status || "", "errorType",redact(a.error?.name||a.error?.type||""),"errorMessage",redact(a.error?.message||a.error||""));
+            const endpoints = [
+              "https://api.trigger.dev/api/v3/runs/" + encodeURIComponent(id),
+              "https://api.trigger.dev/api/v1/runs/" + encodeURIComponent(id) + "/result",
+              "https://api.trigger.dev/api/v1/runs/" + encodeURIComponent(id) + "/trace",
+              "https://api.trigger.dev/api/v1/projects/proj_ckweruqrgwndssqpjdvg/runs/" + encodeURIComponent(id)
+            ];
+            for (const endpoint of endpoints) {
+              const detailResponse = await fetch(endpoint,{headers:{Authorization:"Bearer "+token,Accept:"application/json"}});
+              console.log("DETAIL_ENDPOINT",new URL(endpoint).pathname,"HTTP",detailResponse.status);
+              if(!detailResponse.ok) continue;
+              const d = await detailResponse.json();
+              console.log("DETAIL_STATUS",d.status||d.run?.status||"","error",redact(d.error?.message||d.error||d.run?.error?.message||""));
+              const attempts=Array.isArray(d.attempts)?d.attempts:Array.isArray(d.run?.attempts)?d.run.attempts:[];
+              for(const a of attempts.slice(-3)) console.log("ATTEMPT",a.status||"","type",redact(a.error?.name||a.error?.type||""),"error",redact(a.error?.message||a.error||""));
+              const trace=Array.isArray(d.spans)?d.spans:Array.isArray(d.rootSpan?.children)?d.rootSpan.children:[];
+              for(const span of trace.slice(0,30)){
+                const err=span.error||span.attributes?.error||span.data?.error;
+                if(err||span.isError) console.log("SPAN_ERROR",redact(span.name||span.data?.message||""),redact(err?.message||err||""));
+              }
             }
           }
           
