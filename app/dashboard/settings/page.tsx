@@ -27,10 +27,10 @@ const settings = [
 ];
 
 export default async function SettingsPage() {
-  let registryLoadFailed = false;
   const [supabase, registry] = await Promise.all([
     getSupabaseReadiness(),
-    getWorkflowRegistrySummary().catch(() => { registryLoadFailed = true; return ({
+    getWorkflowRegistrySummary().then(value => ({ ...value, loadFailed: false })).catch(() => ({
+      loadFailed: true,
       configured: false,
       workflows: [],
       runs: [],
@@ -38,9 +38,10 @@ export default async function SettingsPage() {
       paused: 0,
       failures: 0,
       successRate: 0,
-    }); }),
+    })),
   ]);
 
+  const registryLoadFailed = registry.loadFailed;
   const configuredSettings = settings.filter((setting) => setting.keys.some((key) => process.env[key])).length;
 
   return (
