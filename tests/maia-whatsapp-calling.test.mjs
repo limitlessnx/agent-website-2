@@ -53,3 +53,18 @@ test("The transport documents the Maia server-side tool-control path", () => {
   assert.match(docs, /feature-flagged/);
   assert.match(docs, /30–60 seconds/);
 });
+
+
+test("Maia voice sideband records tenant-scoped startup, audio and early termination milestones", () => {
+  assert.match(sideband, /from\("whatsapp_webhook_event_logs"\)\.insert\(/);
+  assert.match(sideband, /event_type: "maia_voice_sideband"/);
+  assert.match(sideband, /organization_id: input\.organizationId/);
+  assert.match(sideband, /"session_ready"/);
+  assert.match(sideband, /"audio_started"/);
+  assert.match(sideband, /"response_without_audio"/);
+  assert.match(sideband, /"socket_closed"/);
+  assert.match(sideband, /"failed"/);
+  assert.match(sideband, /closed before greeting initialization/);
+  assert.match(sideband, /closed before audio output/);
+  assert.match(webhook, /taskRunId: sidebandRun\.id/);
+});
