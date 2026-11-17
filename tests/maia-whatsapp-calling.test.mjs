@@ -19,7 +19,7 @@ test("The call bridge performs the Meta offer to OpenAI answer to Meta accept fl
   assert.match(helper, /https:\/\/api\.openai\.com\/v1\/realtime\/calls/);
   assert.match(helper, /Accept: "application\/sdp"/);
   assert.match(helper, /action: "accept"/);
-  assert.match(helper, /session: \{ sdp_type: "answer", sdp: input\.sdp \}/);
+  assert.match(helper, /payload\.session = \{ sdp_type: "answer", sdp: input\.sdp \}/);
   assert.match(helper, /\/calls`/);
   assert.match(webhook, /callSession\(rawCall\)/);
 });
