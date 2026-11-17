@@ -22,7 +22,7 @@
 .hint { color:var(--fk-text-muted,#aaa3c4); font-size:13px; line-height:1.5; }
 .errorText { color:var(--fk-danger,#fda4af); font-size:13px; line-height:1.5; }
 .tableRegion { max-width:100%; overflow:auto; border:1px solid var(--fk-border,#393151); border-radius:12px; overscroll-behavior-inline:contain; }
-.tableRegion table { width:100%; border-collapse:collapse; text-align:left; font-size:14px; }
+.tableRegion table { width:100%; min-width:640px; border-collapse:collapse; text-align:left; font-size:14px; }
 .tableRegion caption { text-align:left; padding:16px; color:var(--fk-text-muted); }
 .tableRegion :is(th,td) { padding:14px 16px; border-bottom:1px solid var(--fk-border,#393151); vertical-align:top; }
 .tableRegion th { background:var(--fk-table-head,#17112d); color:var(--fk-text-secondary,#c2bafa); font-weight:600; }

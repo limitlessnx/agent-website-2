@@ -9,7 +9,7 @@ import styles from "./MobileBottomNav.module.css";
 const items = [
   { href: "/dashboard", label: "Home", icon: Home, exact: true },
   { href: "/dashboard/agents", label: "Agents", icon: Bot },
-  { href: "/dashboard/conversations", label: "Conversations", icon: MessageSquareText },
+  { href: "/dashboard/conversations", label: "Inbox", icon: MessageSquareText },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
 ];
 
@@ -30,7 +30,7 @@ export default function MobileBottomNav() {
         const route = item.href.split("#")[0];
         const active = item.exact ? pathname === route : !item.href.includes("#") && (pathname === route || pathname.startsWith(`${route}/`));
         return (
-          <Link key={item.label} href={item.href} className={active ? styles.active : ""} aria-current={active ? "page" : undefined}>
+          <Link key={item.label} href={item.href} className={active ? styles.active : ""} aria-label={item.href === "/dashboard/conversations" ? "Conversations" : item.label} aria-current={active ? "page" : undefined}>
             <item.icon size={18} aria-hidden="true" />
             <span>{item.label}</span>
           </Link>

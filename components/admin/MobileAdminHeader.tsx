@@ -1,5 +1,6 @@
 "use client";
 
+import FluxLogo from "@/components/FluxLogo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Menu } from "@/components/admin/ServerIcons";
@@ -21,9 +22,8 @@ export default function MobileAdminHeader() {
         <button type="button" className={styles.menuButton} onClick={openMenu} aria-label="Open navigation menu" aria-expanded={open} aria-controls="admin-mobile-navigation">
           <Menu size={22} aria-hidden="true" />
         </button>
-        <Link href="/dashboard" className={styles.logo} aria-label="Limitless Realty home">
-          <span className={styles.logoMark}>L</span>
-          <span>LIMITLESS <b>REALTY</b></span>
+        <Link href={homeHref} className={styles.logo} aria-label={`${label} home`}>
+          {isGencouv || isLimitless ? <><span className={styles.logoMark}>{mark}</span><span className={styles.label}>{label}</span></> : <FluxLogo compact/>}
         </Link>
       </div>
       <div className={styles.actions}>
