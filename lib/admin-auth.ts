@@ -1,3 +1,5 @@
+import { createClient } from "@/lib/supabase/server";
+import { isVerifiedPlatformAdmin } from "@/lib/platform-admin-access";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -8,13 +10,18 @@ export type AdminSession = {
   email: string;
   name: string;
   issuedAt: number;
+  userId?: string;
+  authMode?: "account";
 };
 
 function sessionSecret() {
   return (
     process.env.ADMIN_SESSION_SECRET ||
     process.env.LIMITLESS_ADMIN_PASSWORD ||
-    "development-only-change-this-secret"
+    process.env.ADMIN_PASSWORD ||
+    (process.env.NODE_ENV === "production"
+      ? ""
+      : "development-only-change-this-secret")
   );
 }
 
@@ -23,11 +30,16 @@ function configuredEmail() {
 }
 
 function configuredPassword() {
-  return process.env.LIMITLESS_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "";
+  return (
+    process.env.LIMITLESS_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || ""
+  );
 }
 
 function sign(payload: string) {
-  return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+  const secret = sessionSecret();
+  if (!secret)
+    throw new Error("Administrator session signing is not configured.");
+  return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
 function safeEqual(a: string, b: string) {
@@ -55,13 +67,27 @@ export function createSessionToken(session: AdminSession) {
   return `${payload}.${sign(payload)}`;
 }
 
-export function verifySessionToken(token: string | undefined): AdminSession | null {
-  if (!token) return null;
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature || !safeEqual(signature, sign(payload))) return null;
+export function verifySessionToken(
+  token: string | undefined,
+): AdminSession | null {
+  if (!token || !sessionSecret()) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, signature] = parts;
+  if (!payload || !signature || !safeEqual(signature, sign(payload)))
+    return null;
   try {
-    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as AdminSession;
-    if (!session.email || !session.issuedAt) return null;
+    const session = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    ) as AdminSession;
+    if (
+      typeof session.email !== "string" ||
+      typeof session.name !== "string" ||
+      !Number.isFinite(session.issuedAt) ||
+      session.issuedAt <= 0 ||
+      session.issuedAt > Date.now() + 60_000
+    )
+      return null;
     if (Date.now() - session.issuedAt > SESSION_TTL_SECONDS * 1000) return null;
     return session;
   } catch {
@@ -71,7 +97,23 @@ export function verifySessionToken(token: string | undefined): AdminSession | nu
 
 export async function getAdminSession() {
   const cookieStore = await cookies();
-  return verifySessionToken(cookieStore.get(COOKIE_NAME)?.value);
+  const legacy = verifySessionToken(cookieStore.get(COOKIE_NAME)?.value);
+  if (legacy) return legacy;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !(await isVerifiedPlatformAdmin(data.user || undefined)))
+      return null;
+    return {
+      email: data.user!.email!,
+      name: data.user!.email!.split("@")[0],
+      userId: data.user!.id,
+      authMode: "account" as const,
+      issuedAt: Date.now(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function setAdminSession(session: AdminSession) {
