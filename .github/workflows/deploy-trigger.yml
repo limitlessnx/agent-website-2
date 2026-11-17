@@ -14,6 +14,11 @@ on:
     # changes. Keep the worker deployment aligned with every pushed commit.
   workflow_dispatch:
     inputs:
+      configure_daily_schedule:
+        description: "Assign and verify approved daily Instagram slots only; do not publish early"
+        required: false
+        default: false
+        type: boolean
       prepare_review_week:
         description: "Prepare the current Fluxknight review-only weekly batch; never approve or publish"
         required: false
@@ -144,3 +149,17 @@ jobs:
           name: social-review-week-verification
           path: verification/social-review-week
           retention-days: 7
+
+      - name: Verify approved daily Instagram scheduling
+        if: github.event_name == 'workflow_dispatch' && inputs.configure_daily_schedule && steps.trigger_deploy.outcome == 'success'
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-social-daily-schedule.mjs
+
+      - name: Save daily Instagram schedule verification
+        if: github.event_name == 'workflow_dispatch' && inputs.configure_daily_schedule && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: social-daily-schedule-verification
+          path: verification/social-daily-schedule.json
+          retention-days: 30

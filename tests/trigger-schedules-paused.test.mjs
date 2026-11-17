@@ -7,14 +7,14 @@ function triggerFiles(){
   return readdirSync("src/trigger").filter((name)=>name.endsWith(".ts")||name.endsWith(".tsx")).map((name)=>path.join("src/trigger",name));
 }
 
-test("only approved reminder tasks and the scoped Fluxknight review batch are scheduled",()=>{
+test("only approved reminders and scoped Fluxknight review/publishing tasks are scheduled",()=>{
   const files=triggerFiles();
   const scheduled=[];
   for(const file of files){
     const source=readFileSync(file,"utf8");
     if(source.includes("schedules.task(")) scheduled.push(file);
   }
-  assert.deepEqual(scheduled.sort(),["src/trigger/social-review-week.ts","src/trigger/limitless-installment-reminders.ts","src/trigger/tenant-reminder-sweep.ts","src/trigger/tenant-reminder-execution-drain.ts","src/trigger/tenant-appointment-reminder-drain.ts"].sort());
+  assert.deepEqual(scheduled.sort(),["src/trigger/social-daily-publishing.ts","src/trigger/social-review-week.ts","src/trigger/limitless-installment-reminders.ts","src/trigger/tenant-reminder-sweep.ts","src/trigger/tenant-reminder-execution-drain.ts","src/trigger/tenant-appointment-reminder-drain.ts"].sort());
 });
 
 test("core operational jobs remain callable on demand while automatic schedules are paused",()=>{
