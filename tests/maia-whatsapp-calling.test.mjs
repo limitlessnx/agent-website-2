@@ -74,3 +74,11 @@ test("Maia GA Realtime sideband does not send the legacy beta protocol header", 
   assert.match(sideband, /wss:\/\/api\.openai\.com\/v1\/realtime\?call_id=/);
   assert.doesNotMatch(sideband, /OpenAI-Beta.*realtime=v1/);
 });
+
+
+test("Maia retries only transient 404 sideband attach failures with bounded attempts", () => {
+  assert.match(sideband, /for \(let attempt = 1; attempt <= 3; attempt \+= 1\)/);
+  assert.match(sideband, /!String\(connectionError\)\.includes\("HTTP 404"\)/);
+  assert.match(sideband, /attempt \* 350/);
+  assert.match(sideband, /"attach_retry"/);
+});
