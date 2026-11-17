@@ -227,6 +227,14 @@ for (const [index, [industry, name]] of tenants.entries()) {
         }),
         contentType: "image/png",
       });
+      const settings = page
+        .getByRole("navigation", { name: "Client dashboard navigation" })
+        .getByRole("link", { name: "Settings", exact: true });
+      await settings.focus();
+      const settingsBox = await settings.boundingBox();
+      expect(settingsBox!.y + settingsBox!.height).toBeLessThanOrEqual(
+        page.viewportSize()!.height + 1,
+      );
       await page.keyboard.press("Escape");
       await expect(page.locator(".portal-sidebar")).not.toHaveClass(/is-open/);
       await expect(open).toBeFocused();

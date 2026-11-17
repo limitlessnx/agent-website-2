@@ -109,6 +109,8 @@
   color: var(--fk-text);
 }
 [data-flux-ui] .portal-sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--fk-canvas-accent);
   border-color: var(--fk-border);
 }
@@ -160,4 +162,8 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+[data-flux-ui].portal-shell:has(.portal-sidebar.is-open) .leo-launcher {
+  visibility: hidden;
 }
