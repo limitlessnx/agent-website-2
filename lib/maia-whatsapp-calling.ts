@@ -1,3 +1,4 @@
+import { closeMaiaPilotCall, getMaiaElevenLabsPilotConfig, maiaPilotSessionId, prepareMaiaPilotCall } from "@/lib/maia-elevenlabs-pilot";
 import { getWhatsAppCredentials } from "@/lib/whatsapp-integration";
 import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -6,6 +7,7 @@ import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 export type WhatsAppCallEvent = {
   id: string;
   from: string;
+  verifiedCaller?: string;
   to?: string;
   direction: "USER_INITIATED" | "BUSINESS_INITIATED" | "UNKNOWN";
   event: string;
@@ -96,6 +98,15 @@ export async function acceptMaiaWhatsAppCall(call: WhatsAppCallEvent, target: Te
   if (process.env.MAIA_WHATSAPP_CALLING_ENABLED !== "true") return { ok: false, enabled: false, reason: "feature_disabled" } as const;
   if (target.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) return { ok: false, enabled: true, reason: "limitless_realty_only" } as const;
   if (!call.id || !call.from || !call.phoneNumberId) throw new Error("A WhatsApp call ID, caller and phone number ID are required.");
+  const event = call.event.toLowerCase();
+  const pilot = (event === "terminate" || (event === "connect" && call.direction === "USER_INITIATED"))
+    ? getMaiaElevenLabsPilotConfig(call.verifiedCaller || "", call.phoneNumberId)
+    : null;
+  const pilotSessionId = pilot ? maiaPilotSessionId(call.phoneNumberId, call.id) : "";
+  if (pilot && event === "terminate") {
+    await closeMaiaPilotCall(pilot, pilotSessionId);
+    return { ok: true, enabled: true, ignored: true, reason: "pilot_call_closed" } as const;
+  }
   if (call.event.toLowerCase() !== "connect" || call.session?.sdp_type?.toLowerCase() !== "offer" || !call.session.sdp?.trim()) {
     return { ok: true, enabled: true, ignored: true, reason: "not_an_inbound_offer" } as const;
   }
@@ -107,6 +118,25 @@ export async function acceptMaiaWhatsAppCall(call: WhatsAppCallEvent, target: Te
   if (String(credentials?.provider_family || "meta").toLowerCase() === "twilio") throw new Error("WhatsApp Calling requires a Meta Cloud API integration, not Twilio WhatsApp.");
 
   await preflightChargeableFluxAi({ organizationId: target.organizationId, feature: "leo_voice", action: "leo_voice_minute" });
+  if (pilot) {
+    if (phoneNumberId !== call.phoneNumberId) throw new Error("Maia pilot phone binding mismatch.");
+    const answer = await prepareMaiaPilotCall(pilot, pilotSessionId, call.session.sdp);
+    if (!answer) return { ok: true, enabled: true, ignored: true, reason: "duplicate_pilot_offer" } as const;
+    try {
+      await metaCallAction({ phoneNumberId, accessToken, graphVersion, callId: call.id, action: "accept", sdp: answer });
+    } catch (error) {
+      await closeMaiaPilotCall(pilot, pilotSessionId).catch(() => {
+        console.warn("[maia-voice] pilot cleanup failed", { pilotSessionId });
+      });
+      throw error;
+    }
+    console.info("[maia-voice] pilot accepted by Meta", { pilotSessionId });
+    await recordChargeableFluxAiUsage({
+      organizationId: target.organizationId, action: "leo_voice_minute", source: "maia_whatsapp_calling",
+      provider: "elevenlabs", quantity: 1, metadata: { call_id: call.id, provider: "meta_whatsapp" },
+    }).catch(() => console.warn("[maia-voice] pilot usage recording failed", { pilotSessionId }));
+    return { ok: true, enabled: true, accepted: true, callId: call.id } as const;
+  }
   const agent = await createAdminClient().from("agents").select("name").eq("id", target.agentId).eq("organization_id", target.organizationId).maybeSingle();
   const session = openAiSession(text(agent.data?.name) || "Maia", target.organizationId, text(call.contactName));
   const multipart = buildMultipart(call.session.sdp, session);

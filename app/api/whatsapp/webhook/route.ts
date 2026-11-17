@@ -409,6 +409,7 @@ export async function POST(request: NextRequest) {
         const call: WhatsAppCallEvent = {
           id: String(rawCall.id || ""),
           from: String(rawCall.from || "").replace(/[^0-9]/g, ""),
+          verifiedCaller: typeof rawCall.from === "string" ? rawCall.from : undefined,
           to: String(rawCall.to || "").replace(/[^0-9]/g, "") || undefined,
           direction: rawCall.direction === "USER_INITIATED" || rawCall.direction === "BUSINESS_INITIATED" ? rawCall.direction : "UNKNOWN",
           event: String(rawCall.event || ""),
