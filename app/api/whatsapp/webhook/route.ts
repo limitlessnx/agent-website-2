@@ -429,7 +429,7 @@ export async function POST(request: NextRequest) {
           else voiceCallsIgnored += 1;
           const realtimeCallId = "realtimeCallId" in result ? result.realtimeCallId : "";
           if (accepted && realtimeCallId) {
-            await tasks.trigger("maia-whatsapp-call-sideband", {
+            const sidebandRun = await tasks.trigger("maia-whatsapp-call-sideband", {
               callId: realtimeCallId,
               metaCallId: call.id,
               phoneNumberId: call.phoneNumberId,
@@ -438,6 +438,11 @@ export async function POST(request: NextRequest) {
               customerPhone: call.from,
               customerName: call.contactName,
             }, { idempotencyKey: `maia-whatsapp-sideband:${tenant.organizationId}:${call.id}` });
+            console.info("[whatsapp-webhook] Maia voice sideband queued", {
+              organizationId: tenant.organizationId,
+              callId: call.id,
+              taskRunId: sidebandRun.id,
+            });
           }
           console.info("[whatsapp-webhook] Maia voice call handled", {
             organizationId: tenant.organizationId,

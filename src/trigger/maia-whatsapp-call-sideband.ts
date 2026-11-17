@@ -1,4 +1,6 @@
 import { logger, task } from "@trigger.dev/sdk";
+import { randomUUID } from "node:crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 import WebSocket from "ws";
 import { maiaEstateTools } from "@/lib/ai/maia-estate-tools";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
@@ -81,25 +83,52 @@ function providerHandshakeError(body: string) {
   }
 }
 
+/**
+ * Nonblocking tenant-scoped call lifecycle audit. Vercel can confirm that the
+ * call was accepted, but cannot observe the separate Trigger.dev worker.
+ * Keep credentials, phone numbers, SDP, and transcript content out of logs.
+ */
+async function auditSideband(input: MaiaSidebandPayload, stage: string, data: Json = {}) {
+  try {
+    const { error } = await createAdminClient().from("whatsapp_webhook_event_logs").insert({
+      request_id: `maia-voice-sideband:${randomUUID()}`,
+      event_type: "maia_voice_sideband",
+      organization_id: input.organizationId,
+      provider_message_id: input.metaCallId,
+      http_status: stage === "failed" ? 500 : 200,
+      details: {
+        stage,
+        agent_id: input.agentId,
+        ...data,
+      },
+    });
+    if (error) logger.warn("Maia voice lifecycle audit write failed", { stage, errorCode: error.code || "unknown" });
+  } catch (error) {
+    logger.warn("Maia voice lifecycle audit unavailable", { stage, errorType: error instanceof Error ? error.name : "unknown" });
+  }
+}
+
 async function runSideband(input: MaiaSidebandPayload) {
   if (!input.callId || !input.metaCallId || !input.phoneNumberId || !input.organizationId || !input.agentId) {
     throw new Error("Maia sideband requires realtime call, WhatsApp call, phone number, organization and agent identifiers.");
   }
   if (input.organizationId !== LIMITLESS_REALTY_ORGANIZATION_ID) throw new Error("The Maia WhatsApp voice sideband is restricted to Limitless Realty.");
   try {
+  await auditSideband(input, "started");
   if (!process.env.OPENAI_API_KEY?.trim()) throw new Error("OPENAI_API_KEY is missing from the Trigger.dev production environment.");
   const tools = toolsForVoice();
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
   const socket = new WebSocket(`wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(input.callId)}`, {
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
-      "OpenAI-Beta": "realtime=v1",
     },
   });
-
+  try {
     return await new Promise<{ ok: true; callId: string; tools: string[] }>((resolve, reject) => {
     let settled = false;
     let greetingStarted = false;
+    let audioStarted = false;
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
@@ -117,6 +146,7 @@ async function runSideband(input: MaiaSidebandPayload) {
       const type = String(event.type || "");
       if (type === "session.updated" && !greetingStarted) {
         greetingStarted = true;
+        void auditSideband(input, "session_ready");
         send(socket, {
           type: "response.create",
           response: {
@@ -126,6 +156,13 @@ async function runSideband(input: MaiaSidebandPayload) {
         });
         logger.info("Maia WhatsApp call greeting started", { callId: input.callId });
         return;
+      }
+      if ((type === "response.audio.delta" || type === "response.output_audio.delta") && !audioStarted) {
+        audioStarted = true;
+        void auditSideband(input, "audio_started");
+      }
+      if (type === "response.done" && greetingStarted && !audioStarted) {
+        void auditSideband(input, "response_without_audio");
       }
       if (type === "error") {
         logger.error("Maia sideband reported an OpenAI error", { callId: input.callId, error: event.error || event });
@@ -152,6 +189,7 @@ async function runSideband(input: MaiaSidebandPayload) {
       if (["session.closed", "conversation.ended", "call.ended"].includes(type)) finish();
     };
     socket.on("open", () => {
+      void auditSideband(input, "socket_open");
       send(socket, {
         type: "session.update",
         session: {
@@ -208,10 +246,28 @@ async function runSideband(input: MaiaSidebandPayload) {
         closeCode: code,
         closeReason: String(reason || "").slice(0, 500),
       });
-      finish();
+      void auditSideband(input, "socket_closed", {
+        close_code: code,
+        greeting_started: greetingStarted,
+        audio_started: audioStarted,
+      });
+      if (!greetingStarted) finish(new Error("Maia voice sideband closed before greeting initialization."));
+      else if (!audioStarted) finish(new Error("Maia voice sideband closed before audio output."));
+      else finish();
     });
     });
+  } catch (connectionError) {
+    // The WebRTC call can become visible to the sideband shortly after
+    // signaling completes. Retry only a missing session, never auth/other errors.
+    if (attempt >= 3 || !String(connectionError).includes("HTTP 404")) throw connectionError;
+    logger.warn("Maia sideband attach returned 404; retrying briefly", { attempt });
+    await auditSideband(input, "attach_retry", { attempt, http_status: 404 });
+    await new Promise((resolve) => setTimeout(resolve, attempt * 350));
+  }
+  }
+  throw new Error("Maia voice sideband attachment retries were exhausted.");
   } catch (error) {
+    await auditSideband(input, "failed", { error_type: error instanceof Error ? error.name : "unknown" });
     try {
       await terminateMaiaWhatsAppCall({ organizationId: input.organizationId, phoneNumberId: input.phoneNumberId, callId: input.metaCallId });
       logger.warn("Maia WhatsApp call terminated after sideband failure", { callId: input.metaCallId });

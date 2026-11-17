@@ -19,7 +19,7 @@ test("The call bridge performs the Meta offer to OpenAI answer to Meta accept fl
   assert.match(helper, /https:\/\/api\.openai\.com\/v1\/realtime\/calls/);
   assert.match(helper, /Accept: "application\/sdp"/);
   assert.match(helper, /action: "accept"/);
-  assert.match(helper, /session: \{ sdp_type: "answer", sdp: input\.sdp \}/);
+  assert.match(helper, /payload\.session = \{ sdp_type: "answer", sdp: input\.sdp \}/);
   assert.match(helper, /\/calls`/);
   assert.match(webhook, /callSession\(rawCall\)/);
 });
@@ -52,4 +52,33 @@ test("The transport documents the Maia server-side tool-control path", () => {
   assert.match(docs, /sideband task/);
   assert.match(docs, /feature-flagged/);
   assert.match(docs, /30–60 seconds/);
+});
+
+
+test("Maia voice sideband records tenant-scoped startup, audio and early termination milestones", () => {
+  assert.match(sideband, /from\("whatsapp_webhook_event_logs"\)\.insert\(/);
+  assert.match(sideband, /event_type: "maia_voice_sideband"/);
+  assert.match(sideband, /organization_id: input\.organizationId/);
+  assert.match(sideband, /"session_ready"/);
+  assert.match(sideband, /"audio_started"/);
+  assert.match(sideband, /"response_without_audio"/);
+  assert.match(sideband, /"socket_closed"/);
+  assert.match(sideband, /"failed"/);
+  assert.match(sideband, /closed before greeting initialization/);
+  assert.match(sideband, /closed before audio output/);
+  assert.match(webhook, /taskRunId: sidebandRun\.id/);
+});
+
+
+test("Maia GA Realtime sideband does not send the legacy beta protocol header", () => {
+  assert.match(sideband, /wss:\/\/api\.openai\.com\/v1\/realtime\?call_id=/);
+  assert.doesNotMatch(sideband, /OpenAI-Beta.*realtime=v1/);
+});
+
+
+test("Maia retries only transient 404 sideband attach failures with bounded attempts", () => {
+  assert.match(sideband, /for \(let attempt = 1; attempt <= 3; attempt \+= 1\)/);
+  assert.match(sideband, /!String\(connectionError\)\.includes\("HTTP 404"\)/);
+  assert.match(sideband, /attempt \* 350/);
+  assert.match(sideband, /"attach_retry"/);
 });
