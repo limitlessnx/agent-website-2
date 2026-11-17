@@ -121,7 +121,6 @@ async function runSideband(input: MaiaSidebandPayload) {
   const socket = new WebSocket(`wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(input.callId)}`, {
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
-      "OpenAI-Beta": "realtime=v1",
     },
   });
 
