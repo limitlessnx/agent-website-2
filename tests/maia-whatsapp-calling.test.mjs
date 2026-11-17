@@ -40,11 +40,12 @@ test("The OpenAI sideband starts Maia's spoken greeting after the session update
   assert.match(sideband, /Greet the caller warmly and briefly as Maia/);
 });
 
-test("The call bridge is tenant scoped and does not route through ElevenLabs", () => {
+test("The call bridge is tenant scoped and retains OpenAI as its default", () => {
   assert.match(helper, /getWhatsAppCredentials\(target\.organizationId\)/);
   assert.match(helper, /eq\("organization_id", target\.organizationId\)/);
   assert.match(helper, /organizationId: target\.organizationId/);
-  assert.doesNotMatch(helper, /elevenlabs/i);
+  assert.match(helper, /LIMITLESS_REALTY_ORGANIZATION_ID/);
+  assert.match(helper, /if \(pilot\) \{[\s\S]*prepareMaiaPilotCall[\s\S]*const openAiResponse/);
   assert.match(helper, /leo_voice_minute/);
 });
 
