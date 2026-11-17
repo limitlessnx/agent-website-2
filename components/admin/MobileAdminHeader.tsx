@@ -1,5 +1,6 @@
 "use client";
 
+import FluxLogo from "@/components/FluxLogo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Menu } from "@/components/admin/ServerIcons";
@@ -11,26 +12,59 @@ export default function MobileAdminHeader() {
   const pathname = usePathname();
   const isGencouv = pathname.startsWith("/dashboard/gencouv");
   const isLimitless = pathname.startsWith("/dashboard/limitless");
-  const label = isGencouv ? "GENCOUV" : isLimitless ? "LIMITLESS REALTY" : "FLUXKNIGHT";
-  const homeHref = isGencouv ? "/dashboard/gencouv" : isLimitless ? "/dashboard/limitless/leads" : "/dashboard";
+  const label = isGencouv
+    ? "GENCOUV"
+    : isLimitless
+      ? "LIMITLESS REALTY"
+      : "FLUXKNIGHT";
+  const homeHref = isGencouv
+    ? "/dashboard/gencouv"
+    : isLimitless
+      ? "/dashboard/limitless/leads"
+      : "/dashboard";
   const mark = isGencouv ? "G" : isLimitless ? "L" : "F";
 
   return (
     <header className={styles.header} aria-label={`${label} mobile header`}>
       <div className={styles.brandGroup}>
-        <button type="button" className={styles.menuButton} onClick={openMenu} aria-label="Open navigation menu" aria-expanded={open} aria-controls="admin-mobile-navigation">
+        <button
+          type="button"
+          className={styles.menuButton}
+          onClick={openMenu}
+          aria-label="Open navigation menu"
+          aria-expanded={open}
+          aria-controls="admin-mobile-navigation"
+        >
           <Menu size={22} aria-hidden="true" />
         </button>
-        <Link href="/dashboard" className={styles.logo} aria-label="Limitless Realty home">
-          <span className={styles.logoMark}>L</span>
-          <span>LIMITLESS <b>REALTY</b></span>
+        <Link
+          href={homeHref}
+          className={styles.logo}
+          aria-label={`${label} home`}
+        >
+          {isGencouv || isLimitless ? (
+            <>
+              <span className={styles.logoMark}>{mark}</span>
+              <span className={styles.label}>{label}</span>
+            </>
+          ) : (
+            <FluxLogo compact />
+          )}
         </Link>
       </div>
       <div className={styles.actions}>
-        <Link href="/dashboard/notifications" className={styles.iconButton} aria-label="Open notifications">
+        <Link
+          href="/dashboard/notifications"
+          className={styles.iconButton}
+          aria-label="Open notifications"
+        >
           <Bell size={18} />
         </Link>
-        <Link href="/dashboard/settings" className={styles.avatar} aria-label="Open account settings">
+        <Link
+          href="/dashboard/settings"
+          className={styles.avatar}
+          aria-label="Open account settings"
+        >
           <span>{mark}</span>
         </Link>
       </div>

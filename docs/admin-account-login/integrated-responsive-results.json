@@ -1,0 +1,21 @@
+{
+  "sourceCommit": "68be09a8",
+  "stats": {
+    "startTime": "2026-11-17T08:28:33.227Z",
+    "duration": 213333.38199999998,
+    "expected": 42,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "widths": [
+    360,
+    430,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "visualCompare": true,
+  "updatedBaselines": false
+}

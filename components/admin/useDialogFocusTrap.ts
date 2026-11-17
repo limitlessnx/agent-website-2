@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE = [
   "a[href]",
@@ -16,14 +16,27 @@ export function useDialogFocusTrap(
   containerRef: RefObject<HTMLElement | null>,
   onClose: () => void,
 ) {
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
   useEffect(() => {
     if (!open || !containerRef.current) return;
 
     const dialog = containerRef.current;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((element) => !element.hasAttribute("inert"));
+    const previous =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const focusable = () =>
+      Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (element) =>
+          !element.closest("[inert]") &&
+          element.getClientRects().length > 0 &&
+          getComputedStyle(element).visibility !== "hidden",
+      );
 
-    requestAnimationFrame(() => {
+    const initialFocus = requestAnimationFrame(() => {
       const first = focusable()[0];
       (first || dialog).focus();
     });
@@ -31,7 +44,7 @@ export function useDialogFocusTrap(
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        closeRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -47,19 +60,23 @@ export function useDialogFocusTrap(
       const last = items[items.length - 1];
       const active = document.activeElement;
 
-      if (event.shiftKey && active === first) {
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && active === last) {
+      } else if (
+        !event.shiftKey &&
+        (active === last || !dialog.contains(active))
+      ) {
         event.preventDefault();
         first.focus();
       }
     }
 
-    dialog.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      dialog.removeEventListener("keydown", onKeyDown);
+      cancelAnimationFrame(initialFocus);
+      document.removeEventListener("keydown", onKeyDown);
       requestAnimationFrame(() => previous?.focus());
     };
-  }, [open, containerRef, onClose]);
+  }, [open, containerRef]);
 }

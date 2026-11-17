@@ -17,8 +17,10 @@ import {
   X,
   Zap,
 } from "@/components/admin/ServerIcons";
+import { NavigationItem } from "@/components/ui/DashboardPrimitives";
 import FluxLogo from "@/components/FluxLogo";
-import { Suspense, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 import HotelBottomNav from "@/components/portal/hotel/HotelBottomNav";
 import type { IndustryExperience } from "@/lib/industryExperience";
 
@@ -49,36 +51,53 @@ export default function PortalSidebar({
   const pathname=usePathname();
   const [open,setOpen]=useState(false);
   const active=(href:string,exact=false)=>exact?pathname===href:pathname===href||pathname.startsWith(`${href}/`);
-  const close=()=>setOpen(false);
+  const close=useCallback(()=>setOpen(false),[]);
+  const sidebarRef=useRef<HTMLElement>(null);
+  useDialogFocusTrap(open,sidebarRef,close);
+  useEffect(()=>{
+    const media=window.matchMedia("(max-width:820px)");
+    const sync=()=>{
+      if(sidebarRef.current) sidebarRef.current.inert=media.matches&&!open;
+      if(!media.matches) close();
+    };
+    sync();media.addEventListener("change",sync);
+    return ()=>media.removeEventListener("change",sync);
+  },[open,close]);
+  useEffect(()=>{
+    if(!open)return;
+    const previous=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    return ()=>{document.body.style.overflow=previous;};
+  },[open]);
 
   return <>
-    <button className="portal-mobile-toggle" type="button" onClick={()=>setOpen(true)} aria-label="Open client dashboard navigation"><Menu size={21}/></button>
+    <button className="portal-mobile-toggle" type="button" onClick={()=>setOpen(true)} aria-label="Open client dashboard navigation" aria-expanded={open} aria-controls="portal-mobile-navigation"><Menu size={21}/></button>
     {open?<button className="portal-backdrop" type="button" onClick={close} aria-label="Close client dashboard navigation"/>:null}
-    <aside className={`portal-sidebar ${open?"is-open":""}`}>
+    <aside ref={sidebarRef} id="portal-mobile-navigation" className={`portal-sidebar ${open?"is-open":""}`} aria-label="Workspace navigation" role={open?"dialog":undefined} aria-modal={open?true:undefined} tabIndex={open?-1:undefined}>
       <div className="portal-mobile-head"><button type="button" onClick={close} aria-label="Close navigation"><X size={20}/></button></div>
       <Link href="/portal" className="portal-brand portal-brand-logo" onClick={close} aria-label="Fluxknight client workspace home"><FluxLogo/><small>Client workspace</small></Link>
       <div className="portal-workspace-identity"><span className="portal-workspace-icon"><Zap size={18}/></span><div><small>Business workspace</small><strong>{organization}</strong><em>{role.replaceAll("-"," ")}</em></div></div>
 
       <nav aria-label="Client dashboard navigation">
         <span className="portal-nav-label">Workspace</span>
-        <Link href="/portal" className={active("/portal",true)?"active":""} onClick={close}><LayoutDashboard size={18}/><span>Overview</span></Link>
-        <Link href="/portal/notifications" className={active("/portal/notifications")?"active":""} onClick={close}><Bell size={18}/><span>Needs Attention</span>{unreadNotifications>0?<small>{unreadNotifications>99?"99+":unreadNotifications}</small>:null}</Link>
-        {capabilities.customers?<Link href="/portal/customers" className={active("/portal/customers")?"active":""} onClick={close}><Users size={18}/><span>{experience.customerLabel}</span><span className="sr-only">Customers</span></Link>:null}
-        {capabilities.conversations?<Link href={experience.slug === "hotels"?"/portal/hotel/inbox":"/portal/conversations"} className={active(experience.slug === "hotels"?"/portal/hotel/inbox":"/portal/conversations")?"active":""} onClick={close}><MessageSquareText size={18}/><span>Conversations</span></Link>:null}
-        {capabilities.systems?<Link href="/portal/systems" className={active("/portal/systems")?"active":""} onClick={close}><Workflow size={18}/><span>Systems</span></Link>:null}
-        {capabilities.customers&&experience.slug === "hotels"?<><Link href="/portal/hotel" className={active("/portal/hotel",true)?"active":""} onClick={close}><Clock3 size={18}/><span>Hotel workspace</span></Link><Link href="/portal/hotel/catalog" className={active("/portal/hotel/catalog")?"active":""} onClick={close}><Workflow size={18}/><span>Hotel Catalog</span></Link></>:null}
-        {capabilities.appointments&&experience.features.appointments&&experience.slug !== "hotels"?<Link href="/portal/appointments" className={active("/portal/appointments")?"active":""} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></Link>:null}
-        {capabilities.customers&&experience.slug === "hotels"?<><Link href="/portal/hotel/reports" className={active("/portal/hotel/reports")?"active":""} onClick={close}><Activity size={18}/><span>Hotel reports</span></Link><Link href="/portal/hotel/followups" className={active("/portal/hotel/followups")?"active":""} onClick={close}><Clock3 size={18}/><span>Follow-ups & reminders</span></Link></>:null}
-        {experience.slug === "photography-studio"?<Link href="/portal/catalogue" className={active("/portal/catalogue")?"active":""} onClick={close}><Workflow size={18}/><span>Studio Catalogue</span></Link>:null}
-        {capabilities.conversations && ["photography-studio", "hotels"].includes(experience.slug)?<Link href="/portal/campaigns" className={active("/portal/campaigns")?"active":""} onClick={close}><Zap size={18}/><span>Campaigns</span></Link>:null}
-        {capabilities.analytics?<Link href="/portal/analytics" className={active("/portal/analytics")?"active":""} onClick={close}><Activity size={18}/><span>Analytics</span></Link>:null}
-        {capabilities.billing?<Link href="/portal/billing" className={active("/portal/billing")?"active":""} onClick={close}><CreditCard size={18}/><span>Flux Credits</span></Link>:null}
-        {capabilities.team?<Link href="/portal/team" className={active("/portal/team")?"active":""} onClick={close}><Users size={18}/><span>Team</span></Link>:null}
+        <NavigationItem href="/portal" active={active("/portal",true)} onClick={close}><LayoutDashboard size={18}/><span>Overview</span></NavigationItem>
+        <NavigationItem href="/portal/notifications" active={active("/portal/notifications")} onClick={close}><Bell size={18}/><span>Needs Attention</span>{unreadNotifications>0?<small>{unreadNotifications>99?"99+":unreadNotifications}</small>:null}</NavigationItem>
+        {capabilities.customers?<NavigationItem href="/portal/customers" active={active("/portal/customers")} onClick={close}><Users size={18}/><span>{experience.customerLabel}</span><span className="sr-only">Customers</span></NavigationItem>:null}
+        {capabilities.conversations?<NavigationItem href={experience.slug === "hotels"?"/portal/hotel/inbox":"/portal/conversations"} active={active(experience.slug === "hotels"?"/portal/hotel/inbox":"/portal/conversations")} onClick={close}><MessageSquareText size={18}/><span>Conversations</span></NavigationItem>:null}
+        {capabilities.systems?<NavigationItem href="/portal/systems" active={active("/portal/systems")} onClick={close}><Workflow size={18}/><span>Systems</span></NavigationItem>:null}
+        {capabilities.customers&&experience.slug === "hotels"?<><NavigationItem href="/portal/hotel" active={active("/portal/hotel",true)} onClick={close}><Clock3 size={18}/><span>Hotel workspace</span></NavigationItem><NavigationItem href="/portal/hotel/catalog" active={active("/portal/hotel/catalog")} onClick={close}><Workflow size={18}/><span>Hotel Catalog</span></NavigationItem></>:null}
+        {capabilities.appointments&&experience.features.appointments&&experience.slug !== "hotels"?<NavigationItem href="/portal/appointments" active={active("/portal/appointments")} onClick={close}><Clock3 size={18}/><span>{experience.appointmentLabel}</span></NavigationItem>:null}
+        {capabilities.customers&&experience.slug === "hotels"?<><NavigationItem href="/portal/hotel/reports" active={active("/portal/hotel/reports")} onClick={close}><Activity size={18}/><span>Hotel reports</span></NavigationItem><NavigationItem href="/portal/hotel/followups" active={active("/portal/hotel/followups")} onClick={close}><Clock3 size={18}/><span>Follow-ups & reminders</span></NavigationItem></>:null}
+        {experience.slug === "photography-studio"?<NavigationItem href="/portal/catalogue" active={active("/portal/catalogue")} onClick={close}><Workflow size={18}/><span>Studio Catalogue</span></NavigationItem>:null}
+        {capabilities.conversations && ["photography-studio", "hotels"].includes(experience.slug)?<NavigationItem href="/portal/campaigns" active={active("/portal/campaigns")} onClick={close}><Zap size={18}/><span>Campaigns</span></NavigationItem>:null}
+        {capabilities.analytics?<NavigationItem href="/portal/analytics" active={active("/portal/analytics")} onClick={close}><Activity size={18}/><span>Analytics</span></NavigationItem>:null}
+        {capabilities.billing?<NavigationItem href="/portal/billing" active={active("/portal/billing")} onClick={close}><CreditCard size={18}/><span>Flux Credits</span></NavigationItem>:null}
+        {capabilities.team?<NavigationItem href="/portal/team" active={active("/portal/team")} onClick={close}><Users size={18}/><span>Team</span></NavigationItem>:null}
 
         <span className="portal-nav-label">Help & Settings</span>
-        {experience.slug === "hotels"?<Link href="/portal/hotel/setup" className={active("/portal/hotel/setup")?"active":""} onClick={close}><Settings size={18}/><span>Hotel setup</span></Link>:null}
-        {capabilities.support?<Link href="/portal/support" className={active("/portal/support")?"active":""} onClick={close}><LifeBuoy size={18}/><span>Support</span></Link>:null}
-        <Link href="/portal/settings" className={active("/portal/settings")?"active":""} onClick={close}><Settings size={18}/><span>Settings</span></Link>
+        {experience.slug === "hotels"?<NavigationItem href="/portal/hotel/setup" active={active("/portal/hotel/setup")} onClick={close}><Settings size={18}/><span>Hotel setup</span></NavigationItem>:null}
+        {capabilities.support?<NavigationItem href="/portal/support" active={active("/portal/support")} onClick={close}><LifeBuoy size={18}/><span>Support</span></NavigationItem>:null}
+        <NavigationItem href="/portal/settings" active={active("/portal/settings")} onClick={close}><Settings size={18}/><span>Settings</span></NavigationItem>
       </nav>
 
       <div className="portal-sidebar-note"><span>Workspace status</span><strong><i/> Tenant secured</strong></div>

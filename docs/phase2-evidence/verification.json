@@ -1,0 +1,49 @@
+{
+  "sourceCommit": "72cdb0361f6adee2be619b300c418294e0d1092a",
+  "syntheticFixtures": true,
+  "responsiveCasesPassed": 42,
+  "visualCasesPassed": 42,
+  "reviewedBaselines": 84,
+  "baselineHashesUnchanged": true,
+  "visualRun": {
+    "startTime": "2026-11-17T01:30:24.210Z",
+    "duration": 164078.614,
+    "expected": 42,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "sourceChecks": {
+    "typescript": {
+      "exitCode": 0
+    },
+    "focusedLint": {
+      "exitCode": 0
+    }
+  },
+  "supportFilesPassed": 68,
+  "maiaFilesPassed": 18,
+  "hotelSetupFilesPassed": 11,
+  "additionalComponentCaptureCasesPassed": 6,
+  "wholeRepositoryLint": {
+    "errors": 496,
+    "warnings": 76,
+    "status": "legacy failures; focused changed files pass"
+  },
+  "hostedBuild": {
+    "status": "READY",
+    "previewUrl": "https://limitlessnx-agent-website-2-1oub7kkf7-fluxagents.vercel.app",
+    "sourceCommit": "72cdb0361f6adee2be619b300c418294e0d1092a"
+  },
+  "authenticatedPreviewBrowserVerified": false,
+  "external12uiPostAlignment": {
+    "broaderUrlSource": "blocked by automatic approval review; not executed",
+    "saferImageOnly": "completed with synthetic capture and existing local LayerDoc; unanchored, no DOM/source coverage; no new purchase",
+    "recurringTokenPatch": "none"
+  },
+  "production": {
+    "applicationDeployed": false,
+    "newCustomerDataWrites": false,
+    "priorApprovedPhase1MigrationAndQATenantRetained": true
+  }
+}

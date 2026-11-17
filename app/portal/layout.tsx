@@ -15,6 +15,7 @@ import { Bell, LifeBuoy } from "lucide-react";
 import hotelStyles from "@/components/portal/hotel/HotelMobileShell.module.css";
 import "./portal.css";
 import "./marketplace.css";
+import "@/components/ui/dashboard-foundation.css";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
 
   const leoScope = `${session.organizationId}:${session.userId}`;
   return <LeoConversationProvider key={leoScope} tenantScope={leoScope}>
-    <div className={`portal-shell ${experience.slug==="hotels"?hotelStyles.shell:""}`}>
+    <div data-flux-ui className={`portal-shell ${experience.slug==="hotels"?hotelStyles.shell:""}`}>
       <PortalSidebar
         organization={profile.business_name||session.organizationSlug}
         role={capabilities.role}

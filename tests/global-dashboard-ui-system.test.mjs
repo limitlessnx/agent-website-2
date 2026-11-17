@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(path, "utf8");
 
 test("global action button contract supports semantic loading labels and in-place pending state", () => {
-  const button = read("components/Button.tsx");
+  const button = read("components/Button.tsx") + read("components/Button.module.css");
 
   assert.match(button, /loading|pending/i, "Button must expose a loading/pending state");
   assert.match(button, /Saving|Creating|Updating|Deleting|Sending|Processing/i, "Button system must support semantic action labels");
@@ -14,7 +14,7 @@ test("global action button contract supports semantic loading labels and in-plac
 });
 
 test("global action button contract preserves dimensions while loading", () => {
-  const button = read("components/Button.tsx");
+  const button = read("components/Button.tsx") + read("components/Button.module.css");
 
   assert.match(button, /minWidth|min-width|width/, "Button must reserve stable geometry");
   assert.match(button, /spinner|loadingIndicator|Loader|Loader2/i, "Loading state must have a visual indicator");
@@ -37,7 +37,7 @@ test("global dashboard visual system defines a restrained premium accent instead
 });
 
 test("dashboard action buttons have consistent size tiers", () => {
-  const button = read("components/Button.tsx");
+  const button = read("components/Button.tsx") + read("components/Button.module.css");
   assert.match(button, /sm/);
   assert.match(button, /md/);
   assert.match(button, /lg/);
@@ -68,13 +68,13 @@ test("dashboard UI changes preserve reduced-motion accessibility", () => {
 });
 
 test("global UI implementation must avoid page navigation for ordinary in-place mutations", () => {
-  const button = read("components/Button.tsx");
+  const button = read("components/Button.tsx") + read("components/Button.module.css");
   assert.doesNotMatch(button, /window\.location|location\.href/);
   assert.match(button, /onClick|type/);
 });
 
 test("global action feedback is designed for every mutation class", () => {
-  const button = read("components/Button.tsx");
+  const button = read("components/Button.tsx") + read("components/Button.module.css");
   for (const verb of ["Saving", "Creating", "Updating", "Deleting", "Sending", "Recording", "Approving", "Rejecting", "Uploading", "Connecting", "Testing", "Running"]) {
     assert.match(button, new RegExp(verb), `Missing semantic action state: ${verb}`);
   }
@@ -82,7 +82,7 @@ test("global action feedback is designed for every mutation class", () => {
 
 
 test("loading navigation actions cannot activate their href while busy", () => {
-  const button = read("components/Button.tsx");
+  const button = read("components/Button.tsx") + read("components/Button.module.css");
   assert.match(button, /isBusy.*preventDefault|preventDefault.*isBusy/s, "Busy links must block navigation activation");
   assert.match(button, /aria-disabled={isBusy/, "Busy links must expose disabled semantics");
 });

@@ -1,3 +1,4 @@
+import "@/components/ui/dashboard-foundation.css";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
@@ -36,7 +37,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   };
 
   return (
-    <div id="dashboard-theme-root" data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish} ${referenceFidelity.referenceFidelity}`}>
+    <div id="dashboard-theme-root" data-flux-ui data-dashboard-theme="dark" className={`${design.designSystem} ${enterprise.platform} ${desktop.desktopChrome} ${mobilePolish.mobilePolish} ${referenceFidelity.referenceFidelity}`}>
       <MobileNavigationProvider>
         <LeoConversationProvider>
           <MobileAdminHeader />

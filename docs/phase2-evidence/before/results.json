@@ -1,0 +1,223 @@
+{
+  "syntheticData": true,
+  "approvedVisualBaseline": false,
+  "phase": "before visual migration; navigation fixes started during capture, so final interaction results require a clean rerun",
+  "results": [
+    {
+      "title": "tenant general",
+      "width": 360,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-general-360.png"
+    },
+    {
+      "title": "tenant real-estate",
+      "width": 360,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-real-estate-360.png"
+    },
+    {
+      "title": "tenant photography-studio",
+      "width": 360,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-photography-studio-360.png"
+    },
+    {
+      "title": "tenant general",
+      "width": 430,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-general-430.png"
+    },
+    {
+      "title": "tenant real-estate",
+      "width": 430,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-real-estate-430.png"
+    },
+    {
+      "title": "tenant photography-studio",
+      "width": 430,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-photography-studio-430.png"
+    },
+    {
+      "title": "tenant photography-studio",
+      "width": 768,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-photography-studio-768.png"
+    },
+    {
+      "title": "tenant photography-studio",
+      "width": 1024,
+      "outcome": "unexpected",
+      "screenshot": "docs/phase2-evidence/before/tenant-photography-studio-1024.png"
+    },
+    {
+      "title": "admin /dashboard",
+      "width": 360,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-360.png"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "width": 360,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-clients-360.png"
+    },
+    {
+      "title": "tenant hotels",
+      "width": 360,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-hotels-360.png"
+    },
+    {
+      "title": "admin /dashboard",
+      "width": 430,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-430.png"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "width": 430,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-clients-430.png"
+    },
+    {
+      "title": "tenant hotels",
+      "width": 430,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-hotels-430.png"
+    },
+    {
+      "title": "admin /dashboard",
+      "width": 768,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-768.png"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "width": 768,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-clients-768.png"
+    },
+    {
+      "title": "tenant general",
+      "width": 768,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-general-768.png"
+    },
+    {
+      "title": "tenant real-estate",
+      "width": 768,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-real-estate-768.png"
+    },
+    {
+      "title": "tenant hotels",
+      "width": 768,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-hotels-768.png"
+    },
+    {
+      "title": "admin /dashboard",
+      "width": 1024,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-1024.png"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "width": 1024,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-clients-1024.png"
+    },
+    {
+      "title": "tenant general",
+      "width": 1024,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-general-1024.png"
+    },
+    {
+      "title": "tenant real-estate",
+      "width": 1024,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-real-estate-1024.png"
+    },
+    {
+      "title": "tenant hotels",
+      "width": 1024,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-hotels-1024.png"
+    },
+    {
+      "title": "admin /dashboard",
+      "width": 1440,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-1440.png"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "width": 1440,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-clients-1440.png"
+    },
+    {
+      "title": "tenant general",
+      "width": 1440,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-general-1440.png"
+    },
+    {
+      "title": "tenant real-estate",
+      "width": 1440,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-real-estate-1440.png"
+    },
+    {
+      "title": "tenant photography-studio",
+      "width": 1440,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-photography-studio-1440.png"
+    },
+    {
+      "title": "tenant hotels",
+      "width": 1440,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-hotels-1440.png"
+    },
+    {
+      "title": "admin /dashboard",
+      "width": 1920,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-1920.png"
+    },
+    {
+      "title": "admin /dashboard/clients",
+      "width": 1920,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/admin--dashboard-clients-1920.png"
+    },
+    {
+      "title": "tenant general",
+      "width": 1920,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-general-1920.png"
+    },
+    {
+      "title": "tenant real-estate",
+      "width": 1920,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-real-estate-1920.png"
+    },
+    {
+      "title": "tenant photography-studio",
+      "width": 1920,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-photography-studio-1920.png"
+    },
+    {
+      "title": "tenant hotels",
+      "width": 1920,
+      "outcome": "expected",
+      "screenshot": "docs/phase2-evidence/before/tenant-hotels-1920.png"
+    }
+  ]
+}
