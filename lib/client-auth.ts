@@ -17,7 +17,7 @@ const CLIENT_PASSWORD_RESET_TTL=60*10;
 const CLIENT_ADMIN_PREVIEW_COOKIE="fluxknight_admin_tenant_preview_v2";
 const CLIENT_ADMIN_PREVIEW_TTL=60*60;
 
-type SupabaseAuthUser={id:string;email?:string;user_metadata?:Record<string,unknown>};
+type SupabaseAuthUser={id:string;email?:string;email_confirmed_at?:string|null;user_metadata?:Record<string,unknown>};
 type SupabaseAuthResponse={access_token?:string;refresh_token?:string;expires_in?:number;user?:SupabaseAuthUser;error?:string;error_description?:string;msg?:string};
 export type ClientSession={userId:string;email:string;organizationId:string;organizationSlug:string;membershipId:string;role:string;issuedAt:number;isAdminPreview?:boolean};
 export type PendingClientSetupSession={userId:string;email:string;invitationToken?:string;nextPath?:string;txRef?:string;trialPlan?:""|"basic";issuedAt:number};
@@ -54,7 +54,7 @@ type SupabaseAdminUser={id:string;email?:string;user_metadata?:Record<string,unk
 type SupabaseAdminUsersResponse={users?:SupabaseAdminUser[]};
 
 async function adminAuthUsersRequest(path:string){
- const{url,anonKey,projectRef}=authConfig();
+ const{url,projectRef}=authConfig();
  const adminKey=(process.env.FLUXKNIGHT_SUPABASE_SERVICE_ROLE_KEY||process.env.LIMITLESS_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||"").trim();
  if(!adminKey) return null;
  try{

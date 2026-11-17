@@ -1,7 +1,12 @@
+import { clearAdminSession } from "@/lib/admin-auth";
+import { establishAccountSession, isVerifiedPlatformAdmin } from "@/lib/platform-admin-access";
+import { adminAuthDestination, isAdminPath } from "@/lib/auth-navigation";
 import { NextRequest, NextResponse } from "next/server";
 import { provisionClientOrganization } from "@/lib/client-onboarding";
 import {
   clientAccountExists,
+  clearClientSession,
+  clearPendingClientSetupSession,
   getMembershipForOrganization,
   getPendingClientSetupSession,
   getPrimaryMembership,
@@ -40,6 +45,20 @@ export async function POST(request: NextRequest) {
     const matchingPending = pending?.userId === auth.user.id ? pending : null;
     const invitationToken = String(body.invitation_token || matchingPending?.invitationToken || "").trim();
     const txRef = String(body.payment_tx_ref || matchingPending?.txRef || "").trim().slice(0, 200);
+
+    // Use the verified Auth identity, never a role/email supplied in the request.
+    const platformAdmin = await isVerifiedPlatformAdmin(auth.user);
+    await establishAccountSession(auth);
+    await clearAdminSession();
+    await clearClientSession();
+    if (platformAdmin && !invitationToken) {
+      await clearPendingClientSetupSession();
+      return NextResponse.json({ ok: true, redirect_to: adminAuthDestination(String(body.post_signup_path || "")) });
+    }
+    if (isAdminPath(String(body.post_signup_path || "")) && !platformAdmin) {
+      return NextResponse.json({ error: "This account does not have super-admin access." }, { status: 403 });
+    }
+
 
     // Resolve an explicit invitation before any primary-membership fallback.
     let membership;

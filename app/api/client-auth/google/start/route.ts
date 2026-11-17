@@ -1,9 +1,10 @@
+import { safeAuthPath } from "@/lib/auth-navigation";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { setClientOAuthContext } from "@/lib/client-auth";
 
 function safeNext(value:string|null){
-  return value&&value.startsWith("/")&&!value.startsWith("//")?value:"/portal";
+  return safeAuthPath(value);
 }
 
 export async function GET(request:NextRequest){

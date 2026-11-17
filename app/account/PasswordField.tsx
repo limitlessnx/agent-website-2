@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export default function PasswordField({
   name,
@@ -16,12 +16,14 @@ export default function PasswordField({
   required?:boolean;
 }){
   const [visible,setVisible]=useState(false);
+  const labelId=useId();
   return (
     <label className="auth-password-field">
-      <span>{label}</span>
+      <span id={labelId}>{label}</span>
       <span className="auth-password-control">
         <input
           name={name}
+          aria-labelledby={labelId}
           type={visible ? "text" : "password"}
           required={required}
           minLength={minLength}

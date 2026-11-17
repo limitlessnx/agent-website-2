@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { adminAuthDestination } from "@/lib/auth-navigation";
 import Link from "next/link";
 import { ArrowLeft } from "@/components/admin/ServerIcons";
 import { Suspense } from "react";
@@ -5,8 +7,9 @@ import LoginForm from "./LoginForm";
 
 export const metadata = { title: "Admin Login | Fluxknight" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; legacy?: string }> }) {
   const params = await searchParams;
+  if (params.legacy !== "1") redirect(`/account/login?next=${encodeURIComponent(adminAuthDestination(params.next))}`);
   return (
     <section className="admin-login-page">
       <Link

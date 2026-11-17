@@ -1,0 +1,66 @@
+{
+  "synthetic": true,
+  "productionWrites": false,
+  "results": [
+    {
+      "width": 360,
+      "normalAccountLogin": true,
+      "legacyPasswordRequired": false,
+      "tenantDenied": true,
+      "wrongPasswordDenied": true,
+      "roleRevocation": true,
+      "logoutDuringProviderOutage": true,
+      "documentWidth": 360
+    },
+    {
+      "width": 430,
+      "normalAccountLogin": true,
+      "legacyPasswordRequired": false,
+      "tenantDenied": true,
+      "wrongPasswordDenied": true,
+      "roleRevocation": true,
+      "logoutDuringProviderOutage": true,
+      "documentWidth": 430
+    },
+    {
+      "width": 768,
+      "normalAccountLogin": true,
+      "legacyPasswordRequired": false,
+      "tenantDenied": true,
+      "wrongPasswordDenied": true,
+      "roleRevocation": true,
+      "logoutDuringProviderOutage": true,
+      "documentWidth": 768
+    },
+    {
+      "width": 1024,
+      "normalAccountLogin": true,
+      "legacyPasswordRequired": false,
+      "tenantDenied": true,
+      "wrongPasswordDenied": true,
+      "roleRevocation": true,
+      "logoutDuringProviderOutage": true,
+      "documentWidth": 1024
+    },
+    {
+      "width": 1440,
+      "normalAccountLogin": true,
+      "legacyPasswordRequired": false,
+      "tenantDenied": true,
+      "wrongPasswordDenied": true,
+      "roleRevocation": true,
+      "logoutDuringProviderOutage": true,
+      "documentWidth": 1440
+    },
+    {
+      "width": 1920,
+      "normalAccountLogin": true,
+      "legacyPasswordRequired": false,
+      "tenantDenied": true,
+      "wrongPasswordDenied": true,
+      "roleRevocation": true,
+      "logoutDuringProviderOutage": true,
+      "documentWidth": 1920
+    }
+  ]
+}

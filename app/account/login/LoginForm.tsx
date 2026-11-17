@@ -1,18 +1,20 @@
 "use client";
 
+import { safeAuthPath, isAdminPath } from "@/lib/auth-navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import GoogleAuthButton from "../GoogleAuthButton";
 import PasswordField from "../PasswordField";
 
-export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invitationToken = "" }: { txRef?: string; nextPath?: string; invitationToken?: string }) {
+export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invitationToken = "", initialError = "" }: { txRef?: string; nextPath?: string; invitationToken?: string; initialError?: string }) {
   const router = useRouter();
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/portal";
+  const safeNext = safeAuthPath(nextPath);
+  const adminAccess = isAdminPath(safeNext);
   const signupUrl = new URL("/account/signup", "https://fluxknight.local");
   if (txRef) signupUrl.searchParams.set("tx_ref", txRef);
   signupUrl.searchParams.set("next", safeNext);
@@ -46,6 +48,12 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
         return;
       }
 
+      if (result.redirect_to) {
+        router.push(safeAuthPath(result.redirect_to));
+        router.refresh();
+        return;
+      }
+
       if (result.requires_workspace_setup) {
         router.push("/account/setup");
         return;
@@ -65,8 +73,8 @@ export default function ClientLoginForm({ txRef = "", nextPath = "/portal", invi
   return (
     <form onSubmit={submit} className="admin-login-card">
       <div>
-        <h1>Welcome back</h1>
-        <p className="admin-muted">Sign in to your Fluxknight account to continue.</p>
+        <h1>{adminAccess ? "Super-admin sign in" : "Welcome back"}</h1>
+        <p className="admin-muted">{adminAccess ? "Use your existing Fluxknight account. Administrator access must be approved." : "Sign in to your Fluxknight account to continue."}</p>
       </div>
       {txRef ? <p className="admin-form-message">Your payment is verified. Sign in to continue to onboarding.</p> : null}
       <GoogleAuthButton nextPath={safeNext} txRef={txRef} trialPlan="" invitationToken={invitationToken} />

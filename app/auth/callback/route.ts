@@ -1,7 +1,12 @@
+import { clearAdminSession } from "@/lib/admin-auth";
+import { isVerifiedPlatformAdmin } from "@/lib/platform-admin-access";
+import { safeAuthPath, adminAuthDestination, isAdminPath } from "@/lib/auth-navigation";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   clearClientOAuthContext,
+  clearClientSession,
+  clearPendingClientSetupSession,
   getClientAccountMode,
   getClientOAuthContext,
   getClientSession,
@@ -14,7 +19,7 @@ import {
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
 
 function safeNext(value:string|null|undefined){
-  return value&&value.startsWith("/")&&!value.startsWith("//")?value:"/portal";
+  return safeAuthPath(value);
 }
 
 function destination(origin:string,nextPath:string,txRef?:string,trialPlan?:string){
@@ -49,6 +54,21 @@ export async function GET(request:NextRequest){
     await supabase.auth.signOut();
     await clearClientOAuthContext().catch(()=>undefined);
     return NextResponse.redirect(new URL("/account/login?error=google_email",origin));
+  }
+
+  await clearAdminSession();
+  await clearClientSession();
+  let platformAdmin=false;
+  try { platformAdmin=await isVerifiedPlatformAdmin(data.user); }
+  catch { await clearClientOAuthContext().catch(()=>undefined); return NextResponse.redirect(new URL("/account/login?error=admin_access_unavailable&next=%2Fdashboard",origin)); }
+  if(platformAdmin&&!context?.invitationToken){
+    await clearPendingClientSetupSession();
+    await clearClientOAuthContext().catch(()=>undefined);
+    return NextResponse.redirect(new URL(adminAuthDestination(nextPath),origin));
+  }
+  if(isAdminPath(nextPath)&&!platformAdmin){
+    await clearClientOAuthContext().catch(()=>undefined);
+    return NextResponse.redirect(new URL("/account/login?error=admin_access_denied&next=%2Fdashboard",origin));
   }
 
   let membership:Awaited<ReturnType<typeof getPrimaryMembership>>=null;
