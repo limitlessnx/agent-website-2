@@ -1,0 +1,492 @@
+{
+  "synthetic": true,
+  "productionWrites": false,
+  "results": [
+    {
+      "name": "platform-settings",
+      "width": 360,
+      "status": 200,
+      "path": "/dashboard/settings",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "platform-integrations",
+      "width": 360,
+      "status": 200,
+      "path": "/dashboard/integrations",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 360,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "tenant-settings",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/settings",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "tenant-integrations",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/integrations",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "campaign-templates",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/campaigns",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 360,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "leo",
+      "width": 360,
+      "status": 200,
+      "path": "/dashboard/support",
+      "errors": [],
+      "documentWidth": 360,
+      "overflow": []
+    },
+    {
+      "name": "platform-settings",
+      "width": 430,
+      "status": 200,
+      "path": "/dashboard/settings",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "platform-integrations",
+      "width": 430,
+      "status": 200,
+      "path": "/dashboard/integrations",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 430,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "tenant-settings",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/settings",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "tenant-integrations",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/integrations",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "campaign-templates",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/campaigns",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 430,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "leo",
+      "width": 430,
+      "status": 200,
+      "path": "/dashboard/support",
+      "errors": [],
+      "documentWidth": 430,
+      "overflow": []
+    },
+    {
+      "name": "platform-settings",
+      "width": 768,
+      "status": 200,
+      "path": "/dashboard/settings",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "platform-integrations",
+      "width": 768,
+      "status": 200,
+      "path": "/dashboard/integrations",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 768,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "tenant-settings",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/settings",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "tenant-integrations",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/integrations",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "campaign-templates",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/campaigns",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 768,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "leo",
+      "width": 768,
+      "status": 200,
+      "path": "/dashboard/support",
+      "errors": [],
+      "documentWidth": 768,
+      "overflow": []
+    },
+    {
+      "name": "platform-settings",
+      "width": 1024,
+      "status": 200,
+      "path": "/dashboard/settings",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "platform-integrations",
+      "width": 1024,
+      "status": 200,
+      "path": "/dashboard/integrations",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 1024,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "tenant-settings",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/settings",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "tenant-integrations",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/integrations",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "campaign-templates",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/campaigns",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 1024,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "leo",
+      "width": 1024,
+      "status": 200,
+      "path": "/dashboard/support",
+      "errors": [],
+      "documentWidth": 1024,
+      "overflow": []
+    },
+    {
+      "name": "platform-settings",
+      "width": 1440,
+      "status": 200,
+      "path": "/dashboard/settings",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "platform-integrations",
+      "width": 1440,
+      "status": 200,
+      "path": "/dashboard/integrations",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 1440,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "tenant-settings",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/settings",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "tenant-integrations",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/integrations",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "campaign-templates",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/campaigns",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 1440,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "leo",
+      "width": 1440,
+      "status": 200,
+      "path": "/dashboard/support",
+      "errors": [],
+      "documentWidth": 1440,
+      "overflow": []
+    },
+    {
+      "name": "platform-settings",
+      "width": 1920,
+      "status": 200,
+      "path": "/dashboard/settings",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "platform-integrations",
+      "width": 1920,
+      "status": 200,
+      "path": "/dashboard/integrations",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "platform-billing",
+      "width": 1920,
+      "status": 200,
+      "path": "/dashboard/billing",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "tenant-settings",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/settings",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "tenant-integrations",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/integrations",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "tenant-billing",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/billing",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "campaign-templates",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/campaigns",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "tenant-agents",
+      "width": 1920,
+      "status": 200,
+      "path": "/portal/systems",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    },
+    {
+      "name": "leo",
+      "width": 1920,
+      "status": 200,
+      "path": "/dashboard/support",
+      "errors": [],
+      "documentWidth": 1920,
+      "overflow": []
+    }
+  ]
+}

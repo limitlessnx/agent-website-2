@@ -1,0 +1,7 @@
+  ✓  1 [chromium-360] › tests/ui-motion/settings-motion.spec.ts:57:1 › workflow outage stays visible without blocking unrelated settings (7.8s)
+  ✓  2 [chromium-430] › tests/ui-motion/settings-motion.spec.ts:57:1 › workflow outage stays visible without blocking unrelated settings (4.1s)
+  ✓  3 [chromium-768] › tests/ui-motion/settings-motion.spec.ts:57:1 › workflow outage stays visible without blocking unrelated settings (3.6s)
+  ✓  4 [chromium-1024] › tests/ui-motion/settings-motion.spec.ts:57:1 › workflow outage stays visible without blocking unrelated settings (6.2s)
+  ✓  5 [chromium-1440] › tests/ui-motion/settings-motion.spec.ts:57:1 › workflow outage stays visible without blocking unrelated settings (5.4s)
+  ✓  6 [chromium-1920] › tests/ui-motion/settings-motion.spec.ts:57:1 › workflow outage stays visible without blocking unrelated settings (5.7s)
+  6 passed (47.3s)
