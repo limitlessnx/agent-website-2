@@ -15,8 +15,9 @@ function authorized(request: NextRequest) {
   const secret = process.env.ELEVENLABS_MAIA_TOOL_SECRET?.trim();
   if (!secret || secret.length < 32) return false;
   const supplied = request.headers.get("authorization") || "";
-  if (!supplied.startsWith("Bearer ")) return false;
-  const token = supplied.slice("Bearer ".length);
+  // ElevenLabs may send a workspace Secret as the full Authorization value.
+  // Support both that raw value and the standard Bearer scheme during this pilot.
+  const token = supplied.startsWith("Bearer ") ? supplied.slice("Bearer ".length) : supplied;
   const expected = Buffer.from(secret);
   const received = Buffer.from(token);
   return received.length === expected.length && timingSafeEqual(received, expected);
