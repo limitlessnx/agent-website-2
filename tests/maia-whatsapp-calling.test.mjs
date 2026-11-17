@@ -68,3 +68,9 @@ test("Maia voice sideband records tenant-scoped startup, audio and early termina
   assert.match(sideband, /closed before audio output/);
   assert.match(webhook, /taskRunId: sidebandRun\.id/);
 });
+
+
+test("Maia GA Realtime sideband does not send the legacy beta protocol header", () => {
+  assert.match(sideband, /wss:\/\/api\.openai\.com\/v1\/realtime\?call_id=/);
+  assert.doesNotMatch(sideband, /OpenAI-Beta.*realtime=v1/);
+});
