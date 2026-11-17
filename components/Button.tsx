@@ -60,9 +60,15 @@ function ActionContent({
 }) {
   return (
     <span className={buttonStyles.content}>
-      <span data-hidden={loading} aria-hidden={loading || undefined}>{children}</span>
+      <span data-hidden={loading} aria-hidden={loading || undefined}>
+        {children}
+      </span>
       <span data-hidden={!loading} aria-hidden={!loading || undefined}>
-        <span className="fk-action-spinner" aria-hidden="true" style={loading ? undefined : { animation: "none" }} />
+        <span
+          className="fk-action-spinner"
+          aria-hidden="true"
+          style={loading ? undefined : { animation: "none" }}
+        />
         {label}
       </span>
     </span>
@@ -102,7 +108,9 @@ export default function Button({
           if (isBusy) e.preventDefault();
         }}
       >
-        <ActionContent loading={loading} label={label}>{children}</ActionContent>
+        <ActionContent loading={loading} label={label}>
+          {children}
+        </ActionContent>
       </Link>
     );
   }
@@ -119,7 +127,9 @@ export default function Button({
       data-variant={variant}
       data-full-width={fullWidth || undefined}
     >
-      <ActionContent loading={loading} label={label}>{children}</ActionContent>
+      <ActionContent loading={loading} label={label}>
+        {children}
+      </ActionContent>
     </button>
   );
 }

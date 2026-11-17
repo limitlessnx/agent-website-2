@@ -1,9 +1,61 @@
-.nav{display:none}
-@media(max-width:900px){
-  .nav{position:fixed;z-index:75;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:64px;padding:4px;border:1px solid var(--fk-border);border-radius:16px;background:color-mix(in srgb,var(--fk-surface) 96%,transparent);box-shadow:var(--fk-shadow);backdrop-filter:blur(8px)}
-  .nav a,.nav button{display:flex;min-width:0;min-height:52px;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;border-radius:11px;color:var(--fk-text-muted);background:transparent;text-decoration:none;font:inherit;font-size:11px;font-weight:600;line-height:1.2;cursor:pointer;touch-action:manipulation}
-  .nav a svg,.nav button svg{width:19px;height:19px}
-  .nav a.active,.nav button.active{color:var(--fk-text);background:var(--fk-brand-soft)}
-  .nav a.active svg,.nav button.active svg{color:var(--fk-metallic)}
-  .nav span{max-width:100%;overflow-wrap:normal;white-space:nowrap}
+.nav {
+  display: none;
+}
+@media (max-width: 900px) {
+  .nav {
+    position: fixed;
+    z-index: 75;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: 64px;
+    padding: 4px;
+    border: 1px solid var(--fk-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--fk-surface) 96%, transparent);
+    box-shadow: var(--fk-shadow);
+    backdrop-filter: blur(8px);
+  }
+  .nav a,
+  .nav button {
+    display: flex;
+    min-width: 0;
+    min-height: 52px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 0;
+    border-radius: 11px;
+    color: var(--fk-text-muted);
+    background: transparent;
+    text-decoration: none;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .nav a svg,
+  .nav button svg {
+    width: 19px;
+    height: 19px;
+  }
+  .nav a.active,
+  .nav button.active {
+    color: var(--fk-text);
+    background: var(--fk-brand-soft);
+  }
+  .nav a.active svg,
+  .nav button.active svg {
+    color: var(--fk-metallic);
+  }
+  .nav span {
+    max-width: 100%;
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
 }

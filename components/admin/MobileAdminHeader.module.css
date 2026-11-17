@@ -1,14 +1,93 @@
-.header{display:none}
-@media(max-width:900px){
-  .header{position:fixed;inset:0 0 auto;z-index:1101;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;height:64px;padding:8px 12px;background:var(--fk-canvas);border-bottom:1px solid var(--fk-border)}
-  .brandGroup{display:flex;align-items:center;gap:8px;min-width:0}
-  .menuButton,.iconButton,.avatar{display:grid;place-items:center;width:44px;height:44px;flex:0 0 auto;border:1px solid var(--fk-border);border-radius:12px;color:var(--fk-text-secondary);background:var(--fk-surface);padding:0;text-decoration:none;touch-action:manipulation}
-  .menuButton{border-color:transparent;background:transparent}
-  .logo{display:flex;align-items:center;gap:7px;width:auto;max-width:136px;min-width:0;color:var(--fk-text);font-size:11px;font-weight:700;text-decoration:none}
-  .label{min-width:0;line-height:1.3}
-  .logoMark{display:grid;place-items:center;width:27px;height:27px;flex-shrink:0;border-radius:8px;color:white;background:var(--fk-brand-strong);font-size:13px;font-weight:800}
-  .actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-  .iconButton:active,.avatar:active{background:var(--fk-surface-hover)}
-  .avatar{border-radius:999px;color:white;background:var(--fk-brand)}
-  .avatar span{font-size:12px;font-weight:700;line-height:1}
+.header {
+  display: none;
+}
+@media (max-width: 900px) {
+  .header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 1101;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    height: 64px;
+    padding: 8px 12px;
+    background: var(--fk-canvas);
+    border-bottom: 1px solid var(--fk-border);
+  }
+  .brandGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .menuButton,
+  .iconButton,
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    border: 1px solid var(--fk-border);
+    border-radius: 12px;
+    color: var(--fk-text-secondary);
+    background: var(--fk-surface);
+    padding: 0;
+    text-decoration: none;
+    touch-action: manipulation;
+  }
+  .menuButton {
+    border-color: transparent;
+    background: transparent;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: auto;
+    max-width: 136px;
+    min-width: 0;
+    color: var(--fk-text);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .label {
+    min-width: 0;
+    line-height: 1.3;
+  }
+  .logoMark {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    color: white;
+    background: var(--fk-brand-strong);
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .iconButton:active,
+  .avatar:active {
+    background: var(--fk-surface-hover);
+  }
+  .avatar {
+    border-radius: 999px;
+    color: white;
+    background: var(--fk-brand);
+  }
+  .avatar span {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
 }

@@ -1,0 +1,2 @@
+/* Hide only Next.js development tooling, which is absent in deployed production. */
+nextjs-portal { display: none !important; }

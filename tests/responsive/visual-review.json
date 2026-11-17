@@ -1,0 +1,7 @@
+{
+  "status": "awaiting-review",
+  "reviewer": null,
+  "scope": "Synthetic local fixtures only. No production customer records.",
+  "reference": "12ui candidate B and matching multi-state exports",
+  "note": "Before captures are audit evidence, not baselines. Register after captures only after checking the rendered output. Stakeholder signoff remains part of PR review."
+}

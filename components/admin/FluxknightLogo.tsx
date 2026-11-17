@@ -1,6 +1,9 @@
-import type { SVGProps } from "react";
+"use client";
+
+import { useId, type SVGProps } from "react";
 
 export default function FluxknightLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
+  const prefix = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   return (
     <svg
       className={className}
@@ -12,21 +15,21 @@ export default function FluxknightLogo({ className, ...props }: SVGProps<SVGSVGE
       {...props}
     >
       <defs>
-        <linearGradient id="fluxknight-mark-light" x1="10" y1="8" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+        <linearGradient id={`${prefix}-fluxknight-mark-light`} x1="10" y1="8" x2="54" y2="54" gradientUnits="userSpaceOnUse">
           <stop stopColor="#FFFFFF" />
           <stop offset="1" stopColor="#D9D2EA" />
         </linearGradient>
-        <linearGradient id="fluxknight-mark-violet" x1="34" y1="18" x2="72" y2="58" gradientUnits="userSpaceOnUse">
+        <linearGradient id={`${prefix}-fluxknight-mark-violet`} x1="34" y1="18" x2="72" y2="58" gradientUnits="userSpaceOnUse">
           <stop stopColor="#7C3AED" />
           <stop offset="0.48" stopColor="#A855F7" />
           <stop offset="1" stopColor="#C084FC" />
         </linearGradient>
-        <linearGradient id="fluxknight-x" x1="144" y1="20" x2="165" y2="44" gradientUnits="userSpaceOnUse">
+        <linearGradient id={`${prefix}-fluxknight-x`} x1="144" y1="20" x2="165" y2="44" gradientUnits="userSpaceOnUse">
           <stop stopColor="#C084FC" />
           <stop offset="0.52" stopColor="#A855F7" />
           <stop offset="1" stopColor="#7C3AED" />
         </linearGradient>
-        <filter id="fluxknight-glow" x="-40%" y="-40%" width="180%" height="180%">
+        <filter id={`${prefix}-fluxknight-glow`} x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="2.4" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
@@ -36,13 +39,13 @@ export default function FluxknightLogo({ className, ...props }: SVGProps<SVGSVGE
       </defs>
 
       <g aria-hidden="true">
-        <path d="M18 45.5L39.5 10H57L35.5 45.5H18Z" fill="url(#fluxknight-mark-light)" />
-        <path d="M39 55L60.5 19.5H78L56.5 55H39Z" fill="url(#fluxknight-mark-violet)" filter="url(#fluxknight-glow)" />
+        <path d="M18 45.5L39.5 10H57L35.5 45.5H18Z" fill={`url(#${prefix}-fluxknight-mark-light)`} />
+        <path d="M39 55L60.5 19.5H78L56.5 55H39Z" fill={`url(#${prefix}-fluxknight-mark-violet)`} filter={`url(#${prefix}-fluxknight-glow)`} />
       </g>
 
       <g fontFamily="Inter, Arial, Helvetica, sans-serif" fontSize="27" fontWeight="600" letterSpacing="1.9">
         <text x="88" y="41" fill="currentColor">FLU</text>
-        <text x="143" y="41" fill="url(#fluxknight-x)" filter="url(#fluxknight-glow)">X</text>
+        <text x="143" y="41" fill={`url(#${prefix}-fluxknight-x)`} filter={`url(#${prefix}-fluxknight-glow)`}>X</text>
         <text x="157" y="41" fill="currentColor">KNIGHT</text>
       </g>
     </svg>
