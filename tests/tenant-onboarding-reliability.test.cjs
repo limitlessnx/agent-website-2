@@ -113,7 +113,7 @@ test('readiness reads are tenant scoped and database errors fail closed', async(
   const api=load(path.join(root,'lib/tenant-readiness-server.ts'),{
     '@/lib/supabase/admin':{createAdminClient:()=>admin},
     '@/lib/organization-package-service':{getOrganizationPackageSnapshot:async id=>{assert.equal(id,ORG);return {packageEntitlements:[],organizationOverrides:[]}}},
-    '@/lib/tenant-readiness':evaluate,
+    '@/lib/tenant-readiness':evaluate,'@/lib/hotel-inventory-readiness':{getHotelInventoryReadiness:async()=>{throw Error('Hotel not expected in this fixture')}},
   });
   const result=await api.getTenantReadiness(ORG);
   assert.equal(result.stage,'needs_attention');assert.ok(result.blockers.some(c=>c.key==='evidence'));

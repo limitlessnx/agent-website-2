@@ -1,3 +1,4 @@
+import { getIndustryExperience } from "@/lib/industryExperience";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { getClientSession } from "@/lib/client-auth";
@@ -17,6 +18,12 @@ export type XposureTenantAuthorization =
   | { ok: true; organizationId: string; actorUserId: string | null; authMode: "platform-admin" | "organization-member" }
   | { ok: false; response: NextResponse };
 
+export function isPhotographyOrganization(organization: { slug: string; status: string; metadata?: Record<string, unknown> | null }) {
+  if (organization.status !== "active") return false;
+  if (organization.slug === "xposure") return true;
+  return getIndustryExperience(String(organization.metadata?.industry_slug || organization.metadata?.industry || "")).slug === "photography-studio";
+}
+
 function denied(message: string, status: number): XposureTenantAuthorization {
   return { ok: false, response: NextResponse.json({ error: message }, { status }) };
 }
@@ -32,12 +39,12 @@ export async function authorizeXposureTenantAccess(
   const session = await getClientSession().catch(() => null);
   if (session) {
     try {
-      const organizations = await supabaseServerRequest<Array<{ id: string; slug: string; status: string }>>(
-        `organizations?id=eq.${encodeURIComponent(session.organizationId)}&select=id,slug,status&limit=1`,
+      const organizations = await supabaseServerRequest<Array<{ id: string; slug: string; status: string; metadata?: Record<string, unknown> | null }>>(
+        `organizations?id=eq.${encodeURIComponent(session.organizationId)}&select=id,slug,status,metadata&limit=1`,
       );
       const organization = organizations[0];
-      if (!organization || organization.status !== "active" || organization.slug !== "xposure") {
-        return denied("An active Xposure organization membership is required.", 403);
+      if (!organization || organization.status !== "active" || !isPhotographyOrganization(organization)) {
+        return denied("An active Photography organization membership is required.", 403);
       }
       await requirePortalPermission(session, [permission]);
       return {
@@ -49,7 +56,7 @@ export async function authorizeXposureTenantAccess(
     } catch (error) {
       return denied(
         error instanceof Error && error.message.toLowerCase().includes("permission")
-          ? "You do not have permission to perform this action in Xposure Studios."
+          ? "You do not have permission to perform this action in this studio."
           : "Unable to verify organization permissions.",
         403,
       );
@@ -61,8 +68,12 @@ export async function authorizeXposureTenantAccess(
   if (scope.status !== "active" || scope.organizationId.startsWith("unavailable:")) {
     return denied("Active organization context is required.", 403);
   }
-  if (scope.kind !== "tenant" || scope.slug !== "xposure") {
-    return denied("Switch to the Xposure organization before managing studio data.", 403);
+  if (scope.kind !== "tenant") return denied("Switch to a Photography tenant before managing studio data.", 403);
+  const organizations = await supabaseServerRequest<Array<{ id: string; slug: string; status: string; metadata?: Record<string, unknown> | null }>>(
+    `organizations?id=eq.${encodeURIComponent(scope.organizationId)}&select=id,slug,status,metadata&limit=1`,
+  ).catch(() => []);
+  if (!organizations[0] || !isPhotographyOrganization(organizations[0])) {
+    return denied("An active Photography organization is required.", 403);
   }
   return { ok: true, organizationId: scope.organizationId, actorUserId: null, authMode: "platform-admin" };
 }

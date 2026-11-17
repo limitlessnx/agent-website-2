@@ -167,8 +167,8 @@ const EXPERIENCES: Record<string, IndustryExperience> = {
 };
 
 export function getIndustryExperience(industry?: string | null): IndustryExperience {
-  const key=String(industry || "").trim().toLowerCase();
-  return EXPERIENCES[["hotel","hospitality"].includes(key)?"hotels":key] || DEFAULT_EXPERIENCE;
+  const key=String(industry || "").trim().toLowerCase().replace(/[ _]+/g,"-");
+  return EXPERIENCES[["hotel","hospitality"].includes(key)?"hotels":key==="photography"?"photography-studio":key] || DEFAULT_EXPERIENCE;
 }
 
 

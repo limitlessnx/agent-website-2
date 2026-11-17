@@ -69,3 +69,17 @@ Readiness is a conservative report. Existing activation gates remain authoritati
 Hotel/Photography starter templates are absent from the live legacy template catalog, and the existing hotel inventory-readiness RPC is not installed. Those prerequisites still need a concrete reviewed rollout. Configuration changes outside agent rows may require rerunning tests even when the agent timestamp is unchanged. Ambiguous remote creates and interrupted real-worker claims still require verified administrator reconciliation; claims are not automatically stolen.
 
 Hosted visual rendering is now verified at the required widths. The separately requested 12ui/iOS-style visual refinement remains incomplete because approval to share the design brief with that external service was not received. Full production application release, merge and activation remain unapproved. The PR stays draft.
+
+## 17 November follow-up verification
+
+Fresh main remains `967f2821`. The Phase 2 preflight found and corrected additional Phase 1 compatibility gaps:
+
+- Hotel setup and readiness now reuse one inventory reader. It retains the existing RPC when available and uses paginated, tenant-filtered reads only for a missing-function response. Permission/database errors fail closed. No migration is required.
+- Photography API authorization now accepts active Photography organizations based on database industry metadata, preserves Xposure compatibility, and still checks member permissions or the separately authenticated platform-admin tenant scope. Runtime tests reject unrelated tenants, forged scope slugs and insufficient permissions.
+- Industry labels such as “Real Estate” and “Photography Studio” resolve to the existing industry workspace instead of the generic dashboard.
+- New studios no longer inherit the Xposure catalogue sample counts or heading. The existing Xposure fallback remains intact.
+- `industry-template-registration.sql` prepares empty Photography and Hotel starter definitions, replay-safe and without copying customer content. It has only been tested locally in PGlite. It has **not been executed against production** and requires explicit production-change approval.
+
+Verification: support 67/67 files; Hotel setup 11/11; focused Photography catalogue/authorization/campaign checks 5/5; added runtime authorization, pagination, industry alias and local SQL replay tests pass; TypeScript and focused ESLint pass. A broader Photography check found two existing failing test files (outdated campaign copy assertion and missing historical migration filename), both reproduced on untouched main. These are not reported as passes.
+
+The current environment blocks Turbopack's local worker port (`Operation not permitted`) even after requesting additional permissions. The new follow-up build is therefore **blocked**, not passed; earlier successful builds and hosted screenshots apply to the earlier commits only. No new hosted visual verification is claimed for these follow-ups. Phase 2 starts with the documented audit in `docs/phase2-audit.md`, preserving this distinction.

@@ -1,3 +1,4 @@
+import {getHotelInventoryReadiness} from "@/lib/hotel-inventory-readiness";
 import {getClientSession} from "@/lib/client-auth";
 import {requirePortalPermission} from "@/lib/portal-access";
 import {requireHotelOrganization} from "@/lib/hotel-communications";
@@ -20,7 +21,7 @@ export async function loadHotelSetup(org:string,permissions:Set<string>,preview=
   const defaults=Object.fromEntries(Object.keys(HOTEL_SETUP_FIELDS).map(key=>[key,""])) as HotelSetupValues;
   const values={...defaults,...Object.fromEntries(Object.entries(profile.data||{}).filter(([key])=>key in defaults).map(([key,value])=>[key,typeof value==="string"?value:""])),escalation_name:profile.data?.human_contact_name||"",escalation_email:profile.data?.human_contact_email||"",...(settings.data?.values||{})} as HotelSetupValues;
   const canViewInventory=permissions.has("customers.view")||permissions.has("customers.manage");
-  const inventoryResult=canViewInventory?await admin.rpc("hotel_tenant_inventory_readiness",{p_organization_id:org}):{data:null,error:null};check(inventoryResult.error);
+  const inventoryResult=canViewInventory?{data:await getHotelInventoryReadiness(org,admin),error:null}:{data:null,error:null};check(inventoryResult.error);
   const inventory=inventoryResult.data as HotelInventoryReadiness|null;
   const checks:HotelSetupData["checks"]=[{key:"profile",required:true,group:"basics",href:"#hotel-business",label:"Hotel information",state:values.business_name&&values.address&&values.timezone&&values.currency?"ready":"attention",detail:"Name, address, time zone and default currency."},{key:"policies",required:true,group:"basics",href:"#hotel-policies",label:"Guest policies",state:values.check_in&&values.check_out&&values.cancellation_policy&&values.inclusions?"ready":"attention",detail:"Check-in/out, cancellation terms and inclusions shared with guests."},{key:"escalation",required:true,group:"basics",label:"Escalation contact",state:values.escalation_name&&(values.escalation_email||values.escalation_phone)?"ready":"attention",detail:"Private contact details. Configure actual handoff assignments in Settings.",href:"#hotel-escalation"}];
   checks.push({key:"inventory",required:true,group:"basics",label:"Room inventory",state:!inventory?"unverified":inventory.activeRooms>0?"ready":"attention",detail:inventory?`${inventory.roomTypes} room types and ${inventory.activeRooms} active physical rooms in this hotel. Add capacity, prices and individual rooms before taking reservations.`:"A guest-record manager must review this hotel's room inventory.",href:canViewInventory?"/portal/hotel?tab=rooms":undefined});

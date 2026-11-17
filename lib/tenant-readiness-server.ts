@@ -1,3 +1,4 @@
+import { getHotelInventoryReadiness } from "@/lib/hotel-inventory-readiness";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrganizationPackageSnapshot } from "@/lib/organization-package-service";
 import { evaluateTenantReadiness, type ReadinessCheck } from "@/lib/tenant-readiness";
@@ -44,9 +45,7 @@ export async function getTenantReadiness(organizationId: string) {
   let catalogRequired = false;
   if (industry.includes("hotel")) {
     catalogRequired = true;
-    const inventory = await admin.rpc("hotel_tenant_inventory_readiness", { p_organization_id: organizationId });
-    if (inventory.error) unavailable = true;
-    const value = inventory.data as { activeRoomTypes?: number; unpublishedRoomTypes?: number; activeRooms?: number } | null;
+    const value = await getHotelInventoryReadiness(organizationId, admin).catch(() => { unavailable = true; return null; });
     catalogReady = Boolean(value && Number(value.activeRoomTypes) > 0 && Number(value.activeRooms) > 0 && value.unpublishedRoomTypes === 0);
   } else if (industry.includes("photography") || industry.includes("real-estate") || industry.includes("real estate")) {
     catalogRequired = true;
