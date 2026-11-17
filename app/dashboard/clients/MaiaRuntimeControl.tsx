@@ -15,6 +15,8 @@ const defaultProfile: Profile = { enabled: true, autonomy_mode: "autonomous", ma
 
 export default function MaiaRuntimeControl({ organizationId, agentId, agentName }: Props) {
   const [profile, setProfile] = useState<Profile>(defaultProfile);
+  const [savedProfile, setSavedProfile] = useState<Profile>(defaultProfile);
+  const dirty = (["enabled", "autonomy_mode", "max_steps", "model_strategy", "memory_enabled"] as const).some(key => profile[key] !== savedProfile[key]);
   const [models, setModels] = useState<Model[]>([]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,7 +36,8 @@ export default function MaiaRuntimeControl({ organizationId, agentId, agentName 
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || "Unable to load agentic runtime.");
         if (!active) return;
-        setProfile({ ...defaultProfile, ...(result.profile || {}) });
+        const loaded = { ...defaultProfile, ...(result.profile || {}) };
+        setProfile(loaded); setSavedProfile(loaded);
         setModels(result.models || []); setHasProfile(Boolean(result.profile)); setLoadFailed(false); setFeedbackState("idle");
       } catch (error) {
         if (active) { setLoadFailed(true); setFeedbackState("error"); setMessage(error instanceof Error ? error.message : "Unable to load agentic runtime."); }
@@ -50,7 +53,7 @@ export default function MaiaRuntimeControl({ organizationId, agentId, agentName 
       const response = await fetch("/api/admin/maia-runtime", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ organizationId, agentId, enabled: profile.enabled, autonomyMode: profile.autonomy_mode, maxSteps: profile.max_steps, modelStrategy: profile.model_strategy, memoryEnabled: profile.memory_enabled, toolPolicy: profile.tool_policy }) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Unable to save agentic runtime.");
-      setProfile(result.profile); setHasProfile(true); setFeedbackState("completed");
+      setProfile(result.profile); setSavedProfile(result.profile); setHasProfile(true); setFeedbackState("completed");
       setMessage(`${agentName} agentic runtime saved.`);
     } catch (error) { setFeedbackState("error"); setMessage(error instanceof Error ? error.message : "Unable to save agentic runtime."); }
     finally { setSaving(false); }
@@ -61,14 +64,14 @@ export default function MaiaRuntimeControl({ organizationId, agentId, agentName 
 
   return (
     <div className="maia-runtime-controls" style={{ display: "grid", gap: 14 }} onChange={() => setFeedbackState("idle")}>
-      <AIPresence state={feedbackState} name={agentName} label={saving ? "Saving runtime settings" : feedbackState === "completed" ? "Runtime settings saved" : feedbackState === "error" ? "Settings could not be saved" : !hasProfile ? "Default runtime configuration" : profile.enabled ? "Runtime enabled in configuration" : "Runtime disabled in configuration"} />
+      <AIPresence state={feedbackState} name={agentName} label={saving ? "Saving runtime settings" : feedbackState === "completed" ? "Runtime settings saved" : feedbackState === "error" ? "Settings could not be saved" : dirty ? "Unsaved runtime settings" : !hasProfile ? "Default runtime configuration" : profile.enabled ? "Runtime enabled in configuration" : "Runtime disabled in configuration"} />
       <div className="admin-list-row" style={{ alignItems: "flex-start" }}>
         <BrainCircuit size={18} />
         <div style={{ flex: 1 }}>
           <strong>{agentName} · Agentic Intelligence</strong>
           <span>Models, memory, tools and autonomous execution are selected by the runtime. You do not configure Supabase, n8n or platform API credentials here.</span>
         </div>
-        <em className={profile.enabled ? "good" : "muted"}>{!hasProfile ? "defaults" : profile.enabled ? "enabled" : "paused"}</em>
+        <em className={profile.enabled ? "good" : "muted"}>{dirty ? "unsaved changes" : !hasProfile ? "defaults" : profile.enabled ? "enabled" : "paused"}</em>
       </div>
 
       <div className="admin-form-grid">
