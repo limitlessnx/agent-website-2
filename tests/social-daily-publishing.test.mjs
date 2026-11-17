@@ -93,3 +93,12 @@ test('competing schedule claims cannot dispatch the same slot twice',async()=>{
   const result=await service.runDailyPublishing(db,new Date('2026-11-17T17:00:00Z'),false,async(id)=>sent.push(id));
   assert.equal(result.reason,'already_claimed');assert.equal(sent.length,0);
 });
+test('manually changing an automatic date preserves its delivery and approval metadata',async()=>{
+ const db=setup();await service.runDailyPublishing(db,morning,true,async()=>{});
+ const social=load('lib/social.ts',{'@/lib/tenant':{requireTenant:async()=>({supabase:db,organizationId:policy.DAILY_ORGANIZATION})}});
+ await social.scheduleSocialPost({postId:'post-1',scheduledFor:'2026-12-01T17:00:00Z',timezone:'Africa/Lagos',platforms:['instagram']});
+ const schedule=db.tables.social_schedules.find((slot)=>slot.post_id==='post-1');
+ assert.equal(schedule.metadata.source,policy.DAILY_SOURCE);assert.equal(schedule.metadata.manual_schedule_override,true);
+ assert.equal(schedule.metadata.approval_snapshot,db.tables.social_posts[0].approved_at);
+ assert.equal(schedule.scheduled_for,'2026-12-01T17:00:00.000Z');
+});
