@@ -5,7 +5,7 @@ import WebSocket from "ws";
 import { maiaEstateTools } from "@/lib/ai/maia-estate-tools";
 import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
-import { terminateMaiaWhatsAppCall } from "@/lib/maia-whatsapp-calling";
+
 
 type Json = Record<string, unknown>;
 
@@ -267,17 +267,18 @@ async function runSideband(input: MaiaSidebandPayload) {
   }
   throw new Error("Maia voice sideband attachment retries were exhausted.");
   } catch (error) {
-    await auditSideband(input, "failed", { error_type: error instanceof Error ? error.name : "unknown" });
-    try {
-      await terminateMaiaWhatsAppCall({ organizationId: input.organizationId, phoneNumberId: input.phoneNumberId, callId: input.metaCallId });
-      logger.warn("Maia WhatsApp call terminated after sideband failure", { callId: input.metaCallId });
-    } catch (terminationError) {
-      logger.error("Maia WhatsApp call termination failed after sideband failure", {
-        callId: input.metaCallId,
-        errorType: terminationError instanceof Error ? terminationError.name : "unknown",
-        errorMessage: terminationError instanceof Error ? terminationError.message.slice(0, 500) : "Unknown termination failure",
-      });
-    }
+    // The primary WhatsApp/OpenAI WebRTC media session was already accepted.
+    // A secondary observability/tools sideband failure does not prove that
+    // the media session is dead. Do not hang up the customer's live call.
+    await auditSideband(input, "failed", {
+      error_type: error instanceof Error ? error.name : "unknown",
+      media_session_preserved: true,
+    });
+    logger.error("Maia voice sideband failed; preserving accepted WhatsApp call", {
+      callId: input.metaCallId,
+      errorType: error instanceof Error ? error.name : "unknown",
+      errorMessage: error instanceof Error ? error.message.slice(0, 300) : "Unknown sideband error",
+    });
     throw error;
   }
 }
