@@ -1,0 +1,45 @@
+name: Maia Sideband Incident Probe
+on:
+  push:
+    branches:
+      - fix/maia-voice-sideband-lifecycle-diagnostics
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Trigger.dev run statuses without printing payloads or secrets
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: |
+          node --input-type=module <<'NODE'
+          const token = process.env.TRIGGER_ACCESS_TOKEN || "";
+          if (!token) { console.error("Trigger token not configured for this workflow"); process.exit(1); }
+          const base = token.startsWith("tr_pat_") ? "https://api.trigger.dev/api/v1/projects/proj_ckweruqrgwndssqpjdvg/runs" : "https://api.trigger.dev/api/v1/runs";
+          const u = new URL(base);
+          u.searchParams.set("filter[taskIdentifier]", "maia-whatsapp-call-sideband");
+          u.searchParams.set("filter[createdAt.from]", "2026-11-17T20:50:00Z");
+          u.searchParams.set("page[size]", "30");
+          const response = await fetch(u, { headers: { Authorization: "Bearer " + token, Accept: "application/json" } });
+          console.log("Trigger runs API status:", response.status);
+          if (!response.ok) { process.exit(1); }
+          const payload = await response.json();
+          const rows = payload.data || payload.runs || payload.items || [];
+          console.log("Matching runs:", rows.length);
+          const redact = (s) => String(s || "").replace(/wacid\.[A-Za-z0-9_+\/=.-]+/g, "[call-id]").replace(/\+?\d{9,}/g,"[digits]").replace(/(sk|tr)_[A-Za-z0-9_-]{12,}/gi,"[secret]").slice(0,500);
+          for(const item of rows.slice(0,10)) {
+            const id = item.id || item.runId;
+            console.log("RUN", id, "status", item.status, "created", item.createdAt || item.created_at, "started", item.startedAt || "");
+            if (!id) continue;
+            const detailUrl = "https://api.trigger.dev/api/v1/runs/" + encodeURIComponent(id);
+            const detailResponse = await fetch(detailUrl,{headers:{Authorization:"Bearer "+token,Accept:"application/json"}});
+            if(!detailResponse.ok){console.log("DETAIL_STATUS", detailResponse.status);continue;}
+            const d=await detailResponse.json();
+            const attemptList=Array.isArray(d.attempts)?d.attempts:[];
+            for(const a of attemptList.slice(-3)) {
+              console.log("ATTEMPT", a.status || "", "errorType",redact(a.error?.name||a.error?.type||""),"errorMessage",redact(a.error?.message||a.error||""));
+            }
+          }
+          
+          NODE
