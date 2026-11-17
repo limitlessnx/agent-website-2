@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-import { configure, tasks, runs } from "@trigger.dev/sdk";
+import { configure, tasks, runs, schedules } from "@trigger.dev/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { metaPublisherConfigFromIntegration } from "../lib/social-meta-publisher.ts";
 
@@ -30,6 +30,14 @@ assert.ok(connectedResponse.ok, `Instagram connection check failed: ${connectedR
 const connected = await connectedResponse.json();
 assert.equal(connected.username, "fluxknight.space");
 configure({ secretKey: environment.apiKey });
+const registered = await schedules.list({ perPage: 100 });
+const sweep = registered.data.find((item) => item.task === "flux-social-daily-publishing-sweep");
+assert.ok(sweep?.active, "The automatic publishing sweep must be active in Trigger.dev");
+assert.equal(sweep.generator.expression, "*/5 * * * *");
+assert.equal(sweep.timezone, "Africa/Lagos");
+assert.ok(sweep.environments.some((item) => item.type === "PRODUCTION"), "The sweep must be attached to production");
+const clockSchedule = { id: sweep.id, active: sweep.active, cron: sweep.generator.expression, timezone: sweep.timezone, window: sweep.window, nextRun: sweep.nextRun };
+console.log(JSON.stringify({ clockSchedule }));
 // This mode can assign future times but cannot invoke the publisher.
 const handle = await tasks.trigger("flux-social-daily-publishing-cycle", { scheduleOnly: true });
 console.log(JSON.stringify({ triggerRunId: handle.id, mode: "schedule_only" }));
@@ -65,7 +73,7 @@ for (const slot of slots) {
 const after = await db.from("social_publish_jobs").select("id", { count: "exact", head: true }).eq("organization_id", organizationId);
 assert.ifError(after.error);
 assert.equal(after.count, before.count, "Scheduling verification must not create publishing jobs");
-const result = { triggerRunId: handle.id, instagramAccount: connected.username, dailyTime: "18:00 Africa/Lagos / 17:00 UTC", scheduledPosts: slots.map((slot) => ({ scheduleId: slot.id, postId: slot.post_id, title: posts.find((post) => post.id === slot.post_id).title, scheduledFor: slot.scheduled_for })), publishJobCount: after.count, publiclyPublishedDuringVerification: false };
+const result = { triggerRunId: handle.id, clockSchedule, instagramAccount: connected.username, dailyTime: "18:00 Africa/Lagos / 17:00 UTC", scheduledPosts: slots.map((slot) => ({ scheduleId: slot.id, postId: slot.post_id, title: posts.find((post) => post.id === slot.post_id).title, scheduledFor: slot.scheduled_for })), publishJobCount: after.count, publiclyPublishedDuringVerification: false };
 await mkdir("verification", { recursive: true });
 await writeFile("verification/social-daily-schedule.json", JSON.stringify(result, null, 2));
 console.log(JSON.stringify(result));
