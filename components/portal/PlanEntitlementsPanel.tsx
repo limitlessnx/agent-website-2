@@ -32,7 +32,7 @@ export default function PlanEntitlementsPanel({ planCode }: { planCode: FluxPlan
           return (
             <div className="portal-list-row" key={feature} style={{ opacity: unlocked ? 1 : 0.72 }}>
               <div><strong>{FLUX_FEATURE_LABELS[feature]}</strong><span>{unlocked ? "Included in your plan" : upgrade}</span></div>
-              {unlocked ? <em>Active</em> : <em><LockKeyhole size={13} /> Upgrade</em>}
+              {unlocked ? <em>Included</em> : <em><LockKeyhole size={13} /> Upgrade</em>}
             </div>
           );
         })}

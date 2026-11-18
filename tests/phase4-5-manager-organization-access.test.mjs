@@ -54,9 +54,9 @@ test("Phase 5 organization admin controls remain tenant-scoped", () => {
   assert.match(page, /Team & Access/);
   assert.match(page, /manager_access_code/);
   assert.match(client, /Organization Access ID/);
-  assert.match(client, /Accept/);
+  assert.match(client, /Approve/);
   assert.match(client, /Reject/);
-  assert.match(client, /Remove Access/);
+  assert.match(client, /Remove access/);
   assert.match(route, /session\.organizationId/);
   assert.match(route, /p_organization_id:\s*session\.organizationId/);
   assert.match(settings, /Workspace members/);
@@ -67,8 +67,8 @@ test("Phase 5 manager removal preserves the account while blocking workspace acc
   const route = read("app/api/portal/team/access-requests/route.ts");
   const sql = read("supabase/migrations/20261006105736_20261005_manager_account_access_mvp.sql");
 
-  assert.match(client, /keeps their account and history but blocks workspace access/);
-  assert.match(route, /p_status:\s*"removed"/);
+  assert.match(client, /Their account and business records will be retained/);
+  assert.match(route, /p_status:\s*action === "remove" \? "removed"/);
   assert.match(sql, /organization_memberships/);
   assert.match(sql, /set status = 'active'/);
 });

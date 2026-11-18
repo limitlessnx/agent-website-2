@@ -1,0 +1,16 @@
+/* Team presentation reuses the existing purple portal cards, fields and buttons. */
+.portal-team-access-stack { display:grid; gap:var(--fk-space-4, 16px); min-width:0; }
+.portal-team-access-stack :is(.portal-card,.portal-card-head,.portal-list-row,.portal-form-grid) > div { min-width:0; }
+.portal-team-access-stack :is(strong,span,p,dt,dd) { overflow-wrap:anywhere; }
+.portal-team-access-stack :is(.portal-card-head,.portal-list-row,.portal-actions) { flex-wrap:wrap; gap:var(--fk-space-3, 12px); }
+.portal-team-access-stack .portal-actions { flex-shrink:0; max-width:100%; }
+.portal-team-access-stack .portal-button { min-height:44px; height:auto; white-space:normal; flex-shrink:0; }
+.portal-team-seat-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr)); gap:var(--fk-space-4,16px); }
+.portal-team-seat-summary div { min-width:0; }
+.portal-team-seat-summary dt { color:var(--fk-text-secondary,#c4b5d9); }
+.portal-team-seat-summary dd { margin:6px 0 0; font-size:1.5rem; font-weight:700; }
+@media (max-width:600px) {
+  .portal-team-access-stack .portal-list-row { align-items:stretch; flex-direction:column; }
+  .portal-team-access-stack .portal-actions { width:100%; }
+  .portal-team-access-stack .portal-actions > .portal-button { flex:1 1 140px; }
+}

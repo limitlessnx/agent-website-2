@@ -26,6 +26,8 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
+  // PR #423: owner-only manager access; reviewed locally, NOT applied to production.
+  "20261118091000",
   "20261001233000",
   "202610020001",
   "202610020002",

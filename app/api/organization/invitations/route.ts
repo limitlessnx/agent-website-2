@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getClientSession();
     if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    if (session.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const email = String(body.email || "").trim().toLowerCase();
     const role = String(body.role || "team-member").trim();
@@ -55,6 +56,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getClientSession();
     if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    if (session.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const invitationId = String(body.invitation_id || "").trim();
     if (!invitationId) return NextResponse.json({ error: "invitation_id is required." }, { status: 400 });

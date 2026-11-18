@@ -74,7 +74,7 @@ test("phase 5 implements the approved command-center hierarchy", () => {
     "What your systems have been doing",
   ]) assert.match(page, new RegExp(phrase));
   assert.match(page, /portal-business-metrics/);
-  assert.match(page, /portal-command-grid/);
+  assert.match(page, /WorkspacePresetPanel/);
 });
 
 test("phase 5 TasteSkill responsive and accessibility guardrails are present", () => {
