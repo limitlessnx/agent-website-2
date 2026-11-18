@@ -12,7 +12,7 @@ async function capture(page:Page,name:string){mkdirSync('docs/phase4/after',{rec
 async function stableLayout(page:Page){
  await expect(page.locator('.flux-safe-error')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width+1);
- const topbar=page.locator('.admin-topbar');if(await topbar.isVisible()){const header=await topbar.boundingBox();const crumb=await page.locator('.admin-breadcrumb').boundingBox();expect(crumb!.y).toBeGreaterThanOrEqual(header!.y-1);expect(crumb!.y+crumb!.height).toBeLessThanOrEqual(header!.y+header!.height+1);}
+ const topbar=page.locator('.admin-topbar:visible');if(await topbar.isVisible()){const header=await topbar.boundingBox();const crumb=await page.locator('.admin-breadcrumb:visible').boundingBox();expect(crumb!.y).toBeGreaterThanOrEqual(header!.y-1);expect(crumb!.y+crumb!.height).toBeLessThanOrEqual(header!.y+header!.height+1);}
  expect(await page.content()).not.toContain('PRIVATE_PROVIDER_DIAGNOSTIC');expect(await page.content()).not.toContain('PRIVATE_AUDIT_METADATA');
  for(const action of await page.locator('main a.fk-action-button, main button.fk-action-button').all()) {
   const box=await action.boundingBox();if(!box)continue;expect(box.x).toBeGreaterThanOrEqual(-1);expect(box.x+box.width).toBeLessThanOrEqual(page.viewportSize()!.width+1);
@@ -62,7 +62,7 @@ test('workspace switch errors stay visible and successful selection does not gra
 });
 test('registry search and three organization contexts remain distinct',async({page})=>{
  await page.goto('/dashboard/organizations',{waitUntil:'networkidle'});await expect(page.getByRole('heading',{name:'Administration contexts'})).toBeVisible();
- await page.getByRole('searchbox',{name:'Find an organization'}).fill('Demo Business');await page.getByLabel('Organization context').selectOption('customer');await page.getByRole('search').filter({has:page.getByRole('searchbox',{name:'Find an organization'})}).getByRole('button',{name:'Search',exact:true}).click();await expect(page).toHaveURL(/category=customer/);await expect(page.getByText('1 matching records')).toBeVisible();await stableLayout(page);
+ await page.getByRole('searchbox',{name:'Find an organization'}).fill('Demo Business');await page.getByLabel('Organization context').selectOption('customer');await page.getByRole('search').filter({has:page.getByRole('searchbox',{name:'Find an organization'})}).getByRole('button',{name:'Search',exact:true}).click();await expect(page).toHaveURL(/category=customer/);await page.waitForLoadState('networkidle');const result=page.getByText('1 matching records').filter({visible:true});await expect(result).toHaveCount(1);await expect(result).toBeVisible();await stableLayout(page);
 });
 test('mobile navigation, reduced motion and zoom keep actions usable',async({page})=>{
  await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/dashboard/organizations',{waitUntil:'networkidle'});await page.addStyleTag({content:'html{font-size:125%}body{zoom:1.25}'});await stableLayout(page);

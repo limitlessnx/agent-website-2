@@ -43,6 +43,8 @@ The file-by-file rationale is in [implementation.md](implementation.md); initial
 
 A pre-existing Real Estate test fixture omitted the shared WhatsApp normalizer. It was reproduced on untouched main, updated to use the real normalizer, and kept the strict no-provider-send assertion for invalid template variables. Messaging behavior was not changed.
 
+Final CI at `c9f56ba9b5fb312f804e60046c98a51230b96718` passed 89/90 responsive cases; a search assertion also matched the outgoing route’s hidden copy during navigation. The assertion now waits for navigation and requires exactly one visible matching result. This is a test synchronization correction; product behavior is unchanged. The affected case passed on rerun at all six widths; test lint and isolated type checking also passed. Final CI is checked again.
+
 Earlier local browser failures were fixture/scoping issues (search filter emulation, duplicate Search controls and encoded cookie expectations). They were corrected and the complete 90-case suite passed. Blank captures from an unsuccessful webpack baseline attempt were replaced by valid captures from the application's normal compiler.
 
 The saved machine-readable summaries are [full-browser-results.json](full-browser-results.json), [industry-visual-results.json](industry-visual-results.json) and [verification-results.json](verification-results.json). CI at published code commit `95b9c62d929ee82ba2b50fc4650389f5ffbd5ddf` passed all active checks, including the responsive job. Final refinements trigger another CI/preview run; its status and exact preview URL are recorded in the PR description.
