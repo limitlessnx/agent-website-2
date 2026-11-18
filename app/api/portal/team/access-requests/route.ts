@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { requirePortalPermission } from "@/lib/portal-access";
-import { listOrganizationMembers } from "@/lib/organization-membership";
+import { getOrganizationAccessContext, assertOrganizationOwner, listOrganizationMembers } from "@/lib/organization-membership";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -9,7 +9,12 @@ export async function GET() {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
-    await requirePortalPermission(session, ["members.manage", "members.view"]);
+    await requirePortalPermission(session, ["members.view", "members.manage"]);
+    const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+    if (!access.roles.includes("owner")) {
+      const members = await listOrganizationMembers(session.organizationId, session.userId);
+      return NextResponse.json({ requests: [], members });
+    }
     const [rows, members] = await Promise.all([
       supabaseServerRequest<Array<{ id: string; requester_user_id: string; status: string; created_at: string }>>(
         `organization_access_requests?organization_id=eq.${encodeURIComponent(session.organizationId)}&status=eq.pending&select=id,requester_user_id,status,created_at&order=created_at.asc`,
@@ -31,7 +36,8 @@ export async function POST(request: NextRequest) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   try {
-    await requirePortalPermission(session, ["members.manage"]);
+    const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+    assertOrganizationOwner(access);
     const body = await request.json().catch(() => ({}));
     const action = String(body.action || "");
 
