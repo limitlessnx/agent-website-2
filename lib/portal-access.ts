@@ -16,8 +16,12 @@ export async function getPortalCapabilities(session: ClientSession) {
   if (session.isAdminPreview) {
     return {
       role: "super-admin-preview",
+      isOwner: false,
       permissions: [],
       installedSystems: [],
+      systemStates: {} as Record<string, string>,
+      systemsUnavailable: false,
+      agents: true,
       customers: true,
       conversations: true,
       systems: true,
@@ -30,9 +34,10 @@ export async function getPortalCapabilities(session: ClientSession) {
     };
   }
   const access = await getOrganizationAccessContext(session.organizationId, session.userId);
+  let systemsUnavailable = false;
   const systems = await supabaseServerRequest<SystemRow[]>(
     `organization_systems?organization_id=eq.${encodeURIComponent(session.organizationId)}&status=neq.archived&select=status,system_catalog(slug)`,
-  ).catch(() => []);
+  ).catch(() => { systemsUnavailable = true; return []; });
 
   const installedSystems = new Set(
     systems.map((row) => one(row.system_catalog)?.slug || "").filter(Boolean),
@@ -42,8 +47,12 @@ export async function getPortalCapabilities(session: ClientSession) {
 
   return {
     role: access.roles[0] || session.role,
+    isOwner: access.roles.includes("owner"),
     permissions: [...permissions],
     installedSystems: [...installedSystems],
+    systemStates: Object.fromEntries(systems.map((row) => [one(row.system_catalog)?.slug || "", row.status])),
+    systemsUnavailable,
+    agents: hasAny("agents.view", "agents.read", "agents.manage"),
     customers: hasAny("customers.view", "customers.manage"),
     conversations: hasAny("conversations.view", "conversations.reply"),
     systems: hasAny("systems.view", "systems.manage"),
