@@ -1,0 +1,41 @@
+{
+  "base": "79a50882cc212d2d1f36022b1b7b61a6ef45d760",
+  "production_modified": false,
+  "production_metadata_read_only": {
+    "voice_calls_present": false,
+    "voice_receipts_present": false,
+    "conversations_present": true,
+    "handoffs_present": true,
+    "existing_credit_rpc_present": true,
+    "recovery_rpc_present": false
+  },
+  "runtime_cases": 13,
+  "database_scenarios": 11,
+  "legacy_contract_cases": 5,
+  "postgres_concurrency_scenarios": 4,
+  "maia_test_files": 25,
+  "billing_cases": 27,
+  "ledger_checks": 4,
+  "build": "passed (clean cache)",
+  "changed_file_lint": "passed",
+  "provider_calls": 0,
+  "live_customer_billing": false,
+  "schema_applied": false,
+  "sha256": {
+    "app/api/webhooks/elevenlabs/post-call/route.ts": "8f202205e0ac54ec297f2cfc51b3fef4f93ac4cad169df52b9eb9aee9980b9da",
+    "supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql": "91a8559f458242810cce27f5b3a6a81c936aaa59d13085e4e9bb98cbff770dec"
+  },
+  "explicit_service_grants_verified": true,
+  "support_test_files": 75,
+  "browser_raw_voice_tables_denied": true,
+  "service_voice_table_privileges": [
+    "SELECT",
+    "INSERT",
+    "UPDATE"
+  ],
+  "atomic_paired_install_verified": true,
+  "configured_live_provider_mappings": 0,
+  "paired_sql_sha256": "a22278bd884db9f00c2a9a3b0e876fa1378c17ec500ca23e0847ca0fa2492e7e",
+  "hosted_revalidation": "pending publication",
+  "authenticated_acceptance": "not performed"
+}

@@ -1,7 +1,7 @@
 {
   "capturedAt": "2026-10-30",
   "projectRef": "tacxegmlppngnuvldojy",
-  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation. Incremental update: hotel_shared_communications was verified applied to production on 2026-11-05 with user approval; other baseline entries retain their original capture date. Fluxknight email draft storage migration 20261107145518 verified applied 2026-11-07. Incremental update: admin_organization_creation_retry_safe 20261116120507 applied with explicit user approval on 2026-11-16; original creation and template-provisioner checksums verified unchanged.",
+  "purpose": "Read-only snapshot of the live production Supabase migration ledger, refreshed from list_migrations on 2026-10-30 for release reconciliation. Incremental update: hotel_shared_communications was verified applied to production on 2026-11-05 with user approval; other baseline entries retain their original capture date. Fluxknight email draft storage migration 20261107145518 verified applied 2026-11-07. Incremental update: admin_organization_creation_retry_safe 20261116120507 applied with explicit user approval on 2026-11-16; original creation and template-provisioner checksums verified unchanged. Incremental update: owner_only_tenant_manager_access 20261118091000 applied and verified with explicit user approval on 2026-11-18; exact SQL SHA256 6d3a5b74a68fa7d1a7813b8a81cd0aaa844b2d9dcc05e83a1105864e737be7df. Other baseline entries retain their original capture dates.",
   "migrations": [
     {
       "version": "20260724",
@@ -910,6 +910,10 @@
     {
       "version": "20261116120507",
       "name": "admin_organization_creation_retry_safe"
+    },
+    {
+      "version": "20261118091000",
+      "name": "owner_only_tenant_manager_access"
     }
   ]
 }

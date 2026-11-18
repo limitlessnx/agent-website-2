@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+const recovery = readFileSync("supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql", "utf8");
 
 const gate = readFileSync("lib/voice-activation-gate.ts", "utf8");
 const readiness = readFileSync("app/api/integrations/voice/readiness/route.ts", "utf8");
@@ -35,7 +36,8 @@ test("ElevenLabs webhook is tenant-scoped and idempotent", () => {
   assert.match(webhook, /23505/);
   assert.match(webhook, /configuration->>elevenlabs_agent_id/);
   assert.match(webhook, /organization_id: organizationId/);
-  assert.match(webhook, /elevenlabs_voice_calls/);
+  assert.match(webhook, /apply_elevenlabs_voice_receipt/);
+  assert.match(recovery, /elevenlabs_voice_calls/);
   assert.match(migration, /unique \(organization_id, conversation_id\)/);
   assert.match(migration, /event_key text not null unique/);
 });
@@ -43,8 +45,8 @@ test("ElevenLabs webhook is tenant-scoped and idempotent", () => {
 test("Completed ElevenLabs calls meter by rounded-up duration and create failed-transfer handoffs", () => {
   assert.match(webhook, /Math\.ceil\(duration \/ 60\)/);
   assert.match(webhook, /action: "leo_voice_minute"/);
-  assert.match(webhook, /source: "elevenlabs_voice_call"/);
-  assert.match(webhook, /handoff_requests/);
+  assert.match(recovery, /'elevenlabs_voice_call'/);
+  assert.match(recovery, /handoff_requests/);
   assert.match(webhook, /transfer_failed/);
-  assert.match(webhook, /conversation_id: conversation\.id/);
+  assert.match(recovery, /organization_id=p_organization_id and conversation_id=conversation/);
 });
