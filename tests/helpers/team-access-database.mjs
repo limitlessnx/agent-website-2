@@ -7,7 +7,7 @@ export const manager = '20000000-0000-4000-8000-000000000002';
 export const newcomer = '20000000-0000-4000-8000-000000000003';
 export const another = '20000000-0000-4000-8000-000000000004';
 export const bootstrap = `
-create role anon; create role authenticated; create role service_role bypassrls;
+do $$begin if not exists(select 1 from pg_roles where rolname='anon') then create role anon;end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated;end if; if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role bypassrls;end if;end$$;
 create schema auth;
 create table auth.users(id uuid primary key,email text);
 create table public.organizations(id uuid primary key,status text default 'active',seat_limit integer default 3);

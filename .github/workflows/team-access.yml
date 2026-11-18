@@ -33,7 +33,7 @@ jobs:
         run: |
           docker run --detach --rm --name flux-team-access-postgres --network none -e POSTGRES_PASSWORD=synthetic-local-only -e POSTGRES_DB=flux_team_test postgres:17-alpine
           for attempt in $(seq 1 30); do
-            if docker exec flux-team-access-postgres pg_isready -U postgres -d flux_team_test; then exit 0; fi
+            if docker exec flux-team-access-postgres pg_isready -h 127.0.0.1 -U postgres -d flux_team_test; then exit 0; fi
             sleep 1
           done
           exit 1

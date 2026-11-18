@@ -1,15 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn,execFileSync } from 'node:child_process';
 import {bootstrap,migration,seed,org,owner,manager,newcomer,another,invite,request,approve,accept} from './helpers/team-access-database.mjs';
 
 const container=process.env.TEAM_TEST_DOCKER_CONTAINER;
+const database=process.env.TEAM_TEST_DATABASE || 'flux_team_test';
+assert.match(database,/^flux_team_test(?:_[a-z0-9]+)?$/);
 function sql(query){return new Promise((resolve,reject)=>{
- const child=spawn('docker',['exec','-i',container,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','flux_team_test']);
+ const child=spawn('docker',['exec','-i',container,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-U','postgres','-d',database]);
  let out='',err='';child.stdout.on('data',c=>out+=c);child.stderr.on('data',c=>err+=c);child.on('error',reject);child.on('close',code=>code?reject(new Error(err)):resolve(out.trim()));child.stdin.end(query);
 });}
 
 test('PostgreSQL 17 concurrent tenant-seat transitions',{skip:!container},async t=>{
+ assert.equal(execFileSync('docker',['inspect','-f','{{.HostConfig.NetworkMode}}',container],{encoding:'utf8'}).trim(),'none');
+ assert.equal(await sql("select count(*) from information_schema.tables where table_schema in ('public','auth')"),'0','Refusing a non-empty test database');
  await sql(bootstrap+migration+seed);
  const reset=()=>sql(`delete from audit_logs;delete from organization_access_requests;delete from organization_invitations;delete from membership_roles where membership_id in(select id from organization_memberships where user_id in('${newcomer}','${another}') and organization_id='${org}');delete from organization_memberships where user_id in('${newcomer}','${another}') and organization_id='${org}';update organizations set seat_limit=3 where id='${org}';update organization_memberships set status='active' where user_id='${manager}';`);
  const race=async(first,second)=>{
