@@ -62,6 +62,18 @@ begin
     raise exception 'Organization team seat limit reached';
   end if;
 
+  -- A previously removed owner must never regain ownership via manager approval.
+  if exists (
+    select 1 from public.organization_memberships m
+    join public.membership_roles mr on mr.membership_id = m.id
+    join public.roles r on r.id = mr.role_id
+    where m.organization_id = v_request.organization_id
+      and m.user_id = v_request.requester_user_id
+      and r.slug = 'owner'
+  ) then
+    raise exception 'Owner access cannot be changed through manager approval';
+  end if;
+
   insert into public.organization_memberships(organization_id, user_id, status)
   values (v_request.organization_id, v_request.requester_user_id, 'active')
   on conflict do nothing
@@ -77,6 +89,8 @@ begin
     where id = v_membership_id;
   end if;
 
+  -- Existing removed memberships can carry stale roles: replace with Manager.
+  delete from public.membership_roles where membership_id = v_membership_id;
   insert into public.membership_roles(membership_id, role_id)
   values (v_membership_id, v_role_id)
   on conflict do nothing;
