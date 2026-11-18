@@ -46,3 +46,11 @@ test('archived organizations cannot appear active or ready for activation in the
   '@/lib/supabase/admin':{createAdminClient:()=>({from(table){const q={select(){return q;},eq(){return q;},order(){return q;},limit(){return q;},maybeSingle:async()=>({data:{id:ORG,status:'archived',metadata:{}},error:null}),then(resolve,reject){return Promise.resolve({data:table==='organizations'?[{id:ORG,status:'archived'}]:[],error:null}).then(resolve,reject);}};return q;}})},
  });const result=await reader.getTenantReadiness(ORG);assert.equal(result.stage,'needs_attention');assert.equal(result.blockers.some(x=>x.key==='lifecycle'),true);
 });
+test('existing tenant sessions stop resolving after archive while another active workspace remains accessible',async()=>{
+ const jar=new Map();const states=new Map([[ORG,'active'],['10000000-0000-4000-8000-000000000002','active']]);
+ const api=load('lib/client-auth.ts',{
+  'next/headers':{cookies:async()=>({get:key=>jar.has(key)?{value:jar.get(key)}:undefined})},'@/lib/admin-auth':{getAdminSession:async()=>null},'@/lib/supabase/config':{},
+  '@/lib/supabase-server-rest':{supabaseServerRequest:async path=>{const query=new URL('https://fixture/'+path).searchParams;assert.equal(query.get('organizations.status'),'eq.active');assert.match(query.get('select'),/organizations!inner\(slug,status\)/);const id=query.get('organization_id').slice(3);return states.get(id)==='active'?[{id:'membership',organization_id:id,status:'active',organizations:{slug:'business',status:'active'},membership_roles:[{roles:{slug:'owner'}}]}]:[];}},
+ });const select=id=>jar.set('fluxknight_client_session',api.createClientSessionToken({userId:'user',email:'owner@example.test',organizationId:id,organizationSlug:'business',membershipId:'membership',role:'owner',issuedAt:Date.now()}));
+ select(ORG);assert.equal((await api.getClientSession()).organizationId,ORG);states.set(ORG,'archived');assert.equal(await api.getClientSession(),null);const other='10000000-0000-4000-8000-000000000002';select(other);assert.equal((await api.getClientSession()).organizationId,other);
+});
