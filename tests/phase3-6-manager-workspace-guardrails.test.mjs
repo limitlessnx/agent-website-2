@@ -39,7 +39,7 @@ test("Phase 5 manager approval, removal and entry are organization scoped",()=>{
  assert.match(teamRoute,/rpc\/reject_organization_access_request/);
  assert.match(teamRoute,/p_actor_user_id:\s*session\.userId/);
  assert.match(teamRoute,/p_organization_id:\s*session\.organizationId/);
- assert.match(teamRoute,/p_status:\s*"removed"/);
+ assert.match(teamRoute,/p_status:\s*action === "remove" \? "removed"/);
  assert.match(managerRoute,/getMembershipForOrganization\(session\.userId,\s*organizationId\)/);
  assert.match(sql,/organization_id = v_request\.organization_id/);
  assert.match(sql,/organization_id = v_request\.organization_id/);

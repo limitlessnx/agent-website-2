@@ -40,9 +40,8 @@ test("A2/A3 member management revalidates live database permissions", () => {
   assert.match(access, /getOrganizationAccessContext/);
   assert.match(access, /status=eq\.active/);
   assert.match(access, /assertAnyOrganizationPermission/);
-  assert.match(access, /members\.roles\.manage/);
-  assert.match(access, /members\.suspend/);
-  assert.match(access, /members\.invite/);
+  assert.match(access, /assertOrganizationOwner\(access\)/);
+  assert.match(access, /context\.roles\.includes\("owner"\)/);
 });
 
 test("A2/A3 client sessions revalidate live membership state", () => {

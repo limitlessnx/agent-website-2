@@ -17,9 +17,9 @@ test("Phase 3 Team & Access exposes organization-scoped manager controls", () =>
   assert.match(route, /p_organization_id:\s*session\.organizationId/);
   assert.match(page, /manager_access_code/);
   assert.match(client, /Organization Access ID/);
-  assert.match(client, /Accept/);
+  assert.match(client, /Approve/);
   assert.match(client, /Reject/);
-  assert.match(client, /Remove Access/);
+  assert.match(client, /Remove access/);
 });
 
 test("Phase 3 approval assigns the organization manager role", () => {
@@ -45,5 +45,5 @@ test("Phase 3 removal cannot cross organization boundaries", () => {
   assert.match(route, /target\.role\s*!==\s*"manager"/);
   assert.match(route, /p_organization_id:\s*session\.organizationId/);
   assert.match(route, /p_membership_id:\s*membershipId/);
-  assert.match(route, /p_status:\s*"removed"/);
+  assert.match(route, /p_status:\s*action === "remove" \? "removed"/);
 });

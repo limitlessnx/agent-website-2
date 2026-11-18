@@ -24,7 +24,7 @@ test("Phase 7: team access mutations remain organization-scoped and manager-only
   assert.match(route,/target\.role[\s\S]*manager/);
   assert.match(route,/p_organization_id:\s*session\.organizationId/);
   assert.match(route,/p_actor_user_id:\s*session\.userId/);
-  assert.match(route,/p_status:\s*\"removed\"/);
+  assert.match(route,/p_status:\s*action === "remove" \? "removed"/);
 });
 
 test("Phase 8: customer reads and stage mutations cannot cross tenants",()=>{

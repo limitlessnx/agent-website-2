@@ -1,0 +1,39 @@
+# Fluxknight implementation audit — 18 November 2026
+
+Base: `main ae2a41f9031544f340ae9144bc79fb0c72819b8b`. Repository main, merged/open PRs, both pages of implementation branches, current CI, Vercel previews and production Supabase migration/function/policy metadata were inspected before edits. No production writes were performed. Earlier delivery files contain historical unmerged/release statements; the actual GitHub merge state takes precedence.
+
+| Master phase | Classification | Evidence and precise remaining work |
+| --- | --- | --- |
+| 1 — Tenant onboarding and provisioning | Implemented but awaiting validation | #406 merged; creation replay migration `20261116120507` exists in production; shared readiness and recovery services/tests are present. Approved empty industry starter registration is recorded in the rollout report. Complete authenticated fresh-tenant registration → configuration → testing → activation acceptance, external-provider failure recovery and durable concurrent retry verification before claiming the entire master phase verified. Do not rerun provisioning against customer records. |
+| 2 — Purple design system and responsive foundation | Implemented but awaiting validation | #408 and #413 merged; shared tokens, primitives, shells, settings fixes and six-width rendered evidence are present. Existing screenshot coverage is synthetic; it does not prove every authenticated hosted screen or native browser zoom/accessibility/performance acceptance. Preserve the approved components and baselines. |
+| 3 — Flux Motion and AI experience | Partially implemented | #413 merged with CSS motion, reduced-motion support and observed-state AI presence. Existing delivery evidence covers representative settings/AI states. Master brief additionally requires verified industry pipeline/inspection/calendar/reservation/handoff transitions, meaningful KPI/chart updates and mobile performance; these have not all been demonstrated. |
+| 4 — Super Admin Modernization, Organization Management & Team Access | Partially implemented | #422 remains draft at `f14b839`; all 108 responsive CI cases passed and preview is ready. #423 remains draft at `17f1c2f`; preview ready does not override failing Maia/regression jobs or unapplied migration. Manager invitation/approval/seat/security gaps below must be fixed and verified; authenticated hosted acceptance and 12ui closing alignment remain open. No competing manager or platform permission system is needed. |
+| 5 — Industry dashboard standardization | Partially implemented | Three distinct industry workspaces, booking/catalog/CRM foundations and representative six-width baseline comparisons already exist. Independently validate complete Real Estate, Photography capacity/handoffs and Hotel reservations/services workflows; inventory remaining page migrations before changing them. Shared-shell work is not proof of full industry migration. |
+| 6 — Unified AI communications | Partially implemented | Existing shared orchestration, customer timeline, Meta Maia runtime, ElevenLabs pilot/property bridge and email infrastructure are present. Voice #411/#418, email/knowledge/handoff and Flux Social PRs remain open. Verify common action permissions, identity/correlation, channel retries and genuine delivery/error lifecycle in controlled provider environments; do not treat a pilot or read-only bridge as full voice/email integration. |
+| 7 — Subscriptions, usage and Flux Credits | Partially implemented | Existing entitlements, effective limits, wallets/reservations/renewals and billing tests are present. #423 exposes missing team-seat enforcement at acceptance/reactivation. Verify each billable channel's units, reserve/settle/release boundaries, concurrency and actual reporting without altering pricing or charging customers. |
+| 8 — End-to-end quality, security and operations | Partially implemented | Existing unit, PGlite, synthetic browser, permission and industry suites are substantial. #423 currently fails CI; global lint debt and hosted/provider acceptance remain. Cross-phase integration, real concurrent database tests, accessibility/performance and migration compatibility must pass before release. |
+| 9 — Controlled production rollout | Partially implemented | Earlier #406/#408/#409/#413 releases are merged; current production main contains them. #422/#423 are unmerged. Exact future release approval, reviewed migration/rollback, authenticated post-release checks and operational monitoring remain required. No production release is authorized by this brief. |
+
+“Awaiting validation” is not “completed and verified.” No whole master phase is declared complete solely from its PR, build or historical report. Existing later-phase foundations must be reused rather than recreated.
+
+## Phase 4 manager-access review before modification
+
+PR #423 modifies six files: membership authorization, Access ID API, Team page/client, one proposed migration and a source-contract test. Reviewed every changed file against current main. #422 and #423 have no overlapping changed paths, but their session/readiness/preview safeguards must be tested together before rollout. Old open manager PRs #222/#238 and migration-order PR #273 overlap this architecture; do not merge those blindly or reintroduce old permission behavior.
+
+Confirmed gaps in #423:
+
+- Access ID approval still accepts `admin` instead of owner only and does not audit approval/rejection outcomes.
+- Invitation acceptance has no current seat-limit recheck; reactivation has no seat check or shared capacity lock. Revocation remains guarded by delegable permissions in SQL.
+- Existing authenticated membership mutation policy and broad table privileges bypass the intended audited, seat-checked RPC path. Role customization still allows billing mutation permissions.
+- Approval can consume both an invitation reservation and a membership for the same identity; existing active memberships can be demoted by stale invitations/requests.
+- Invitation expiry is counted as occupied by the UI; missing roster data can appear as an empty list/available capacity. Managers cannot see subscription/seat information, and only active managers appear instead of the full roster.
+- The new test itself has a stale JSX assertion. Existing CI failures include old Accept/Remove Access labels, old permission-enforcement source contracts and the explicit pending-migration review gate. These are not evidence that the new access model works.
+
+Production inspection confirms the same missing acceptance/reactivation quota checks and legacy approval grants. `organization_effective_seat_limit` already delegates to the existing `team.seats` effective entitlement; its established fallback is retained. The new `20261118091000` migration is absent from production. Local migration history has historical naming/version drift and other pending migrations; do not push the whole directory or refresh the production ledger to pretend those are deployed.
+
+## Proposed implementation order
+
+1. Correct #423 in place: owner-only SQL/application boundaries, RPC grants/direct-write restrictions, atomic seat transitions and audit records. Reuse existing functions and tables; edit the still-unapplied reviewed migration rather than add competing infrastructure.
+2. Add behavioral database and route tests, including expired/revoked invitations, cross-tenant and revoked users, plan changes and concurrent capacity attempts. Then stabilize the existing Team & Access UI using shared purple styles and six-width rendered tests.
+3. Validate #423 CI/preview and test integration with #422 without merging either. Keep hosted authentication, provider and design-reference limitations explicit.
+4. Close earlier phase acceptance gaps in dependency order; only then scope targeted industry/channel/billing work. Obtain explicit approval for any production migration, merge or release.

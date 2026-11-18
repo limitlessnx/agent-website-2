@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { requirePortalPermission } from "@/lib/portal-access";
-import { getOrganizationAccessContext, assertOrganizationOwner, listOrganizationMembers } from "@/lib/organization-membership";
+import { getOrganizationAccessContext, assertOrganizationOwner, listOrganizationMembers, getOrganizationTeamSummary } from "@/lib/organization-membership";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -13,7 +13,8 @@ export async function GET() {
     const access = await getOrganizationAccessContext(session.organizationId, session.userId);
     if (!access.roles.includes("owner")) {
       const members = await listOrganizationMembers(session.organizationId, session.userId);
-      return NextResponse.json({ requests: [], members });
+      const summary = await getOrganizationTeamSummary(session.organizationId, members);
+      return NextResponse.json({ requests: [], members, summary });
     }
     const [rows, members] = await Promise.all([
       supabaseServerRequest<Array<{ id: string; requester_user_id: string; status: string; created_at: string }>>(
@@ -26,7 +27,8 @@ export async function GET() {
       const user = await admin.auth.admin.getUserById(row.requester_user_id);
       return { ...row, email: user.data.user?.email || row.requester_user_id };
     }));
-    return NextResponse.json({ requests, members });
+    const summary = await getOrganizationTeamSummary(session.organizationId, members);
+    return NextResponse.json({ requests, members, summary });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load team access." }, { status: 403 });
   }
@@ -35,6 +37,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getClientSession();
   if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  if (session.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
   try {
     const access = await getOrganizationAccessContext(session.organizationId, session.userId);
     assertOrganizationOwner(access);
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, ...result });
     }
 
-    if (action === "remove") {
+    if (action === "remove" || action === "suspend" || action === "reactivate") {
       const membershipId = String(body.membership_id || "");
       if (!membershipId) return NextResponse.json({ error: "A manager membership is required." }, { status: 400 });
       const members = await listOrganizationMembers(session.organizationId, session.userId);
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
           p_actor_user_id: session.userId,
           p_membership_id: membershipId,
           p_role_slug: null,
-          p_status: "removed",
+          p_status: action === "remove" ? "removed" : action === "suspend" ? "suspended" : "active",
         }),
       });
       return NextResponse.json({ ok: true, ...result });
@@ -82,6 +85,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Unsupported team access action." }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update team access." }, { status: 403 });
+    const message = error instanceof Error ? error.message : "Unable to update team access.";
+    return NextResponse.json({ error: message }, { status: /seat limit/i.test(message) ? 409 : 403 });
   }
 }

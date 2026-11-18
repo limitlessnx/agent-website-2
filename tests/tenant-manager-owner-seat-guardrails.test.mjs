@@ -25,13 +25,13 @@ test("Access ID approvals and removals require owner while managers can view ros
   assert.match(api, /assertOrganizationOwner\(access\)/);
   assert.match(api, /if \(!access\.roles\.includes\("owner"\)\)/);
   assert.match(page, /canManage=\{canManage\}/);
-  assert.match(ui, /\{canManage \? <section/);
-  assert.match(ui, /canManage \? <button/);
+  assert.match(ui, /\{canManage \? <>/);
+  assert.match(ui, /canManage && member\.role === "manager"/);
 });
 
 test("plan seat limits are displayed and checked by the Access ID approval RPC", () => {
-  assert.match(page, /rpc\/organization_effective_seat_limit/);
-  assert.match(ui, /occupiedSeats/);
+  assert.match(membership, /rpc\/organization_effective_seat_limit/);
+  assert.match(ui, /summary\.availableSeats/);
   assert.match(ui, /atLimit/);
   assert.match(sql, /Organization team seat limit reached/);
   assert.match(sql, /pg_advisory_xact_lock\(hashtextextended\(v_request\.organization_id::text, 187\)\)/);
@@ -39,8 +39,8 @@ test("plan seat limits are displayed and checked by the Access ID approval RPC",
 });
 
 test("manager privileges are nondelegable in seeded and customized roles", () => {
-  assert.match(sql, /Team access and ownership permissions are reserved to the organization owner/);
-  assert.match(sql, /r\.slug = 'manager'/);
+  assert.match(sql, /Team access, ownership and billing permissions are reserved to the organization owner/);
+  assert.match(sql, /r\.slug <> 'owner'/);
   assert.match(sql, /p\.key <> 'members\.view'/);
   assert.doesNotMatch(sql, /'members\.view','members\.invite','members\.suspend'/);
 });

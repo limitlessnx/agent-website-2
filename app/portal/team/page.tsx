@@ -4,6 +4,7 @@ import { requirePortalPermission } from "@/lib/portal-access";
 import { getOrganizationAccessContext } from "@/lib/organization-membership";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import AccessRequestsClient from "./AccessRequestsClient";
+import "./team.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Team | Fluxknight" };
@@ -19,10 +20,6 @@ export default async function TeamPage() {
     `organizations?id=eq.${encodeURIComponent(session.organizationId)}&select=manager_access_code&limit=1`
   ).catch(()=>[]) : [];
   const accessCode=organizations[0]?.manager_access_code||"Unavailable";
-  const seatLimit = canManage ? await supabaseServerRequest<number>("rpc/organization_effective_seat_limit", {
-    method: "POST",
-    body: JSON.stringify({ p_organization_id: session.organizationId }),
-  }).catch(() => null) : null;
 
   return <main className="portal-page">
     <section className="portal-command-hero">
@@ -32,6 +29,6 @@ export default async function TeamPage() {
         <p>{canManage ? "Invite and approve managers, control access, and review team members." : "View your organization's team members. Only the owner manages access."}</p>
       </div>
     </section>
-    <AccessRequestsClient accessCode={canManage ? accessCode : ""} canManage={canManage} seatLimit={typeof seatLimit === "number" ? seatLimit : null}/>
+    <AccessRequestsClient accessCode={canManage ? accessCode : ""} canManage={canManage}/>
   </main>;
 }

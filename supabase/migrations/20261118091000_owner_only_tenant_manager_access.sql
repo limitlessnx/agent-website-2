@@ -6,13 +6,15 @@ CREATE OR REPLACE FUNCTION public.approve_organization_access_request(p_request_
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO ''
 AS $function$
 declare
   v_request public.organization_access_requests%rowtype;
   v_role_id uuid;
   v_membership_id uuid;
 begin
+  select organization_id into v_request.organization_id from public.organization_access_requests where id=p_request_id;
+  perform pg_advisory_xact_lock(hashtextextended(v_request.organization_id::text, 187));
   -- Service-role endpoint: caller identity is validated by tenant owner membership below.
   select * into v_request
   from public.organization_access_requests
@@ -31,7 +33,8 @@ begin
     where m.organization_id = v_request.organization_id
       and m.user_id = p_actor_user_id
       and m.status = 'active'
-      and r.slug in ('owner','admin')
+      and r.organization_id = m.organization_id
+      and r.slug = 'owner'
   ) then
     raise exception 'Organization admin access required.';
   end if;
@@ -47,7 +50,14 @@ begin
     raise exception 'Manager role is not configured for this organization.';
   end if;
 
-  perform pg_advisory_xact_lock(hashtextextended(v_request.organization_id::text, 187));
+  if not exists (select 1 from public.organizations where id=v_request.organization_id and status='active') then
+    raise exception 'Organization is inactive';
+  end if;
+
+  -- An email invitation and Access ID approval reserve only one seat for this account.
+  update public.organization_invitations i set status='revoked',revoked_at=now(),updated_at=now()
+  where i.organization_id=v_request.organization_id and i.status='pending'
+    and lower(i.email)=(select lower(email) from auth.users where id=v_request.requester_user_id);
   if not exists (
     select 1 from public.organization_memberships
     where organization_id = v_request.organization_id
@@ -69,11 +79,16 @@ begin
     join public.roles r on r.id = mr.role_id
     where m.organization_id = v_request.organization_id
       and m.user_id = v_request.requester_user_id
+      and r.organization_id = m.organization_id
       and r.slug = 'owner'
   ) then
     raise exception 'Owner access cannot be changed through manager approval';
   end if;
 
+  -- A stale request must not overwrite an already active membership's roles.
+  select id into v_membership_id from public.organization_memberships
+  where organization_id=v_request.organization_id and user_id=v_request.requester_user_id and status='active';
+  if v_membership_id is null then
   insert into public.organization_memberships(organization_id, user_id, status)
   values (v_request.organization_id, v_request.requester_user_id, 'active')
   on conflict do nothing
@@ -95,9 +110,15 @@ begin
   values (v_membership_id, v_role_id)
   on conflict do nothing;
 
+  end if;
+
   update public.organization_access_requests
   set status = 'approved', reviewed_by = p_actor_user_id, reviewed_at = now(), updated_at = now()
   where id = v_request.id;
+
+  insert into public.audit_logs(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+  values(v_request.organization_id,p_actor_user_id,'organization.access_request_approved','organization_access_request',v_request.id::text,
+    jsonb_build_object('membership_id',v_membership_id,'requester_user_id',v_request.requester_user_id));
 
   return jsonb_build_object('organization_id', v_request.organization_id, 'membership_id', v_membership_id, 'status', 'approved');
 end;
@@ -118,13 +139,15 @@ declare
   v_occupied integer;
   v_invitation_id uuid;
 begin
+  perform pg_advisory_xact_lock(hashtextextended(p_organization_id::text, 187));
+  if not exists(select 1 from public.organizations where id=p_organization_id and status='active') then raise exception 'Organization is inactive'; end if;
   if v_email = '' or v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
     raise exception 'A valid email is required';
   end if;
   if length(coalesce(p_token_hash,'')) < 32 then
     raise exception 'Invalid invitation token hash';
   end if;
-  if p_expires_at <= now() then
+  if p_expires_at is null or p_expires_at <= now() then
     raise exception 'Invitation expiry must be in the future';
   end if;
 
@@ -136,6 +159,7 @@ begin
     where m.organization_id = p_organization_id
       and m.user_id = p_actor_user_id
       and m.status = 'active'
+      and r.organization_id = m.organization_id
       and r.slug = 'owner'
   ) then
     raise exception 'Not authorized to invite organization members';
@@ -147,7 +171,7 @@ begin
     and slug = p_role_slug
   limit 1;
 
-  if not found or v_role.slug = 'owner' then
+  if not found or v_role.slug not in ('manager','supervisor','team-member') then
     raise exception 'Invalid invitation role';
   end if;
 
@@ -168,7 +192,6 @@ begin
     and status = 'pending'
     and expires_at <= now();
 
-  perform pg_advisory_xact_lock(hashtextextended(p_organization_id::text, 187));
   v_limit := public.organization_effective_seat_limit(p_organization_id);
 
   select
@@ -339,6 +362,7 @@ begin
     where m.organization_id=p_organization_id
       and m.user_id=p_actor_user_id
       and m.status='active'
+      and r.organization_id=m.organization_id
       and r.slug='owner'
   ) then
     raise exception 'Not authorized to change role permissions';
@@ -365,9 +389,10 @@ begin
 
   if exists (
     select 1 from unnest(coalesce(p_permission_keys,array[]::text[])) k
-    where k like 'members.%' or k = 'organization.owner.transfer'
+    where (k like 'members.%' and k <> 'members.view')
+       or k = 'organization.owner.transfer' or (k like 'billing.%' and k <> 'billing.view')
   ) then
-    raise exception 'Team access and ownership permissions are reserved to the organization owner';
+    raise exception 'Team access, ownership and billing permissions are reserved to the organization owner';
   end if;
 
   delete from public.role_permissions where role_id=v_role_id;
@@ -404,6 +429,7 @@ declare
   v_new_role_id uuid;
   v_effective_status text;
 begin
+  perform pg_advisory_xact_lock(hashtextextended(p_organization_id::text, 187));
   if not exists (
     select 1
     from public.organization_memberships m
@@ -412,6 +438,7 @@ begin
     where m.organization_id=p_organization_id
       and m.user_id=p_actor_user_id
       and m.status='active'
+      and r.organization_id=m.organization_id
       and r.slug='owner'
   ) then
     raise exception 'Not authorized to manage organization members';
@@ -433,6 +460,9 @@ begin
   limit 1;
 
   if v_current_role='owner' then
+    if v_target.status <> 'active' and p_status in ('active','suspended') then
+      raise exception 'Owner reactivation requires the ownership transfer flow';
+    end if;
     if p_role_slug is distinct from null and p_role_slug <> 'owner' then
       raise exception 'Owner role changes require the ownership transfer flow';
     end if;
@@ -445,8 +475,17 @@ begin
     raise exception 'You cannot suspend or remove your own membership';
   end if;
 
+  if p_status in ('active','suspended') and v_target.status not in ('active','suspended') then
+    if not exists(select 1 from public.organizations where id=p_organization_id and status='active') then raise exception 'Organization is inactive'; end if;
+    if (select count(*) from public.organization_memberships where organization_id=p_organization_id and status in ('active','suspended'))
+       + (select count(*) from public.organization_invitations where organization_id=p_organization_id and status='pending' and expires_at>now())
+       >= public.organization_effective_seat_limit(p_organization_id) then
+      raise exception 'Organization team seat limit reached';
+    end if;
+  end if;
+
   if p_role_slug is not null then
-    if p_role_slug='owner' then
+    if p_role_slug not in ('manager','supervisor','team-member') then
       raise exception 'Owner role can only be assigned through ownership transfer';
     end if;
 
@@ -499,9 +538,10 @@ delete from public.role_permissions rp
 using public.roles r, public.permissions p
 where rp.role_id = r.id
   and rp.permission_id = p.id
-  and r.slug = 'manager'
+  and r.slug <> 'owner'
   and ((p.key like 'members.%' and p.key <> 'members.view')
-       or p.key = 'organization.owner.transfer');
+       or p.key = 'organization.owner.transfer'
+       or (p.key like 'billing.%' and p.key <> 'billing.view'));
 
 -- The legacy Access ID approval/rejection functions must be service-role only.
 -- The public callable versions required auth.uid(), which conflicts with server-side service-role routing.
@@ -509,9 +549,13 @@ CREATE OR REPLACE FUNCTION public.reject_organization_access_request(p_request_i
  RETURNS boolean
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO ''
 AS $function$
+declare
+  v_org_id uuid;
 begin
+  select organization_id into v_org_id from public.organization_access_requests where id=p_request_id;
+  perform pg_advisory_xact_lock(hashtextextended(v_org_id::text, 187));
   -- Server-validated owner action; no reliance on auth.uid() for service-role calls.
   if not exists (
     select 1
@@ -523,6 +567,7 @@ begin
       and ar.status = 'pending'
       and m.user_id = p_actor_user_id
       and m.status = 'active'
+      and r.organization_id = m.organization_id
       and r.slug = 'owner'
   ) then
     raise exception 'Organization admin access required.';
@@ -532,6 +577,9 @@ begin
   set status = 'rejected', reviewed_by = p_actor_user_id, reviewed_at = now(), updated_at = now()
   where id = p_request_id and status = 'pending';
 
+  if not found then raise exception 'Access request is no longer pending'; end if;
+  insert into public.audit_logs(organization_id,actor_user_id,action,resource_type,resource_id)
+  values(v_org_id,p_actor_user_id,'organization.access_request_rejected','organization_access_request',p_request_id::text);
   return true;
 end;
 $function$
@@ -541,3 +589,163 @@ revoke all on function public.approve_organization_access_request(uuid,uuid) fro
 grant execute on function public.approve_organization_access_request(uuid,uuid) to service_role;
 revoke all on function public.reject_organization_access_request(uuid,uuid) from public, anon, authenticated;
 grant execute on function public.reject_organization_access_request(uuid,uuid) to service_role;
+
+-- Existing invitation reservation is converted atomically into a membership.
+CREATE OR REPLACE FUNCTION public.accept_organization_invitation(p_user_id uuid, p_user_email text, p_token_hash text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_email text := lower(btrim(coalesce(p_user_email,'')));
+  v_invitation public.organization_invitations%rowtype;
+  v_membership_id uuid;
+  v_role_slug text;
+  v_occupied integer;
+  v_existing_status text;
+begin
+  select i.* into v_invitation from public.organization_invitations i where i.token_hash=p_token_hash;
+  perform pg_advisory_xact_lock(hashtextextended(v_invitation.organization_id::text, 187));
+  select i.* into v_invitation
+  from public.organization_invitations i
+  where i.token_hash = p_token_hash
+    and i.status = 'pending'
+  limit 1
+  for update;
+
+  if not found then
+    raise exception 'Invitation is invalid or no longer available';
+  end if;
+
+  if v_invitation.expires_at <= now() then
+    update public.organization_invitations
+    set status='expired', updated_at=now()
+    where id=v_invitation.id;
+    raise exception 'Invitation has expired';
+  end if;
+
+  if lower(v_invitation.email) <> v_email then
+    raise exception 'Invitation email does not match the authenticated account';
+  end if;
+
+  if not exists (
+    select 1 from auth.users
+    where id = p_user_id and lower(coalesce(email,'')) = v_email
+  ) then
+    raise exception 'Authenticated user identity could not be verified';
+  end if;
+
+  if not exists(select 1 from public.organizations where id=v_invitation.organization_id and status='active') then raise exception 'Organization is inactive'; end if;
+  if not exists(select 1 from public.organization_memberships m
+    join public.membership_roles mr on mr.membership_id=m.id join public.roles r on r.id=mr.role_id
+    where m.organization_id=v_invitation.organization_id and m.user_id=v_invitation.invited_by and m.status='active'
+      and r.organization_id=m.organization_id and r.slug='owner') then raise exception 'Invitation owner is no longer authorized'; end if;
+  select slug into v_role_slug from public.roles where id=v_invitation.role_id and organization_id=v_invitation.organization_id;
+  if v_role_slug is null or v_role_slug not in ('manager','supervisor','team-member') then raise exception 'Invalid invitation role'; end if;
+  if exists(select 1 from public.organization_memberships m
+    join public.membership_roles mr on mr.membership_id=m.id join public.roles r on r.id=mr.role_id
+    where m.organization_id=v_invitation.organization_id and m.user_id=p_user_id and r.slug='owner') then
+    raise exception 'Owner access cannot be changed through invitation acceptance'; end if;
+  select status into v_existing_status from public.organization_memberships where organization_id=v_invitation.organization_id and user_id=p_user_id;
+  if v_existing_status='active' then raise exception 'You already have access to this organization'; end if;
+  select (select count(*) from public.organization_memberships where organization_id=v_invitation.organization_id and status in ('active','suspended'))
+    + (select count(*) from public.organization_invitations where organization_id=v_invitation.organization_id and status='pending' and expires_at>now() and id<>v_invitation.id)
+    + case when v_existing_status='suspended' then 0 else 1 end into v_occupied;
+  if v_occupied > public.organization_effective_seat_limit(v_invitation.organization_id) then raise exception 'Organization team seat limit reached'; end if;
+
+  insert into public.organization_memberships (
+    organization_id,user_id,status
+  ) values (
+    v_invitation.organization_id,p_user_id,'active'
+  )
+  on conflict (organization_id,user_id) do update
+    set status='active', updated_at=now()
+  returning id into v_membership_id;
+
+  delete from public.membership_roles where membership_id = v_membership_id;
+  insert into public.membership_roles (membership_id,role_id)
+  values (v_membership_id,v_invitation.role_id);
+
+  select slug into v_role_slug from public.roles where id=v_invitation.role_id;
+
+  update public.organization_invitations
+  set status='accepted',accepted_by=p_user_id,accepted_at=now(),updated_at=now()
+  where id=v_invitation.id;
+
+  insert into public.audit_logs (
+    organization_id,actor_user_id,action,resource_type,resource_id,metadata
+  ) values (
+    v_invitation.organization_id,p_user_id,'organization.member_joined',
+    'organization_membership',v_membership_id::text,
+    jsonb_build_object('invitation_id',v_invitation.id,'role',v_role_slug)
+  );
+
+  return jsonb_build_object(
+    'ok',true,
+    'organization_id',v_invitation.organization_id,
+    'membership_id',v_membership_id,
+    'role',v_role_slug
+  );
+end;
+$function$
+;
+CREATE OR REPLACE FUNCTION public.revoke_organization_invitation(p_organization_id uuid, p_actor_user_id uuid, p_invitation_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  perform pg_advisory_xact_lock(hashtextextended(p_organization_id::text, 187));
+  if not exists (
+    select 1
+    from public.organization_memberships m
+    join public.membership_roles mr on mr.membership_id=m.id
+    join public.roles r on r.id=mr.role_id
+    where m.organization_id=p_organization_id
+      and m.user_id=p_actor_user_id
+      and m.status='active'
+      and r.organization_id=m.organization_id and r.slug='owner'
+  ) then
+    raise exception 'Not authorized to revoke invitations';
+  end if;
+
+  update public.organization_invitations
+  set status='revoked',revoked_at=now(),updated_at=now()
+  where id=p_invitation_id
+    and organization_id=p_organization_id
+    and status='pending';
+
+  if not found then raise exception 'Pending invitation not found'; end if;
+
+  insert into public.audit_logs (
+    organization_id,actor_user_id,action,resource_type,resource_id
+  ) values (
+    p_organization_id,p_actor_user_id,'organization.invitation_revoked',
+    'organization_invitation',p_invitation_id::text
+  );
+
+  return true;
+end;
+$function$
+;
+
+-- Mutations must pass the audited owner/seat RPCs. RLS alone previously allowed
+-- delegated members.manage and broad grants included TRUNCATE (which bypasses RLS).
+revoke insert,update,delete,truncate,references,trigger on public.organization_memberships,
+  public.membership_roles,public.roles,public.role_permissions,public.organization_invitations,
+  public.organization_access_requests from public,anon,authenticated;
+drop policy if exists memberships_admin_manage on public.organization_memberships;
+revoke all on function public.create_organization_invitation(uuid,uuid,text,text,text,timestamptz) from public,anon,authenticated;
+grant execute on function public.create_organization_invitation(uuid,uuid,text,text,text,timestamptz) to service_role;
+revoke all on function public.accept_organization_invitation(uuid,text,text) from public,anon,authenticated;
+grant execute on function public.accept_organization_invitation(uuid,text,text) to service_role;
+revoke all on function public.revoke_organization_invitation(uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.revoke_organization_invitation(uuid,uuid,uuid) to service_role;
+revoke all on function public.update_organization_member_access(uuid,uuid,uuid,text,text) from public,anon,authenticated;
+grant execute on function public.update_organization_member_access(uuid,uuid,uuid,text,text) to service_role;
+revoke all on function public.set_organization_role_permissions(uuid,uuid,text,text[]) from public,anon,authenticated;
+grant execute on function public.set_organization_role_permissions(uuid,uuid,text,text[]) to service_role;
+revoke all on function public.ensure_organization_role_presets(uuid) from public,anon,authenticated;
+grant execute on function public.ensure_organization_role_presets(uuid) to service_role;

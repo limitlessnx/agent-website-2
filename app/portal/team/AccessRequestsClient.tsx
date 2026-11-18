@@ -4,17 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 
 type RequestItem = { id: string; email: string; status: string; created_at: string };
 type MemberItem = { id: string; user_id: string; email: string | null; status: string; role: string; created_at: string };
+type TeamSummary = { planName: string; subscriptionStatus: string; maximumSeats: number; activeSeats: number; suspendedSeats: number; reservedInvitations: number; availableSeats: number };
 type InvitationItem = { id: string; email: string; status: string; expires_at: string; created_at: string };
 
 export default function AccessRequestsClient({
   accessCode,
   canManage,
-  seatLimit,
 }: {
   accessCode: string;
   canManage: boolean;
-  seatLimit: number | null;
 }) {
+  const [summary, setSummary] = useState<TeamSummary | null>(null);
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [invitations, setInvitations] = useState<InvitationItem[]>([]);
@@ -25,32 +25,44 @@ export default function AccessRequestsClient({
   const [email, setEmail] = useState("");
   const [invitationPath, setInvitationPath] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     try {
       const [accessResponse, invitationResponse] = await Promise.all([
-        fetch("/api/portal/team/access-requests", { cache: "no-store" }),
-        canManage ? fetch("/api/organization/invitations", { cache: "no-store" }) : Promise.resolve(null),
+        fetch("/api/portal/team/access-requests", { cache: "no-store", signal }),
+        canManage ? fetch("/api/organization/invitations", { cache: "no-store", signal }) : Promise.resolve(null),
       ]);
       const data = await accessResponse.json();
+      if (signal?.aborted) return;
       if (!accessResponse.ok) throw new Error(data.error || "Unable to load team access.");
+      if (!Array.isArray(data.members) || !data.summary) throw new Error("Team data is unavailable. Retry before changing access.");
+      setSummary(data.summary);
       setRequests(data.requests || []);
       setMembers(data.members || []);
       if (invitationResponse) {
         const invitationsData = await invitationResponse.json();
+        if (signal?.aborted) return;
         if (!invitationResponse.ok) throw new Error(invitationsData.error || "Unable to load invitations.");
         setInvitations(invitationsData.invitations || []);
       }
       setError("");
     } catch (cause) {
+      if (signal?.aborted) return;
+      setSummary(null);
       setError(cause instanceof Error ? cause.message : "Unable to load team access.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [canManage]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.resolve().then(() => load(controller.signal));
+    return () => controller.abort();
+  }, [load]);
 
   async function act(payload: Record<string, string>, busyKey: string) {
+    if (!canManage || busy) return;
+    if (["remove", "suspend"].includes(payload.action) && !window.confirm(`${payload.action === "remove" ? "Remove" : "Suspend"} this manager’s workspace access? Their account and business records will be retained.`)) return;
     setError("");
     setNotice("");
     setBusy(busyKey);
@@ -72,7 +84,7 @@ export default function AccessRequestsClient({
   }
 
   async function invite() {
-    if (!canManage || !email.trim()) return;
+    if (!canManage || !email.trim() || busy || !summary || summary.availableSeats === 0) return;
     setBusy("invite");
     setError("");
     setNotice("");
@@ -129,20 +141,32 @@ export default function AccessRequestsClient({
     }
   }
 
-  const activeManagers = members.filter((member) => member.role === "manager" && member.status === "active");
-  const occupiedSeats = members.filter((member) => ["active", "suspended"].includes(member.status)).length + invitations.length;
-  const atLimit = seatLimit !== null && occupiedSeats >= seatLimit;
+  const atLimit = summary !== null && summary.availableSeats === 0;
+  const unavailable = loading || !summary;
 
   return <div className="portal-team-access-stack">
-    {canManage ? <>
+    {error ? <div role="alert" className="admin-error"><p>{error}</p><button type="button" className="portal-button secondary" disabled={!!busy || loading} onClick={() => void load()}>Retry team access</button></div> : null}
+    {notice ? <p className="portal-form-message" role="status">{notice}</p> : null}
       <section className="portal-card">
         <div className="portal-card-head"><div>
           <p className="portal-kicker">Plan allowances</p>
           <h2>Team seats</h2>
-          <p>{seatLimit === null ? "Seat allowance temporarily unavailable. The server will still enforce your plan." : `${occupiedSeats} of ${seatLimit} seats in use (including pending invitations).`}</p>
-          {atLimit ? <p role="status">Seat limit reached. Upgrade your plan or remove an existing invitation before adding another manager.</p> : null}
+          {summary ? <>
+            <p>{summary.planName} · {summary.subscriptionStatus}</p>
+            <dl className="portal-team-seat-summary">
+              <div><dt>Maximum team seats</dt><dd>{summary.maximumSeats}</dd></div>
+              <div><dt>Active seats</dt><dd>{summary.activeSeats}</dd></div>
+              <div><dt>Suspended seats</dt><dd>{summary.suspendedSeats}</dd></div>
+              <div><dt>Reserved invitations</dt><dd>{summary.reservedInvitations}</dd></div>
+              <div><dt>Available seats</dt><dd>{summary.availableSeats}</dd></div>
+            </dl>
+            <p>The owner counts toward the total. Suspended memberships retain their seats; expired and revoked invitations do not.</p>
+          </> : <p role="status">{loading ? "Loading team allowance…" : "Seat allowance unavailable. Retry to reload the current plan and roster."}</p>}
+          {atLimit ? <p role="status">Seat limit reached. {canManage ? "Review billing or revoke a pending invitation before adding another manager." : "Ask your organization owner to review the plan."}</p> : null}
+          {canManage && atLimit ? <a className="portal-button secondary" href="/portal/billing">Review plan</a> : null}
         </div></div>
       </section>
+    {canManage ? <>
       <section className="portal-card">
         <div className="portal-card-head"><div>
           <p className="portal-kicker">Owner-only</p><h2>Invite a manager</h2>
@@ -154,7 +178,7 @@ export default function AccessRequestsClient({
             <input id="manager-invitation-email" type="email" autoComplete="email" placeholder="manager@example.com" required value={email} onChange={(event) => setEmail(event.target.value)}/>
           </div>
           <div className="portal-actions">
-            <button className="portal-button" type="submit" disabled={busy === "invite" || atLimit}>{busy === "invite" ? "Creating..." : "Create manager invitation"}</button>
+            <button className="portal-button" type="submit" disabled={!!busy || unavailable || atLimit}>{busy === "invite" ? "Creating..." : "Create manager invitation"}</button>
           </div>
         </form>
         {invitationPath ? <div className="portal-list-row" style={{ minWidth: 0 }}>
@@ -177,11 +201,11 @@ export default function AccessRequestsClient({
       <section className="portal-card">
         <div className="portal-card-head"><div><p className="portal-kicker">Pending</p><h2>Manager requests</h2><p>Approve or reject managers who requested access using the Access ID.</p></div></div>
         <div className="portal-list">
-          {loading ? <p className="portal-empty">Loading...</p> : requests.length ? requests.map((item) => <div className="portal-list-row" key={item.id}>
+          {loading ? <p className="portal-empty">Loading...</p> : !summary ? <p>Data unavailable. Use Retry team access above.</p> : requests.length ? requests.map((item) => <div className="portal-list-row" key={item.id}>
             <div style={{ minWidth: 0 }}><strong style={{ overflowWrap: "anywhere" }}>{item.email}</strong><span>Requested {new Date(item.created_at).toLocaleString("en-NG")}</span></div>
             <div className="portal-actions">
-              <button className="portal-button" type="button" disabled={!!busy || atLimit} onClick={() => void act({ request_id: item.id, action: "approve" }, item.id)}>Approve</button>
-              <button className="portal-button secondary" type="button" disabled={!!busy} onClick={() => void act({ request_id: item.id, action: "reject" }, item.id)}>Reject</button>
+              <button className="portal-button" type="button" disabled={!!busy || unavailable || (atLimit && !invitations.some((invitation) => invitation.email.toLowerCase() === item.email.toLowerCase()))} onClick={() => void act({ request_id: item.id, action: "approve" }, item.id)}>Approve</button>
+              <button className="portal-button secondary" type="button" disabled={!!busy || loading} onClick={() => void act({ request_id: item.id, action: "reject" }, item.id)}>Reject</button>
             </div>
           </div>) : <p className="portal-empty">No pending manager requests.</p>}
         </div>
@@ -189,23 +213,25 @@ export default function AccessRequestsClient({
       <section className="portal-card">
         <div className="portal-card-head"><div><p className="portal-kicker">Invitations</p><h2>Pending email invitations</h2></div></div>
         <div className="portal-list">
-          {loading ? <p className="portal-empty">Loading...</p> : invitations.length ? invitations.map((item) => <div className="portal-list-row" key={item.id}>
+          {loading ? <p className="portal-empty">Loading...</p> : !summary ? <p>Data unavailable. Use Retry team access above.</p> : invitations.length ? invitations.map((item) => <div className="portal-list-row" key={item.id}>
             <div style={{ minWidth: 0 }}><strong style={{ overflowWrap: "anywhere" }}>{item.email}</strong><span>Expires {new Date(item.expires_at).toLocaleString("en-NG")}</span></div>
-            <button className="portal-button secondary" type="button" disabled={!!busy} onClick={() => void revoke(item.id)}>Revoke</button>
+            <button className="portal-button secondary" type="button" disabled={!!busy || loading} onClick={() => void revoke(item.id)}>Revoke</button>
           </div>) : <p className="portal-empty">No pending invitations.</p>}
         </div>
       </section>
     </> : null}
     <section className="portal-card">
-      <div className="portal-card-head"><div><p className="portal-kicker">Team</p><h2>Active managers</h2><p>{canManage ? "Manage approved manager access." : "View authorized managers. Only your organization owner can change access."}</p></div></div>
+      <div className="portal-card-head"><div><p className="portal-kicker">Team</p><h2>Team members</h2><p>{canManage ? "Manage approved manager access." : "View authorized managers. Only your organization owner can change access."}</p></div></div>
       <div className="portal-list">
-        {loading ? <p className="portal-empty">Loading team...</p> : activeManagers.length ? activeManagers.map((member) => <div className="portal-list-row" key={member.id}>
-          <div style={{ minWidth: 0 }}><strong style={{ overflowWrap: "anywhere" }}>{member.email || member.user_id}</strong><span>Manager · active · joined {new Date(member.created_at).toLocaleDateString("en-NG")}</span></div>
-          {canManage ? <button className="portal-button secondary" type="button" disabled={!!busy} onClick={() => void act({ membership_id: member.id, action: "remove" }, member.id)}>Remove access</button> : null}
-        </div>) : <p className="portal-empty">No active managers yet.</p>}
+        {loading ? <p className="portal-empty">Loading team...</p> : !summary ? <p>Team data unavailable.</p> : members.length ? members.map((member) => <div className="portal-list-row" key={member.id}>
+          <div style={{ minWidth: 0 }}><strong style={{ overflowWrap: "anywhere" }}>{member.email || member.user_id}</strong><span>{member.role} · {member.status} · joined {new Date(member.created_at).toLocaleDateString("en-NG")}</span></div>
+          {canManage && member.role === "manager" ? <div className="portal-actions">
+            {member.status === "active" ? <button className="portal-button secondary" type="button" disabled={!!busy} onClick={() => void act({ membership_id: member.id, action: "suspend" }, member.id)}>Suspend access</button> : null}
+            {["suspended", "removed"].includes(member.status) ? <button className="portal-button secondary" type="button" disabled={!!busy || (member.status === "removed" && atLimit)} onClick={() => void act({ membership_id: member.id, action: "reactivate" }, member.id)}>Reactivate access</button> : null}
+            {member.status !== "removed" ? <button className="portal-button secondary" type="button" disabled={!!busy} onClick={() => void act({ membership_id: member.id, action: "remove" }, member.id)}>Remove access</button> : null}
+          </div> : null}
+        </div>) : <p className="portal-empty">No team members found.</p>}
       </div>
     </section>
-    {notice ? <p className="portal-form-message" role="status">{notice}</p> : null}
-    {error ? <p className="admin-error" role="alert">{error}</p> : null}
   </div>;
 }
