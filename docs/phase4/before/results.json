@@ -1,0 +1,152 @@
+[
+  {
+    "route": "organizations",
+    "width": 360,
+    "scrollWidth": 360,
+    "error": 0
+  },
+  {
+    "route": "agent-operations",
+    "width": 360,
+    "scrollWidth": 360,
+    "error": 0,
+    "successRate": "Success rate\n\n100%\n0 failed or timed out"
+  },
+  {
+    "route": "integrations",
+    "width": 360,
+    "scrollWidth": 360,
+    "error": 0
+  },
+  {
+    "route": "clients",
+    "width": 360,
+    "scrollWidth": 360,
+    "error": 0
+  },
+  {
+    "route": "organizations",
+    "width": 430,
+    "scrollWidth": 430,
+    "error": 0
+  },
+  {
+    "route": "agent-operations",
+    "width": 430,
+    "scrollWidth": 430,
+    "error": 0,
+    "successRate": "Success rate\n\n100%\n0 failed or timed out"
+  },
+  {
+    "route": "integrations",
+    "width": 430,
+    "scrollWidth": 430,
+    "error": 0
+  },
+  {
+    "route": "clients",
+    "width": 430,
+    "scrollWidth": 430,
+    "error": 0
+  },
+  {
+    "route": "organizations",
+    "width": 768,
+    "scrollWidth": 768,
+    "error": 0
+  },
+  {
+    "route": "agent-operations",
+    "width": 768,
+    "scrollWidth": 768,
+    "error": 0,
+    "successRate": "Success rate\n\n100%\n0 failed or timed out"
+  },
+  {
+    "route": "integrations",
+    "width": 768,
+    "scrollWidth": 768,
+    "error": 0
+  },
+  {
+    "route": "clients",
+    "width": 768,
+    "scrollWidth": 768,
+    "error": 0
+  },
+  {
+    "route": "organizations",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "error": 0
+  },
+  {
+    "route": "agent-operations",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "error": 0,
+    "successRate": "Success rate\n\n100%0 failed or timed out"
+  },
+  {
+    "route": "integrations",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "error": 0
+  },
+  {
+    "route": "clients",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "error": 0
+  },
+  {
+    "route": "organizations",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "error": 0
+  },
+  {
+    "route": "agent-operations",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "error": 0,
+    "successRate": "Success rate\n\n100%0 failed or timed out"
+  },
+  {
+    "route": "integrations",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "error": 0
+  },
+  {
+    "route": "clients",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "error": 0
+  },
+  {
+    "route": "organizations",
+    "width": 1920,
+    "scrollWidth": 1920,
+    "error": 0
+  },
+  {
+    "route": "agent-operations",
+    "width": 1920,
+    "scrollWidth": 1920,
+    "error": 0,
+    "successRate": "Success rate\n\n100%0 failed or timed out"
+  },
+  {
+    "route": "integrations",
+    "width": 1920,
+    "scrollWidth": 1920,
+    "error": 0
+  },
+  {
+    "route": "clients",
+    "width": 1920,
+    "scrollWidth": 1920,
+    "error": 0
+  }
+]

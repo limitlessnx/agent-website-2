@@ -60,7 +60,7 @@ export async function resolveAdminOrganizationScope(): Promise<AdminOrganization
         organizationId: String(data.id),
         name: String(data.name || "Tenant organization"),
         slug: String(data.slug || context.id),
-        status: String(data.status || "active"),
+        status: String(data.status || "unknown"),
         workflowLegacyIds: [],
       };
     }
@@ -83,27 +83,8 @@ export async function resolveAdminOrganizationScope(): Promise<AdminOrganization
       organizationId: String(data.id),
       name: String(data.name || (context.kind === "system" ? context.name : "Fluxknight")),
       slug: String(data.slug || slug),
-      status: String(data.status || "active"),
+      status: String(data.status || "unknown"),
       workflowLegacyIds: workflowLegacyIds(systemId),
-    };
-  }
-
-  const fallback = await admin
-    .from("organizations")
-    .select("id,name,slug,status")
-    .eq("slug", "fluxknight")
-    .maybeSingle();
-
-  if (fallback.data) {
-    return {
-      kind: "system",
-      contextId: "fluxknight",
-      systemId: "fluxknight",
-      organizationId: String(fallback.data.id),
-      name: String(fallback.data.name || "Fluxknight"),
-      slug: String(fallback.data.slug || "fluxknight"),
-      status: String(fallback.data.status || "active"),
-      workflowLegacyIds: workflowLegacyIds("fluxknight"),
     };
   }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Calendar, KeyRound, Mail, Mic2, PlugZap, ShieldCheck } from "@/components/admin/ServerIcons";
 import { getPlatformEngineSummary, humanize } from "@/lib/platform-engine";
 import IntegrationCredentialControl from "./IntegrationCredentialControl";
+import PlatformProviderOverview from "@/components/admin/PlatformProviderOverview";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +51,12 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
         {organizationId ? <Link className="admin-button secondary-button" href={`/dashboard/clients/${organizationId}/setup`}>Back to client setup</Link> : null}
       </header>
 
+      {!organizationId ? <PlatformProviderOverview /> : null}
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><PlugZap size={15} /> Available</p><strong>{visibleIntegrations.length}</strong><span>Tenant-owned provider records</span></article>
-        <article className="admin-metric-card"><p><KeyRound size={15} /> Configured</p><strong>{configured}</strong><span>Credentials stored securely</span></article>
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Connected</p><strong>{connected}</strong><span>Verified provider connections</span></article>
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Attention</p><strong>{attention}</strong><span>Authentication or provider issues</span></article>
+        <article className="admin-metric-card"><p><PlugZap size={15} /> Available</p><strong>{errors.some(error => error.startsWith("Integrations:")) ? "—" : visibleIntegrations.length}</strong><span>Latest 300 tenant provider records</span></article>
+        <article className="admin-metric-card"><p><KeyRound size={15} /> Configured</p><strong>{errors.some(error => error.startsWith("Integrations:")) ? "—" : configured}</strong><span>Credentials stored securely</span></article>
+        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Connected</p><strong>{errors.some(error => error.startsWith("Integrations:")) ? "—" : connected}</strong><span>Last recorded connection status</span></article>
+        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Attention</p><strong>{errors.some(error => error.startsWith("Integrations:")) ? "—" : attention}</strong><span>Authentication or provider issues</span></article>
       </div>
 
       <section className="admin-panel">
@@ -91,13 +93,13 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
               </article>
             );
           })}
-          {!visibleIntegrations.length ? <div className="admin-empty-state"><div><PlugZap size={20} /><p>No tenant-owned connection is required yet. Relevant providers appear when an assigned agent or channel needs them.</p></div></div> : null}
+          {!visibleIntegrations.length ? <div className="admin-empty-state"><div><PlugZap size={20} /><p role={errors.some(error => error.startsWith("Integrations:")) ? "alert" : undefined}>{errors.some(error => error.startsWith("Integrations:")) ? "Tenant connection evidence unavailable. Refresh to retry; connection health is unknown." : "No connection records in the current sample. Review assigned agent requirements before concluding setup is complete."}</p></div></div> : null}
         </div>
       </section>
 
       {errors.length ? (
         <section className="admin-panel">
-          <div className="admin-list-row compact attention-danger"><div><strong>Connection setup attention</strong><span>{errors.join(" · ")}</span></div><ShieldCheck size={16} /></div>
+          <div className="admin-list-row compact attention-danger"><div><strong>Connection setup attention</strong><span>Some configuration evidence could not be loaded. Refresh or review authorized provider diagnostics.</span></div><ShieldCheck size={16} /></div>
         </section>
       ) : null}
     </main>

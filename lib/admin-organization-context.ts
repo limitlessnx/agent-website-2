@@ -1,21 +1,12 @@
 import { cookies } from "next/headers";
 
-export type SystemOrganizationId = "fluxknight" | "limitless-realty" | "gencouv";
+import { SYSTEM_ORGANIZATIONS, type SystemOrganizationId } from "@/lib/organization-context-catalog";
+export { SYSTEM_ORGANIZATIONS, type SystemOrganizationId } from "@/lib/organization-context-catalog";
 export type AdminOrganizationContext =
   | { kind: "system"; id: SystemOrganizationId; name: string }
   | { kind: "tenant"; id: string; name?: string };
 
 const COOKIE_NAME = "fluxknight_admin_organization";
-
-export const SYSTEM_ORGANIZATIONS: Array<{
-  id: SystemOrganizationId;
-  name: string;
-  href: string;
-}> = [
-  { id: "fluxknight", name: "Fluxknight", href: "/dashboard" },
-  { id: "limitless-realty", name: "Limitless Realty", href: "/dashboard/limitless/leads" },
-  { id: "gencouv", name: "Gencouv", href: "/dashboard/gencouv" },
-];
 
 export function parseAdminOrganizationContext(value?: string | null): AdminOrganizationContext {
   const raw = String(value || "").trim();

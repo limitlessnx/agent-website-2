@@ -495,6 +495,7 @@ export async function resolveLeoIdentity(input: { channel?: LeoChannel; allowPub
       scope: "super_admin",
       role: "super_admin",
       email: admin.email,
+      userId: admin.authMode === "account" ? admin.userId : undefined,
       channel,
       globalScope: true,
     };

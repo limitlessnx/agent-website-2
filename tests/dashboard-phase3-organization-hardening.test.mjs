@@ -22,13 +22,12 @@ test("phase 3 organization hardening remains compatible with the A7 canonical ad
     "/dashboard/billing",
     "/dashboard/settings",
   ]) assert.match(nav, new RegExp(route.replaceAll("/", "\\/")));
-  for (const label of ["Overview", "Clients", "Systems", "Operations", "Billing", "Security"]) {
+  for (const label of ["Overview", "Organizations", "Onboarding & Provisioning", "AI Agents & Automations", "Communications & Integrations", "Operations & Monitoring", "Billing & Usage", "Security & Settings"]) {
     assert.match(nav, new RegExp(`label:"${label}"`));
   }
 });
 
 test("phase 3 keeps system and tenant organizations distinct", () => {
-  const nav = read("components/admin/navigationConfig.ts");
   const sidebar = read("components/admin/AdminSidebar.tsx");
   assert.match(sidebar, /System Organizations/);
   assert.match(sidebar, /Tenant Organizations/);

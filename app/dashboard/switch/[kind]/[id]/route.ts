@@ -4,9 +4,8 @@ import { getAdminSession } from "@/lib/admin-auth";
 import {
   ADMIN_ORGANIZATION_COOKIE,
   serializeAdminOrganizationContext,
-  SYSTEM_ORGANIZATIONS,
 } from "@/lib/admin-organization-context";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { authorizeWorkspaceSelection } from "@/lib/admin-workspace-selection";
 
 export async function GET(
   request: Request,
@@ -20,23 +19,18 @@ export async function GET(
   const kind = rawKind === "tenant" ? "tenant" : rawKind === "system" ? "system" : null;
   if (!kind || !id) return NextResponse.redirect(new URL("/dashboard", request.url));
 
-  if (kind === "system" && !SYSTEM_ORGANIZATIONS.some((item) => item.id === id)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  if (kind === "tenant") {
-    const admin = createAdminClient();
-    const { data } = await admin.from("organizations").select("id").eq("id", id).maybeSingle();
-    if (!data) return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
+  if (request.headers.get("sec-fetch-site") === "cross-site") return new NextResponse("Same-origin navigation required.", { status: 403 });
+  try { await authorizeWorkspaceSelection(session, { kind, id }); }
+  catch { return NextResponse.redirect(new URL("/dashboard/organizations?selection=unavailable", request.url)); }
 
   const response = NextResponse.redirect(new URL("/dashboard", request.url));
   response.cookies.set(ADMIN_ORGANIZATION_COOKIE, serializeAdminOrganizationContext({ kind, id }), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/dashboard",
+    path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
+  response.headers.append("Set-Cookie", `${ADMIN_ORGANIZATION_COOKIE}=; Path=/dashboard; Max-Age=0; HttpOnly; SameSite=Lax`);
   return response;
 }
