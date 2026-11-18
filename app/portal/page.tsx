@@ -22,6 +22,10 @@ import OrganizationDashboard from "@/components/portal/OrganizationDashboard";
 import PhotographyDashboard from "@/components/portal/PhotographyDashboard";
 import HotelOverviewPage from "@/components/portal/hotel/HotelOverviewPage";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getPortalCapabilities } from "@/lib/portal-access";
+import { getWorkspaceHealth, getWorkspaceModules } from "@/lib/workspace-overview";
+import WorkspacePresetPanel from "@/components/portal/WorkspacePresetPanel";
+import workspaceStyles from "@/components/portal/WorkspacePresetPanel.module.css";
 
 export const metadata = { title: "Client Portal | Fluxknight" };
 export const dynamic = "force-dynamic";
@@ -63,10 +67,10 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   }
   const onboarding = await getClientOnboardingProfile(session.organizationId).catch(() => null);
   if (getIndustryExperience(onboarding?.industry).slug === "hotels") return <HotelOverviewPage/>;
-  const [summary, wallet, subscription, whatsappStatus, latestEvaluation] = await Promise.all([
+  const [summary, wallet, subscriptionResult, whatsappStatus, latestEvaluation] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
-    getActiveFluxSubscription(session.organizationId).catch(() => null),
+    getActiveFluxSubscription(session.organizationId).then((value) => ({ value, unavailable: false })).catch(() => ({ value: null, unavailable: true })),
     (async (): Promise<WhatsAppStatus | null> => {
       try {
         const [{ data: binding }, { data: integration }] = await Promise.all([
@@ -78,6 +82,8 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
     })(),
     (async () => { try { const { data } = await admin.from("ai_business_evaluation_sessions").select("id,status,context,evaluation,created_at,updated_at").eq("organization_id",session.organizationId).eq("status","evaluated").order("updated_at",{ascending:false}).limit(1).maybeSingle(); return data; } catch { return null; } })(),
   ]);
+  const subscription = subscriptionResult.value;
+  const subscriptionUnavailable = subscriptionResult.unavailable;
 
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
   const experience = getIndustryExperience(summary.onboarding?.industry);
@@ -165,17 +171,16 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
     ? organization.metadata as Record<string, unknown>
     : {};
   const workspaceMode = String(organizationMetadata.workspace_mode || "");
-  const isFreeWorkspace = workspaceMode === "free" && !subscription && !isTrial;
-  const systemHealthy = failedRuns.length === 0 && attentionAgents.length === 0;
+  const isFreeWorkspace = workspaceMode === "free" && !subscription && !isTrial && !subscriptionUnavailable;
+  const capabilities = await getPortalCapabilities(session).catch(() => null);
+  const health = getWorkspaceHealth(summary, !capabilities || capabilities.systemsUnavailable);
+  const systemHealthy = health.state === "observed";
   const recentActivity = summary.runs.slice(0, 6);
-  const industryActions = [
-    experience.features.propertyCatalog ? { href: "/portal/systems", label: experience.inventoryLabel, description: "Manage the resources and records central to this workspace." } : null,
-    experience.features.appointments ? { href: "/portal/appointments", label: experience.appointmentLabel, description: `Manage ${experience.appointmentLabel.toLowerCase()} for your business.` } : null,
-    experience.features.inventory ? { href: "/portal/systems", label: experience.inventoryLabel, description: "Manage the products, services or resources your team operates." } : null,
-  ].filter(Boolean) as Array<{href:string;label:string;description:string}>;
+  const unavailableSources = summary.unavailableSources || [];
+  const modules = getWorkspaceModules({ experience, capabilities, preview: session.isAdminPreview, planCode: wallet?.planCode, trial: isTrial });
 
   return (
-    <main className="portal-page portal-command-center">
+    <main className={`portal-page portal-command-center ${workspaceStyles.overview}`}>
       <section className="portal-command-hero">
         <div>
           <p className="portal-kicker">Business command center · {experience.name}</p>
@@ -186,10 +191,12 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
           <span />
           <div>
             <small>System status</small>
-            <strong>{systemHealthy ? "Everything is running normally" : "A few items need attention"}</strong>
+            <strong>{health.label}</strong>
           </div>
         </div>
       </section>
+
+      {health.state === "unavailable" ? <section className="portal-card" role="alert"><h2>Some workspace information is unavailable</h2><p>Reload before relying on setup status, counts or recent activity. A failed request does not mean there are no records.</p><a className="portal-button secondary" href="/portal">Reload overview</a></section> : null}
 
       {isFreeWorkspace ? (
         <section className="portal-card portal-activation-banner" aria-label="Choose a Fluxknight plan">
@@ -198,10 +205,10 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
             <h2>Your workspace is ready. Activate it when you are ready.</h2>
             <p>Explore your dashboard and complete your business setup without paying or starting a trial. Choose a paid plan or activate the Basic free trial when you want customer-facing AI turned on.</p>
           </div>
-          <div className="portal-actions">
+          {capabilities?.isOwner && !session.isAdminPreview ? <div className="portal-actions">
             <Link className="portal-button secondary" href="/pricing">Choose a plan</Link>
             <TrialActivationButton />
-          </div>
+          </div> : <p>Ask your organization owner to review activation and plan access.</p>}
         </section>
       ) : null}
 
@@ -234,49 +241,44 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
         </section>
       ) : null}
 
-      <section className="portal-card portal-industry-context" aria-label={`${experience.name} workspace`}>
-        <div className="portal-card-head"><div><p className="portal-kicker">{experience.name} workspace</p><h2>Built around your business</h2><p>{experience.dashboardDescription}</p></div></div>
-        <div className="portal-action-list">
-          {industryActions.map((action) => <Link href={action.href} key={action.label}><span><Workflow size={17} /></span><div><strong>{action.label}</strong><small>{action.description}</small></div><ChevronRight size={16} /></Link>)}
-          {!industryActions.length ? <div className="portal-empty">Industry-specific modules will appear here as your workspace is configured.</div> : null}
-        </div>
-      </section>
-
       <section className="portal-business-metrics" aria-label="Business system overview">
         <article className="portal-business-metric">
           <span><Bot size={17} /> AI team</span>
-          <strong>{activeAgents}</strong>
-          <small>{summary.agents.length} total agent{summary.agents.length === 1 ? "" : "s"}</small>
+          <strong>{unavailableSources.includes("agents") ? "Unavailable" : activeAgents}</strong>
+          <small>{unavailableSources.includes("agents") ? "Agent information could not be loaded" : `${summary.agents.length} total agent${summary.agents.length === 1 ? "" : "s"}`}</small>
         </article>
         <article className="portal-business-metric">
           <span><Workflow size={17} /> Automations</span>
-          <strong>{activeWorkflows}</strong>
-          <small>{summary.workflows.length} configured</small>
+          <strong>{unavailableSources.includes("workflows") ? "Unavailable" : activeWorkflows}</strong>
+          <small>{unavailableSources.includes("workflows") ? "System information could not be loaded" : `${summary.workflows.length} configured`}</small>
         </article>
         <article className="portal-business-metric">
           <span><Activity size={17} /> Recent activity</span>
-          <strong>{summary.runs.length}</strong>
-          <small>{successfulRuns} completed successfully</small>
+          <strong>{unavailableSources.includes("runs") ? "Unavailable" : summary.runs.length}</strong>
+          <small>{unavailableSources.includes("runs") ? "Activity could not be loaded" : `${successfulRuns} completed successfully`}</small>
         </article>
         <article className="portal-business-metric">
           <span><Clock3 size={17} /> Flux Credits</span>
           <strong>{wallet ? wallet.balance.toLocaleString("en-NG") : "Unavailable"}</strong>
-          <small>{wallet?.percentUsed ?? 0}% used this cycle</small>
+          <small>{wallet ? `${wallet.percentUsed}% used this cycle` : "Usage could not be loaded"}</small>
         </article>
       </section>
 
-      <section className="portal-command-grid">
+      <WorkspacePresetPanel experience={experience} modules={modules} unavailable={!capabilities} preview={session.isAdminPreview} />
+
+      <section className="portal-page">
         <article className="portal-card portal-attention-card">
           <div className="portal-card-head">
             <div>
               <p className="portal-kicker">Needs your attention</p>
-              <h2>{systemHealthy ? "Nothing urgent right now" : "Review these items"}</h2>
+              <h2>{systemHealthy ? "Nothing urgent recorded" : health.label}</h2>
               <p>Important items that could affect your AI team or customer experience.</p>
             </div>
             {systemHealthy ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}
           </div>
 
           <div className="portal-list">
+            {health.state === "unavailable" || health.state === "setup" ? <p>{health.description}</p> : null}
             {failedRuns.slice(0, 3).map((run: PortalWorkflowRun) => (
               <Link className="portal-list-row portal-list-link" href="/portal/systems" key={run.id}>
                 <div>
@@ -299,25 +301,14 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
               <div className="portal-clear-state">
                 <span><ShieldCheck size={19} /></span>
                 <div>
-                  <strong>Your systems look healthy</strong>
-                  <p>No recent failures or agent setup issues need your attention.</p>
+                  <strong>No recent issues recorded</strong>
+                  <p>{health.description}</p>
                 </div>
               </div>
             ) : null}
           </div>
         </article>
 
-        <article className="portal-card portal-quick-actions">
-          <div className="portal-card-head">
-            <div><p className="portal-kicker">Quick actions</p><h2>Manage your business systems</h2></div>
-          </div>
-          <div className="portal-action-list">
-            <Link href="/portal/agents"><span><Bot size={17} /></span><div><strong>Open AI Team</strong><small>See your agents and what they are configured to handle.</small></div><ChevronRight size={16} /></Link>
-            <Link href="/portal/systems"><span><Workflow size={17} /></span><div><strong>View Automations</strong><small>Review the systems working in the background.</small></div><ChevronRight size={16} /></Link>
-            <Link href="/portal/integrations"><span><Activity size={17} /></span><div><strong>Check Connections</strong><small>See whether your business channels are connected.</small></div><ChevronRight size={16} /></Link>
-            <Link href="/portal/billing"><span><Clock3 size={17} /></span><div><strong>Plan & Usage</strong><small>Review credits, plan access and usage.</small></div><ChevronRight size={16} /></Link>
-          </div>
-        </article>
       </section>
 
       <section className="portal-card portal-ai-team-preview">
@@ -327,11 +318,11 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
             <h2>Your AI Team</h2>
             <p>See the systems working for your business and their current status.</p>
           </div>
-          <Link href="/portal/agents">View all agents <ChevronRight size={14} /></Link>
+          {!session.isAdminPreview && capabilities?.systems ? <Link href="/portal/agents">View all agents <ChevronRight size={14} /></Link> : null}
         </div>
         <div className="portal-ai-team-grid">
-          {summary.agents.slice(0, 3).map((agent: PortalAgent) => (
-            <Link href="/portal/agents" className="portal-ai-team-card" key={agent.id}>
+          {summary.agents.slice(0, 3).map((agent: PortalAgent) => {
+            const content = <>
               <span className="portal-agent-icon"><Bot size={20} /></span>
               <div>
                 <div className="portal-ai-team-title">
@@ -341,9 +332,12 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
                 <p>{agent.description || "AI agent configured for your business."}</p>
               </div>
               <ChevronRight size={17} />
-            </Link>
-          ))}
-          {!summary.agents.length ? <p className="portal-empty">Your AI agents will appear here once provisioning begins.</p> : null}
+            </>;
+            return !session.isAdminPreview && capabilities?.systems
+              ? <Link href="/portal/agents" className="portal-ai-team-card" key={agent.id}>{content}</Link>
+              : <article className="portal-ai-team-card" key={agent.id}>{content}</article>;
+          })}
+          {!summary.agents.length ? <p className="portal-empty">{unavailableSources.includes("agents") ? "Agent information is unavailable. Reload to try again." : "Your AI agents will appear here once provisioning begins."}</p> : null}
         </div>
       </section>
 
@@ -354,7 +348,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
             <h2>What your systems have been doing</h2>
             <p>A simple view of recent automation activity in your workspace.</p>
           </div>
-          <Link href="/portal/systems">View automations <ChevronRight size={14} /></Link>
+          {!session.isAdminPreview && capabilities?.systems ? <Link href="/portal/systems">View automations <ChevronRight size={14} /></Link> : null}
         </div>
         <div className="portal-list">
           {recentActivity.map((run) => (
@@ -366,17 +360,17 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
               <em>{run.status.replaceAll("_", " ")}</em>
             </div>
           ))}
-          {!recentActivity.length ? <p className="portal-empty">No recent business-system activity has been recorded yet.</p> : null}
+          {!recentActivity.length ? <p className="portal-empty">{unavailableSources.includes("runs") ? "Recent activity is unavailable. Reload to try again." : "No recent business-system activity has been recorded yet."}</p> : null}
         </div>
       </section>
 
-      {wallet ? <PlanEntitlementsPanel planCode={wallet.planCode} /> : (
+      {wallet ? <details className={workspaceStyles.planDisclosure}><summary>Plan access details</summary><PlanEntitlementsPanel planCode={wallet.planCode} /></details> : (
         <section className="portal-card portal-degraded-state" aria-live="polite">
           <div className="portal-card-head">
             <div><p className="portal-kicker">Plan & usage</p><h2>Usage data temporarily unavailable</h2><p>Your workspace remains available while billing and credit data reconnects.</p></div>
             <AlertTriangle size={19} />
           </div>
-          <Link className="portal-button secondary" href="/portal/billing">Open Plan & Usage</Link>
+          {!session.isAdminPreview && capabilities?.billing ? <Link className="portal-button secondary" href="/portal/billing">Open Plan & Usage</Link> : null}
         </section>
       )}
     </main>

@@ -57,6 +57,8 @@ export async function getTenantReadiness(organizationId: string) {
   const base = `/dashboard/clients/${encodeURIComponent(organizationId)}/setup`;
   const checks: ReadinessCheck[] = [];
   const add = (key: string, label: string, ready: boolean, action: string, anchor = "brief") => checks.push({ key, label, ready, action, href: `${base}#${anchor}` });
+  const inactive = Boolean(org.data && org.data.status !== "active");
+  if (inactive) add("lifecycle", "Organization lifecycle", false, `Organization is ${org.data!.status}. Review its lifecycle in organization management before testing or activation.`);
   add("owner", "Organization and owner", Boolean(org.data && members.data?.some(row => (row.membership_roles as unknown as Array<{ roles: { slug: string } | null }>).some(binding => binding.roles?.slug === "owner"))), "Assign an active owner in Team & Access.");
   add("template", "Industry template", Boolean((assignments.data?.length && assignments.data.every(row => row.status === "active")) || families.data?.some(row => row.template_id && (row.agent_templates as unknown as { status: string } | null)?.status === "published")), "Apply the correct industry template; use starter configuration only.");
   add("subscription", "Subscription and entitlements", subscriptionReady && [...effective.values()].some(Boolean), "Review the current subscription and effective package entitlements.", "launch");
@@ -70,11 +72,11 @@ export async function getTenantReadiness(organizationId: string) {
   const stale = Boolean(running && (!Number.isFinite(started) || Date.now() - started > 15 * 60_000));
   const deploymentFailed = systems.data?.some(row => row.status === "needs_attention") || jobs.data?.some(row => row.status === "failed");
   const deploymentRunning = systems.data?.some(row => row.status === "provisioning") || jobs.data?.some(row => ["queued", "running"].includes(row.status));
-  const syncState = stale || deploymentFailed || metadata.some(row => row?.n8n_sync_status === "needs_attention") ? "needs_attention" : running || deploymentRunning ? "provisioning" : "";
+  const syncState = inactive || stale || deploymentFailed || metadata.some(row => row?.n8n_sync_status === "needs_attention") ? "needs_attention" : running || deploymentRunning ? "provisioning" : "";
   add("automation", "Automation deployment", allRuntime("workflow_ready") && !syncState, "Review deployment evidence and retry the saved starter setup if needed.", "configuration");
   add("tests", "Test results", latestPass(tests.data || [], "passed"), "Run controlled tests for every agent after its latest configuration change.", "testing");
   add("approval", "Activation approval", latestPass(approvals.data || [], "approved"), "Obtain approval for the current agent configuration before activation.", "launch");
-  for (const check of checks) if (["owner", "subscription", "template", "catalog"].includes(check.key)) check.href = `/dashboard/clients/${encodeURIComponent(organizationId)}/manage`;
+  for (const check of checks) if (["owner", "subscription", "template", "catalog", "lifecycle"].includes(check.key)) check.href = `/dashboard/clients/${encodeURIComponent(organizationId)}/manage`;
   if (unavailable) add("evidence", "Readiness evidence", false, "Readiness could not be fully loaded. Refresh or ask an administrator to review access.");
   return evaluateTenantReadiness({ checks, provisioning: syncState, live: profiles.data?.[0]?.status === "live", hasSetup: Boolean(assignments.data?.length || agentRows.length), unavailable });
 }

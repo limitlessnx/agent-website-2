@@ -6,11 +6,13 @@ type PermissionRelation = { key?: string } | Array<{ key?: string }> | null;
 type RolePermissionRow = { permissions?: PermissionRelation };
 type RoleRelation = {
   id?: string;
+  organization_id?: string;
   slug?: string;
   name?: string;
   role_permissions?: RolePermissionRow[];
 } | Array<{
   id?: string;
+  organization_id?: string;
   slug?: string;
   name?: string;
   role_permissions?: RolePermissionRow[];
@@ -47,11 +49,12 @@ function normalizeOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] || null : value;
 }
 
-function permissionsFromMembership(row: MembershipAccessRow) {
+function permissionsFromMembership(row: MembershipAccessRow, organizationId: string) {
   const keys = new Set<string>();
   for (const membershipRole of row.membership_roles || []) {
     const role = normalizeOne(membershipRole.roles);
-    for (const rp of role?.role_permissions || []) {
+    if (role?.organization_id !== organizationId) continue;
+    for (const rp of role.role_permissions || []) {
       const permission = normalizeOne(rp.permissions);
       if (permission?.key) keys.add(permission.key);
     }
@@ -61,15 +64,15 @@ function permissionsFromMembership(row: MembershipAccessRow) {
 
 export async function getOrganizationAccessContext(organizationId: string, userId: string) {
   const rows = await supabaseServerRequest<MembershipAccessRow[]>(
-    `organization_memberships?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,user_id,status,membership_roles(roles(id,slug,name,role_permissions(permissions(key))))&limit=1`,
+    `organization_memberships?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,user_id,status,membership_roles(roles(id,organization_id,slug,name,role_permissions(permissions(key))))&limit=1`,
   );
   const membership = rows[0];
   if (!membership) throw new Error("Active organization membership required.");
 
   const roles = (membership.membership_roles || [])
-    .map((item) => normalizeOne(item.roles)?.slug || "")
+    .map((item) => { const role = normalizeOne(item.roles); return role?.organization_id === organizationId ? role.slug || "" : ""; })
     .filter(Boolean);
-  const permissions = permissionsFromMembership(membership);
+  const permissions = permissionsFromMembership(membership, organizationId);
 
   return {
     membershipId: membership.id,
@@ -78,6 +81,12 @@ export async function getOrganizationAccessContext(organizationId: string, userI
     roles,
     permissions,
   };
+}
+
+/** Membership administration belongs exclusively to organization owners. */
+export function assertOrganizationOwner(context: Awaited<ReturnType<typeof getOrganizationAccessContext>>) {
+  if (context.roles.includes("owner")) return;
+  throw new Error("Only the organization owner is authorized to manage team access.");
 }
 
 export function assertAnyOrganizationPermission(
@@ -90,6 +99,7 @@ export function assertAnyOrganizationPermission(
 }
 
 function roleSlug(row: MemberListRow) {
+  if ((row.membership_roles || []).some((item) => normalizeOne(item.roles)?.slug === "owner")) return "owner";
   for (const membershipRole of row.membership_roles || []) {
     const role = normalizeOne(membershipRole.roles);
     if (role?.slug) return role.slug;
@@ -123,10 +133,10 @@ export async function listOrganizationMembers(organizationId: string, userId: st
 
 export async function listOrganizationInvitations(organizationId: string, userId: string) {
   const access = await getOrganizationAccessContext(organizationId, userId);
-  assertAnyOrganizationPermission(access, ["members.view", "members.invite", "members.manage"]);
+  assertOrganizationOwner(access);
 
   return supabaseServerRequest<InvitationRow[]>(
-    `organization_invitations?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.pending&select=id,email,status,expires_at,created_at,invited_by,roles(slug,name)&order=created_at.desc`,
+    `organization_invitations?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.pending&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=id,email,status,expires_at,created_at,invited_by,roles(slug,name)&order=created_at.desc`,
   );
 }
 
@@ -142,7 +152,7 @@ export async function createOrganizationInvitation(input: {
   expiresInHours?: number;
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  assertAnyOrganizationPermission(access, ["members.invite", "members.manage"]);
+  assertOrganizationOwner(access);
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + Math.max(1, Math.min(input.expiresInHours || 72, 168)) * 60 * 60 * 1000);
@@ -196,8 +206,7 @@ export async function updateOrganizationMemberAccess(input: {
   status?: "active" | "suspended" | "removed";
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  const required = input.role ? ["members.roles.manage", "members.manage"] : ["members.suspend", "members.manage"];
-  assertAnyOrganizationPermission(access, required);
+  assertOrganizationOwner(access);
 
   return supabaseServerRequest<Record<string, unknown>>(
     "rpc/update_organization_member_access",
@@ -220,7 +229,7 @@ export async function revokeOrganizationInvitation(input: {
   invitationId: string;
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  assertAnyOrganizationPermission(access, ["members.invite", "members.manage"]);
+  assertOrganizationOwner(access);
 
   return supabaseServerRequest<boolean>("rpc/revoke_organization_invitation", {
     method: "POST",
@@ -248,9 +257,12 @@ export async function setOrganizationRolePermissions(input: {
   permissions: string[];
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  assertAnyOrganizationPermission(access, ["members.roles.manage", "members.manage"]);
+  assertOrganizationOwner(access);
 
   const permissions = [...new Set(input.permissions.map((value) => value.trim()).filter(Boolean))];
+  if (permissions.some((key) => (key.startsWith("members.") && key !== "members.view") || key === "organization.owner.transfer" || (key.startsWith("billing.") && key !== "billing.view"))) {
+    throw new Error("Team access, ownership and billing permissions are reserved to the organization owner.");
+  }
   return supabaseServerRequest<Record<string, unknown>>(
     "rpc/set_organization_role_permissions",
     {
@@ -263,4 +275,24 @@ export async function setOrganizationRolePermissions(input: {
       }),
     },
   );
+}
+
+/** Read the existing commercial entitlement; no new seat allowances are invented. */
+export async function getOrganizationTeamSummary(organizationId: string, members: Awaited<ReturnType<typeof listOrganizationMembers>>) {
+  const [maximumSeats, invitations, subscriptions] = await Promise.all([
+    supabaseServerRequest<number>("rpc/organization_effective_seat_limit", {
+      method: "POST", body: JSON.stringify({ p_organization_id: organizationId }),
+    }),
+    supabaseServerRequest<Array<{ id: string }>>(`organization_invitations?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.pending&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=id`),
+    supabaseServerRequest<Array<{ status: string; billing_plans: { name?: string } | Array<{ name?: string }> | null }>>(`organization_subscriptions?organization_id=eq.${encodeURIComponent(organizationId)}&select=status,billing_plans(name)&order=created_at.desc&limit=1`),
+  ]);
+  if (!Number.isFinite(maximumSeats) || maximumSeats < 1) throw new Error("Team seat allowance is unavailable.");
+  const activeSeats = members.filter((m) => m.status === "active").length;
+  const suspendedSeats = members.filter((m) => m.status === "suspended").length;
+  return {
+    planName: normalizeOne(subscriptions[0]?.billing_plans)?.name || "No subscription assigned",
+    subscriptionStatus: subscriptions[0]?.status || "unassigned",
+    maximumSeats, activeSeats, suspendedSeats, reservedInvitations: invitations.length,
+    availableSeats: Math.max(0, maximumSeats - activeSeats - suspendedSeats - invitations.length),
+  };
 }

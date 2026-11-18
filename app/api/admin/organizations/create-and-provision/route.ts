@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
           p_business_email: businessEmail || null,
           p_country: country || "Nigeria",
           p_timezone: timezone || "Africa/Lagos",
-          p_actor_user_id: null,
+          p_actor_user_id: session.authMode === "account" ? session.userId || null : null,
           p_request_id: requestId,
         }),
       },

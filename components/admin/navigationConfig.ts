@@ -15,30 +15,40 @@ export type AdminNavGroup={id:string;label:string;sections:AdminNavSection[]}
  * removed from primary navigation unless they map to a platform operator job.
  */
 export const ADMIN_NAV_GROUPS:AdminNavGroup[]=[
-  {id:"overview",label:"Overview",sections:[{items:[{href:"/dashboard",label:"Overview",exact:true}]}]},
-  {id:"clients",label:"Clients",sections:[{items:[
-    {href:"/dashboard/clients",label:"Organization Management",exact:true},
-    {href:"/dashboard/onboarding#new-client",label:"Onboard Client"},
+  {id:"overview",label:"Overview",sections:[{items:[
+    {href:"/dashboard/platform",label:"Platform Control Center",exact:true},
+    {href:"/dashboard",label:"Workspace Overview",exact:true},
+  ]}]},
+  {id:"clients",label:"Organizations",sections:[{items:[
+    {href:"/dashboard/organizations",label:"Organization Registry"},
+    {href:"/dashboard/clients",label:"Organization Management"},
     {href:"/dashboard/evaluations",label:"Evaluation Leads"},
   ]}]},
-  {id:"systems",label:"Systems",sections:[{items:[
+  {id:"onboarding",label:"Onboarding & Provisioning",sections:[{items:[
+    {href:"/dashboard/provisioning",label:"Provisioning Readiness"},
+    {href:"/dashboard/onboarding#new-client",label:"Onboard Client"},
+  ]}]},
+  {id:"systems",label:"AI Agents & Automations",sections:[{items:[
     {href:"/dashboard/workflows",label:"Systems & Workflows"},
     {href:"/dashboard/agents",label:"Agents"},
+    {href:"/dashboard/agent-operations",label:"Agent Operations"},
+  ]}]},
+  {id:"communications",label:"Communications & Integrations",sections:[{items:[
     {href:"/dashboard/email",label:"Email & Proposals"},
     {href:"/dashboard/integrations",label:"Integrations"},
-  ]}]},
-  {id:"operations",label:"Operations",sections:[{items:[
-    {href:"/dashboard/control-center",label:"Operations Center"},
     {href:"/dashboard/conversations",label:"Conversations"},
+  ]}]},
+  {id:"operations",label:"Operations & Monitoring",sections:[{items:[
+    {href:"/dashboard/control-center",label:"Operations Center"},
     {href:"/dashboard/activity",label:"Activity"},
     {href:"/dashboard/health",label:"Health & Failures"},
     {href:"/dashboard/analytics",label:"Analytics & Tenant Health"},
     {href:"/dashboard/support",label:"Support & Leo"},
   ]}]},
-  {id:"billing",label:"Billing",sections:[{items:[
+  {id:"billing",label:"Billing & Usage",sections:[{items:[
     {href:"/dashboard/billing",label:"Billing & Credits"},
   ]}]},
-  {id:"security",label:"Security",sections:[{items:[
+  {id:"security",label:"Security & Settings",sections:[{items:[
     {href:"/dashboard/settings",label:"Security & Settings"},
   ]}]},
 ];

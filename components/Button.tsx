@@ -20,6 +20,7 @@ export type ButtonAction =
 
 interface ButtonProps {
   href?: string;
+  prefetch?: boolean;
   onClick?: () => void;
   variant?: "primary" | "ghost" | "outline";
   size?: "sm" | "md" | "lg";
@@ -77,6 +78,7 @@ function ActionContent({
 
 export default function Button({
   href,
+  prefetch,
   onClick,
   variant = "primary",
   size = "md",
@@ -96,6 +98,7 @@ export default function Button({
     return (
       <Link
         href={href}
+        prefetch={prefetch}
         className={`fk-action-button ${buttonStyles.button} ${className}`.trim()}
         data-size={size}
         data-variant={variant}

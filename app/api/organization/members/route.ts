@@ -23,6 +23,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const session = await getClientSession();
     if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    if (session.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const membershipId = String(body.membership_id || "").trim();
     const role = body.role ? String(body.role).trim() : undefined;

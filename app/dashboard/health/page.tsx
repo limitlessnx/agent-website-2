@@ -24,6 +24,8 @@ export default async function CustomerHealthPage({ searchParams }: HealthPagePro
     ? allSnapshots.filter((snapshot) => snapshot.organizationId === organizationId)
     : allSnapshots;
 
+  const evidenceAvailable = errors.length === 0;
+  const canAssessHealth = evidenceAvailable && snapshots.length > 0;
   const healthy = snapshots.filter((snapshot) => snapshot.band === "healthy").length;
   const watch = snapshots.filter((snapshot) => snapshot.band === "watch").length;
   const risk = snapshots.filter((snapshot) => ["risk", "critical"].includes(snapshot.band)).length;
@@ -35,18 +37,18 @@ export default async function CustomerHealthPage({ searchParams }: HealthPagePro
         <div>
           <p className="admin-kicker">Phase 5 · Customer success</p>
           <h1>Customer Health</h1>
-          <p>Organization health is calculated from live integration state, stale health checks, channel availability and recent platform activity. Dashboard alerts are the default response; email is reserved for separately routed critical events.</p>
+          <p>Organization health scores use the latest recorded integration sample and health-check timestamps. They do not verify current provider availability. Dashboard alerts are the default response; email is reserved for separately routed critical events.</p>
         </div>
-        <span className={risk ? "admin-status warning" : "admin-status live"}>
-          {risk ? `${risk} organization${risk === 1 ? "" : "s"} need attention` : "Customer health stable"}
+        <span className={!canAssessHealth || risk ? "admin-status warning" : "admin-status"}>
+          {!evidenceAvailable ? "Health evidence unavailable" : !snapshots.length ? "Health unknown · no evidence" : risk ? `${risk} organization${risk === 1 ? "" : "s"} need attention` : "No high-risk scores in sample"}
         </span>
       </header>
 
       <div className="admin-metric-grid">
-        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Healthy</p><strong>{healthy}</strong><span>Score 80–100</span></article>
-        <article className="admin-metric-card"><p><Activity size={15} /> Watch</p><strong>{watch}</strong><span>Score 60–79</span></article>
-        <article className="admin-metric-card"><p><Building2 size={15} /> At risk</p><strong>{risk}</strong><span>Score below 60</span></article>
-        <article className="admin-metric-card"><p><PlugZap size={15} /> Active alerts</p><strong>{alerts}</strong><span>Dashboard-first interventions</span></article>
+        <article className="admin-metric-card"><p><ShieldCheck size={15} /> Healthy</p><strong>{evidenceAvailable ? healthy : "—"}</strong><span>Score 80–100</span></article>
+        <article className="admin-metric-card"><p><Activity size={15} /> Watch</p><strong>{evidenceAvailable ? watch : "—"}</strong><span>Score 60–79</span></article>
+        <article className="admin-metric-card"><p><Building2 size={15} /> At risk</p><strong>{evidenceAvailable ? risk : "—"}</strong><span>Score below 60</span></article>
+        <article className="admin-metric-card"><p><PlugZap size={15} /> Active alerts</p><strong>{evidenceAvailable ? alerts : "—"}</strong><span>Dashboard-first interventions</span></article>
       </div>
 
       <section className="admin-panel">
@@ -97,13 +99,13 @@ export default async function CustomerHealthPage({ searchParams }: HealthPagePro
               {notification.actionHref && notification.actionLabel ? <Link href={notification.actionHref}>{notification.actionLabel}</Link> : null}
             </div>
           ))}
-          {!alerts ? <p className="admin-empty">No health interventions are currently required.</p> : null}
+          {!alerts ? <p className="admin-empty">{canAssessHealth ? "No health interventions in the current sample." : "Insufficient evidence to assess health interventions."}</p> : null}
         </div>
       </section>
 
       {errors.length ? (
         <section className="admin-panel">
-          <div className="admin-list-row compact"><div><strong>Health visibility is partially degraded</strong><span>{errors.join(" · ")}</span></div><ShieldCheck size={16} /></div>
+          <div className="admin-list-row compact"><div><strong>Health visibility is partially degraded</strong><span role="alert">Some health evidence could not be loaded. Refresh or review authorized diagnostics. Health is unknown.</span></div><ShieldCheck size={16} /></div>
         </section>
       ) : null}
     </main>

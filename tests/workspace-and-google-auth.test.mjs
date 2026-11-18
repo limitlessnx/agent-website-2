@@ -11,7 +11,7 @@ test("workspace dashboard greeting uses resolved organization instead of hard-co
 });
 
 test("organization scope has distinct Fluxknight, Limitless Realty and Gencouv system identities",()=>{
-  const context=read("lib/admin-organization-context.ts");
+  const context=read("lib/organization-context-catalog.ts");
   const scope=read("lib/admin-organization-scope.ts");
   assert.match(context,/"fluxknight"/);
   assert.match(context,/"limitless-realty"/);

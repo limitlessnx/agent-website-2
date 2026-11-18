@@ -1,0 +1,12 @@
+{
+  "run": "Phase 4 full behavioral and responsive suite",
+  "stats": {
+    "startTime": "2026-11-18T00:28:07.286Z",
+    "duration": 433571.27800000005,
+    "expected": 90,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "source": "Local synthetic fixtures; no external provider requests"
+}

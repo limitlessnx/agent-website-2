@@ -95,6 +95,8 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
   const [openSections, setOpenSections] = useState<string[]>([]);
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState("");
   const [collapsed, setCollapsed] = useState(false);
   const { open: mobileOpen, closeMenu } = useMobileNavigation();
   const sidebarRef = useRef<HTMLElement>(null);
@@ -145,23 +147,30 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
   const workspaceName = activeOrganization.name;
 
   const systemOrganizations = [
-    { id: "fluxknight", href: "/dashboard", label: "Fluxknight", meta: "System organization" },
-    { id: "limitless-realty", href: "/dashboard", label: "Limitless Realty", meta: "System organization" },
-    { id: "gencouv", href: "/dashboard/gencouv", label: "Gencouv", meta: "System organization" },
+    { id: "fluxknight", href: "/dashboard/platform", label: "Fluxknight", meta: "Platform administration" },
+    { id: "limitless-realty", href: "/dashboard/limitless/leads", label: "Limitless Realty", meta: "Internal organization" },
+    { id: "gencouv", href: "/dashboard/gencouv", label: "Gencouv", meta: "Internal organization" },
   ];
 
   async function switchOrganization(kind: "system" | "tenant", id: string, href: string) {
+    if (switching) return;
+    setSwitching(true);
+    setSwitchError("");
     try {
       const response = await fetch("/api/admin/organization-context", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind, id }),
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error || "Workspace could not be switched. Try again.");
+      }
       setWorkspaceOpen(false);
       closeMenu();
       window.location.assign(href);
-    } catch {}
+    } catch (error) { setSwitchError(error instanceof Error ? error.message : "Connection unavailable. Try again."); }
+    finally { setSwitching(false); }
   }
 
   return <>
@@ -190,20 +199,22 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
       </div>
 
       <div className={extras.workspaceWrap}>
-        <button type="button" className={extras.workspaceSwitcher} onClick={() => setWorkspaceOpen((current) => !current)} aria-expanded={workspaceOpen}>
+        <button type="button" className={extras.workspaceSwitcher} title={workspaceName} onClick={() => setWorkspaceOpen((current) => !current)} aria-expanded={workspaceOpen}>
           <span className={extras.workspaceIcon}><Building2 size={16} /></span>
           <span><small>Current workspace</small><strong>{workspaceName}</strong></span>
           <ChevronDown size={15} className={workspaceOpen ? extras.workspaceChevronOpen : extras.workspaceChevron} />
         </button>
         {workspaceOpen ? <div className={extras.workspaceMenu}>
+          {switchError ? <p role="alert" className={extras.workspaceEmpty}>{switchError}</p> : null}
+          {switching ? <p role="status" className={extras.workspaceEmpty}>Verifying workspace…</p> : null}
           <div className={extras.workspaceSectionLabel}>System Organizations</div>
-          {systemOrganizations.map((workspace) => <button key={workspace.id} type="button" onClick={() => void switchOrganization("system", workspace.id, workspace.href)} data-active={activeOrganization.kind === "system" && activeOrganization.id === workspace.id}>
+          {systemOrganizations.map((workspace) => <button key={workspace.id} type="button" disabled={switching} onClick={() => void switchOrganization("system", workspace.id, workspace.href)} data-active={activeOrganization.kind === "system" && activeOrganization.id === workspace.id}>
             <span><strong>{workspace.label}</strong><small>{workspace.meta}</small></span>
           </button>)}
           <div className={extras.workspaceSectionLabel}>Tenant Organizations</div>
           {tenants.length ? tenants.slice(0, 6).map((tenant) => {
             const href = `/dashboard/preview/tenant/${encodeURIComponent(tenant.organizationId)}`;
-            return <button key={tenant.organizationId} type="button" onClick={() => void switchOrganization("tenant", tenant.organizationId, href)} data-active={activeOrganization.kind === "tenant" && activeOrganization.id === tenant.organizationId}>
+            return <button key={tenant.organizationId} type="button" disabled={switching} onClick={() => void switchOrganization("tenant", tenant.organizationId, href)} data-active={activeOrganization.kind === "tenant" && activeOrganization.id === tenant.organizationId}>
               <span><strong>{tenant.name}</strong><small>{tenant.status.replaceAll("_", " ")}</small></span>
             </button>;
           }) : <span className={extras.workspaceEmpty}>No tenant organizations yet</span>}

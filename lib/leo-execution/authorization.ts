@@ -1,4 +1,5 @@
 import { assertLeoToolAllowed, enforceLeoOrganizationScope, type LeoIdentity } from "@/lib/leo-core";
+import { isActivePlatformAdmin } from "@/lib/platform-admin-access";
 import { getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isHotelOrganization } from "@/lib/hotel-communication-policy";
@@ -16,7 +17,8 @@ export async function currentCrmIdentity(identity: LeoIdentity, organizationId: 
     current = { ...identity, permissions: [...access.permissions] };
   } else {
     const configured = (process.env.LIMITLESS_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "").trim().toLowerCase();
-    if (!configured || identity.email?.trim().toLowerCase() !== configured) throw new Error("Leo admin authorization is no longer current.");
+    const authorized = identity.userId ? await isActivePlatformAdmin(identity.userId) : Boolean(configured && identity.email?.trim().toLowerCase() === configured);
+    if (!authorized) throw new Error("Leo admin authorization is no longer current.");
   }
   assertLeoToolAllowed(current, CRM_FOLLOWUP_TOOL);
   return current;

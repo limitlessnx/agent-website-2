@@ -1,0 +1,23 @@
+.panel { min-width:0; }
+.overview :global(.portal-card-head) { flex-wrap:wrap; }
+.overview :global(.portal-card-head) > div { flex:1 1 220px; min-width:0; }
+.overview :global(.portal-card-head) > a { display:inline-flex; align-items:center; gap:8px; flex-shrink:0; min-height:44px; max-width:100%; white-space:normal; }
+.modules { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:var(--fk-space-4,16px); }
+.module { min-width:0; display:flex; flex-direction:column; gap:var(--fk-space-3,12px); padding:var(--fk-space-4,16px); border:1px solid var(--fk-border); border-radius:var(--fk-radius-control,12px); background:var(--fk-surface-raised); }
+.moduleHeading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:var(--fk-space-2,8px); }
+.module h3,.guide h3 { margin:0; font-size:var(--fk-font-body,16px); }
+.module p,.guide p,.guide li { margin:0; color:var(--fk-text-secondary); line-height:1.6; }
+.module :is(h3,p,a),.guide { overflow-wrap:anywhere; }
+.module a { margin-top:auto; min-height:44px; width:fit-content; max-width:100%; white-space:normal; text-align:center; }
+.guide { margin-top:var(--fk-space-5,24px); border-top:1px solid var(--fk-border); padding-top:var(--fk-space-4,16px); }
+.guide summary { display:list-item; min-height:44px; cursor:pointer; font-weight:600; color:var(--fk-text); }
+.guide summary:focus-visible { outline:2px solid var(--fk-focus); outline-offset:4px; border-radius:var(--fk-radius-control,12px); }
+.planDisclosure { padding:var(--fk-space-5,24px); border:1px solid var(--fk-border); border-radius:var(--fk-radius-card,16px); background:var(--fk-surface); min-width:0; }
+.planDisclosure > summary { min-height:44px; display:list-item; cursor:pointer; color:var(--fk-text); font-weight:600; }
+.planDisclosure > summary:focus-visible { outline:2px solid var(--fk-focus); outline-offset:4px; }
+.planDisclosure > article { border:0; box-shadow:none; padding:var(--fk-space-4,16px) 0 0; }
+.guide[open] { display:block; }
+.guide p,.guide h3 { margin-block:var(--fk-space-3,12px); }
+.journey { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr)); gap:var(--fk-space-3,12px); padding-left:22px; }
+.journey li { padding-right:var(--fk-space-3,12px); }
+@container (max-width:500px) { .module a { width:100%; } }

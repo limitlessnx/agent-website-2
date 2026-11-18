@@ -20,7 +20,7 @@
 .trigger{min-height:32px;padding:0 10px;color:#68717d;font-size:10px;font-weight:800;letter-spacing:.095em;text-transform:uppercase;transition:color 140ms ease,background 140ms ease}
 .trigger:hover{color:#aeb5c0;background:#0f1319}
 .groupActive>.trigger{color:#c8ced7;background:transparent}
-.triggerLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.triggerLabel{min-width:0;white-space:normal;line-height:1.45;overflow-wrap:normal}
 .chevron{opacity:.48;transition:transform 180ms cubic-bezier(.2,.8,.2,1),opacity 140ms ease}
 .trigger:hover .chevron,.groupActive>.trigger .chevron{opacity:.8}
 .items{gap:2px;padding:2px 0 0}

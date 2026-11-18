@@ -26,6 +26,9 @@ on:
       - "lib/client-*.ts"
       - "lib/workflow-registry.ts"
       - "lib/xposure-*.ts"
+      - "lib/photography-booking-conflicts.ts"
+      - "app/api/portal/bookings/**"
+      - "tests/photography-availability-reliability.test.cjs"
       - "lib/appointment-scheduling.ts"
       - "lib/calendar-provider.ts"
       - "tests/dashboard-*.test.mjs"
@@ -118,3 +121,22 @@ jobs:
         run: npx tsc --noEmit
       - name: Production build
         run: npm run build
+
+  control-center-responsive:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Synthetic control center at six viewport widths
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:phase4-ui
+      # Captures remain in the runner; public evidence publication requires review approval.
