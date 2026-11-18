@@ -1,0 +1,29 @@
+{
+  "base": "bfa3e0bd6af07a79bc7df6bb97f0fa9986ca0f97",
+  "production_modified": false,
+  "production_metadata_read_only": {
+    "voice_calls_present": false,
+    "voice_receipts_present": false,
+    "conversations_present": true,
+    "handoffs_present": true,
+    "existing_credit_rpc_present": true,
+    "recovery_rpc_present": false
+  },
+  "runtime_cases": 13,
+  "database_scenarios": 10,
+  "legacy_contract_cases": 5,
+  "postgres_concurrency_scenarios": 4,
+  "maia_test_files": 25,
+  "support_cases": 604,
+  "billing_cases": 27,
+  "ledger_checks": 4,
+  "build": "passed",
+  "changed_file_lint": "passed",
+  "provider_calls": 0,
+  "live_customer_billing": false,
+  "schema_applied": false,
+  "sha256": {
+    "app/api/webhooks/elevenlabs/post-call/route.ts": "8f202205e0ac54ec297f2cfc51b3fef4f93ac4cad169df52b9eb9aee9980b9da",
+    "supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql": "82068fbdfcacf23e88ddb79e2dbd1951afe3c902df30d3beed8ffbf8dc6ad8a9"
+  }
+}
