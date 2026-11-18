@@ -79,6 +79,10 @@
 .choiceDescription { color: #aaa3b8; font-size: .78rem; line-height: 1.5; font-weight: 450; }
 .choiceArrow { color: #a78bfa; font-size: 1.25rem; text-align: center; }
 .loadingMark { font-size: 1.5rem; line-height: 1; }
+.managerCard { overflow-wrap: anywhere; }
+.requestList { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
+.requestItem { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 14px; border: 1px solid rgba(196, 181, 253, .24); border-radius: 16px; }
+.requestItem strong { min-width: 0; overflow-wrap: anywhere; }
 
 .securityNote {
   display: flex;

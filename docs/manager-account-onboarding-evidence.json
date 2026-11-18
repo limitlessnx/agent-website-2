@@ -1,0 +1,38 @@
+{
+  "base": "ba6f79ca8dc9b9f6d3d3cbcb58c10f5e1a811414",
+  "production_modified": false,
+  "schema_migrations": 0,
+  "actual_runtime_scenarios": 18,
+  "focused_auth_test_files": 5,
+  "maia_test_files": 25,
+  "support_test_files": 75,
+  "team_access_test_files": 3,
+  "responsive_cases": 24,
+  "responsive_screenshots": 54,
+  "responsive_widths": [
+    360,
+    430,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "browser_stats": {
+    "startTime": "2026-11-18T21:05:16.953Z",
+    "duration": 71996.836,
+    "expected": 24,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "changed_file_lint": "passed",
+  "hosted_checks": "pending publication",
+  "authentication_boundaries": "synthetic; real hosted email/Google acceptance not claimed",
+  "browser_signup_and_approval": "intercepted synthetic responses; runtime tests execute actual route code",
+  "provider_calls": 0,
+  "customer_communications": 0,
+  "customer_billing": false,
+  "12ui_reference": "candidate A; completed selected LayerDoc alignment; existing application geometry and vector icons retained",
+  "production_build": "passed",
+  "type_checks": "passed"
+}

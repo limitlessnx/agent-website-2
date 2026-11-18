@@ -12,8 +12,13 @@ export async function GET(request:NextRequest){
   // Production OAuth must use one host from the very first request. The
   // context cookie is host-only, so writing it on www and then redirecting
   // the callback to the apex domain loses the cookie before callback runs.
-  const url=new URL(requestUrl.toString());
-  if(url.hostname==="www.fluxknight.space") url.hostname="fluxknight.space";
+  const canonical=new URL(requestUrl.toString());
+  if(canonical.hostname==="www.fluxknight.space"){
+    canonical.hostname="fluxknight.space";
+    return NextResponse.redirect(canonical);
+  }
+  // Preview deployments retain their own host and callback context.
+  const url=requestUrl;
   const nextPath=safeNext(url.searchParams.get("next"));
   const txRef=String(url.searchParams.get("tx_ref")||"").trim().slice(0,240);
   const trialPlan=url.searchParams.get("trial")==="basic"?"basic":"";

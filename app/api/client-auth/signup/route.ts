@@ -6,6 +6,7 @@ import {
   signUpClient,
 } from "@/lib/client-auth";
 import { acceptOrganizationInvitation } from "@/lib/organization-membership";
+import { establishAccountSession } from "@/lib/platform-admin-access";
 import { fluxknightPortalUrl, sendFluxknightLifecycleEvent } from "@/lib/resend-events";
 
 function firstName(value: string) {
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest) {
     const passwordConfirmation = String(body.password_confirmation || "");
     const invitationToken = String(body.invitation_token || "").trim();
     const joiningOrganization = Boolean(invitationToken);
-    const ownerNextPath = "/onboarding";
+    const accountChoicePath = "/account/choose-mode";
     const invitationNextPath = safeInternalPath(body.post_signup_path, "/portal");
-    const nextPath = joiningOrganization ? invitationNextPath : ownerNextPath;
+    const nextPath = joiningOrganization ? invitationNextPath : accountChoicePath;
     const txRef = String(body.payment_tx_ref || body.tx_ref || "").trim().slice(0, 200);
 
     if (fullName.length < 2 || fullName.length > 120) {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         signed_in: false,
-        account_mode: joiningOrganization ? "organization-member" : "organization-owner",
+        account_mode: joiningOrganization ? "organization-member" : "unselected",
         requires_email_confirmation: true,
         message: "Account created. Verify your email, then sign in to continue.",
       }, { status: 201 });
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
     if (!auth.user?.id) {
       throw new Error("The account was authenticated, but the user profile could not be loaded.");
     }
+    await establishAccountSession(auth);
 
     if (joiningOrganization) {
       const accepted = await acceptOrganizationInvitation({
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
     await setPendingClientSetupSession({
       userId: auth.user.id,
       email: auth.user.email || email,
-      nextPath: ownerNextPath,
+      nextPath: accountChoicePath,
       txRef: txRef || undefined,
       trialPlan: "",
       issuedAt: Date.now(),
@@ -117,10 +119,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       signed_in: true,
-      account_mode: "organization-owner",
+      account_mode: "unselected",
       requires_email_confirmation: false,
-      requires_workspace_setup: true,
-      redirect_to: "/account/setup",
+      requires_account_choice: true,
+      requires_workspace_setup: false,
+      redirect_to: accountChoicePath,
     }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create account.";

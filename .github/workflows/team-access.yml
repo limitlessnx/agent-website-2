@@ -4,6 +4,14 @@ on:
     branches: [main]
     paths:
       - 'app/portal/team/**'
+      - 'app/account/**'
+      - 'app/manage-organizations/**'
+      - 'app/api/client-auth/**'
+      - 'app/auth/callback/**'
+      - 'lib/client-auth.ts'
+      - 'tests/manager-account-onboarding.test.cjs'
+      - 'tests/manager-onboarding/**'
+      - 'playwright.manager-onboarding.config.ts'
       - 'app/api/organization/**'
       - 'app/api/portal/team/**'
       - 'app/api/portal/billing/**'
@@ -29,6 +37,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:team-access
+      - run: npm run test:manager-onboarding
       - name: Isolated PostgreSQL 17
         run: |
           docker run --detach --rm --name flux-team-access-postgres --network none -e POSTGRES_PASSWORD=synthetic-local-only -e POSTGRES_DB=flux_team_test postgres:17-alpine
@@ -55,3 +64,13 @@ jobs:
       - run: npx playwright test --config playwright.team.config.ts
         env:
           PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+      - run: npm run test:manager-onboarding-ui
+        env:
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: manager-onboarding-responsive
+          path: |
+            test-results/manager-onboarding/
+            test-results/manager-onboarding-results.json

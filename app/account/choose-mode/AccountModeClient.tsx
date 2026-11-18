@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Building2, Check, Users } from "@/components/admin/ServerIcons";
 import styles from "./AccountModeClient.module.css";
@@ -59,9 +60,9 @@ export default function AccountModeClient() {
           <span className={styles.choiceIcon}><Building2 size={20} /></span>
           <span className={styles.choiceCopy}>
             <span className={styles.choiceTitle}>
-              {loading === "organization" ? "Starting your organization…" : "Start an Organization"}
+              {loading === "organization" ? "Starting your organization…" : "Organization owner"}
             </span>
-            <span className={styles.choiceDescription}>Create and own a workspace for your business.</span>
+            <span className={styles.choiceDescription}>Start an Organization and set up a workspace for your business.</span>
           </span>
           <span className={styles.choiceArrow} aria-hidden="true">
             {loading === "organization" ? <span className={styles.loadingMark}>…</span> : <ArrowRight size={18} />}
@@ -78,9 +79,9 @@ export default function AccountModeClient() {
           <span className={styles.choiceIcon}><Users size={20} /></span>
           <span className={styles.choiceCopy}>
             <span className={styles.choiceTitle}>
-              {loading === "manager" ? "Opening organization access…" : "Manage Organizations"}
+              {loading === "manager" ? "Opening organization access…" : "Manager"}
             </span>
-            <span className={styles.choiceDescription}>Access organizations where you have an invitation or approved manager access.</span>
+            <span className={styles.choiceDescription}>Manage Organizations using an Access ID from the owner. Request access, then wait for owner approval.</span>
           </span>
           <span className={styles.choiceArrow} aria-hidden="true">
             {loading === "manager" ? <span className={styles.loadingMark}>…</span> : <ArrowRight size={18} />}
@@ -88,7 +89,7 @@ export default function AccountModeClient() {
         </button>
       </div>
 
-      {error ? <p className="admin-error" role="alert">{error}</p> : null}
+      {error ? <div className="admin-error" role="alert"><p>{error}</p><Link href="/account/login">Sign in again</Link></div> : null}
       <p className={styles.securityNote}><Check size={14} /> Your access is protected by organization-level permissions.</p>
     </div>
   );

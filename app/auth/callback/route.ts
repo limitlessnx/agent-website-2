@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   clearClientOAuthContext,
   clearClientSession,
+  clearManagerSession,
   clearPendingClientSetupSession,
   getClientAccountMode,
   getClientOAuthContext,
@@ -58,6 +59,7 @@ export async function GET(request:NextRequest){
 
   await clearAdminSession();
   await clearClientSession();
+  await clearManagerSession();
   let platformAdmin=false;
   try { platformAdmin=await isVerifiedPlatformAdmin(data.user); }
   catch { await clearClientOAuthContext().catch(()=>undefined); return NextResponse.redirect(new URL("/account/login?error=admin_access_unavailable&next=%2Fdashboard",origin)); }
@@ -71,6 +73,12 @@ export async function GET(request:NextRequest){
     return NextResponse.redirect(new URL("/account/login?error=admin_access_denied&next=%2Fdashboard",origin));
   }
 
+  const accountMode=await getClientAccountMode(data.user.id);
+  if(accountMode==="manager"&&!context?.invitationToken){
+    await setManagerSession({userId:data.user.id,email,issuedAt:Date.now()});
+    await clearClientOAuthContext().catch(()=>undefined);
+    return NextResponse.redirect(new URL("/manage-organizations",origin));
+  }
   let membership:Awaited<ReturnType<typeof getPrimaryMembership>>=null;
 
   if(context?.invitationToken){
@@ -101,6 +109,7 @@ export async function GET(request:NextRequest){
   }
 
   if(membership){
+    if(accountMode==="manager")await setManagerSession({userId:data.user.id,email,issuedAt:Date.now()});
     await setClientSession({
       userId:data.user.id,
       email,
@@ -123,7 +132,6 @@ export async function GET(request:NextRequest){
     return NextResponse.redirect(destination(origin,nextPath,context?.txRef,context?.trialPlan));
   }
 
-  const accountMode=await getClientAccountMode(data.user.id);
   if(accountMode==="manager"){
     await setManagerSession({userId:data.user.id,email,issuedAt:Date.now()});
     await clearClientOAuthContext().catch(()=>undefined);

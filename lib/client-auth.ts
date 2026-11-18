@@ -86,7 +86,7 @@ export async function getActiveManagerOrganizations(userId:string){
   status:string;
   organizations:{id:string;name:string;slug:string}|{id:string;name:string;slug:string}[]|null;
   membership_roles:Array<{roles:{slug:string}|{slug:string}[]|null}>;
- }>>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&status=eq.active&select=id,organization_id,status,organizations(id,name,slug),membership_roles(roles(slug))&order=created_at.asc`);
+ }>>(`organization_memberships?user_id=eq.${encodeURIComponent(userId)}&status=eq.active&organizations.status=eq.active&select=id,organization_id,status,organizations!inner(id,name,slug),membership_roles(roles(slug))&order=created_at.asc`);
  return rows.map(row=>{
    const organization=normalizeRelation(row.organizations);
    const role=normalizeRelation(row.membership_roles?.[0]?.roles||null);

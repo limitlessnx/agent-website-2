@@ -9,6 +9,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isApplicationArea =
     pathname === "/login" ||
+    pathname === "/manage-organizations" ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/portal") ||
     pathname.startsWith("/onboarding") ||
