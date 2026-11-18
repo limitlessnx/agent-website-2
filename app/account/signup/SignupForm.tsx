@@ -64,7 +64,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
         const verify = new URL("/account/verify-email", window.location.origin);
         verify.searchParams.set("email", email);
         if (txRef) verify.searchParams.set("tx_ref", txRef);
-        if (safeNext) verify.searchParams.set("next", safeNext);
+        verify.searchParams.set("next", invitationToken ? safeNext : "/account/choose-mode");
         router.push(`${verify.pathname}${verify.search}`);
         return;
       }
@@ -84,7 +84,7 @@ export default function SignupForm({ txRef = "", nextPath = "/portal", invitatio
     <form onSubmit={submit} className="admin-login-card">
       <div>
         <h1>Create your Fluxknight account</h1>
-        <p className="admin-muted">Create your account and set up your Fluxknight workspace.</p>
+        <p className="admin-muted">Create your account, then choose Organization owner or Manager. Managers join an existing business with its Access ID and owner approval.</p>
       </div>
       {txRef ? <p className="admin-form-message">Payment confirmed. Create your account to continue.</p> : null}
       <GoogleAuthButton nextPath={safeNext} label="Create account with Google" txRef={txRef} trialPlan="" invitationToken={invitationToken} />

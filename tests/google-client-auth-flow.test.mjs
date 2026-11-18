@@ -40,7 +40,7 @@ test("email login keeps nonexistent accounts on the login screen with a signup p
   const form=read("app/account/login/LoginForm.tsx");
   const auth=read("lib/client-auth.ts");
   assert.match(route,/clientAccountExists/);
-  assert.match(route,/code:"account_not_found"/);
+  assert.match(route,/code:\s*"account_not_found"/);
   assert.match(route,/No Fluxknight account exists for this email/);
   assert.match(route,/The email or password is incorrect/);
   assert.match(auth,/export async function clientAccountExists/);
@@ -53,8 +53,8 @@ test("email login keeps nonexistent accounts on the login screen with a signup p
 
 test("email login still routes successful users to the requested destination",()=>{
   const form=read("app/account/login/LoginForm.tsx");
-  assert.match(form,/router\\.push/);
-  assert.match(form,/router\\.refresh/);
+  assert.match(form,/router\.push/);
+  assert.match(form,/router\.refresh/);
 });
 
 
@@ -72,5 +72,5 @@ test("new Google identities are told to continue account creation instead of bei
   const mode=read("app/account/choose-mode/AccountModeClient.tsx");
   assert.match(route,/\/account\/choose-mode\?source=google&new_account=1/);
   assert.match(mode,/Continue creating your account/);
-  assert.match(mode,/Google identity is verified, but you have not finished creating your Fluxknight account/);
+  assert.match(mode,/Your Google identity is verified/);
 });

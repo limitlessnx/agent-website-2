@@ -21,8 +21,9 @@ function setupRoute(overrides = {}) {
   };
   const route = load('app/api/client-auth/setup-workspace/route.ts', {
     'next/server': nextServer,
+    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email_confirmed_at: '2026-11-18' } } }) } }) },
     '@/lib/client-onboarding': { provisionClientWorkspace: async input => calls.provision.push(input) },
-    '@/lib/client-auth': { ...auth, ...overrides.auth },
+    '@/lib/client-auth': { getClientAccountMode: async () => 'organization', ...auth, ...overrides.auth },
   }, '', { URL });
   return { POST: route.POST, calls };
 }
@@ -30,6 +31,7 @@ function setupRoute(overrides = {}) {
 function signupRoute(overrides = {}) {
   const calls = { pendingWrites: [], sessions: [] };
   const route = load('app/api/client-auth/signup/route.ts', {
+    '@/lib/platform-admin-access': { establishAccountSession: async () => undefined },
     'next/server': nextServer,
     '@/lib/client-auth': {
       signUpClient: async (...args) => { calls.signupArgs = args; return overrides.auth || { user: { id: 'auth-user-id', email: 'owner@example.test' } }; },
@@ -58,6 +60,9 @@ function loginRoute(overrides = {}) {
     '@/lib/client-onboarding': { provisionClientOrganization: async input => calls.provision.push(input) },
     '@/lib/client-auth': {
       clearClientSession:async()=>undefined,
+      clearManagerSession:async()=>undefined,
+      getClientAccountMode:async()=>overrides.mode || null,
+      setManagerSession:async()=>undefined,
       clearPendingClientSetupSession:async()=>undefined,
       signInClient: async () => overrides.auth || { user: { id: 'auth-user-id', email: 'owner@example.test', user_metadata: {} } },
       getPendingClientSetupSession: async () => overrides.pending || null,
@@ -131,12 +136,12 @@ test('new signup persists onboarding and payment context across email verificati
   assert.equal(response.status, 201);
   assert.equal(response.body.requires_email_confirmation, true);
   assert.equal(route.calls.pendingWrites[0].userId, 'auth-user-id');
-  assert.equal(route.calls.pendingWrites[0].nextPath, '/onboarding');
+  assert.equal(route.calls.pendingWrites[0].nextPath, '/account/choose-mode');
   assert.equal(route.calls.pendingWrites[0].txRef, 'paid-checkout-ref');
 });
 
 test('login after email verification restores a pending owner workspace instead of losing checkout context', async () => {
-  const route = loginRoute({ pending: { userId: 'auth-user-id', email: 'owner@example.test', nextPath: '/portal', txRef: 'old-ref' } });
+  const route = loginRoute({ mode: 'organization', pending: { userId: 'auth-user-id', email: 'owner@example.test', nextPath: '/portal', txRef: 'old-ref' } });
   const response = await route.POST(request({ email: 'owner@example.test', password: 'safe-password', payment_tx_ref: 'current-ref' }));
   assert.equal(response.status, 200);
   assert.equal(response.body.requires_workspace_setup, true);

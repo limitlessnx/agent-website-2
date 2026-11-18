@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { provisionClientWorkspace } from "@/lib/client-onboarding";
+import { createClient } from "@/lib/supabase/server";
 import {
   getPendingClientSetupSession,
+  getClientAccountMode,
   getPrimaryMembership,
   setClientSession,
 } from "@/lib/client-auth";
@@ -41,6 +43,18 @@ export async function POST(request: NextRequest) {
         { error: "This account is joining by invitation. Ask the organization owner to resend the invitation instead of creating a workspace." },
         { status: 409 },
       );
+    }
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || data.user?.id !== pending.userId || !data.user?.email_confirmed_at) {
+      return NextResponse.json({ error: "Verify your email and sign in before creating a workspace." }, { status: 401 });
+    }
+    const accountMode = await getClientAccountMode(pending.userId);
+    if (accountMode === "manager") {
+      return NextResponse.json({ error: "Manager accounts join an existing organization using its Access ID." }, { status: 403 });
+    }
+    if (!accountMode && pending.nextPath === "/account/choose-mode") {
+      return NextResponse.json({ error: "Choose Organization owner before creating a workspace." }, { status: 409 });
     }
 
     const rawBody = await request.json().catch(() => ({}));

@@ -89,6 +89,9 @@ function fixture(options = {}) {
       };
     },
     getPendingClientSetupSession: async () => null,
+    getClientAccountMode: async () => 'organization',
+    clearManagerSession: async () => undefined,
+    setManagerSession: async () => undefined,
     getPrimaryMembership: async () => {
       calls.membershipReads++;
       return options.membership || null;
@@ -334,6 +337,7 @@ test("Google callback recognizes verified platform admins before tenant membersh
         "@/lib/client-auth": {
           clearClientOAuthContext: async () => undefined,
           clearClientSession: async () => undefined,
+          clearManagerSession: async () => undefined,
           clearPendingClientSetupSession: async () => undefined,
           getClientOAuthContext: async () => ({
             nextPath: "/dashboard/clients",

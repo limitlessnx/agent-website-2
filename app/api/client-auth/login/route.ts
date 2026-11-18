@@ -6,11 +6,14 @@ import { provisionClientOrganization } from "@/lib/client-onboarding";
 import {
   clientAccountExists,
   clearClientSession,
+  clearManagerSession,
   clearPendingClientSetupSession,
   getMembershipForOrganization,
   getPendingClientSetupSession,
   getPrimaryMembership,
+  getClientAccountMode,
   setClientSession,
+  setManagerSession,
   setPendingClientSetupSession,
   signInClient,
 } from "@/lib/client-auth";
@@ -51,6 +54,7 @@ export async function POST(request: NextRequest) {
     await establishAccountSession(auth);
     await clearAdminSession();
     await clearClientSession();
+    await clearManagerSession();
     if (platformAdmin && !invitationToken) {
       await clearPendingClientSetupSession();
       return NextResponse.json({ ok: true, redirect_to: adminAuthDestination(String(body.post_signup_path || "")) });
@@ -58,8 +62,11 @@ export async function POST(request: NextRequest) {
     if (isAdminPath(String(body.post_signup_path || "")) && !platformAdmin) {
       return NextResponse.json({ error: "This account does not have super-admin access." }, { status: 403 });
     }
-
-
+    const accountMode = await getClientAccountMode(auth.user.id);
+    if (accountMode === "manager" && !invitationToken) {
+      await setManagerSession({ userId: auth.user.id, email: auth.user.email || email, issuedAt: Date.now() });
+      return NextResponse.json({ ok: true, redirect_to: "/manage-organizations" });
+    }
     // Resolve an explicit invitation before any primary-membership fallback.
     let membership;
     if (invitationToken) {
@@ -107,22 +114,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (!membership) {
+      const needsOwnerSetup = accountMode === "organization" || Boolean(companyName);
       await setPendingClientSetupSession({
         userId: auth.user.id,
         email: auth.user.email || email,
-        nextPath: "/onboarding",
+        nextPath: needsOwnerSetup ? "/onboarding" : "/account/choose-mode",
         txRef: txRef || undefined,
         trialPlan: matchingPending?.trialPlan || "",
         issuedAt: Date.now(),
       });
       return NextResponse.json({
         ok: true,
-        requires_workspace_setup: true,
-        redirect_to: "/account/setup",
-        message: "Your email is verified. Finish setting up your company workspace.",
+        requires_workspace_setup: needsOwnerSetup,
+        requires_account_choice: !needsOwnerSetup,
+        redirect_to: needsOwnerSetup ? "/account/setup" : "/account/choose-mode",
+        message: needsOwnerSetup ? "Your email is verified. Finish setting up your company workspace." : "Choose Organization owner or Manager to continue.",
       });
     }
 
+    if (accountMode === "manager") {
+      await setManagerSession({ userId: auth.user.id, email: auth.user.email || email, issuedAt: Date.now() });
+    }
     await setClientSession({
       userId: auth.user.id,
       email: auth.user.email || email,

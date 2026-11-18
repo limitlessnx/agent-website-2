@@ -44,7 +44,7 @@ test("new organization owner choice preserves setup state and sends workspace cr
   assert.match(choice,/nextPath:\s*"\/portal"/);
   assert.match(setup,/safeInternalPath\(pending\.txRef \? "\/onboarding" : "\/portal", "\/portal"\)/);
   assert.match(setup,/if \(pending\.txRef\) redirectTo\.searchParams\.set\("tx_ref", pending\.txRef\)/);
-  assert.match(signup,/const ownerNextPath = "\/onboarding"/);
+  assert.match(signup,/const accountChoicePath = "\/account\/choose-mode"/);
 });
 
 test("organization choice UI uses explicit accessible action cards and pending/error states",()=>{

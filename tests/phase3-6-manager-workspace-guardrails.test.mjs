@@ -64,7 +64,8 @@ test("Phase 6 manager workspace exposes only active organizations belonging to t
  assert.match(auth,/getActiveManagerOrganizations/);
  assert.match(auth,/user_id=eq\./);
  assert.match(auth,/status=eq\.active/);
- assert.match(auth,/organizations\(id,name,slug\)/);
+ assert.match(auth,/organizations!inner\(id,name,slug\)/);
+ assert.match(auth,/organizations\.status=eq\.active/);
  assert.match(layout,/session\.role === "manager"/);
  assert.match(layout,/getActiveManagerOrganizations\(session\.userId\)/);
  assert.match(switcher,/action:"enter"/);
@@ -78,7 +79,7 @@ test("Phase 6 workspace switching cannot bypass membership authorization",()=>{
  assert.match(switcher,/switchWorkspace/);
  assert.match(route,/action\s*===\s*"enter"/);
  assert.match(route,/getMembershipForOrganization\(session\.userId,\s*organizationId\)/);
- assert.match(route,/if\s*\(!membership\)/);
+ assert.match(route,/if\s*\(!membership\s*\|\|\s*!organizations\.some/);
  assert.match(route,/status:\s*403/);
  assert.match(route,/setClientSession/);
 });

@@ -39,7 +39,9 @@
     "test:phase4": "node --test tests/admin-control-center.test.cjs tests/admin-organization-actions.test.cjs",
     "test:phase4-ui": "playwright test --config playwright.phase4.config.ts",
     "test:industry-presets": "node --test tests/general-industry-workspace.test.cjs tests/phase1-industry-completion.test.cjs tests/tenant-onboarding-reliability.test.cjs tests/client-workspace-provisioning-idempotency.test.cjs",
-    "test:communications-receipts": "node --test tests/elevenlabs-receipt-runtime.test.cjs tests/elevenlabs-receipt-database.test.mjs tests/phase-7-elevenlabs-voice-runtime.test.mjs"
+    "test:communications-receipts": "node --test tests/elevenlabs-receipt-runtime.test.cjs tests/elevenlabs-receipt-database.test.mjs tests/phase-7-elevenlabs-voice-runtime.test.mjs",
+    "test:manager-onboarding": "node --test tests/manager-account-onboarding.test.cjs tests/client-workspace-onboarding-routes.test.cjs tests/platform-admin-account-login.test.cjs tests/google-client-auth-flow.test.mjs tests/workspace-and-google-auth.test.mjs",
+    "test:manager-onboarding-ui": "playwright test --config playwright.manager-onboarding.config.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.523",

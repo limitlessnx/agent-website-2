@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getManagerSession, getMembershipForOrganization, setClientSession } from "@/lib/client-auth";
+import { getManagerSession, getMembershipForOrganization, getActiveManagerOrganizations, setClientSession } from "@/lib/client-auth";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 type AccessRequestRow = { id: string; organization_id: string; status: string; created_at: string; organizations?: { name?: string } | Array<{ name?: string }> };
@@ -12,6 +12,7 @@ export async function GET() {
       `organization_access_requests?requester_user_id=eq.${encodeURIComponent(session.userId)}&select=id,organization_id,status,created_at,organizations(name)&order=created_at.desc`,
     );
     return NextResponse.json({
+      organizations: await getActiveManagerOrganizations(session.userId),
       requests: rows.map((row) => ({
         id: row.id,
         organization_id: row.organization_id,
@@ -28,14 +29,17 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getManagerSession();
   if (!session) return NextResponse.json({ error: "Manager session required." }, { status: 401 });
-  const body = await request.json().catch(() => ({}));
+  const rawBody = await request.json().catch(() => ({}));
+  const body = rawBody && typeof rawBody === "object" && !Array.isArray(rawBody) ? rawBody as Record<string, unknown> : {};
   const action = String(body.action || "request");
+  if (action !== "request" && action !== "enter") return NextResponse.json({ error: "Choose a valid organization action." }, { status: 400 });
 
   if (action === "enter") {
     const organizationId = String(body.organization_id || "").trim();
     if (!organizationId) return NextResponse.json({ error: "Organization is required." }, { status: 400 });
     const membership = await getMembershipForOrganization(session.userId, organizationId);
-    if (!membership) return NextResponse.json({ error: "Approved organization membership not found." }, { status: 403 });
+    const organizations = await getActiveManagerOrganizations(session.userId);
+    if (!membership || !organizations.some(item => item.organizationId === organizationId)) return NextResponse.json({ error: "Approved organization membership not found." }, { status: 403 });
     await setClientSession({
       userId: session.userId,
       email: session.email,
@@ -79,7 +83,7 @@ export async function POST(request: NextRequest) {
       },
     );
     return NextResponse.json({ ok: true, request_id: created[0]?.id, organization_id: organization.id, status: "pending" }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to request organization access." }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Unable to request organization access. Please retry." }, { status: 400 });
   }
 }

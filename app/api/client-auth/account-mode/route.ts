@@ -11,24 +11,28 @@ import {
 export async function POST(request: NextRequest) {
   try {
     let pending = await getPendingClientSetupSession();
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    const user = data.user;
+    const email = String(user?.email || "").trim().toLowerCase();
+    // Signup context may exist before email confirmation. Only a verified live
+    // identity may choose a mode or obtain a manager session.
+    if (error || !user?.id || !email || !user.email_confirmed_at) {
+      return NextResponse.json({ error: "Verify your email and sign in before choosing your account type." }, { status: 401 });
+    }
+    if (pending && pending.userId !== user.id) pending = null;
+    if (pending) pending = { ...pending, email };
 
     // OAuth can establish a valid Supabase session even if the short-lived
     // application setup cookie is absent on the next request. Recover only
     // from the authenticated Supabase identity; never trust a client-supplied
     // user ID or email.
     if (!pending) {
-      const supabase = await createClient();
-      const { data, error } = await supabase.auth.getUser();
-      const user = data.user;
-      const email = String(user?.email || "").trim().toLowerCase();
-      if (error || !user?.id || !email) {
-        return NextResponse.json(
-          { error: "Your setup session has expired. Sign in again to continue." },
-          { status: 401 },
-        );
-      }
       pending = { userId: user.id, email, issuedAt: Date.now() };
       await setPendingClientSetupSession(pending);
+    }
+    if (pending.invitationToken) {
+      return NextResponse.json({ error: "Finish accepting your invitation before choosing an account type." }, { status: 409 });
     }
 
     const body = await request.json().catch(() => ({}));
