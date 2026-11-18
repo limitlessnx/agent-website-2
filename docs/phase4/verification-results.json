@@ -1,0 +1,51 @@
+{
+  "phase4_browser": {
+    "passed": 90,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "header_followup": {
+    "passed_before_restart": 53,
+    "interrupted_case_rerun_passed": 1
+  },
+  "industry_visual": {
+    "passed": 24,
+    "baselines_updated": false
+  },
+  "runtime": {
+    "passed": 14
+  },
+  "regression_files": {
+    "support": 70,
+    "maia": 22,
+    "hotel_setup": 11,
+    "admin_auth": 4,
+    "real_estate": 49,
+    "photography_dashboard": 6
+  },
+  "changed_file_lint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "whole_repo_lint": {
+    "errors": 480,
+    "warnings": 73,
+    "passed": false,
+    "main_baseline_errors": 492,
+    "main_baseline_warnings": 74
+  },
+  "clean_typecheck": "passed",
+  "isolated_build": "passed",
+  "authenticated_hosted_acceptance": "not_verified",
+  "public_screenshot_publication": "blocked_by_automatic_approval_review",
+  "production_modified": false,
+  "ci_search_synchronization": {
+    "initial_ci_responsive_passed": 89,
+    "initial_ci_responsive_failed": 1,
+    "reason": "Hidden outgoing-route copy matched an unscoped text assertion",
+    "affected_case_rerun_widths": 6,
+    "affected_case_rerun_passed": 6,
+    "product_behavior_changed": false
+  }
+}

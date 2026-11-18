@@ -1,3 +1,4 @@
+import OrganizationAdminActions from "@/components/admin/OrganizationAdminActions";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Building2, CreditCard, PlugZap, ShieldCheck, Users, Workflow } from "@/components/admin/ServerIcons";
@@ -69,6 +70,8 @@ export default async function OrganizationManagementPage({ params }: PageProps) 
       <div><p className="admin-kicker">Super Admin · Organization Management</p><h1>{profile?.business_name || organization.name}</h1><p>One control surface for organization identity, lifecycle, subscription, agents, integrations and workspace access. Changes remain scoped to this tenant.</p></div>
       <Link className="admin-button secondary" href="/dashboard/clients"><ArrowLeft size={15}/> Back to organizations</Link>
     </header>
+
+    <section className="admin-panel" id="organization-actions"><OrganizationAdminActions organization={organization} /></section>
 
     <section className="admin-metric-grid">
       <article className="admin-metric-card"><p><Building2 size={15}/> Organization status</p><strong>{String(organization.status || "unknown").replaceAll("_"," ")}</strong><span>Created {displayDate(organization.created_at)}</span></article>
@@ -142,7 +145,7 @@ export default async function OrganizationManagementPage({ params }: PageProps) 
         <Link prefetch={false} className="admin-button secondary" href={"/dashboard/preview/tenant/"+encodeURIComponent(organizationId)}>Open tenant preview</Link>
         <Link prefetch={false} className="admin-button secondary" href={"/dashboard/switch/tenant/"+encodeURIComponent(organizationId)}>Open admin workspace</Link>
       </div>
-      <p className="admin-note" style={{marginTop:14}}>Deletion is intentionally not exposed in this draft. A safe deletion lifecycle needs verified export, retention, ownership-transfer, dependency-cleanup and audit steps before any destructive control is added.</p>
+      <p className="admin-note" style={{marginTop:14}}>Delete organization uses an audited archive with customer records retained. External billing and running provider work must be reviewed separately.</p>
     </section>
   </main>;
 }

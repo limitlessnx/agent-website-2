@@ -1,0 +1,13 @@
+{
+  "run": "Retained tenant and industry visual baselines at six widths",
+  "stats": {
+    "startTime": "2026-11-18T06:36:57.792Z",
+    "duration": 109596.96200000001,
+    "expected": 24,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "baseline_updates": false,
+  "external_provider_requests": false
+}

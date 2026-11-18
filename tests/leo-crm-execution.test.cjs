@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -120,7 +121,7 @@ test('CRM adapter reconciles ambiguous enqueue using same execution and broker k
 test('authorization refreshes tenant membership and canonical tool permissions, rejecting revoked and cross-tenant actors',async()=>{
   let permissions=['customers.manage'],membershipId='membership';
   const core=load('lib/leo-core.ts',{'@/lib/admin-auth':{},'@/lib/client-auth':{},'@/lib/organization-membership':{}});
-  const api=load('lib/leo-execution/authorization.ts',{
+  const api=load('lib/leo-execution/authorization.ts',{'@/lib/platform-admin-access':{isActivePlatformAdmin:async()=>false},
     '@/lib/leo-core':core,
     '@/lib/organization-membership':{getOrganizationAccessContext:async()=>({permissions,membershipId})},
     '@/lib/supabase/admin':{},'@/lib/hotel-communication-policy':{},'@/lib/real-estate-organization':{},'./contract':contract,
@@ -164,7 +165,7 @@ test('canonical CRM binding checks retain tenant filters and reject specialized 
   }};
   const hotel=load('lib/hotel-communication-policy.ts');
   const realEstate=load('lib/real-estate-organization.ts');
-  const api=load('lib/leo-execution/authorization.ts',{'@/lib/leo-core':{},'@/lib/organization-membership':{},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/hotel-communication-policy':hotel,'@/lib/real-estate-organization':realEstate,'./contract':contract});
+  const api=load('lib/leo-execution/authorization.ts',{'@/lib/platform-admin-access':{isActivePlatformAdmin:async()=>false},'@/lib/leo-core':{},'@/lib/organization-membership':{},'@/lib/supabase/admin':{createAdminClient:()=>db},'@/lib/hotel-communication-policy':hotel,'@/lib/real-estate-organization':realEstate,'./contract':contract});
   assert.equal((await api.validateCrmBindings(action)).phone,'15550000000');
   for(const table of ['agents','crm_customers','client_onboarding_profiles','hotel_guest_profiles','human_handoffs']) assert.ok(filters.some(f=>f.table===table&&f.key==='organization_id'&&f.value===org));
   for(variant of ['hotel','profileHotel','realEstate','profileRealEstate','guest','handoff','optOut','paused']) await assert.rejects(api.validateCrmBindings(action));

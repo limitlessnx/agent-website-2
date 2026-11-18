@@ -147,7 +147,7 @@ export async function getClientSession(){
  if(!signed){
   return null;
  }
- const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?id=eq.${encodeURIComponent(signed.membershipId)}&user_id=eq.${encodeURIComponent(signed.userId)}&organization_id=eq.${encodeURIComponent(signed.organizationId)}&status=eq.active&select=id,organization_id,status,organizations(slug),membership_roles(roles(slug))&limit=1`);
+ const rows=await supabaseServerRequest<MembershipRow[]>(`organization_memberships?id=eq.${encodeURIComponent(signed.membershipId)}&user_id=eq.${encodeURIComponent(signed.userId)}&organization_id=eq.${encodeURIComponent(signed.organizationId)}&status=eq.active&organizations.status=eq.active&select=id,organization_id,status,organizations!inner(slug,status),membership_roles(roles(slug))&limit=1`);
  const live=rows[0]?membershipSnapshot(rows[0]):null;
  if(!live){
   return null;

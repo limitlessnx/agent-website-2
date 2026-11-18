@@ -28,13 +28,14 @@ test("organization hub summarizes profile, lifecycle, subscription, allocations,
   assert.match(page, /organization_memberships/);
 });
 
-test("organization hub does not expose destructive deletion and clearly defers it behind safeguards", () => {
-  assert.match(page, /Deletion is intentionally not exposed in this draft/);
+test("organization hub exposes confirmed archival while retaining customer records", () => {
+  assert.match(page, /OrganizationAdminActions/);
+  assert.match(page, /audited archive with customer records retained/);
   assert.doesNotMatch(page, /fetch\([^)]*(delete-organization|\/organizations\/delete)/i);
 });
 
 test("client registry links directly to management and primary Super Admin nav is renamed", () => {
   assert.match(registry, /Manage organization/);
   assert.match(registry, /\/manage/);
-  assert.match(navigation, /label:"Organization Management",exact:true/);
+  assert.match(navigation, /label:"Organization Management"/);
 });

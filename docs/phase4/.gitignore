@@ -1,0 +1,4 @@
+# Original captures stay local pending approval for public screenshot publication.
+before/*.png
+after/*.png
+screenshots/
