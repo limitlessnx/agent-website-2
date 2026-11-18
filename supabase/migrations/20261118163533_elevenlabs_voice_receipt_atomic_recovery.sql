@@ -13,6 +13,9 @@ end$$;
 
 -- Do not depend on the project's changing default table grants. These are the
 -- existing server adapter's required operations, never browser-role access.
+-- Both tables retain raw provider payloads. Existing reads use authorized
+-- server adapters; a tenant membership alone must not expose raw receipts.
+revoke all on public.elevenlabs_voice_calls,public.elevenlabs_voice_webhook_events from public,anon,authenticated,service_role;
 grant select,insert,update on public.elevenlabs_voice_calls,public.elevenlabs_voice_webhook_events to service_role;
 
 create function public.apply_elevenlabs_voice_receipt(

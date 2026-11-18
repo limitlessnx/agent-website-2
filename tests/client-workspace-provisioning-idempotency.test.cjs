@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { PGlite } = require('@electric-sql/pglite');
+const { getIndustryExperience, getIndustryWorkspacePreset } = require('./helpers/load-typescript.cjs')('lib/industryExperience.ts');
 
 const USER_A = '10000000-0000-4000-8000-000000000001';
 const USER_B = '10000000-0000-4000-8000-000000000002';
@@ -202,5 +204,30 @@ test('different tenants requesting the same slug are serialized into unique orga
     assert.ok([a.organization_slug, b.organization_slug].includes('shared-brand'));
     assert.equal(await count(db, 'organizations'), 2);
     assert.equal(await count(db, 'organization_memberships'), 2);
+  } finally { await db.close(); }
+});
+
+test('general and remaining industry workspaces keep isolated identity and receive no automatic agent or paid activation', async () => {
+  const db = await database();
+  try {
+    const industries = ['general','other','sales-companies','professional-services','service-businesses','auto-shops','beauty-salons','clinics','gyms','ecommerce','restaurants'];
+    const organizations = new Set();
+    for (const [index, industry] of industries.entries()) {
+      const user = `30000000-0000-4000-8000-${String(index + 1).padStart(12,'0')}`;
+      await db.query('INSERT INTO auth.users(id) VALUES ($1)',[user]);
+      const first = await provision(db,user,`Business ${industry}`,`isolated-${industry}`,industry,`owner-${index}@example.test`);
+      const retry = await provision(db,user,`Business ${industry}`,`isolated-${industry}`,industry,`owner-${index}@example.test`);
+      assert.deepEqual(retry,first);
+      organizations.add(first.organization_id);
+      const profile = (await db.query('SELECT industry,business_name,user_id FROM client_onboarding_profiles WHERE organization_id=$1',[first.organization_id])).rows[0];
+      assert.equal(profile.industry,industry);assert.equal(profile.business_name,`Business ${industry}`);assert.equal(profile.user_id,user);
+      assert.equal(getIndustryExperience(profile.industry).slug,industry === 'other' ? 'general' : industry);
+      assert.equal(getIndustryWorkspacePreset(getIndustryExperience(profile.industry)).version,1);
+      const wallet = (await db.query('SELECT balance,status,metadata FROM flux_credit_wallets WHERE organization_id=$1',[first.organization_id])).rows[0];
+      assert.equal(wallet.balance,0);assert.equal(wallet.status,'paused');assert.equal(wallet.metadata.trial_available,true);assert.equal(first.trial_started,false);
+    }
+    assert.equal(organizations.size,industries.length);
+    assert.equal(await count(db,'organization_memberships'),industries.length);
+    assert.equal(await count(db,'agent_families'),0);assert.equal(await count(db,'projects'),0);
   } finally { await db.close(); }
 });

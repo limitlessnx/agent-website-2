@@ -6,7 +6,7 @@ import { fluxCreditsFromUsd, FLUX_CREDIT_MIN_TOPUP_USD } from "@/lib/flux-topups
 import { resolveBillingRegionFromHeaders } from "@/lib/payments/region";
 import { flutterwaveRequest } from "@/lib/payments/flutterwave";
 import { supabaseRest } from "@/lib/supabase-server-rest";
-import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
+import { assertOrganizationOwner, getOrganizationAccessContext } from "@/lib/organization-membership";
 
 export const dynamic="force-dynamic";
 
@@ -17,8 +17,9 @@ export async function POST(request:Request){
   try{
     const session=await getClientSession();
     if(!session) return NextResponse.json({error:"Authentication required."},{status:401});
+    if (session.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
     const access=await getOrganizationAccessContext(session.organizationId,session.userId);
-    assertAnyOrganizationPermission(access,["billing.manage"]);
+    try { assertOrganizationOwner(access); } catch { return NextResponse.json({ error: "Only the organization owner can manage billing." }, { status: 403 }); }
 
     const body=await request.json().catch(()=>({}));
     const amount=Number(body?.amountUsd);

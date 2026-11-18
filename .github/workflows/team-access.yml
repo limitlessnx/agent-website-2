@@ -1,0 +1,57 @@
+name: Tenant team access verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/portal/team/**'
+      - 'app/api/organization/**'
+      - 'app/api/portal/team/**'
+      - 'app/api/portal/billing/**'
+      - 'app/api/checkout/**'
+      - 'app/api/payments/create/**'
+      - 'lib/organization-membership.ts'
+      - 'supabase/migrations/20261118091000*'
+      - 'tests/tenant-team-access*'
+      - 'tests/team-access/**'
+      - 'tests/helpers/team-access-database.mjs'
+      - 'playwright.team.config.ts'
+      - '.github/workflows/team-access.yml'
+  workflow_dispatch:
+jobs:
+  team-permissions-and-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:team-access
+      - name: Isolated PostgreSQL 17
+        run: |
+          docker run --detach --rm --name flux-team-access-postgres --network none -e POSTGRES_PASSWORD=synthetic-local-only -e POSTGRES_DB=flux_team_test postgres:17-alpine
+          for attempt in $(seq 1 30); do
+            if docker exec flux-team-access-postgres pg_isready -h 127.0.0.1 -U postgres -d flux_team_test; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Actual concurrent PostgreSQL sessions
+        run: TEAM_TEST_DOCKER_CONTAINER=flux-team-access-postgres node --test tests/tenant-team-access-concurrency.test.mjs
+      - if: always()
+        run: docker stop flux-team-access-postgres || true
+  team-responsive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config playwright.team.config.ts
+        env:
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome

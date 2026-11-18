@@ -32,42 +32,48 @@ export type PortalWorkflowRun = {
 };
 
 export type ClientPortalSummary = {
+  unavailableSources?: Array<"onboarding" | "agents" | "workflows" | "runs">;
   onboarding: ClientOnboardingProfile | null;
   agents: PortalAgent[];
   workflows: PortalWorkflow[];
   runs: PortalWorkflowRun[];
 };
 
-async function safeLoad<T>(loader: () => Promise<T>, fallback: T): Promise<T> {
+async function safeLoad<T>(loader: () => Promise<T>, fallback: T, onFailure: () => void): Promise<T> {
   try {
     return await loader();
   } catch {
+    onFailure();
     return fallback;
   }
 }
 
 export async function getClientPortalSummary(organizationId: string): Promise<ClientPortalSummary> {
+  const unavailableSources: NonNullable<ClientPortalSummary["unavailableSources"]> = [];
   const [onboarding, agents, workflows, runs] = await Promise.all([
-    safeLoad(() => getClientOnboardingProfile(organizationId), null),
+    safeLoad(() => getClientOnboardingProfile(organizationId), null, () => unavailableSources.push("onboarding")),
     safeLoad(
       () => supabaseServerRequest<PortalAgent[]>(
         `agents?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,name,slug,description,status,current_version,configuration,created_at&order=created_at.desc`,
       ),
       [],
+      () => unavailableSources.push("agents"),
     ),
     safeLoad(
       () => supabaseServerRequest<PortalWorkflow[]>(
         `workflow_registry?organization_uuid=eq.${encodeURIComponent(organizationId)}&select=id,name,workflow_key,provider,status,trigger_type,environment,last_run_at&order=created_at.desc`,
       ),
       [],
+      () => unavailableSources.push("workflows"),
     ),
     safeLoad(
       () => supabaseServerRequest<PortalWorkflowRun[]>(
         `workflow_runs?organization_uuid=eq.${encodeURIComponent(organizationId)}&select=id,workflow_key,status,duration_ms,created_at&order=created_at.desc&limit=20`,
       ),
       [],
+      () => unavailableSources.push("runs"),
     ),
   ]);
 
-  return { onboarding, agents, workflows, runs };
+  return { onboarding, agents, workflows, runs, unavailableSources: unavailableSources.sort() };
 }

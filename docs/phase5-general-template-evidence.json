@@ -1,0 +1,61 @@
+{
+  "base_commit": "ae2a41f9031544f340ae9144bc79fb0c72819b8b",
+  "branch": "feat/phase5-general-industry-presets",
+  "production_modified": false,
+  "viewports": [
+    360,
+    430,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "before": {
+    "passed": 60,
+    "skipped_new_states": 42,
+    "source_commit": "ae2a41f9031544f340ae9144bc79fb0c72819b8b"
+  },
+  "after": {
+    "passed": 102,
+    "failed": 0,
+    "skipped": 0,
+    "report": "test-results/preset-final-results.json"
+  },
+  "dedicated_visual_comparisons": {
+    "passed": 18,
+    "baselines_updated": false
+  },
+  "local_checks": {
+    "runtime_cases": 7,
+    "provisioning_cases": 7,
+    "isolated_industry_selections_in_provisioning_loop": 11,
+    "support_files": 70,
+    "maia_files": 22,
+    "real_estate_files": 49,
+    "photography_files": 6,
+    "hotel_setup_files": 11,
+    "billing_files": 3,
+    "changed_file_lint": "passed",
+    "type_check": "passed",
+    "production_build": "passed",
+    "repository_lint": {
+      "errors": 483,
+      "warnings": 74
+    }
+  },
+  "design_review": {
+    "mode": "image-only, unanchored",
+    "dom_source_coverage": false,
+    "reference_conversion_id": "3fffa037-3f9e-4973-bc7c-10f0d2da58e6",
+    "review_stages": "settled",
+    "recurring_token_deltas": 0
+  },
+  "screenshots": "Local synthetic captures under test-results/preset-evidence; no public image upload",
+  "source_sha256": {
+    "app/portal/page.tsx": "9e2928b62fd7ee06398cd2004c42716739b93bc972b68156e2593cdbcc204873",
+    "lib/industryExperience.ts": "c90054c55679bcf6758c950f57fa30f422d24486d615d3534b4ee8a5bcc767d1",
+    "lib/workspace-overview.ts": "0064a8b23a3abda0cfeb4c8bec2b49b93ebd0cbd2d376e20865f04b454ec0f14",
+    "components/portal/WorkspacePresetPanel.tsx": "b0a32cbd4abdef9283124cd933ad777b1f943f8d0aa53ca280b9619332fa3c2d",
+    "components/portal/WorkspacePresetPanel.module.css": "44119acf65b1986cb7940f0077c016cb7983c53f95e124fba047646cd89f20df"
+  }
+}

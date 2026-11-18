@@ -1,0 +1,42 @@
+name: General and industry workspace presets
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/portal/page.tsx'
+      - 'components/portal/WorkspacePresetPanel*'
+      - 'lib/industryExperience.ts'
+      - 'lib/workspace-overview.ts'
+      - 'lib/client-portal-data.ts'
+      - 'lib/portal-access.ts'
+      - 'tests/general-industry-workspace.test.cjs'
+      - 'tests/industry-presets/**'
+      - 'playwright.presets.config.ts'
+      - '.github/workflows/industry-presets.yml'
+  workflow_dispatch:
+jobs:
+  preset-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:industry-presets
+      - name: Changed module lint
+        run: npx eslint app/portal/page.tsx lib/industryExperience.ts lib/client-portal-data.ts lib/portal-access.ts lib/workspace-overview.ts components/portal/WorkspacePresetPanel.tsx components/portal/PlanEntitlementsPanel.tsx
+  preset-responsive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config playwright.presets.config.ts

@@ -1,3 +1,4 @@
+import { assertOrganizationOwner, getOrganizationAccessContext } from "@/lib/organization-membership";
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase-server-rest";
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
     const planSlug = typeof body?.planSlug === "string" ? body.planSlug.trim() : "";
     const billingType = "subscription" as const;
     const clientSession = await getClientSession();
+    if (clientSession) {
+      if (clientSession.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
+      try { assertOrganizationOwner(await getOrganizationAccessContext(clientSession.organizationId, clientSession.userId)); } catch { return NextResponse.json({ error: "Only the organization owner can manage billing." }, { status: 403 }); }
+    }
     const customerName = typeof body?.customer?.name === "string" && body.customer.name.trim()
       ? body.customer.name.trim()
       : clientSession?.organizationSlug || "Fluxknight Client";

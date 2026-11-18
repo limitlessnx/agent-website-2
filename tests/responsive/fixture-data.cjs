@@ -72,6 +72,7 @@ function fixture(url) {
           {
             roles: {
               id: "qa-role",
+              organization_id: organization.id,
               slug: "owner",
               name: "Owner",
               role_permissions: permissions.map((key) => ({

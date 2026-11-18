@@ -8,7 +8,7 @@ let command,args,env;
 if(container){
  assert.ok(/^flux-phase6-/.test(container)||container==='flux-team-access-final','Only an explicitly isolated test container is allowed');
  assert.equal(execFileSync('docker',['inspect','-f','{{.HostConfig.NetworkMode}}',container],{encoding:'utf8'}).trim(),'none');
- command='docker';args=['exec','-i',container,'psql','-X','-At','-v','ON_ERROR_STOP=1','-U','postgres','-d','receipt_test'];env=process.env;
+ command='docker';args=['exec','-i',container,'psql','-X','-At','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-U','postgres','-d','receipt_test'];env=process.env;
 }else{
  const url=new URL(process.env.ELEVENLABS_TEST_DATABASE_URL||'');
  assert.ok(['localhost','127.0.0.1'].includes(url.hostname)&&url.pathname==='/receipt_test','Refusing any non-local or non-test database');
@@ -22,7 +22,7 @@ function run(sql,app='receipt-audit'){
  return new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',code=>resolve({code,stdout:stdout.trim(),stderr}));});
 }
 async function ok(sql,app){const r=await run(sql,app);assert.equal(r.code,0,r.stderr);return r.stdout.split('\n').filter(x=>x!=='SET').join('\n');}
-assert.equal(await ok("select count(*) from information_schema.tables where table_schema='public'"),'0','Test database must be empty');
+assert.equal(await ok("select count(*) from information_schema.tables where table_schema in ('public','auth')"),'0','Test database must be empty');
 await ok(schemaSQL());
 const quote=value=>value===null?'null':"'"+String(value).replaceAll("'","''")+"'";
 function apply(args){return 'select apply_elevenlabs_voice_receipt('+args.map(quote).join(',')+');';}

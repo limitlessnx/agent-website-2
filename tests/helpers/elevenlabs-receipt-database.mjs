@@ -1,8 +1,10 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
+import {foundationSQL,recoverySQL} from '../../scripts/phase6-voice-release-sql.mjs';
+export {voiceReleaseSQL} from '../../scripts/phase6-voice-release-sql.mjs';
 export const org='10000000-0000-4000-8000-000000000001',other='10000000-0000-4000-8000-000000000002',agent='20000000-0000-4000-8000-000000000001';
 export const migration=readdirSync('supabase/migrations').find(n=>n.endsWith('_elevenlabs_voice_receipt_atomic_recovery.sql'));
-export function schemaSQL(){
+export function schemaSQL({voice=true}={}){
  const wallet=readFileSync('supabase/migrations/20260908114328_fluxknight_subscription_credits.sql','utf8');
  const policy=readFileSync('supabase/migrations/20260908114430_flux_credit_policy_hardening.sql','utf8');
  const start=policy.indexOf('create or replace function public.record_flux_credit_usage(');
@@ -16,7 +18,7 @@ export function schemaSQL(){
  create table customer_profiles(id uuid primary key,organization_id uuid references organizations(id),unique(organization_id,id));
  create function is_organization_member(uuid) returns boolean language sql stable as $$select false$$;
  ${conversation}\n${handoff}\n${wallet.slice(0,wallet.indexOf('create or replace function'))}
- ${readFileSync('supabase/migrations/20261012090000_phase7_elevenlabs_voice_runtime.sql','utf8')}
+ ${voice?foundationSQL:''}
  ${creditFunction}
  revoke all on function record_flux_credit_usage(uuid,text,integer,text,text,numeric,jsonb,jsonb) from public,anon,authenticated;
  grant execute on function record_flux_credit_usage(uuid,text,integer,text,text,numeric,jsonb,jsonb) to service_role;
@@ -24,8 +26,7 @@ export function schemaSQL(){
  insert into organizations values('${org}'),('${other}');
  insert into agents values('${agent}','${org}','{"elevenlabs_agent_id":"provider-agent"}'),('20000000-0000-4000-8000-000000000002','${other}','{"elevenlabs_agent_id":"foreign-provider"}');
  insert into flux_credit_wallets(organization_id,plan_code,balance) values('${org}','business_plus',1000),('${other}','business_plus',1000);
- revoke all on elevenlabs_voice_calls,elevenlabs_voice_webhook_events from service_role;
- ${readFileSync('supabase/migrations/'+migration,'utf8')}`;
+ ${voice?'revoke all on elevenlabs_voice_calls,elevenlabs_voice_webhook_events from service_role;'+recoverySQL:''}`;
 }
 export function parameters(options={}){
  const call=options.call||'call-one',key=options.key||'event-one';

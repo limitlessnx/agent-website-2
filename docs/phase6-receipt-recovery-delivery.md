@@ -1,6 +1,6 @@
 # Phase 6: reliable ElevenLabs receipt recovery
 
-Base: `bfa3e0bd6af07a79bc7df6bb97f0fa9986ca0f97`, latest main inspected before implementation and publication. Branch: `feat/phase6-unified-communications`; existing draft PR #427 is extended in place.
+Original base: `bfa3e0bd6af07a79bc7df6bb97f0fa9986ca0f97`. Reconciled against released main `79a50882cc212d2d1f36022b1b7b61a6ef45d760` after explicit permission to proceed with Phase 6 review. Branch: `feat/phase6-unified-communications`; existing draft PR #427 is extended in place.
 
 ## Behavior and architecture
 
@@ -19,7 +19,7 @@ Errors distinguish invalid input/signature, tenant mismatch, conflicting replay 
 | Files | Purpose |
 | --- | --- |
 | `app/api/webhooks/elevenlabs/post-call/route.ts` | Existing authenticated adapter: accurate replay states, server-resolved tenant binding, safe failures and one atomic persistence call. |
-| `supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql` | CLI-generated proposed migration adding one invoker RPC with service-only execution; explicit foundation prerequisite. No tenant membership, role preset, data or pricing is rewritten. Required service-role access to the two existing voice tables is explicit. |
+| `supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql` | CLI-generated proposed migration adding one invoker RPC with service-only execution; explicit foundation prerequisite. No tenant membership, role preset, data or pricing is rewritten. Raw voice tables are server-only; explicit service-role SELECT/INSERT/UPDATE grants replace inherited defaults, with DELETE/TRUNCATE denied. |
 | `tests/elevenlabs-receipt-runtime.test.cjs` | Actual route/helper with synthetic HMAC and database boundaries; failed replay, completed duplicate, binding drift, changed content, malformed input, missing migration and lost-response recovery. |
 | `tests/elevenlabs-receipt-database.test.mjs`, `tests/helpers/elevenlabs-receipt-database.mjs` | Execute the real proposed SQL and existing foundation/credit function in PGlite, including rollback, isolation, record retention and grants. |
 | `tests/elevenlabs-receipt-concurrency.mjs` | Independent real PostgreSQL sessions: same-event competition, distinct events for one call, interrupted transaction and mapping change. Refuses non-test database targets. |
@@ -47,8 +47,12 @@ Read-only production metadata confirms the two ElevenLabs call/receipt tables ar
 
 Before a future release, review the existing `20261012090000_phase7_elevenlabs_voice_runtime.sql` foundation, including its RLS/grants and actual schema prerequisites. Then review this increment's `20261118163533` function migration and apply only the exact approved prerequisites in order. Do not push the historical migration directory or mark an unapplied version as deployed. Run hosted schema/grant/advisor checks and controlled provider acceptance before enabling callbacks. No test should send a real call, email, message, campaign or incur customer billing.
 
-The unrelated team-access migration and industry preset release remain held by their existing explicit-approval requirement. Neither is copied into or applied by this PR. The newer Maia WhatsApp pilot, accepted-media behavior, Leo, industry dashboards and Flux Social are preserved.
+The team-access migration and industry presets were separately approved, merged in #426 and verified live on main `79a50882`. This branch retains them through the main merge and incrementally records only the actually executed team migration in the local ledger snapshot. Phase 6 SQL remains unapplied. The newer Maia WhatsApp pilot, accepted-media behavior, Leo, industry dashboards and Flux Social are preserved.
 
 This does not implement all Phase 6 channels, a provider retry scheduler/backlog replay service, historical agent-ownership reconstruction, new pricing or duration-adjustment billing. It makes redelivery of the existing receipt adapter transactional and recoverable. Correlation propagation and channel-state parity are subsequent scoped milestones.
 
 Future rollback must retain receipt/ledger evidence and avoid restoring non-atomic retry behavior while callbacks are active. Any provider/callback or production release change needs its own explicit approval; no automatic rollback or integration disconnection was performed here.
+
+## Post-release prerequisite review
+
+See [release review](phase6-release-review-20261118.md) for current schema checks, paired transaction installation, server-only payload access, rollback limits and refreshed candidate checks. Earlier validation counts above describe the original candidate; current checks are reported separately.

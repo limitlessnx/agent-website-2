@@ -1,12 +1,16 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
+import { assertOrganizationOwner, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
     const session = await getClientSession();
     if (!session) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
+    if (session.isAdminPreview) return NextResponse.json({ error: "Tenant preview is read-only." }, { status: 403 });
+    try { assertOrganizationOwner(await getOrganizationAccessContext(session.organizationId, session.userId)); } catch { return NextResponse.json({ error: "Only the organization owner can manage billing." }, { status: 403 }); }
 
     const body = await request.json().catch(() => ({}));
     const provider = body.provider === "stripe" ? "stripe" : "paystack";

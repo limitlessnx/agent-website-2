@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {PGlite} from '@electric-sql/pglite';
 import {migration} from './helpers/elevenlabs-receipt-database.mjs';
-import {fixture,apply,parameters,insertReceipt,org,other} from './helpers/elevenlabs-receipt-database.mjs';
+import {fixture,apply,parameters,insertReceipt,org,other,schemaSQL,voiceReleaseSQL} from './helpers/elevenlabs-receipt-database.mjs';
 const count=async(db,table)=>(await db.query(`select count(*)::integer n from ${table}`)).rows[0].n;
 const balance=async(db)=>(await db.query('select balance from flux_credit_wallets where organization_id=$1',[org])).rows[0].balance;
 
@@ -60,12 +61,32 @@ test('zero-duration evidence persists without a debit; later measured duration s
 test('invoker RPC is service-only and preserves client RLS boundaries',async t=>{
  const db=await fixture(t);await insertReceipt(db);
  for(const role of ['anon','authenticated']){await db.exec(`set role ${role}`);await assert.rejects(apply(db),/permission denied/);await db.exec('reset role');}
- await db.exec('set role authenticated');assert.equal(await count(db,'elevenlabs_voice_webhook_events'),0);await db.exec('reset role');
+ // Even a permissive legacy membership predicate cannot expose raw payloads.
+ await db.exec('create or replace function is_organization_member(uuid) returns boolean language sql stable as $$select true$$;');
+ for(const role of ['anon','authenticated']){
+  await db.exec(`set role ${role}`);
+  for(const table of ['elevenlabs_voice_calls','elevenlabs_voice_webhook_events'])await assert.rejects(count(db,table),/permission denied/);
+  await db.exec('reset role');
+ }
  await db.exec('set role service_role');assert.equal((await apply(db)).ok,true);await db.exec('reset role');
+ for(const table of ['elevenlabs_voice_calls','elevenlabs_voice_webhook_events']){
+  for(const privilege of ['SELECT','INSERT','UPDATE'])assert.equal((await db.query(`select has_table_privilege('service_role',$1,$2) allowed`,[table,privilege])).rows[0].allowed,true);
+  for(const privilege of ['DELETE','TRUNCATE','REFERENCES','TRIGGER'])assert.equal((await db.query(`select has_table_privilege('service_role',$1,$2) allowed`,[table,privilege])).rows[0].allowed,false);
+ }
  assert.equal((await db.query(`select prosecdef from pg_proc where proname='apply_elevenlabs_voice_receipt'`)).rows[0].prosecdef,false);
 });
 test('recovery migration fails explicitly when the existing voice foundation is absent',async t=>{
  const db=await fixture(t);await db.exec('drop function apply_elevenlabs_voice_receipt(text,jsonb,uuid,uuid,text,text,jsonb,integer,text,numeric);drop table elevenlabs_voice_calls cascade;');
  await assert.rejects(db.exec(readFileSync('supabase/migrations/'+migration,'utf8')),/voice foundation/);await db.exec('rollback');
  assert.equal((await db.query("select count(*)::integer n from pg_proc where proname='apply_elevenlabs_voice_receipt'")).rows[0].n,0);
+});
+test('paired foundation and recovery install atomically without an intermediate browser-access window',async t=>{
+ const db=new PGlite();t.after(()=>db.close());await db.exec(schemaSQL({voice:false}));
+ const bundle=voiceReleaseSQL();
+ await assert.rejects(db.exec(bundle.replace(/commit;$/,'select 1/0;commit;')),/division by zero/);
+ await db.exec('rollback');
+ assert.equal((await db.query("select to_regclass('public.elevenlabs_voice_calls') present")).rows[0].present,null);
+ await db.exec(bundle);
+ for(const table of ['elevenlabs_voice_calls','elevenlabs_voice_webhook_events'])assert.equal((await db.query("select has_table_privilege('authenticated',$1,'SELECT') allowed",[table])).rows[0].allowed,false);
+ await insertReceipt(db);await db.exec('set role service_role');assert.equal((await apply(db)).ok,true);await db.exec('reset role');
 });
