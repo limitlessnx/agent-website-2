@@ -13,10 +13,7 @@ declare
   v_role_id uuid;
   v_membership_id uuid;
 begin
-  if auth.uid() is null or auth.uid() <> p_actor_user_id then
-    raise exception 'Authenticated organization administrator required.';
-  end if;
-
+  -- Service-role endpoint: caller identity is validated by tenant owner membership below.
   select * into v_request
   from public.organization_access_requests
   where id = p_request_id and status = 'pending'
@@ -491,3 +488,42 @@ where rp.role_id = r.id
   and r.slug = 'manager'
   and ((p.key like 'members.%' and p.key <> 'members.view')
        or p.key = 'organization.owner.transfer');
+
+-- The legacy Access ID approval/rejection functions must be service-role only.
+-- The public callable versions required auth.uid(), which conflicts with server-side service-role routing.
+CREATE OR REPLACE FUNCTION public.reject_organization_access_request(p_request_id uuid, p_actor_user_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  -- Server-validated owner action; no reliance on auth.uid() for service-role calls.
+  if not exists (
+    select 1
+    from public.organization_access_requests ar
+    join public.organization_memberships m on m.organization_id = ar.organization_id
+    join public.membership_roles mr on mr.membership_id = m.id
+    join public.roles r on r.id = mr.role_id
+    where ar.id = p_request_id
+      and ar.status = 'pending'
+      and m.user_id = p_actor_user_id
+      and m.status = 'active'
+      and r.slug = 'owner'
+  ) then
+    raise exception 'Organization admin access required.';
+  end if;
+
+  update public.organization_access_requests
+  set status = 'rejected', reviewed_by = p_actor_user_id, reviewed_at = now(), updated_at = now()
+  where id = p_request_id and status = 'pending';
+
+  return true;
+end;
+$function$
+;
+
+revoke all on function public.approve_organization_access_request(uuid,uuid) from public, anon, authenticated;
+grant execute on function public.approve_organization_access_request(uuid,uuid) to service_role;
+revoke all on function public.reject_organization_access_request(uuid,uuid) from public, anon, authenticated;
+grant execute on function public.reject_organization_access_request(uuid,uuid) to service_role;
