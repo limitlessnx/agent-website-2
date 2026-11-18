@@ -30,6 +30,7 @@ const pages=[['platform','/dashboard/platform','Super Admin Control Center'],['o
 for(const [name,route,heading] of pages)test(`${name} preserves long content and actions`,async({page})=>{
  const response=await page.goto(route,{waitUntil:'networkidle'});expect(response?.status()).toBe(200);
  await expect(page.getByRole('heading',{level:1})).toContainText(heading);await stableLayout(page);await capture(page,name);
+ if(page.viewportSize()!.width>900){const navigation=page.getByRole('button',{name:'Security & Settings',exact:true});const box=await navigation.boundingBox();expect(box!.y+box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);}
  if(process.env.FLUX_PHASE4_COMPARE==='1' && ['platform','organizations','provisioning'].includes(name))await expect(page).toHaveScreenshot(`${name}.png`,{fullPage:true,animations:'disabled',maxDiffPixelRatio:0.002,stylePath:'tests/phase4/screenshot.css'});
 });
 test('readiness exposes failures, next actions, owner roles and separate subscription evidence',async({page})=>{
@@ -59,7 +60,7 @@ test('workspace switch errors stay visible and successful selection does not gra
 });
 test('registry search and three organization contexts remain distinct',async({page})=>{
  await page.goto('/dashboard/organizations',{waitUntil:'networkidle'});await expect(page.getByRole('heading',{name:'Administration contexts'})).toBeVisible();
- await page.getByRole('searchbox',{name:'Find an organization'}).fill('Demo Business');await page.getByLabel('Organization context').selectOption('customer');await page.getByRole('button',{name:'Search',exact:true}).click();await expect(page).toHaveURL(/category=customer/);await expect(page.getByText('1 matching records')).toBeVisible();await stableLayout(page);
+ await page.getByRole('searchbox',{name:'Find an organization'}).fill('Demo Business');await page.getByLabel('Organization context').selectOption('customer');await page.getByRole('search').filter({has:page.getByRole('searchbox',{name:'Find an organization'})}).getByRole('button',{name:'Search',exact:true}).click();await expect(page).toHaveURL(/category=customer/);await expect(page.getByText('1 matching records')).toBeVisible();await stableLayout(page);
 });
 test('mobile navigation, reduced motion and zoom keep actions usable',async({page})=>{
  await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/dashboard/organizations',{waitUntil:'networkidle'});await page.addStyleTag({content:'html{font-size:125%}body{zoom:1.25}'});await stableLayout(page);

@@ -199,7 +199,7 @@ export default function AdminSidebar({ email, tenants, activeOrganization }: { e
       </div>
 
       <div className={extras.workspaceWrap}>
-        <button type="button" className={extras.workspaceSwitcher} onClick={() => setWorkspaceOpen((current) => !current)} aria-expanded={workspaceOpen}>
+        <button type="button" className={extras.workspaceSwitcher} title={workspaceName} onClick={() => setWorkspaceOpen((current) => !current)} aria-expanded={workspaceOpen}>
           <span className={extras.workspaceIcon}><Building2 size={16} /></span>
           <span><small>Current workspace</small><strong>{workspaceName}</strong></span>
           <ChevronDown size={15} className={workspaceOpen ? extras.workspaceChevronOpen : extras.workspaceChevron} />

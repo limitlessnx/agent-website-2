@@ -345,7 +345,8 @@
     overflow-x:hidden!important;
   }
   .desktopChrome :global(.admin-sidebar .admin-nav){
-    flex:1 0 auto!important;
+    flex:0 0 auto!important;
+    align-content:start!important;
   }
   .desktopChrome :global(.admin-sidebar-footer){
     margin-top:auto!important;
