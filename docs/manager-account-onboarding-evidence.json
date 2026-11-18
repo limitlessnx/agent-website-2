@@ -34,5 +34,8 @@
   "customer_billing": false,
   "12ui_reference": "candidate A; completed selected LayerDoc alignment; existing application geometry and vector icons retained",
   "production_build": "passed",
-  "type_checks": "passed"
+  "type_checks": "passed",
+  "hotel_setup_test_files": 11,
+  "hosted_initial_failure": "Hotel access fixture omitted getActiveManagerOrganizations; corrected and local suite passed",
+  "hosted_browser_acceptance": "blocked by Vercel protection; public share-link request denied; no protection changes"
 }

@@ -58,3 +58,5 @@ The existing account-mode preference is not an administrator role. Tenant approv
 ## Production status
 
 This feature is implemented in isolation for PR and preview review. Production remains on the earlier approved Phase 6 release. No production customer data, permissions, provider configuration or database schema was modified by this work. Merging and production deployment require explicit approval for this new feature.
+
+Hosted first-candidate verification found the Hotel manager-access fixture omitted the newly reused active-workspace helper. The fixture now models approval/removal consistently and all eleven Hotel setup test files pass locally. This correction changes no application behavior. Protected preview HTTP checks returned 200 for signup/choice; the signup HTML includes the new guidance. Independent Chromium reached Vercel Login. A public share-link request was denied, so protection settings were left unchanged and authenticated rendered preview acceptance is not claimed.
