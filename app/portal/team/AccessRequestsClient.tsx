@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 type RequestItem={id:string;email:string;status:string;created_at:string};
 type MemberItem={id:string;user_id:string;email:string|null;status:string;role:string;created_at:string};
 
-export default function AccessRequestsClient({accessCode}:{accessCode:string}){
+export default function AccessRequestsClient({accessCode,canManage}:{accessCode:string;canManage:boolean}){
  const [requests,setRequests]=useState<RequestItem[]>([]);
  const [members,setMembers]=useState<MemberItem[]>([]);
  const [loading,setLoading]=useState(true);
@@ -37,13 +37,13 @@ export default function AccessRequestsClient({accessCode}:{accessCode:string}){
  }
  const managers=members.filter(member=>member.role==="manager"&&member.status==="active");
  return <div className="portal-team-access-stack">
-  <section className="portal-card">
+  {canManage ? <section className="portal-card">
    <div className="portal-card-head">
     <div><p className="portal-kicker">Manager access</p><h2>Organization Access ID</h2><p>Share this ID with a manager. It identifies this organization but does not grant access until you approve the request.</p></div>
     <div className="portal-actions"><strong>{accessCode}</strong><button className="portal-button secondary" type="button" onClick={copyAccessCode}>Copy Access ID</button></div>
    </div>
-  </section>
-  <section className="portal-card">
+  </section> : null}
+  {canManage ? <section className="portal-card">
    <div className="portal-card-head"><div><p className="portal-kicker">Pending</p><h2>Manager requests</h2><p>Review people who used this organization’s Access ID.</p></div></div>
    <div className="portal-list">
     {loading?<p className="portal-empty">Loading access requests...</p>:requests.length?requests.map(item=><div className="portal-list-row" key={item.id}>
@@ -54,13 +54,13 @@ export default function AccessRequestsClient({accessCode}:{accessCode:string}){
       </div>
     </div>):<p className="portal-empty">No pending manager access requests.</p>}
    </div>
-  </section>
+  </section> : null}
   <section className="portal-card">
-   <div className="portal-card-head"><div><p className="portal-kicker">Active access</p><h2>Active managers</h2><p>Managers currently authorized to enter this organization. Removing access keeps their account and history but blocks workspace access.</p></div></div>
+   <div className="portal-card-head"><div><p className="portal-kicker">Team members</p><h2>Active managers</h2><p>{canManage ? "Managers currently authorized to enter this organization. Removing access keeps their account and history but blocks workspace access." : "View managers in your organization. Only the owner can change team access."}</p></div></div>
    <div className="portal-list">
     {managers.length?managers.map(member=><div className="portal-list-row" key={member.id}>
       <div><strong>{member.email||member.user_id}</strong><span>Manager · active · joined {new Date(member.created_at).toLocaleDateString("en-NG")}</span></div>
-      <button className="portal-button secondary" type="button" disabled={busy===member.id} onClick={()=>act({membership_id:member.id,action:"remove"},member.id)}>Remove Access</button>
+      {canManage ? <button className="portal-button secondary" type="button" disabled={busy===member.id} onClick={()=>act({membership_id:member.id,action:"remove"},member.id)}>Remove Access</button> : null}
     </div>):<p className="portal-empty">No active managers yet.</p>}
     {error?<p className="admin-error">{error}</p>:null}
    </div>
