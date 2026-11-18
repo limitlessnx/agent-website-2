@@ -41,7 +41,7 @@ test("A7 hides legacy tenant control planes behind redirects",()=>{
 
 test("A7 Super Admin navigation is organized around canonical control planes",()=>{
   const nav=read("components/admin/navigationConfig.ts");
-  for(const label of ["Overview","Clients","Systems","Operations","Billing","Security"]){
+  for(const label of ["Overview","Organizations","Onboarding & Provisioning","AI Agents & Automations","Communications & Integrations","Operations & Monitoring","Billing & Usage","Security & Settings"]){
     assert.match(nav,new RegExp(`label:"${label}"`));
   }
   assert.doesNotMatch(nav,/label:"Retention"/);

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { LeoIdentity } from "@/lib/leo-core";
+import { organizationCategory } from "@/lib/organization-context-catalog";
 
 export type LeoWorkspaceRelation = "owned" | "client";
 export type LeoWorkspaceTarget = {
@@ -17,15 +18,13 @@ function text(value: unknown) { return String(value || "").trim(); }
 function normalize(value: string) { return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
 function aliasesFor(row: OrganizationRow) {
   const raw = [text(row.name), text(row.slug)].filter(Boolean);
-  const joined = normalize(raw.join(" "));
-  if (/limitless|realty/.test(joined)) raw.push("limitless", "limitless realty", "realty", "maia");
-  if (/gencouv/.test(joined)) raw.push("gencouv", "gencouv trading");
-  if (/fluxknight|fluxagents|boundless flux/.test(joined)) raw.push("fluxknight", "fluxagents", "platform");
+  if (row.slug === "limitless-realty") raw.push("limitless", "limitless realty", "realty", "maia");
+  if (row.slug === "gencouv") raw.push("gencouv", "gencouv trading");
+  if (row.slug === "fluxknight") raw.push("fluxknight", "fluxagents", "platform");
   return [...new Set(raw.map(normalize).filter(Boolean))];
 }
 function relationFor(row: OrganizationRow): LeoWorkspaceRelation {
-  const value = normalize(`${row.name || ""} ${row.slug || ""}`);
-  return /limitless|gencouv|fluxknight|fluxagents|boundless flux/.test(value) ? "owned" : "client";
+  return organizationCategory(row.slug) === "customer" ? "client" : "owned";
 }
 
 export async function listLeoWorkspacePortfolio(identity: LeoIdentity) {
@@ -49,7 +48,7 @@ export async function resolveLeoWorkspaceTarget(identity: LeoIdentity, reference
   const workspaces = await listLeoWorkspacePortfolio(identity);
   const exact = workspaces.filter((workspace) => workspace.organizationId === reference || normalize(workspace.slug) === ref || normalize(workspace.name) === ref || workspace.aliases.includes(ref));
   if (exact.length === 1) return exact[0];
-  const fuzzy = workspaces.filter((workspace) => [workspace.name, workspace.slug, ...workspace.aliases].some((value) => normalize(value).includes(ref) || ref.includes(normalize(value))));
+  const fuzzy = workspaces.filter((workspace) => [workspace.name, workspace.slug, ...workspace.aliases].some((value) => { const normalized = normalize(value); return Boolean(normalized) && (normalized.includes(ref) || ref.includes(normalized)); }));
   if (fuzzy.length === 1) return fuzzy[0];
   if (exact.length > 1 || fuzzy.length > 1) throw new Error("Workspace reference is ambiguous. Use an organization ID or a more specific workspace name.");
   throw new Error("Workspace was not found in the current Super Leo portfolio.");

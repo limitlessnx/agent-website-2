@@ -2,6 +2,8 @@ import "@/components/ui/dashboard-foundation.css";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-auth";
 import { listClientOnboardingProfiles } from "@/lib/client-workspace-onboarding";
+import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
+import { organizationCategory, organizationCategoryLabels } from "@/lib/organization-context-catalog";
 import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 import AdminSearch from "@/components/admin/AdminSearch";
 import AdminSidebar from "@/components/admin/AdminSidebar";
@@ -23,9 +25,10 @@ import referenceFidelity from "@/components/admin/DashboardReferenceFidelity.mod
 export default async function AdminShell({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard");
-  const [tenants, organizationContext] = await Promise.all([
+  const [tenants, organizationContext, scope] = await Promise.all([
     listClientOnboardingProfiles(100).catch(() => []),
     getAdminOrganizationContext(),
+    resolveAdminOrganizationScope().catch(() => null),
   ]);
   const selectedTenant = organizationContext.kind === "tenant"
     ? tenants.find((tenant) => tenant.organization_id === organizationContext.id)
@@ -33,7 +36,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
   const activeOrganization: { kind: "system" | "tenant"; id: string; name: string } = {
     kind: organizationContext.kind,
     id: organizationContext.id,
-    name: selectedTenant?.business_name || selectedTenant?.business_email || (organizationContext.kind === "system" ? organizationContext.name : undefined) || "Tenant organization",
+    name: (scope?.status !== "unavailable" ? scope?.name : undefined) || selectedTenant?.business_name || selectedTenant?.business_email || (organizationContext.kind === "system" ? organizationContext.name : undefined) || "Tenant organization",
   };
 
   return (
@@ -54,7 +57,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             />
             <section className="admin-main">
               <header className="admin-topbar">
-                <div className="admin-breadcrumb"><strong>{activeOrganization.name}</strong><span>{activeOrganization.kind === "system" ? "System Organization" : "Tenant Organization"}</span></div>
+                <div className="admin-breadcrumb"><strong>{activeOrganization.name}</strong><span>{scope?.status === "unavailable" ? "Workspace unavailable" : organizationCategoryLabels[organizationCategory(scope?.slug || (organizationContext.kind === "system" ? organizationContext.id : null))]}</span></div>
                 <AdminSearch />
                 <div className="admin-topbar-actions">
                   <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
