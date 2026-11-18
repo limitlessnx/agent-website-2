@@ -24,6 +24,7 @@
   "schema_applied": false,
   "sha256": {
     "app/api/webhooks/elevenlabs/post-call/route.ts": "8f202205e0ac54ec297f2cfc51b3fef4f93ac4cad169df52b9eb9aee9980b9da",
-    "supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql": "82068fbdfcacf23e88ddb79e2dbd1951afe3c902df30d3beed8ffbf8dc6ad8a9"
-  }
+    "supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql": "aa081455a09650446c2a94327a6dc750cde0d8971f46ecdc5c3bc46718d32d08"
+  },
+  "explicit_service_grants_verified": true
 }

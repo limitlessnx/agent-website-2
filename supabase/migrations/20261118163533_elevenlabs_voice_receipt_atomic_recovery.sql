@@ -11,6 +11,10 @@ do $$begin
   end if;
 end$$;
 
+-- Do not depend on the project's changing default table grants. These are the
+-- existing server adapter's required operations, never browser-role access.
+grant select,insert,update on public.elevenlabs_voice_calls,public.elevenlabs_voice_webhook_events to service_role;
+
 create function public.apply_elevenlabs_voice_receipt(
   p_event_key text, p_payload jsonb, p_organization_id uuid, p_agent_id uuid,
   p_provider_agent_id text, p_call_id text, p_projection jsonb,

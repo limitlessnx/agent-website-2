@@ -24,6 +24,7 @@ export function schemaSQL(){
  insert into organizations values('${org}'),('${other}');
  insert into agents values('${agent}','${org}','{"elevenlabs_agent_id":"provider-agent"}'),('20000000-0000-4000-8000-000000000002','${other}','{"elevenlabs_agent_id":"foreign-provider"}');
  insert into flux_credit_wallets(organization_id,plan_code,balance) values('${org}','business_plus',1000),('${other}','business_plus',1000);
+ revoke all on elevenlabs_voice_calls,elevenlabs_voice_webhook_events from service_role;
  ${readFileSync('supabase/migrations/'+migration,'utf8')}`;
 }
 export function parameters(options={}){

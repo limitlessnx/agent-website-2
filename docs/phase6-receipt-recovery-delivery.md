@@ -19,7 +19,7 @@ Errors distinguish invalid input/signature, tenant mismatch, conflicting replay 
 | Files | Purpose |
 | --- | --- |
 | `app/api/webhooks/elevenlabs/post-call/route.ts` | Existing authenticated adapter: accurate replay states, server-resolved tenant binding, safe failures and one atomic persistence call. |
-| `supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql` | CLI-generated proposed migration adding one invoker RPC with service-only execution; explicit foundation prerequisite. No existing roles, data or pricing are rewritten. |
+| `supabase/migrations/20261118163533_elevenlabs_voice_receipt_atomic_recovery.sql` | CLI-generated proposed migration adding one invoker RPC with service-only execution; explicit foundation prerequisite. No tenant membership, role preset, data or pricing is rewritten. Required service-role access to the two existing voice tables is explicit. |
 | `tests/elevenlabs-receipt-runtime.test.cjs` | Actual route/helper with synthetic HMAC and database boundaries; failed replay, completed duplicate, binding drift, changed content, malformed input, missing migration and lost-response recovery. |
 | `tests/elevenlabs-receipt-database.test.mjs`, `tests/helpers/elevenlabs-receipt-database.mjs` | Execute the real proposed SQL and existing foundation/credit function in PGlite, including rollback, isolation, record retention and grants. |
 | `tests/elevenlabs-receipt-concurrency.mjs` | Independent real PostgreSQL sessions: same-event competition, distinct events for one call, interrupted transaction and mapping change. Refuses non-test database targets. |
@@ -34,7 +34,7 @@ Errors distinguish invalid input/signature, tenant mismatch, conflicting replay 
 - Final runtime: **13/13 passed**; database behavior: **10/10 passed**; existing voice contracts: **5/5 passed** (28 targeted cases total).
 - **Four real PostgreSQL scenarios passed**, covering same-event retries, separate events for one call, termination after uncommitted settlement and an agent mapping writer blocked until commit. Each retry scenario preserves one committed debit/handoff.
 - Maia: **25 test files passed**; support: **604 cases passed**; billing: **27 cases passed**; migration-ledger checks: **4/4 passed**. Counts reflect the actual runner summaries, not estimated nested totals.
-- Final changed-file ESLint, type checking and production build passed. Whitespace validation preserves the existing CRLF workflow/ledger format. Historical whole-repository lint debt remains.
+- Final changed-file ESLint, type checking and production build passed. Whitespace validation preserves the existing CRLF workflow/ledger format. Historical whole-repository lint debt remains. The database fixture starts with service-role access to the voice tables revoked, so invoker success verifies explicit server grants rather than assuming project defaults.
 - Hosted CI and preview results are recorded in the PR description for its exact head; local success is not substituted for a pending hosted check.
 
 Logs: `/tmp/phase6-*.log`. All records/wallet debits in tests are synthetic. Authentication uses a synthetic secret; no credential was retrieved or published. PostgreSQL ran inside a network-isolated local test container with a separate empty `receipt_test` database. A fresh container initially exceeded local disk capacity; the existing isolated test instance was reused without changing its other databases.
