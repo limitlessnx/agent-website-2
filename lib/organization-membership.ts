@@ -80,6 +80,12 @@ export async function getOrganizationAccessContext(organizationId: string, userI
   };
 }
 
+/** Membership administration belongs exclusively to organization owners. */
+export function assertOrganizationOwner(context: Awaited<ReturnType<typeof getOrganizationAccessContext>>) {
+  if (context.roles.includes("owner")) return;
+  throw new Error("Only the organization owner is authorized to manage team access.");
+}
+
 export function assertAnyOrganizationPermission(
   context: Awaited<ReturnType<typeof getOrganizationAccessContext>>,
   keys: string[],
@@ -123,7 +129,7 @@ export async function listOrganizationMembers(organizationId: string, userId: st
 
 export async function listOrganizationInvitations(organizationId: string, userId: string) {
   const access = await getOrganizationAccessContext(organizationId, userId);
-  assertAnyOrganizationPermission(access, ["members.view", "members.invite", "members.manage"]);
+  assertOrganizationOwner(access);
 
   return supabaseServerRequest<InvitationRow[]>(
     `organization_invitations?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.pending&select=id,email,status,expires_at,created_at,invited_by,roles(slug,name)&order=created_at.desc`,
@@ -142,7 +148,7 @@ export async function createOrganizationInvitation(input: {
   expiresInHours?: number;
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  assertAnyOrganizationPermission(access, ["members.invite", "members.manage"]);
+  assertOrganizationOwner(access);
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + Math.max(1, Math.min(input.expiresInHours || 72, 168)) * 60 * 60 * 1000);
@@ -196,8 +202,7 @@ export async function updateOrganizationMemberAccess(input: {
   status?: "active" | "suspended" | "removed";
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  const required = input.role ? ["members.roles.manage", "members.manage"] : ["members.suspend", "members.manage"];
-  assertAnyOrganizationPermission(access, required);
+  assertOrganizationOwner(access);
 
   return supabaseServerRequest<Record<string, unknown>>(
     "rpc/update_organization_member_access",
@@ -220,7 +225,7 @@ export async function revokeOrganizationInvitation(input: {
   invitationId: string;
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  assertAnyOrganizationPermission(access, ["members.invite", "members.manage"]);
+  assertOrganizationOwner(access);
 
   return supabaseServerRequest<boolean>("rpc/revoke_organization_invitation", {
     method: "POST",
@@ -248,9 +253,12 @@ export async function setOrganizationRolePermissions(input: {
   permissions: string[];
 }) {
   const access = await getOrganizationAccessContext(input.organizationId, input.actorUserId);
-  assertAnyOrganizationPermission(access, ["members.roles.manage", "members.manage"]);
+  assertOrganizationOwner(access);
 
   const permissions = [...new Set(input.permissions.map((value) => value.trim()).filter(Boolean))];
+  if (permissions.some((key) => key.startsWith("members.") || key === "organization.owner.transfer")) {
+    throw new Error("Team access and ownership permissions are reserved to the organization owner.");
+  }
   return supabaseServerRequest<Record<string, unknown>>(
     "rpc/set_organization_role_permissions",
     {
