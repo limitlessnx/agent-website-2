@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
@@ -88,6 +89,7 @@ test('Limitless strict template validation blocks missing or mismatched required
    throw new Error('Unexpected network request in test');
   };
   const client=load(path.resolve(__dirname,'../lib/whatsapp-delivery.ts'),{
+   '@/lib/whatsapp-message-normalizer':load(path.resolve(__dirname,'../lib/whatsapp-message-normalizer.ts')),
    '@/lib/supabase/admin':{createAdminClient:()=>admin},
    '@/lib/twilio-whatsapp':{sendTwilioWhatsAppMessage:async()=>({sid:'unit-provider-message'})},
   },'',{fetch,process:{env:{LIMITLESS_SUPABASE_URL:'https://unit.test',LIMITLESS_SUPABASE_SERVICE_ROLE_KEY:'unit-test-key'}}});
@@ -116,7 +118,7 @@ test('Limitless strict template validation blocks missing or mismatched required
 
  const blank={...validValues,[order[0]]:'   '};
  const missingValueClient=createClient(base);
- await assert.rejects(missingValueClient.client.sendWhatsAppMessage({...input,variables:blank}),/required approved WhatsApp template variable/i);
+ await assert.rejects(missingValueClient.client.sendWhatsAppMessage({...input,variables:blank}),error=>error.name==='WhatsAppMessageValidationError' && error.message===`Template variable ${order[0]} is required and cannot be empty.`);
  assert.equal(missingValueClient.calls.some(call=>call.url.startsWith('https://graph.facebook.com/')),false);
 
  const validClient=createClient(base);

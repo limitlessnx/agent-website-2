@@ -3,7 +3,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findPhotographerConflict } from "@/lib/photography-booking-conflicts";
+import { findPhotographerConflict, PhotographyAvailabilityError } from "@/lib/photography-booking-conflicts";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,13 @@ export async function POST(request: Request) {
     const { data: member } = await admin.from("organization_memberships").select("user_id").eq("organization_id", session.organizationId).eq("user_id", assignedPhotographerId).eq("status", "active").maybeSingle();
     if (!member) return NextResponse.json({ error: "Selected photographer is not an active workspace member." }, { status: 400 });
     const effectiveEndAt = endAt || new Date(new Date(startAt).getTime() + 60 * 60 * 1000).toISOString();
-    const conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: assignedPhotographerId, startAt, endAt: effectiveEndAt });
+    let conflict;
+    try {
+      conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: assignedPhotographerId, startAt, endAt: effectiveEndAt });
+    } catch (error) {
+      if (error instanceof PhotographyAvailabilityError) return NextResponse.json({ error: error.message }, { status: 503 });
+      throw error;
+    }
     if (conflict) return NextResponse.json({ error: `Photographer is already assigned to “${conflict.title || "another session"}” during this time.`, conflict: { appointmentId: conflict.id, startAt: conflict.start_at, endAt: conflict.end_at } }, { status: 409 });
   }
   const { data: appointment, error: appointmentError } = await admin.from("appointments").insert({ organization_id: session.organizationId, customer_id: customerId, appointment_system_id: appointmentSystem.id, status: "confirmed", title: title || packageName || "Studio session", start_at: startAt, end_at: endAt, customer_name: customer.full_name, customer_email: customer.email, customer_phone: customer.phone, location: String(body.location || "").trim().slice(0, 240) || null, notes: String(body.clientNotes || "").trim().slice(0, 2000) || null, provider: "dashboard", metadata: { source: "exposure_booking_form", catalogue_item_id: catalogueItemId, shoot_type: shootType } }).select("id").single();
