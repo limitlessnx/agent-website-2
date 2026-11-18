@@ -37,7 +37,7 @@ test('customized manager role cannot gain billing or team administration',async(
  assert.equal(f.calls.filter(x=>x.url==='rpc/set_organization_role_permissions').length,0);
 });
 test('all live checkout routes deny manager before provider, wallet or database mutations',async()=>{
- for(const file of ['app/api/payments/create/route.ts','app/api/checkout/route.ts','app/api/portal/billing/top-up/route.ts']){
+ for(const file of ['app/api/payments/create/route.ts','app/api/checkout/route.ts','app/api/portal/billing/top-up/route.ts','app/api/client-auth/start-trial/route.ts']){
    const f=fixture({role:'manager'});const route=load(path.resolve(file),{...next,'crypto':require('node:crypto'),
     '@/lib/client-auth':{getClientSession:async()=>f.session},'@/lib/organization-membership':f.membership,
     '@/lib/supabase/admin':{createAdminClient:()=>{throw Error('unexpected database mutation')}},
@@ -46,5 +46,14 @@ test('all live checkout routes deny manager before provider, wallet or database 
     '@/lib/flux-topups':{},'@/lib/payments/region':{},'@/lib/payments/flutterwave':{},'@/lib/payments/catalog':{},
    });
    const response=await route.POST({headers:new Headers(),json:async()=>({planSlug:'test',amountUsd:10})});assert.equal(response.status,403,file);
+ }
+});
+test('trial activation requires live ownership and binds the RPC to the session organization',async()=>{
+ for(const [options,status] of [[{anonymous:true},401],[{preview:true},403],[{revoked:true},403],[{},200]]){
+  const f=fixture(options),writes=[];
+  const route=load(path.resolve('app/api/client-auth/start-trial/route.ts'),{...next,'@/lib/client-auth':{getClientSession:async()=>f.session},'@/lib/organization-membership':f.membership,'@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name,args)=>{writes.push({name,args});return {data:{ok:true},error:null};}})}});
+  assert.equal((await route.POST()).status,status);
+  assert.equal(writes.length,status===200?1:0);
+  if(writes.length)assert.equal(writes[0].args.target_organization_id,org);
  }
 });

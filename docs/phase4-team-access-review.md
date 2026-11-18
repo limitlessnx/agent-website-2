@@ -21,6 +21,7 @@ All six original #423 changed files and its 543-line proposed migration were rev
 - Approval converts a matching email invitation reservation without double counting. Expired/revoked invitations release capacity. Stale requests cannot overwrite active roles, and manager invitation/approval/reactivation paths cannot restore or transfer owner privileges.
 - Approval and rejection now produce audit events. Audit failure rolls back these database transactions rather than silently claiming success.
 - Managers cannot obtain billing mutation powers through customized roles. Authenticated checkout/top-up endpoints independently require owner membership before provider, wallet or database mutations. Public new-customer checkout behavior remains available. Admin tenant preview remains read-only.
+- Trial activation is also owner-only and rejects preview/revoked sessions before its existing trial RPC. This previously unguarded path was found during the general-template review; the fix stays in the existing team-access workstream.
 - Team & Access exposes the existing plan's effective maximum, active seats, suspended seats, reserved invitations, available seats and full roster to owners and managers. Owner-only controls support generated invitation links, pending requests, revocation, suspend/remove and reactivation. No email is automatically sent.
 - Failed team reads show a retryable error, not an empty roster or invented capacity. Unknown capacity disables additions. Existing purple cards/fields/buttons are reused; long identifiers wrap and mobile actions stack without clipping.
 
@@ -46,7 +47,7 @@ All six original #423 changed files and its 543-line proposed migration were rev
 
 Use the final PR description for exact final CI commit and preview. Local command logs are under `/tmp/team-*.log`; browser results and screenshots are under `test-results/` (ignored).
 
-- `npm run test:team-access`: five runtime API cases and the SQL behavior suite, plus existing draft guard contracts. No real provider functions execute.
+- `npm run test:team-access`: six runtime API cases and the SQL behavior suite, plus existing draft guard contracts. No real provider functions execute.
 - `TEAM_TEST_DOCKER_CONTAINER=<isolated-name> node --test tests/tenant-team-access-concurrency.test.mjs`: PostgreSQL 17 in an ephemeral `--network none` container, separate real sessions competing for final capacity. Covers invite/invite, invite/approval, approval/approval, invite/reactivation and parallel reserved-seat acceptance.
 - `npm run test:support`, `npm run test:maia`, `npm run test:real-estate`, `npm run test:xposure-dashboard`, `npm run test:hotel-setup`, `npm run test:billing`: existing business, tenant, agent and billing regressions. Initial failures and corrective reruns are reported in final results, not hidden.
 - Changed-file ESLint, repository ESLint inventory, `npx tsc --noEmit`, `npm run build` and `git diff --check` run separately. The production build does not deploy anything.
@@ -74,7 +75,7 @@ This does not certify full provider delivery, actual customer billing, every nat
 
 ## Recorded local results
 
-- SQL behavior: 21 scenarios passed (22 including the parent test); five API/runtime cases passed. Five actual PostgreSQL concurrency scenarios passed (six including parent). The final owner-reactivation safeguard was included in the SQL/concurrency rerun.
+- SQL behavior: 21 scenarios passed (22 including the parent test); six API/runtime cases passed. Five actual PostgreSQL concurrency scenarios passed (six including parent). The final owner-reactivation safeguard was included in the SQL/concurrency rerun.
 - Support: 72 test files passed; Maia: 22; Real Estate: 49; Photography: 6; Hotel setup: 11; billing: 3. Existing revoked-session, cross-tenant request and provider-call blocking assertions remain.
 - New responsive suite: **42/42 passed**. Before audit: **12 captured, six new-only cases intentionally skipped**. The initial after run had six identical test-selector failures caused by the framework route announcer sharing `role=alert`; the application alert selector was scoped and all 42 cases passed on a fresh run.
 - Real Estate baseline initially failed on an unmocked existing normalizer dependency; the unchanged baseline reproduced it. After repairing the fixture and blank-variable assertion, the entire 49-file suite passed. No messaging implementation was changed.
