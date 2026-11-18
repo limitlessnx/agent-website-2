@@ -3,7 +3,7 @@ import { getClientSession } from "@/lib/client-auth";
 import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { assertAnyOrganizationPermission, getOrganizationAccessContext } from "@/lib/organization-membership";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findPhotographerConflict } from "@/lib/photography-booking-conflicts";
+import { findPhotographerConflict, PhotographyAvailabilityError } from "@/lib/photography-booking-conflicts";
 
 const appointmentStatuses = new Set(["requested", "confirmed", "rescheduled", "cancelled"]);
 const depositStatuses = new Set(["not_required", "pending", "partial", "paid", "refunded", "failed"]);
@@ -36,12 +36,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { data: member } = await admin.from("organization_memberships").select("user_id").eq("organization_id", session.organizationId).eq("user_id", assignedPhotographerId).eq("status", "active").maybeSingle();
     if (!member) return NextResponse.json({ error: "Selected photographer is not an active workspace member." }, { status: 400 });
   }
-  const { data: currentMetadata } = await admin.from("photography_booking_metadata").select("assigned_photographer_id").eq("organization_id", session.organizationId).eq("appointment_id", id).maybeSingle();
-  const effectivePhotographerId = assignedPhotographerId !== undefined ? assignedPhotographerId : currentMetadata?.assigned_photographer_id || null;
+  let currentPhotographerId: string | null = null;
+  if (assignedPhotographerId === undefined) {
+    try {
+      const { data: currentMetadata, error: currentMetadataError } = await admin.from("photography_booking_metadata").select("assigned_photographer_id").eq("organization_id", session.organizationId).eq("appointment_id", id).maybeSingle();
+      if (currentMetadataError) throw new PhotographyAvailabilityError();
+      currentPhotographerId = currentMetadata?.assigned_photographer_id || null;
+    } catch {
+      return NextResponse.json({ error: new PhotographyAvailabilityError().message }, { status: 503 });
+    }
+  }
+  const effectivePhotographerId = assignedPhotographerId !== undefined ? assignedPhotographerId : currentPhotographerId;
   const effectiveStartAt = startAt !== undefined ? startAt : appointment.start_at;
   const effectiveEndAt = endAt !== undefined ? endAt : appointment.end_at;
   if (effectivePhotographerId) {
-    const conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: effectivePhotographerId, startAt: effectiveStartAt, endAt: effectiveEndAt, excludeAppointmentId: id });
+    let conflict;
+    try {
+      conflict = await findPhotographerConflict({ admin, organizationId: session.organizationId, photographerUserId: effectivePhotographerId, startAt: effectiveStartAt, endAt: effectiveEndAt, excludeAppointmentId: id });
+    } catch (error) {
+      if (error instanceof PhotographyAvailabilityError) return NextResponse.json({ error: error.message }, { status: 503 });
+      throw error;
+    }
     if (conflict) return NextResponse.json({ error: `Photographer is already assigned to “${conflict.title || "another session"}” during this time.`, conflict: { appointmentId: conflict.id, startAt: conflict.start_at, endAt: conflict.end_at } }, { status: 409 });
   }
   const appointmentPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
