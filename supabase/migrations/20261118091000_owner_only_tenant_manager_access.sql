@@ -538,6 +538,7 @@ delete from public.role_permissions rp
 using public.roles r, public.permissions p
 where rp.role_id = r.id
   and rp.permission_id = p.id
+  and r.organization_id is not null
   and r.slug <> 'owner'
   and ((p.key like 'members.%' and p.key <> 'members.view')
        or p.key = 'organization.owner.transfer'

@@ -10,7 +10,9 @@ test('reviewed manager migration enforces real database behavior',async t=>{
  const scenario=async(name,fn)=>t.test(name,async()=>{await db.exec('begin');try{await fn();}finally{await db.exec('rollback');}});
  try{
  await scenario('migration is repeatable and preserves seeded operational permissions',async()=>{
+   await db.exec(`insert into roles(slug,name) values('platform-admin','Platform administrator');insert into role_permissions select r.id,p.id from roles r cross join permissions p where r.organization_id is null and r.slug='platform-admin' and p.key='members.manage';`);
    await db.exec(migration);
+   assert.equal((await run(`select count(*)::int n from role_permissions rp join roles r on r.id=rp.role_id where r.organization_id is null and r.slug='platform-admin'`))[0].n,1);
    const keys=(await run(`select p.key from role_permissions rp join roles r on r.id=rp.role_id join permissions p on p.id=rp.permission_id where r.organization_id='${org}' and r.slug='manager'`)).map(x=>x.key);
    assert.ok(keys.includes('customers.manage'));assert.ok(keys.includes('appointments.manage'));assert.ok(keys.includes('members.view'));assert.ok(!keys.includes('members.manage'));assert.ok(!keys.includes('billing.manage'));
  });

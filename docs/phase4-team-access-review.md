@@ -15,7 +15,7 @@ All six original #423 changed files and its 543-line proposed migration were rev
 
 ## Defects corrected
 
-- Owner membership is required in the application and SQL for invitations, request approval/rejection, role changes, suspension/removal, reactivation and revocation. A foreign organization's role cannot authorize the selected tenant. A legacy `admin` role does not become ownership.
+- Owner membership is required in the application and SQL for invitations, request approval/rejection, role changes, suspension/removal, reactivation and revocation. A foreign organization's role cannot authorize the selected tenant. A legacy `admin` role does not become ownership. Permission cleanup is restricted to organization-owned roles; global platform roles are preserved and covered by the migration replay test.
 - Browser-authenticated direct mutation privileges (including RLS-bypassing TRUNCATE) are removed from the team/access tables. Existing service-role RPCs enforce actor/tenant/role checks and audit records; read policies and service-role server operations remain.
 - Invitation creation, acceptance, revocation, Access ID approval/rejection and member updates acquire the same organization advisory transaction lock before seat/row changes. Acceptance rechecks the current plan after a downgrade. Reactivation from a non-occupied state checks available capacity. Suspended members retain their existing seats.
 - Approval converts a matching email invitation reservation without double counting. Expired/revoked invitations release capacity. Stale requests cannot overwrite active roles, and manager invitation/approval/reactivation paths cannot restore or transfer owner privileges.
