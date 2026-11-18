@@ -8,6 +8,9 @@
 .identity select { width:100%; min-width:0; max-width:100%; }
 .actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; max-width:100%; }
 .actions > * { min-width:0; }
+.destructive { min-height:44px; padding:10px 16px; color:var(--fk-danger)!important; border:1px solid var(--fk-danger)!important; background:transparent; white-space:normal; }
+.destructive:disabled { opacity:.5; cursor:not-allowed; }
+.row > .actions { flex:0 1 55%; }
 .note { color:var(--fk-text-secondary); line-height:1.6; overflow-wrap:anywhere; }
 .evidence { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
 .evidence li { display:grid; gap:6px; padding:12px 0; border-bottom:1px solid var(--fk-border); overflow-wrap:anywhere; }
@@ -19,5 +22,6 @@
 @media (max-width:767px) {
   .row { flex-direction:column; }
   .actions { width:100%; }
+  .row > .actions { flex-basis:auto; }
   .actions > * { flex:1 1 160px; }
 }

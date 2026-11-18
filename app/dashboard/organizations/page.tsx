@@ -1,3 +1,4 @@
+import OrganizationAdminActions from "@/components/admin/OrganizationAdminActions";
 import { PageHeader, DashboardCard, CardHeader, StatusBadge, Button, SearchFilters, EmptyState } from "@/components/ui/DashboardPrimitives";
 import { getAdminOrganizations } from "@/lib/admin-control-center";
 import { organizationCategory, organizationCategoryLabels, SYSTEM_ORGANIZATIONS } from "@/lib/organization-context-catalog";
@@ -29,7 +30,7 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
         <p className={styles.note}>{rows.length} matching records · page {page}. {evidence.truncated ? "More organizations are available on the next page." : "End of results."}</p>
         {rows.map(row => <article className={styles.row} key={row.id}>
           <div className={styles.identity}><strong>{row.name || "Unnamed organization"}</strong><span>{organizationCategoryLabels[organizationCategory(row.slug)]}</span><small>{row.slug} · {row.id}</small><div className={styles.status}><StatusBadge>{row.status || "Unknown lifecycle"}</StatusBadge><span>Organization lifecycle</span></div></div>
-          <div className={styles.actions}><Button href={`/dashboard/clients/${encodeURIComponent(row.id)}/manage`}>Manage</Button><Button variant="outline" href={`/dashboard/provisioning?organizationId=${encodeURIComponent(row.id)}`}>Readiness & ownership</Button><Button variant="outline" prefetch={false} href={`/dashboard/preview/tenant/${encodeURIComponent(row.id)}`}>Preview read-only</Button></div>
+          <div className={styles.actions}><Button href={`/dashboard/clients/${encodeURIComponent(row.id)}/manage`}>Manage</Button><Button variant="outline" href={`/dashboard/provisioning?organizationId=${encodeURIComponent(row.id)}`}>Readiness & ownership</Button><Button variant="outline" prefetch={false} href={`/dashboard/preview/tenant/${encodeURIComponent(row.id)}`}>Preview read-only</Button><OrganizationAdminActions organization={row} /></div>
         </article>)}
         {!rows.length ? <EmptyState title="No matching organizations" description="Adjust the search or organization context filter." /> : null}
         <div className={styles.actions}>{page > 1 ? <Button href={pageHref(page - 1)} variant="outline">Previous page</Button> : null}{evidence.truncated ? <Button href={pageHref(page + 1)} variant="outline">Next page</Button> : null}</div>
