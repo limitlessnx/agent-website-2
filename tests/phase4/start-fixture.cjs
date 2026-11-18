@@ -72,7 +72,11 @@ const server = http.createServer((request, response) => {
   if (table === "organizations") {
     const all = [...fixture(new URL("http://fixture/rest/v1/organizations")),...systemOrganizations];
     const id = url.searchParams.get("id"); const slug = url.searchParams.get("slug");
-    result = all.filter(row=>(!id || id === `eq.${row.id}`)&&(!slug || slug === `eq.${row.slug}`));
+    result = all.filter(row=>(!id || id === `eq.${row.id}`)&&(!slug || !slug.startsWith("eq.") || slug === `eq.${row.slug}`));
+    if (slug?.startsWith("in.(")) result = result.filter(row=>slug.slice(4,-1).split(",").includes(row.slug));
+    if (slug?.startsWith("not.in.(")) result = result.filter(row=>!slug.slice(8,-1).split(",").includes(row.slug));
+    const name = url.searchParams.get("name");
+    if (name?.startsWith("ilike.")) {const needle=name.slice(6).replace(/^%|%$/g,"").toLowerCase();result=result.filter(row=>row.name.toLowerCase().includes(needle));}
   }
   if (table === "organization_integration_admin_view") result = [
     {id:"connection-1",organization_id:orgId,organization_name:"Demo Business — International Customer Experience and Business Operations Group",provider:"whatsapp",display_name:"WhatsApp / Meta",status:"authentication_failed",has_credentials:true,secret_keys:[],last_checked_at:recordedAt,health:{}},

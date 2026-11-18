@@ -28,7 +28,6 @@ test("phase 3 organization hardening remains compatible with the A7 canonical ad
 });
 
 test("phase 3 keeps system and tenant organizations distinct", () => {
-  const nav = read("components/admin/navigationConfig.ts");
   const sidebar = read("components/admin/AdminSidebar.tsx");
   assert.match(sidebar, /System Organizations/);
   assert.match(sidebar, /Tenant Organizations/);

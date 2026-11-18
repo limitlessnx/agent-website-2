@@ -118,3 +118,25 @@ jobs:
         run: npx tsc --noEmit
       - name: Production build
         run: npm run build
+
+  control-center-responsive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Synthetic control center at six viewport widths
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:phase4-ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase4-responsive-evidence
+          path: |
+            docs/phase4/after/
+            test-results/
+          retention-days: 14
