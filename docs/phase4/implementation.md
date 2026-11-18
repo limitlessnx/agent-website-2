@@ -24,7 +24,7 @@ The new control center reads existing tables with explicit columns and independe
 | `lib/leo-core.ts`, `lib/leo-execution/authorization.ts` | Preserve verified account identity and recheck active admin enrollment for controlled queued CRM actions. Retain tenant membership revalidation, approval proofs, execution identity and recovery-email compatibility. |
 | organization creation route | Supply verified account actor ID to the existing provisioning RPC instead of always recording a null actor. |
 | `components/Button.tsx`, `ControlCenter.module.css` | Reuse the existing purple primitives, support explicit no-prefetch links, and contain long content and adaptive action layouts. No replacement design framework or animation dependency. |
-| tests, Playwright config, package scripts, existing dashboard QA workflow | Behavioral permission/readiness/isolation tests, six-width synthetic browser coverage, responsive evidence artifacts and existing contract updates for renamed navigation/canonical catalog location. |
+| tests, Playwright config, package scripts, existing dashboard QA workflow | Behavioral permission/readiness/isolation tests, six-width synthetic browser coverage, local responsive evidence and existing contract updates for renamed navigation/canonical catalog location. |
 
 ## Evidence boundaries and limitations
 
@@ -37,3 +37,5 @@ The new control center reads existing tables with explicit columns and independe
 - Existing whole-repository lint debt is reported separately from changed-file lint. No unrelated business services are rewritten to clear legacy lint.
 
 Final check results, screenshot review and preview commit will be recorded in `delivery.md` after verification finishes.
+
+Public screenshot publication was rejected by automatic approval review: the exact image contents and authorization for public exposure were not established. No workaround upload is used. Lossless screenshots and their gallery remain local for review; the responsive CI job no longer publishes image artifacts automatically. Source, tests, reports and preview delivery continue.

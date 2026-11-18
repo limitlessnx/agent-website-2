@@ -12,6 +12,7 @@ async function capture(page:Page,name:string){mkdirSync('docs/phase4/after',{rec
 async function stableLayout(page:Page){
  await expect(page.locator('.flux-safe-error')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width+1);
+ const topbar=page.locator('.admin-topbar');if(await topbar.isVisible()){const header=await topbar.boundingBox();const crumb=await page.locator('.admin-breadcrumb').boundingBox();expect(crumb!.y).toBeGreaterThanOrEqual(header!.y-1);expect(crumb!.y+crumb!.height).toBeLessThanOrEqual(header!.y+header!.height+1);}
  expect(await page.content()).not.toContain('PRIVATE_PROVIDER_DIAGNOSTIC');expect(await page.content()).not.toContain('PRIVATE_AUDIT_METADATA');
  for(const action of await page.locator('main a.fk-action-button, main button.fk-action-button').all()) {
   const box=await action.boundingBox();if(!box)continue;expect(box.x).toBeGreaterThanOrEqual(-1);expect(box.x+box.width).toBeLessThanOrEqual(page.viewportSize()!.width+1);
@@ -48,6 +49,7 @@ test('source outages are explicit and unrelated registry stays available',async(
  await scenario(context,'outage');await page.goto('/dashboard/platform',{waitUntil:'networkidle'});await expect(page.getByRole('alert').filter({hasText:'Evidence unavailable'})).toHaveCount(7);await expect(page.getByRole('link',{name:'Manage organizations'})).toBeVisible();await stableLayout(page);await capture(page,'source-outage');
  await page.goto('/dashboard/agent-operations',{waitUntil:'networkidle'});await expect(page.getByRole('alert').filter({hasText:'runtime evidence is unavailable'})).toBeVisible();await expect(page.locator('.admin-metric-card').filter({hasText:'Success rate'})).toContainText('—');
  await page.goto('/dashboard/integrations',{waitUntil:'networkidle'});await expect(page.getByRole('alert').filter({hasText:'Tenant connection evidence unavailable'})).toBeVisible();await expect(page.getByText('No tenant-owned connection is required yet.')).toHaveCount(0);
+ await page.goto('/dashboard/health',{waitUntil:'networkidle'});await expect(page.getByText('Health evidence unavailable',{exact:true})).toBeVisible();await expect(page.getByRole('alert').filter({hasText:'Health is unknown.'})).toBeVisible();await capture(page,'health-unavailable');
 });
 test('workspace switch errors stay visible and successful selection does not grant tenant membership',async({page,context})=>{
  await page.goto('/dashboard/platform',{waitUntil:'networkidle'});

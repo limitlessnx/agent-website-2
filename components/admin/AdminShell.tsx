@@ -57,7 +57,7 @@ export default async function AdminShell({ children }: { children: React.ReactNo
             />
             <section className="admin-main">
               <header className="admin-topbar">
-                <div className="admin-breadcrumb"><strong>{activeOrganization.name}</strong><span>{scope?.status === "unavailable" ? "Workspace unavailable" : organizationCategoryLabels[organizationCategory(scope?.slug || (organizationContext.kind === "system" ? organizationContext.id : null))]}</span></div>
+                <div className="admin-breadcrumb"><strong title={activeOrganization.name}>{activeOrganization.name}</strong><span>{scope?.status === "unavailable" ? "Workspace unavailable" : organizationCategoryLabels[organizationCategory(scope?.slug || (organizationContext.kind === "system" ? organizationContext.id : null))]}</span></div>
                 <AdminSearch />
                 <div className="admin-topbar-actions">
                   <a href="/" target="_blank" rel="noreferrer" title="Open Fluxknight homepage in a new tab" className="admin-period"><span aria-hidden="true">Home</span><span>Homepage</span><span aria-hidden="true">Open</span></a>
