@@ -137,11 +137,13 @@ function toWalletSummary(wallet: WalletRow): FluxWalletSummary {
   const plan = getFluxPlanDefinition(wallet.plan_code);
   const balance = Math.max(0, numberValue(wallet.balance));
   const allowance = numberValue(wallet.monthly_allowance, plan.monthlyCredits);
-  const percentUsed = calculateUsagePercent(balance, allowance);
+  const calculatedPercentUsed = calculateUsagePercent(balance, allowance);
+  // Keep 100% for an exhausted balance; integer display rounding is not a quota gate.
+  const percentUsed = balance > 0 ? Math.min(99, calculatedPercentUsed) : calculatedPercentUsed;
   const threshold = getThresholdLevel(percentUsed);
   const trialExpired = wallet.trial_ends_at ? new Date(wallet.trial_ends_at).getTime() <= Date.now() : false;
   const trial = isFreeTrialWallet(wallet);
-  const chargeableAiPaused = wallet.status === "paused" || percentUsed >= 100 || trialExpired;
+  const chargeableAiPaused = !["active", "trialing"].includes(wallet.status) || balance <= 0 || trialExpired;
   return {
     organizationId: wallet.organization_id,
     planCode: plan.code,

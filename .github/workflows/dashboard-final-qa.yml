@@ -46,6 +46,8 @@ on:
       - "supabase/migrations/*.sql"
       - "tests/evaluation-and-conversation-center.test.mjs"
       - "tests/workspace-and-google-auth.test.mjs"
+      - "lib/flux-credits.ts"
+      - "tests/flux-wallet-preflight.test.cjs"
       - "package.json"
       - ".github/workflows/dashboard-final-qa.yml"
   workflow_dispatch:
