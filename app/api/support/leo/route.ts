@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     ).catch(() => []);
     const diagnosticContext = await loadTenantSupportContext(session.organizationId, leoIdentity.permissions || []);
 
-    const aiResult = await withFluxAiOperation({organizationId:session.organizationId,feature:"leo_chat",action:"leo_chat",source:"tenant_support_leo",operationId:request.headers.get("x-flux-operation-id") || (typeof body.requestId === "string" ? body.requestId : crypto.randomUUID()),request:{userId:session.userId,conversationId:body.conversationId||null,message},failure:"ai"},
+    const aiResult = await withFluxAiOperation({organizationId:session.organizationId,feature:"leo_chat",action:"leo_chat",source:"tenant_support_leo",context:{conversation_id:conversationId},operationId:request.headers.get("x-flux-operation-id") || (typeof body.requestId === "string" ? body.requestId : crypto.randomUUID()),request:{userId:session.userId,conversationId:body.conversationId||null,message},failure:"ai"},
       () => generateSupportAgentReply({
       message,
       history: history.slice(0, -1),

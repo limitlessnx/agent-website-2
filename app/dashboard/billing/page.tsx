@@ -59,7 +59,7 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
               return <a className="admin-list-row" aria-current={organization.id === selectedOrganizationId ? "page" : undefined} href={`/dashboard/billing?organizationId=${encodeURIComponent(organization.id)}`} key={organization.id}>
                 <div><strong>{organization.name}</strong>
                 <span>{organization.slug} · {organization.status}</span></div>
-                <span>{wallet ? `${formatCredits(wallet.balance)} / ${formatCredits(wallet.monthly_allowance)} credits · ${formatCredits(wallet.top_up_balance)} top-up` : "Wallet not provisioned"}</span>
+                <span style={{ flexShrink: 0, maxWidth: "38%", textAlign: "right" }}>{wallet ? `${formatCredits(wallet.balance)} / ${formatCredits(wallet.monthly_allowance)} credits · ${formatCredits(wallet.top_up_balance)} top-up` : "Wallet not provisioned"}</span>
               </a>;
             })}
           </div>
@@ -72,7 +72,7 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
             <div className="admin-list-row"><span>Balance</span><strong>{formatCredits(usage.balance)}</strong></div>
             <div className="admin-list-row"><span>Reserved credits</span><strong>{usage.capacity.reservedCredits === null ? "Unavailable" : formatCredits(usage.capacity.reservedCredits)}</strong></div>
             <div className="admin-list-row"><span>Available for new work</span><strong>{usage.capacity.availableCredits === null ? "Unavailable" : formatCredits(usage.capacity.availableCredits)}</strong></div>
-            <div className="admin-list-row"><span>Used</span><strong>{usage.percentUsed}%</strong></div>
+            <div className="admin-list-row"><span>Allowance depletion</span><strong>{usage.percentUsed}%</strong></div>
             <div className="admin-list-row"><span>Sampled provider cost</span><strong>{formatMoney(usage.providerCostCents)}</strong></div>
             <div className="admin-list-row"><span>Sampled customer value</span><strong>{formatMoney(usage.customerValueCents)}</strong></div>
             <div className="admin-list-row"><span>Sampled gross margin</span><strong>{formatMoney(usage.grossMarginCents)}</strong></div>
