@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, suppressedReply: true, reason: "human_handoff_active" });
     }
     const result = await runMaia({
+      operationId: request.headers.get("x-flux-operation-id") || String(body.messageId || body.message_id || body.operationId || "").trim() || undefined,
       organizationId: organization.id,
       agentId: agent.id,
       message: enrichedMessage,

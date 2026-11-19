@@ -77,7 +77,7 @@ test("G generic Phase 12 internal agent execution meters web_ai",()=>{
   const route=read("app/api/internal/runtime/agents/execute/route.ts");
   assert.match(route,/action:"web_ai"/);
   assert.match(route,/preflightChargeableFluxAi/);
-  assert.match(route,/recordChargeableFluxAiUsage/);
+  assert.match(route,/withFluxAiOperation/);
   assert.match(route,/source:"phase12_internal_agent"/);
 });
 

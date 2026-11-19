@@ -33,7 +33,10 @@ export type FluxWalletSummary = {
   customerMessage: string | null;
 };
 
+export type FluxPeriodUsage = { organizationId:string; periodStart:string; periodEnd:string|null; usedCredits:number; usageEvents:number; providerCostCents:number|null; customerValueCents:number|null; grossMarginCents:number|null };
+
 export type FluxBillingSummary = FluxWalletSummary & {
+  periodUsage: FluxPeriodUsage | null;
   capacity: { status: "available" | "unavailable"; reservedCredits: number | null; availableCredits: number | null };
 };
 
@@ -183,14 +186,26 @@ export async function getFluxWalletSummary(organizationId: string): Promise<Flux
   return toWalletSummary(await ensureFluxWallet(organizationId));
 }
 
+export async function getFluxCreditPeriodUsage(organizationId:string): Promise<FluxPeriodUsage|null> {
+  try {
+    const {data,error}=await createAdminClient().rpc("get_flux_credit_period_usage",{p_organization_id:organizationId});
+    if(error||!data||data.organizationId!==organizationId||typeof data.periodStart!=="string"||!Number.isFinite(Date.parse(data.periodStart))
+      || ![data.usedCredits,data.usageEvents].every(value=>Number.isSafeInteger(value)&&value>=0)
+      || !(data.periodEnd===null || typeof data.periodEnd==="string" && Number.isFinite(Date.parse(data.periodEnd)) && Date.parse(data.periodEnd)>Date.parse(data.periodStart))
+      || ![data.providerCostCents,data.customerValueCents,data.grossMarginCents].every(value=>value===null || typeof value==="number"&&Number.isFinite(value))) return null;
+    return data as FluxPeriodUsage;
+  } catch { return null; }
+}
+
 async function withCreditCapacity(wallet: WalletRow, organizationId: string): Promise<FluxBillingSummary> {
   if (wallet.organization_id !== organizationId) throw new Error("Billing wallet was not returned inside the organization.");
-  const unavailable: FluxBillingSummary = { ...toWalletSummary(wallet), capacity: { status: "unavailable", reservedCredits: null, availableCredits: null } };
+  const periodUsage = await getFluxCreditPeriodUsage(organizationId);
+  const unavailable: FluxBillingSummary = { ...toWalletSummary(wallet), periodUsage, capacity: { status: "unavailable", reservedCredits: null, availableCredits: null } };
   try {
     const { data, error } = await createAdminClient().rpc("get_flux_credit_availability", { p_organization_id: organizationId });
     if (error || !data || ![data.balance, data.reserved, data.available].every(value => Number.isSafeInteger(value) && value >= 0)
       || data.available !== Math.max(0, data.balance - data.reserved)) return unavailable;
-    return { ...toWalletSummary({ ...wallet, balance: data.balance }), capacity: { status: "available", reservedCredits: data.reserved, availableCredits: data.available } };
+    return { ...toWalletSummary({ ...wallet, balance: data.balance }), periodUsage, capacity: { status: "available", reservedCredits: data.reserved, availableCredits: data.available } };
   } catch {
     return unavailable;
   }

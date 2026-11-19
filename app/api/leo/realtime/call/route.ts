@@ -1,9 +1,10 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { NextRequest } from "next/server";
 import { listLeoToolsForIdentity, resolveLeoIdentity } from "@/lib/leo-core";
 import { publicLeoVoiceInstructions } from "@/lib/leo-public-policy";
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, type LeoVoiceWorkingContext } from "@/lib/leo-session-store";
 import { loadActiveLeoOperationalTask, type LeoOperationalTask } from "@/lib/leo-task-plan";
-import { FLUX_AI_HUMAN_HANDOFF_MESSAGE, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
+import { FLUX_AI_HUMAN_HANDOFF_MESSAGE, fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi } from "@/lib/flux-ai-metering";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,10 +68,12 @@ export async function POST(request: NextRequest) {
   if (identity.scope === "super_admin") realtimeTools.push({ type: "function", name: "leo_manage_task", description: "Create an orchestration, inspect, revise, cancel, approve, resume, run or safely recover the current persisted Super Leo operational task. Use action=orchestrate for broad objectives that need specialist coordination. Put the full objective in reason and scoped details in arguments.", parameters: { type: "object", additionalProperties: false, properties: { action: { type: "string", enum: ["orchestrate", "active", "get", "revise", "cancel", "approve", "run", "resume", "recover"] }, task_id: { type: "string" }, tool_key: { type: "string" }, arguments: { type: "object", additionalProperties: true }, approval_token: { type: "string" }, reason: { type: "string" }, max_steps: { type: "number" } }, required: ["action"] } });
   realtimeTools.push({ type: "function", name: "leo_end_call", description: "End the current Leo voice call immediately. Use when the user asks to end, hang up, disconnect, stop the call, or says goodbye to terminate the call.", parameters: { type: "object", additionalProperties: false, properties: {} } });
   const session = { type: "realtime", model, instructions: voiceInstructions(identity, continuity), output_modalities: ["audio"], audio: { input: { noise_reduction: { type: "far_field" }, transcription: { model: identity.scope === "public" ? "gpt-4o-mini-transcribe" : "gpt-4o-transcribe", language: "en", prompt: "Fluxknight workspace operations with Leo and Maia. Preserve spoken names, dates, IDs, organization names, numbers, and corrections." }, turn_detection: { type: "semantic_vad", eagerness: "low", create_response: true, interrupt_response: true } }, output: { voice } }, tools: realtimeTools, tool_choice: "auto" };
-  const multipart = buildRealtimeMultipart(sdp, session); const response = await fetch("https://api.openai.com/v1/realtime/calls", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/sdp", "Content-Type": `multipart/form-data; boundary=${multipart.boundary}` }, body: multipart.body, cache: "no-store" }); const answer = await response.text();
+  const multipart = buildRealtimeMultipart(sdp, session); const connect = () => fetch("https://api.openai.com/v1/realtime/calls", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/sdp", "Content-Type": `multipart/form-data; boundary=${multipart.boundary}` }, body: multipart.body, cache: "no-store" });
+  let response: Response;
+  try { response = identity.scope === "tenant" && identity.organizationId ? await withFluxAiOperation({organizationId:identity.organizationId,feature:"leo_voice",action:"leo_voice_minute",source:"leo_voice",quantity:1,operationId:request.headers.get("x-flux-operation-id") || crypto.randomUUID(),request:{userId:identity.userId,sessionId:requestedSessionId||null,sdp,model,voice},failure:"delivery"},connect,
+    value => ({accepted:value.ok,provider:"openai",model,reference:(value.headers.get("location")||"").split("?")[0].split("/").pop()})) : await connect(); }
+  catch(error) { if(isFluxAiControlError(error)) return fluxAiControlResponse(error); throw error; } const answer = await response.text();
   if (!response.ok) { const upstream = upstreamErrorBody(answer); console.error("[leo/realtime] OpenAI rejected WebRTC call", { status: response.status, model, voice, type: upstream.type, code: upstream.code, message: upstream.message }); return Response.json({ error: upstream.message, code: upstream.code, type: upstream.type, status: response.status }, { status: response.status, headers: { "cache-control": "no-store" } }); }
-  if (identity.scope === "tenant" && identity.organizationId) {
-    await recordChargeableFluxAiUsage({ organizationId: identity.organizationId, action: "leo_voice_minute", source: "leo_voice", provider: "openai", model, quantity: 1, metadata: { session_id: leoSession.id, voice } });
-  }
+
   void auditLeoEvent({ identity, session: leoSession, eventType: "voice_call_started", details: { model, voice, input_noise_reduction: "far_field", turn_detection: "semantic_vad", turn_eagerness: "low", interrupt_response: true, shared_history_count: history.length, restored_working_context: Boolean(leoSession.voiceWorkingContext), restored_operational_task: activeTask?.id || null } }); const headers = new Headers({ "content-type": "application/sdp", "cache-control": "no-store", "x-leo-realtime-model": model, "x-leo-realtime-voice": voice, "x-leo-session-id": leoSession.id }); const location = response.headers.get("location"); if (location) headers.set("x-leo-realtime-call", location); return new Response(answer, { status: 200, headers });
 }

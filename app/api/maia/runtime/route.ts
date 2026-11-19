@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     if (!agent) return NextResponse.json({ error: "Agent is not currently assigned to this organization." }, { status: 404 });
 
     const result = await runMaia({
+      operationId: request.headers.get("x-flux-operation-id") || text(body.messageId || body.message_id || body.operationId) || undefined,
       organizationId,
       agentId,
       message,

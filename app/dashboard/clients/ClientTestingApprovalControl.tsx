@@ -12,7 +12,7 @@ export default function ClientTestingApprovalControl({ organizationId, agents, r
   async function call(path: string, body: Record<string, unknown>) {
     setBusy(path); setNotice("");
     try {
-      const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "x-flux-operation-id": crypto.randomUUID() }, body: JSON.stringify(body) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "The gate action failed.");
       setNotice(result.reply ? `Live runtime passed: ${result.reply}` : "Gate completed successfully.");

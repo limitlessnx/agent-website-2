@@ -1,3 +1,4 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { NextRequest, NextResponse } from "next/server";
 import { generateLeoReasoning, type LeoChatMessage } from "@/lib/ai/leo-model";
 import { buildLeoReasoningContext } from "@/lib/leo-context";
@@ -8,7 +9,7 @@ import { buildLeoPolicySnapshot, enforceLeoOrganizationScope, resolveLeoIdentity
 import { auditLeoEvent, getOrCreateLeoSession, loadLeoHistory, storeLeoMessage, storeLeoToolProposals, updateLeoPublicLeadState } from "@/lib/leo-session-store";
 import { createLeoMultiAgentOrchestration, refreshLeoMultiAgentOrchestration } from "@/lib/leo-multi-agent-orchestrator";
 import { auditLeoCrossWorkspaceOperation, createLeoCrossWorkspaceOperation } from "@/lib/leo-cross-workspace";
-import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
+import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi } from "@/lib/flux-ai-metering";
 
 function validChannel(value: unknown): LeoChannel { return value === "voice" ? "voice" : value === "api" ? "api" : "chat"; }
 function safeHistory(value: unknown): LeoChatMessage[] {
@@ -101,23 +102,18 @@ export async function POST(request: NextRequest) {
   const leadCaptured = session.leadCaptured || body.leadCaptured === true || Boolean(body.leadProfile);
   const directive = identity.scope === "public" ? publicLeoSalesDirective(leadCaptured, session.leadProfile || body.leadProfile) : "";
   const modelMessage = directive ? `${directive}\n\nVISITOR'S LATEST MESSAGE:\n${message}` : message;
-  const result = await generateLeoReasoning({ identity, message: modelMessage, history, context });
+  const reason = () => generateLeoReasoning({ identity, message: modelMessage, history, context });
+  let result;
+  try {
+    result = identity.scope === "tenant" && identity.organizationId ? await withFluxAiOperation({organizationId:identity.organizationId,feature:"leo_chat",action:"leo_chat",source:"leo_chat",operationId:request.headers.get("x-flux-operation-id") || (typeof body.requestId === "string" ? body.requestId : crypto.randomUUID()),request:{userId:identity.userId,role:identity.role,sessionId:body.sessionId||null,message: modelMessage,pageContext},failure:"ai"},reason,
+    value => value.ok ? {accepted:true,provider:value.provider,model:value.model,usage:value.usage||{}} : {accepted:false}) : await reason();
+  } catch (error) { if (isFluxAiControlError(error)) return fluxAiControlResponse(error); throw error; }
   if (!result.ok) {
     void auditLeoEvent({ identity, session, eventType: "reasoning_failed", details: { reason: result.reason, model: result.model, latency_ms: result.latencyMs } });
     const status = result.reason === "not_configured" ? 503 : result.reason === "timeout" ? 504 : 502;
     return NextResponse.json({ error: "Leo could not complete this response.", reason: result.reason, sessionId: session.id, persistence: session.persisted ? "database" : "ephemeral", ai: { connected: false, model: result.model, latencyMs: result.latencyMs } }, { status });
   }
-  if (identity.scope === "tenant" && identity.organizationId) {
-    await recordChargeableFluxAiUsage({
-      organizationId: identity.organizationId,
-      action: "leo_chat",
-      source: "leo_chat",
-      provider: result.provider,
-      model: result.model,
-      providerUsage: result.usage,
-      metadata: { session_id: session.id, channel, intent: result.intent, latency_ms: result.latencyMs },
-    });
-  }
+
   let reply = conciseLeoReply(result.reply);
   let orchestration: Awaited<ReturnType<typeof refreshLeoMultiAgentOrchestration>> | null = null;
   let crossWorkspaceOperation: Awaited<ReturnType<typeof createLeoCrossWorkspaceOperation>> | null = null;

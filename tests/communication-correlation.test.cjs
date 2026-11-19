@@ -57,7 +57,9 @@ function inspectionFixture({accepted=true}={}){
  const canonical=load('lib/canonical-customer.ts',{'@/lib/supabase/admin':{createAdminClient:()=>admin}});
  const worker=load('lib/real-estate-inspection-worker.ts',{
   '@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/canonical-customer':canonical,
-  '@/lib/flux-ai-metering-core':{preflightChargeableFluxAi:async()=>undefined,recordChargeableFluxAiUsage:async()=>calls.metering++},
+  '@/lib/flux-ai-metering-core':{preflightChargeableFluxAi:async()=>undefined},
+  // This suite covers timeline behavior; the real credit boundary has SQL integration coverage.
+  '@/lib/flux-ai-operation':{withFluxAiOperation:async(input,run,describe)=>{const result=await run();if(describe(result).accepted!==true)throw Error('Provider outcome unknown');calls.metering++;return result;}},
   '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async()=>{calls.sends++;return {provider:'synthetic',providerMessageId:accepted?'synthetic-message':null};}},
  });
  const service=load('lib/real-estate-inspections.ts',{

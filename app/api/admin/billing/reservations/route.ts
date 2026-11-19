@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const blockers: Record<string, string> = {
       evidence_incomplete: "Saved result, usage and completion evidence must agree. Review the execution records.",
       organization_inactive: "The organization is inactive. Review its access state before reconciliation.",
-      unsupported_unit: "This reservation does not have a supported Web AI unit or execution identifier. Manual evidence review is required.",
+      unsupported_unit: "This reservation does not have a supported operation or execution identifier. Manual evidence review is required.",
       reservation_released: "This reservation was already released and cannot be settled.",
       accounting_needs_attention: "Review the original billing period, plan and wallet eligibility before settlement.",
     };

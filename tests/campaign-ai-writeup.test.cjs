@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -9,7 +10,8 @@ function service(options = {}) {
   const state = { models: [], credits: [], calls: [] };
   const api = load(path.resolve('lib/campaign-ai-writeup.ts'), {
     '@/lib/ai-runtime/model-router': { routeRuntimeModel: async input => { state.models.push(input); return { provider: 'openai', modelKey: 'test' }; } },
-    '@/lib/flux-credits': { reserveFluxCredits: async input => { state.credits.push(input); if (options.noCredits) throw Error('denied'); } },
+    // Lifecycle SQL, duplicate dispatch and settlement are exercised with the real helper in flux-ai-operation.test.cjs.
+    '@/lib/flux-ai-operation': { withFluxAiOperation: async (input, run) => { state.credits.push(input); if (options.noCredits) throw Error('denied'); return run(); } },
     '@/lib/ai-runtime/provider': { generateRuntimeStructuredOutput: async input => { state.calls.push(input); return { parsed: options.parsed || { variables: options.variables || valid } }; } },
     '@/lib/whatsapp-message-normalizer': normalizer,
   });
@@ -79,7 +81,7 @@ function routeHarness(kind, options = {}) {
     '@/lib/limitless-followup-contract': { LIMITLESS_REALTY_ORGANIZATION_ID: 'tenant-a' },
   };
   const route = load(path.resolve(`app/api/${kind === 'portal' ? 'portal' : 'limitless'}/campaigns/writeup/route.ts`), { ...shared, ...mocks });
-  const request = extra => ({ json: async () => ({ ...input, campaignType: 'limitless_realty_reminder', templateName: template.name, language: template.language, templatePurpose: template.purpose, organizationId: 'forged', body: 'forged template', ...extra }) });
+  const request = extra => ({ headers: new Headers(), json: async () => ({ ...input, campaignType: 'limitless_realty_reminder', templateName: template.name, language: template.language, templatePurpose: template.purpose, organizationId: 'forged', body: 'forged template', ...extra }) });
   return { route, state, request };
 }
 for (const kind of ['limitless']) {

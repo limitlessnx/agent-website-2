@@ -72,9 +72,9 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
             <div><span>Reserved credits</span><strong>{usage.capacity.reservedCredits === null ? "Unavailable" : formatCredits(usage.capacity.reservedCredits)}</strong></div>
             <div><span>Available for new work</span><strong>{usage.capacity.availableCredits === null ? "Unavailable" : formatCredits(usage.capacity.availableCredits)}</strong></div>
             <div><span>Used</span><strong>{usage.percentUsed}%</strong></div>
-            <div><span>Provider cost</span><strong>{formatMoney(usage.providerCostCents)}</strong></div>
-            <div><span>Customer value</span><strong>{formatMoney(usage.customerValueCents)}</strong></div>
-            <div><span>Gross margin</span><strong>{formatMoney(usage.grossMarginCents)}</strong></div>
+            <div><span>Sampled provider cost</span><strong>{formatMoney(usage.providerCostCents)}</strong></div>
+            <div><span>Sampled customer value</span><strong>{formatMoney(usage.customerValueCents)}</strong></div>
+            <div><span>Sampled gross margin</span><strong>{formatMoney(usage.grossMarginCents)}</strong></div>
             <div><span>Bonus balance</span><strong>{formatCredits(usage.bonusCredits)}</strong></div>
             <div><span>Top-up balance</span><strong>{formatCredits(usage.topUpCredits)}</strong></div>
             <div><span>Subscription</span><strong>{commercial?.subscription?.status || "None"}</strong></div>
@@ -83,13 +83,14 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
           </div>
           <p role="status" className="admin-note">{usage.capacity.status === "unavailable" ? "Credit availability could not be verified. Refresh to retry. Your balance is shown separately." : "Reserved credits include running work and unresolved accounting. They become usage only after settlement; do not release unresolved reservations without provider evidence."}</p>
           <p className="admin-note">Commercial policy: Flux Credits are prepaid. At exhaustion, chargeable AI pauses rather than creating an unapproved postpaid overage. 1 Flux Credit = $0.01 customer-facing usage value; minimum customer top-up is $10 = 1,000 credits.</p>
-          <h3>Usage by action</h3>
+          <h3>Historical sample by action</h3><p className="admin-note">Historical cost and action figures summarize the latest 5,000 ledger rows. Current-period totals below use the complete billing-period ledger.</p>
           <div className="admin-list compact">
             {Object.entries(usage.usageByAction).map(([action, credits]) => <div key={action}><strong>{action.replaceAll("_", " ")}</strong><span>{formatCredits(credits)} credits</span></div>)}
             {!Object.keys(usage.usageByAction).length ? <p>No Flux Credit usage recorded yet.</p> : null}
           </div>
         </article> : null}
       </section>
+      {usage ? <section className="admin-card"><h2>Current billing period</h2>{usage.periodUsage ? <><p>{formatTimestamp(usage.periodUsage.periodStart)} – {usage.periodUsage.periodEnd ? formatTimestamp(usage.periodUsage.periodEnd) : "Open period"}</p><div className="admin-metrics"><div><span>Credits charged</span><strong>{formatCredits(usage.periodUsage.usedCredits)}</strong></div><div><span>Usage events</span><strong>{formatCredits(usage.periodUsage.usageEvents)}</strong></div><div><span>Recorded provider cost</span><strong>{usage.periodUsage.providerCostCents===null ? "Unavailable" : formatMoney(usage.periodUsage.providerCostCents)}</strong></div><div><span>Recorded gross margin</span><strong>{usage.periodUsage.grossMarginCents===null ? "Unavailable" : formatMoney(usage.periodUsage.grossMarginCents)}</strong></div></div></> : <p role="status">Billing-period usage is unavailable. Refresh to retry.</p>}</section> : null}
       {selectedOrganization ? <CreditReservationRecovery organizationId={selectedOrganization.id} reservations={recovery?.data || []} unavailable={Boolean(recovery?.error)} /> : null}
       {selectedOrganizationId ? <CreditAdjustmentForm organizationId={selectedOrganizationId} /> : null}
       <section className="admin-card">

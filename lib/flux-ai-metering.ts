@@ -13,10 +13,14 @@ export const FLUX_AI_HUMAN_HANDOFF_MESSAGE =
   "Chargeable AI is paused. Your dashboard, data, billing and human operations remain available. New customer-facing AI messages should be handed to your team.";
 
 export function isFluxAiControlError(error: unknown) {
-  return error instanceof Error && ["FluxFeatureGateError","FluxTrialFeatureGateError","FluxCreditLimitError"].includes(error.name);
+  return error instanceof Error && ["FluxFeatureGateError","FluxTrialFeatureGateError","FluxCreditLimitError","FluxAiOperationError"].includes(error.name);
 }
 
 export function fluxAiControlResponse(error: unknown) {
+  if (error instanceof Error && error.name === "FluxAiOperationError") {
+    const evidence = error as Error & { billingStatus?: string; providerCompleted?: boolean };
+    return NextResponse.json({ error: error.message, billingStatus: evidence.billingStatus, providerCompleted: evidence.providerCompleted, doNotRedispatch: true, reviewRequired: true }, { status: 409 });
+  }
   const featureLocked = error instanceof Error && ["FluxFeatureGateError","FluxTrialFeatureGateError"].includes(error.name);
   const message = error instanceof Error ? error.message : FLUX_AI_HUMAN_HANDOFF_MESSAGE;
   return NextResponse.json(

@@ -59,3 +59,22 @@ test('workflow outage stays visible without blocking unrelated settings',async({
  try{await page.goto('/dashboard/settings',{waitUntil:'networkidle'});await expect(page.getByRole('alert').filter({hasText:'Workflow status unavailable'})).toBeVisible();await expect(page.getByRole('heading',{name:'Register workflow',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Save capacity',exact:true})).toBeEnabled();await capture(page,'workflow-unavailable',page.viewportSize()!.width);}
  finally{await context.request.get('http://127.0.0.1:4401/__qa/workflow-unavailable?value=0');}
 });
+
+for(const role of ["admin","tenant"])test(`billing period totals and unavailable feedback: ${role}`,async({page,context},info)=>{
+ await authenticate(context,role);
+ await page.request.get(origin+"/__qa/period-unavailable?value=0");
+ const path=role==="admin"?"/dashboard/billing?organizationId=10000000-0000-4000-8000-000000000001":"/portal/billing";
+ try {
+  await page.goto(path,{waitUntil:"networkidle"});
+  const section=page.locator("section").filter({has:page.getByRole("heading",{name:"Current billing period",exact:true})});
+  await expect(section).toContainText(role==="admin"?"Credits charged":"42 credits charged across 21 usage events");
+  await expect(section).toContainText("42");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width+1);
+  mkdirSync("docs/phase7-channel-evidence",{recursive:true});
+  await page.screenshot({path:`docs/phase7-channel-evidence/${role}-period-${page.viewportSize()!.width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});
+  await info.attach("billing-period",{body:await page.screenshot({animations:"disabled"}),contentType:"image/png"});
+  await page.request.get(origin+"/__qa/period-unavailable?value=1");await page.reload({waitUntil:"networkidle"});
+  await expect(page.getByRole("status").filter({hasText:"Billing-period usage is unavailable"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Current billing period",exact:true})).toBeVisible();
+ } finally {await page.request.get(origin+"/__qa/period-unavailable?value=0");}
+});

@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import load from "./helpers/load-typescript.cjs";
 
+// Domain/scheduling fixture only; real hold/settlement behavior is tested in flux-ai-operation.test.cjs.
+const operationBoundary = { withFluxAiOperation: async (_input, run) => run() };
+const billingPlans = load("lib/fluxknight-plans.ts");
 const read = (path) => readFileSync(path, "utf8");
 const actions = () => read("app/dashboard/limitless/payments/actions.ts");
 const runtime = () => read("lib/limitless-installment-reminder-runtime.ts");
@@ -13,6 +16,8 @@ const phoneContract = load("lib/limitless-followup-contract.ts", {}, "export { L
 const scheduleHelpers = load("lib/limitless-installment-reminder-runtime.ts", {
   "@/lib/supabase/admin": { createAdminClient: () => ({}) },
   "@/lib/whatsapp-delivery": { sendWhatsAppMessage: async () => ({}) },
+  "@/lib/flux-ai-operation": operationBoundary,
+  "@/lib/fluxknight-plans": billingPlans,
   "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({}) },
   "@/lib/limitless-followup-contract": phoneContract,
 }, "export { computeReminderOccurrence, computeLimitlessReminderOccurrence, classifyReminderOccurrence };");
@@ -149,7 +154,9 @@ test("manual retry makes no provider call for an opted-out linked or phone-match
     const runtimeModule = load("lib/limitless-installment-reminder-runtime.ts", {
       "@/lib/supabase/admin": { createAdminClient: () => ({ from: (table) => new Query(table) }) },
       "@/lib/whatsapp-delivery": { sendWhatsAppMessage: async () => { providerCalled = true; return {}; } },
-      "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ ok: true }) },
+      "@/lib/flux-ai-operation": operationBoundary,
+  "@/lib/fluxknight-plans": billingPlans,
+  "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ ok: true }) },
       "@/lib/limitless-followup-contract": { followupErrorSummary: () => "safe_failure", LIMITLESS_REALTY_ORGANIZATION_ID: LIMITLESS_ID, limitlessPhoneCandidates: phoneContract.limitlessPhoneCandidates },
     }, "export { retryLimitlessInstallmentReminder };");
     await assert.rejects(
@@ -233,7 +240,9 @@ test("Limitless invalid monetary fields create no attempt and authorization deni
     const runtimeModule = load("lib/limitless-installment-reminder-runtime.ts", {
       "@/lib/supabase/admin": { createAdminClient: () => ({ from: (table) => new Query(table) }) },
       "@/lib/whatsapp-delivery": { sendWhatsAppMessage: async () => { providerCalled = true; return { providerMessageId: "sent" }; } },
-      "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ ok: true }) },
+      "@/lib/flux-ai-operation": operationBoundary,
+  "@/lib/fluxknight-plans": billingPlans,
+  "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ ok: true }) },
       "@/lib/limitless-followup-contract": { followupErrorSummary: () => "safe_failure", LIMITLESS_REALTY_ORGANIZATION_ID: LIMITLESS_ID, limitlessPhoneCandidates: phoneContract.limitlessPhoneCandidates },
     }, "export { runLimitlessInstallmentReminderSweep };");
     const result = await runtimeModule.runLimitlessInstallmentReminderSweep(new Date("2026-11-01T08:05:00Z"));
@@ -272,7 +281,9 @@ test("Limitless invalid monetary fields create no attempt and authorization deni
       rpc: async (name, args) => { assert.equal(name, "authorize_limitless_installment_reminder_send"); rpcArgs = args; return { data: { authorized: false, reason: "customer_opted_out" }, error: null }; },
     }) },
     "@/lib/whatsapp-delivery": { sendWhatsAppMessage: async () => { providerCalled = true; return { providerMessageId: "sent" }; } },
-    "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ ok: true }) },
+    "@/lib/flux-ai-operation": operationBoundary,
+  "@/lib/fluxknight-plans": billingPlans,
+  "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ ok: true }) },
     "@/lib/limitless-followup-contract": { followupErrorSummary: () => "safe_failure", LIMITLESS_REALTY_ORGANIZATION_ID: LIMITLESS_ID, limitlessPhoneCandidates: phoneContract.limitlessPhoneCandidates },
   }, "export { retryLimitlessInstallmentReminder };");
   const result = await runtimeModule.retryLimitlessInstallmentReminder({ organizationId: LIMITLESS_ID, planId: "plan-a", attemptId: "attempt-a" });
@@ -362,7 +373,9 @@ test("explicit provider rejection remains manually retryable after the one-use s
   const runtimeModule = load("lib/limitless-installment-reminder-runtime.ts", {
     "@/lib/supabase/admin": { createAdminClient: () => ({ from: (table) => new RetryQuery(table), rpc: async (name, args) => { authorizationCalls.push({ name, args }); return { data: { authorized: true }, error: null }; } }) },
     "@/lib/whatsapp-delivery": { sendWhatsAppMessage: async () => { providerCalls += 1; const error = new Error("explicit provider rejection"); error.status = 400; throw error; } },
-    "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ credits: 1 }) },
+    "@/lib/flux-ai-operation": operationBoundary,
+  "@/lib/fluxknight-plans": billingPlans,
+  "@/lib/flux-credits": { assertFluxFeatureAccess: async () => {}, reserveFluxCredits: async () => ({ credits: 1 }) },
     "@/lib/limitless-followup-contract": { followupErrorSummary: () => "WhatsApp template was rejected or is not configured.", LIMITLESS_REALTY_ORGANIZATION_ID: LIMITLESS_ID, limitlessPhoneCandidates: phoneContract.limitlessPhoneCandidates },
   }, "export { retryLimitlessInstallmentReminder };");
 

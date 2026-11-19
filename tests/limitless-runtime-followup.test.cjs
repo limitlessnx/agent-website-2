@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const load = require('./helpers/load-typescript.cjs');
@@ -18,7 +19,7 @@ function fixture(lead = null) {
       return query;
     },
   };
-  const module = load('lib/ai/maia-runtime.ts', {
+  const runtimeModule = load('lib/ai/maia-runtime.ts', {
     '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/ai/maia-estate-tools': {},
     '@/lib/ai/maia-estate-context': { resolveNamedVerifiedPropertyId: async () => null },
@@ -30,11 +31,12 @@ function fixture(lead = null) {
     '@/lib/ai/maia-appointment-tools': { maiaAppointmentTools: () => [] },
     '@/lib/ai/limitless-handoff-policy.mjs': { buildLimitlessHandoffAcknowledgement: () => 'Handoff recorded.' },
     '@/lib/flux-ai-metering-core': {},
+    '@/lib/flux-ai-operation': { withFluxAiOperation: async () => { throw Error('Consent-guard test must not dispatch model work'); } },
     '@/lib/limitless-inspections': {},
     '@/lib/human-operations': {},
     '@/lib/whatsapp-integration': {},
   }, 'export { toolSet };');
-  return { tool: module.toolSet().find((item) => item.name === 'create_followup_task'), writes, selects };
+  return { tool: runtimeModule.toolSet().find((item) => item.name === 'create_followup_task'), writes, selects };
 }
 
 const args = { leadId: 'synthetic-lead', title: 'Approved follow-up', description: 'Check inspection preference', dueAt: '2099-01-01T12:00:00Z' };

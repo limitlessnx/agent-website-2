@@ -64,11 +64,14 @@ export default async function PortalBillingPage() {
       <section role="status" className="portal-card">{wallet.capacity.status === "unavailable" ? "Credit availability could not be verified. Refresh to retry. Your balance is shown separately." : wallet.capacity.reservedCredits ? "Reserved credits cover running work or work awaiting accounting review. They are not recorded as usage until settled. Contact support if a reservation remains unresolved." : "No credits are currently reserved."}</section>
       <section className="portal-metrics">
         <article className="portal-metric"><span><WalletCards size={16} /> Monthly credits</span><strong>{formatNumber(wallet.monthlyCredits)}</strong><small>Total cycle allowance</small></article>
-        <article className="portal-metric"><span><CreditCard size={16} /> Balance</span><strong>{formatNumber(wallet.balance)}</strong><small>{formatNumber(wallet.used)} used</small></article>
+        <article className="portal-metric"><span><CreditCard size={16} /> Balance</span><strong>{formatNumber(wallet.balance)}</strong><small>Includes unused credits and top-ups</small></article>
         <article className="portal-metric"><span>Reserved credits</span><strong>{wallet.capacity.reservedCredits === null ? "Unavailable" : formatNumber(wallet.capacity.reservedCredits)}</strong><small>Held for work; not yet charged</small></article>
         <article className="portal-metric"><span>Available for new work</span><strong>{wallet.capacity.availableCredits === null ? "Unavailable" : formatNumber(wallet.capacity.availableCredits)}</strong><small>Balance after reservations</small></article>
-        <article className="portal-metric"><span>Usage</span><strong>{wallet.percentUsed}%</strong><small>{wallet.threshold ? `${wallet.threshold}% threshold reached` : "Within normal range"}</small></article>
+        <article className="portal-metric"><span>Allowance depletion</span><strong>{wallet.percentUsed}%</strong><small>{wallet.threshold ? `${wallet.threshold}% threshold reached` : "Within normal range"}</small></article>
         <article className="portal-metric"><span>Renewal</span><strong>{formatDate(wallet.renewalDate)}</strong><small>{wallet.trialEndsAt ? `Trial ends ${formatDate(wallet.trialEndsAt)}` : "Monthly reset"}</small></article>
+      </section>
+      <section className="portal-card" aria-labelledby="billing-period-usage"><h2 id="billing-period-usage">Current billing period</h2>
+        {wallet.periodUsage ? <><p>{formatDate(wallet.periodUsage.periodStart)} – {formatDate(wallet.periodUsage.periodEnd)}</p><p>{formatNumber(wallet.periodUsage.usedCredits)} credits charged across {formatNumber(wallet.periodUsage.usageEvents)} usage events. Reservations and top-ups do not count as consumption.</p></> : <p role="status">Billing-period usage is unavailable. Refresh to retry.</p>}
       </section>
       <section className="portal-grid">
         <article className="portal-card">
@@ -92,7 +95,7 @@ export default async function PortalBillingPage() {
       </section>
       <section className="portal-grid">
         <article className="portal-card">
-          <div className="portal-card-head"><div><h2>Credit status</h2><p>{wallet.percentUsed}% of this cycle has been used.</p></div></div>
+          <div className="portal-card-head"><div><h2>Credit status</h2><p>{wallet.percentUsed}% of the allowance is depleted after balance adjustments.</p></div></div>
           <div className="portal-progress">
             <div className="portal-progress-row"><span>Current cycle</span><div><i style={{ width: `${wallet.percentUsed}%` }} /></div><strong>{wallet.percentUsed}%</strong></div>
             <div className="portal-progress-row"><span>Balance</span><div><i style={{ width: `${Math.max(0, 100 - wallet.percentUsed)}%` }} /></div><strong>{formatNumber(wallet.balance)}</strong></div>
