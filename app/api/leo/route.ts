@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
   const reason = () => generateLeoReasoning({ identity, message: modelMessage, history, context });
   let result;
   try {
-    result = identity.scope === "tenant" && identity.organizationId ? await withFluxAiOperation({organizationId:identity.organizationId,feature:"leo_chat",action:"leo_chat",source:"leo_chat",operationId:request.headers.get("x-flux-operation-id") || (typeof body.requestId === "string" ? body.requestId : crypto.randomUUID()),request:{userId:identity.userId,role:identity.role,sessionId:body.sessionId||null,message: modelMessage,pageContext},failure:"ai"},reason,
+    result = identity.scope === "tenant" && identity.organizationId ? await withFluxAiOperation({organizationId:identity.organizationId,feature:"leo_chat",action:"leo_chat",source:"leo_chat",context:{session_id:session.id},operationId:request.headers.get("x-flux-operation-id") || (typeof body.requestId === "string" ? body.requestId : crypto.randomUUID()),request:{userId:identity.userId,role:identity.role,sessionId:body.sessionId||null,message: modelMessage,pageContext},failure:"ai"},reason,
     value => value.ok ? {accepted:true,provider:value.provider,model:value.model,usage:value.usage||{}} : {accepted:false}) : await reason();
   } catch (error) { if (isFluxAiControlError(error)) return fluxAiControlResponse(error); throw error; }
   if (!result.ok) {

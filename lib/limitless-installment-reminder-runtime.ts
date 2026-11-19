@@ -305,7 +305,7 @@ async function sendAttempt(args: {
       }
     }
 
-    const delivery = await withFluxAiOperation({organizationId:String(plan.organization_id),feature:"reminders",action:"whatsapp_follow_up_reminder",source:"installment_reminder",operationId:attemptId,request:{paymentPlanId:plan.id,templateId:template.id,scheduledFor},failure:"delivery"}, () => sendWhatsAppMessage({
+    const delivery = await withFluxAiOperation({organizationId:String(plan.organization_id),feature:"reminders",action:"whatsapp_follow_up_reminder",source:"installment_reminder",context:{payment_plan_id:plan.id,reminder_attempt_id:attemptId},operationId:attemptId,request:{paymentPlanId:plan.id,templateId:template.id,scheduledFor},failure:"delivery"}, () => sendWhatsAppMessage({
       organizationId: String(plan.organization_id),
       to: String(plan.client_phone || "").replace(/[^\d]/g, ""),
       text: renderLocalTemplate(String(template.message_template || ""), values),

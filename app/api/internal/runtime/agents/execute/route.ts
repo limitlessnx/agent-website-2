@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     await preflightChargeableFluxAi({ organizationId, feature:"core_ai_support", action:"web_ai" });
 
-    const result = await withFluxAiOperation({organizationId,feature:"core_ai_support",action:"web_ai",source:"phase12_internal_agent",operationId:executionId,request:{agentId,kind,objective,input:record(body.input)},failure:"ai"},
+    const result = await withFluxAiOperation({organizationId,feature:"core_ai_support",action:"web_ai",source:"phase12_internal_agent",context:{agent_id:agentId,execution_id:executionId},operationId:executionId,request:{agentId,kind,objective,input:record(body.input)},failure:"ai"},
       () => runPhase12Agent({
       kind,
       organizationId,

@@ -159,7 +159,7 @@ async function processClaimedJob(organizationId: string, job: InspectionJob) {
   const jobType = String(job.job_type);
   await preflightChargeableFluxAi({ organizationId, feature: "reminders", action: "whatsapp_follow_up_reminder" });
   try {
-    const result = await withFluxAiOperation({organizationId,feature:"reminders",action:"whatsapp_follow_up_reminder",source:"real_estate_inspection",operationId:job.id,request:{inspectionId:inspection.id,jobType},failure:"delivery"}, () => sendWhatsAppMessage({
+    const result = await withFluxAiOperation({organizationId,feature:"reminders",action:"whatsapp_follow_up_reminder",source:"real_estate_inspection",context:{inspection_id:inspection.id,job_id:job.id},operationId:job.id,request:{inspectionId:inspection.id,jobType},failure:"delivery"}, () => sendWhatsAppMessage({
       organizationId, to: String(customer.phone), text: OUTCOME_TYPES.has(jobType) ? outcomeMessage(inspection) : reminderMessage(inspection, jobType),
       deliveryMode: "auto", templatePurpose: "appointment_reminder",
       variables: { customer_name: String(customer.full_name || ""), inspection_time: String(inspection.requested_start_at || "") },

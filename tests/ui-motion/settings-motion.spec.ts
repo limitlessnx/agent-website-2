@@ -70,8 +70,8 @@ for(const role of ["admin","tenant"])test(`billing period totals and unavailable
   await expect(section).toContainText(role==="admin"?"Credits charged":"42 credits charged across 21 usage events");
   await expect(section).toContainText("42");
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width+1);
-  mkdirSync("docs/phase7-channel-evidence",{recursive:true});
-  await page.screenshot({path:`docs/phase7-channel-evidence/${role}-period-${page.viewportSize()!.width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});
+  mkdirSync("docs/phase7-channel-evidence/after",{recursive:true});
+  await page.screenshot({path:`docs/phase7-channel-evidence/after/${role}-period-${page.viewportSize()!.width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});
   await info.attach("billing-period",{body:await page.screenshot({animations:"disabled"}),contentType:"image/png"});
   await page.request.get("http://127.0.0.1:4401/__qa/period-unavailable?value=1");await page.reload({waitUntil:"networkidle"});
   await expect(page.getByRole("status").filter({hasText:"Billing-period usage is unavailable"})).toBeVisible();

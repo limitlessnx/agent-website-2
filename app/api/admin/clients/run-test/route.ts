@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     await preflightChargeableFluxAi({ organizationId, feature: "core_ai_support", action: "web_ai" });
 
-    const runtime = await withFluxAiOperation({organizationId,feature:"core_ai_support",action:"web_ai",source:"super_admin_live_agent_test",operationId:request.headers.get("x-flux-operation-id") || testRunId,request:{agentId,message},failure:"ai"},
+    const runtime = await withFluxAiOperation({organizationId,feature:"core_ai_support",action:"web_ai",source:"super_admin_live_agent_test",context:{agent_id:agentId,test_run_id:testRunId},operationId:request.headers.get("x-flux-operation-id") || testRunId,request:{agentId,message},failure:"ai"},
       () => runPhase12Agent({
       kind: "specialist",
       organizationId,

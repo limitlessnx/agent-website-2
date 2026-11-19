@@ -957,7 +957,7 @@ async function channelReplyAdapter(input: SystemWorkflowAdapterInput) {
       appointment_time: text(input.event.payload.startAt || input.event.payload.start_at || ""),
     },
   });
-  const result = chargeReminder ? await withFluxAiOperation({organizationId:input.event.organizationId,feature:"reminders",action:"whatsapp_follow_up_reminder",source:"appointment_reminder",operationId:[input.event.id,input.targetSystemId].join(":"),request:{event:input.event.eventType,payload:input.event.payload},failure:"delivery"},submit,
+  const result = chargeReminder ? await withFluxAiOperation({organizationId:input.event.organizationId,feature:"reminders",action:"whatsapp_follow_up_reminder",source:"appointment_reminder",context:{event_id:input.event.id,target_system_id:input.targetSystemId},operationId:[input.event.id,input.targetSystemId].join(":"),request:{event:input.event.eventType,payload:input.event.payload},failure:"delivery"},submit,
     value => ({accepted:value.providerMessageId ? true : "unknown",provider:"meta",reference:value.providerMessageId})) : await submit();
 
 

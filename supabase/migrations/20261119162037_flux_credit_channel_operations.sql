@@ -34,7 +34,7 @@ begin
        and proof->'provider_cost_cents'=to_jsonb(r.reserved_credits*0.5)
        and jsonb_typeof(proof->'usage')='object' and length(coalesce(proof->>'provider',''))>0 then
        result:=public.finish_flux_credit_capacity(p_organization_id,r.id,'settled','admin_operation_reconciliation',proof->>'provider',(proof->>'provider_cost_cents')::numeric,proof->'usage',
-         jsonb_build_object('actor_email',btrim(p_actor_email),'actor_user_id',p_actor_user_id,'reconciliation_reason',btrim(p_reason),'provider_response_id',proof->'reference','recovery',true));
+         jsonb_build_object('actor_email',btrim(p_actor_email),'actor_user_id',p_actor_user_id,'reconciliation_reason',btrim(p_reason),'provider_response_id',proof->'reference','operation_context',coalesce(proof->'context','{}'::jsonb),'recovery',true));
        outcome:=result->>'status';code:=case when outcome='settled' then 'settled' else 'accounting_needs_attention' end;r.status:=outcome;
      end if;
    end if;

@@ -4,7 +4,7 @@ import { reserveFluxCreditCapacity, finishFluxCreditCapacity } from "@/lib/flux-
 import { calculateModeledProviderCostCents, type FluxCreditAction, type FluxFeatureKey } from "@/lib/fluxknight-plans";
 
 type Description<T> = { accepted: boolean | "unknown"; provider?: string; model?: string | null; reference?: string | null; usage?: Record<string, unknown>; cache?: T };
-type Input = { organizationId: string; feature: FluxFeatureKey; action: FluxCreditAction; source: string; operationId: string; request: unknown; quantity?: number; failure: "ai" | "delivery" };
+type Input = { organizationId: string; feature: FluxFeatureKey; action: FluxCreditAction; source: string; operationId: string; request: unknown; quantity?: number; context?: Record<string, string | number | null>; failure: "ai" | "delivery" };
 export class FluxAiOperationError extends Error {
   readonly name = "FluxAiOperationError";
   readonly doNotRedispatch = true;
@@ -73,14 +73,14 @@ export async function withFluxAiOperation<T>(input: Input, run: () => Promise<T>
     if (outcome === "needs_attention") throw new FluxAiOperationError(outcome, reservation.id, false, description.reference || undefined);
     return result;
   }
-  const completion = JSON.stringify({ version: 1, reservation_id: reservation.id, organization_id: input.organizationId, fingerprint, action: input.action, source: input.source, credits: reservation.reserved_credits, provider: description.provider || "unknown", model: description.model || null, reference: description.reference || null, usage: description.usage || {}, provider_cost_cents: calculateModeledProviderCostCents(input.action, input.quantity ?? 1), provider_completed: true });
+  const completion = JSON.stringify({ version: 1, reservation_id: reservation.id, organization_id: input.organizationId, fingerprint, action: input.action, source: input.source, credits: reservation.reserved_credits, provider: description.provider || "unknown", model: description.model || null, reference: description.reference || null, usage: description.usage || {}, provider_cost_cents: calculateModeledProviderCostCents(input.action, input.quantity ?? 1), provider_completed: true, context: input.context || {} });
   let cached: string | null = null;
   if (description.cache !== undefined) { try { const value = JSON.stringify(description.cache); if (value.length <= 65536) cached = value; } catch { /* Oversized/non-JSON results remain explicitly non-replayable. */ } }
   try {
     // Persist observed completion before settlement, so a lost response/crash retains reviewable evidence.
     const recorded = await finishFluxCreditCapacity({ organizationId: input.organizationId, reservationId: reservation.id, outcome: "needs_attention", reason: "provider_completed_accounting_pending", metadata: { operation_completion_json: completion, operation_completion_sha256: digest(completion), operation_cache_json: cached } });
     if (recorded.status === "released") throw new Error("Reservation was released during completion.");
-    const finished = await finishFluxCreditCapacity({ organizationId: input.organizationId, reservationId: reservation.id, outcome: "settled", provider: description.provider, providerCostCents: calculateModeledProviderCostCents(input.action, input.quantity ?? 1), providerUsage: description.usage, metadata: { model: description.model || null, provider_response_id: description.reference || null } });
+    const finished = await finishFluxCreditCapacity({ organizationId: input.organizationId, reservationId: reservation.id, outcome: "settled", provider: description.provider, providerCostCents: calculateModeledProviderCostCents(input.action, input.quantity ?? 1), providerUsage: description.usage, metadata: { ...input.context, model: description.model || null, provider_response_id: description.reference || null } });
     if (finished.status !== "settled") throw new FluxAiOperationError(finished.status, reservation.id, true, description.reference || undefined);
   } catch (error) {
     if (error instanceof FluxAiOperationError) throw error;

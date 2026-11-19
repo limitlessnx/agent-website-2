@@ -82,7 +82,7 @@ export async function processDueHandoffFollowups(limit=100){
             templateName:null,
             providerMessageId:"test-handoff-followup:"+task.id,
           }
-        : await withFluxAiOperation({organizationId:task.organization_id,feature:"follow_ups",action:"whatsapp_follow_up_reminder",source:"handoff_follow_up",operationId:task.id,request:{conversationId,handoffId},failure:"delivery"}, () => sendWhatsAppMessage({
+        : await withFluxAiOperation({organizationId:task.organization_id,feature:"follow_ups",action:"whatsapp_follow_up_reminder",source:"handoff_follow_up",context:{task_id:task.id,handoff_id:handoffId},operationId:task.id,request:{conversationId,handoffId},failure:"delivery"}, () => sendWhatsAppMessage({
             organizationId:task.organization_id,
             to:customer.phone,
             text,

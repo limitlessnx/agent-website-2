@@ -499,7 +499,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
   while (steps < Math.max(1, Math.min(profile.max_steps, 20))) {
     steps += 1;
     await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
-    const payload = await withFluxAiOperation({organizationId:input.organizationId,feature:"core_ai_support",action:"web_ai",source:"maia_runtime",operationId:operationId+":"+steps,request:{agentId:input.agentId,model:model.id,messages},failure:"ai"},
+    const payload = await withFluxAiOperation({organizationId:input.organizationId,feature:"core_ai_support",action:"web_ai",source:"maia_runtime",context:{agent_id:input.agentId,session_id:session.id,step:steps},operationId:operationId+":"+steps,request:{agentId:input.agentId,model:model.id,messages},failure:"ai"},
       () => callOpenAI(model, messages, tools), value => ({accepted:true,provider:model.provider,model:model.model_key,reference:typeof value.id === "string" ? value.id : null,usage:chatUsage(value)}));
     const choice = payload?.choices?.[0];
     const assistant = choice?.message;
