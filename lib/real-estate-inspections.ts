@@ -399,7 +399,7 @@ export async function recordRealEstateInspectionOutcome(input: { organizationId:
     await addCanonicalTimelineEvent({
       organizationId: input.organizationId, customerId: updated.customer_id,
       eventType: `real_estate_inspection.${input.outcome}`, title: input.outcome === "completed" ? "Inspection completed" : "Inspection marked no-show",
-      summary: input.notes || null, channel: "internal", sourceTable: "real_estate_inspections", sourceId: updated.id,
+      summary: input.notes || null, channel: "internal", sourceTable: "real_estate_inspections", sourceId: updated.id, correlationId: updated.id,
       actorType: "system", actorId: "real_estate_inspection", metadata: { outcome: input.outcome, stage_key: stageKey, stage_id: configuredStage.data?.id || null },
     });
   }

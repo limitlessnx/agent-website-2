@@ -1,3 +1,5 @@
+> Historical audit snapshot. Subsequent approved releases #426–#428 are live, including the voice foundation/recovery migration. Current Phase 6 findings and remaining work are recorded in [traceability delivery](phase6-traceability-delivery-20261118.md); earlier held/missing statements below are preserved as historical evidence.
+
 # Fluxknight implementation audit — 18 November 2026
 
 Base: `main ae2a41f9031544f340ae9144bc79fb0c72819b8b`. Repository main, merged/open PRs, both pages of implementation branches, current CI, Vercel previews and production Supabase migration/function/policy metadata were inspected before edits. No production writes were performed. Earlier delivery files contain historical unmerged/release statements; the actual GitHub merge state takes precedence.

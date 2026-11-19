@@ -127,7 +127,7 @@ async function setOutcomeStage(organizationId: string, inspection: InspectionRow
     organizationId, customerId: inspection.customer_id, eventType: `real_estate_inspection.${inspection.status}`,
     title: inspection.status === "completed" ? "Inspection follow-up accepted by provider" : "Inspection no-show follow-up accepted by provider",
     summary: inspection.status === "completed" ? "Inspection outcome recorded and the WhatsApp provider accepted the follow-up request." : "Inspection was recorded as a no-show and the WhatsApp provider accepted the follow-up request.",
-    channel: "whatsapp", sourceTable: "real_estate_inspections", sourceId: inspection.id,
+    channel: "whatsapp", sourceTable: "real_estate_inspections", sourceId: inspection.id, correlationId: inspection.id,
     actorType: "system", actorId: "real_estate_inspection_worker", metadata: { stage_id: stage.data.id, stage_key: desiredKey },
   });
   return stage.data;

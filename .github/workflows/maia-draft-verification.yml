@@ -43,6 +43,12 @@ jobs:
         run: npm run test:hotel-overview
       - name: Hotel overview lint
         run: npx eslint app/api/portal/hotel/overview/route.ts lib/hotel-overview*.ts lib/hotel-trends*.ts lib/hotel-client-activity.ts tests/hotel-overview*.test.mjs tests/hotel-dashboard-trends.test.mjs tests/hotel-client-activity.test.mjs app/portal/hotel/reports/page.tsx app/portal/hotel/inbox/page.tsx "app/portal/hotel/inbox/[id]/page.tsx" app/portal/hotel/followups/page.tsx app/portal/layout.tsx app/portal/campaigns/CampaignComposer.tsx app/api/portal/campaigns/send/route.ts lib/whatsapp-delivery.ts
+      - name: Phase 6 tenant-scoped communication correlation
+        run: npm run test:communications-correlation
+      - name: Communication and inspection regression coverage
+        run: npm run test:real-estate
+      - name: Correlation changed-module lint
+        run: npx eslint lib/canonical-customer.ts lib/real-estate-inspections.ts lib/real-estate-inspection-worker.ts tests/communication-correlation.test.cjs tests/communication-correlation-database.test.mjs
       - run: npm run test:maia
       - run: npm run build
 
