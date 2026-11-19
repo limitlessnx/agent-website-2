@@ -31,7 +31,7 @@ function routeFixture({session={organizationId:org,userId:'member'},permissions=
   'next/server':{NextResponse:{json:(body,options={})=>({body,status:options.status||200})}},
   '@/lib/client-auth':{getClientSession:async()=>session},
   '@/lib/organization-membership':{getOrganizationAccessContext:async(organization,user)=>{reads.push(['membership',organization,user]);if(membershipError)throw Error('PRIVATE');return {permissions:new Set(permissions)};}},
-  '@/lib/flux-credits':{getFluxBillingSummary:async organization=>{reads.push(['wallet',organization]);if(failRead)throw Error('PRIVATE');return {balance:100,capacity:{status:'available',reservedCredits:40,availableCredits:60}};}},
+  '@/lib/flux-credits':{getFluxBillingSummary:async organization=>{reads.push(['wallet',organization]);if(failRead)throw Error('PRIVATE');return {balance:100,periodUsage:{periodStart:'2026-11-01',periodEnd:'2026-12-01',usedCredits:6,usageEvents:3,providerCostCents:987654,customerValueCents:123456,grossMarginCents:999999},capacity:{status:'available',reservedCredits:40,availableCredits:60}};}},
   '@/lib/flux-commercial':{getFluxCommercialSnapshot:async organization=>{reads.push(['commercial',organization]);return {};}}
  });return {route,reads};
 }
@@ -39,7 +39,7 @@ for(const options of [{session:null},{permissions:[]},{membershipError:true}])te
  const f=routeFixture(options),r=await f.route.GET();assert.equal(r.status,options.session===null?401:403);assert.ok(!f.reads.some(x=>['wallet','commercial'].includes(x[0])));
 });
 for(const permissions of [['billing.view'],['billing.manage']])test('billing API uses authorized session organization and additive public capacity fields',async()=>{
- const f=routeFixture({permissions}),r=await f.route.GET();assert.equal(r.status,200);assert.equal(r.body.wallet.capacity.availableCredits,60);assert.equal(f.reads.find(x=>x[0]==='wallet')[1],org);assert.ok(!JSON.stringify(r.body).includes('request_fingerprint'));
+ const f=routeFixture({permissions}),r=await f.route.GET();assert.equal(r.status,200);assert.equal(r.body.wallet.capacity.availableCredits,60);assert.equal(f.reads.find(x=>x[0]==='wallet')[1],org);assert.ok(!JSON.stringify(r.body).includes('request_fingerprint'));assert.equal(r.body.wallet.periodUsage.usedCredits,6);for(const internal of ['providerCostCents','customerValueCents','grossMarginCents'])assert.ok(!(internal in r.body.wallet.periodUsage));
 });
 test('billing read errors are explicit and sanitized',async()=>{const f=routeFixture({permissions:['billing.view'],failRead:true}),r=await f.route.GET();assert.equal(r.status,500);assert.ok(!r.body.error.includes('PRIVATE'));});
 test('existing trusted admin preview stays read-only without conflating tenant membership',async()=>{const f=routeFixture({session:{organizationId:org,userId:'preview',isAdminPreview:true}});assert.equal((await f.route.GET()).status,200);assert.ok(!f.reads.some(x=>x[0]==='membership'));});
