@@ -28,7 +28,7 @@ Only service_role can execute the new invoker RPC, which uses an empty search_pa
 - tests/flux-credit-capacity-concurrency.test.cjs: extend existing disposable PostgreSQL pipeline with independent recovery/audit-failure sessions.
 - tests/phase4/start-fixture.cjs and control-center.spec.ts: extend existing rendered six-width harness with recovery confirmation, pending/blocked/success and unavailable queue states. Writes/providers remain synthetic/local.
 - .github/workflows/monthly-billing-verification.yml: extend existing financial tests and scoped lint, keeping the existing independent PostgreSQL service.
-- tests/supabase-migration-ledger.test.mjs: explicitly pending migration until actual registration is read back.
+- supabase/migration-ledger.production-snapshot.json and tests/supabase-migration-ledger.test.mjs: reconcile only the actual verified migration registration; other pending work remains pending.
 
 ## Verification
 
@@ -49,3 +49,11 @@ Previous application versions continue using the existing wallet/settlement func
 Older holds without the new proof links and executions with partial persistence remain in review. This RPC does not repair missing result/usage/progress records or accept an operator's assertion in place of proof. Provider failure/absence evidence is still required before any future release control can be considered. Other billable channels, historical/period reporting and designated authenticated/live-provider acceptance remain Phase 7 work. The current work does not mark the full master roadmap complete.
 
 Screenshot review identified an inherited oversized checkbox style in the first candidate. The recovery form now scopes its checkbox to the existing 20px control geometry and purple brand token, keeping a 44px label target. A browser assertion checks its dimensions at all six widths; final release checks run on this refined source.
+
+## Reviewed candidate and schema registration
+
+Candidate fd4197578e7b29d1ba788706b253c8a2f0057ece passed Monthly Billing Verification 44534467291, Maia Draft Verification 44534467221 and Dashboard Final QA 44534467317. Hosted PostgreSQL ran the independent concurrent recovery/audit-failure cases successfully. Browser logs report 132 passing cases, including recovery at all six widths. Preview dpl_bKk1JXwfFgc5XaQZPFGWZt8ooHHW was READY; direct HTTP access redirects to Vercel SSO (302), so authenticated preview acceptance is not claimed. Local final recovery browser cases passed 12/12; support suite 656/656 and build passed.
+
+After these gates, apply_migration succeeded. Readback verified actual registration 20261119134520 / flux_credit_reconciliation, function body MD5 cc7df6518c35b73c7383dc522829408b, invoker/empty search_path, anonymous/authenticated denial and service execution, both composite lookup indexes and unchanged debit MD5 cad92f4730562aa51d724a20b217effb. The CLI-generated migration file was renamed to its actual registration with identical SQL SHA256 1f50fadcc92293da76c2b031760284bc785b5bfa447e832837cc4af90afe56fb; remote history was not rewritten. The migration created schema/index objects only; no live reservation was reconciled, no customer row was seeded/backfilled and no provider was called.
+
+The registration/documentation-only follow-up is revalidated on its exact commit before application merge/deployment. Actual final runs, merge tree, production deployment and read-only post-release evidence are recorded in the PR after they occur.
