@@ -33,7 +33,11 @@ export type FluxWalletSummary = {
   customerMessage: string | null;
 };
 
-export type FluxInternalUsageSummary = FluxWalletSummary & {
+export type FluxBillingSummary = FluxWalletSummary & {
+  capacity: { status: "available" | "unavailable"; reservedCredits: number | null; availableCredits: number | null };
+};
+
+export type FluxInternalUsageSummary = FluxBillingSummary & {
   bonusCredits: number;
   topUpCredits: number;
   providerCostCents: number;
@@ -179,6 +183,22 @@ export async function getFluxWalletSummary(organizationId: string): Promise<Flux
   return toWalletSummary(await ensureFluxWallet(organizationId));
 }
 
+async function withCreditCapacity(wallet: WalletRow): Promise<FluxBillingSummary> {
+  const unavailable: FluxBillingSummary = { ...toWalletSummary(wallet), capacity: { status: "unavailable", reservedCredits: null, availableCredits: null } };
+  try {
+    const { data, error } = await createAdminClient().rpc("get_flux_credit_availability", { p_organization_id: wallet.organization_id });
+    if (error || !data || ![data.balance, data.reserved, data.available].every(value => Number.isSafeInteger(value) && value >= 0)
+      || data.available !== Math.max(0, data.balance - data.reserved)) return unavailable;
+    return { ...toWalletSummary({ ...wallet, balance: data.balance }), capacity: { status: "available", reservedCredits: data.reserved, availableCredits: data.available } };
+  } catch {
+    return unavailable;
+  }
+}
+
+export async function getFluxBillingSummary(organizationId: string): Promise<FluxBillingSummary> {
+  return withCreditCapacity(await ensureFluxWallet(organizationId));
+}
+
 export async function getFluxInternalUsageSummary(organizationId: string): Promise<FluxInternalUsageSummary> {
   const admin = createAdminClient();
   const wallet = await ensureFluxWallet(organizationId);
@@ -205,7 +225,7 @@ export async function getFluxInternalUsageSummary(organizationId: string): Promi
   }
 
   return {
-    ...toWalletSummary(wallet),
+    ...await withCreditCapacity(wallet),
     bonusCredits: numberValue(wallet.bonus_balance),
     topUpCredits: numberValue(wallet.top_up_balance),
     providerCostCents,

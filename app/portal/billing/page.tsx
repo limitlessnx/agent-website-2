@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CreditCard, WalletCards } from "@/components/admin/ServerIcons";
 import { getClientSession } from "@/lib/client-auth";
-import { getFluxWalletSummary } from "@/lib/flux-credits";
+import { getFluxBillingSummary } from "@/lib/flux-credits";
 import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
 import { getTenantBusinessValueAnalytics } from "@/lib/analytics-phase-e";
 import { getOrganizationAccessContext } from "@/lib/organization-membership";
@@ -34,7 +34,7 @@ export default async function PortalBillingPage() {
   const canManageBilling = Boolean(access?.permissions.has("billing.manage"));
   const admin = createAdminClient();
   const [wallet, commercial, ledgerResult, businessValue] = await Promise.all([
-    getFluxWalletSummary(session.organizationId),
+    getFluxBillingSummary(session.organizationId),
     getFluxCommercialSnapshot(session.organizationId),
     admin.from("flux_credit_ledger")
       .select("id,transaction_type,action_key,credit_delta,balance_after,source,reason,created_at")
@@ -61,9 +61,12 @@ export default async function PortalBillingPage() {
           <div className="portal-card-head"><div><h2>{wallet.chargeableAiPaused ? "AI paused" : "Credit warning"}</h2><p>{wallet.customerMessage}</p></div></div>
         </section>
       ) : null}
+      <section role="status" className="portal-card">{wallet.capacity.status === "unavailable" ? "Credit availability could not be verified. Refresh to retry. Your balance is shown separately." : wallet.capacity.reservedCredits ? "Reserved credits cover running work or work awaiting accounting review. They are not recorded as usage until settled. Contact support if a reservation remains unresolved." : "No credits are currently reserved."}</section>
       <section className="portal-metrics">
         <article className="portal-metric"><span><WalletCards size={16} /> Monthly credits</span><strong>{formatNumber(wallet.monthlyCredits)}</strong><small>Total cycle allowance</small></article>
-        <article className="portal-metric"><span><CreditCard size={16} /> Remaining</span><strong>{formatNumber(wallet.balance)}</strong><small>{formatNumber(wallet.used)} used</small></article>
+        <article className="portal-metric"><span><CreditCard size={16} /> Balance</span><strong>{formatNumber(wallet.balance)}</strong><small>{formatNumber(wallet.used)} used</small></article>
+        <article className="portal-metric"><span>Reserved credits</span><strong>{wallet.capacity.reservedCredits === null ? "Unavailable" : formatNumber(wallet.capacity.reservedCredits)}</strong><small>Held for work; not yet charged</small></article>
+        <article className="portal-metric"><span>Available for new work</span><strong>{wallet.capacity.availableCredits === null ? "Unavailable" : formatNumber(wallet.capacity.availableCredits)}</strong><small>Balance after reservations</small></article>
         <article className="portal-metric"><span>Usage</span><strong>{wallet.percentUsed}%</strong><small>{wallet.threshold ? `${wallet.threshold}% threshold reached` : "Within normal range"}</small></article>
         <article className="portal-metric"><span>Renewal</span><strong>{formatDate(wallet.renewalDate)}</strong><small>{wallet.trialEndsAt ? `Trial ends ${formatDate(wallet.trialEndsAt)}` : "Monthly reset"}</small></article>
       </section>
@@ -92,7 +95,7 @@ export default async function PortalBillingPage() {
           <div className="portal-card-head"><div><h2>Credit status</h2><p>{wallet.percentUsed}% of this cycle has been used.</p></div></div>
           <div className="portal-progress">
             <div className="portal-progress-row"><span>Current cycle</span><div><i style={{ width: `${wallet.percentUsed}%` }} /></div><strong>{wallet.percentUsed}%</strong></div>
-            <div className="portal-progress-row"><span>Available</span><div><i style={{ width: `${Math.max(0, 100 - wallet.percentUsed)}%` }} /></div><strong>{formatNumber(wallet.balance)}</strong></div>
+            <div className="portal-progress-row"><span>Balance</span><div><i style={{ width: `${Math.max(0, 100 - wallet.percentUsed)}%` }} /></div><strong>{formatNumber(wallet.balance)}</strong></div>
           </div>
         </article>
         <article className="portal-card">
@@ -120,7 +123,7 @@ export default async function PortalBillingPage() {
 
       <section className="portal-card">
         <div className="portal-card-head"><div><h2>Recent credit transactions</h2><p>Credits added, used, or adjusted for this workspace. Only your organization’s records are shown.</p></div></div>
-        {transactions.length ? <div className="portal-list">
+        {ledgerResult.error ? <p role="alert">Credit history could not be loaded. Refresh to retry.</p> : transactions.length ? <div className="portal-list">
           {transactions.map((item) => <div className="portal-list-row" key={item.id}>
             <div><strong>{transactionLabel(item.transaction_type || item.action_key || "credit transaction")}</strong><span>{item.reason || item.source || "Flux Credit ledger"} · {formatTimestamp(item.created_at)}</span></div>
             <em>{item.credit_delta > 0 ? "+" : ""}{formatNumber(item.credit_delta)} · balance {formatNumber(item.balance_after)}</em>

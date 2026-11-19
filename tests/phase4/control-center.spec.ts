@@ -75,3 +75,33 @@ test('context endpoint denies missing admin, malformed target and cross-origin a
  const missing=await context.request.post('/api/admin/organization-context',{data:{kind:'tenant',id:'90000000-0000-4000-8000-000000000001'}});expect(missing.status()).toBe(404);
  await context.clearCookies();const denied=await context.request.post('/api/admin/organization-context',{data:{kind:'system',id:'fluxknight'}});expect(denied.status()).toBe(401);
 });
+
+async function tenantBilling(context:BrowserContext) {
+ const payload=Buffer.from(JSON.stringify({userId:'qa-owner',email:'owner@example.test',organizationId:org,organizationSlug:'qa-general',membershipId:'qa-membership',role:'owner',issuedAt:Date.now()})).toString('base64url');
+ await context.addCookies([{name:'fluxknight_client_session',value:payload+'.'+createHmac('sha256','synthetic-local-test-secret').update(payload).digest('base64url'),url:origin}]);
+}
+test('tenant billing separates reserved credits and available funds',async({page,context})=>{
+ await tenantBilling(context);await page.goto('/portal/billing',{waitUntil:'networkidle'});
+ await expect(page.getByRole('heading',{name:'Flux Credits',exact:true})).toBeVisible();
+ await expect(page.locator('.portal-metric').filter({hasText:'Reserved credits'})).toContainText('996');
+ await expect(page.locator('.portal-metric').filter({hasText:'Available for new work'})).toContainText('4');
+ await stableLayout(page);await capture(page,'tenant-billing-capacity');
+ await scenario(context,'credit-held');await page.reload({waitUntil:'networkidle'});
+ await expect(page.locator('.portal-metric').filter({hasText:'Available for new work'})).toContainText('0');
+ await expect(page.locator('.portal-metric').filter({hasText:'Reserved credits'})).toContainText('1,000');
+ await stableLayout(page);await capture(page,'tenant-billing-held');
+});
+test('billing capacity outages remain explicit for admin and tenant',async({page,context})=>{
+ await scenario(context,'credit-unavailable');
+ await page.goto('/dashboard/billing',{waitUntil:'networkidle'});
+ await expect(page.getByRole('status').filter({hasText:'Credit availability could not be verified'})).toBeVisible();
+ await stableLayout(page);await capture(page,'admin-billing-unavailable');
+ await tenantBilling(context);await page.goto('/portal/billing',{waitUntil:'networkidle'});
+ await expect(page.getByRole('status').filter({hasText:'Credit availability could not be verified'})).toBeVisible();
+ await expect(page.locator('.portal-metric').filter({hasText:'Available for new work'})).toContainText('Unavailable');
+ await stableLayout(page);await capture(page,'tenant-billing-unavailable');
+ await scenario(context,'credit-history-unavailable');await page.reload({waitUntil:'networkidle'});
+ await expect(page.getByRole('alert').filter({hasText:'Credit history could not be loaded'})).toBeVisible();
+ await expect(page.getByText('No credit transactions have been recorded yet.')).toHaveCount(0);
+ await stableLayout(page);await capture(page,'tenant-billing-history-unavailable');
+});
