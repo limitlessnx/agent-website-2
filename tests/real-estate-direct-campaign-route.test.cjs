@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
@@ -26,12 +27,12 @@ function harness({windowOpen=true}={}){
   '@/lib/maia-action-gateway':{dispatchMaiaCampaignAction:async()=>{state.dispatches++;return{accepted:1,failed:0,skipped:0,pendingDelivery:1,acceptedRecipients:[{leadId:lead.id,phone:lead.phone,provider:'meta_whatsapp',provider_message_id:'wamid.1'}],failedRecipients:[],executionId:'exec-1',path:['trigger','send'],summary:{pending_delivery_confirmation:1,status:'submitted'}};}},
   '@/lib/campaign-report-store':{saveCampaignDeliveryReport:async()=>{}},
   '@/lib/whatsapp-message-splitter':{splitWhatsAppMessage:(message)=>[message]},
-  '@/lib/whatsapp-status-log':{getMetaCooldownPhones:async()=>new Set()},
+  '@/lib/whatsapp-status-log':{getMetaCooldownPhones:async()=>{if(state.cooldownError)throw state.cooldownError;return new Set();}},
   '@/lib/real-estate-customer-service-window':{getRealEstateDirectWindowPhones:async()=>{if(windowOpen==='missing'){const error=new Error('real_estate_customer_service_windows is missing');error.code='42P01';throw error;}return windowOpen?new Set([lead.phone]):new Set();}},
   '@/lib/supabase/admin':{createAdminClient:()=>({})},
   '@/lib/real-estate-campaign-delivery':{claimOutboundTracking:async()=>({duplicate:false,row:{metadata:{}}}),updateOutboundTracking:async()=>{}},
  };
- return{route:load(routePath,mocks),state};
+ return{route:load(routePath,mocks,'',{Error}),state};
 }
 function body(extra={}){return{requestId:'request-1',approvalStage:'prepare',topic:'Viewing follow-up',message:'Your viewing request is being followed up.',audienceMode:'all',...extra};}
 function request(value){return{json:async()=>value};}
@@ -93,4 +94,11 @@ test('direct route rejects unsupported media and property context before any app
   assert.equal(state.dispatches,0);
   assert.equal(state.approved,null);
  }
+});
+
+test('direct sends stop before approval when cooldown evidence is unavailable',async()=>{
+ const {route,state}=harness();state.cooldownError=new Error('WhatsApp delivery evidence is unavailable.');
+ const result=await route.POST(request(body({approvalStage:'send'})));
+ assert.equal(result.status,500);assert.match(result.body.error,/evidence is unavailable/);
+ assert.equal(state.approved,null);assert.equal(state.dispatches,0);
 });

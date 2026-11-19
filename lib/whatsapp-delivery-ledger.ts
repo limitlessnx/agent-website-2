@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getRecentWhatsAppStatuses, type WhatsAppStatusLog } from "@/lib/whatsapp-status-log";
+import { createHash } from "node:crypto";
+import { getRecentWhatsAppStatuses } from "@/lib/whatsapp-status-log";
 
 const LIMITLESS_REALTY_ORGANIZATION_ID = process.env.LIMITLESS_REALTY_ORGANIZATION_ID || "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
@@ -27,7 +28,38 @@ function recipientPhone(item: RecipientResult) { return phone(item.phone || item
 function recipientName(item: RecipientResult) { return text(item.name || item.recipient_name) || "there"; }
 function errorMessage(item: RecipientResult) { return text(item.error || item.failure || item.reason || item.message); }
 
+// Match the existing canonical receipt ordering. The WHERE predicate is evaluated
+// by Postgres when the row is updated, including after concurrent row-lock waits.
+const deliveryStates = ["accepted", "sent", "failed", "delivered", "read"] as const;
+function precedingStates(status: string) {
+  const rank = deliveryStates.indexOf(status as typeof deliveryStates[number]);
+  return rank < 0 ? [] : ["pending", "unknown", ...deliveryStates.slice(0, rank)];
+}
+
+export async function applyLegacyWhatsAppReceipt(input: {
+  organizationId: string;
+  providerMessageId: string;
+  status: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  responsePayload?: Record<string, unknown>;
+}) {
+  if (!input.organizationId || !input.providerMessageId) return false;
+  const states = precedingStates(input.status);
+  if (!states.length) return false;
+  const { data, error } = await createAdminClient().from("whatsapp_delivery_attempts").update({
+    status: input.status,
+    error_code: input.status === "failed" ? input.errorCode || null : null,
+    error_message: input.status === "failed" ? input.errorMessage || null : null,
+    response_payload: input.responsePayload || null,
+  }).eq("organization_id", input.organizationId).eq("provider_message_id", input.providerMessageId)
+    .in("status", states).select("id");
+  if (error) throw new Error("WhatsApp delivery receipt could not be stored.");
+  return Boolean(data?.length);
+}
+
 export async function recordLimitlessCampaignDeliveryAttempts(input: {
+  organizationId: string;
   campaignId: string;
   executionId?: string;
   campaignType?: string;
@@ -37,6 +69,7 @@ export async function recordLimitlessCampaignDeliveryAttempts(input: {
   failedRecipients?: RecipientResult[];
   createdBy?: string;
 }) {
+  if (!input.organizationId) throw new Error("Organization ID is required for campaign delivery evidence.");
   const supabase = createAdminClient();
   const acceptedRecipients = Array.isArray(input.acceptedRecipients) ? input.acceptedRecipients : [];
   const failedRecipients = Array.isArray(input.failedRecipients) ? input.failedRecipients : [];
@@ -60,7 +93,7 @@ export async function recordLimitlessCampaignDeliveryAttempts(input: {
     const responsePayload = entry.item;
     let existing: { id: string } | null = null;
     if (providerMessageId) {
-      const lookup = await supabase.from("whatsapp_delivery_attempts").select("id").eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).eq("provider_message_id", providerMessageId).maybeSingle();
+      const lookup = await supabase.from("whatsapp_delivery_attempts").select("id").eq("organization_id", input.organizationId).eq("provider_message_id", providerMessageId).maybeSingle();
       if (lookup.error) throw lookup.error;
       existing = lookup.data || null;
     }
@@ -70,13 +103,23 @@ export async function recordLimitlessCampaignDeliveryAttempts(input: {
         error_message: entry.status === "failed" ? errorMessage(entry.item) || null : null,
         request_payload: requestPayload,
         response_payload: responsePayload,
-      }).eq("id", existing.id);
+      }).eq("id", existing.id).eq("organization_id", input.organizationId)
+        .in("status", precedingStates(entry.status)).select("id");
       if (update.error) throw update.error;
-      updated += 1;
+      updated += update.data?.length || 0;
       continue;
     }
-    const insert = await supabase.from("whatsapp_delivery_attempts").insert({
-      organization_id: LIMITLESS_REALTY_ORGANIZATION_ID,
+    // A stable primary key makes concurrent campaign-report replays harmless
+    // without adding a second uniqueness constraint or rewriting historical rows.
+    const digest = createHash("sha256").update(JSON.stringify([
+      input.organizationId, providerMessageId,
+      providerMessageId ? null : input.campaignId,
+      providerMessageId ? null : input.executionId || null, recipient,
+    ])).digest("hex").slice(0, 32);
+    const attemptId = `${digest.slice(0, 8)}-${digest.slice(8, 12)}-${digest.slice(12, 16)}-${digest.slice(16, 20)}-${digest.slice(20)}`;
+    const insert = await supabase.from("whatsapp_delivery_attempts").upsert({
+      id: attemptId,
+      organization_id: input.organizationId,
       recipient,
       message_type: "template",
       template_name: input.templateName || null,
@@ -85,20 +128,11 @@ export async function recordLimitlessCampaignDeliveryAttempts(input: {
       error_message: entry.status === "failed" ? errorMessage(entry.item) || null : null,
       request_payload: requestPayload,
       response_payload: responsePayload,
-    });
+    }, { onConflict: "id", ignoreDuplicates: true }).select("id");
     if (insert.error) throw insert.error;
-    inserted += 1;
+    inserted += insert.data?.length || 0;
   }
   return { inserted, updated };
-}
-
-function latestStatusByMessageId(statusLogs: WhatsAppStatusLog[]) {
-  const latest = new Map<string, WhatsAppStatusLog>();
-  for (const log of statusLogs) {
-    if (!log.message_id || latest.has(log.message_id)) continue;
-    latest.set(log.message_id, log);
-  }
-  return latest;
 }
 
 export async function reconcileLimitlessDeliveryLedger(limit = 1500) {
@@ -109,31 +143,18 @@ export async function reconcileLimitlessDeliveryLedger(limit = 1500) {
   ]);
   if (attemptsResult.error) throw attemptsResult.error;
   const attempts = (attemptsResult.data || []) as DeliveryAttemptRow[];
-  const statusMap = latestStatusByMessageId(statuses);
-  let updated = 0;
-  for (const attempt of attempts) {
-    if (!attempt.provider_message_id) continue;
-    const latest = statusMap.get(attempt.provider_message_id);
-    if (!latest) continue;
-    const nextStatus = latest.status || attempt.status;
-    const nextErrorCode = latest.error_code || null;
-    const nextErrorMessage = latest.error_details || latest.error_title || null;
-    if (attempt.status === nextStatus && (attempt.error_code || null) === nextErrorCode && (attempt.error_message || null) === nextErrorMessage) continue;
-    const update = await supabase.from("whatsapp_delivery_attempts").update({
-      status: nextStatus,
-      error_code: nextErrorCode,
-      error_message: nextErrorMessage,
-      response_payload: { ...(attempt.response_payload || {}), latest_status_event: latest },
-    }).eq("id", attempt.id);
-    if (update.error) throw update.error;
-    updated += 1;
+  const messageIds = new Set(attempts.map(attempt => attempt.provider_message_id).filter(Boolean));
+  if (statuses.some(status => messageIds.has(status.message_id))) {
+    // These historical bot_sessions rows lack verified organization/provider
+    // provenance. Matching a message ID alone is not authority to mutate a row.
+    throw new Error("Legacy WhatsApp receipt identity is unverified. Delivery evidence requires a verified provider callback.");
   }
-  return { checked: attempts.length, updated };
+  return { checked: attempts.length, updated: 0 };
 }
 
 export async function getLimitlessCampaignDeliveryLedger(campaignId?: string, limit = 500) {
   const supabase = createAdminClient();
-  await reconcileLimitlessDeliveryLedger(1500).catch((error) => console.error("Limitless delivery ledger reconciliation failed.", error));
+  await reconcileLimitlessDeliveryLedger(1500);
   let query = supabase.from("whatsapp_delivery_attempts").select("*").eq("organization_id", LIMITLESS_REALTY_ORGANIZATION_ID).order("created_at", { ascending: false }).limit(Math.max(1, Math.min(limit, 5000)));
   if (campaignId) query = query.contains("request_payload", { campaign_id: campaignId });
   const result = await query;

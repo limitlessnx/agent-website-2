@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
@@ -27,14 +28,14 @@ function harness(){
   '@/lib/campaign-report-store':{saveCampaignDeliveryReport:async(report)=>{state.report=report;}},
   '@/lib/whatsapp-message-splitter':{splitWhatsAppMessage:(message)=>[message]},
   '@/lib/property-campaign-message':{buildPropertyCampaignContent:(property,original)=>({message:`${original}\n\nProperty: ${property.title}\nLocation: ${property.location_city}\n\nReply MORE INFO for human verification.`,propertyName:property.title,memory:{propertyId:property.id},replyInstruction:'human verification'}),PropertyCampaignMessageError:class extends Error{}},
-  '@/lib/whatsapp-status-log':{getMetaCooldownPhones:async()=>new Set()},
+  '@/lib/whatsapp-status-log':{getMetaCooldownPhones:async()=>{if(state.cooldownError)throw state.cooldownError;return new Set();}},
   '@/lib/supabase/admin':{createAdminClient:()=>({})},
   '@/lib/real-estate-campaign-delivery':{
    claimOutboundTracking:async(_admin,input)=>{const key=input.idempotencyKey;const existing=state.tracking.get(key);if(existing)return{duplicate:true,row:existing};const row={...input,metadata:input.metadata||{}};state.tracking.set(key,row);return{duplicate:false,row};},
    updateOutboundTracking:async(_admin,_org,key,values)=>{const row=state.tracking.get(key);if(row){Object.assign(row,values);if(values.metadata)row.metadata={...row.metadata,...values.metadata};}return row||null;},
   },
  };
- return{route:load(routePath,mocks),state};
+ return{route:load(routePath,mocks,'',{Error}),state};
 }
 function base(extra={}){return{requestId:'campaign-1',approvalStage:'prepare',campaignType:'limitless_realty_update',topic:'Abuja market update',message:'Main market update\n\nSupporting details\n\nReply MORE INFO.',audienceMode:'all',propertyId:'property-1',...extra};}
 function request(value){return{json:async()=>value};}
@@ -92,4 +93,11 @@ test('a mis-scoped CRM row cannot enter the server audience even if the reader r
  const result=await route.POST(request(base({propertyId:''})));
  assert.equal(result.body.preview.attemptedRecipients,1);
  assert.equal(result.body.preview.recipientPreview.some((row)=>row.name==='Foreign'),false);
+});
+
+test('unavailable cooldown evidence stops before approval, tracking and provider dispatch',async()=>{
+ const {route,state}=harness();state.cooldownError=new Error('WhatsApp delivery evidence is unavailable.');
+ const result=await route.POST(request(base({approvalStage:'send'})));
+ assert.equal(result.status,500);assert.match(result.body.error,/evidence is unavailable/);
+ assert.equal(state.approvals.size,0);assert.equal(state.tracking.size,0);assert.equal(state.dispatches,0);
 });

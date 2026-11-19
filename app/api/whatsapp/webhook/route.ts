@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { recordWhatsAppBusinessAppEcho } from "@/lib/whatsapp-coexistence";
 import { syncHandoffNotificationStatus } from "@/lib/human-operations";
 import { syncRealEstateProviderStatus } from "@/lib/real-estate-provider-status";
+import { applyLegacyWhatsAppReceipt } from "@/lib/whatsapp-delivery-ledger";
 import { syncLimitlessInstallmentRecoveryReceipt } from "@/lib/limitless-installment-recovery-receipts";
 import { acceptMaiaWhatsAppCall, terminateMaiaWhatsAppCall, type WhatsAppCallEvent } from "@/lib/maia-whatsapp-calling";
 
@@ -32,13 +33,6 @@ function verifySignature(rawBody: string, signature: string | null) {
   const supplied = signature.slice("sha256=".length);
   if (expected.length !== supplied.length) return false;
   return timingSafeEqual(Buffer.from(expected), Buffer.from(supplied));
-}
-
-async function updateAttempt(providerMessageId: string, patch: Record<string, unknown>) {
-  if (!providerMessageId) return false;
-  const admin = createAdminClient();
-  const { error } = await admin.from("whatsapp_delivery_attempts").update(patch).eq("provider_message_id", providerMessageId);
-  return !error;
 }
 
 /**
@@ -84,7 +78,7 @@ async function recordWhatsAppTriggerDispatch(input: {
   }
 }
 
-async function resolveWhatsAppTenant(phoneNumberId: string) {
+async function resolveWhatsAppOrganization(phoneNumberId: string) {
   const admin = createAdminClient();
   const { data: integrations, error: integrationsError } = await admin
     .from("organization_integrations")
@@ -98,7 +92,14 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
   let maiaFlagConfigured = false;
   let matchedIntegration = false;
 
-  for (const row of integrations || []) {
+  const matches = (integrations || []).filter(row => {
+    const config = (row.configuration || {}) as Record<string, unknown>;
+    return String(config.phone_number_id || config.phoneNumberId || "") === phoneNumberId;
+  });
+  if (new Set(matches.map(row => String(row.organization_id || ""))).size > 1) {
+    throw new Error("WhatsApp provider binding is ambiguous.");
+  }
+  for (const row of matches) {
     const config = (row.configuration || {}) as Record<string, unknown>;
     if (String(config.phone_number_id || config.phoneNumberId || "") !== phoneNumberId) continue;
     matchedIntegration = true;
@@ -111,17 +112,25 @@ async function resolveWhatsAppTenant(phoneNumberId: string) {
   if (!organizationId && !matchedIntegration) {
     const legacyPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
     if (legacyPhoneNumberId && legacyPhoneNumberId === phoneNumberId) {
-      const { data: organization } = await admin
+      const { data: organization, error: organizationError } = await admin
         .from("organizations")
         .select("id")
         .eq("slug", "limitless-realty")
         .maybeSingle();
+      if (organizationError) throw new Error("WhatsApp organization binding is unavailable.");
       organizationId = String(organization?.id || "");
       maiaActive = Boolean(organizationId);
     }
   }
 
   if (!organizationId) return null;
+  return { organizationId, maiaActive, maiaFlagConfigured };
+}
+
+async function resolveWhatsAppTenant(binding: Awaited<ReturnType<typeof resolveWhatsAppOrganization>>) {
+  if (!binding) return null;
+  const { organizationId, maiaActive, maiaFlagConfigured } = binding;
+  const admin = createAdminClient();
 
   // Resolve published Maia agents inside this tenant before choosing a
   // runtime route. Some tenants have a named Maia instance (for example,
@@ -347,8 +356,12 @@ export async function POST(request: NextRequest) {
       const metadata = record(value.metadata);
       const phoneNumberId = String(metadata.phone_number_id || "");
       let tenant = null;
+      let receiptBinding = null;
       try {
-        tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId) : null;
+        receiptBinding = phoneNumberId ? await resolveWhatsAppOrganization(phoneNumberId) : null;
+        if (recordArray(value.messages).length || recordArray(value.calls).length || recordArray(value.message_echoes).length) {
+          tenant = await resolveWhatsAppTenant(receiptBinding);
+        }
       } catch (error) {
         console.error("[whatsapp-webhook] tenant lookup failed", { phoneNumberIdPresent: Boolean(phoneNumberId), errorType: error instanceof Error ? error.name : "unknown" });
         throw error;
@@ -356,6 +369,7 @@ export async function POST(request: NextRequest) {
       console.info("[whatsapp-webhook] tenant lookup result", { phoneNumberIdPresent: Boolean(phoneNumberId), tenantResolved: Boolean(tenant), organizationId: tenant?.organizationId || null, mode: tenant?.mode || null, agentResolved: Boolean(tenant?.agentId) });
 
       for (const status of recordArray(value.statuses)) {
+        if (!receiptBinding) continue;
         const providerMessageId = String(status?.id || "");
         if (!providerMessageId) continue;
         const state = String(status?.status || "").toLowerCase();
@@ -366,27 +380,30 @@ export async function POST(request: NextRequest) {
         const patch = {
           status: nextStatus,
           error_code: firstError?.code != null ? String(firstError.code) : null,
-          error_message: firstError?.title || firstError?.message || null,
+          error_message: optionalText(firstError?.title || firstError?.message),
           response_payload: body,
         };
         const recoveryHandled = await syncLimitlessInstallmentRecoveryReceipt({
-          organizationId: String(tenant?.organizationId || ""),
+          organizationId: String(receiptBinding?.organizationId || ""),
           callbackData: status.biz_opaque_callback_data,
           providerMessageId,
           patch,
         });
-        const ok = recoveryHandled || await updateAttempt(providerMessageId, patch).catch(() => false);
+        const ok = recoveryHandled || await applyLegacyWhatsAppReceipt({
+          organizationId: String(receiptBinding?.organizationId || ""), providerMessageId, status: nextStatus,
+          errorCode: patch.error_code, errorMessage: patch.error_message, responsePayload: body,
+        });
         if (ok) statusUpdates += 1;
         const providerTimestamp=Number(status?.timestamp);
         await syncRealEstateProviderStatus({
-          provider:"meta",providerMessageId,status:nextStatus as "sent"|"delivered"|"read"|"failed",organizationId:String(tenant?.organizationId||""),
+          provider:"meta",providerMessageId,status:nextStatus as "sent"|"delivered"|"read"|"failed",organizationId:String(receiptBinding?.organizationId||""),
           eventAt:Number.isFinite(providerTimestamp)&&providerTimestamp>0?new Date(providerTimestamp*1000).toISOString():new Date().toISOString(),
           errorCode:firstError?.code!=null?String(firstError.code):null,
           errorMessage:optionalText(errorData.details || firstError.title || firstError.message),
-        }).catch((error:unknown)=>console.warn("[whatsapp-webhook] real-estate receipt sync unavailable",{providerMessageIdPresent:true,errorType:error instanceof Error?error.name:"unknown"}));
-        if(tenant?.organizationId){
+        }).catch(()=>{throw new Error("WhatsApp canonical receipt could not be stored.");});
+        if(receiptBinding?.organizationId){
           await syncHandoffNotificationStatus({
-            organizationId:String(tenant.organizationId),
+            organizationId:String(receiptBinding.organizationId),
             providerMessageId,
             status: nextStatus as "sent" | "delivered" | "read" | "failed",
             errorCode: firstError?.code != null ? String(firstError.code) : null,

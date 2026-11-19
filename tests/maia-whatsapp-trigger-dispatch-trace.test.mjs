@@ -16,7 +16,7 @@ test("Maia webhook records Trigger queue acceptance with run ID, not execution s
 });
 
 test("Dispatch audit does not persist customer message, phone or secrets", () => {
-  const auditBlock = webhook.slice(webhook.indexOf("async function recordWhatsAppTriggerDispatch"),webhook.indexOf("async function resolveWhatsAppTenant"));
+  const auditBlock = webhook.slice(webhook.indexOf("async function recordWhatsAppTriggerDispatch"),webhook.indexOf("async function resolveWhatsAppOrganization"));
   assert.ok(auditBlock.length > 100);
   assert.doesNotMatch(auditBlock, /customerPhone|customerName|access_token|message: input\.|phoneNumberId|payload: inboundPayload/);
   assert.match(auditBlock, /if \(error\) console\.error/);

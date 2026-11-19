@@ -225,7 +225,7 @@ export async function POST(request: Request) {
 
     const finalLifecycle = accepted > 0 ? "executed" : failed > 0 ? "failed" : "unknown";
     await updateOutboundTracking(trackingAdmin, organizationId, parentIdempotencyKey, { lifecycle_status: finalLifecycle, delivery_status: deliveryStatus, metadata: { requestId, campaignType, templateName, topic, attempted, response: payload } });
-    await saveCampaignDeliveryReport({ id: campaignId, campaign_type: campaignType, template_name: templateName, campaign_topic: topic, command_id: campaignId, execution_id: payload.executionId, status, attempted, accepted, delivered, read, failed, skipped, pending_delivery: pendingDelivery, accepted_recipients: allAcceptedRecipients, failed_recipients: failedRecipients, workflow_path: payload.workflowPath, created_by: createdBy, created_at: new Date().toISOString() }).catch((error) => console.error("Campaign delivery ledger save failed.", error));
+    await saveCampaignDeliveryReport({ organization_id: organizationId, id: campaignId, campaign_type: campaignType, template_name: templateName, campaign_topic: topic, command_id: campaignId, execution_id: payload.executionId, status, attempted, accepted, delivered, read, failed, skipped, pending_delivery: pendingDelivery, accepted_recipients: allAcceptedRecipients, failed_recipients: failedRecipients, workflow_path: payload.workflowPath, created_by: createdBy, created_at: new Date().toISOString() }).catch((error) => console.error("Campaign delivery ledger save failed.", error));
     return noStore(payload);
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
