@@ -15,6 +15,7 @@ export default function GencouvMarketingWorkspace(){
   const [category,setCategory] = useState("");
   const [audience,setAudience] = useState<Audience|null>(null);
   const [from,setFrom] = useState("info@gencouv.com");
+  const [provider,setProvider] = useState<"resend" | "brevo">("resend");
   const [to,setTo] = useState("");
   const [subject,setSubject] = useState("");
   const [message,setMessage] = useState("");
@@ -37,7 +38,7 @@ export default function GencouvMarketingWorkspace(){
   async function send(){
     setSending(true);setError("");setFeedback("");
     try{
-      const response=await fetch("/api/dashboard/gencouv/proposals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({from,to,subject,text:message,confirmed})});
+      const response=await fetch("/api/dashboard/gencouv/proposals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider,from,to,subject,text:message,confirmed})});
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||"Email was not sent.");
       setFeedback(data.note||"Email accepted.");
@@ -77,6 +78,11 @@ export default function GencouvMarketingWorkspace(){
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Compose an individual proposal</h2><p>Send a manually reviewed, one-recipient Gencouv email via Resend. This does not start a marketing campaign.</p></div><span className="admin-status">Resend</span></div>
       <div style={{display:"grid",gap:14}}>
+        <label className="admin-field">Email provider<select value={provider} onChange={e=>{setProvider(e.target.value as "resend" | "brevo");setConfirmed(false);}}>
+          <option value="resend">Resend (available)</option>
+          <option value="brevo" disabled>Brevo (sender setup pending)</option>
+        </select></label>
+        <p role="status" style={{margin:0}}>Brevo domain authentication is complete, but a Gencouv sender must be registered and the integration reviewed before sending is enabled. Resend remains the active provider.</p>
         <label className="admin-field">From<select value={from} onChange={e=>{setFrom(e.target.value);setConfirmed(false);}}>
           <option value="info@gencouv.com">info@gencouv.com</option><option value="support@gencouv.com">support@gencouv.com</option><option value="onboarding@gencouv.com">onboarding@gencouv.com</option>
         </select></label>
