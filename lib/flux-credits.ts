@@ -248,6 +248,18 @@ export async function assertFluxCreditsAvailable(organizationId: string, action:
     error.name = "FluxCreditLimitError";
     throw error;
   }
+  const { data: capacity, error: capacityError } = await createAdminClient().rpc("get_flux_credit_availability", {
+    p_organization_id: organizationId,
+  });
+  if (capacityError || !capacity || typeof capacity !== "object"
+    || typeof capacity.available !== "number" || !Number.isFinite(capacity.available)) {
+    throw new Error("Flux Credit capacity evidence is unavailable.");
+  }
+  if (capacity.available < credits) {
+    const error = new Error("Flux Credits are reserved for in-progress work. Wait for completion or review unresolved accounting.");
+    error.name = "FluxCreditLimitError";
+    throw error;
+  }
   return { credits, wallet: summary };
 }
 
@@ -300,4 +312,53 @@ export async function adjustFluxCredits(input: {
   });
   if (error) throw error;
   return toWalletSummary(requireWalletRow(data));
+}
+
+
+export type FluxCreditCapacity = {
+  id: string;
+  organization_id: string;
+  status: "held" | "settled" | "released" | "needs_attention";
+  reserved_credits: number;
+  created?: boolean;
+};
+
+function requireCapacityRow(value: unknown, organizationId: string): FluxCreditCapacity {
+  const row = (Array.isArray(value) ? value[0] : value) as FluxCreditCapacity | null;
+  if (!row || row.organization_id !== organizationId || typeof row.id !== "string"
+    || !["held", "settled", "released", "needs_attention"].includes(row.status)) {
+    throw new Error("Credit reservation evidence was not returned inside the organization.");
+  }
+  return row;
+}
+
+export async function reserveFluxCreditCapacity(input: {
+  organizationId: string; feature: FluxFeatureKey; action: FluxCreditAction;
+  idempotencyKey: string; requestFingerprint: string; source: string; quantity?: number;
+}) {
+  await assertFluxFeatureAccess(input.organizationId, input.feature);
+  const { credits } = await assertFluxCreditsAvailable(input.organizationId, input.action, input.quantity ?? 1);
+  const { data, error } = await createAdminClient().rpc("reserve_flux_credit_capacity", {
+    p_organization_id: input.organizationId, p_idempotency_key: input.idempotencyKey,
+    p_fingerprint: input.requestFingerprint, p_action_key: input.action,
+    p_credit_amount: credits, p_source: input.source,
+  });
+  if (error) throw new Error("Flux Credit capacity is unavailable or conflicts with this execution.");
+  return requireCapacityRow(data, input.organizationId);
+}
+
+export async function finishFluxCreditCapacity(input: {
+  organizationId: string; reservationId: string;
+  outcome: "settled" | "released" | "needs_attention"; reason?: string;
+  provider?: string; providerCostCents?: number;
+  providerUsage?: Record<string, unknown>; metadata?: Record<string, unknown>;
+}) {
+  const { data, error } = await createAdminClient().rpc("finish_flux_credit_capacity", {
+    p_organization_id: input.organizationId, p_reservation_id: input.reservationId,
+    p_outcome: input.outcome, p_reason: input.reason || null,
+    p_provider: input.provider || null, p_provider_cost_cents: input.providerCostCents ?? 0,
+    p_provider_usage: input.providerUsage || {}, p_metadata: input.metadata || {},
+  });
+  if (error) throw new Error("Credit reservation reconciliation is unavailable. Do not redispatch this execution.");
+  return requireCapacityRow(data, input.organizationId);
 }

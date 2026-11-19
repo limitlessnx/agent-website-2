@@ -26,6 +26,8 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
+  // Phase 7 capacity migration is under explicit release review; not yet applied.
+  "20261119074201",
   "20261001233000",
   "202610020001",
   "202610020002",
