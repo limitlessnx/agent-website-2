@@ -87,7 +87,10 @@ test("F7 outbound WhatsApp delivery is provider neutral",()=>{
 
 test("F7 delivery status callbacks update the existing WhatsApp delivery ledger",()=>{
   const status=read("app/api/whatsapp/twilio/status/route.ts");
-  assert.match(status,/whatsapp_delivery_attempts/);
+  assert.match(status,/applyLegacyWhatsAppReceipt/);
+  const ledger=read("lib/whatsapp-delivery-ledger.ts");
+  assert.match(ledger,/from\("whatsapp_delivery_attempts"\)/);
+  assert.match(ledger,/\.eq\("organization_id", input\.organizationId\)/);
   assert.match(status,/MessageSid/);
   assert.match(status,/MessageStatus/);
   assert.match(status,/ErrorCode/);

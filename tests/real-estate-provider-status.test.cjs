@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -24,8 +25,8 @@ test('Meta and Twilio integrations reconcile only after provider signature valid
  const twilio=fs.readFileSync('app/api/whatsapp/twilio/status/route.ts','utf8');
  assert.ok(meta.indexOf('if (!signatureValid)')<meta.indexOf('await syncRealEstateProviderStatus'));
  assert.ok(twilio.indexOf('if(!validateTwilioFormSignature')<twilio.indexOf('await syncRealEstateProviderStatus'));
- assert.ok(meta.indexOf('tenant = phoneNumberId ? await resolveWhatsAppTenant(phoneNumberId)')<meta.indexOf('for (const status of recordArray(value.statuses))'));
- assert.match(meta,/organizationId:String\(tenant\?\.organizationId\|\|""\)/);
+ assert.ok(meta.indexOf('receiptBinding = phoneNumberId ? await resolveWhatsAppOrganization(phoneNumberId)')<meta.indexOf('for (const status of recordArray(value.statuses))'));
+ assert.match(meta,/organizationId:String\(receiptBinding\?\.organizationId\|\|""\)/);
  assert.match(meta,/syncHandoffNotificationStatus\(/);
  assert.ok(twilio.indexOf('if(!validateTwilioFormSignature')<twilio.indexOf('await syncHandoffNotificationStatus'));
  assert.match(twilio,/organizationId:String\(binding\.organization_id\)/);

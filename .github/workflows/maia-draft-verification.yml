@@ -49,6 +49,8 @@ jobs:
         run: npm run test:real-estate
       - name: Correlation changed-module lint
         run: npx eslint lib/canonical-customer.ts lib/real-estate-inspections.ts lib/real-estate-inspection-worker.ts tests/communication-correlation.test.cjs tests/communication-correlation-database.test.mjs
+      - name: Legacy delivery receipt changed-module lint
+        run: npx eslint lib/whatsapp-delivery-ledger.ts lib/whatsapp-status-log.ts app/api/whatsapp/webhook/route.ts app/api/whatsapp/twilio/status/route.ts tests/legacy-whatsapp-receipts.test.cjs tests/whatsapp-status-availability.test.cjs lib/campaign-report-store.ts app/api/limitless/campaigns/send/route.ts app/api/limitless/campaigns/direct/route.ts tests/real-estate-provider-status.test.cjs tests/real-estate-campaign-send-route.test.cjs tests/real-estate-direct-campaign-route.test.cjs tests/maia-whatsapp-trigger-dispatch-trace.test.mjs tests/tenant-f7-twilio-whatsapp-onboarding.test.mjs
       - run: npm run test:maia
       - run: npm run build
 

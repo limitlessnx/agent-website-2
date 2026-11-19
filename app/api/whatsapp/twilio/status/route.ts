@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { validateTwilioFormSignature } from "@/lib/twilio-whatsapp";
 import { syncRealEstateProviderStatus } from "@/lib/real-estate-provider-status";
 import { syncHandoffNotificationStatus } from "@/lib/human-operations";
+import { applyLegacyWhatsAppReceipt } from "@/lib/whatsapp-delivery-ledger";
 
 export const dynamic="force-dynamic";
 type CredentialsRpcClient = {
@@ -34,17 +35,17 @@ export async function POST(request:NextRequest){
 
   const sid=String(params.get("MessageSid")||params.get("SmsSid")||"");
   const state=String(params.get("MessageStatus")||params.get("SmsStatus")||"").toLowerCase();
-  const mapped=["queued","sent","delivered","read","failed","undelivered"].includes(state)?state:"accepted";
+  const mapped=state==="queued"?"accepted":state==="undelivered"?"failed":["accepted","sent","delivered","read","failed"].includes(state)?state:null;
   if(sid){
-    await admin.from("whatsapp_delivery_attempts").update({
-      status:mapped,
-      error_code:String(params.get("ErrorCode")||"")||null,
-      error_message:String(params.get("ErrorMessage")||"")||null,
-      response_payload:Object.fromEntries(params.entries()),
-    }).eq("provider_message_id",sid);
+    if(mapped) await applyLegacyWhatsAppReceipt({
+      organizationId:String(binding.organization_id),providerMessageId:sid,status:mapped,
+      errorCode:String(params.get("ErrorCode")||"")||null,
+      errorMessage:String(params.get("ErrorMessage")||"")||null,
+      responsePayload:Object.fromEntries(params.entries()),
+    });
     const realEstateState=state==="queued"?"accepted":state==="undelivered"?"failed":["sent","delivered","read","failed"].includes(state)?state:null;
     if(realEstateState){
-      await syncRealEstateProviderStatus({provider:"twilio",providerMessageId:sid,status:realEstateState as "accepted"|"sent"|"delivered"|"read"|"failed",eventAt:new Date().toISOString(),organizationId:String(binding.organization_id),errorCode:String(params.get("ErrorCode")||"")||null,errorMessage:String(params.get("ErrorMessage")||"")||null}).catch(()=>undefined);
+      await syncRealEstateProviderStatus({provider:"twilio",providerMessageId:sid,status:realEstateState as "accepted"|"sent"|"delivered"|"read"|"failed",eventAt:new Date().toISOString(),organizationId:String(binding.organization_id),errorCode:String(params.get("ErrorCode")||"")||null,errorMessage:String(params.get("ErrorMessage")||"")||null}).catch(()=>{throw new Error("WhatsApp canonical receipt could not be stored.");});
     }
     const handoffState=["queued","accepted","sending","sent"].includes(state)?"sent":state==="undelivered"?"failed":["delivered","read","failed"].includes(state)?state:null;
     if(handoffState){

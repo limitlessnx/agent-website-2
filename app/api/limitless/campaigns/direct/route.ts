@@ -160,7 +160,7 @@ export async function POST(request: Request) {
       }
     }
     await updateOutboundTracking(trackingAdmin, organizationId, parentKey, { lifecycle_status: accepted > 0 ? "executed" : failed > 0 ? "failed" : "unknown", delivery_status: deliveryStatus, metadata: { requestId, campaignType: "direct_message", topic, attempted, response: payload } });
-    await saveCampaignDeliveryReport({ id: requestId, campaign_type: "direct_message", campaign_topic: topic, command_id: requestId, execution_id: executionId, status, attempted, accepted, delivered, read, failed, skipped: skippedCount, pending_delivery: pendingDelivery, accepted_recipients: acceptedRecipients, failed_recipients: failedRecipients, workflow_path: workflowPath, created_by: session.email, created_at: new Date().toISOString() }).catch((error) => console.error("Direct campaign delivery ledger save failed.", error));
+    await saveCampaignDeliveryReport({ organization_id: organizationId, id: requestId, campaign_type: "direct_message", campaign_topic: topic, command_id: requestId, execution_id: executionId, status, attempted, accepted, delivered, read, failed, skipped: skippedCount, pending_delivery: pendingDelivery, accepted_recipients: acceptedRecipients, failed_recipients: failedRecipients, workflow_path: workflowPath, created_by: session.email, created_at: new Date().toISOString() }).catch((error) => console.error("Direct campaign delivery ledger save failed.", error));
     return noStore(payload);
   } catch (error) {
     console.error("Direct WhatsApp campaign failed.", { organizationId, requestId, errorType: error instanceof Error ? error.name : "unknown" });

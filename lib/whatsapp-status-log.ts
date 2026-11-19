@@ -41,32 +41,39 @@ function config() {
   return { url, key };
 }
 
-function parseStatusContent(content: string | Record<string, unknown> | null | undefined) {
+const unavailableMessage = "WhatsApp delivery evidence is unavailable. Retry when status access is restored.";
+
+function parseStatusContent(content: unknown): Record<string, unknown> {
   try {
-    return typeof content === "string" ? JSON.parse(content) as Record<string, unknown> : content || {};
+    const value = typeof content === "string" ? JSON.parse(content) : content;
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(unavailableMessage);
+    return value as Record<string, unknown>;
   } catch {
-    return {};
+    throw new Error(unavailableMessage);
   }
 }
 
 export async function getRecentWhatsAppStatuses(limit = 1000): Promise<WhatsAppStatusLog[]> {
   const { url, key } = config();
-  if (!url || !key) return [];
+  if (!url || !key) throw new Error(unavailableMessage);
 
-  const response = await fetch(
+  let response: Response;
+  try { response = await fetch(
     `${url}/rest/v1/bot_sessions?select=id,user_id,content,created_at&role=eq.whatsapp_status&order=created_at.desc&limit=${Math.max(1, Math.min(limit, 5000))}`,
     {
       headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: "application/json" },
       cache: "no-store",
     },
-  );
+  ); } catch { throw new Error(unavailableMessage); }
 
   if (!response.ok) {
-    console.error("Unable to load WhatsApp status logs.", await response.text().catch(() => ""));
-    return [];
+    throw new Error(unavailableMessage);
   }
 
-  const rows = (await response.json()) as Array<{
+  let payload: unknown;
+  try { payload = await response.json(); } catch { throw new Error(unavailableMessage); }
+  if (!Array.isArray(payload) || payload.some(row => !row || typeof row !== "object" || Array.isArray(row))) throw new Error(unavailableMessage);
+  const rows = payload as Array<{
     id: string;
     user_id?: string;
     content?: string | Record<string, unknown>;
