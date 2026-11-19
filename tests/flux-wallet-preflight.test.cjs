@@ -12,11 +12,12 @@ function fixture(overrides = {}) {
     balance: 100, bonus_balance: 0, top_up_balance: 0, trial_credit_limit: null,
     trial_ends_at: null, current_period_end: '2099-01-01T00:00:00Z', status: 'active', ...overrides,
   };
-  let walletError = null;
+  let walletError = null; let capacityEvidence = null;
   const admin = { from(table) {
     const filters = [];
     const data = () => {
       if (table === 'organization_subscriptions') return { id: 'synthetic-subscription', status: wallet.status, metadata: { plan_code: wallet.plan_code } };
+      if (table === 'flux_credit_reservations') return null;
       if (table === 'runtime_executions') return filters.some(([key, value]) => key === 'organization_id' && value !== organizationId) ? null : { id: 'synthetic-execution', organization_id: organizationId, agent_id: agentId, status: 'prepared' };
       if (table === 'runtime_context_snapshots') return { id: 'synthetic-snapshot', compiled_prompt: 'Synthetic instructions', prompt_version: 1, checksum: 'synthetic' };
       if (table === 'agent_provider_assignments') return { id: 'synthetic-assignment', limits: {} };
@@ -30,6 +31,9 @@ function fixture(overrides = {}) {
     return q;
   }, rpc: async (name, args) => {
     if (name === 'record_flux_credit_usage') { calls.charges++; throw Error('No real or synthetic charge should be recorded by a preflight test'); }
+    if (name === 'get_flux_credit_availability') return capacityEvidence || { data: { balance: wallet.balance, reserved: 0, available: wallet.balance }, error: null };
+    if (name === 'reserve_flux_credit_capacity') return { data: { id: '30000000-0000-4000-8000-000000000001', organization_id: organizationId, status: 'held', reserved_credits: 2, created: true }, error: null };
+    if (name === 'finish_flux_credit_capacity') return { data: { id: '30000000-0000-4000-8000-000000000001', organization_id: organizationId, status: args.p_outcome, reserved_credits: 2 }, error: null };
     assert.equal(name, 'sync_flux_credit_wallet_from_subscription');
     assert.equal(args.target_subscription_id, 'synthetic-subscription');
     return { data: walletError ? null : wallet, error: walletError };
@@ -48,12 +52,13 @@ function fixture(overrides = {}) {
     '@/lib/supabase/admin': { createAdminClient: () => admin },
     '@/lib/ai-runtime/migration': { runPhase12StructuredAgent: async () => { calls.provider++; throw Error('Synthetic provider boundary reached; no request sent'); } },
     '@/lib/flux-credits': credits,
+    '@/lib/fluxknight-plans': plans,
     '@/lib/flux-ai-metering-core': core,
   }, '', { Error });
   function request(extra = {}, secret = 'synthetic-runtime') {
     return { headers: new Headers({ 'x-runtime-secret': secret }), json: async () => ({ organization_id: organizationId, agent_id: agentId, execution_id: 'synthetic-execution', purpose: 'runtime', ...extra }) };
   }
-  return { credits, core, http, route, request, calls, wallet, failWallet: error => { walletError = error; } };
+  return { credits, core, http, route, request, calls, wallet, failWallet: error => { walletError = error; }, capacity: evidence => { capacityEvidence = evidence; } };
 }
 const preflight = { organizationId, feature: 'core_ai_support', action: 'web_ai' };
 for (const status of ['paused', 'suspended', 'cancelled', 'pending', 'unexpected']) {
@@ -131,4 +136,15 @@ test('existing runtime authorization and execution tenant checks still run befor
   assert.equal(f.calls.queries.length, 0);
   assert.equal((await f.route.POST(f.request({ organization_id: 'foreign-tenant' }))).status, 404);
   assert.equal(f.calls.provider, 0); assert.equal(f.calls.charges, 0);
+});
+
+test('shared legacy preflight respects held capacity before reaching providers', async () => {
+ const f=fixture(); f.capacity({data:{balance:100,reserved:100,available:0},error:null});
+ for(const metering of [f.core,f.http]) await assert.rejects(metering.preflightChargeableFluxAi(preflight),error=>error.name==='FluxCreditLimitError');
+ assert.equal((await f.route.POST(f.request())).status,409);assert.equal(f.calls.provider,0);
+});
+test('unavailable capacity evidence fails closed before provider work', async () => {
+ const f=fixture(); f.capacity({data:null,error:Error('Synthetic unavailable capacity')});
+ for(const metering of [f.core,f.http]) await assert.rejects(metering.preflightChargeableFluxAi(preflight),/capacity evidence is unavailable/);
+ assert.equal((await f.route.POST(f.request())).status,409);assert.equal(f.calls.provider,0);
 });
