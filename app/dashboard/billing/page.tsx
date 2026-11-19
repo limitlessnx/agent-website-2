@@ -90,7 +90,19 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
           </div>
         </article> : null}
       </section>
-      {usage ? <section className="admin-card"><h2>Current billing period</h2>{usage.periodUsage ? <><p>{formatTimestamp(usage.periodUsage.periodStart)} – {usage.periodUsage.periodEnd ? formatTimestamp(usage.periodUsage.periodEnd) : "Open period"}</p><div className="admin-metrics"><div><span>Credits charged</span><strong>{formatCredits(usage.periodUsage.usedCredits)}</strong></div><div><span>Usage events</span><strong>{formatCredits(usage.periodUsage.usageEvents)}</strong></div><div><span>Recorded provider cost</span><strong>{usage.periodUsage.providerCostCents===null ? "Unavailable" : formatMoney(usage.periodUsage.providerCostCents)}</strong></div><div><span>Recorded gross margin</span><strong>{usage.periodUsage.grossMarginCents===null ? "Unavailable" : formatMoney(usage.periodUsage.grossMarginCents)}</strong></div></div></> : <p role="status">Billing-period usage is unavailable. Refresh to retry.</p>}</section> : null}
+      {usage ? <section className="admin-card" aria-labelledby="admin-billing-period">
+        <h2 id="admin-billing-period">Current billing period</h2>
+        {usage.periodUsage ? <>
+          <p>{formatTimestamp(usage.periodUsage.periodStart)} – {usage.periodUsage.periodEnd ? formatTimestamp(usage.periodUsage.periodEnd) : "Open period"}</p>
+          <div className="admin-metrics">
+            <div><span>Credits charged</span><strong>{formatCredits(usage.periodUsage.usedCredits)}</strong></div>
+            <div><span>Usage events</span><strong>{formatCredits(usage.periodUsage.usageEvents)}</strong></div>
+            <div><span>Recorded provider cost</span><strong>{usage.periodUsage.providerCostCents === null ? "Unavailable" : formatMoney(usage.periodUsage.providerCostCents)}</strong></div>
+            <div><span>Recorded gross margin</span><strong>{usage.periodUsage.grossMarginCents === null ? "Unavailable" : formatMoney(usage.periodUsage.grossMarginCents)}</strong></div>
+          </div>
+          <p className="admin-note">Ledger costs include modeled provider amounts and are not verified provider invoices.</p>
+        </> : <p role="status">Billing-period usage is unavailable. Refresh to retry.</p>}
+      </section> : null}
       {selectedOrganization ? <CreditReservationRecovery organizationId={selectedOrganization.id} reservations={recovery?.data || []} unavailable={Boolean(recovery?.error)} /> : null}
       {selectedOrganizationId ? <CreditAdjustmentForm organizationId={selectedOrganizationId} /> : null}
       <section className="admin-card">

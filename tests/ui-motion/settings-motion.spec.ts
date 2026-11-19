@@ -66,7 +66,7 @@ for(const role of ["admin","tenant"])test(`billing period totals and unavailable
  const path=role==="admin"?"/dashboard/billing?organizationId=10000000-0000-4000-8000-000000000001":"/portal/billing";
  try {
   await page.goto(path,{waitUntil:"networkidle"});
-  const section=page.locator("section").filter({has:page.getByRole("heading",{name:"Current billing period",exact:true})});
+  const section=page.getByRole("region",{name:"Current billing period",exact:true});
   await expect(section).toContainText(role==="admin"?"Credits charged":"42 credits charged across 21 usage events");
   await expect(section).toContainText("42");
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width+1);
