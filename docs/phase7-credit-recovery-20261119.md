@@ -21,7 +21,7 @@ Only service_role can execute the new invoker RPC, which uses an empty search_pa
 - supabase/migrations/*_flux_credit_reconciliation.sql: atomic proof validation, existing settlement/audit, service-only grants and organization/execution lookup indexes. Indexes avoid broad scans under the financial lock; none replaces existing organization/time indexes. Migration uses 5-second lock and 60-second statement limits to fail safely if production is busy. No existing data/backfill is changed.
 - app/api/internal/runtime/provider/execute/route.ts: persist reservation UUID/fingerprint, current modeled cost/token quantity and response references in actual completed result/usage/progress records. Billing units and provider behavior remain unchanged.
 - app/api/admin/billing/reservations/route.ts: administrator authorization, CSRF/confirmation/validation, server identity, sanitized outcomes and precise recovery blockers.
-- app/dashboard/billing/CreditReservationRecovery.tsx and page.tsx: reuse existing purple billing surfaces and form styles for the tenant-scoped queue/action. No navigation, agent or industry dashboard rebuild.
+- app/dashboard/billing/CreditReservationRecovery.tsx, its scoped CSS module and page.tsx: reuse existing purple billing surfaces and form styles for the tenant-scoped queue/action. No navigation, agent or industry dashboard rebuild.
 - tests/helpers/flux-recovery-database.cjs and tests/flux-credit-recovery-database.test.cjs: isolated fixtures and lifecycle/evidence/grant/eligibility/audit rollback cases.
 - tests/flux-credit-recovery-api.test.cjs: session, same-origin, input/confirmation, server identity, safe repeat and error/tenant checks.
 - tests/flux-credit-capacity-runtime.test.cjs: verify actual provider persistence carries matching proof and unchanged consumption.
@@ -47,3 +47,5 @@ Previous application versions continue using the existing wallet/settlement func
 ## Remaining limits
 
 Older holds without the new proof links and executions with partial persistence remain in review. This RPC does not repair missing result/usage/progress records or accept an operator's assertion in place of proof. Provider failure/absence evidence is still required before any future release control can be considered. Other billable channels, historical/period reporting and designated authenticated/live-provider acceptance remain Phase 7 work. The current work does not mark the full master roadmap complete.
+
+Screenshot review identified an inherited oversized checkbox style in the first candidate. The recovery form now scopes its checkbox to the existing 20px control geometry and purple brand token, keeping a 44px label target. A browser assertion checks its dimensions at all six widths; final release checks run on this refined source.

@@ -112,7 +112,7 @@ test('credit recovery requires confirmation, preserves review failures and repor
  const submit=recovery.locator('button[type=submit]');
  await expect(submit).toBeDisabled();await recovery.getByLabel('Reservation',{exact:true}).selectOption('20000000-0000-4000-8000-000000000001');
  await recovery.getByLabel('Review reason').fill('Reviewed synthetic completed execution evidence');await expect(submit).toBeDisabled();
- await recovery.getByRole('checkbox').check();await submit.click();
+ await recovery.getByRole('checkbox').check();const checkbox=await recovery.getByRole('checkbox').boundingBox();expect(checkbox!.width).toBeLessThanOrEqual(24);expect(checkbox!.height).toBeLessThanOrEqual(24);await submit.click();
  await expect(recovery.getByRole('status')).toContainText('Reservation remains in review');
  await stableLayout(page);await capture(page,'recovery-blocked');
  await scenario(context,'normal');

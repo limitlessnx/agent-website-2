@@ -1,0 +1,2 @@
+.panel .confirmation { display:flex; align-items:flex-start; gap:var(--fk-space-3,12px); min-height:var(--fk-touch,44px); }
+.panel .confirmation > input[type="checkbox"] { width:20px!important; min-width:20px!important; height:20px!important; min-height:20px!important; padding:0!important; margin:2px 0 0; flex-shrink:0; accent-color:var(--fk-brand,#8b3dff); }
