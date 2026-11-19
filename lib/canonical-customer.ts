@@ -21,7 +21,7 @@ export async function resolveCanonicalCustomer(input:{
   companyName?:unknown;
   source:string;
 }) {
-  const admin=createAdminClient() as any;
+  const admin=createAdminClient();
   const {data,error}=await admin.rpc("resolve_crm_customer",{
     p_organization_id:input.organizationId,
     p_email:clean(input.email,240)||null,
@@ -48,7 +48,7 @@ export async function getOrCreateCanonicalConversation(input:{
   agentId?:string|null;
   metadata?:Record<string,unknown>;
 }) {
-  const admin=createAdminClient() as any;
+  const admin=createAdminClient();
   const {data,error}=await admin.rpc("get_or_create_crm_conversation",{
     p_organization_id:input.organizationId,
     p_customer_id:input.customerId,
@@ -135,11 +135,12 @@ export async function addCanonicalTimelineEvent(input:{
   conversationId?:string|null;
   sourceTable?:string|null;
   sourceId?:string|null;
+  correlationId?:string|null;
   actorType?:string|null;
   actorId?:string|null;
   metadata?:Record<string,unknown>;
 }) {
-  const admin=createAdminClient() as any;
+  const admin=createAdminClient();
   const {data,error}=await admin.rpc("add_customer_timeline_event",{
     p_organization_id:input.organizationId,
     p_customer_id:input.customerId,
@@ -150,7 +151,9 @@ export async function addCanonicalTimelineEvent(input:{
     p_conversation_id:input.conversationId||null,
     p_source_table:input.sourceTable||null,
     p_source_id:input.sourceId||null,
-    p_correlation_id:null,
+    // Trace evidence only. Tenant/customer authority comes from the explicit
+    // scoped arguments above, never from metadata or the correlation value.
+    p_correlation_id:input.correlationId||null,
     p_actor_type:input.actorType||null,
     p_actor_id:input.actorId||null,
     p_metadata:input.metadata||{},
@@ -197,7 +200,7 @@ export async function canonicalizePublicLeoLead(input:{
   await addCanonicalTimelineEvent({
     organizationId,customerId,eventType:"lead.public_leo_captured",title:"Public Leo lead captured",
     summary:"Website visitor identified and linked to the canonical customer record.",
-    channel:"web",conversationId,sourceTable:"leo_public_leads",sourceId:input.leadId,
+    channel:"web",conversationId,sourceTable:"leo_public_leads",sourceId:input.leadId,correlationId:input.sessionId,
     actorType:"agent",actorId:"leo",metadata:{session_id:input.sessionId},
   });
   return {organizationId,customerId,conversationId,backfilledMessages};
@@ -250,7 +253,7 @@ export async function canonicalizeEvaluationLead(input:{
   await addCanonicalTimelineEvent({
     organizationId,customerId,eventType:"lead.evaluation_submitted",title:"Business evaluation submitted",
     summary:"Website evaluation linked to the canonical customer record.",
-    channel:"web",conversationId,sourceTable:"evaluation_leads",sourceId:input.evaluationId,
+    channel:"web",conversationId,sourceTable:"evaluation_leads",sourceId:input.evaluationId,correlationId:input.evaluationId,
     actorType:"customer",actorId:customerId,metadata:{evaluation_id:input.evaluationId},
   });
   return {organizationId,customerId,conversationId};

@@ -26,8 +26,6 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
-  // Phase 6 receipt recovery, proposed in #427; not applied to production.
-  "20261118163533",
   "20261001233000",
   "202610020001",
   "202610020002",
@@ -36,7 +34,6 @@ const expectedPendingVersions = [
   "20261007193000",
   "20261009230000",
   "20261011143000",
-  "20261012090000",
   // Xposure studio catalog migration reviewed but not yet applied to production.
   "20261021230000",
   // Pre-existing production release migration pending review.

@@ -1,3 +1,5 @@
+> Historical audit snapshot. Subsequent approved releases #426–#428 are live, including the voice foundation/recovery migration. Current Phase 6 findings and remaining work are recorded in [traceability delivery](phase6-traceability-delivery-20261118.md); earlier held/missing statements below are preserved as historical evidence.
+
 # Phase 6 — Unified AI Communications: audit and receipt recovery
 
 Date: 18 November 2026. This is the master SaaS communications workstream, not the older dashboard lifecycle document's separately numbered usage-reporting phase.

@@ -1,0 +1,25 @@
+{
+  "base": "c850347a1051a21909167518808fbff78387ff12",
+  "production_modified": false,
+  "new_migrations": 0,
+  "runtime_scenarios": 7,
+  "database_scenarios": 5,
+  "focused_total": 12,
+  "real_estate_test_files": 49,
+  "support_test_files": 77,
+  "maia_test_files": 25,
+  "production_build": "passed",
+  "type_checks": "passed",
+  "changed_file_lint": "passed",
+  "timeline_rpc_body_md5": "b63486216effce2be535ee68e2d25ac5",
+  "production_voice_mappings": 0,
+  "provider_inventory": "two read-only attempts failed with MCP -32603; no inventory or provider acceptance claimed",
+  "historical_backfill": false,
+  "provider_dispatch_and_billing_in_tests": "synthetic mocks only",
+  "hosted_checks": "pending publication",
+  "sha256": {
+    "lib/canonical-customer.ts": "81071b5d067a276c3186244456116667d1252fcff2fecf5867a68bc745f13516",
+    "lib/real-estate-inspections.ts": "42349f3c4bd783d28e17a0fc5acbd144aee8a6d3f0a55429d525071334dd1ee2",
+    "lib/real-estate-inspection-worker.ts": "b9d5f444fb0cb49f61f8cfded7e51d9d2bc3ef9b91dd5ebd584fdb570425f66b"
+  }
+}
