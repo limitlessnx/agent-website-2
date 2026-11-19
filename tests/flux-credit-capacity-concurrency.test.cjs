@@ -40,7 +40,8 @@ test('independent recovery sessions settle once and audit failure rolls back eve
 test('independent channel recovery sessions settle once using the same audited transaction',{skip:!database},async()=>{
  const fs=require('node:fs');const migration=fs.readdirSync('supabase/migrations').find(x=>x.endsWith('_flux_credit_channel_operations.sql'));
  await sql(fs.readFileSync('supabase/migrations/'+migration,'utf8'));
- await sql('update flux_credit_wallets set balance=4');
+ // Earlier cases deliberately exhaust this disposable wallet; prepare an active funded scenario.
+ await sql("update flux_credit_wallets set balance=4,status='active'");
  const fingerprint='b'.repeat(64),key='flux-op:phase12_internal_agent:independent-session';
  const r=JSON.parse(await sql("select reserve_flux_credit_capacity("+lit(org)+","+lit(key)+","+lit(fingerprint)+",'web_ai',2,'phase12_internal_agent')"));
  const raw=JSON.stringify({version:1,reservation_id:r.id,organization_id:org,fingerprint,action:'web_ai',source:'phase12_internal_agent',credits:2,provider:'synthetic',provider_completed:true,provider_cost_cents:1,usage:{}});
