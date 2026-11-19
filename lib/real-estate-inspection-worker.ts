@@ -1,6 +1,7 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addCanonicalTimelineEvent } from "@/lib/canonical-customer";
-import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { preflightChargeableFluxAi } from "@/lib/flux-ai-metering-core";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 const REMINDER_TYPES = new Set(["reminder_24h", "reminder_2h"]);
@@ -158,17 +159,17 @@ async function processClaimedJob(organizationId: string, job: InspectionJob) {
   const jobType = String(job.job_type);
   await preflightChargeableFluxAi({ organizationId, feature: "reminders", action: "whatsapp_follow_up_reminder" });
   try {
-    const result = await sendWhatsAppMessage({
+    const result = await withFluxAiOperation({organizationId,feature:"reminders",action:"whatsapp_follow_up_reminder",source:"real_estate_inspection",context:{inspection_id:inspection.id,job_id:job.id},operationId:job.id,request:{inspectionId:inspection.id,jobType},failure:"delivery"}, () => sendWhatsAppMessage({
       organizationId, to: String(customer.phone), text: OUTCOME_TYPES.has(jobType) ? outcomeMessage(inspection) : reminderMessage(inspection, jobType),
       deliveryMode: "auto", templatePurpose: "appointment_reminder",
       variables: { customer_name: String(customer.full_name || ""), inspection_time: String(inspection.requested_start_at || "") },
-    });
+    }), value => ({accepted:value.providerMessageId ? true : "unknown",provider:String(value.provider||"whatsapp"),reference:value.providerMessageId}));
     const providerMessageId = text(result?.providerMessageId, 300) || null;
     if (!providerMessageId) {
       await updateJob(organizationId, job.id, { status: "failed", payload: { ...record(job.payload), delivery_status: "unknown", manual_review_required: true, retry_safe: false, provider_message_id: null, delivery_error: "Provider accepted no identifiable message id." } });
       return { jobId: job.id, status: "unknown", manualReview: true };
     }
-    await recordChargeableFluxAiUsage({ organizationId, action: "whatsapp_follow_up_reminder", source: "real_estate_inspection", provider: String(result?.provider || "whatsapp"), metadata: { inspection_id: inspection.id, job_id: job.id, provider_message_id: providerMessageId } });
+
     const deliveryStatus = "accepted"; // Submission acknowledgement is not a delivery receipt.
     const provider=String(result?.provider||"meta");
     await updateJob(organizationId, job.id, { status: "completed", provider, provider_message_id: providerMessageId, delivery_status: deliveryStatus, delivery_status_received_at:null, payload: { ...record(job.payload), provider, delivery_status: deliveryStatus, provider_message_id: providerMessageId, submitted_at: new Date().toISOString(), retry_safe: false } });

@@ -1,3 +1,4 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { generateSupportAgentReply, SUPPORT_ACTION_KEYS, type SupportAIResponse } from "@/lib/ai/support-model";
@@ -6,7 +7,7 @@ import { legacySupportActionPolicy, tenantLeoIdentityFromSession } from "@/lib/l
 import type { LeoIdentity } from "@/lib/leo-core";
 import { mergeSupportLifecycleMetadata } from "@/lib/support-lifecycle";
 import { getRecentOrchestrationFailures } from "@/lib/orchestration-observability";
-import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering";
+import { fluxAiControlResponse, isFluxAiControlError, preflightChargeableFluxAi } from "@/lib/flux-ai-metering";
 import {
   buildSupportReply,
   collectSupportDiagnostics,
@@ -195,13 +196,14 @@ export async function POST(request: NextRequest) {
     ).catch(() => []);
     const diagnosticContext = await loadTenantSupportContext(session.organizationId, leoIdentity.permissions || []);
 
-    const aiResult = await generateSupportAgentReply({
+    const aiResult = await withFluxAiOperation({organizationId:session.organizationId,feature:"leo_chat",action:"leo_chat",source:"tenant_support_leo",context:{conversation_id:conversationId},operationId:request.headers.get("x-flux-operation-id") || (typeof body.requestId === "string" ? body.requestId : crypto.randomUUID()),request:{userId:session.userId,conversationId:body.conversationId||null,message},failure:"ai"},
+      () => generateSupportAgentReply({
       message,
       history: history.slice(0, -1),
       diagnostics: diagnosticContext as unknown as Record<string, unknown>,
       scope: "tenant",
       organizationId: session.organizationId,
-    });
+    }), value => value.ok ? {accepted:true,provider:value.provider,model:value.model,usage:value.usage||{}} : {accepted:false});
 
     let replyText: string;
     let createdActions: SupportAction[] = [];
@@ -233,15 +235,7 @@ export async function POST(request: NextRequest) {
         usage: aiResult.usage,
         latencyMs: aiResult.latencyMs,
       });
-      await recordChargeableFluxAiUsage({
-        organizationId: session.organizationId,
-        action: "leo_chat",
-        source: "tenant_support_leo",
-        provider: aiResult.provider,
-        model: aiResult.model,
-        providerUsage: aiResult.usage,
-        metadata: { conversation_id: conversationId, category, latency_ms: aiResult.latencyMs },
-      });
+
       console.info("Agent Leo tenant AI provider success", {
         organizationId: session.organizationId,
         role: leoIdentity.role,
@@ -356,6 +350,7 @@ export async function POST(request: NextRequest) {
       ai: aiMetadata,
     });
   } catch (error) {
+    if (isFluxAiControlError(error)) return fluxAiControlResponse(error);
     console.error("Agent Leo tenant support request failed", {
       organizationId: session.organizationId,
       role: leoIdentity.role,

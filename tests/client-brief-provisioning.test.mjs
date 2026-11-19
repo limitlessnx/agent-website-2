@@ -77,7 +77,7 @@ test("admin test gate performs a real tenant-scoped runtime execution", () => {
   assert.match(adminTest, /runPhase12Agent/);
   assert.match(adminTest, /internalRuntimeIdentity/);
   assert.match(adminTest, /preflightChargeableFluxAi/);
-  assert.match(adminTest, /recordChargeableFluxAiUsage/);
+  assert.match(adminTest, /withFluxAiOperation/);
   assert.match(adminTest, /agent_test_runs/);
   assert.match(adminTest, /organization_id.*organizationId/);
   assert.match(adminTest, /tools_not_executed: true/);

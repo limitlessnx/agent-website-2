@@ -160,7 +160,7 @@ export function LeoConversationProvider({ children, tenantScope }: { children: R
       const response = await fetch("/api/leo", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) },
-        body: JSON.stringify({ message: clean, sessionId: sessionIdState || undefined, pageContext, channel: "chat" }),
+        body: JSON.stringify({ requestId: crypto.randomUUID(), message: clean, sessionId: sessionIdState || undefined, pageContext, channel: "chat" }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Leo could not respond.");

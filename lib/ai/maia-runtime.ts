@@ -1,3 +1,4 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { maiaEstateTools } from "@/lib/ai/maia-estate-tools";
 import { resolveNamedVerifiedPropertyId } from "@/lib/ai/maia-estate-context";
@@ -7,7 +8,7 @@ import { maiaPropertyTools } from "@/lib/ai/maia-property-tools";
 import { maiaHotelTools } from "@/lib/ai/maia-hotel-tools";
 import { isHotelOrganization } from "@/lib/hotel-communication-policy";
 import { maiaAppointmentTools } from "@/lib/ai/maia-appointment-tools";
-import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { preflightChargeableFluxAi } from "@/lib/flux-ai-metering-core";
 import { requestLimitlessInspection } from "@/lib/limitless-inspections";
 import { createHumanHandoffFromMaia } from "@/lib/human-operations";
 import { buildLimitlessHandoffAcknowledgement } from "@/lib/ai/limitless-handoff-policy.mjs";
@@ -22,6 +23,7 @@ export type MaiaRuntimeInput = {
   customerId?: string;
   conversationId?: string;
   correlationId?: string;
+  operationId?: string;
   autonomous?: boolean;
 };
 
@@ -436,6 +438,7 @@ function safeToolPolicy(profile: RuntimeProfile, toolName: string) {
 
 export async function runMaia(input: MaiaRuntimeInput) {
   const startedAt = Date.now();
+  const operationId = input.operationId || input.correlationId || crypto.randomUUID();
   const agent = await loadAgent(input.organizationId, input.agentId);
   const profile = await loadProfile(input.organizationId, input.agentId);
   if (!profile.enabled) throw new Error("This agent's autonomous runtime is disabled.");
@@ -496,9 +499,8 @@ export async function runMaia(input: MaiaRuntimeInput) {
   while (steps < Math.max(1, Math.min(profile.max_steps, 20))) {
     steps += 1;
     await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
-    const payload = await callOpenAI(model, messages, tools);
-    const usage = chatUsage(payload);
-    await recordChargeableFluxAiUsage({ organizationId: input.organizationId, action: "web_ai", source: "maia_runtime", provider: model.provider, model: model.model_key, providerUsage: usage, metadata: { agent_id: input.agentId, session_id: session.id, step: steps } });
+    const payload = await withFluxAiOperation({organizationId:input.organizationId,feature:"core_ai_support",action:"web_ai",source:"maia_runtime",context:{agent_id:input.agentId,session_id:session.id,step:steps},operationId:operationId+":"+steps,request:{agentId:input.agentId,model:model.id,messages},failure:"ai"},
+      () => callOpenAI(model, messages, tools), value => ({accepted:true,provider:model.provider,model:model.model_key,reference:typeof value.id === "string" ? value.id : null,usage:chatUsage(value)}));
     const choice = payload?.choices?.[0];
     const assistant = choice?.message;
     if (!assistant) throw new Error("AI model returned no message.");

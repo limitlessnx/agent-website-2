@@ -1,3 +1,4 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import {
@@ -8,7 +9,7 @@ import {
 } from "@/lib/calendar-provider";
 import type { SystemEventEnvelope } from "@/lib/system-orchestrator";
 import { evaluateResourceAvailability, selectAppointmentResource } from "@/lib/appointment-scheduling";
-import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { preflightChargeableFluxAi } from "@/lib/flux-ai-metering-core";
 
 export type SystemWorkflowAdapterInput = {
   event: SystemEventEnvelope;
@@ -945,7 +946,7 @@ async function channelReplyAdapter(input: SystemWorkflowAdapterInput) {
     });
   }
 
-  const result = await sendWhatsAppMessage({
+  const submit = () => sendWhatsAppMessage({
     organizationId: input.event.organizationId,
     to: customer.phone,
     text: message,
@@ -956,21 +957,9 @@ async function channelReplyAdapter(input: SystemWorkflowAdapterInput) {
       appointment_time: text(input.event.payload.startAt || input.event.payload.start_at || ""),
     },
   });
+  const result = chargeReminder ? await withFluxAiOperation({organizationId:input.event.organizationId,feature:"reminders",action:"whatsapp_follow_up_reminder",source:"appointment_reminder",context:{event_id:input.event.id,target_system_id:input.targetSystemId},operationId:[input.event.id,input.targetSystemId].join(":"),request:{event:input.event.eventType,payload:input.event.payload},failure:"delivery"},submit,
+    value => ({accepted:value.providerMessageId ? true : "unknown",provider:"meta",reference:value.providerMessageId})) : await submit();
 
-  if(chargeReminder){
-    await recordChargeableFluxAiUsage({
-      organizationId:input.event.organizationId,
-      action:"whatsapp_follow_up_reminder",
-      source:"appointment_reminder",
-      provider:"meta",
-      metadata:{
-        customer_id:input.event.customerId,
-        source_system_id:input.event.sourceSystemId,
-        target_system_id:input.targetSystemId,
-        correlation_id:input.event.correlationId,
-      },
-    });
-  }
 
   return {
     adapter: "channel_reply",

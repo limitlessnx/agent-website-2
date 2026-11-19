@@ -68,6 +68,6 @@ test("usage tracking is best effort and cannot fail the support reply", () => {
 
 test("tenant support AI is gated and metered through Flux Credits", () => {
   assert.match(route, /preflightChargeableFluxAi\(\{ organizationId: session\.organizationId, feature: "leo_chat", action: "leo_chat" \}\)/);
-  assert.match(route, /recordChargeableFluxAiUsage\(\{[\s\S]*source: "tenant_support_leo"/);
+  assert.match(route, /withFluxAiOperation\([\s\S]*source:"tenant_support_leo"/);
   assert.match(route, /if \(isFluxAiControlError\(error\)\) return fluxAiControlResponse\(error\)/);
 });

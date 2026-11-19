@@ -1,6 +1,8 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
+import { calculateFluxCredits } from "@/lib/fluxknight-plans";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
-import { assertFluxFeatureAccess, reserveFluxCredits } from "@/lib/flux-credits";
+import { assertFluxFeatureAccess } from "@/lib/flux-credits";
 import { followupErrorSummary, LIMITLESS_REALTY_ORGANIZATION_ID, limitlessPhoneCandidates } from "@/lib/limitless-followup-contract";
 
 const LEGACY_EXPECTED_VARIABLE_KEYS = [
@@ -302,14 +304,8 @@ async function sendAttempt(args: {
         return { status: "skipped", error: safeError };
       }
     }
-    const metering = await reserveFluxCredits({
-      organizationId: String(plan.organization_id),
-      action: "whatsapp_follow_up_reminder",
-      source: "installment_reminder",
-      provider: "whatsapp",
-      metadata: { payment_plan_id: plan.id, reminder_attempt_id: attemptId },
-    });
-    const delivery = await sendWhatsAppMessage({
+
+    const delivery = await withFluxAiOperation({organizationId:String(plan.organization_id),feature:"reminders",action:"whatsapp_follow_up_reminder",source:"installment_reminder",context:{payment_plan_id:plan.id,reminder_attempt_id:attemptId},operationId:attemptId,request:{paymentPlanId:plan.id,templateId:template.id,scheduledFor},failure:"delivery"}, () => sendWhatsAppMessage({
       organizationId: String(plan.organization_id),
       to: String(plan.client_phone || "").replace(/[^\d]/g, ""),
       text: renderLocalTemplate(String(template.message_template || ""), values),
@@ -317,7 +313,7 @@ async function sendAttempt(args: {
       templatePurpose: "installment_payment_reminder",
       ...(isLimitless ? { requestedTemplateName: approved.template_name } : {}),
       variables: values,
-    });
+    }), value => ({accepted:value.providerMessageId ? true : "unknown",provider:String(value.provider||"whatsapp"),reference:value.providerMessageId}));
     const providerMessageId = String(delivery.providerMessageId || "").trim() || null;
     const sentAt = new Date().toISOString();
     const status = providerMessageId ? "sent" : "unknown";
@@ -334,7 +330,7 @@ async function sendAttempt(args: {
       await admin.from("payment_plans").update({ last_reminder_at: sentAt, next_reminder_at: nextAt, updated_at: sentAt })
         .eq("id", plan.id).eq("organization_id", plan.organization_id).eq("status", "active").eq("reminders_enabled", true).gt("outstanding_balance", 0);
     }
-    return { status, credits: metering.credits };
+    return { status, credits: calculateFluxCredits("whatsapp_follow_up_reminder",1) };
   } catch (error) {
     const status = explicitDeliveryFailure(error) ? "failed" : "unknown";
     await admin.from("reminder_attempts").update({ status, error_message: attemptError(error) }).eq("id", attemptId).eq("organization_id", plan.organization_id).eq("payment_plan_id", plan.id).eq("status", "pending");

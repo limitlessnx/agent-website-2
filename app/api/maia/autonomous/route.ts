@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
           : "Complete the queued autonomous task using approved tenant tools and stop when the goal is satisfied.";
 
       const result = await runMaia({
+        operationId: String(goal.id),
         organizationId,
         agentId,
         message: `AUTONOMOUS GOAL: ${title}\n\n${instructions}`,

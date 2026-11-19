@@ -25,7 +25,7 @@ export default function CreditReservationRecovery({ organizationId, reservations
   }
   return <section className={`admin-card ${styles.panel}`} aria-labelledby="reservation-recovery-heading">
     <h2 id="reservation-recovery-heading">Reservation recovery</h2>
-    <p className="admin-note">Showing up to 20 unresolved reservations, oldest first. Reconcile only completed Web AI work with matching saved result, usage and completion records. Unknown outcomes stay in review; credits are never released by this action.</p>
+    <p className="admin-note">Showing up to 20 unresolved reservations, oldest first. Reconcile completed work only when its saved completion evidence matches the reserved operation. Legacy Web AI work also requires matching usage and completion records. Unknown outcomes stay in review; credits are never released by this action.</p>
     {unavailable ? <p role="alert">Reservations could not be loaded. Refresh to retry.</p> : reservations.length ? <>
       <div className="admin-list compact">{reservations.map(row => <div key={row.id}><strong>{row.action_key.replaceAll("_", " ")} · {row.reserved_credits.toLocaleString()} credits</strong>{" "}<span>{row.id} · {settled.includes(row.id) ? "Settlement verified" : row.status.replaceAll("_", " ")} · {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(row.created_at)) + " WAT"}</span></div>)}</div>
       <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>

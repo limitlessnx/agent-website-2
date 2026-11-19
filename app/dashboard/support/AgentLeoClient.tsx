@@ -106,7 +106,7 @@ export default function AgentLeoClient({
       const response = await fetch(apiBase, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, conversationId: conversationId || undefined }),
+        body: JSON.stringify({ requestId: crypto.randomUUID(), message, conversationId: conversationId || undefined }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(friendlyLeoText(result.error || "Agent Leo could not respond."));

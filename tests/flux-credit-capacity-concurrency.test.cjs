@@ -36,3 +36,20 @@ test('independent recovery sessions settle once and audit failure rolls back eve
  const results=(await Promise.all(Array.from({length:8},recover))).map(JSON.parse);assert.equal(results.filter(x=>x.outcome==='settled').length,1);assert.equal(results.filter(x=>x.outcome==='already_settled').length,7);
  assert.equal(await sql('select count(*) from flux_credit_ledger'),'2');assert.equal(await sql('select count(*) from audit_logs'),'8');
 });
+
+test('independent channel recovery sessions settle once using the same audited transaction',{skip:!database},async()=>{
+ const fs=require('node:fs');const migration=fs.readdirSync('supabase/migrations').find(x=>x.endsWith('_flux_credit_channel_operations.sql'));
+ await sql(fs.readFileSync('supabase/migrations/'+migration,'utf8'));
+ // Earlier cases deliberately exhaust this disposable wallet; prepare an active funded scenario.
+ await sql("update flux_credit_wallets set balance=4,status='active'");
+ const fingerprint='b'.repeat(64),key='flux-op:phase12_internal_agent:independent-session';
+ const r=JSON.parse(await sql("select reserve_flux_credit_capacity("+lit(org)+","+lit(key)+","+lit(fingerprint)+",'web_ai',2,'phase12_internal_agent')"));
+ const raw=JSON.stringify({version:1,reservation_id:r.id,organization_id:org,fingerprint,action:'web_ai',source:'phase12_internal_agent',credits:2,provider:'synthetic',provider_completed:true,provider_cost_cents:1,usage:{}});
+ const hash=require('node:crypto').createHash('sha256').update(raw).digest('hex');
+ await sql("select finish_flux_credit_capacity("+lit(org)+","+lit(r.id)+",'needs_attention','provider_completed_accounting_pending',null,null,'{}',"+lit(JSON.stringify({operation_completion_json:raw,operation_completion_sha256:hash}))+"::jsonb)");
+ const recover=()=>sql("select reconcile_flux_credit_capacity("+lit(org)+","+lit(r.id)+",'admin@example.test',null,'Reviewed synthetic channel completion')");
+ await sql('create trigger reject_recovery_audit before insert on audit_logs for each row execute function reject_recovery_audit()');
+ const blocked=await Promise.allSettled(Array.from({length:8},recover));assert.equal(blocked.filter(x=>x.status==='rejected').length,8);assert.equal(await sql('select count(*) from flux_credit_ledger'),'2');
+ await sql('drop trigger reject_recovery_audit on audit_logs');
+ const results=(await Promise.all(Array.from({length:8},recover))).map(JSON.parse);assert.equal(results.filter(x=>x.outcome==='settled').length,1);assert.equal(results.filter(x=>x.outcome==='already_settled').length,7);assert.equal(await sql('select count(*) from flux_credit_ledger'),'3');
+});

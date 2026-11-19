@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       facts.property_price = String(property.data.price || "");
     }
     if (body.campaignType === "estate_brief_update" && (!facts.property_name || !facts.property_location || !facts.property_price)) return json({ error: "Choose a property with a name, location and price first." }, 409);
-    return json(await createCampaignWriteup(scope.organizationId, contract, input, facts));
+    return json(await createCampaignWriteup(scope.organizationId, contract, input, facts, request.headers.get("x-flux-operation-id") || crypto.randomUUID()));
   } catch (error) {
     if (error instanceof CampaignWriteupError || error instanceof CampaignTemplateError) return json({ error: error.message }, error.status);
     return json({ error: "AI writing is unavailable. Check your plan and AI credits, or continue editing manually." }, 503);

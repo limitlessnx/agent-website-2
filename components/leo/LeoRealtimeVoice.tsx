@@ -299,7 +299,7 @@ export default function LeoRealtimeVoice({ sessionId, tenantSurface, pageContext
       dataChannel.onerror = () => handleUnexpectedDrop("Leo voice connection encountered an error. You can reconnect or continue by message.");
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
-      const headers: Record<string, string> = { "content-type": "application/sdp", ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) };
+      const headers: Record<string, string> = { "content-type": "application/sdp", "x-flux-operation-id": crypto.randomUUID(), ...(tenantSurface ? { "x-leo-surface": "tenant" } : {}) };
       if (activeSessionIdRef.current) headers["x-leo-session-id"] = activeSessionIdRef.current;
       if (pageContext) headers["x-leo-page-context"] = encodeURIComponent(JSON.stringify(pageContext));
       headers["x-leo-timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone || "";

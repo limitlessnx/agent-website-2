@@ -5,6 +5,7 @@ const { spawn } = require("node:child_process");
 const { fixture } = require("../responsive/fixture-data.cjs");
 const fixturePort = 4401;
 let workflowUnavailable = false;
+let periodUnavailable = false;
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, "http://127.0.0.1");
   if (url.pathname === "/__qa/workflow-unavailable") {
@@ -13,6 +14,18 @@ const server = http.createServer((request, response) => {
   }
   if (workflowUnavailable && ["/rest/v1/workflow_registry","/rest/v1/workflow_runs"].includes(url.pathname)) {
     response.writeHead(503,{"Content-Type":"application/json"}); return response.end(JSON.stringify({message:"Synthetic workflow outage"}));
+  }
+  if (url.pathname === "/__qa/period-unavailable") {
+    periodUnavailable = url.searchParams.get("value") === "1";
+    response.writeHead(200,{"Content-Type":"application/json"}); return response.end(JSON.stringify({ok:true}));
+  }
+  if (url.pathname === "/rest/v1/rpc/get_flux_credit_period_usage") {
+    response.writeHead(periodUnavailable?503:200,{"Content-Type":"application/json"});
+    return response.end(JSON.stringify(periodUnavailable?{message:"Synthetic period outage"}:{organizationId:"10000000-0000-4000-8000-000000000001",periodStart:"2026-11-01T00:00:00Z",periodEnd:"2026-12-01T00:00:00Z",usedCredits:42,usageEvents:21,providerCostCents:21,customerValueCents:42,grossMarginCents:21}));
+  }
+  if (url.pathname === "/rest/v1/rpc/get_flux_credit_availability") {
+    response.writeHead(200,{"Content-Type":"application/json"});
+    return response.end(JSON.stringify({balance:1000,reserved:40,available:960}));
   }
   // These RPCs are simulated locally; nothing is forwarded or persisted.
   if (url.pathname === "/rest/v1/rpc/ensure_flux_credit_wallet") {

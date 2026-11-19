@@ -1,9 +1,10 @@
+import { withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { internalRuntimeIdentity, runPhase12Agent } from "@/lib/ai-runtime/migration";
-import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { preflightChargeableFluxAi } from "@/lib/flux-ai-metering-core";
 
 export async function POST(request: NextRequest) {
   const session = await getAdminSession();
@@ -87,7 +88,8 @@ export async function POST(request: NextRequest) {
 
     await preflightChargeableFluxAi({ organizationId, feature: "core_ai_support", action: "web_ai" });
 
-    const runtime = await runPhase12Agent({
+    const runtime = await withFluxAiOperation({organizationId,feature:"core_ai_support",action:"web_ai",source:"super_admin_live_agent_test",context:{agent_id:agentId,test_run_id:testRunId},operationId:request.headers.get("x-flux-operation-id") || testRunId,request:{agentId,message},failure:"ai"},
+      () => runPhase12Agent({
       kind: "specialist",
       organizationId,
       agentId,
@@ -101,17 +103,10 @@ export async function POST(request: NextRequest) {
         configuration: agent.configuration || {},
       },
       identity: internalRuntimeIdentity(organizationId, "api"),
-    });
+    }),
+      value => ({accepted:true,provider:value.model.provider,model:value.model.modelKey,reference:value.executionId,usage:value.usage||{}}));
 
-    await recordChargeableFluxAiUsage({
-      organizationId,
-      action: "web_ai",
-      source: "super_admin_live_agent_test",
-      provider: runtime.model.provider,
-      model: runtime.model.modelKey,
-      providerUsage: runtime.usage || {},
-      metadata: { agent_id: agentId, test_run_id: testRunId, runtime_execution_id: runtime.executionId },
-    });
+
 
     const replyPresent = Boolean(runtime.reply?.trim());
     const passed = replyPresent;

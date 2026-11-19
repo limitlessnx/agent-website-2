@@ -26,6 +26,7 @@ export async function GET() {
         monthlyCredits: wallet.monthlyCredits,
         balance: wallet.balance,
         capacity: wallet.capacity,
+        periodUsage: wallet.periodUsage ? { periodStart:wallet.periodUsage.periodStart,periodEnd:wallet.periodUsage.periodEnd,usedCredits:wallet.periodUsage.usedCredits,usageEvents:wallet.periodUsage.usageEvents } : null,
         used: wallet.used,
         percentUsed: wallet.percentUsed,
         renewalDate: wallet.renewalDate,

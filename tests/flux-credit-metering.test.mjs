@@ -49,22 +49,22 @@ test("new client provisioning atomically includes one idempotent Basic free tria
 test("tenant Leo Chat preflights entitlements and records provider usage", () => {
   assert.match(leoRoute, /identity\.scope === "tenant" && identity\.organizationId/);
   assert.match(leoRoute, /preflightChargeableFluxAi\(\{ organizationId: identity\.organizationId, feature: "leo_chat", action: "leo_chat" \}\)/);
-  assert.match(leoRoute, /recordChargeableFluxAiUsage\(\{[\s\S]*source: "leo_chat"[\s\S]*providerUsage: result\.usage/);
+  assert.match(leoRoute, /withFluxAiOperation\([\s\S]*source:"leo_chat"[\s\S]*usage:value\.usage/);
   assert.match(leoRoute, /if \(isFluxAiControlError\(error\)\) return fluxAiControlResponse\(error\)/);
 });
 
-test("tenant Leo Voice requires Business voice access and charges one minute at call start", () => {
+test("tenant Leo Voice requires Business voice access and reserves its existing one-unit call-start charge", () => {
   assert.match(voiceRoute, /feature: "leo_voice", action: "leo_voice_minute"/);
-  assert.match(voiceRoute, /source: "leo_voice"/);
-  assert.match(voiceRoute, /quantity: 1/);
+  assert.match(voiceRoute, /source:\s*"leo_voice"/);
+  assert.match(voiceRoute, /quantity:\s*1/);
   assert.match(voiceRoute, /status: 402/);
 });
 
 test("Maia runtime meters every successful tenant model step as Web AI", () => {
   assert.match(maiaRuntime, /feature: "core_ai_support", action: "web_ai"/);
-  assert.match(maiaRuntime, /recordChargeableFluxAiUsage\(\{ organizationId: input\.organizationId, action: "web_ai", source: "maia_runtime"/);
-  assert.match(maiaRuntime, /providerUsage: usage/);
-  assert.match(maiaRuntime, /step: steps/);
+  assert.match(maiaRuntime, /withFluxAiOperation\([\s\S]*action:"web_ai",source:"maia_runtime"/);
+  assert.match(maiaRuntime, /usage:chatUsage\(value\)/);
+  assert.match(maiaRuntime, /operationId:operationId\+":"\+steps/);
 });
 
 test("Flux Credit metering tests run with the support suite", () => {

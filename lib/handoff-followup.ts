@@ -1,7 +1,8 @@
+import { FluxAiOperationError, withFluxAiOperation } from "@/lib/flux-ai-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 import { addCanonicalCrmMessage } from "@/lib/canonical-customer";
-import { preflightChargeableFluxAi, recordChargeableFluxAiUsage } from "@/lib/flux-ai-metering-core";
+import { preflightChargeableFluxAi } from "@/lib/flux-ai-metering-core";
 
 function rec(value:unknown):Record<string,unknown>{
   return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
@@ -81,7 +82,7 @@ export async function processDueHandoffFollowups(limit=100){
             templateName:null,
             providerMessageId:"test-handoff-followup:"+task.id,
           }
-        : await sendWhatsAppMessage({
+        : await withFluxAiOperation({organizationId:task.organization_id,feature:"follow_ups",action:"whatsapp_follow_up_reminder",source:"handoff_follow_up",context:{task_id:task.id,handoff_id:handoffId},operationId:task.id,request:{conversationId,handoffId},failure:"delivery"}, () => sendWhatsAppMessage({
             organizationId:task.organization_id,
             to:customer.phone,
             text,
@@ -92,7 +93,7 @@ export async function processDueHandoffFollowups(limit=100){
               customer_name:customerName,
               handoff_id:handoffId,
             },
-          });
+          }), value => ({accepted:value.providerMessageId ? true : "unknown",provider:"meta",reference:value.providerMessageId}));
 
       await addCanonicalCrmMessage({
         organizationId:task.organization_id,
@@ -111,15 +112,7 @@ export async function processDueHandoffFollowups(limit=100){
         },
       });
 
-      if(!simulated){
-        await recordChargeableFluxAiUsage({
-          organizationId:task.organization_id,
-          action:"whatsapp_follow_up_reminder",
-          source:"handoff_follow_up",
-          provider:"meta",
-          metadata:{handoff_id:handoffId,task_id:task.id,conversation_id:conversationId},
-        });
-      }
+
 
       await admin.from("crm_tasks").update({
         status:"completed",
@@ -135,6 +128,11 @@ export async function processDueHandoffFollowups(limit=100){
 
       results.push({taskId:task.id,status:"completed",handoffId,messageType:delivery.messageType});
     }catch(error){
+      // A concurrent observer must not overwrite the dispatch owner's task outcome.
+      if(error instanceof FluxAiOperationError){
+        results.push({taskId:task.id,status:error.billingStatus==="settled"?"already_submitted":"needs_attention",handoffId,reservationId:error.reservationId||null,doNotRedispatch:true});
+        continue;
+      }
       const message=error instanceof Error?error.message:"Handoff follow-up failed.";
       await admin.from("crm_tasks").update({
         status:"failed",updated_at:new Date().toISOString(),
