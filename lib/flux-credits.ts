@@ -183,10 +183,11 @@ export async function getFluxWalletSummary(organizationId: string): Promise<Flux
   return toWalletSummary(await ensureFluxWallet(organizationId));
 }
 
-async function withCreditCapacity(wallet: WalletRow): Promise<FluxBillingSummary> {
+async function withCreditCapacity(wallet: WalletRow, organizationId: string): Promise<FluxBillingSummary> {
+  if (wallet.organization_id !== organizationId) throw new Error("Billing wallet was not returned inside the organization.");
   const unavailable: FluxBillingSummary = { ...toWalletSummary(wallet), capacity: { status: "unavailable", reservedCredits: null, availableCredits: null } };
   try {
-    const { data, error } = await createAdminClient().rpc("get_flux_credit_availability", { p_organization_id: wallet.organization_id });
+    const { data, error } = await createAdminClient().rpc("get_flux_credit_availability", { p_organization_id: organizationId });
     if (error || !data || ![data.balance, data.reserved, data.available].every(value => Number.isSafeInteger(value) && value >= 0)
       || data.available !== Math.max(0, data.balance - data.reserved)) return unavailable;
     return { ...toWalletSummary({ ...wallet, balance: data.balance }), capacity: { status: "available", reservedCredits: data.reserved, availableCredits: data.available } };
@@ -196,7 +197,7 @@ async function withCreditCapacity(wallet: WalletRow): Promise<FluxBillingSummary
 }
 
 export async function getFluxBillingSummary(organizationId: string): Promise<FluxBillingSummary> {
-  return withCreditCapacity(await ensureFluxWallet(organizationId));
+  return withCreditCapacity(await ensureFluxWallet(organizationId), organizationId);
 }
 
 export async function getFluxInternalUsageSummary(organizationId: string): Promise<FluxInternalUsageSummary> {
@@ -225,7 +226,7 @@ export async function getFluxInternalUsageSummary(organizationId: string): Promi
   }
 
   return {
-    ...await withCreditCapacity(wallet),
+    ...await withCreditCapacity(wallet, organizationId),
     bonusCredits: numberValue(wallet.bonus_balance),
     topUpCredits: numberValue(wallet.top_up_balance),
     providerCostCents,

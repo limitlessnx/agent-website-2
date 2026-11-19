@@ -43,3 +43,5 @@ for(const permissions of [['billing.view'],['billing.manage']])test('billing API
 });
 test('billing read errors are explicit and sanitized',async()=>{const f=routeFixture({permissions:['billing.view'],failRead:true}),r=await f.route.GET();assert.equal(r.status,500);assert.ok(!r.body.error.includes('PRIVATE'));});
 test('existing trusted admin preview stays read-only without conflating tenant membership',async()=>{const f=routeFixture({session:{organizationId:org,userId:'preview',isAdminPreview:true}});assert.equal((await f.route.GET()).status,200);assert.ok(!f.reads.some(x=>x[0]==='membership'));});
+
+test('unexpected wallet identity fails before reading another organization capacity',async()=>{const f=fixture();f.wallet.organization_id='foreign';await assert.rejects(f.credits.getFluxBillingSummary(org),/inside the organization/);assert.equal(f.calls.length,1);});

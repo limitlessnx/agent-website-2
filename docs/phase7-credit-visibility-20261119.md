@@ -35,3 +35,5 @@ This increment exposes held credits; it does not implement manual reconciliation
 An additional billing-related run initially passed 55/56 cases: the existing sidebar contract expected a Link component while unchanged main already used NavigationItem. The contract now checks the actual shared navigation component behind the same billing capability gate. This failure is not counted as a pass; the corrected related suite is rerun before release.
 
 The corrected related suite passed 56/56. Final targeted browser verification passed 12/12 across all six widths, including funded/fully held capacity and unavailable capacity/history. Production build and exact-head hosted release checks remain required and are recorded in the PR.
+
+A final tenant-identity guard rejects unexpected wallet organization identities before any capacity read. Its behavioral regression is included in the final hosted candidate.
