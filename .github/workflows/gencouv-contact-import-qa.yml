@@ -1,0 +1,29 @@
+name: Gencouv Contact Import QA
+
+on:
+  pull_request:
+    paths:
+      - "app/api/dashboard/gencouv/contact-import/route.ts"
+      - "components/gencouv/GencouvContactImport.tsx"
+      - "tests/gencouv-contact-import-review.test.mjs"
+      - ".github/workflows/gencouv-contact-import-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gencouv-contact-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Use Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Run Gencouv import regression contracts
+        run: node --test tests/gencouv-contact-import-review.test.mjs
