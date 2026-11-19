@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type Category = { id: string; name: string };
 type Contact = { id: string; full_name: string | null; email: string; company_name: string | null; metadata?: { marketing_consent?: string }; created_at: string };
-type Preview = { preview: true; total: number; new_contacts: number; existing_contacts: number; duplicates_in_file: number; invalid: number; sample: Array<{ email: string; full_name: string }> };
+type Preview = { preview: true; total: number; new_contacts: number; existing_contacts: number; duplicates_in_file: number; invalid: number; missing_email: number; fingerprint: string; sample: Array<{ email: string; full_name: string }> };
 const endpoint = "/api/dashboard/gencouv/contact-import";
 
 export default function GencouvContactImport() {
@@ -38,18 +38,24 @@ export default function GencouvContactImport() {
     data.set("file", file);
     data.set("preview", String(isPreview));
     if (categoryId) data.set("category_id", categoryId);
+    if (!isPreview && preview) data.set("preview_fingerprint", preview.fingerprint);
     try {
       const response = await fetch(endpoint, { method: "POST", body: data });
       const result = await response.json();
       if (!response.ok && response.status !== 207) throw new Error(result.error || "Import failed.");
       if (isPreview) { setPreview(result); }
       else {
-        setMessage(`${result.imported} saved; ${result.already_saved} already existed; ${result.failed} errors. No marketing messages sent.`);
-        setPreview(null);
-        setFile(null);
-        const input = document.getElementById("gencouv-upload") as HTMLInputElement | null;
-        if (input) input.value = "";
+        setMessage(`${result.imported} saved; ${result.already_saved} already existed; ${result.failed_contacts ?? 0} contact errors; ${result.failed_assignments ?? 0} category errors. No marketing messages sent.`);
         await load();
+        if (result.success) {
+          setPreview(null);
+          setFile(null);
+          const input = document.getElementById("gencouv-upload") as HTMLInputElement | null;
+          if (input) input.value = "";
+        } else {
+          setError("Some contacts or categories could not be saved. The file is retained so you can preview and retry safely.");
+          setPreview(null);
+        }
       }
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to import file."); }
     finally { setBusy(false); }
@@ -87,7 +93,7 @@ export default function GencouvContactImport() {
       {message && <p role="status">{message}</p>}
       {preview && <div style={{ marginTop: 18, borderTop: "1px solid var(--admin-border)", paddingTop: 14 }}>
         <h3>Import preview</h3>
-        <p>{preview.total} unique valid contacts, {preview.new_contacts} new, {preview.existing_contacts} already saved, {preview.duplicates_in_file} duplicates removed, {preview.invalid} invalid.</p>
+        <p>{preview.total} unique valid contacts, {preview.new_contacts} new, {preview.existing_contacts} already saved, {preview.duplicates_in_file} duplicates removed, {preview.invalid} invalid email addresses, {preview.missing_email} rows missing email.</p>
         <ul>{preview.sample.map(row => <li key={row.email}>{row.full_name ? `${row.full_name} · ` : ""}{row.email}</li>)}</ul>
         <p>Uploaded contacts will be saved with marketing consent unverified. Saving does not enroll them in a campaign.</p>
       </div>}
