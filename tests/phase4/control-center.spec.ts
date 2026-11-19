@@ -23,7 +23,7 @@ test.beforeEach(async({context})=>{
  await context.route('**/*',r=>{
   const u=new URL(r.request().url());if(u.origin!==origin)return r.abort();
   if(u.pathname==='/api/leo/monitor')return r.fulfill({json:{ok:true,alerts:[]}});
-  if(!['GET','HEAD'].includes(r.request().method()) && u.pathname!=='/api/admin/organization-context')return r.abort();
+  if(!['GET','HEAD'].includes(r.request().method()) && !['/api/admin/organization-context','/api/admin/billing/reservations'].includes(u.pathname))return r.abort();
   return r.continue();
  });
 });
@@ -104,4 +104,31 @@ test('billing capacity outages remain explicit for admin and tenant',async({page
  await expect(page.getByRole('alert').filter({hasText:'Credit history could not be loaded'})).toBeVisible();
  await expect(page.getByText('No credit transactions have been recorded yet.')).toHaveCount(0);
  await stableLayout(page);await capture(page,'tenant-billing-history-unavailable');
+});
+
+test('credit recovery requires confirmation, preserves review failures and reports verified settlement',async({page,context})=>{
+ await scenario(context,'recovery-blocked');await page.goto('/dashboard/billing',{waitUntil:'networkidle'});
+ const recovery=page.getByRole('region',{name:'Reservation recovery'});
+ const submit=recovery.locator('button[type=submit]');
+ await expect(submit).toBeDisabled();await recovery.getByLabel('Reservation',{exact:true}).selectOption('20000000-0000-4000-8000-000000000001');
+ await recovery.getByLabel('Review reason').fill('Reviewed synthetic completed execution evidence');await expect(submit).toBeDisabled();
+ await recovery.getByRole('checkbox').check();await submit.click();
+ await expect(recovery.getByRole('status')).toContainText('Reservation remains in review');
+ await stableLayout(page);await capture(page,'recovery-blocked');
+ await scenario(context,'normal');
+ let resume:()=>void=()=>{};const paused=new Promise<void>(resolve=>{resume=resolve;});
+ await page.route('**/api/admin/billing/reservations',async route=>{await paused;await route.continue();});
+ await submit.click();await expect(submit).toBeDisabled();resume();
+ await expect(recovery.getByRole('status')).toContainText('Settlement verified');
+ await expect(recovery.getByRole('button',{name:'Reconcile completed work',exact:true})).toBeDisabled();
+ const entries=await(await context.request.get('http://127.0.0.1:4401/__qa/audits')).json();
+ const last=entries.filter((x:{action:string})=>x.action==='billing.credit_reservation.reconcile').at(-1);
+ expect(last.p_organization_id).toBe(org);expect(last.p_actor_email).toBe('admin@example.test');expect(last.outcome).toBe('settled');
+ await stableLayout(page);await capture(page,'recovery-settled');
+});
+test('unavailable reservation reads never look like an empty recovery queue',async({page,context})=>{
+ await scenario(context,'recovery-unavailable');await page.goto('/dashboard/billing',{waitUntil:'networkidle'});
+ await expect(page.getByRole('alert').filter({hasText:'Reservations could not be loaded'})).toBeVisible();
+ await expect(page.getByText('No unresolved reservations in this organization.')).toHaveCount(0);
+ await stableLayout(page);await capture(page,'recovery-unavailable');
 });

@@ -4,6 +4,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxInternalUsageSummary } from "@/lib/flux-credits";
 import { getFluxCommercialSnapshot } from "@/lib/flux-commercial";
 import { createAdminClient } from "@/lib/supabase/admin";
+import CreditReservationRecovery from "./CreditReservationRecovery";
 import CreditAdjustmentForm from "./CreditAdjustmentForm";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,9 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
   ]) : [null, null, { data: [], error: null }];
   if (ledgerResult?.error) throw ledgerResult.error;
   const transactions = ledgerResult?.data || [];
+  const recovery = selectedOrganization ? await admin.from("flux_credit_reservations")
+    .select("id,status,reserved_credits,action_key,created_at").eq("organization_id", selectedOrganization.id)
+    .in("status", ["held", "needs_attention"]).order("created_at", { ascending: true }).limit(20) : null;
 
   return (
     <main className="admin-page">
@@ -86,6 +90,7 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
           </div>
         </article> : null}
       </section>
+      {selectedOrganization ? <CreditReservationRecovery organizationId={selectedOrganization.id} reservations={recovery?.data || []} unavailable={Boolean(recovery?.error)} /> : null}
       {selectedOrganizationId ? <CreditAdjustmentForm organizationId={selectedOrganizationId} /> : null}
       <section className="admin-card">
         <h2>Credit ledger</h2>

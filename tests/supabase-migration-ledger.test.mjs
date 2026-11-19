@@ -26,6 +26,8 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
+  // Reviewed recovery RPC; not yet applied.
+  "20261119131123",
   "20261001233000",
   "202610020001",
   "202610020002",
