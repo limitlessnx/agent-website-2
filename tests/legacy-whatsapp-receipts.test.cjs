@@ -94,30 +94,43 @@ test('report store forwards tenant context and does not report successful persis
   await assert.rejects(store.saveCampaignDeliveryReport({ organization_id: other, id: 'synthetic', accepted_recipients: [] }), /synthetic storage failure/);
   assert.equal(input.organizationId, other);
 });
-function metaFixture({ known = true, ambiguous = false, invalidSignature = false, failWrite = false, failCanonical = false } = {}) {
-  const writes = [], canonical = [], calls = { dispatch: 0, agentQueries: 0 };
+function metaFixture({ known = true, ambiguous = false, invalidSignature = false, failWrite = false, failCanonical = false, messageKind } = {}) {
+  const writes = [], canonical = [], echoes = [], taskRequests = [], calls = { dispatch: 0, agentQueries: 0 };
   const admin = { from(table) {
-    const q = { select: () => q, in: () => q, eq: () => q, order: () => q, maybeSingle: async () => ({ data: null, error: null }),
-      then(resolve, reject) { if (table === 'agents') calls.agentQueries++; const data = table === 'organization_integrations' && known ? [{ organization_id: org, configuration: { phone_number_id: 'synthetic-number', maia_active: true } }, ...(ambiguous ? [{ organization_id: other, configuration: { phone_number_id: 'synthetic-number' } }] : [])] : []; return Promise.resolve({ data, error: null }).then(resolve, reject); },
+    const q = { select: () => q, insert: () => q, in: () => q, eq: () => q, order: () => q, maybeSingle: async () => ({ data: null, error: null }),
+      then(resolve, reject) { if (table === 'agents') calls.agentQueries++; const data = table === 'organization_integrations' && known ? [{ organization_id: org, configuration: { phone_number_id: 'synthetic-number', maia_active: true } }, ...(ambiguous ? [{ organization_id: other, configuration: { phone_number_id: 'synthetic-number' } }] : [])] : table === 'agents' && messageKind ? [{ id: 'synthetic-maia', slug: 'maia' }] : []; return Promise.resolve({ data, error: null }).then(resolve, reject); },
     }; return q;
   } };
   const route = load('app/api/whatsapp/webhook/route.ts', {
     'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200 }) } },
-    '@trigger.dev/sdk': { tasks: { trigger: async () => { calls.dispatch++; throw Error('No dispatch permitted'); } } },
-    '@/lib/supabase/admin': { createAdminClient: () => admin }, '@/lib/whatsapp-coexistence': {},
+    '@trigger.dev/sdk': { tasks: { trigger: async (...args) => { calls.dispatch++; if (messageKind !== 'inbound') throw Error('No dispatch permitted'); taskRequests.push(args); return { id: 'synthetic-run' }; } } },
+    '@/lib/supabase/admin': { createAdminClient: () => admin }, '@/lib/whatsapp-coexistence': { recordWhatsAppBusinessAppEcho: async v => echoes.push(v) },
     '@/lib/human-operations': { syncHandoffNotificationStatus: async () => {} },
     '@/lib/real-estate-provider-status': { syncRealEstateProviderStatus: async v => { canonical.push(v); if (failCanonical) throw Error('PRIVATE_STORAGE_ERROR'); } },
     '@/lib/whatsapp-delivery-ledger': { applyLegacyWhatsAppReceipt: async v => { writes.push(v); if (failWrite) throw Error('Synthetic persistence unavailable'); return true; } },
     '@/lib/limitless-installment-recovery-receipts': { syncLimitlessInstallmentRecoveryReceipt: async () => false }, '@/lib/maia-whatsapp-calling': {},
   }, '', { process: { env: { WHATSAPP_APP_SECRET: 'synthetic-secret' } }, console: quiet });
-  const raw = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ value: { metadata: { phone_number_id: 'synthetic-number' }, statuses: [{ id: message, status: 'delivered', timestamp: '1795052000' }] } }] }] });
+  const value = { metadata: { phone_number_id: 'synthetic-number' }, statuses: [{ id: message, status: 'delivered', timestamp: '1795052000' }] };
+  if (messageKind === 'echo') value.message_echoes = [{ id: 'synthetic-echo', to: '15555550123', type: 'text', text: { body: 'Synthetic human reply' } }];
+  if (messageKind === 'inbound') value.messages = [{ id: 'synthetic-inbound', from: '15555550123', type: 'text', timestamp: String(Math.floor(Date.now() / 1000)), text: { body: 'Synthetic inquiry' } }];
+  const raw = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: messageKind === 'echo' ? 'smb_message_echoes' : 'messages', value }] }] });
   const signature = 'sha256=' + createHmac('sha256', 'synthetic-secret').update(raw).digest('hex');
-  return { route, writes, canonical, calls, request: { text: async () => raw, headers: new Headers({ 'x-hub-signature-256': invalidSignature ? 'sha256=invalid' : signature }) } };
+  return { route, writes, canonical, calls, echoes, taskRequests, request: { text: async () => raw, headers: new Headers({ 'x-hub-signature-256': invalidSignature ? 'sha256=invalid' : signature }) } };
 }
 test('signed Meta receipts retain verified organization without requiring a published agent', async () => {
   const f = metaFixture(); assert.equal((await f.route.POST(f.request)).status, 200);
   assert.equal(f.writes[0].organizationId, org); assert.equal(f.canonical[0].organizationId, org);
   assert.equal(f.calls.agentQueries, 0); assert.equal(f.calls.dispatch, 0);
+});
+test('human coexistence echoes retain tenant runtime resolution and do not dispatch an AI reply', async () => {
+  const f = metaFixture({ messageKind: 'echo' }); await f.route.POST(f.request);
+  assert.equal(f.echoes.length, 1); assert.equal(f.echoes[0].organizationId, org); assert.equal(f.echoes[0].agentId, 'synthetic-maia'); assert.equal(f.calls.dispatch, 0);
+});
+test('ordinary inbound messages retain tenant-agent routing and queue idempotency', async () => {
+  const f = metaFixture({ messageKind: 'inbound' }); await f.route.POST(f.request);
+  assert.equal(f.calls.dispatch, 1); const [task, payload, options] = f.taskRequests[0];
+  assert.equal(task, 'maia-process-inbound-message'); assert.equal(payload.organizationId, org); assert.equal(payload.agentId, 'synthetic-maia');
+  assert.equal(options.idempotencyKey, 'whatsapp-inbound:tenant-a:synthetic-maia:synthetic-inbound');
 });
 test('unknown and ambiguous Meta bindings cannot update legacy or canonical evidence', async () => {
   const unknown = metaFixture({ known: false }); await unknown.route.POST(unknown.request); assert.equal(unknown.writes.length, 0); assert.equal(unknown.canonical.length, 0);

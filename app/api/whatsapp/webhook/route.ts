@@ -359,7 +359,7 @@ export async function POST(request: NextRequest) {
       let receiptBinding = null;
       try {
         receiptBinding = phoneNumberId ? await resolveWhatsAppOrganization(phoneNumberId) : null;
-        if (recordArray(value.messages).length || recordArray(value.calls).length) {
+        if (recordArray(value.messages).length || recordArray(value.calls).length || recordArray(value.message_echoes).length) {
           tenant = await resolveWhatsAppTenant(receiptBinding);
         }
       } catch (error) {
