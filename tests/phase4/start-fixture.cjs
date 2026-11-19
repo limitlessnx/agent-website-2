@@ -27,6 +27,7 @@ const server = http.createServer((request, response) => {
   if (table === "flux_credit_ledger" && scenario === "credit-history-unavailable") {
     response.writeHead(503, {"Content-Type":"application/json"});return response.end(JSON.stringify({message:"PRIVATE_PROVIDER_DIAGNOSTIC"}));
   }
+  if (table === "flux_credit_reservations" && scenario === "recovery-unavailable") {response.writeHead(503,{"Content-Type":"application/json"});return response.end(JSON.stringify({message:"PRIVATE_PROVIDER_DIAGNOSTIC"}));}
   const evidenceTables = ["organization_integration_admin_view","agent_runtime_tool_runs","maia_inbound_events","automation_provisioning_jobs","transactional_email_events","elevenlabs_voice_calls","whatsapp_delivery_attempts"];
   if (scenario === "outage" && evidenceTables.includes(table)) {
     response.writeHead(503,{"Content-Type":"application/json"});return response.end(JSON.stringify({message:"PRIVATE_PROVIDER_DIAGNOSTIC"}));
@@ -44,6 +45,15 @@ const server = http.createServer((request, response) => {
     response.writeHead(503,{"Content-Type":"application/json"}); return response.end(JSON.stringify({message:"Synthetic workflow outage"}));
   }
   // These RPCs are simulated locally; nothing is forwarded or persisted.
+  if (url.pathname === "/rest/v1/rpc/reconcile_flux_credit_capacity") {
+    let body="";request.on("data",chunk=>body+=chunk);request.on("end",()=>{
+      const args=JSON.parse(body);
+      if(scenario === "recovery-audit-unavailable"){response.writeHead(503,{"Content-Type":"application/json"});return response.end(JSON.stringify({message:"PRIVATE_PROVIDER_DIAGNOSTIC"}));}
+      const blocked=scenario === "recovery-blocked";
+      audits.push({action:"billing.credit_reservation.reconcile",...args,outcome:blocked?"blocked":"settled"});
+      response.writeHead(200,{"Content-Type":"application/json"});response.end(JSON.stringify({id:args.p_reservation_id,organization_id:args.p_organization_id,status:blocked?"held":"settled",outcome:blocked?"blocked":"settled"}));
+    });return;
+  }
   if (url.pathname === "/rest/v1/rpc/get_flux_credit_availability") {
     response.writeHead(scenario === "credit-unavailable" ? 503 : 200, {"Content-Type":"application/json"});
     return response.end(JSON.stringify(scenario === "credit-unavailable" ? {message:"PRIVATE_PROVIDER_DIAGNOSTIC"} : {balance:1000,reserved:scenario === "credit-held" ? 1000 : 996,available:scenario === "credit-held" ? 0 : 4}));
@@ -93,6 +103,7 @@ const server = http.createServer((request, response) => {
   if (table === "agent_runtime_tool_runs") result = scenario === "pending" ? [{id:"tool-pending",organization_id:orgId,status:"pending"}] : ["completed","failed","pending"].map((status,index)=>({id:`tool-${index}`,organization_id:orgId,status,tool_name:"diagnostic",started_at:recordedAt}));
   if (table === "maia_inbound_events") result = [{id:"maia-1",organization_id:orgId,status:"failed"},{id:"maia-2",organization_id:orgId,status:"processing"}];
   if (["transactional_email_events","elevenlabs_voice_calls","whatsapp_delivery_attempts"].includes(table)) result = [{id:table+"-1",organization_id:orgId,status:"failed"}];
+  if (table === "flux_credit_reservations") result = [{id:"20000000-0000-4000-8000-000000000001",status:"needs_attention",reserved_credits:2,action_key:"web_ai",created_at:recordedAt}];
   if (table === "audit_logs") result = [{id:"audit-1",organization_id:orgId,actor_user_id:null,action:"admin.workspace.select",resource_type:"organization",created_at:recordedAt,metadata:{actor_email:"admin@example.test",outcome:"selected",credential:"PRIVATE_AUDIT_METADATA"}}];
   if (scenario === "empty" && evidenceTables.includes(table)) result = [];
   const organizationFilter = url.searchParams.get("organization_id");

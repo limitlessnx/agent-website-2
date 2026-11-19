@@ -21,3 +21,18 @@ test('independent PostgreSQL sessions serialize holds, legacy debits, settlement
  assert.equal(await sql('select count(*) from flux_credit_ledger'),'1');
  const available=JSON.parse(await sql("select get_flux_credit_availability('"+org+"')"));assert.deepEqual(available,{balance:2,reserved:0,available:2});
 });
+
+const {extraSQL,recoverySQL,execution}=require('./helpers/flux-recovery-database.cjs');
+test('independent recovery sessions settle once and audit failure rolls back every concurrent attempt',{skip:!database},async()=>{
+ await sql(extraSQL);await sql(recoverySQL);
+ const reservation=JSON.parse(await reserve('phase12-provider:'+execution));
+ const proof={provider:'synthetic',credit_reservation_id:reservation.id,credit_request_fingerprint:'a'.repeat(64),provider_response_id:'synthetic-response'};
+ const payload={...proof,id:'synthetic-response',provider:'synthetic',output_text:'Synthetic output',credit_provider_cost_cents:1,credit_usage_quantity:0};
+ await sql("insert into runtime_model_requests(organization_id,execution_id,status,response_payload,completed_at) values("+lit(org)+","+lit(execution)+",'succeeded',"+lit(JSON.stringify(payload))+"::jsonb,clock_timestamp());insert into usage_ledger(organization_id,execution_id,usage_type,metadata,occurred_at) values("+lit(org)+","+lit(execution)+",'ai_tokens',"+lit(JSON.stringify(proof))+"::jsonb,clock_timestamp());insert into runtime_progress_events(organization_id,execution_id,event_type,payload,created_at) values("+lit(org)+","+lit(execution)+",'provider.completed',"+lit(JSON.stringify(proof))+"::jsonb,clock_timestamp());");
+ const recover=()=>sql("select reconcile_flux_credit_capacity("+lit(org)+","+lit(reservation.id)+",'admin@example.test',null,'Reviewed synthetic completion proof')");
+ await sql("create function reject_recovery_audit() returns trigger language plpgsql as $$begin raise exception 'synthetic audit failure';end$$;create trigger reject_recovery_audit before insert on audit_logs for each row execute function reject_recovery_audit();");
+ const blocked=await Promise.allSettled(Array.from({length:8},recover));assert.equal(blocked.filter(x=>x.status==='rejected').length,8);assert.equal(await sql('select count(*) from flux_credit_ledger'),'1');assert.equal(await sql('select count(*) from audit_logs'),'0');
+ await sql('drop trigger reject_recovery_audit on audit_logs');
+ const results=(await Promise.all(Array.from({length:8},recover))).map(JSON.parse);assert.equal(results.filter(x=>x.outcome==='settled').length,1);assert.equal(results.filter(x=>x.outcome==='already_settled').length,7);
+ assert.equal(await sql('select count(*) from flux_credit_ledger'),'2');assert.equal(await sql('select count(*) from audit_logs'),'8');
+});

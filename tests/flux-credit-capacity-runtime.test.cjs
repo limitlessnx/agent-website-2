@@ -53,6 +53,13 @@ test('Web provider work reserves first, persists evidence and settles its fixed 
  assert.equal(await count(f.db),1);assert.deepEqual(await available(f.db),{balance:0,reserved:0,available:0});
  const replay=await f.route.POST(f.request());assert.equal(replay.status,200);assert.equal(replay.body.cached,true);assert.equal(replay.body.output_text,'Synthetic output');assert.equal(replay.body.usage.total_tokens,5);assert.equal(f.calls.provider,1);assert.equal(await count(f.db),1);
  const ledger=(await f.db.query('select metadata from flux_credit_ledger')).rows[0].metadata;assert.equal(ledger.provider_response_id,'synthetic-response');
+ const reservation=(await f.db.query('select * from flux_credit_reservations')).rows[0];
+ for(const table of ['runtime_model_requests','usage_ledger','runtime_progress_events']){
+  const value=f.calls.writes.find(row=>row.table===table).values;
+  const proof=value.response_payload||value.metadata||value.payload;
+  assert.equal(proof.credit_reservation_id,reservation.id);assert.equal(proof.credit_request_fingerprint,reservation.request_fingerprint);
+ }
+ assert.equal(f.calls.writes.find(row=>row.table==='runtime_model_requests').values.response_payload.credit_provider_cost_cents,1);assert.equal(f.calls.writes.find(row=>row.table==='runtime_model_requests').values.response_payload.credit_usage_quantity,5);
 });
 test('concurrent duplicate and competing execution cannot dispatch against the same last credits',async t=>{
  const f=await harness(t);let resume;f.pause(new Promise(resolve=>{resume=resolve;}));

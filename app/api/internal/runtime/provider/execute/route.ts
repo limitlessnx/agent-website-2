@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
   let capacity: FluxCreditCapacity | null = null;
   let capacityOrganization = "";
   let providerCompleted = false;
+  let capacityFingerprint = "";
   let providerEvidence: Record<string, unknown> = {};
   try {
     assertRuntimeSecret(request.headers.get("x-runtime-secret"));
@@ -146,6 +147,7 @@ export async function POST(request: NextRequest) {
         requestFingerprint: fingerprint, source: "phase12_provider_runtime",
       });
       if (!claimed.created || claimed.status !== "held") return await replay(claimed.status);
+      capacityFingerprint = fingerprint;
       capacity = claimed;
       capacityOrganization = organizationId;
     }
@@ -165,7 +167,11 @@ export async function POST(request: NextRequest) {
     providerEvidence = { provider_response_id: result.responseId || null, provider: result.provider, model: result.modelKey };
     const latencyMs = Date.now() - startedAt;
     const usage = result.usage || {};
+    const tokenQuantity = usage.totalTokens || (usage.inputTokens || 0) + (usage.outputTokens || 0);
+    const creditProof = capacity ? { credit_reservation_id: capacity.id, credit_request_fingerprint: capacityFingerprint } : {};
     const responsePayload = {
+      ...creditProof,
+      ...(capacity ? { credit_usage_quantity: tokenQuantity, credit_provider_cost_cents: calculateModeledProviderCostCents("web_ai", 1) } : {}),
       provider_assignment_id: assignment?.id || null,
       usage: { input_tokens: usage.inputTokens, output_tokens: usage.outputTokens, total_tokens: usage.totalTokens },
       id: result.responseId || null,
@@ -195,9 +201,10 @@ export async function POST(request: NextRequest) {
         agent_id: agentId,
         execution_id: executionId,
         usage_type: "ai_tokens",
-        quantity: usage.totalTokens || (usage.inputTokens || 0) + (usage.outputTokens || 0),
+        quantity: tokenQuantity,
         unit_cost_minor: 0,
         metadata: {
+          ...creditProof,
           provider: result.provider,
           model: result.modelKey,
           model_source: result.modelSource,
@@ -212,6 +219,8 @@ export async function POST(request: NextRequest) {
         event_type: "provider.completed",
         message: "Shared Phase 12 AI runtime completed the request.",
         payload: {
+          ...creditProof,
+          provider_response_id: result.responseId || null,
           provider: result.provider,
           model: result.modelKey,
           model_source: result.modelSource,
