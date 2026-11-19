@@ -55,3 +55,11 @@ Phase 7 as a whole remains open for coordinated email/voice receipt adoption, me
 The schema change is additive for older application code: an extra read RPC and an extended existing recovery function. Code rollback can restore the prior Vercel deployment while retaining all holds, ledger and evidence for review. Do not delete reservations or fabricate refunds as a rollback. The previous reconciliation definition remains in migration history; replacing it requires explicit reviewed schema rollback. The existing debit function is unchanged.
 
 PR: https://github.com/limitlessnx/agent-website-2/pull/437. Production registration, exact release head, preview and deployed status will be recorded only after verification. This increment does not close the remaining channel/authenticated acceptance gates above.
+
+## Production schema registration
+
+At 18:16 UTC on 2026-11-19, after all implementation-head hosted suites passed, the reviewed function-only migration was registered as **20261119181622_flux_credit_channel_operations.sql**. Its SQL SHA-256 remains `4e14079aea8200066a546b4023dd24b8b0295293a6384a6dceb0c28db8976c59`; only the CLI filename was reconciled to the actual server registration. The snapshot marks only this verified migration applied; unrelated pending migrations remain pending.
+
+Readback verified reconciliation body MD5 `d76d8dc76c4e786091b1fca44983c1d6`, period-read body MD5 `d65b3938e7833e110195103a22c74d99`, empty search paths, invoker execution, service-role grants and denied anonymous/authenticated execution. Original debit body MD5 `cad92f4730562aa51d724a20b217effb` is unchanged. The security advisor reported no finding referencing either changed function; pre-existing project advisories remain outside this increment.
+
+This changes production function definitions only. No wallet/ledger/customer rows were backfilled, no live reservation was reconciled, and no communication/provider/credit-adjustment test ran. Application merge/deployment and automatic Trigger.dev worker publication require final metadata-head CI verification; their actual results will be recorded in PR #437.

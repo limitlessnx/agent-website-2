@@ -26,8 +26,6 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
-  // Channel operation settlement and billing-period reporting; pending production application.
-  "20261119162037",
   "20261001233000",
   "202610020001",
   "202610020002",
