@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { requireAdminSystemScope } from "@/lib/admin-organization-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as XLSX from "xlsx";
+import { createHash } from "node:crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ async function scope() {
 }
 function parseContacts(buffer: Buffer, extension: string) {
   const records: Array<{ email: string; full_name: string; company_name: string }> = [];
+  let missingEmail = 0;
   if (extension === "txt") {
     for (const line of buffer.toString("utf8").split(/\r?\n/)) {
       const emails = line.match(emailFinder) || [];
@@ -36,7 +38,7 @@ function parseContacts(buffer: Buffer, extension: string) {
       for (const row of rows) {
         const mapped = Object.fromEntries(Object.entries(row).map(([k, v]) => [k.toLowerCase().trim().replace(/[ _-]/g, ""), v]));
         const email = normalize(mapped.email || mapped.emailaddress || mapped.workemail || mapped.businessemail);
-        if (!email) continue;
+        if (!email) { missingEmail++; continue; }
         records.push({
           email,
           full_name: clean(mapped.fullname || mapped.name || [mapped.firstname, mapped.lastname].filter(Boolean).join(" ")).slice(0, 200),
@@ -54,7 +56,7 @@ function parseContacts(buffer: Buffer, extension: string) {
     seen.add(row.email);
     unique.push(row);
   }
-  return { contacts: unique, duplicatesInFile, invalid };
+  return { contacts: unique, duplicatesInFile, invalid, missingEmail };
 }
 
 export async function GET() {
@@ -82,7 +84,8 @@ export async function POST(request: NextRequest) {
   if (!allowed.has(extension)) return fail("Supported formats: CSV, XLSX, XLS, and TXT.");
   if (file.size < 1 || file.size > maxBytes) return fail("Files must be between 1 byte and 2 MB.");
   let parsed: ReturnType<typeof parseContacts>;
-  try { parsed = parseContacts(Buffer.from(await file.arrayBuffer()), extension); }
+  const bytes = Buffer.from(await file.arrayBuffer());
+  try { parsed = parseContacts(bytes, extension); }
   catch { return fail("Could not read this document. Check the file format."); }
   if (!parsed.contacts.length) return fail("No valid email addresses found. Use an Email column in spreadsheets.");
   if (parsed.contacts.length > maxContacts) return fail("Import at most 500 unique contacts per document.");
@@ -93,6 +96,8 @@ export async function POST(request: NextRequest) {
       .eq("organization_id", organizationId).eq("id", categoryId).maybeSingle();
     if (error || !data) return fail("Select a valid Gencouv category.");
   }
+  // Bind the reviewed preview to exactly the file bytes and selected category.
+  const fingerprint = createHash("sha256").update(bytes).update("\0").update(categoryId).digest("hex");
   const emails = parsed.contacts.map(c => c.email);
   const found = new Map<string, string>();
   for (let i = 0; i < emails.length; i += 75) {
@@ -107,19 +112,24 @@ export async function POST(request: NextRequest) {
     preview: true, total: parsed.contacts.length, new_contacts: fresh.length,
     existing_contacts: parsed.contacts.length - fresh.length,
     duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid,
+    missing_email: parsed.missingEmail, fingerprint,
     sample: parsed.contacts.slice(0, 10)
   }, { headers });
+  if (clean(form?.get("preview_fingerprint")) !== fingerprint) {
+    return fail("File or category changed since preview. Preview again before saving.", 409);
+  }
   // No marketing consent is inferred from a document upload, and no campaign is enrolled.
   const savedIds: string[] = [];
-  let skipped = parsed.contacts.length - fresh.length;
-  let failed = 0;
+  const skipped = parsed.contacts.length - fresh.length;
+  let failedContacts = 0;
+  let failedAssignments = 0;
   for (const contact of fresh) {
     const { data, error } = await db.from("crm_customers").insert({
       organization_id: organizationId, full_name: contact.full_name || null,
       email: contact.email, company_name: contact.company_name || null,
       metadata: { source: "gencouv_document_import", import_filename: file.name.slice(0, 180), marketing_consent: "unknown", imported_at: new Date().toISOString() }
     }).select("id").single();
-    if (error || !data) { failed++; continue; }
+    if (error || !data) { failedContacts++; continue; }
     savedIds.push(data.id);
   }
   if (categoryId) {
@@ -128,12 +138,16 @@ export async function POST(request: NextRequest) {
       const { error } = await db.from("crm_customer_category_assignments")
         .upsert({ organization_id: organizationId, customer_id: id, category_id: categoryId },
           { onConflict: "organization_id,customer_id,category_id", ignoreDuplicates: true });
-      if (error) failed++;
+      if (error) failedAssignments++;
     }
   }
   return NextResponse.json({
-    success: failed === 0, imported: savedIds.length, already_saved: skipped,
-    failed, duplicates_in_file: parsed.duplicatesInFile,
+    success: failedContacts === 0 && failedAssignments === 0,
+    imported: savedIds.length, already_saved: skipped,
+    failed: failedContacts + failedAssignments,
+    failed_contacts: failedContacts, failed_assignments: failedAssignments,
+    duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid,
+    missing_email: parsed.missingEmail,
     message: "Contacts saved for review. No marketing emails have been sent or scheduled."
-  }, { status: failed ? 207 : 200, headers });
+  }, { status: failedContacts || failedAssignments ? 207 : 200, headers });
 }
