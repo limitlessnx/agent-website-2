@@ -31,7 +31,7 @@ export type BrevoIndividualEmail = {
   to: string;
   subject: string;
   text: string;
-  // The caller must supply a stable idempotency key shared across providers.
+  // Future integration must reserve this ID durably before any provider send.
   idempotencyKey: string;
 };
 
@@ -52,7 +52,7 @@ export async function sendGencouvBrevoIndividual(
       email.text.length > 30000) {
     throw new Error("Valid subject and message required.");
   }
-  if (!/^[A-Za-z0-9_-]{12,120}$/.test(email.idempotencyKey)) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(email.idempotencyKey)) {
     throw new Error("Valid email idempotency key required.");
   }
   const response = await fetch(BREVO_API + "/smtp/email", {
@@ -60,7 +60,8 @@ export async function sendGencouvBrevoIndividual(
     headers: {
       "api-key": apiKey,
       "Content-Type": "application/json",
-      "idempotencyKey": email.idempotencyKey,
+      // Brevo documents request idempotency for batches; do not assume
+      // single-recipient deduplication replaces our own delivery ledger.
     },
     body: JSON.stringify({
       sender: { email: email.from.trim().toLowerCase(), name: "Gencouv Capital" },
