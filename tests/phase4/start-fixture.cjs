@@ -24,6 +24,9 @@ const server = http.createServer((request, response) => {
     response.writeHead(200,{"Content-Type":"application/json"});return response.end(JSON.stringify(audits));
   }
   const table = url.pathname.split("/").pop();
+  if (table === "flux_credit_ledger" && scenario === "credit-history-unavailable") {
+    response.writeHead(503, {"Content-Type":"application/json"});return response.end(JSON.stringify({message:"PRIVATE_PROVIDER_DIAGNOSTIC"}));
+  }
   const evidenceTables = ["organization_integration_admin_view","agent_runtime_tool_runs","maia_inbound_events","automation_provisioning_jobs","transactional_email_events","elevenlabs_voice_calls","whatsapp_delivery_attempts"];
   if (scenario === "outage" && evidenceTables.includes(table)) {
     response.writeHead(503,{"Content-Type":"application/json"});return response.end(JSON.stringify({message:"PRIVATE_PROVIDER_DIAGNOSTIC"}));
@@ -41,6 +44,10 @@ const server = http.createServer((request, response) => {
     response.writeHead(503,{"Content-Type":"application/json"}); return response.end(JSON.stringify({message:"Synthetic workflow outage"}));
   }
   // These RPCs are simulated locally; nothing is forwarded or persisted.
+  if (url.pathname === "/rest/v1/rpc/get_flux_credit_availability") {
+    response.writeHead(scenario === "credit-unavailable" ? 503 : 200, {"Content-Type":"application/json"});
+    return response.end(JSON.stringify(scenario === "credit-unavailable" ? {message:"PRIVATE_PROVIDER_DIAGNOSTIC"} : {balance:1000,reserved:scenario === "credit-held" ? 1000 : 996,available:scenario === "credit-held" ? 0 : 4}));
+  }
   if (url.pathname === "/rest/v1/rpc/ensure_flux_credit_wallet") {
     response.writeHead(200,{"Content-Type":"application/json"});
     return response.end(JSON.stringify({id:"qa-wallet", organization_id:"10000000-0000-4000-8000-000000000001",plan_code:"basic",monthly_allowance:1000,balance:1000,bonus_balance:0,top_up_balance:0,status:"active",current_period_start:"2026-11-01T00:00:00Z",current_period_end:null,trial_ends_at:null,trial_credit_limit:null}));

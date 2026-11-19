@@ -64,7 +64,9 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
           <div className="admin-metrics">
             <div><span>Plan</span><strong>{usage.planName}</strong></div>
             <div><span>Monthly credits</span><strong>{formatCredits(usage.monthlyCredits)}</strong></div>
-            <div><span>Remaining</span><strong>{formatCredits(usage.balance)}</strong></div>
+            <div><span>Balance</span><strong>{formatCredits(usage.balance)}</strong></div>
+            <div><span>Reserved credits</span><strong>{usage.capacity.reservedCredits === null ? "Unavailable" : formatCredits(usage.capacity.reservedCredits)}</strong></div>
+            <div><span>Available for new work</span><strong>{usage.capacity.availableCredits === null ? "Unavailable" : formatCredits(usage.capacity.availableCredits)}</strong></div>
             <div><span>Used</span><strong>{usage.percentUsed}%</strong></div>
             <div><span>Provider cost</span><strong>{formatMoney(usage.providerCostCents)}</strong></div>
             <div><span>Customer value</span><strong>{formatMoney(usage.customerValueCents)}</strong></div>
@@ -75,6 +77,7 @@ export default async function AdminBillingPage({ searchParams }: { searchParams?
             <div><span>Service package</span><strong>{commercial?.servicePackage?.packageName || "Not assigned"}</strong></div>
             <div><span>Active systems</span><strong>{formatCredits(commercial?.systems.active || 0)}</strong></div>
           </div>
+          <p role="status" className="admin-note">{usage.capacity.status === "unavailable" ? "Credit availability could not be verified. Refresh to retry. Your balance is shown separately." : "Reserved credits include running work and unresolved accounting. They become usage only after settlement; do not release unresolved reservations without provider evidence."}</p>
           <p className="admin-note">Commercial policy: Flux Credits are prepaid. At exhaustion, chargeable AI pauses rather than creating an unapproved postpaid overage. 1 Flux Credit = $0.01 customer-facing usage value; minimum customer top-up is $10 = 1,000 credits.</p>
           <h3>Usage by action</h3>
           <div className="admin-list compact">

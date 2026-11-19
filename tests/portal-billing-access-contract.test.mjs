@@ -9,7 +9,7 @@ const entitlements = fs.readFileSync("components/portal/PlanEntitlementsPanel.ts
 
 test("Flux Credits navigation is visible only when billing capability is granted", () => {
   assert.match(sidebar, /billing:boolean/);
-  assert.match(sidebar, /capabilities\.billing\?<Link href="\/portal\/billing"/);
+  assert.match(sidebar, /capabilities\.billing\?<NavigationItem href="\/portal\/billing"/);
   assert.match(layout, /billing:capabilities\.billing/);
 });
 

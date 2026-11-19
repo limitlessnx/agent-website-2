@@ -15,6 +15,11 @@ on:
       - "lib/flux-credits.ts"
       - "lib/flux-ai-metering*.ts"
       - "tests/flux-wallet-preflight.test.cjs"
+      - "tests/flux-credit-visibility.test.cjs"
+      - "tests/portal-billing-access-contract.test.mjs"
+      - "app/api/portal/billing/route.ts"
+      - "app/portal/billing/**"
+      - "app/dashboard/billing/**"
       - "tests/flux-credit-capacity*.cjs"
       - "tests/helpers/flux-capacity-database.cjs"
       - "app/api/internal/runtime/provider/execute/route.ts"
@@ -56,10 +61,12 @@ jobs:
         run: npm run test:billing
       - name: Wallet availability and provider preflight boundaries
         run: node --test tests/flux-wallet-preflight.test.cjs
+      - name: Billing visibility and permission parity
+        run: node --test tests/flux-credit-visibility.test.cjs tests/portal-billing-access-contract.test.mjs
       - name: Credit capacity SQL and provider lifecycle
         run: node --test tests/flux-credit-capacity-database.test.cjs tests/flux-credit-capacity-runtime.test.cjs
       - name: Wallet changed-module lint
-        run: npx eslint lib/flux-credits.ts app/api/internal/runtime/provider/execute/route.ts tests/flux-wallet-preflight.test.cjs tests/flux-credit-capacity*.cjs tests/helpers/flux-capacity-database.cjs
+        run: npx eslint lib/flux-credits.ts app/api/internal/runtime/provider/execute/route.ts tests/flux-wallet-preflight.test.cjs tests/flux-credit-visibility.test.cjs tests/flux-credit-capacity*.cjs app/api/portal/billing/route.ts app/portal/billing/page.tsx app/dashboard/billing/page.tsx tests/helpers/flux-capacity-database.cjs
       - name: PostgreSQL concurrent renewal sessions
         env:
           BILLING_TEST_DATABASE_URL: postgresql://postgres:billing_test_only@localhost:5432/billing_test
