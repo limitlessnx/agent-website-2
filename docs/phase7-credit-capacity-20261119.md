@@ -29,7 +29,7 @@ Provider exceptions release the hold under the existing success-only billing rul
 - tests/flux-credit-capacity-runtime.test.cjs: actual route/shared helper with synthetic providers and isolated SQL.
 - tests/flux-credit-capacity-concurrency.test.cjs: independent PostgreSQL sessions against a dedicated disposable localhost database.
 - tests/flux-wallet-preflight.test.cjs: retained wallet cases plus held/unavailable capacity boundaries.
-- tests/supabase-migration-ledger.test.mjs: explicit pending migration until actual registration is verified.
+- supabase/migration-ledger.production-snapshot.json and tests/supabase-migration-ledger.test.mjs: actual verified migration registration; no other pending migration is marked applied.
 - .github/workflows/monthly-billing-verification.yml: extend existing financial pipeline, including independent PostgreSQL concurrency.
 
 ## Verification and deployment gates
@@ -51,3 +51,13 @@ Rollback must preserve holds, actual debits and provider evidence. Stop new adop
 Other billable channels still need measured unit inventory and incremental atomic adoption. Reserved/available customer-facing spending visibility, explicit authorized recovery UI/jobs for crash/unknown outcomes, period-transition acceptance and designated authenticated/live-provider acceptance remain open. Holds have no automatic expiry because elapsed time is not evidence of provider failure. This increment does not close all master phases.
 
 The user has standing approval to test, merge and deploy verified completed increments. Production application/schema status is reported from actual release readback; authorization alone is not verification.
+
+## Reviewed source and schema evidence
+
+Candidate 8d6af77e02983e1ac70ba2db7d08439417cc6a06 passed Monthly Billing Verification run 44485574737, Maia Draft Verification 44485574739 and Dashboard Final QA 44485574741. Vercel preview dpl_99W5xX2wS3jFD5C17Luh7FQfz64b was READY. Dashboard browser logs record 108 passing synthetic cases at all six widths; this is not authenticated live acceptance or visual baseline approval.
+
+Local evidence: 12 SQL cases, 30 runtime/wallet cases, 27 billing regressions, 656 support cases, four migration-ledger checks and production build passed. Changed-module lint has zero errors and one pre-existing unused planFromSubscription warning. Hosted billing independently passed 16 wallet cases, 26 SQL/runtime cases, renewal concurrency and the new independent PostgreSQL capacity test, plus types/build.
+
+After these gates passed, apply_migration succeeded. Production readback reports actual registration 20261119082208 / flux_credit_capacity. The CLI-generated file was renamed to that actual registration with identical SQL bytes (SHA256 ed2d43cf910a77a9626708342960aea91e8441b22a874410a97b5593be1aafd3); remote migration history was not rewritten. RLS is enabled, anonymous/authenticated table reads and new function execution are denied, all three new functions are invoker with empty search_path, service execution is granted, and the existing debit body is the reviewed patched MD5. No customer wallets, subscriptions or history were backfilled or edited by the migration.
+
+The registration/snapshot-only follow-up must pass exact-head checks and produce a READY preview before merging. Production schema is now extended; application release and read-only post-release checks are recorded in the PR after actual deployment. Existing prior advisory groups are outside this bounded change; the service-only reservations table intentionally has no client RLS policies.
