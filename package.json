@@ -36,6 +36,7 @@
     "test:admin-auth": "node --test tests/platform-admin-account-login.test.cjs tests/client-workspace-onboarding-routes.test.cjs tests/workspace-and-google-auth.test.mjs tests/client-manager-onboarding-handoffs.test.mjs",
     "test:admin-auth-browser": "node tests/admin-account-login-browser.cjs",
     "test:ui-motion": "playwright test --config playwright.motion.config.ts",
+    "test:leo-keyboard": "playwright test --config playwright.leo-keyboard.config.ts",
     "test:ai-presence": "node --test tests/ai-presence-state.test.cjs",
     "test:team-access": "node --test tests/tenant-manager-owner-seat-guardrails.test.mjs tests/tenant-team-access-api.test.cjs tests/tenant-team-access-database.test.mjs",
     "test:phase4": "node --test tests/admin-control-center.test.cjs tests/admin-organization-actions.test.cjs",

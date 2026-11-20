@@ -4,17 +4,55 @@ on:
   push:
     branches:
       - fix/public-leo-evaluation-system
+  pull_request:
+    branches: [main]
+    paths:
+      - "components/PublicLeoConsultant.tsx"
+      - "components/leo/**"
+      - "components/admin/LeoFloatingButton.tsx"
+      - "components/admin/MobileAdminPolish.module.css"
+      - "components/portal/TenantLeoFloatingButton.tsx"
+      - "app/dashboard/support/AgentLeoClient.tsx"
+      - "app/leo-platform-ui.css"
+      - "tests/ui-motion/**"
+      - "playwright.leo-keyboard.config.ts"
+      - "playwright.motion.config.ts"
+      - "package.json"
+      - ".github/workflows/leo-public-voice-stability.yml"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   voice-stability:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run prebuild
+      - name: Changed Leo source lint
+        run: npx eslint components/PublicLeoConsultant.tsx components/leo/useChatViewport.ts components/admin/LeoFloatingButton.tsx components/portal/TenantLeoFloatingButton.tsx app/dashboard/support/AgentLeoClient.tsx tests/ui-motion/leo-keyboard.spec.ts playwright.leo-keyboard.config.ts
+      - name: Leo state, authorization and voice regression contracts
+        run: node --test tests/ai-presence-state.test.cjs tests/leo-public-voice-stability.test.mjs tests/leo-core-security.test.mjs tests/leo-action-approval.test.mjs
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Synthetic keyboard geometry across six widths and mobile WebKit
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:leo-keyboard
+      - name: Preserve synthetic screenshots and failure traces for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-keyboard-evidence
+          path: |
+            test-results/leo-keyboard/
+            test-results/leo-keyboard-results.json
+            test-results/leo-keyboard-traces/
+          if-no-files-found: ignore
+          retention-days: 14

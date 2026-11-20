@@ -57,7 +57,7 @@ export default function AgentLeoClient({
   const [busy, setBusy] = useState(false);
   const [workingAction, setWorkingAction] = useState("");
   const [error, setError] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
     const response = await fetch(apiBase, { cache: "no-store" });
@@ -68,7 +68,7 @@ export default function AgentLeoClient({
   // Initial client-side load for saved support cases.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadConversations(); }, [loadConversations]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy, actions]);
+  useEffect(() => { const log = messagesRef.current; if (log) log.scrollTop = log.scrollHeight; }, [messages, busy, actions]);
 
   async function openConversation(id: string) {
     setConversationId(id);
@@ -213,7 +213,7 @@ export default function AgentLeoClient({
         </section>
 
         <section className="leo-chat-shell">
-          <div className="leo-messages">
+          <div ref={messagesRef} className="leo-messages">
             {!messages.length && !busy ? (
               <div className="leo-empty-chat">
                 <h2>How can I help you today?</h2>
@@ -235,7 +235,6 @@ export default function AgentLeoClient({
                 <div className="leo-message-body"><div className="leo-typing"><i /><i /><i /></div><small>{typingLabel}</small></div>
               </article>
             ) : null}
-            <div ref={bottomRef} />
           </div>
 
           {actions.length ? (

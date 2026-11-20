@@ -99,13 +99,7 @@
     color:var(--fk-text)!important;
     box-shadow:0 10px 30px rgba(0,0,0,.24)!important;
   }
-  .mobilePolish :global(.fixed[aria-label="Open Agent Leo"] + aside){
-    right:12px!important;
-    bottom:calc(140px + env(safe-area-inset-bottom,0px))!important;
-    width:calc(100vw - 24px)!important;
-    max-height:calc(100dvh - 204px)!important;
-    height:min(520px,calc(100dvh - 204px))!important;
-  }
+  /* Leo panel geometry is owned by leo-platform-ui.css and its visible-viewport hook. */
 }
 
 @media (max-width:620px){
