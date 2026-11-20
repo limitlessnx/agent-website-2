@@ -27,6 +27,8 @@ Keyboard tests simulate VisualViewport geometry and viewport-resizing keyboards;
 
 Completed locally: 30 Chromium keyboard cases passed across all six widths; support regression runner 84 test files passed; focused AI-state/Leo permission/voice/Xposure/email-capacity group 7 test files passed; TypeScript passed; changed-source lint has zero errors and one existing unused-prop warning. An optimized local build also passed; final candidate build and hosted release results are recorded in the PR after execution.
 
+The broader responsive run passed 41/42 cases; one desktop drawer-to-tab focus race passed on isolated rerun. Inspection found an unconditional deferred focus return in `useDialogFocusTrap`. Its return now preserves subsequent user focus and avoids page scrolling; four focused lifecycle tests cover abandoned focus, subsequent navigation, native focus return and unmounted triggers. The final responsive rerun is recorded in the PR.
+
 ## Remaining acceptance boundaries
 
 Physical iPhone Safari keyboard behavior still needs device confirmation; synthetic/headless evidence is not that confirmation. No authenticated production customer screenshots or real-provider messaging tests are claimed. Owner/manager acceptance and ElevenLabs remain deferred by the user. This increment does not certify every master implementation milestone complete.

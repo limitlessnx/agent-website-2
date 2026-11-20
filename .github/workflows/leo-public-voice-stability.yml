@@ -11,6 +11,8 @@ on:
       - "components/leo/**"
       - "components/admin/LeoFloatingButton.tsx"
       - "components/admin/MobileAdminPolish.module.css"
+      - "components/admin/useDialogFocusTrap.ts"
+      - "tests/dialog-focus-return.test.cjs"
       - "components/portal/TenantLeoFloatingButton.tsx"
       - "app/dashboard/support/AgentLeoClient.tsx"
       - "app/leo-platform-ui.css"
@@ -39,9 +41,9 @@ jobs:
       - run: npm ci
       - run: npm run prebuild
       - name: Changed Leo source lint
-        run: npx eslint components/PublicLeoConsultant.tsx components/leo/useChatViewport.ts components/admin/LeoFloatingButton.tsx components/portal/TenantLeoFloatingButton.tsx app/dashboard/support/AgentLeoClient.tsx tests/ui-motion/leo-keyboard.spec.ts playwright.leo-keyboard.config.ts
+        run: npx eslint components/PublicLeoConsultant.tsx components/leo/useChatViewport.ts components/admin/LeoFloatingButton.tsx components/portal/TenantLeoFloatingButton.tsx app/dashboard/support/AgentLeoClient.tsx components/admin/useDialogFocusTrap.ts tests/dialog-focus-return.test.cjs tests/ui-motion/leo-keyboard.spec.ts playwright.leo-keyboard.config.ts
       - name: Leo state, authorization and voice regression contracts
-        run: node --test tests/ai-presence-state.test.cjs tests/leo-public-voice-stability.test.mjs tests/leo-core-security.test.mjs tests/leo-action-approval.test.mjs
+        run: node --test tests/dialog-focus-return.test.cjs tests/ai-presence-state.test.cjs tests/leo-public-voice-stability.test.mjs tests/leo-core-security.test.mjs tests/leo-action-approval.test.mjs
       - run: npx playwright install --with-deps chromium webkit
       - name: Synthetic keyboard geometry across six widths and mobile WebKit
         run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:leo-keyboard

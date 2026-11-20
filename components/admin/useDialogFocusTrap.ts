@@ -76,7 +76,14 @@ export function useDialogFocusTrap(
     return () => {
       cancelAnimationFrame(initialFocus);
       document.removeEventListener("keydown", onKeyDown);
-      requestAnimationFrame(() => previous?.focus());
+      requestAnimationFrame(() => {
+        // Native dialogs can restore focus before this frame. Respect any
+        // subsequent user navigation instead of taking focus back again.
+        const active = document.activeElement;
+        if (previous?.isConnected && (!active || active === document.body || dialog.contains(active))) {
+          previous.focus({ preventScroll: true });
+        }
+      });
     };
   }, [open, containerRef]);
 }
