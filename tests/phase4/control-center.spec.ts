@@ -132,3 +132,15 @@ test('unavailable reservation reads never look like an empty recovery queue',asy
  await expect(page.getByText('No unresolved reservations in this organization.')).toHaveCount(0);
  await stableLayout(page);await capture(page,'recovery-unavailable');
 });
+
+test('industry template mismatch stays visible without changing the live workspace',async({page,context})=>{
+ await scenario(context,'industry-mismatch');
+ await page.goto(`/dashboard/provisioning?organizationId=${org}`,{waitUntil:'networkidle'});
+ const requirement=page.locator('li').filter({has:page.getByText('Industry template',{exact:true})});
+ await expect(requirement).toContainText('Blocked');
+ await expect(requirement).toContainText('match photography-studio');
+ await expect(requirement.getByRole('link',{name:'Review required action'})).toHaveAttribute('href',`/dashboard/clients/${org}/manage`);
+ await stableLayout(page);
+ mkdirSync('docs/xposure-readiness-evidence',{recursive:true});
+ await page.screenshot({path:`docs/xposure-readiness-evidence/industry-mismatch-${page.viewportSize()!.width}.png`,fullPage:true,animations:'disabled',style:'nextjs-portal{display:none!important}'});
+});
