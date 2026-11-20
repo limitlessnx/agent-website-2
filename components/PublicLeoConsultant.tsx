@@ -1,5 +1,6 @@
 "use client";
 
+import { useChatViewport } from "@/components/leo/useChatViewport";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, MessageCircle, Phone, PhoneOff, Send, UserRound, X } from "@/components/admin/ServerIcons";
 import { getLeoMicrophoneConstraints } from "@/lib/leo-voice-client";
@@ -71,6 +72,10 @@ function asLeadProfile(value: unknown, leadId?: unknown): LeadProfile | null {
 
 export default function PublicLeoConsultant() {
   const [open, setOpen] = useState(false);
+  const viewportRef = useChatViewport(open);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  const restoreLauncherFocus = useRef(false);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const [lead, setLead] = useState<LeadProfile | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -258,6 +263,24 @@ export default function PublicLeoConsultant() {
     return () => window.removeEventListener("hashchange", openFromHash);
   }, []);
 
+  useEffect(() => {
+    const log = messagesRef.current;
+    if (log) log.scrollTop = log.scrollHeight;
+  }, [messages, isThinking]);
+
+  function closeLeo() {
+    stopCall();
+    restoreLauncherFocus.current = true;
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    if (!open && restoreLauncherFocus.current) {
+      restoreLauncherFocus.current = false;
+      launcherRef.current?.focus({ preventScroll: true });
+    }
+  }, [open]);
+
   function openLeo() {
     setOpen(true);
     if (messages.length === 0) setMessages([firstMessage]);
@@ -265,8 +288,7 @@ export default function PublicLeoConsultant() {
 
   function toggleLeo() {
     if (open) {
-      stopCall();
-      setOpen(false);
+      closeLeo();
       return;
     }
     openLeo();
@@ -391,6 +413,8 @@ export default function PublicLeoConsultant() {
     try { event = JSON.parse(raw) as RealtimeEvent; } catch { return; }
     if (event.type === "input_audio_buffer.speech_started") {
       const priorVoiceState = voiceStateRef.current;
+      // This clock is read only by a WebRTC data-channel event, never by render.
+      // eslint-disable-next-line react-hooks/purity
       const sinceLastStop = lastSpeechStoppedAtRef.current ? Date.now() - lastSpeechStoppedAtRef.current : Number.POSITIVE_INFINITY;
       if (
         (priorVoiceState === "endpointing" || priorVoiceState === "generating") &&
@@ -416,6 +440,8 @@ export default function PublicLeoConsultant() {
       return;
     }
     if (event.type === "input_audio_buffer.speech_stopped") {
+      // This timestamp belongs to the speech-stopped event, not the render phase.
+      // eslint-disable-next-line react-hooks/purity
       lastSpeechStoppedAtRef.current = Date.now();
       if (voiceStateRef.current === "user_speaking") transitionVoice("endpointing");
       return;
@@ -578,16 +604,16 @@ export default function PublicLeoConsultant() {
   }
 
   return (
-    <aside id="talk-to-leo" className={`public-leo ${open ? "open" : ""}`} aria-label="Fluxknight Leo support assistant">
+    <aside ref={viewportRef} id="talk-to-leo" className={`public-leo ${open ? "open" : ""}`} aria-label="Fluxknight Leo support assistant">
       {open ? (
         <section className="public-leo-panel">
-          <header className="public-leo-header">
+          <header className="public-leo-header" data-mode={isCalling ? "VOICE" : "CHAT"}>
             <span className="public-leo-avatar"><Bot size={18} /></span>
             <div><strong>Leo</strong><small>{isCalling ? "Live Fluxknight support" : "Support & business evaluation"}</small></div>
-            <button type="button" className="public-leo-close" onClick={() => { stopCall(); setOpen(false); }} aria-label="Close Leo"><X size={18} /></button>
+            <button type="button" className="public-leo-close" onClick={closeLeo} aria-label="Close Leo"><X size={18} /></button>
           </header>
 
-          <div className="public-leo-messages">
+          <div ref={messagesRef} className="public-leo-messages" role="log" aria-label="Leo conversation">
             {messages.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`public-leo-message ${message.role}`}>
                 <span>{message.role === "assistant" ? <Bot size={14} /> : <UserRound size={14} />}</span>
@@ -606,7 +632,7 @@ export default function PublicLeoConsultant() {
               <button type="button" className="public-leo-call-button" onClick={() => void startCall()}><Phone size={17} /> Talk to Leo</button>
             )}
             <form onSubmit={sendMessage} className="public-leo-input">
-              <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask Leo about your business..." disabled={isCalling || isThinking} aria-label="Message Leo" />
+              <input enterKeyHint="send" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask Leo about your business..." disabled={isCalling || isThinking} aria-label="Message Leo" />
               <button type="submit" disabled={isCalling || isThinking || !input.trim()} aria-label="Send message"><Send size={17} /></button>
             </form>
           </div>
@@ -615,6 +641,7 @@ export default function PublicLeoConsultant() {
 
       <button
         type="button"
+        ref={launcherRef}
         className="public-leo-launcher"
         onClick={toggleLeo}
         aria-label={open ? "Close Leo" : "Open Leo"}
@@ -628,7 +655,7 @@ export default function PublicLeoConsultant() {
         .public-leo{position:fixed;right:20px;bottom:20px;z-index:80;color:#f8fbff;font-family:inherit}
         .public-leo-launcher{position:relative;width:62px;height:62px;display:grid;place-items:center;padding:0;border:1px solid rgba(226,232,240,.28);border-radius:999px;color:#fff;background:linear-gradient(145deg,rgba(226,232,240,.18),rgba(124,58,237,.62) 42%,rgba(15,23,42,.82));box-shadow:0 18px 55px rgba(15,23,42,.38),inset 0 1px 0 rgba(255,255,255,.28);backdrop-filter:blur(18px) saturate(1.35);cursor:pointer}
         .public-leo-launcher svg{position:relative;z-index:2}.public-leo-pulse{position:absolute;inset:-7px;border:1px solid rgba(167,139,250,.28);border-radius:inherit;animation:leoLauncherPulse 2.2s ease-out infinite}
-        .public-leo-panel{width:min(360px,calc(100vw - 28px));max-height:min(520px,calc(100vh - 120px));display:grid;grid-template-rows:auto minmax(150px,1fr) auto;border:1px solid rgba(226,232,240,.22);border-radius:20px;overflow:hidden;background:linear-gradient(145deg,rgba(248,250,252,.14),rgba(30,41,59,.72) 42%,rgba(15,23,42,.9));box-shadow:0 24px 80px rgba(2,6,23,.44),inset 0 1px 0 rgba(255,255,255,.22);backdrop-filter:blur(24px) saturate(1.35)}
+        .public-leo-panel{width:min(360px,calc(100vw - 28px));max-height:min(520px,calc(100vh - 120px));display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid rgba(226,232,240,.22);border-radius:20px;overflow:hidden;background:linear-gradient(145deg,rgba(248,250,252,.14),rgba(30,41,59,.72) 42%,rgba(15,23,42,.9));box-shadow:0 24px 80px rgba(2,6,23,.44),inset 0 1px 0 rgba(255,255,255,.22);backdrop-filter:blur(24px) saturate(1.35)}
         .public-leo-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid rgba(226,232,240,.14);background:rgba(255,255,255,.06)}
         .public-leo-avatar{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;color:#f8fbff;background:rgba(148,163,184,.26);border:1px solid rgba(226,232,240,.2)}
         .public-leo-header strong{display:block;font-size:.9rem}.public-leo-header small{display:block;margin-top:2px;color:rgba(226,232,240,.7);font-size:.72rem}
