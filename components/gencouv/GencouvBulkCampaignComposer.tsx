@@ -76,7 +76,7 @@ export default function GencouvBulkCampaignComposer() {
     <div className="admin-panel-header">
       <div>
         <h2>Bulk email campaigns</h2>
-        <p>Prepare a consent-qualified Gencouv audience and send in controlled Resend batches. No SMS or Brevo.</p>
+        <p>Prepare a consent-qualified Gencouv audience and send in controlled Resend batches. No SMS or Brevo. Up to 100 recipients in each batch, subject to remaining daily quota.</p>
       </div>
       <span className="admin-status">{sendingEnabled ? "Resend batch sending enabled" : "Sending disabled until release"}</span>
     </div>
@@ -120,7 +120,7 @@ export default function GencouvBulkCampaignComposer() {
       <button type="button" disabled={busy || consent !== "yes" || consentBasis.trim().length < 8 || !subject.trim() || !body.trim() || !!prepared}
         onClick={() => void prepare()}>{busy ? "Working…" : "Prepare reviewed campaign"}</button>
       <button type="button" disabled={busy || !prepared || !sendingEnabled} onClick={() => void sendBatch()}>
-        {busy ? "Working…" : "Send next 10 with Resend"}
+        {busy ? "Working…" : "Send up to 100 with Resend"}
       </button>
     </div>
     {prepared && <p role="status">Campaign reserved: {prepared.queued} contacts with recorded consent, {prepared.excluded} excluded. ID: {prepared.campaign_id}</p>}
