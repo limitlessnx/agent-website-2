@@ -24,7 +24,7 @@ async function fixture(t) {
     );
     insert into organizations values ('${org}'), ('${otherOrg}');
     insert into crm_customers(organization_id)
-      select '${org}' from generate_series(1,85);
+      select '${org}' from generate_series(1,115);
     insert into crm_customers(organization_id) values ('${otherOrg}');
   `);
   await db.exec(migration);
@@ -42,18 +42,18 @@ async function fixture(t) {
   `);
   return db;
 }
-test("migration applies and the first batch reserves at most ten distinct recipients", async t => {
+test("migration applies and the first batch reserves 100 distinct recipients", async t => {
   const db = await fixture(t);
   const { rows } = await db.query(
     "select id,status from gencouv_claim_bulk_batch($1,$2,$3)",
-    [org,campaign,10]
+    [org,campaign,100]
   );
-  assert.equal(rows.length,10);
+  assert.equal(rows.length,100);
   assert.ok(rows.every(r=>r.status==="sending"));
   assert.equal(new Set(rows.map(r=>r.id)).size,10);
   const second = await db.query("select id from gencouv_claim_bulk_batch($1,$2,$3)",[org,campaign,10]);
-  assert.equal(second.rows.length,10);
-  assert.equal(new Set([...rows,...second.rows].map(r=>r.id)).size,20);
+  assert.equal(second.rows.length,0);
+  assert.equal(new Set([...rows,...second.rows].map(r=>r.id)).size,100);
 });
 test("tenant cross-write is rejected by composite foreign keys", async t => {
   const db = await fixture(t);
@@ -72,14 +72,14 @@ test("unique campaign/email prevents double reservation", async t => {
     [campaign,org,customer,"contact1@example.com"]
   ),/unique/i);
 });
-test("conservative account-day cap returns no more than 75 claims in total",async t=>{
+test("account-day cap returns no more than 100 claims in total",async t=>{
   const db=await fixture(t);
   let claimed=0;
   for(let i=0;i<9;i++){
     const batch=await db.query("select id from gencouv_claim_bulk_batch($1,$2,$3)",[org,campaign,10]);
     claimed+=batch.rows.length;
   }
-  assert.equal(claimed,75);
+  assert.equal(claimed,100);
   const further=await db.query("select id from gencouv_claim_bulk_batch($1,$2,$3)",[org,campaign,10]);
   assert.equal(further.rows.length,0);
 });
