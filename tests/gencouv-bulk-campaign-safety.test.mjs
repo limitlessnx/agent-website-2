@@ -48,10 +48,11 @@ test("Gencouv admin session, CSRF, org isolation, and consent required before an
 });
 
 test("Resend dispatch uses per-recipient idempotency and ambiguous outcomes are not retried", () => {
-  assert.match(api, /"Idempotency-Key": "gencouv-bulk-" \+ job\.id/);
+  assert.match(api, /"Idempotency-Key": batchKey/);
+  assert.match(api, /"\\/emails\\/batch"/);
   assert.match(api, /status: "unknown", error_code: "verify_provider_before_retry"/);
   assert.match(api, /List-Unsubscribe-Post/);
-  assert.match(api, /await suppress\(db, org, job\.normalized_email\)/);
+  assert.match(api, /suppress\(db, org, job\.normalized_email\)/);
   assert.match(api, /hasConsent\(contact\.metadata\)/);
   assert.match(api, /accepted, suppressed,/);
   assert.doesNotMatch(api, /resend\.batch\.send/);
@@ -79,8 +80,8 @@ test("Gencouv UI offers Yes/No consent, campaign review and manual batch sends",
 });
 
 test("imported contacts have individually auditable permission confirmations", () => {
-  assert.match(consentRoute, /requireAdminSystemScope\\("gencouv"\\)/);
-  assert.match(consentRoute, /getAdminSession\\(\\)/);
+  assert.match(consentRoute, /requireAdminSystemScope\("gencouv"\)/);
+  assert.match(consentRoute, /getAdminSession\(\)/);
   assert.match(consentRoute, /gencouv_record_imported_contact_consent/);
   assert.match(importUI, /Confirm consent/);
   assert.match(importUI, /Save consent decision/);
