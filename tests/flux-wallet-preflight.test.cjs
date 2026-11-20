@@ -54,6 +54,7 @@ function fixture(overrides = {}) {
     '@/lib/flux-credits': credits,
     '@/lib/fluxknight-plans': plans,
     '@/lib/flux-ai-metering-core': core,
+    '@/lib/runtime/email-decision': load('lib/runtime/email-decision.ts'),
   }, '', { Error });
   function request(extra = {}, secret = 'synthetic-runtime') {
     return { headers: new Headers({ 'x-runtime-secret': secret }), json: async () => ({ organization_id: organizationId, agent_id: agentId, execution_id: 'synthetic-execution', purpose: 'runtime', ...extra }) };

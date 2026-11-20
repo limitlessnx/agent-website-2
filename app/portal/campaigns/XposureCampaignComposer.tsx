@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
+import { calculateFluxCredits } from "@/lib/fluxknight-plans";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
 
@@ -9,6 +10,7 @@ type Customer = { id: string; full_name: string; phone: string | null };
 type Review = {
   campaignId: string;
   reviewFingerprint: string;
+  writerValues?: Record<string, string>;
   recipientCount: number;
   sampleName: string;
   message: string;
@@ -28,6 +30,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   const [templateError, setTemplateError] = useState("");
   const [contactError, setContactError] = useState("");
   const [error, setError] = useState("");
+  const [canUseAiFormatting, setCanUseAiFormatting] = useState(false);
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState<"review" | "send" | null>(null);
   const [review, setReview] = useState<Review | null>(null);
@@ -76,6 +79,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
     setSelected(next);
     setConsent(false);
     setReview(null);
+    setCanUseAiFormatting(false);
     setError("");
     setNotice("");
   }
@@ -83,6 +87,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   function changeMessage(next: string) {
     setMessage(next);
     setReview(null);
+    setCanUseAiFormatting(false);
     setError("");
     setNotice("");
   }
@@ -93,7 +98,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
     setReload(current => current + 1);
   }
 
-  async function submit(action: "review" | "send") {
+  async function submit(action: "review" | "send", useAiFormatting = false) {
     if (!canReview || pending || (action === "send" && !review)) return;
     setPending(action);
     setError("");
@@ -104,18 +109,23 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         body: JSON.stringify({
           action, message, contactIds: recipients, whatsappConsentConfirmed: consent,
           campaignId: review?.campaignId, reviewFingerprint: review?.reviewFingerprint,
+          writerValues: review?.writerValues, useAiFormatting,
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Campaign request failed.");
+      if (!response.ok) {
+        setCanUseAiFormatting(payload.canUseAiFormatting === true);
+        throw new Error(payload.error || "Campaign request failed.");
+      }
+      setCanUseAiFormatting(false);
       if (action === "review") {
         setReview(payload);
         return;
       }
       changeSelection([]);
-      setNotice(`${payload.accepted} accepted by WhatsApp, ${payload.skipped} skipped.${payload.unknown ? ` ${payload.unknown} unconfirmed. Check delivery records before trying again.` : ""}`);
+      setNotice(`${payload.accepted} accepted by WhatsApp, ${payload.skipped} skipped. Delivery confirmation is pending.${payload.unknown ? ` ${payload.unknown} unconfirmed. Check delivery records before trying again.` : ""}`);
     } catch (reason) {
-      setReview(null);
+      if (action === "review") setReview(null);
       setError(reason instanceof Error ? reason.message : "Campaign request failed. Check the result before trying again.");
     } finally {
       setPending(null);
@@ -160,6 +170,9 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         {issues.length > 0 && <ul id="promotion-review-issues" className={styles.reviewIssues} aria-live="polite">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
         {(templateError || contactError) && <p className={styles.hint}>Refresh campaign information before reviewing.</p>}
         {!review && <button type="button" className={styles.primary} disabled={!canReview || Boolean(pending)} aria-describedby={issues.length ? "promotion-review-issues" : undefined} onClick={() => void submit("review")}>{pending === "review" ? "Checking campaign…" : "Review campaign"}</button>}
+        {canUseAiFormatting && !review && <button type="button" className={styles.secondary} disabled={!canReview || Boolean(pending)} onClick={() => void submit("review", true)}>
+          Try AI formatting · {calculateFluxCredits("web_ai", 1)} Flux Credits
+        </button>}
         {review && <div className={styles.confirm} role="region" aria-label="Final campaign preview" tabIndex={-1} ref={element => { element?.focus(); }}>
           <h3>Final WhatsApp preview</h3>
           <p>Preview for {review.sampleName} · {review.recipientCount} selected</p>
