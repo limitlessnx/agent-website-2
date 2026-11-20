@@ -13,6 +13,7 @@ on:
       - "app/api/admin/billing/**"
       - "lib/payments/**"
       - "lib/flux-credits.ts"
+      - "lib/fluxknight-plans.ts"
       - "lib/flux-ai-metering*.ts"
       - "lib/flux-ai-operation.ts"
       - "lib/runtime/communication-outcome.ts"
@@ -86,7 +87,7 @@ jobs:
       - name: Communication outcome and dispatch recovery
         run: npm run test:communication-outcomes
       - name: Communication outcome changed-module lint
-        run: npx eslint lib/runtime/communication-outcome.ts lib/runtime/command-queue.ts app/api/internal/runtime/actions/outbound-email/route.ts app/api/internal/runtime/actions/voice-receptionist/route.ts app/api/internal/runtime/actions/dispatch/route.ts tests/communication-outcome-*.cjs tests/communication-dispatch-runtime.test.cjs tests/helpers/communication-outcome-database.cjs tests/helpers/outcome-query-adapter.cjs
+        run: npx eslint lib/fluxknight-plans.ts lib/runtime/communication-outcome.ts lib/runtime/command-queue.ts app/api/internal/runtime/actions/outbound-email/route.ts app/api/internal/runtime/actions/voice-receptionist/route.ts app/api/internal/runtime/actions/dispatch/route.ts tests/communication-outcome-*.cjs tests/communication-dispatch-runtime.test.cjs tests/helpers/communication-outcome-database.cjs tests/helpers/outcome-query-adapter.cjs
       - name: Wallet changed-module lint
         run: npx eslint lib/flux-ai-operation.ts tests/flux-ai-operation.test.cjs lib/flux-credits.ts app/api/internal/runtime/provider/execute/route.ts tests/flux-wallet-preflight.test.cjs tests/flux-credit-visibility.test.cjs tests/flux-credit-capacity*.cjs tests/flux-credit-recovery*.cjs tests/helpers/flux-recovery-database.cjs app/api/admin/billing/reservations/route.ts app/dashboard/billing/CreditReservationRecovery.tsx app/api/portal/billing/route.ts app/portal/billing/page.tsx app/dashboard/billing/page.tsx tests/helpers/flux-capacity-database.cjs
       - name: PostgreSQL concurrent renewal sessions

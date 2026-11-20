@@ -2,9 +2,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),load=require('./helpers/load-typescript.cjs');
 const plans=load('lib/fluxknight-plans.ts');
 const base={organization_id:'10000000-0000-4000-8000-000000000001',agent_id:'20000000-0000-4000-8000-000000000001',execution_id:'30000000-0000-4000-8000-000000000001',idempotency_key:'synthetic',customer_key:'synthetic-contact'};
-function fixture({allowed=true,unavailable=false,rpcError=null,alterResult=false,authorized=true,scopeValid=true}={}){
+function fixture({allowed=true,unavailable=false,rpcError=null,alterResult=false,authorized=true,scopeValid=true,plan='business_plus'}={}){
  const calls=[];
- const helper=load('lib/runtime/communication-outcome.ts',{'@/lib/flux-credits':{assertFluxFeatureAccess:async(org,feature)=>{calls.push({gate:feature,org});if(!allowed){const e=new Error('Private policy diagnostic');e.name='FluxFeatureGateError';throw e;}if(unavailable)throw Error('Private connection string');return {planCode:'business_plus'};}},'@/lib/fluxknight-plans':plans,'@/lib/supabase/admin':{createAdminClient:()=>({from(table){const filters=[];const q={select(){return q},eq(k,v){filters.push([k,v]);return q},maybeSingle:async()=>{calls.push({table,filters});return {data:scopeValid?{id:table==='organizations'?base.organization_id:base.execution_id}:null,error:null}}};return q},rpc:async(name,args)=>{calls.push({name,args});return {error:rpcError,data:rpcError?null:{ok:true,organization_id:alterResult?'foreign':args.p_organization_id,agent_id:args.p_agent_id,execution_id:args.p_execution_id,duplicate:true,actions:[]}}}})}},'',{Error});
+ const helper=load('lib/runtime/communication-outcome.ts',{'@/lib/flux-credits':{assertFluxFeatureAccess:async(org,feature)=>{calls.push({gate:feature,org});if(!allowed||!plans.planIncludesFeature(plan,feature)){const e=new Error('Private policy diagnostic');e.name='FluxFeatureGateError';throw e;}if(unavailable)throw Error('Private connection string');return {planCode:plan};}},'@/lib/fluxknight-plans':plans,'@/lib/supabase/admin':{createAdminClient:()=>({from(table){const filters=[];const q={select(){return q},eq(k,v){filters.push([k,v]);return q},maybeSingle:async()=>{calls.push({table,filters});return {data:scopeValid?{id:table==='organizations'?base.organization_id:base.execution_id}:null,error:null}}};return q},rpc:async(name,args)=>{calls.push({name,args});return {error:rpcError,data:rpcError?null:{ok:true,organization_id:alterResult?'foreign':args.p_organization_id,agent_id:args.p_agent_id,execution_id:args.p_execution_id,duplicate:true,actions:[]}}}})}},'',{Error});
  const route=kind=>load(`app/api/internal/runtime/actions/${kind}/route.ts`,{'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status||200})}},'@/lib/runtime/auth':{assertRuntimeSecret:()=>{if(!authorized)throw Error('Unauthorized.')}},'@/lib/runtime/communication-outcome':helper},'',{Error});
  return {helper,calls,post:async(kind='outbound-email',body=base)=>route(kind).POST({headers:{get:()=>null},json:async()=>body})};
 }
@@ -32,4 +32,11 @@ test('normalization preserves safe date fallback, text trimming and finite billi
 test('execution ownership and active lifecycle are checked before any wallet initialization or RPC mutation',async()=>{
  const f=fixture({scopeValid:false});assert.equal((await f.post()).status,404);assert.equal(f.calls.filter(x=>x.gate||x.args).length,0);
  const valid=fixture();await valid.post();const reads=valid.calls.filter(x=>x.table);assert.ok(reads[0].filters.some(([k,v])=>k==='organization_id'&&v===base.organization_id));assert.ok(reads[0].filters.some(([k,v])=>k==='agent_id'&&v===base.agent_id));assert.ok(reads[1].filters.some(([k,v])=>k==='status'&&v==='active'));
+});
+
+test('real plan catalog allows Business follow-up and Business+ automation/follow-up without unlocking Basic/Plus',async()=>{
+ for(const [plan,initial,followup] of [['basic',403,403],['plus',403,403],['business',403,200],['business_plus',200,200]]){
+  let f=fixture({plan});assert.equal((await f.post('outbound-email',base)).status,initial,plan+' initial');
+  f=fixture({plan});assert.equal((await f.post('outbound-email',{...base,sequence_step:2})).status,followup,plan+' follow-up');
+ }
 });
