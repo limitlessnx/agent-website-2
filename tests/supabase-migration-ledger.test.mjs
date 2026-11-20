@@ -26,8 +26,6 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
-  // Atomic runtime completion: reviewed in isolation, not yet applied.
-  "20261120125352",
   "20261001233000",
   "202610020001",
   "202610020002",
