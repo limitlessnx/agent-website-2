@@ -51,7 +51,7 @@ grant select, insert, update, delete on public.gencouv_bulk_campaigns, public.ge
 -- Service-role-only atomic claiming. Keep reservations on ambiguous outcomes;
 -- do not automatically requeue them, because provider acceptance may be unknown.
 create or replace function public.gencouv_claim_bulk_batch(
-  p_organization_id uuid, p_campaign_id uuid, p_requested integer default 10
+  p_organization_id uuid, p_campaign_id uuid, p_requested integer default 100
 )
 returns setof public.gencouv_bulk_recipients
 language plpgsql security invoker set search_path = public
@@ -61,7 +61,7 @@ declare
   v_available integer;
   v_start timestamptz;
 begin
-  if p_requested is null or p_requested < 1 or p_requested > 10 then
+  if p_requested is null or p_requested < 1 or p_requested > 100 then
     raise exception 'Invalid batch size';
   end if;
   -- Serializes claims across every Gencouv campaign for the UTC day.
@@ -78,8 +78,8 @@ begin
     where claimed_at >= v_start
       and claimed_at < v_start + interval '1 day'
       and status in ('sending','accepted','unknown','failed','suppressed');
-  -- Conservative limit below the account's nominal 100/day.
-  v_available := greatest(0, least(p_requested, 75 - v_used));
+  -- At most 100 reservations per UTC day for this bulk system. Other Resend sends\n  -- share the provider quota and may reduce what is actually available.
+  v_available := greatest(0, least(p_requested, 100 - v_used));
   if v_available = 0 then return; end if;
   return query
   with candidates as (
@@ -98,3 +98,77 @@ end;
 $$;
 revoke all on function public.gencouv_claim_bulk_batch(uuid,uuid,integer) from public, anon, authenticated;
 grant execute on function public.gencouv_claim_bulk_batch(uuid,uuid,integer) to service_role;
+
+-- Immutable operator-attestation trail for individual imported contacts.
+create table if not exists public.gencouv_contact_consent_audit (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  customer_id uuid not null,
+  decision text not null check (decision in ('granted','denied')),
+  consent_source text,
+  confirmed_by text not null,
+  confirmed_at timestamptz not null default now(),
+  foreign key (customer_id,organization_id) references public.crm_customers(id,organization_id)
+);
+create index if not exists gencouv_consent_audit_contact_idx
+  on public.gencouv_contact_consent_audit(organization_id,customer_id,confirmed_at desc);
+alter table public.gencouv_contact_consent_audit enable row level security;
+revoke all on public.gencouv_contact_consent_audit from anon, authenticated;
+grant select,insert on public.gencouv_contact_consent_audit to service_role;
+
+-- One transaction updates contact metadata and writes its audit event.
+create or replace function public.gencouv_record_imported_contact_consent(
+  p_organization_id uuid,
+  p_customer_id uuid,
+  p_accepted boolean,
+  p_source text,
+  p_admin_email text
+)
+returns boolean
+language plpgsql security invoker set search_path = public
+as $$
+declare
+  v_contact record;
+  v_source text := btrim(coalesce(p_source,''));
+begin
+  if p_admin_email is null or length(btrim(p_admin_email)) < 3 then
+    raise exception 'Admin identity is required';
+  end if;
+  if p_accepted and (length(v_source) < 8 or length(v_source) > 300) then
+    raise exception 'A real source of prior consent is required';
+  end if;
+  select email,status,metadata into v_contact from public.crm_customers
+    where id=p_customer_id and organization_id=p_organization_id
+    for update;
+  if not found or coalesce(v_contact.metadata->>'source','') <> 'gencouv_document_import'
+     or v_contact.status in ('blocked','archived') then
+    raise exception 'Contact is not eligible for import consent review';
+  end if;
+  if p_accepted and exists (
+    select 1 from public.gencouv_suppression_list
+      where organization_id=p_organization_id
+        and normalized_email=lower(btrim(v_contact.email))
+  ) then
+    raise exception 'Suppressed contact cannot be marked as consented';
+  end if;
+  update public.crm_customers
+    set metadata = coalesce(metadata,'{}'::jsonb) || jsonb_build_object(
+      'marketing_consent', case when p_accepted then 'granted' else 'denied' end,
+      'marketing_consent_source', case when p_accepted then v_source else '' end,
+      'marketing_consent_verified_at', now(),
+      'marketing_consent_verified_by', p_admin_email
+    ), updated_at=now()
+    where id=p_customer_id and organization_id=p_organization_id;
+  insert into public.gencouv_contact_consent_audit
+    (organization_id,customer_id,decision,consent_source,confirmed_by)
+    values(p_organization_id,p_customer_id,
+      case when p_accepted then 'granted' else 'denied' end,
+      case when p_accepted then v_source else null end,
+      p_admin_email);
+  return true;
+end;
+$$;
+revoke all on function public.gencouv_record_imported_contact_consent(uuid,uuid,boolean,text,text)
+  from public, anon, authenticated;
+grant execute on function public.gencouv_record_imported_contact_consent(uuid,uuid,boolean,text,text)
+  to service_role;
