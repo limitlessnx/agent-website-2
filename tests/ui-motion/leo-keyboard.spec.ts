@@ -81,6 +81,6 @@ for(const tenant of [false,true])test(`${tenant?'tenant':'admin'} chat keeps the
   const selector=tenant?'#tenant-leo-chat':'#leo-assistant-panel';const input=page.locator(selector+' textarea');await expect(input).toBeVisible();await input.fill('Synthetic question');
   await setViewport(page,{height:360,offsetTop:40});await expect(page.locator(selector)).toHaveAttribute('data-chat-compact','true');
   const bounds={left:0,top:40,width:page.viewportSize()!.width,height:360};await contained(page,selector+' header',bounds);await contained(page,selector+' form',bounds);expect(await input.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
-  expect((await page.locator(selector).getByRole('button',{name:'Send message',exact:true}).locator('svg').boundingBox())!.width).toBeGreaterThanOrEqual(12);
+  const send=page.locator(selector).getByRole('button',{name:'Send message',exact:true});const buttonBox=(await send.boundingBox())!,iconBox=(await send.locator('svg').boundingBox())!;expect(iconBox.width).toBeGreaterThanOrEqual(12);expect(Math.abs(iconBox.y+iconBox.height/2-buttonBox.y-buttonBox.height/2)).toBeLessThanOrEqual(1);
   await capture(page,tenant?'tenant-keyboard':'admin-keyboard');await page.locator(selector).getByRole('button',{name:'Send message',exact:true}).click();await expect(page.locator(selector).getByText('Synthetic private reply',{exact:true})).toBeVisible();await contained(page,selector+' form',bounds);
 });

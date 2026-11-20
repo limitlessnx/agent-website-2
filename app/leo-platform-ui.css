@@ -37,5 +37,5 @@
 @media(max-width:767px){.leo-viewport-panel{transition-property:opacity,transform!important;--leo-panel-edge:12px}.admin-leo-viewport{--leo-panel-gap:146px}.leo-composer textarea{font-size:max(1rem,16px)!important}}
 .leo-viewport-panel[data-chat-compact=true]{--leo-panel-gap:12px}
 
-.leo-viewport-panel button[aria-label="Send message"]{padding:0!important;min-width:44px;min-height:44px}
+.leo-viewport-panel button[aria-label="Send message"]{display:grid!important;place-items:center!important;padding:0!important;min-width:44px;min-height:44px}
 .leo-viewport-panel button svg{flex-shrink:0}
