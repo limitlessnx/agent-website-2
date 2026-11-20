@@ -108,10 +108,13 @@ export async function POST(request: NextRequest) {
       return true;
     });
     if (!eligible.length) return fail("No recipients have recorded marketing consent. The Yes toggle cannot override missing consent.", 409);
+    const admin = await getAdminSession();
+    if (!admin?.email) return fail("Administrator identity unavailable.", 403);
     const { error: draftError } = await db.from("gencouv_bulk_campaigns").insert({
       id: campaignId, organization_id: org, category_id: categoryId || null,
       from_email: from, subject, text_body: text, status: "draft",
-      consent_confirmed: true, consent_basis: basis, consent_confirmed_at: new Date().toISOString()
+      consent_confirmed: true, consent_basis: basis, consent_confirmed_at: new Date().toISOString(),
+      consent_confirmed_by: admin.email.toLowerCase()
     });
     if (draftError) return fail("Campaign ID already exists or storage is unavailable.", 409);
     const jobs = eligible.map(contact => ({
