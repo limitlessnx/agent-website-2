@@ -45,6 +45,8 @@ create index if not exists gencouv_bulk_recipients_org_claim_idx
 create index if not exists gencouv_bulk_recipients_queue_idx
   on public.gencouv_bulk_recipients(campaign_id,status,created_at);
 alter table public.gencouv_bulk_recipients enable row level security;
+revoke all on public.gencouv_bulk_campaigns, public.gencouv_bulk_recipients from anon, authenticated;
+grant select, insert, update, delete on public.gencouv_bulk_campaigns, public.gencouv_bulk_recipients to service_role;
 
 -- Service-role-only atomic claiming. Keep reservations on ambiguous outcomes;
 -- do not automatically requeue them, because provider acceptance may be unknown.
