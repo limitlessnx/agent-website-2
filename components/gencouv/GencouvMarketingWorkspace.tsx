@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import GencouvBulkCampaignComposer from "@/components/gencouv/GencouvBulkCampaignComposer";
 
 type Category = {id:string;name:string};
 type Lead = {id:string;full_name:string|null;email:string;eligible:boolean;reason:string};
@@ -74,6 +75,7 @@ export default function GencouvMarketingWorkspace(){
       </div>}
       <p><Link href="/dashboard/gencouv/contacts">Import and view saved contacts</Link> · <Link href="/dashboard/gencouv/categories">Manage your categories</Link></p>
     </section>
+    <GencouvBulkCampaignComposer />
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Compose an individual proposal</h2><p>Send a manually reviewed, one-recipient Gencouv email via Resend. This does not start a marketing campaign.</p></div><span className="admin-status">Resend</span></div>
       <div style={{display:"grid",gap:14}}>
