@@ -66,8 +66,9 @@ export async function GET() {
     .eq("organization_id", organizationId)
     .not("email", "is", null)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(501);
   if (error) return fail("Could not load saved contacts.", 500);
+  if ((data?.length ?? 0) > 500) return fail("More than 500 contacts found. Paginated import review required.", 409);
   return NextResponse.json({ contacts: data || [] }, { headers });
 }
 
