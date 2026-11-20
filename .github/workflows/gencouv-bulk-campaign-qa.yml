@@ -7,6 +7,8 @@ on:
       - "lib/gencouv-bulk-unsubscribe.ts"
       - "components/gencouv/GencouvBulkCampaignComposer.tsx"
       - "components/gencouv/GencouvMarketingWorkspace.tsx"
+      - "components/gencouv/GencouvContactImport.tsx"
+      - "app/api/dashboard/gencouv/contact-consent/**"
       - "supabase/migrations/20261120040000_gencouv_resend_bulk_campaigns.sql"
       - "tests/gencouv-bulk-campaign-safety.test.mjs"
       - "tests/gencouv-bulk-campaign-database.test.mjs"
