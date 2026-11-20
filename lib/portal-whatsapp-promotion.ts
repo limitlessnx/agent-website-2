@@ -1,10 +1,11 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { ClientSession } from "@/lib/client-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerSupabaseConfig } from "@/lib/supabase-server-rest";
 import { CampaignTemplateError, loadAssignedPromotion } from "@/lib/portal-campaign-templates";
 import { normalizeTemplateParameter } from "@/lib/whatsapp-message-normalizer";
-import { formatPromotionMessage, renderPromotionMessage } from "@/lib/whatsapp-promotion-message";
+import { formatPromotionMessage, renderPromotionMessage, validatePromotionWriterValues } from "@/lib/whatsapp-promotion-message";
+import { CampaignWriteupError, createCampaignWriteup } from "@/lib/campaign-ai-writeup";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-delivery";
 
 export type PromotionRequest = {
@@ -13,6 +14,8 @@ export type PromotionRequest = {
   whatsappConsentConfirmed?: unknown;
   reviewFingerprint?: unknown;
   campaignId?: unknown;
+  writerValues?: unknown;
+  useAiFormatting?: unknown;
 };
 
 const error = (message: string, status: number) => ({ body: { error: message }, status });
@@ -42,9 +45,10 @@ export async function runPortalPromotion(
   } catch (reason) {
     return reason instanceof CampaignTemplateError ? error(reason.message, reason.status) : error("Unable to verify the WhatsApp promotion. Try again later.", 503);
   }
-  const mapped = formatPromotionMessage(template, body.message);
-  if (!("values" in mapped) || !mapped.values) return error(mapped.error || "Unable to format this promotion.", 400);
-  const { values } = mapped;
+  if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 4000) {
+    return error("Write a promotional message of up to 4,000 characters.", 400);
+  }
+  const message = body.message;
 
   const contacts = await admin.from("tenant_customer_contacts").select("id,full_name,phone,whatsapp_consent")
     .eq("organization_id", organizationId).in("id", contactIds);
@@ -60,7 +64,7 @@ export async function runPortalPromotion(
     }
     if (seen.has(phone)) return error("More than one selected contact has the same WhatsApp number. Select one per number.", 409);
     seen.add(phone);
-    const variables = { ...values };
+    const variables: Record<string, string> = {};
     if (template.variable_keys.includes("customer_name")) {
       try { variables.customer_name = normalizeTemplateParameter(contact.full_name, { maxLength: 1024 }); }
       catch { return error("A selected contact is missing a valid name. Update the contact and review again.", 409); }
@@ -87,13 +91,35 @@ export async function runPortalPromotion(
     return !rows?.some(row => row.id === id) || rows.some(row => row.whatsapp_consent !== "opted_in");
   })) return error("A selected WhatsApp number has withdrawn, missing, or conflicting marketing permission. Refresh the audience and select again.", 409);
 
+  let mapped = body.writerValues === undefined
+    ? formatPromotionMessage(template, message)
+    : validatePromotionWriterValues(template, message, body.writerValues);
+  let writerValues = body.writerValues === undefined ? undefined : mapped.values;
+  if (!mapped.values && review && body.writerValues === undefined && body.useAiFormatting === true) {
+    const contract = { name: template.name, language: template.language, body: template.body, keys: template.variable_keys };
+    const operationId = createHash("sha256").update(JSON.stringify({ userId, contract, message, version: 1 })).digest("hex");
+    try {
+      const suggestion = await createCampaignWriteup(organizationId, contract, { mode: "improve", brief: message, variables: {} }, {}, operationId, true);
+      mapped = validatePromotionWriterValues(template, message, suggestion.variables);
+      writerValues = mapped.values;
+    } catch (reason) {
+      return reason instanceof CampaignWriteupError
+        ? error(reason.message, reason.status)
+        : error(reason instanceof Error ? reason.message : "AI formatting is unavailable.", 409);
+    }
+  }
+  if (!mapped.values) {
+    return { body: { error: mapped.error, canUseAiFormatting: review && body.writerValues === undefined && body.useAiFormatting !== true }, status: 400 };
+  }
+  for (const recipient of recipients) Object.assign(recipient.variables, mapped.values);
+
   const reviewFingerprint = createHmac("sha256", getServerSupabaseConfig().key).update(JSON.stringify({
-    campaignId, organizationId, userId, template, recipients,
+    campaignId, organizationId, userId, template, recipients, message,
   })).digest("hex");
   if (review) {
     const sample = recipients[0];
     return { body: {
-      campaignId, reviewFingerprint, recipientCount: recipients.length, sampleName: sample.name,
+      campaignId, reviewFingerprint, writerValues, recipientCount: recipients.length, sampleName: sample.name,
       message: renderPromotionMessage(template, sample.variables),
       header: template.header, footer: template.footer, buttonLabels: template.buttonLabels,
     }, status: 200 };

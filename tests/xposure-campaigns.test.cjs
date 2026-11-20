@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -15,6 +16,16 @@ const config = { template_name: 'xposure_studio_promotion', language_code: 'en',
 const template = {
   name: config.template_name, language: config.language_code, status: 'APPROVED', category: 'MARKETING',
   components: [{ type: 'BODY', text: 'Hi {{1}}! Offer: {{2}}. Book: {{3}}.' }, { type: 'FOOTER', text: 'Xposure Studios' }],
+};
+const studioValues = {
+  offer_title: 'Family Portrait Weekend', offer_details: 'Get a 30-minute studio session with five edited photos.',
+  availability: 'Available on 28 November.', booking_action: 'Reply to book.',
+};
+const studioCopy = Object.values(studioValues).join('\n');
+const studioConfig = { ...config, variable_keys: ['customer_name', ...Object.keys(studioValues)] };
+const studioTemplate = {
+  ...template,
+  components: [{ type: 'BODY', text: 'Hi {{1}}! Explore {{2}}\nDetails: {{3}}\nAvailability: {{4}}\nNext: {{5}}' }],
 };
 const json = (body, { status = 200 } = {}) => ({ body, status });
 
@@ -36,7 +47,7 @@ function harness(options = {}) {
           return { error: null };
         },
         then(resolve) {
-          if (table === 'whatsapp_template_configs') return Promise.resolve({ data: options.configs ?? [config] }).then(resolve);
+          if (table === 'whatsapp_template_configs') return Promise.resolve({ data: options.configs ?? [options.fiveFields ? studioConfig : config] }).then(resolve);
           const selected = options.missing ? [] : [{ ...contact, whatsapp_consent: options.consent ?? 'opted_in' }];
           if (key === 'id') return Promise.resolve({ data: selected }).then(resolve);
           state.reads++;
@@ -63,10 +74,14 @@ function harness(options = {}) {
   }, { URL, AbortSignal, fetch: async () => {
     state.inventory++;
     if (options.inventoryError) throw new TypeError('private transport information');
-    return { ok: true, json: async () => ({ data: options.templates ?? [template] }) };
+    return { ok: true, json: async () => ({ data: options.templates ?? [options.fiveFields ? studioTemplate : template] }) };
   } });
   const promotion = source('lib/portal-whatsapp-promotion.ts', {
     ...common, '@/lib/portal-campaign-templates': inventory,
+    '@/lib/campaign-ai-writeup': {
+      CampaignWriteupError: Error,
+      createCampaignWriteup: async (...args) => { (state.writer ??= []).push(args); return {variables: studioValues}; },
+    },
     '@/lib/whatsapp-promotion-message': message,
     '@/lib/whatsapp-message-normalizer': normalizer,
     '@/lib/supabase-server-rest': { getServerSupabaseConfig: () => ({ key: 'fixture-signing-key' }) },
@@ -190,4 +205,50 @@ test('an uncertain or missing provider receipt stays unconfirmed', async () => {
     assert.equal(result.body.accepted, 0);
     assert.equal(result.body.unknown, 1);
   }
+});
+
+test('five-field promotion uses normal copy and personalizes the preview and exact reviewed send', async () => {
+  const h = harness({ fiveFields: true });
+  const review = await h.request({ message: studioCopy });
+  assert.equal(review.status, 200);
+  assert.equal(review.body.message, 'Hi Ada! Explore Family Portrait Weekend\nDetails: Get a 30-minute studio session with five edited photos.\nAvailability: Available on 28 November.\nNext: Reply to book.');
+  assert.equal((await h.send(review.body, { message: studioCopy + ' ' })).status, 409);
+  const result = await h.send(review.body, { message: studioCopy });
+  assert.equal(result.body.accepted, 1);
+  assert.deepEqual({ ...h.state.sent[0].variables }, { customer_name: 'Ada', ...studioValues });
+  assert.deepEqual(Array.from(h.state.sent[0].expectedMetaVariableKeys), studioConfig.variable_keys);
+  assert.equal(h.state.writer, undefined);
+});
+
+test('missing or competing availability blocks review and structured values cannot introduce claims or names', async () => {
+  const h = harness({ fiveFields: true });
+  for (const message of [studioCopy.replace(studioValues.availability, ''), studioCopy + '\nAvailable in December.']) {
+    const result = await h.request({ message });
+    assert.equal(result.status, 400);
+    assert.match(result.body.error, /availability/);
+  }
+  assert.equal((await h.request({ message: studioCopy, writerValues: { ...studioValues, availability: 'Available all year.' } })).status, 400);
+  assert.equal((await h.request({ message: studioCopy, writerValues: { ...studioValues, customer_name: 'Other' } })).status, 400);
+  assert.equal((await h.request({ message: studioCopy, writerValues: studioValues, useAiFormatting: true })).status, 200);
+  assert.equal(h.state.writer, undefined);
+});
+
+test('optional AI extraction uses stable identity and send reuses the reviewed output', async () => {
+  const h = harness({ fiveFields: true, noReceipt: true });
+  const message = studioCopy + '\nReply for details.';
+  const failed = await h.request({ message });
+  assert.equal(failed.status, 400);
+  assert.equal(failed.body.canUseAiFormatting, true);
+  assert.equal(h.state.writer, undefined);
+  const review = await h.request({ message, useAiFormatting: true });
+  const retry = await h.request({ message, useAiFormatting: true });
+  assert.equal(review.status, 200);
+  assert.equal(retry.status, 200);
+  assert.equal(h.state.writer[0][4], h.state.writer[1][4]);
+  const result = await h.send(review.body, { message, writerValues: review.body.writerValues });
+  assert.equal(result.body.unknown, 1);
+  assert.equal(result.body.accepted, 0);
+  assert.equal((await h.send(review.body, { message, writerValues: review.body.writerValues })).status, 409);
+  assert.equal(h.state.sent.length, 1);
+  assert.equal(h.state.writer.length, 2);
 });

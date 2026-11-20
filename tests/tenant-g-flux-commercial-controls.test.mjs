@@ -84,12 +84,13 @@ test("G generic Phase 12 internal agent execution meters web_ai",()=>{
 test("G provider runtime gates generic email and voice workloads without double debit",()=>{
   const route=read("app/api/internal/runtime/provider/execute/route.ts");
   assert.match(route,/isEmailPurpose/);
-  assert.match(route,/isFollowUpPurpose/);
+  assert.match(route,/isEmailFollowUp/);
   assert.match(route,/isVoicePurpose/);
   assert.match(route,/email_follow_up/);
   assert.match(route,/ai_email/);
   assert.match(route,/leo_voice_minute/);
-  assert.match(route,/if \(!isEmailPurpose && !isVoicePurpose\)/);
+  assert.match(route,/if \(!isVoicePurpose\)/);
+  assert.match(route,/capacity && !isEmailPurpose/);
 });
 
 test("G outbound email uses the atomic persistence boundary without a second application debit",()=>{
