@@ -99,7 +99,7 @@ $$;
 revoke all on function public.gencouv_claim_bulk_batch(uuid,uuid,integer) from public, anon, authenticated;
 grant execute on function public.gencouv_claim_bulk_batch(uuid,uuid,integer) to service_role;
 
--- Immutable operator-attestation trail for individual imported contacts.
+-- Immutable operator-attestation trail for imported contacts.
 create table if not exists public.gencouv_contact_consent_audit (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
@@ -171,4 +171,37 @@ $$;
 revoke all on function public.gencouv_record_imported_contact_consent(uuid,uuid,boolean,text,text)
   from public, anon, authenticated;
 grant execute on function public.gencouv_record_imported_contact_consent(uuid,uuid,boolean,text,text)
+  to service_role;
+
+-- One operator decision for the reviewed import group, saved atomically for
+-- every eligible contact. This is an attestation of permission already obtained,
+-- never evidence inferred merely from a common public source.
+create or replace function public.gencouv_record_import_group_consent(
+  p_organization_id uuid, p_customer_ids uuid[], p_accepted boolean,
+  p_source text, p_admin_email text
+)
+returns integer
+language plpgsql security invoker set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_count integer;
+begin
+  v_count := coalesce(array_length(p_customer_ids,1),0);
+  if v_count < 1 or v_count > 500 or
+     (select count(distinct id) from unnest(p_customer_ids) as t(id)) <> v_count then
+    raise exception 'Invalid group size or duplicate contacts';
+  end if;
+  -- Uses the existing tenant scoped, row-locked and suppression-aware function.
+  -- Any failure rolls back all consent changes and audits in this transaction.
+  foreach v_id in array p_customer_ids loop
+    perform public.gencouv_record_imported_contact_consent(
+      p_organization_id,v_id,p_accepted,p_source,p_admin_email);
+  end loop;
+  return v_count;
+end;
+$$;
+revoke all on function public.gencouv_record_import_group_consent(uuid,uuid[],boolean,text,text)
+  from public, anon, authenticated;
+grant execute on function public.gencouv_record_import_group_consent(uuid,uuid[],boolean,text,text)
   to service_role;
