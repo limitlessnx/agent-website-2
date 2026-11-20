@@ -134,6 +134,7 @@ export const FLUX_PLAN_DEFINITIONS: Record<FluxPlanCode, FluxPlanDefinition> = {
       "reminders",
       "voice_automation",
       "email_automation",
+      "email_follow_up",
       "web_chat_automation",
       "team_admin",
       "cross_channel",

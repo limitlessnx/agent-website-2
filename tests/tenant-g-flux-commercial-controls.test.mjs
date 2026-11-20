@@ -92,24 +92,20 @@ test("G provider runtime gates generic email and voice workloads without double 
   assert.match(route,/if \(!isEmailPurpose && !isVoicePurpose\)/);
 });
 
-test("G outbound email duplicates return before Flux debit and uses channel-specific rates",()=>{
+test("G outbound email uses the atomic persistence boundary without a second application debit",()=>{
   const route=read("app/api/internal/runtime/actions/outbound-email/route.ts");
-  const duplicateIndex=route.indexOf("if (duplicate.data) return");
-  const preflightIndex=route.indexOf("await preflightChargeableFluxAi",duplicateIndex);
-  assert.ok(duplicateIndex>=0&&preflightIndex>duplicateIndex);
-  assert.match(route,/email_follow_up/);
-  assert.match(route,/ai_email/);
-  assert.match(route,/source:"outbound_email_runtime"/);
+  const shared=read("lib/runtime/communication-outcome.ts");
+  assert.match(route,/persistCommunicationOutcome/);
+  assert.doesNotMatch(route,/recordChargeableFluxAiUsage/);
+  assert.match(shared,/email_follow_up/);assert.match(shared,/ai_email/);
 });
 
-test("G voice runtime debits only terminal call duration",()=>{
+test("G voice retains terminal rounded units inside the shared outcome boundary",()=>{
   const route=read("app/api/internal/runtime/actions/voice-receptionist/route.ts");
-  assert.match(route,/terminalCall/);
-  assert.match(route,/Math\.ceil\(durationSeconds\/60\)/);
-  assert.match(route,/Math\.ceil\(durationMinutes\)/);
-  assert.match(route,/if\(terminalCall\)/);
-  assert.match(route,/action:"leo_voice_minute"/);
-  assert.match(route,/source:"voice_receptionist_runtime"/);
+  const shared=read("lib/runtime/communication-outcome.ts");
+  assert.match(route,/persistCommunicationOutcome/);
+  assert.match(shared,/terminalCall/);assert.match(shared,/Math\.ceil\(durationSeconds \/ 60\)/);assert.match(shared,/Math\.ceil\(durationMinutes\)/);
+  assert.match(shared,/!terminalCall \? 0/);assert.match(shared,/"leo_voice_minute"/);
 });
 
 test("G automated WhatsApp follow-ups and appointment reminders consume reminder credits",()=>{
