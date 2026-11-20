@@ -50,7 +50,7 @@ test("migration applies and the first batch reserves 100 distinct recipients", a
   );
   assert.equal(rows.length,100);
   assert.ok(rows.every(r=>r.status==="sending"));
-  assert.equal(new Set(rows.map(r=>r.id)).size,10);
+  assert.equal(new Set(rows.map(r=>r.id)).size,100);
   const second = await db.query("select id from gencouv_claim_bulk_batch($1,$2,$3)",[org,campaign,10]);
   assert.equal(second.rows.length,0);
   assert.equal(new Set([...rows,...second.rows].map(r=>r.id)).size,100);
@@ -75,7 +75,7 @@ test("unique campaign/email prevents double reservation", async t => {
 test("account-day cap returns no more than 100 claims in total",async t=>{
   const db=await fixture(t);
   let claimed=0;
-  for(let i=0;i<9;i++){
+  for(let i=0;i<11;i++){
     const batch=await db.query("select id from gencouv_claim_bulk_batch($1,$2,$3)",[org,campaign,10]);
     claimed+=batch.rows.length;
   }
