@@ -19,7 +19,7 @@ export async function getTenantReadiness(organizationId: string) {
   const results = await Promise.all([
     admin.from("organizations").select("id,status,metadata").eq("id", organizationId).maybeSingle(),
     admin.from("organization_memberships").select("id,membership_roles(roles(slug))").eq("organization_id", organizationId).eq("status", "active"),
-    admin.from("organization_template_assignments").select("status,metadata,organization_templates(agents,industry,status)").eq("organization_id", organizationId),
+    admin.from("organization_template_assignments").select("id,status,metadata,organization_templates(agents,industry,status)").eq("organization_id", organizationId),
     admin.from("organization_subscriptions").select("status,current_period_end,trial_ends_at").eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(1),
     admin.from("agents").select("id,slug,configuration,updated_at").eq("organization_id", organizationId),
     admin.from("agent_runtime_readiness").select("agent_id,business_profile_ready,prompt_ready,knowledge_ready,integrations_ready,workflow_ready").eq("organization_id", organizationId),
@@ -42,8 +42,19 @@ export async function getTenantReadiness(organizationId: string) {
   });
   const industry = String((org.data?.metadata as Record<string, unknown> | null)?.industry || (org.data?.metadata as Record<string, unknown> | null)?.industry_slug || profiles.data?.[0]?.industry || "");
   const identity = industryIdentity(industry);
-  const currentAssignments = (assignments.data || []).filter(row => !["archived", "inactive"].includes(row.status));
-  const activeAssignments = currentAssignments.filter(row => row.status === "active");
+  const assignmentRows = assignments.data || [];
+  const activeAssignments = assignmentRows.filter(row => row.status === "active");
+  // The database retains retired assignments as paused history. Only an explicit
+  // replacement by a current, industry-matching assignment can retire a blocker.
+  const currentAssignments = assignmentRows.filter(row => {
+    if (["archived", "inactive"].includes(row.status)) return false;
+    const replacementId = (row.metadata as Record<string, unknown> | null)?.superseded_by_assignment_id;
+    const superseded = row.status === "paused" && typeof replacementId === "string" && activeAssignments.some(next => {
+      const template = next.organization_templates as unknown as { industry?: string; status?: string } | null;
+      return next.id === replacementId && next.id !== row.id && identity && template?.status === "active" && industryIdentity(template.industry) === identity;
+    });
+    return !superseded;
+  });
   const assignmentFailed = currentAssignments.some(row => row.status === "failed");
   const assignmentInProgress = currentAssignments.some(row => ["provisioning", "pending", "queued", "running"].includes(row.status));
   const matchingAssignments = activeAssignments.filter(row => {

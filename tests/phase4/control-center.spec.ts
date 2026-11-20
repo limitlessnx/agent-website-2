@@ -144,3 +144,15 @@ test('industry template mismatch stays visible without changing the live workspa
  mkdirSync('docs/xposure-readiness-evidence',{recursive:true});
  await page.screenshot({path:`docs/xposure-readiness-evidence/industry-mismatch-${page.viewportSize()!.width}.png`,fullPage:true,animations:'disabled',style:'nextjs-portal{display:none!important}'});
 });
+
+test('repaired industry template retains paused history without claiming activation',async({page,context})=>{
+ await scenario(context,'industry-repaired');
+ await page.goto(`/dashboard/provisioning?organizationId=${org}`,{waitUntil:'networkidle'});
+ const requirement=page.locator('li').filter({has:page.getByText('Industry template',{exact:true})});
+ await expect(requirement).toContainText('Ready');await expect(requirement).not.toContainText('Blocked');
+ await expect(page.getByText('Photography Studio AI Suite',{exact:true})).toBeVisible();
+ const history=page.locator('li').filter({has:page.getByText('Computer Service AI Suite',{exact:true})});await expect(history).toContainText('paused');
+ const agents=page.locator('li').filter({has:page.getByText('Required AI agents',{exact:true})});await expect(agents).toContainText('Blocked');
+ await stableLayout(page);mkdirSync('docs/xposure-readiness-evidence',{recursive:true});
+ await page.screenshot({path:`docs/xposure-readiness-evidence/industry-repaired-${page.viewportSize()!.width}.png`,fullPage:true,animations:'disabled',style:'nextjs-portal{display:none!important}'});
+});
