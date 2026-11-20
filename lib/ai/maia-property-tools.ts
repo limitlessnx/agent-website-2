@@ -6,6 +6,7 @@ export type MaiaPropertyToolContext = {
   agentId: string;
   sessionId: string;
   conversationId?: string;
+  correlationId?: string;
 };
 
 export type MaiaPropertyToolDefinition = {
@@ -248,7 +249,7 @@ export function maiaPropertyTools(): MaiaPropertyToolDefinition[] {
         if (!publicUrl) throw new Error("The approved property media asset has no deliverable URL.");
 
         const recipient = await resolveTrustedWhatsAppRecipient(ctx);
-        const commandId = `maia-property-media:${ctx.sessionId}:${asset.id}:${crypto.randomUUID()}`;
+        const commandId = `maia-property-media:${ctx.organizationId}:${recipient.conversationId}:${ctx.correlationId || recipient.lastInboundAt}:${asset.id}`;
         const result = await dispatchMaiaPropertyMedia({
           commandId,
           organizationId: ctx.organizationId,
