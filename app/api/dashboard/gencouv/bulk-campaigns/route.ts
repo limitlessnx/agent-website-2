@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { getAdminSession } from "@/lib/admin-auth";
 import { requireAdminSystemScope } from "@/lib/admin-organization-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,6 +7,7 @@ import { resendApi } from "@/lib/fluxknight-mail";
 import { createGencouvUnsubscribeUrl } from "@/lib/gencouv-bulk-unsubscribe";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -146,73 +147,123 @@ export async function POST(request: NextRequest) {
       .eq("organization_id", org).eq("id", campaignId).eq("status", "ready").maybeSingle();
     if (campaignError || !campaign) return fail("Campaign not ready.", 409);
     const { data: claimed, error: claimError } = await db.rpc("gencouv_claim_bulk_batch", {
-      p_organization_id: org, p_campaign_id: campaignId, p_requested: 10
+      p_organization_id: org, p_campaign_id: campaignId, p_requested: 100
     });
     if (claimError) return fail("Could not reserve a sending batch. No emails sent by this request.", 503);
     const jobs = (claimed ?? []) as Job[];
     let accepted = 0, suppressed = 0, uncertain = 0;
-    for (const job of jobs) {
-      try {
-        // Recheck suppression and consent immediately before every provider request.
-        const { data: contact, error: contactError } = await db.from("crm_customers")
-          .select("id,email,metadata,status").eq("organization_id", org)
-          .eq("id", job.customer_id).maybeSingle();
-        const { data: stops, error: stopError } = await suppress(db, org, job.normalized_email);
-        if (contactError || stopError) throw Error("Eligibility lookup failed");
-        if (!contact || String(contact.email || "").trim().toLowerCase() !== job.normalized_email ||
-            ["blocked","archived"].includes(contact.status) ||
-            !hasConsent(contact.metadata) || (stops?.length ?? 0) > 0) {
-          await db.from("gencouv_bulk_recipients").update({ status: "suppressed" })
-            .eq("id", job.id).eq("organization_id", org).eq("status", "sending");
-          suppressed++;
-          continue;
-        }
-        const current = campaign as Campaign;
-        const unsubscribe = createGencouvUnsubscribeUrl({ organizationId: org, email: job.normalized_email });
-        const body = current.text_body + "\n\nTo stop marketing emails from Gencouv Capital, unsubscribe: " + unsubscribe;
-        const response = await resendApi("/emails", {
-          method: "POST",
-          headers: { "Idempotency-Key": "gencouv-bulk-" + job.id },
-          body: JSON.stringify({
+    type PreparedEmail = { job: Job; email: Record<string, unknown> };
+    const prepared: PreparedEmail[] = [];
+    // Process eligibility in bounded groups instead of making 100 serial DB round trips.
+    for (let offset = 0; offset < jobs.length; offset += 20) {
+      const group = jobs.slice(offset, offset + 20);
+      const results = await Promise.all(group.map(async (job): Promise<PreparedEmail | null> => {
+        try {
+          const [{ data: contact, error: contactError }, { data: stops, error: stopError }] = await Promise.all([
+            db.from("crm_customers").select("id,email,metadata,status")
+              .eq("organization_id", org).eq("id", job.customer_id).maybeSingle(),
+            suppress(db, org, job.normalized_email)
+          ]);
+          if (contactError || stopError) throw Error("Eligibility lookup failed");
+          if (!contact || String(contact.email || "").trim().toLowerCase() !== job.normalized_email ||
+              ["blocked","archived"].includes(contact.status) ||
+              !hasConsent(contact.metadata) || (stops?.length ?? 0) > 0) {
+            const { error } = await db.from("gencouv_bulk_recipients").update({ status: "suppressed" })
+              .eq("id", job.id).eq("organization_id", org).eq("status", "sending");
+            if (error) throw Error("Suppression status write failed");
+            suppressed++;
+            return null;
+          }
+          const current = campaign as Campaign;
+          const unsubscribe = createGencouvUnsubscribeUrl({
+            organizationId: org, email: job.normalized_email
+          });
+          return { job, email: {
             from: "Gencouv Capital <" + current.from_email + ">",
             to: [job.normalized_email], reply_to: current.from_email,
-            subject: current.subject, text: body,
+            subject: current.subject,
+            text: current.text_body +
+              "\\n\\nTo stop marketing emails from Gencouv Capital, unsubscribe: " + unsubscribe,
             headers: {
               "List-Unsubscribe": "<" + unsubscribe + ">",
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
             }
-          })
-        });
-        const providerId = typeof response.id === "string" ? response.id : null;
-        const { error: savedError } = await db.from("gencouv_bulk_recipients")
-          .update({ status: "accepted", provider_email_id: providerId, sent_at: new Date().toISOString() })
-          .eq("id", job.id).eq("organization_id", org).eq("status", "sending");
-        // Acceptance is final even if mirroring to the optional email ledger fails.
-        // Do not downgrade a provider-accepted send to unknown and encourage retry.
-        if (savedError) {
-          uncertain++;
-          continue;
-        }
-        const { error: mirrorError } = await db.from("gencouv_email_messages").insert({
-          organization_id: org, recipient_email: job.normalized_email,
-          recipient_name: job.recipient_name, from_email: current.from_email,
-          subject: current.subject, status: "sent", provider: "resend",
-          provider_email_id: providerId, sent_at: new Date().toISOString(),
-          metadata: { source: "gencouv_bulk_campaign", campaign_id: campaignId, recipient_job_id: job.id }
-        });
-        // The primary recipient record remains 'accepted' even if the
-        // secondary ledger cannot be mirrored; reconcile the mirror separately.
-        if (mirrorError) {
+          }};
+        } catch {
+          // An uncertain eligibility or status outcome must never be mailed.
           await db.from("gencouv_bulk_recipients")
-            .update({ error_code: "secondary_ledger_mirror_failed" })
-            .eq("id", job.id).eq("organization_id", org);
+            .update({ status: "unknown", error_code: "eligibility_check_failed" })
+            .eq("id", job.id).eq("organization_id", org).eq("status", "sending");
+          uncertain++;
+          return null;
         }
-        accepted++;
+      }));
+      prepared.push(...results.filter((value): value is PreparedEmail => value !== null));
+    }
+    if (prepared.length) {
+      try {
+        // A single Resend batch request supports up to 100 DISTINCT messages.
+        // The stable idempotency key is tied to these reserved recipient jobs.
+        const batchKey = "gencouv-bulk-" + createHash("sha256")
+          .update(prepared.map(item => item.job.id).sort().join(",")).digest("hex");
+        const response = await resendApi(prepared.length === 1 ? "/emails" : "/emails/batch", {
+          method: "POST",
+          headers: { "Idempotency-Key": batchKey },
+          body: JSON.stringify(prepared.length === 1 ? prepared[0].email : prepared.map(item => item.email))
+        });
+        const deliveredIds = prepared.length === 1 ? [response.id] : response.data;
+        if (!Array.isArray(deliveredIds) || deliveredIds.length !== prepared.length) {
+          throw Error("Provider returned an unexpected receipt count");
+        }
+        // Batch receipts match input order. Acceptance is NOT inbox delivery.
+        for (let offset = 0; offset < prepared.length; offset += 20) {
+          await Promise.all(prepared.slice(offset, offset + 20).map(async (item, index) => {
+            const provider = deliveredIds[offset + index];
+            const providerId = typeof provider === "string"
+              ? provider : provider && typeof provider.id === "string" ? provider.id : null;
+            if (!providerId) {
+              await db.from("gencouv_bulk_recipients")
+                .update({ status: "unknown", error_code: "missing_provider_receipt" })
+                .eq("id", item.job.id).eq("organization_id", org).eq("status", "sending");
+              uncertain++;
+              return;
+            }
+            const { error: savedError } = await db.from("gencouv_bulk_recipients")
+              .update({ status: "accepted", provider_email_id: providerId, sent_at: new Date().toISOString() })
+              .eq("id", item.job.id).eq("organization_id", org).eq("status", "sending");
+            if (savedError) {
+              uncertain++;
+              return;
+            }
+            const { error: mirrorError } = await db.from("gencouv_email_messages").insert({
+              organization_id: org, recipient_email: item.job.normalized_email,
+              recipient_name: item.job.recipient_name, from_email: (campaign as Campaign).from_email,
+              subject: (campaign as Campaign).subject, status: "sent", provider: "resend",
+              provider_email_id: providerId, sent_at: new Date().toISOString(),
+              metadata: {
+                source: "gencouv_bulk_campaign", campaign_id: campaignId,
+                recipient_job_id: item.job.id
+              }
+            });
+            if (mirrorError) {
+              await db.from("gencouv_bulk_recipients")
+                .update({ error_code: "secondary_ledger_mirror_failed" })
+                .eq("id", item.job.id).eq("organization_id", org);
+            }
+            accepted++;
+          }));
+        }
       } catch {
-        // Network timeouts may occur AFTER provider acceptance: do not auto-retry.
-        await db.from("gencouv_bulk_recipients").update({ status: "unknown", error_code: "verify_provider_before_retry" })
-          .eq("id", job.id).eq("organization_id", org).eq("status", "sending");
-        uncertain++;
+        // The batch might have been accepted before a timeout or failure.
+        // Never automatically retry these jobs or create a different batch.
+        for (let offset = 0; offset < prepared.length; offset += 20) {
+          await Promise.all(prepared.slice(offset, offset + 20).map(item =>
+            db.from("gencouv_bulk_recipients")
+              .update({ status: "unknown", error_code: "verify_provider_before_retry" })
+              .eq("id", item.job.id).eq("organization_id", org).eq("status", "sending")
+          ));
+        }
+        uncertain += prepared.length;
       }
     }
     const { count: remaining, error: countError } = await db.from("gencouv_bulk_recipients")
