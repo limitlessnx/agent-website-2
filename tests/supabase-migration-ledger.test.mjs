@@ -74,6 +74,8 @@ const expectedPendingVersions = [
   "20261109073001",
   // Hotel dashboard trends and inbox index: prepared for review, not applied.
   "20261109090514",
+  // Runtime email capacity ownership: function replacement prepared for review.
+  "20261120175254",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
