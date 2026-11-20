@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 type Category = { id: string; name: string };
-type Contact = { id: string; full_name: string | null; email: string; company_name: string | null; metadata?: { marketing_consent?: string }; created_at: string };
+type Contact = { id: string; full_name: string | null; email: string; company_name: string | null; metadata?: { marketing_consent?: string; source?: string; marketing_consent_source?: string }; created_at: string };
 type Preview = { preview: true; total: number; new_contacts: number; existing_contacts: number; duplicates_in_file: number; invalid: number; sample: Array<{ email: string; full_name: string }> };
 const endpoint = "/api/dashboard/gencouv/contact-import";
 
@@ -17,6 +17,9 @@ export default function GencouvContactImport() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [consentDecision, setConsentDecision] = useState<"yes" | "no">("no");
+  const [consentSource, setConsentSource] = useState("");
 
   const load = useCallback(async () => {
     const [contactResult, categoriesResult] = await Promise.all([
@@ -52,6 +55,25 @@ export default function GencouvContactImport() {
         await load();
       }
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to import file."); }
+    finally { setBusy(false); }
+  }
+
+  async function saveConsent(customerId: string) {
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const response = await fetch("/api/dashboard/gencouv/contact-consent", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: customerId, consent_accepted: consentDecision,
+          consent_source: consentDecision === "yes" ? consentSource : ""
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not save consent.");
+      setMessage(result.note || "Consent record updated.");
+      setReviewingId(null); setConsentSource(""); setConsentDecision("no");
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Consent update failed."); }
     finally { setBusy(false); }
   }
 
@@ -96,12 +118,31 @@ export default function GencouvContactImport() {
       <div className="admin-panel-header"><div><h2>Saved Gencouv contacts</h2><p>Most recent 100 records, including existing CRM contacts. Imported addresses require consent verification before marketing.</p></div><span className="admin-status">{contacts.length} shown</span></div>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: 600, borderCollapse: "collapse" }}>
-          <thead><tr><th align="left">Contact</th><th align="left">Email</th><th align="left">Company</th><th align="left">Marketing consent</th></tr></thead>
+          <thead><tr><th align="left">Contact</th><th align="left">Email</th><th align="left">Company</th><th align="left">Marketing consent</th><th align="left">Review consent</th></tr></thead>
           <tbody>{contacts.map(c => <tr key={c.id} style={{ borderTop: "1px solid var(--admin-border)" }}>
             <td style={{ padding: 12 }}>{c.full_name || "Unnamed"}</td>
             <td style={{ padding: 12 }}>{c.email}</td>
             <td style={{ padding: 12 }}>{c.company_name || "—"}</td>
             <td style={{ padding: 12 }}>{c.metadata?.marketing_consent || "Not verified"}</td>
+            <td style={{ padding: 12 }}>
+              {c.metadata?.source === "gencouv_document_import" ? (
+                reviewingId === c.id ? <div style={{ display: "grid", gap: 8, minWidth: 210 }}>
+                  <strong>Was permission previously obtained?</strong>
+                  <label><input type="radio" name={"consent-" + c.id} checked={consentDecision === "yes"} onChange={() => setConsentDecision("yes")} /> Yes</label>
+                  <label><input type="radio" name={"consent-" + c.id} checked={consentDecision === "no"} onChange={() => setConsentDecision("no")} /> No</label>
+                  {consentDecision === "yes" && <label>Where and when was consent obtained?
+                    <input value={consentSource} maxLength={300} onChange={e => setConsentSource(e.target.value)}
+                      placeholder="Subscription form / prior opt-in record" />
+                  </label>}
+                  <small>This records your confirmation of existing permission; it cannot create consent retroactively.</small>
+                  <button type="button" disabled={busy || (consentDecision === "yes" && consentSource.trim().length < 8)}
+                    onClick={() => void saveConsent(c.id)}>{busy ? "Saving…" : "Save consent decision"}</button>
+                  <button type="button" disabled={busy} onClick={() => setReviewingId(null)}>Cancel</button>
+                </div> : <button type="button" disabled={busy} onClick={() => {
+                  setReviewingId(c.id); setConsentDecision("no"); setConsentSource("");
+                }}>Confirm consent</button>
+              ) : <span>Not an imported contact</span>}
+            </td>
           </tr>)}</tbody>
         </table>
         {!contacts.length && <p>No saved contacts yet.</p>}
