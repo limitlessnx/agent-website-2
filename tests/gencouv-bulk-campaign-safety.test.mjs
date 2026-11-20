@@ -83,8 +83,10 @@ test("imported contacts have individually auditable permission confirmations", (
   assert.match(consentRoute, /requireAdminSystemScope\("gencouv"\)/);
   assert.match(consentRoute, /getAdminSession\(\)/);
   assert.match(consentRoute, /gencouv_record_imported_contact_consent/);
-  assert.match(importUI, /Confirm consent/);
-  assert.match(importUI, /Save consent decision/);
-  assert.match(importUI, /Where and when was consent obtained/);
+  assert.match(importUI, /Review imported list consent/);
+  assert.match(importUI, /Save consent for entire import group/);
+  assert.match(importUI, /Where and when did everyone in this list agree to marketing/);
+  assert.match(consentRoute, /gencouv_record_import_group_consent/);
+  assert.match(migration, /gencouv_record_import_group_consent/);
   assert.match(migration, /gencouv_suppression_list/);
 });
