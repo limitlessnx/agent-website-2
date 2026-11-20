@@ -11,6 +11,7 @@ create table if not exists public.gencouv_bulk_campaigns (
   consent_confirmed boolean not null default false,
   consent_basis text not null,
   consent_confirmed_at timestamptz,
+  consent_confirmed_by text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (id, organization_id)
