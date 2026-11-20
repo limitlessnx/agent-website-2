@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
             to: [job.normalized_email], reply_to: current.from_email,
             subject: current.subject,
             text: current.text_body +
-              "\\n\\nTo stop marketing emails from Gencouv Capital, unsubscribe: " + unsubscribe,
+              "\n\nTo stop marketing emails from Gencouv Capital, unsubscribe: " + unsubscribe,
             headers: {
               "List-Unsubscribe": "<" + unsubscribe + ">",
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
