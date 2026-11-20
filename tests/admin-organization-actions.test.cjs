@@ -41,7 +41,7 @@ test('manual plan options require admin access and scope subscription evidence t
  const f=billingHarness();const response=await f.api.GET(new Request('https://app.example.test/api/admin/subscriptions?organizationId='+ORG));assert.equal(response.status,200);const body=await response.json();assert.equal(Array.isArray(body.plans),true);assert.deepEqual(f.calls.find(x=>x.table==='organization_subscriptions').filters,[['organization_id',ORG]]);
 });
 test('archived organizations cannot appear active or ready for activation in the existing readiness engine',async()=>{
- const reader=load('lib/tenant-readiness-server.ts',{
+ const reader=load('lib/tenant-readiness-server.ts',{'@/lib/industryExperience':load('lib/industryExperience.ts'),
   '@/lib/hotel-inventory-readiness':{},'@/lib/organization-package-service':{getOrganizationPackageSnapshot:async()=>({packageEntitlements:[],organizationOverrides:[]})},'@/lib/tenant-readiness':load('lib/tenant-readiness.ts'),
   '@/lib/supabase/admin':{createAdminClient:()=>({from(table){const q={select(){return q;},eq(){return q;},order(){return q;},limit(){return q;},maybeSingle:async()=>({data:{id:ORG,status:'archived',metadata:{}},error:null}),then(resolve,reject){return Promise.resolve({data:table==='organizations'?[{id:ORG,status:'archived'}]:[],error:null}).then(resolve,reject);}};return q;}})},
  });const result=await reader.getTenantReadiness(ORG);assert.equal(result.stage,'needs_attention');assert.equal(result.blockers.some(x=>x.key==='lifecycle'),true);

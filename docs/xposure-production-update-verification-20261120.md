@@ -30,7 +30,7 @@ Relevant open drafts were reviewed: #288 (content-creation catalogue/booking CTA
 1. `lib/tenant-readiness-server.ts` now compares **active organization template assignments** with the tenant industry's existing canonical aliases and checks that template definitions are active. Unrelated unknown labels retain their own identity rather than both becoming “general.” A wrong active assignment reports Needs attention and cannot be bypassed by a legacy published-family fallback. Archived/inactive history is ignored; failed and unfinished assignments still block readiness.
 2. Photography catalog readiness now reads both existing stores: `photography_catalogue_items` (tenant operational pages) and `studio_catalog_items` (legacy admin studio pages). Reads remain scoped by organization and active status. Query failures remain explicit unavailable evidence. No catalog data is copied or seeded.
 3. `tests/tenant-industry-readiness.test.cjs` exercises real readiness evaluation for matching/mismatched industries, unknown/missing labels, active/draft templates, failed/provisioning assignments, both catalog paths, empty/error states, tenant scoping, and Real Estate/Hotel preservation.
-4. `tests/tenant-onboarding-reliability.test.cjs` supplies the real industry alias module to its existing error/isolation fixture. `package.json` includes the new guard tests in the support and industry-presets suites, including the existing Trigger deployment verification path.
+4. `tests/tenant-onboarding-reliability.test.cjs` and `tests/admin-organization-actions.test.cjs` supply the real industry alias module to existing error/isolation/archive-safety fixtures. `package.json` includes the new guard tests in the support and industry-presets suites, including the existing Trigger deployment verification path.
 
 This is a read-only readiness correction. It does not apply a new starter, change entitlements, redeploy a customer's external automation or activate an agent.
 
@@ -46,6 +46,8 @@ News remains the synthetic/non-customer test target. Live Xposure browser accept
 
 - Targeted onboarding/readiness/industry checks: **48 passed**.
 - Photography dashboard/booking/authorization, campaign, team, industry and billing regression group: **200 passed**, zero skipped. Suites overlap; counts are not additive unique-case totals.
+- Full support suite after updating its legacy archive fixture: **675 passed**, zero skipped.
+- Production read-only RPC checks confirmed Xposure-scoped period totals, configured period start, consistent held/available capacity and available credits. Neither RPC debits or creates a wallet.
 - Changed-module ESLint passed with zero errors/warnings; TypeScript and optimized production build passed. Hosted release results are recorded in the PR.
 - No new layout or animation system is introduced. Six rendered mismatch checks passed at 360, 430, 768, 1024, 1440 and 1920px. See [synthetic visual evidence](xposure-readiness-evidence/README.md). No authenticated Xposure screenshots or live paid/provider acceptance are claimed.
 
