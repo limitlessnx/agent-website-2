@@ -119,3 +119,26 @@ test("suppressed imported contacts cannot be marked as consented",async t=>{
     [org,contact.id,true,"Previously documented form","admin@gencouv.com"]
   ),/Suppressed contact/i);
 });
+
+test("one decision applies atomically to the entire eligible imported group", async t => {
+  const db = await fixture(t);
+  const ids = (await db.query("select id from crm_customers where organization_id=$1 order by id limit 3",[org]))
+    .rows.map(row => row.id);
+  const {rows} = await db.query("select gencouv_record_import_group_consent($1,$2,$3,$4,$5) as updated",
+    [org,ids,true,"Opt-in registration on 2026-11-01","admin@gencouv.com"]);
+  assert.equal(rows[0].updated,3);
+  const {rows:audits} = await db.query(
+    "select customer_id,decision from gencouv_contact_consent_audit where customer_id=any($1::uuid[])",[ids]);
+  assert.equal(audits.length,3);
+  assert.ok(audits.every(row=>row.decision==="granted"));
+});
+test("one suppressed recipient rolls back the entire group's consent decision",async t=>{
+  const db=await fixture(t);
+  const contacts=(await db.query("select id,email from crm_customers where organization_id=$1 order by id limit 2",[org])).rows;
+  await db.query("insert into gencouv_suppression_list(organization_id,normalized_email) values ($1,$2)",[org,contacts[1].email]);
+  await assert.rejects(db.query("select gencouv_record_import_group_consent($1,$2,$3,$4,$5)",
+    [org,contacts.map(c=>c.id),true,"Verified prior opt-in records","admin@gencouv.com"]),/Suppressed/i);
+  const changed=await db.query("select count(*)::int as n from gencouv_contact_consent_audit where customer_id=any($1::uuid[])",
+    [contacts.map(c=>c.id)]);
+  assert.equal(changed.rows[0].n,0);
+});
