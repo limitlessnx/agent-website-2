@@ -4,10 +4,20 @@ import { createHmac } from 'node:crypto';
 
 async function visualViewport(page:Page) {
   await page.addInitScript(() => {
-    const viewport = Object.assign(new EventTarget(), { width: innerWidth, height: innerHeight, offsetLeft: 0, offsetTop: 0, scale: 1 });
+    // Mobile WebKit starts at 980px before parsing the viewport meta tag.
+    // Follow real layout dimensions until the test explicitly simulates a change.
+    const geometry:Record<string,number> = {};
+    const viewport = new EventTarget();
+    Object.defineProperties(viewport, {
+      width:{get:()=>geometry.width ?? innerWidth},
+      height:{get:()=>geometry.height ?? innerHeight},
+      offsetLeft:{get:()=>geometry.offsetLeft ?? 0},
+      offsetTop:{get:()=>geometry.offsetTop ?? 0},
+      scale:{get:()=>geometry.scale ?? 1},
+    });
     Object.defineProperty(window, 'visualViewport', { configurable:true, get:()=>viewport });
     Object.assign(window, { __setLeoViewport: (values:Record<string,number>) => {
-      Object.assign(viewport, values);viewport.dispatchEvent(new Event('resize'));viewport.dispatchEvent(new Event('scroll'));
+      Object.assign(geometry, values);viewport.dispatchEvent(new Event('resize'));viewport.dispatchEvent(new Event('scroll'));
     }});
   });
 }
