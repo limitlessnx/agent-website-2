@@ -187,14 +187,26 @@ export async function POST(request: NextRequest) {
         const { error: savedError } = await db.from("gencouv_bulk_recipients")
           .update({ status: "accepted", provider_email_id: providerId, sent_at: new Date().toISOString() })
           .eq("id", job.id).eq("organization_id", org).eq("status", "sending");
-        if (savedError) throw Error("Provider accepted but delivery ledger write failed");
-        await db.from("gencouv_email_messages").insert({
+        // Acceptance is final even if mirroring to the optional email ledger fails.
+        // Do not downgrade a provider-accepted send to unknown and encourage retry.
+        if (savedError) {
+          uncertain++;
+          continue;
+        }
+        const { error: mirrorError } = await db.from("gencouv_email_messages").insert({
           organization_id: org, recipient_email: job.normalized_email,
           recipient_name: job.recipient_name, from_email: current.from_email,
           subject: current.subject, status: "sent", provider: "resend",
           provider_email_id: providerId, sent_at: new Date().toISOString(),
           metadata: { source: "gencouv_bulk_campaign", campaign_id: campaignId, recipient_job_id: job.id }
         });
+        // The primary recipient record remains 'accepted' even if the
+        // secondary ledger cannot be mirrored; reconcile the mirror separately.
+        if (mirrorError) {
+          await db.from("gencouv_bulk_recipients")
+            .update({ error_code: "secondary_ledger_mirror_failed" })
+            .eq("id", job.id).eq("organization_id", org);
+        }
         accepted++;
       } catch {
         // Network timeouts may occur AFTER provider acceptance: do not auto-retry.
