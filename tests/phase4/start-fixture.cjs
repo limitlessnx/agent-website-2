@@ -86,6 +86,7 @@ const server = http.createServer((request, response) => {
     );
   }
   let result = fixture(url);
+  if (scenario === "industry-mismatch" && table === "organization_template_assignments") result = [{id:"qa-assignment",organization_id:orgId,status:"active",organization_templates:{name:"Computer Service AI Suite",industry:"Computer Sales and Repair",status:"active",agents:["crm_automation"]}}];
   if (table === "organizations") {
     const all = [...fixture(new URL("http://fixture/rest/v1/organizations")),...systemOrganizations];
     const id = url.searchParams.get("id"); const slug = url.searchParams.get("slug");
@@ -112,9 +113,9 @@ const server = http.createServer((request, response) => {
   if (Array.isArray(result)) result = result.map((row) => {
     const table = url.pathname.split("/").pop();
     if (table === "organization_systems") return {...row,id:"qa-installation",requested_at:"2026-11-01T00:00:00Z",system_catalog:{...row.system_catalog,name:"Appointment system",summary:"Organization-scoped booking configuration",capabilities:["Bookings","Availability"]}};
-    if (table === "organizations") return {...row, name: row.name + " — The International Customer Experience and Business Operations Group", created_at:"2026-11-01T00:00:00Z"};
+    if (table === "organizations") return {...row, metadata:scenario === "industry-mismatch" ? {qa_test:true,outbound_disabled:true} : row.metadata, name: row.name + " — The International Customer Experience and Business Operations Group", created_at:"2026-11-01T00:00:00Z"};
     if (table === "organization_memberships") return {...row, user_id:"30000000-0000-4000-8000-000000000001", created_at:"2026-11-01T00:00:00Z"};
-    if (table === "client_onboarding_profiles") return {...row, user_id:"30000000-0000-4000-8000-000000000001", business_name: row.business_name + " — The International Customer Experience and Business Operations Group", business_email:"a-very-long-customer-success-and-reservations-address@example.test", human_contact_email:"customer-experience-and-operations-supervisor@example.test", human_contact_name:"Customer Experience and Business Operations Supervisor"};
+    if (table === "client_onboarding_profiles") return {...row, industry:scenario === "industry-mismatch" ? "photography-studio" : row.industry, user_id:"30000000-0000-4000-8000-000000000001", business_name: row.business_name + " — The International Customer Experience and Business Operations Group", business_email:"a-very-long-customer-success-and-reservations-address@example.test", human_contact_email:"customer-experience-and-operations-supervisor@example.test", human_contact_name:"Customer Experience and Business Operations Supervisor"};
     return row;
   });
   const count = Array.isArray(result) ? result.length : 1;

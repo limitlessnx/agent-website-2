@@ -46,7 +46,7 @@ News remains the synthetic/non-customer test target. Live Xposure browser accept
 
 - Targeted onboarding/readiness/industry checks: **48 passed**.
 - Photography dashboard/booking/authorization, campaign, team, industry and billing regression group: **200 passed**, zero skipped. Suites overlap; counts are not additive unique-case totals.
-- Changed-module lint, type checks, build and hosted release checks are recorded in the PR after they run.
-- No new layout or animation system is introduced. Existing responsive control-center checks exercise the rendered status surfaces; no authenticated Xposure screenshots or live paid/provider acceptance are claimed.
+- Changed-module ESLint passed with zero errors/warnings; TypeScript and optimized production build passed. Hosted release results are recorded in the PR.
+- No new layout or animation system is introduced. Six rendered mismatch checks passed at 360, 430, 768, 1024, 1440 and 1920px. See [synthetic visual evidence](xposure-readiness-evidence/README.md). No authenticated Xposure screenshots or live paid/provider acceptance are claimed.
 
 Production tenant configuration and customer data were not modified by this audit. Code publication/deployment is tracked in the linked PR rather than inferred from a local test result.
