@@ -74,6 +74,9 @@ const expectedPendingVersions = [
   "20261109073001",
   // Hotel dashboard trends and inbox index: prepared for review, not applied.
   "20261109090514",
+  // Gencouv Resend bulk campaign tables and atomic claiming, drafted in PR #439.
+  // Reviewed for inclusion in the pending ledger; NOT approved for production application.
+  "20261120040000",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {
