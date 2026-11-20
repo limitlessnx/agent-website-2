@@ -25,7 +25,7 @@ test('feature denial is explicit permission feedback; connection failures and fo
  let f=fixture({allowed:false});assert.equal((await f.post()).status,403);assert.equal(f.calls.filter(x=>x.gate).length,1);f=fixture({unavailable:true});assert.equal((await f.post()).body.error,'outcome_evidence_unavailable');f=fixture({alterResult:true});assert.equal((await f.post()).body.error,'outcome_evidence_unavailable');
 });
 test('normalization preserves safe date fallback, text trimming and finite billing quantities',()=>{
- const f=fixture();const r=f.helper.normalizeCommunicationOutcome('outbound_email_crm_v5',{...base,input:{email:' synthetic@example.test '},decision:{subject:' subject ',next_send_at:'bad date',follow_up_at:'2026-11-23T10:00:00Z'}});assert.equal(r.body.input.email,'synthetic@example.test');assert.equal(r.body.decision.subject,'subject');assert.equal(r.body.decision.next_send_at,null);assert.equal(r.body.decision.follow_up_at,'2026-11-23T10:00:00.000Z');
+ const f=fixture();const r=f.helper.normalizeCommunicationOutcome('outbound_email_crm_v5',{...base,campaign_id:' campaign ',provider:' openai ',model:' model ',input:{email:' synthetic@example.test '},decision:{subject:' subject ',next_send_at:'bad date',follow_up_at:'2026-11-23T10:00:00Z'}});assert.equal(r.body.input.email,'synthetic@example.test');assert.equal(r.body.campaign_id,'campaign');assert.equal(r.body.provider,'openai');assert.equal(r.body.model,'model');assert.equal(r.body.decision.subject,'subject');assert.equal(r.body.decision.next_send_at,null);assert.equal(r.body.decision.follow_up_at,'2026-11-23T10:00:00.000Z');
  assert.throws(()=>f.helper.normalizeCommunicationOutcome('voice_receptionist_v6',{...base,input:{duration_seconds:1e20}}),/invalid_outcome_quantity/);
 });
 

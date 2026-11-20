@@ -24,6 +24,7 @@ export function normalizeCommunicationOutcome(workflow: CommunicationWorkflow, r
   for (const key of ["customer_id", "lead_id", "conversation_id"]) if (text(body[key]) && !uuid.test(text(body[key]))) throw new CommunicationOutcomeError("invalid_outcome_identity", 400);
   if (!text(body.customer_key) || text(body.customer_key).length > 512 || !text(body.idempotency_key) || text(body.idempotency_key).length > 512) throw new CommunicationOutcomeError("invalid_outcome_identity", 400);
   const next = { ...body, organization_id: text(body.organization_id).toLowerCase(), agent_id: text(body.agent_id).toLowerCase(), execution_id: text(body.execution_id).toLowerCase(), customer_key: text(body.customer_key), idempotency_key: text(body.idempotency_key),
+    campaign_id: text(body.campaign_id) || null, provider: text(body.provider) || null, model: text(body.model) || null,
     input, provider_usage: usage, event_type: text(body.event_type) || (workflow === "voice_receptionist_v6" ? "voice.transcript_received" : ""),
     sequence_step: finite(body.sequence_step, 1) || 1,
     decision: { ...decision, next_send_at: date(decision.next_send_at), follow_up_at: date(decision.follow_up_at), qualification_score: Math.max(0, Math.min(100, finite(decision.qualification_score))), next_step: finite(decision.next_step) || (finite(body.sequence_step, 1) || 1) + 1 },
