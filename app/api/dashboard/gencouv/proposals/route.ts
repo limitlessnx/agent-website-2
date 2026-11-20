@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { requireAdminSystemScope } from "@/lib/admin-organization-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resendApi } from "@/lib/fluxknight-mail";
+import { parseGencouvEmailProvider } from "@/lib/gencouv-brevo";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
@@ -20,6 +21,11 @@ export async function POST(request: NextRequest) {
   if (request.headers.get("origin") !== request.nextUrl.origin) return fail("Invalid request origin.",403);
   const input = await request.json().catch(()=>null) as Record<string,unknown> | null;
   if (!input) return fail("Invalid message.");
+  const provider = parseGencouvEmailProvider(input.provider ?? "resend");
+  if (!provider) return fail("Unknown email provider.");
+  // Brevo is intentionally blocked until sender registration, durable idempotency,
+  // delivery reconciliation and release verification are complete.
+  if (provider === "brevo") return fail("Brevo is not yet enabled for Gencouv. Use Resend.", 409);
   const sender = String(input.from || "").trim().toLowerCase();
   const recipient = String(input.to || "").trim().toLowerCase();
   const subject = String(input.subject || "").trim();
