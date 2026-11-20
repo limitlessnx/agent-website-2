@@ -32,3 +32,11 @@ Phase 6 still needs email/voice receipt recovery, verified provider mappings and
 ## Release and production operation
 
 PR, exact-head hosted verification, preview/deployment and actual repair readback will be recorded after completion. Until that evidence is recorded, the script is prepared/tested only; this document does not claim production configuration was repaired.
+
+### Completed release and operation
+
+PR #441 merged as `d2c9947e151cc47ab76f3a66984f0ae158856544`; its file tree matches tested candidate `b6164748f594daddb78fa5df34429b50895574ad`. All applicable hosted workflows passed, including 144 control-center browser cases. Vercel production `dpl_3YqmozDA7CS78aTxXrPaiWsX8EBJ` is READY with fluxknight.space assigned; Trigger.dev version 20261120.2 deployed successfully through run 44675182922.
+
+The scoped repair completed at 2026-11-20 05:01:27 UTC, audit `87e3c737-a907-493f-a7ed-5eb617e78cbd`. Readback confirmed the Photography assignment active, old Computer Service history paused and linked, two draft agents, four tenant-UUID draft workflows, existing published Maia's entire-row hash unchanged, and the Plus wallet/billing unchanged. No external agent/workflow activation or test communication occurred. The connector's first confirmation expired without changes; readback verified no repair audit before the identical retry succeeded.
+
+Production was modified by this approved release and configuration operation; customer operational data and existing agent/integration/knowledge/workflow configuration were preserved. Production login returned 200 and the application readiness API returned Unauthorized/401 without authentication. The preview login loaded, but its API request stopped at Vercel protection and did not establish application authorization. Authenticated Xposure/News acceptance remains open.

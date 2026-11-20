@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertRuntimeSecret } from "@/lib/runtime/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { enqueueRuntimeCommand } from "@/lib/runtime/command-queue";
 import { dispatchMaiaWhatsAppFollowUp } from "@/lib/maia-action-gateway";
 
 function text(value: unknown) {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: execution, error: executionError } = await supabase
       .from("runtime_executions")
-      .select("id,input_payload")
+      .select("id,input")
       .eq("id", executionId)
       .eq("organization_id", organizationId)
       .eq("agent_id", agentId)
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (type === "appointment") {
-        const { data: integration } = await supabase
+        const { data: integration, error: integrationError } = await supabase
           .from("organization_integrations")
           .select("id,provider,status,credential_reference,configuration")
           .eq("organization_id", organizationId)
@@ -92,12 +93,13 @@ export async function POST(request: NextRequest) {
           .limit(1)
           .maybeSingle();
 
+        if (integrationError) throw new Error("Integration evidence is unavailable. Retry only the same operation.");
         if (!integration) {
           results.push({ type, status: "blocked", reason: "calendar_integration_not_connected", payload });
           continue;
         }
 
-        const queued = await supabase.from("command_queue").insert({
+        const command = await enqueueRuntimeCommand(supabase, {
           organization_id: organizationId,
           agent_id: agentId,
           execution_id: executionId,
@@ -107,14 +109,13 @@ export async function POST(request: NextRequest) {
           priority: 60,
           max_attempts: 3,
           idempotency_key: actionKey,
-        }).select("id,status").single();
-        if (queued.error) throw queued.error;
-        results.push({ type, status: "queued", command: queued.data });
+        });
+        results.push({ type, status: "queued", command });
         continue;
       }
 
       if (type === "follow_up") {
-        const queued = await supabase.from("command_queue").insert({
+        const command = await enqueueRuntimeCommand(supabase, {
           organization_id: organizationId,
           agent_id: agentId,
           execution_id: executionId,
@@ -125,9 +126,8 @@ export async function POST(request: NextRequest) {
           max_attempts: 3,
           available_at: text(payload.due_at) || new Date().toISOString(),
           idempotency_key: actionKey,
-        }).select("id,status,available_at").single();
-        if (queued.error) throw queued.error;
-        results.push({ type, status: "queued", command: queued.data });
+        });
+        results.push({ type, status: "queued", command });
         continue;
       }
 
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
             Date.now() - lastInboundAt.getTime() < WHATSAPP_CUSTOMER_SERVICE_WINDOW_MS,
           );
 
-          const executionInput = record(execution.input_payload);
+          const executionInput = record(execution.input);
           const taskMetadata = record(taskResult.data?.metadata);
           const workflowKey = text(taskMetadata.workflow_key) || text(executionInput.workflow_key);
           const isCrmFollowUp = workflowKey === "crm_follow_up_v3" || taskMetadata.source_execution_id === executionId;
@@ -320,8 +320,25 @@ export async function POST(request: NextRequest) {
           telegram: ["telegram"],
           voice: ["voice", "elevenlabs", "vapi", "retell"],
         };
+        if (["email", "voice"].includes(channel) && (!text(payload.recipient) || !text(payload.content) || (channel === "email" && !text(payload.subject)))) {
+          results.push({ type, status: "blocked", reason: `${channel}_recipient_or_content_missing` });
+          continue;
+        }
+        if (channel === "email") {
+          const customerId = text(payload.customer_id);
+          if (!customerId) { results.push({ type, status: "blocked", reason: "email_customer_scope_missing" }); continue; }
+          const contact = await supabase.from("crm_customers").select("id,email,status,profile,metadata").eq("id", customerId).eq("organization_id", organizationId).maybeSingle();
+          if (contact.error) throw new Error("Email suppression evidence is unavailable. Retry only the same operation.");
+          const profile = record(contact.data?.profile), metadata = record(contact.data?.metadata);
+          if (!contact.data || contact.data.status !== "active" || profile.opted_out || metadata.opted_out || metadata.do_not_contact || metadata.email_bounced) {
+            results.push({ type, status: "blocked", reason: "email_customer_suppressed_or_unavailable" }); continue;
+          }
+          if (text(contact.data.email).toLowerCase() !== text(payload.recipient).toLowerCase()) {
+            results.push({ type, status: "blocked", reason: "email_recipient_requires_review" }); continue;
+          }
+        }
         const providers = providerKeys[channel] || [channel];
-        const { data: integration } = await supabase
+        const { data: integration, error: integrationError } = await supabase
           .from("organization_integrations")
           .select("id,provider,status,credential_reference,configuration")
           .eq("organization_id", organizationId)
@@ -330,12 +347,13 @@ export async function POST(request: NextRequest) {
           .limit(1)
           .maybeSingle();
 
+        if (integrationError) throw new Error("Integration evidence is unavailable. Retry only the same operation.");
         if (!integration) {
           results.push({ type, status: "blocked", reason: `${channel}_integration_not_connected`, payload });
           continue;
         }
 
-        const queued = await supabase.from("command_queue").insert({
+        const command = await enqueueRuntimeCommand(supabase, {
           organization_id: organizationId,
           agent_id: agentId,
           execution_id: executionId,
@@ -344,6 +362,7 @@ export async function POST(request: NextRequest) {
             integration_id: integration.id,
             credential_reference: integration.credential_reference,
             recipient: payload.recipient,
+            ...(channel === "email" ? { subject: text(payload.subject) } : {}),
             content: payload.content,
             conversation_id: payload.conversation_id,
             customer_id: payload.customer_id,
@@ -353,33 +372,35 @@ export async function POST(request: NextRequest) {
           priority: 50,
           max_attempts: 3,
           idempotency_key: actionKey,
-        }).select("id,status").single();
-        if (queued.error) throw queued.error;
-        results.push({ type, status: "queued", provider: integration.provider, command: queued.data });
+        });
+        results.push({ type, status: "queued", provider: integration.provider, command });
         continue;
       }
 
       results.push({ type, status: "ignored", reason: "unsupported_action" });
     }
 
-    await supabase.from("runtime_progress_events").insert({
+    const blocked = results.some(result => result.status === "blocked");
+    const progress = await supabase.from("runtime_progress_events").insert({
       organization_id: organizationId,
       execution_id: executionId,
-      event_type: "actions.dispatched",
-      message: "Tenant-safe workflow actions were evaluated and dispatched.",
+      event_type: blocked ? "actions.blocked" : "actions.dispatched",
+      message: blocked ? "Some workflow actions require attention. Queued work was retained." : "Workflow actions were evaluated; queued work is not delivery confirmation.",
       payload: { results },
     });
+    if (progress.error) throw new Error("Dispatch evidence could not be saved. Retry only the same operation; queued work was retained.");
 
     return NextResponse.json({
-      ok: true,
+      ok: !blocked,
+      needs_attention: blocked,
       organization_id: organizationId,
       agent_id: agentId,
       execution_id: executionId,
       idempotency_key: idempotencyKey,
       action_results: results,
-    });
+    }, { status: blocked ? 409 : 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to dispatch tenant actions.";
-    return NextResponse.json({ error: message }, { status: message === "Unauthorized." ? 401 : 409 });
+    return NextResponse.json({ ok: false, error: message, needs_attention: true, do_not_redispatch: true }, { status: message === "Unauthorized." ? 401 : 409 });
   }
 }

@@ -26,6 +26,8 @@ test("production migration ledger snapshot has no duplicate versions", () => {
 });
 
 const expectedPendingVersions = [
+  // Atomic communication outcome recovery: reviewed candidate, not yet applied.
+  "20261120050954",
   "20261001233000",
   "202610020001",
   "202610020002",
