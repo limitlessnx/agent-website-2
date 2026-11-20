@@ -18,6 +18,9 @@ on:
       - "lib/flux-ai-operation.ts"
       - "lib/runtime/communication-outcome.ts"
       - "lib/runtime/command-queue.ts"
+      - "app/api/internal/runtime/actions/complete/route.ts"
+      - "tests/runtime-completion-*.cjs"
+      - "tests/helpers/runtime-completion-database.cjs"
       - "app/api/internal/runtime/actions/outbound-email/route.ts"
       - "app/api/internal/runtime/actions/voice-receptionist/route.ts"
       - "app/api/internal/runtime/actions/dispatch/route.ts"
@@ -86,6 +89,10 @@ jobs:
         run: node --test tests/flux-ai-operation.test.cjs
       - name: Communication outcome and dispatch recovery
         run: npm run test:communication-outcomes
+      - name: Atomic execution finalization
+        run: npm run test:runtime-completion
+      - name: Completion changed-module lint
+        run: npx eslint app/api/internal/runtime/actions/complete/route.ts tests/runtime-completion-*.cjs tests/helpers/runtime-completion-database.cjs
       - name: Communication outcome changed-module lint
         run: npx eslint lib/fluxknight-plans.ts lib/runtime/communication-outcome.ts lib/runtime/command-queue.ts app/api/internal/runtime/actions/outbound-email/route.ts app/api/internal/runtime/actions/voice-receptionist/route.ts app/api/internal/runtime/actions/dispatch/route.ts tests/communication-outcome-*.cjs tests/communication-dispatch-runtime.test.cjs tests/helpers/communication-outcome-database.cjs tests/helpers/outcome-query-adapter.cjs
       - name: Wallet changed-module lint
@@ -110,6 +117,14 @@ jobs:
         env:
           COMMUNICATION_OUTCOME_TEST_DATABASE_URL: postgresql://postgres:billing_test_only@localhost:5432/communication_outcome_test
         run: node --test tests/communication-outcome-concurrency.test.cjs
+      - name: Create dedicated disposable completion database
+        env:
+          PGPASSWORD: billing_test_only
+        run: createdb -h localhost -p 5432 -U postgres runtime_completion_test
+      - name: Independent PostgreSQL finalization sessions
+        env:
+          RUNTIME_COMPLETION_TEST_DATABASE_URL: postgresql://postgres:billing_test_only@localhost:5432/runtime_completion_test
+        run: node --test tests/runtime-completion-concurrency.test.cjs
       - name: TypeScript
         run: npx tsc --noEmit
       - name: Production build
