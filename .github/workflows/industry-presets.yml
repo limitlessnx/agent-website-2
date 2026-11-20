@@ -11,6 +11,11 @@ on:
       - 'lib/portal-access.ts'
       - 'tests/general-industry-workspace.test.cjs'
       - 'tests/industry-presets/**'
+      - 'lib/tenant-readiness-server.ts'
+      - 'tests/tenant-industry-readiness.test.cjs'
+      - 'tests/tenant-starter-repair.test.cjs'
+      - 'tests/fixtures/tenant-starter-repair/**'
+      - 'docs/operations/xposure-photography-starter-repair.sql'
       - 'playwright.presets.config.ts'
       - '.github/workflows/industry-presets.yml'
   workflow_dispatch:

@@ -2,10 +2,11 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const load=require('./helpers/load-typescript.cjs');
 const org='10000000-0000-4000-8000-000000000001';
-function fixture({industry='photography-studio',templateIndustry='Photography Studio',templateStatus='active',catalog='photography_catalogue_items',catalogError=null,history=false,publishedFamily=false,noAssignments=false}={}){
+function fixture({industry='photography-studio',templateIndustry='Photography Studio',templateStatus='active',catalog='photography_catalogue_items',catalogError=null,history=false,publishedFamily=false,noAssignments=false,retirement=null}={}){
  const calls=[];
- const assignment={status:'active',organization_templates:{industry:templateIndustry,status:templateStatus,agents:['studio_concierge']}};
+ const assignment={id:'current-assignment',status:'active',organization_templates:{industry:templateIndustry,status:templateStatus,agents:['studio_concierge']}};
  const data={organizations:{id:org,status:'active',metadata:{}},organization_memberships:[{id:'owner',membership_roles:[{roles:{slug:'owner'}}]}],organization_template_assignments:noAssignments?[]:[assignment,...(history?[{...assignment,status:typeof history==='string'?history:'archived',organization_templates:{industry:'Computer Sales and Repair',status:'active',agents:['crm_automation']}}]:[])],organization_subscriptions:[{status:'active',current_period_end:'2999-01-01',trial_ends_at:null}],agents:[{id:'agent',slug:'studio-concierge',configuration:{agent_key:'studio_concierge'},updated_at:'2026-01-01'}],agent_runtime_readiness:[{agent_id:'agent',business_profile_ready:true,prompt_ready:true,knowledge_ready:true,integrations_ready:true,workflow_ready:true}],agent_test_runs:[{agent_id:'agent',status:'passed',created_at:'2026-02-01'}],agent_approval_requests:[{agent_id:'agent',status:'approved',created_at:'2026-02-01'}],projects:[],client_onboarding_profiles:[{status:'configuration',industry}],agent_families:publishedFamily?[{template_id:'published-template',agent_templates:{status:'published'}}]:[],organization_systems:[],automation_provisioning_jobs:[]};
+ if(retirement)data.organization_template_assignments.push({id:'old-assignment',status:retirement.status||'paused',metadata:{superseded_by_assignment_id:retirement.next||'current-assignment'},organization_templates:{industry:'Computer Sales and Repair',status:'active',agents:['crm_automation']}});
  const admin={from(table){const filters=[];let columns;const q={select(value){columns=value;return q;},eq(k,v){filters.push([k,v]);return q;},order:()=>q,limit:()=>q,maybeSingle:()=>q,then(resolve,reject){calls.push({table,filters,columns});assert.ok(filters.some(([k,v])=>k===(table==='organizations'?'id':'organization_id')&&v===org),'Tenant-scoped '+table);if(['studio_catalog_items','photography_catalogue_items','properties'].includes(table)){assert.ok(filters.some(([k,v])=>k==='status'&&v==='active'));return Promise.resolve({data:table===catalog?[{id:'owned-item'}]:[],error:table===catalogError?Error('Synthetic catalog outage'):null}).then(resolve,reject);}assert.ok(Object.hasOwn(data,table),'Expected read '+table);return Promise.resolve({data:data[table],error:null}).then(resolve,reject);}};return q;}};
  const api=load('lib/tenant-readiness-server.ts',{'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/tenant-readiness':load('lib/tenant-readiness.ts'),'@/lib/industryExperience':load('lib/industryExperience.ts'),'@/lib/organization-package-service':{getOrganizationPackageSnapshot:async id=>{assert.equal(id,org);return {packageEntitlements:[{feature_key:'core_ai_support',enabled:true}],organizationOverrides:[]};}},'@/lib/hotel-inventory-readiness':{getHotelInventoryReadiness:async id=>{assert.equal(id,org);return {activeRoomTypes:1,activeRooms:1,unpublishedRoomTypes:0};}}});
  return {read:()=>api.getTenantReadiness(org),calls};
@@ -24,3 +25,14 @@ test('hotel aliases preserve existing hotel inventory readiness',async()=>{asser
 test('legacy published-family fallback is preserved when no active assignment contradicts it',async()=>{assert.equal((await fixture({noAssignments:true,publishedFamily:true}).read()).stage,'ready_for_activation');});
 
 for(const history of ['failed','provisioning'])test('unresolved '+history+' assignment cannot be hidden by an active template or published family',async()=>{const r=await fixture({history,publishedFamily:true}).read();assert.equal(r.checks.find(x=>x.key==='template').ready,false);assert.equal(r.stage,history==='failed'?'needs_attention':'provisioning_in_progress');});
+
+// Supersession is evidence, not a blanket exemption for paused/failed templates.
+test('paused history with a verified matching active replacement stops blocking readiness',async()=>{
+ const r=await fixture({retirement:{}}).read();assert.equal(r.checks.find(x=>x.key==='template').ready,true);assert.equal(r.stage,'ready_for_activation');
+});
+for(const retirement of [{next:'foreign-or-missing'},{next:'old-assignment'},{status:'failed'},{status:'provisioning'},{status:'active'}])test('unresolved retirement remains a blocker '+JSON.stringify(retirement),async()=>{
+ const r=await fixture({retirement}).read();assert.equal(r.checks.find(x=>x.key==='template').ready,false);
+});
+for(const options of [{templateIndustry:'Computer Sales and Repair'},{templateStatus:'draft'}])test('replacement must match industry and active definition '+JSON.stringify(options),async()=>{
+ const r=await fixture({...options,retirement:{}}).read();assert.equal(r.stage,'needs_attention');assert.equal(r.checks.find(x=>x.key==='template').ready,false);
+});
