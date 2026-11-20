@@ -9,6 +9,8 @@ const unsubscribe = read("app/api/gencouv/bulk-unsubscribe/route.ts");
 const token = read("lib/gencouv-bulk-unsubscribe.ts");
 const ui = read("components/gencouv/GencouvBulkCampaignComposer.tsx");
 const marketing = read("components/gencouv/GencouvMarketingWorkspace.tsx");
+const consentRoute = read("app/api/dashboard/gencouv/contact-consent/route.ts");
+const importUI = read("components/gencouv/GencouvContactImport.tsx");
 
 test("campaign storage has tenant-bound recipients, reservation uniqueness and RLS", () => {
   assert.match(migration, /create table if not exists public\.gencouv_bulk_campaigns/);
@@ -19,12 +21,14 @@ test("campaign storage has tenant-bound recipients, reservation uniqueness and R
   assert.match(migration, /alter table public\.gencouv_bulk_campaigns enable row level security/);
   assert.match(migration, /alter table public\.gencouv_bulk_recipients enable row level security/);
   assert.match(migration, /consent_confirmed_by text not null/);
+  assert.match(migration, /gencouv_contact_consent_audit/);
+  assert.match(migration, /gencouv_record_imported_contact_consent/);
 });
 
 test("a service-role-only atomic claim has a lock and conservative UTC daily cap", () => {
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /for update skip locked/i);
-  assert.match(migration, /75 - v_used/);
+  assert.match(migration, /100 - v_used/);
   assert.match(migration, /status = 'ready' and consent_confirmed = true/);
   assert.match(migration, /revoke all on function public\.gencouv_claim_bulk_batch/);
   assert.match(migration, /grant execute on function public\.gencouv_claim_bulk_batch.*to service_role/);
@@ -70,6 +74,16 @@ test("Gencouv UI offers Yes/No consent, campaign review and manual batch sends",
   assert.match(ui, /No<\/label>/);
   assert.match(ui, /consent !== "yes"/);
   assert.match(ui, /consent_basis: consentBasis/);
-  assert.match(ui, /Send next 10 with Resend/);
+  assert.match(ui, /Send up to 100 with Resend/);
   assert.match(ui, /sendingEnabled/);
+});
+
+test("imported contacts have individually auditable permission confirmations", () => {
+  assert.match(consentRoute, /requireAdminSystemScope\\("gencouv"\\)/);
+  assert.match(consentRoute, /getAdminSession\\(\\)/);
+  assert.match(consentRoute, /gencouv_record_imported_contact_consent/);
+  assert.match(importUI, /Confirm consent/);
+  assert.match(importUI, /Save consent decision/);
+  assert.match(importUI, /Where and when was consent obtained/);
+  assert.match(migration, /gencouv_suppression_list/);
 });
