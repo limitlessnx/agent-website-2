@@ -1,15 +1,64 @@
 {
   "baseCommit": "114cef32627a534c62a56ec7b8221d06c0ee3f3e",
   "physicalIPhoneKeyboard": "user-confirmed-pass",
-  "supportRegressionFiles": {"passed":85,"failed":0},
-  "maiaRegressionFiles": {"passed":25,"failed":0},
-  "initialRepositoryLint": {"errors":445,"warnings":72,"filesWithErrors":149,"scannedFiles":1344},
-  "changedSourceLint": {"errors":0,"existingWarnings":2},
-  "typeCheck":"passed",
-  "optimizedBuild":"passed",
-  "finalBrowserResults":"pending",
-  "hostedResults":"pending",
-  "hostedAuthenticatedAcceptance":"not available; synthetic sessions only",
-  "liveManagerAndElevenLabs":"user-deferred",
-  "productionModifiedThisVerification":false
+  "supportRegressionFiles": {
+    "passed": 85,
+    "failed": 0
+  },
+  "maiaRegressionFiles": {
+    "passed": 25,
+    "failed": 0
+  },
+  "initialRepositoryLint": {
+    "errors": 445,
+    "warnings": 72,
+    "filesWithErrors": 149,
+    "scannedFiles": 1344
+  },
+  "changedSourceLint": {
+    "errors": 0,
+    "existingWarnings": 2
+  },
+  "typeCheck": "passed",
+  "optimizedBuild": "passed",
+  "finalBrowserResults": "pending",
+  "hostedResults": "pending",
+  "hostedAuthenticatedAcceptance": "not available; synthetic sessions only",
+  "liveManagerAndElevenLabs": "user-deferred",
+  "productionModifiedThisVerification": false,
+  "localSettingsMotion": {
+    "passed": 138,
+    "failed": 0,
+    "widths": [
+      360,
+      430,
+      768,
+      1024,
+      1440,
+      1920
+    ]
+  },
+  "targetedDashboardContracts": {
+    "passed": 4,
+    "failed": 0
+  },
+  "hostedSourceCommit": "62c35c8e4d5c1ee454e919a26641d15c480aee65",
+  "hostedInitialVisual": {
+    "passed": 18,
+    "failed": 24,
+    "reason": "Native system font substitution differs on Ubuntu 26.04 vs workspace Debian; separate reviewed Ubuntu references are being prepared. Comparison tolerance unchanged."
+  },
+  "hostedTeam": {
+    "passed": 42,
+    "failed": 0
+  },
+  "preview": {
+    "url": "https://limitlessnx-agent-website-2-ptxhekqtx-fluxagents.vercel.app",
+    "deploymentId": "dpl_A5wqzPMXvKiNVAzxQimkSVWrTxtm",
+    "state": "READY",
+    "publicPageStatus": 200,
+    "loginPageStatus": 200,
+    "sharedCssStatus": 200
+  },
+  "pullRequest": "https://github.com/limitlessnx/agent-website-2/pull/447"
 }

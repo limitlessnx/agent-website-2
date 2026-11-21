@@ -34,11 +34,13 @@ All listed browser suites use the six target widths unless explicitly stated oth
 | Catalog and services | hotel room/service configuration case (read-only, synthetic form values, no save) |
 | Team and permissions | existing team-access browser suite: owner controls, restricted manager view, loading/error/retry and industry workspaces. Live manager enrollment remains deferred. |
 
+[Six-width screenshot index](visual-evidence.md).
+
 ## Visual baseline reconciliation
 
 The initial six demo mismatches reproduced on the verified main revision. The expanded run also identified admin-navigation/overview and general-business captures predating the approved Phase 4–5 releases. The original images are preserved; they are not overwritten or used to represent new screens.
 
-Changed released views use a versioned `docs/phase2-evidence/after/phase23-reviewed/` reference set with image hashes and a recorded implementation review in `tests/responsive/phase23-visual-review.json`. Existing industry and unchanged dialog/drawer goldens retain their original paths/review. Candidate capture is explicit and separate from comparison; normal test runs cannot generate missing baselines or approve hashes. The 0.2% comparison budget is unchanged. Only Next.js development tooling is hidden; product content is not masked. Full-page fixed-chrome capture artifacts are supplemented by viewport captures and geometry/focus checks. Bounded table/tab scrolling is intentional and is distinguished from page overflow.
+Changed released views use a versioned `docs/phase2-evidence/after/phase23-reviewed/` reference set with image hashes and a recorded implementation review in `tests/responsive/phase23-visual-review.json`. Existing industry and unchanged dialog/drawer goldens retain their original paths/review. Candidate capture is explicit and separate from comparison; normal test runs cannot generate missing baselines or approve hashes. The 0.2% comparison budget is unchanged. Initial hosted comparisons passed 18 admin/shared cases and failed all 24 tenant cases because native system-font substitution differs between workspace Debian and Ubuntu 26.04. Separate Ubuntu tenant references require explicit candidate capture, inspection and hash review; they cannot be auto-approved by CI. Original workspace references remain available. Only Next.js development tooling is hidden; product content is not masked. Full-page fixed-chrome capture artifacts are supplemented by viewport captures and geometry/focus checks. Bounded table/tab scrolling is intentional and is distinguished from page overflow.
 
 The general-tenant fixture intentionally displays unavailable wallet/plan and setup-required recovery states; those screenshots do not demonstrate healthy billing. Separate billing fixtures cover successful data responses.
 

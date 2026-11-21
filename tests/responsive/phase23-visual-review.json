@@ -2,7 +2,6 @@
   "status": "reviewed",
   "reviewer": "Codex implementation review",
   "reviewedAt": "2026-11-21T06:33:47.092063+00:00",
-  "runtimeSourceCommit": "114cef32627a534c62a56ec7b8221d06c0ee3f3e",
   "scope": "45 synthetic fixture images: admin overview, organization management, general tenant, expanded shared demo and relevant states across six widths. Implementation review, not stakeholder or live acceptance.",
   "rationale": "Old references predate released Phase 3 expanded demo and Phase 4\u20135 navigation/general workspace. Separate versioned references preserve originals; this candidate repairs icon padding and narrows misleading health labels.",
   "criteria": [
@@ -58,5 +57,8 @@
     "tenant-general-chromium-430.png": "7a6b7d9332f21a95b4a68a39ea30326fc0a41575b6291a89834f447365bc1379",
     "tenant-general-chromium-768-mobile-navigation.png": "ef334923440c69f42974ff220af0efd266d436e86068923630ba60530261b4eb",
     "tenant-general-chromium-768.png": "1a9b5b249aacf62c54722f7c5e06a7d55796770ad6d32335d07be04169245747"
-  }
+  },
+  "baseCommit": "114cef32627a534c62a56ec7b8221d06c0ee3f3e",
+  "runtimeSourceCommit": "62c35c8e4d5c1ee454e919a26641d15c480aee65",
+  "captureEnvironment": "Debian 13 / Chromium 156.0.8078.79, native system fonts"
 }

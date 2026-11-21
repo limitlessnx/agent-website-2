@@ -38,19 +38,27 @@ async function visualCheck(
 ) {
   if (process.env.FLUX_VISUAL_COMPARE !== "1") return;
   const currentDemo = (testInfo.title.startsWith("shared component") && !["dialog", "drawer"].includes(state)) || testInfo.title === "tenant general" || testInfo.title.startsWith("admin ");
+  const ubuntuTenant = process.env.FLUX_VISUAL_PLATFORM === "ubuntu-26.04" && testInfo.title.startsWith("tenant ");
   const name = `${testInfo.title.replace(/[^a-z0-9]+/gi, "-").replace(/-$/, "")}-${testInfo.project.name}${state ? `-${state}` : ""}.png`;
-  const directory = join(process.cwd(), "docs/phase2-evidence/after", ...(currentDemo ? ["phase23-reviewed"] : []));
+  const directory = join(process.cwd(), "docs/phase2-evidence/after", ...(ubuntuTenant ? ["phase23-ubuntu"] : currentDemo ? ["phase23-reviewed"] : []));
   const path = join(directory, name);
   if (process.env.FLUX_CAPTURE_REVIEW_BASELINES === "1") {
-    if (!currentDemo) return; // Capture mode does not approve or update any existing baseline.
+    if (process.env.FLUX_VISUAL_PLATFORM === "ubuntu-26.04") {
+      if (!ubuntuTenant) return;
+      const candidates = join(process.cwd(), "test-results/visual-candidates");
+      mkdirSync(candidates, { recursive: true });
+      await page.screenshot({ path: join(candidates, name), fullPage, animations: "disabled", style: screenshotStyle });
+      return;
+    }
+    if (!currentDemo) return; // Capturing never approves references.
     mkdirSync(directory, { recursive: true });
     await page.screenshot({ path, fullPage, animations: "disabled", style: screenshotStyle });
     return;
   }
-  const review = JSON.parse(readFileSync(join(process.cwd(), `tests/responsive/${currentDemo ? "phase23-visual-review" : "visual-review"}.json`), "utf8"));
+  const review = JSON.parse(readFileSync(join(process.cwd(), `tests/responsive/${ubuntuTenant ? "phase23-ubuntu-review" : currentDemo ? "phase23-visual-review" : "visual-review"}.json`), "utf8"));
   expect(review.status, "Visual comparisons require a recorded implementation review.").toBe("reviewed");
-  if (currentDemo) expect(createHash("sha256").update(readFileSync(path)).digest("hex"), "Reviewed baseline hash must match.").toBe(review.hashes[name]);
-  await expect(page).toHaveScreenshot(currentDemo ? ["phase23-reviewed", name] : name, {
+  if (ubuntuTenant || currentDemo) expect(createHash("sha256").update(readFileSync(path)).digest("hex"), "Reviewed baseline hash must match.").toBe(review.hashes[name]);
+  await expect(page).toHaveScreenshot(ubuntuTenant ? ["phase23-ubuntu", name] : currentDemo ? ["phase23-reviewed", name] : name, {
     fullPage, animations: "disabled",
     stylePath: join(process.cwd(), "tests/responsive/visual-stability.css"),
     maxDiffPixelRatio: 0.002,

@@ -10,6 +10,7 @@ on:
       - "components/portal/**"
       - "tests/responsive/**"
       - "tests/ui-motion/**"
+      - "docs/phase2-evidence/after/phase23-ubuntu/**"
       - "docs/phase2-evidence/after/phase23-reviewed/**"
       - "playwright*.ts"
       - "package.json"
@@ -20,7 +21,7 @@ permissions:
 jobs:
   ui:
     name: phase23-${{ matrix.suite }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -36,9 +37,23 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Capture Ubuntu review candidates when references are absent
+        if: matrix.suite == 'visual'
+        run: |
+          if [ ! -f tests/responsive/phase23-ubuntu-review.json ]; then
+            FLUX_VISUAL_PLATFORM=ubuntu-26.04 FLUX_CAPTURE_REVIEW_BASELINES=1 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:visual -- --grep "tenant "
+          fi
+      - name: Preserve unapproved Ubuntu candidates separately
+        if: always() && matrix.suite == 'visual'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase23-ubuntu-review-candidates
+          path: test-results/visual-candidates/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Reviewed visual comparisons across six widths
         if: matrix.suite == 'visual'
-        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:visual
+        run: FLUX_VISUAL_PLATFORM=ubuntu-26.04 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:visual
       - name: Settings, AI state, accessibility, zoom and client performance checks
         if: matrix.suite == 'settings-motion'
         run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:phase23-ui
