@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getTikTokIntegration, getTikTokCredentials, TIKTOK_REDIRECT_URI } from "@/lib/tiktok-integration";
+import { saveFluxSocialTikTokApp } from "./tiktok-actions";
 import {
   getFluxknightOrganization,
   getMetaCredentials,
@@ -20,6 +22,11 @@ export default async function SocialIntegrationsPage({
   const organization = await getFluxknightOrganization();
   const integration = await getMetaIntegration(organization.id);
   const credentials = await getMetaCredentials(organization.id);
+  const { integration: tikTok } = await getTikTokIntegration();
+  const tikTokCredentials = await getTikTokCredentials(organization.id);
+  const tikTokConfig = (tikTok?.configuration || {}) as Record<string, unknown>;
+  const tikTokConfigured = Boolean(tikTokCredentials?.client_key && tikTokCredentials?.client_secret);
+  const tikTokConnected = Boolean(tikTokConfig.oauth_connected_at && tikTokCredentials?.access_token);
   const config = (integration?.configuration || {}) as Record<string, unknown>;
   const health = (integration?.health || {}) as Record<string, unknown>;
   const appId = String(credentials?.app_id || config.app_id || "");
@@ -402,6 +409,53 @@ export default async function SocialIntegrationsPage({
             ) : null}
           </div>
         </section>
+      </section>
+
+      <section className="admin-panel" aria-label="TikTok connection">
+        <div className="admin-panel-header">
+          <div>
+            <h2>TikTok</h2>
+            <p>Connect Fluxknight's TikTok account through TikTok Login Kit. This does not enable publishing or post existing content.</p>
+          </div>
+          <span className={tikTokConnected ? "admin-status live" : "admin-status warning"}>
+            {tikTokConnected ? "connected" : tikTokConfigured ? "authorization required" : "setup required"}
+          </span>
+        </div>
+        {params.tiktok === "connected" ? <p role="status">TikTok account authorization completed.</p> : null}
+        {params.tiktok === "configured" ? <p role="status">TikTok developer credentials saved. Authorize the TikTok account next.</p> : null}
+        {typeof params.tiktok_error === "string" ? <p role="alert">{params.tiktok_error}</p> : null}
+        <div className="admin-grid two">
+          <div>
+            <h3>Developer app</h3>
+            <p>Register a TikTok developer app with Login Kit and the callback below. Keep the secret private.</p>
+            <p><code>{TIKTOK_REDIRECT_URI}</code></p>
+            <form action={saveFluxSocialTikTokApp} className="admin-form" style={{ display: "grid", gap: 12 }}>
+              <label><span>TikTok Client Key</span><input type="text" name="clientKey" autoComplete="off" defaultValue={String(tikTokConfig.client_key || "")} placeholder="Client Key from TikTok for Developers" /></label>
+              <label><span>TikTok Client Secret</span><input type="password" name="clientSecret" autoComplete="new-password" placeholder={tikTokConfigured ? "Leave blank to retain stored secret" : "Client Secret"} /></label>
+              <button type="submit" className="admin-btn secondary">Save TikTok app credentials</button>
+            </form>
+          </div>
+          <div>
+            <h3>Account authorization</h3>
+            <div className="admin-list">
+              <div className="admin-list-row">
+                <div><strong>Account</strong><span>{tikTokConnected ? String(tikTokConfig.display_name || "Connected TikTok account") : "Not connected"}</span></div>
+                <em>{tikTokConnected ? "linked" : "pending"}</em>
+              </div>
+              <div className="admin-list-row">
+                <div><strong>Publishing</strong><span>Not enabled. TikTok Content Posting API access and separate tests are required.</span></div>
+                <em>disabled</em>
+              </div>
+              <div className="admin-list-row">
+                <div><strong>Last connected</strong><span>{tikTok?.last_connected_at ? new Date(tikTok.last_connected_at).toLocaleString() : String(tikTokConfig.oauth_connected_at || "Never")}</span></div>
+                <em>OAuth</em>
+              </div>
+            </div>
+            {tikTokConfigured
+              ? <Link href="/api/integrations/tiktok/connect" className="admin-btn primary">{tikTokConnected ? "Reconnect TikTok" : "Connect TikTok account"}</Link>
+              : <p>Save the developer app credentials first to enable secure TikTok authorization.</p>}
+          </div>
+        </div>
       </section>
 
       <section className="admin-panel">
