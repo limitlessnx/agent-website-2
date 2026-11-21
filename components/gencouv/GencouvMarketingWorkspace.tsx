@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import GencouvBulkCampaigns from "@/components/gencouv/GencouvBulkCampaigns";
 
 type Category = {id:string;name:string};
 type Lead = {id:string;full_name:string|null;email:string;eligible:boolean;reason:string};
@@ -46,6 +47,7 @@ export default function GencouvMarketingWorkspace(){
     finally{setSending(false);}
   }
   return <div style={{display:"grid",gap:18,maxWidth:1060,margin:"0 auto"}}>
+    <GencouvBulkCampaigns />
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Marketing audiences</h2><p>Preview contact categories, verified consent and suppression safeguards before planning a campaign.</p></div><span className="admin-status">Preview only</span></div>
       <div style={{display:"flex",gap:10,alignItems:"end",flexWrap:"wrap"}}>
