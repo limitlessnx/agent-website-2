@@ -10,6 +10,8 @@ const endpoint = "/api/dashboard/gencouv/contact-import";
 
 export default function GencouvContactImport() {
   const [file, setFile] = useState<File | null>(null);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [consentSource, setConsentSource] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -38,6 +40,8 @@ export default function GencouvContactImport() {
     data.set("file", file);
     data.set("preview", String(isPreview));
     if (categoryId) data.set("category_id", categoryId);
+    data.set("consent_confirmed", String(consentConfirmed));
+    data.set("consent_source", consentSource);
     try {
       const response = await fetch(endpoint, { method: "POST", body: data });
       const result = await response.json();
@@ -78,9 +82,11 @@ export default function GencouvContactImport() {
           </select>
           <small>Categories are created by you. <Link href="/dashboard/gencouv/categories">Manage categories</Link></small>
         </label>
+        <label style={{display:"flex",gap:8,alignItems:"start"}}><input type="checkbox" checked={consentConfirmed} onChange={e=>{setConsentConfirmed(e.target.checked);setPreview(null);}} /> I confirm all NEW contacts in this upload agreed to receive promotional emails from Gencouv. One answer applies to this entire import.</label>
+        {consentConfirmed && <label className="admin-field">Where was consent obtained?<input required value={consentSource} onChange={e=>setConsentSource(e.target.value)} placeholder="e.g. event registration opt-in, website form" /></label>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           <button type="button" disabled={!file || busy} onClick={() => void submit(true)}>Preview contacts</button>
-          <button type="button" disabled={!file || busy || !preview} onClick={() => void submit(false)}>Save reviewed contacts</button>
+          <button type="button" disabled={!file || busy || !preview || (consentConfirmed && !consentSource.trim())} onClick={() => void submit(false)}>Save reviewed contacts</button>
         </div>
       </div>
       {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
@@ -89,7 +95,7 @@ export default function GencouvContactImport() {
         <h3>Import preview</h3>
         <p>{preview.total} unique valid contacts, {preview.new_contacts} new, {preview.existing_contacts} already saved, {preview.duplicates_in_file} duplicates removed, {preview.invalid} invalid.</p>
         <ul>{preview.sample.map(row => <li key={row.email}>{row.full_name ? `${row.full_name} · ` : ""}{row.email}</li>)}</ul>
-        <p>Uploaded contacts will be saved with marketing consent unverified. Saving does not enroll them in a campaign.</p>
+        <p>{consentConfirmed ? "New contacts will have consent recorded from the stated source. Existing contacts keep their prior consent status." : "Uploaded contacts will be saved with marketing consent unverified."} Saving does not send emails or enroll anyone in an automated campaign.</p>
       </div>}
     </section>
     <section className="admin-panel">
