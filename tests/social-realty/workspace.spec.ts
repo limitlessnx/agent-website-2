@@ -14,7 +14,7 @@ test('manual idea creates an unapproved draft with its original brief and own br
   await expect(page.getByText('Prepare the final graphic, then review its copy and sources.',{exact:false})).toBeVisible();const state=await (await context.request.get('http://127.0.0.1:4401/__qa/state')).json();expect(state.calls).toBe(1);expect(state.posts).toHaveLength(1);expect(state.posts[0].status).toBe('review');expect(state.posts[0].approved_at).toBeNull();await capture(page,'manual-review',info.project.use.viewport!.width);
 });
 test('research produces cited candidates and never claims verified popularity or approval',async({page,context},info)=>{
-  await signIn(context);await page.goto('/dashboard/social/create');await page.getByRole('button',{name:'Research topics and draft posts'}).click();await expect(page).toHaveURL(/social\/review\?week=all/,{timeout:30000});
+  await signIn(context);await page.goto('/dashboard/social/create',{waitUntil:'networkidle'});await page.getByRole('button',{name:'Research topics and draft posts'}).click();await expect(page.getByRole('button',{name:'Researching and drafting…'})).toBeDisabled();await expect(page).toHaveURL(/social\/review\?week=all/,{timeout:30000});
   await expect(page.getByRole('link',{name:'Synthetic Nigerian property report'})).toHaveCount(3);await expect(page.getByRole('heading',{name:/Synthetic property education draft/})).toHaveCount(3);
   const state=await (await context.request.get('http://127.0.0.1:4401/__qa/state')).json();expect(state.calls).toBe(2);expect(state.posts.every((p:{status:string;metadata:{popularity_verified:boolean}})=>p.status==='review'&&p.metadata.popularity_verified===false)).toBeTruthy();await capture(page,'research-review',info.project.use.viewport!.width);
 });
