@@ -41,7 +41,7 @@ export default async function SocialOverviewPage() {
 
       <section className="admin-grid two" aria-label="Social workspace navigation">
         <Link href="/dashboard/social/create" className="admin-panel compact">
-          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week's AI content plan.</p></div></div>
+          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week&apos;s AI content plan.</p></div></div>
         </Link>
         <Link href="/dashboard/social/review" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Review & Approval</h2><p>Preview copy and media together, edit, reject, regenerate or approve.</p></div><span className={reviewCount ? "admin-status warning" : "admin-status live"}>{reviewCount}</span></div>
