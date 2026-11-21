@@ -1,0 +1,42 @@
+{
+  "scope": "Chromium CDP client CPU simulation; not physical mobile hardware or backend latency. Settings loaded and reset without real writes.",
+  "source": "test:phase23-ui local full run, 138 passed",
+  "checks": [
+    {
+      "project": "chromium-360",
+      "status": "passed",
+      "cpuSlowdown": 6,
+      "cls": 0
+    },
+    {
+      "project": "chromium-430",
+      "status": "passed",
+      "cpuSlowdown": 6,
+      "cls": 0
+    },
+    {
+      "project": "chromium-768",
+      "status": "passed",
+      "cpuSlowdown": 6,
+      "cls": 0
+    },
+    {
+      "project": "chromium-1024",
+      "status": "passed",
+      "cpuSlowdown": 6,
+      "cls": 0.06306423568725586
+    },
+    {
+      "project": "chromium-1440",
+      "status": "passed",
+      "cpuSlowdown": 6,
+      "cls": 0.04866394675925926
+    },
+    {
+      "project": "chromium-1920",
+      "status": "passed",
+      "cpuSlowdown": 6,
+      "cls": 0.025001725260416666
+    }
+  ]
+}

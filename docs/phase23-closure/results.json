@@ -21,11 +21,27 @@
   },
   "typeCheck": "passed",
   "optimizedBuild": "passed",
-  "finalBrowserResults": "pending",
-  "hostedResults": "pending",
+  "finalBrowserResults": {
+    "localSettingsMotionPassed": 138,
+    "localVisualPassed": 42,
+    "physicalIPhone": "user-confirmed-pass"
+  },
+  "hostedResults": {
+    "sourceCommit": "62c35c8e4d5c1ee454e919a26641d15c480aee65",
+    "settingsMotionPassed": 138,
+    "teamPassed": 42,
+    "controlCenterPassed": 144,
+    "leoChromiumWebKitPassed": 45,
+    "focusedUnitAssertionsPassed": 22,
+    "regressionBuild": "passed",
+    "maia": "passed",
+    "billing": "passed",
+    "leoExecution": "passed",
+    "hotelAndVoiceConcurrency": "passed",
+    "ubuntuVisual": "Separate references reviewed from run 44876885454; final comparisons and exact-head release gates are recorded in PR checks/receipt."
+  },
   "hostedAuthenticatedAcceptance": "not available; synthetic sessions only",
   "liveManagerAndElevenLabs": "user-deferred",
-  "productionModifiedThisVerification": false,
   "localSettingsMotion": {
     "passed": 138,
     "failed": 0,
@@ -60,5 +76,32 @@
     "loginPageStatus": 200,
     "sharedCssStatus": 200
   },
-  "pullRequest": "https://github.com/limitlessnx/agent-website-2/pull/447"
+  "pullRequest": "https://github.com/limitlessnx/agent-website-2/pull/447",
+  "recordedAt": "2026-11-21T06:53:09.365405+00:00",
+  "recordScope": "Pre-release evidence snapshot. Final exact-head CI, merge and production readback are maintained in PR #447.",
+  "localVisual": {
+    "passed": 42,
+    "failed": 0,
+    "widths": [
+      360,
+      430,
+      768,
+      1024,
+      1440,
+      1920
+    ],
+    "comparisonBudget": 0.002,
+    "normalRunGeneratedBaselines": false
+  },
+  "visualDiagnostics": {
+    "workspaceBeforeScrollStabilization": {
+      "passed": 40,
+      "failed": 2,
+      "reason": "Admin navigation capture scroll state differed; captures now await focus and explicitly show top of menu."
+    },
+    "ubuntuCandidateImagesReviewed": 36,
+    "allVersionedImageHashes": 81
+  },
+  "productionModifiedAtRecordCommit": false,
+  "releaseReceipt": "https://github.com/limitlessnx/agent-website-2/pull/447"
 }

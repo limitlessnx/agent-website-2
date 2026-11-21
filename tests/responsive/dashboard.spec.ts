@@ -194,6 +194,10 @@ for (const route of ["/dashboard", "/dashboard/clients"]) {
       const close=page.getByRole("dialog",{name:"Admin navigation"}).getByRole("button",{name:"Close navigation menu",exact:true});
       expect((await close.locator("svg").boundingBox())!.width).toBeGreaterThanOrEqual(16);
       await close.click();await expect(menu).toBeFocused();await menu.click();
+      await expect(close).toBeFocused();
+      // Capture the top of the scrollable navigation after focus settles.
+      // This changes the documented scroll state, not the rendered content.
+      await page.getByRole("dialog",{name:"Admin navigation"}).evaluate(el=>el.scrollTo({top:0,behavior:"instant"}));
       await captureState(page, testInfo, "mobile-navigation");
       await page.keyboard.press("Escape");
       await expect(menu).toBeFocused();

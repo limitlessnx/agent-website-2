@@ -16,3 +16,5 @@ Synthetic rendered pages only. Historical audit images are preserved and are not
 The historical overview predates the released Phase 4 navigation; it is context for the original audit, not an immediate before image of this PR. Current captures include the icon-padding and availability-label corrections. Existing industry comparisons continue using their original reviewed goldens.
 
 General tenant references intentionally contain wallet/plan unavailable and setup-required feedback. Successful billing data, loading, errors, retries and scoped permissions are exercised separately. Full-page fixed navigation can appear midway through long content; viewport captures and geometry checks supplement these images.
+
+[Ubuntu tenant references](../phase2-evidence/after/phase23-ubuntu/) · [Ubuntu image hashes and review](../../tests/responsive/phase23-ubuntu-review.json). The same six widths are compared against environment-specific native-font references; original workspace images remain unchanged.
