@@ -7,7 +7,7 @@ import { resendApi } from "@/lib/fluxknight-mail";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
-const emailPattern = /^[^\\s@,;]+@[^\\s@,;]+\\.[^\\s@,;]+$/;
+const emailPattern = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const senders = new Set(["info@gencouv.com", "support@gencouv.com", "onboarding@gencouv.com"]);
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status, headers });
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   if (ids.length < 1 || ids.length > 100 || ids.some(id => typeof id !== "string" || !uuid.test(id))) return fail("Choose 1–100 saved contacts per send.");
   if (new Set(ids).size !== ids.length) return fail("Duplicate contact selection.");
   if (categoryId && !uuid.test(categoryId)) return fail("Invalid category.");
-  if (/\\[[^\\]\\n]{1,80}\\]/.test(subject)) return fail("Replace subject placeholders before sending.");
+  if (/\[[^\]\n]{1,80}\]/.test(subject)) return fail("Replace subject placeholders before sending.");
   const db = createAdminClient();
   const { data: contacts, error: contactError } = await db.from("crm_customers")
     .select("id,email,full_name,metadata,status").eq("organization_id", org).in("id", ids as string[]);
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   // This action never changes the automated campaign toggle and never enrolls contacts in sequences.
   const emails = contacts.map(c => ({
     from: "Gencouv <" + sender + ">", to: [String(c.email).trim().toLowerCase()],
-    reply_to: sender, subject, text: message.replace(/\\[Name\\]/gi, String(c.full_name || "there"))
+    reply_to: sender, subject, text: message.replace(/\[Name\]/gi, String(c.full_name || "there"))
   }));
   try {
     const result = await resendApi("/emails/batch", { method: "POST", body: JSON.stringify(emails) });
