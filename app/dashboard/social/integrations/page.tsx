@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { metaConnectionReadiness } from "@/lib/meta-connection";
 import {
   getFluxknightOrganization,
   getMetaCredentials,
@@ -7,6 +8,8 @@ import {
 import {
   saveMetaAppCredentials,
   syncFluxknightMetaAnalytics,
+  checkFluxknightMetaConnection,
+  renewFluxknightInstagramToken,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -43,33 +46,17 @@ export default async function SocialIntegrationsPage({
   const instagramLoginConfigured = Boolean(
     instagramAppId && credentials?.instagram_app_secret,
   );
-  const instagramLoginConnected = Boolean(
-    config.instagram_login_connected_at &&
-      (config.instagram_login_user_id || credentials?.instagram_login_user_id),
-  );
+  const readiness = metaConnectionReadiness(config, credentials || {}, integration?.status || "disconnected");
+  const instagramLoginConnected = readiness.instagramDirectReady;
   const instagramWebhookConfigured = Boolean(
     credentials?.instagram_webhook_verify_token ||
       config.instagram_webhook_configured,
   );
   const status = integration?.status || "disconnected";
-  const grantedPermissions = Array.isArray(config.granted_permissions)
-    ? config.granted_permissions.filter((item): item is string => typeof item === "string")
-    : [];
-  const requiredPublishingPermissions = ["pages_manage_posts", "instagram_content_publish"];
-  const missingPublishingPermissions = requiredPublishingPermissions.filter(
-    (permission) => !grantedPermissions.includes(permission),
-  );
-  const legacyPublishingReady =
-    status === "connected" &&
-    Boolean(config.page_id) &&
-    Boolean(config.instagram_business_account_id) &&
-    missingPublishingPermissions.length === 0;
-  const publishingReady =
-    instagramLoginConnected || legacyPublishingReady;
   const success =
     params.meta === "configured" ||
     params.meta === "connected" ||
-    params.meta === "sync-complete";
+    params.meta === "sync-complete" || params.instagram === "connected" || params.instagram === "renewed";
   const error = typeof params.error === "string" ? params.error : null;
   const syncStatus =
     typeof params.sync_status === "string" ? params.sync_status : null;
@@ -100,7 +87,7 @@ export default async function SocialIntegrationsPage({
           style={{ borderColor: "rgba(34,197,94,.45)" }}
         >
           <strong>
-            {params.meta === "connected"
+            {params.instagram === "renewed" ? "Instagram token renewed." : params.instagram === "connected" ? "Instagram authorization saved. Review publishing access below." : params.meta === "connected"
               ? "Meta connected successfully."
               : params.meta === "sync-complete"
                 ? "Meta analytics sync completed."
@@ -282,7 +269,7 @@ export default async function SocialIntegrationsPage({
                 <strong>Facebook Page</strong>
                 <span>{String(config.page_name || "Not connected")}</span>
               </div>
-              <em>{config.page_id ? "linked" : "pending"}</em>
+              <em>{readiness.facebookReady ? "publishing authorized" : "needs authorization"}</em>
             </div>
             <div className="admin-list-row">
               <div>
@@ -296,7 +283,7 @@ export default async function SocialIntegrationsPage({
                 </span>
               </div>
               <em>
-                {config.instagram_business_account_id ? "linked" : "pending"}
+                {readiness.instagramViaFacebookReady ? "publishing authorized" : "needs authorization"}
               </em>
             </div>
             <div className="admin-list-row">
@@ -331,12 +318,13 @@ export default async function SocialIntegrationsPage({
                           config.instagram_username ||
                           "connected account",
                       )}.`
+                    : readiness.instagramViaFacebookReady ? "Publishing is authorized through the linked Facebook Page. Direct Instagram Login is optional."
                     : instagramLoginConfigured
                       ? "Authorize Instagram publishing to enable direct scheduled uploads."
                       : "Add the Instagram App ID and App Secret from API setup with Instagram Login."}
                 </span>
               </div>
-              <em>{instagramLoginConnected ? "ready" : "attention"}</em>
+              <em>{instagramLoginConnected || readiness.instagramViaFacebookReady ? "authorized" : "attention"}</em>
             </div>
             <div className="admin-list-row">
               <div>
@@ -372,10 +360,16 @@ export default async function SocialIntegrationsPage({
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <form action={checkFluxknightMetaConnection}>
+              <button className="admin-btn secondary" type="submit">Check connection (no publishing)</button>
+            </form>
+            {credentials?.instagram_user_access_token ? <form action={renewFluxknightInstagramToken}>
+              <button className="admin-btn secondary" type="submit">Renew Instagram token</button>
+            </form> : null}
             {configured ? (
-              <Link href="/api/integrations/meta/connect" className="admin-btn primary">
+              <a href="/api/integrations/meta/connect" className="admin-btn primary">
                 {status === "connected" ? "Reconnect Meta" : "Connect Meta"}
-              </Link>
+              </a>
             ) : (
               <p style={{ margin: 0 }}>
                 Save the Meta App ID and App Secret first.
@@ -383,14 +377,14 @@ export default async function SocialIntegrationsPage({
             )}
 
             {instagramLoginConfigured ? (
-              <Link
+              <a
                 href="/api/integrations/meta/instagram/connect"
                 className="admin-btn primary"
               >
                 {instagramLoginConnected
                   ? "Reconnect Instagram Publishing"
                   : "Connect Instagram Publishing"}
-              </Link>
+              </a>
             ) : null}
 
             {status === "connected" ? (
@@ -402,6 +396,14 @@ export default async function SocialIntegrationsPage({
             ) : null}
           </div>
         </section>
+      </section>
+
+      <section className="admin-panel">
+        <h2>Publishing access</h2>
+        <p>Account linkage and publishing permission are separate. Use Check connection to verify current account access. It does not post content.</p>
+        <p>Facebook missing grants: {readiness.facebookMissing.join(", ") || "none recorded"}. Instagram through Facebook: {readiness.instagramMissing.join(", ") || "none recorded"}.</p>
+        <p>Instagram Login token: {readiness.directExpired ? "expired — reconnect" : credentials?.instagram_user_access_token ? `expires ${String(config.instagram_login_token_expires_at || "at an unknown time — reconnect")}` : "not connected"}. Renew after 24 hours and before expiry; expired tokens require reconnection.</p>
+        <p>For “Insufficient Developer Role”, add the intended Instagram professional account as a tester in the Fluxknight Meta app and accept its invitation in Instagram. Public client connections need the relevant approved access in Meta.</p>
       </section>
 
       <section className="admin-panel">

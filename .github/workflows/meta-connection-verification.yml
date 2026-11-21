@@ -1,0 +1,26 @@
+name: Meta connection verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/meta-*.ts"
+      - "lib/instagram-login.ts"
+      - "lib/social-meta-publisher.ts"
+      - "app/api/integrations/meta/**"
+      - "app/dashboard/social/integrations/**"
+      - "tests/meta-*.test.*"
+      - ".github/workflows/meta-connection-verification.yml"
+
+jobs:
+  connection-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/meta-connections-runtime.test.cjs tests/meta-oauth-url.test.mjs tests/flux-social-reel-audio-contract.test.mjs tests/trigger-schedules-paused.test.mjs
+      - run: npx tsc --noEmit

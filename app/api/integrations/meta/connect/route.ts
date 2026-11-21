@@ -5,7 +5,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getFluxknightOrganization, getMetaCredentials } from "@/lib/meta-integration";
 import { buildMetaAuthorizationUrl } from "@/lib/meta-oauth";
 
-const COOKIE = "__Host-flux_meta_oauth_state";
+const COOKIE = process.env.NODE_ENV === "production" ? "__Host-flux_meta_oauth_state" : "flux_meta_oauth_state";
 const PRODUCTION_ORIGIN = "https://fluxknight.space";
 
 function oauthOrigin(request: Request) {
@@ -13,6 +13,7 @@ function oauthOrigin(request: Request) {
 }
 
 export async function GET(request: Request) {
+  if (new URL(request.url).origin !== oauthOrigin(request)) return NextResponse.redirect(new URL("/api/integrations/meta/connect", oauthOrigin(request)));
   const session = await getAdminSession();
   if (!session) {
     return NextResponse.redirect(new URL("/login?next=/dashboard/social/integrations", request.url));

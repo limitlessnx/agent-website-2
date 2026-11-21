@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyMetaWebhook } from "@/lib/meta-webhook";
 import {
   getFluxknightOrganization,
   getMetaCredentials,
@@ -37,7 +38,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const rawBody = await request.text();
+  const organization = await getFluxknightOrganization();
+  const credentials = await getMetaCredentials(organization.id);
+  const signature = request.headers.get("x-hub-signature-256");
+  // Meta's parent app and Instagram Login product can have distinct secrets.
+  if (![credentials?.app_secret, credentials?.instagram_app_secret].some(secret =>
+    typeof secret === "string" && verifyMetaWebhook(rawBody, signature, secret))) return unauthorized();
+  let body: Record<string, unknown>;
+  try { body = JSON.parse(rawBody); } catch { return new NextResponse("Invalid JSON", { status: 400 }); }
 
   console.info("Instagram webhook received", {
     hasBody: Boolean(body),

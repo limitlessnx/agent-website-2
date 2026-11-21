@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
   getFluxknightOrganization,
@@ -18,6 +19,7 @@ function oauthOrigin(request: Request) {
 }
 
 export async function GET(request: Request) {
+  if (new URL(request.url).origin !== oauthOrigin(request)) return NextResponse.redirect(new URL("/api/integrations/meta/instagram/connect", oauthOrigin(request)));
   const session = await getAdminSession();
   if (!session) {
     return NextResponse.redirect(
@@ -44,6 +46,9 @@ export async function GET(request: Request) {
     oauthOrigin(request),
   ).toString();
   const state = createInstagramOAuthState(organization.id);
+  (await cookies()).set(process.env.NODE_ENV === "production" ? "__Host-flux_instagram_oauth_state" : "flux_instagram_oauth_state", state, {
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600,
+  });
   const authorization = buildInstagramAuthorizationUrl({
     appId,
     redirectUri,

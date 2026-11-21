@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { permissions } from "@/lib/meta-connection";
 
 export const INSTAGRAM_LOGIN_SCOPES = [
   "instagram_business_basic",
@@ -16,12 +17,13 @@ type StatePayload = {
 type Json = Record<string, unknown>;
 
 function stateSecret() {
-  return (
+  const secret = (
     process.env.INSTAGRAM_OAUTH_STATE_SECRET ||
     process.env.ADMIN_SESSION_SECRET ||
-    process.env.LIMITLESS_ADMIN_PASSWORD ||
-    "development-only-change-this-instagram-oauth-secret"
+    process.env.LIMITLESS_ADMIN_PASSWORD
   );
+  if (!secret) throw new Error("Instagram OAuth state secret is not configured.");
+  return secret;
 }
 
 function sign(payload: string) {
@@ -46,7 +48,8 @@ export function createInstagramOAuthState(organizationId: string) {
 
 export function verifyInstagramOAuthState(value: string | null) {
   if (!value) return null;
-  const [encoded, signature] = value.split(".");
+  const [encoded, signature, extra] = value.split(".");
+  if (extra !== undefined) return null;
   if (!encoded || !signature || !safeEqual(signature, sign(encoded))) return null;
 
   try {
@@ -115,7 +118,7 @@ export async function exchangeInstagramCode(input: {
     code: input.code,
   });
 
-  const shortResponse = await instagramJson(
+  const shortBodyResponse = await instagramJson(
     new URL("https://api.instagram.com/oauth/access_token"),
     {
       method: "POST",
@@ -124,19 +127,24 @@ export async function exchangeInstagramCode(input: {
     },
   );
 
+  // Support current documented data-array and historical flat responses.
+  const shortResponse = (Array.isArray(shortBodyResponse.data) ? shortBodyResponse.data[0] : shortBodyResponse) as Json | undefined;
+  if (!shortResponse) throw new Error("Instagram returned no authorization data.");
   const shortAccessToken = String(shortResponse.access_token || "");
   if (!shortAccessToken) {
     throw new Error("Instagram did not return an access token.");
   }
 
   const longUrl = new URL(
-    `https://graph.instagram.com/${input.apiVersion}/access_token`,
+    "https://graph.instagram.com/access_token",
   );
   longUrl.searchParams.set("grant_type", "ig_exchange_token");
   longUrl.searchParams.set("client_secret", input.appSecret);
   longUrl.searchParams.set("access_token", shortAccessToken);
   const longResponse = await instagramJson(longUrl);
-  const accessToken = String(longResponse.access_token || shortAccessToken);
+  const accessToken = String(longResponse.access_token || "");
+  const expiresIn = Number(longResponse.expires_in);
+  if (!accessToken || !Number.isFinite(expiresIn) || expiresIn <= 0) throw new Error("Instagram did not return a valid long-lived token.");
 
   const profileUrl = new URL(
     `https://graph.instagram.com/${input.apiVersion}/me`,
@@ -150,17 +158,21 @@ export async function exchangeInstagramCode(input: {
 
   return {
     accessToken,
-    expiresIn: Number(longResponse.expires_in || 0) || null,
+    expiresIn,
     userId: String(profile.id || shortResponse.user_id || ""),
     username: String(profile.username || ""),
     accountType: String(profile.account_type || ""),
     profilePictureUrl: String(profile.profile_picture_url || ""),
-    returnedPermissions:
-      typeof shortResponse.permissions === "string"
-        ? shortResponse.permissions
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean)
-        : [...INSTAGRAM_LOGIN_SCOPES],
+    returnedPermissions: permissions(shortResponse.permissions),
   };
+}
+
+export async function refreshInstagramToken(accessToken: string) {
+  const url = new URL("https://graph.instagram.com/refresh_access_token");
+  url.searchParams.set("grant_type", "ig_refresh_token");
+  url.searchParams.set("access_token", accessToken);
+  const result = await instagramJson(url);
+  const expiresIn = Number(result.expires_in);
+  if (typeof result.access_token !== "string" || !result.access_token || !Number.isFinite(expiresIn) || expiresIn <= 0) throw new Error("Instagram did not return a valid renewed token.");
+  return { accessToken: result.access_token, expiresIn };
 }

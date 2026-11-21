@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getFluxknightOrganization,
@@ -7,7 +9,6 @@ import {
 } from "@/lib/meta-integration";
 import {
   exchangeInstagramCode,
-  INSTAGRAM_LOGIN_SCOPES,
   verifyInstagramOAuthState,
 } from "@/lib/instagram-login";
 
@@ -28,6 +29,7 @@ function back(request: Request, key: "instagram" | "error", value: string) {
 
 export async function GET(request: Request) {
   try {
+    if (!await getAdminSession()) return back(request, "error", "Admin session required");
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get("code");
     const returnedState = requestUrl.searchParams.get("state");
@@ -36,10 +38,14 @@ export async function GET(request: Request) {
       requestUrl.searchParams.get("error_message") ||
       requestUrl.searchParams.get("error");
 
+    const cookieStore = await cookies();
+    const cookieName = process.env.NODE_ENV === "production" ? "__Host-flux_instagram_oauth_state" : "flux_instagram_oauth_state";
+    const expectedState = cookieStore.get(cookieName)?.value;
+    cookieStore.delete(cookieName);
     if (oauthError) return back(request, "error", oauthError);
 
     const state = verifyInstagramOAuthState(returnedState);
-    if (!code || !state) {
+    if (!code || !state || !expectedState || expectedState !== returnedState) {
       return back(
         request,
         "error",
@@ -111,7 +117,7 @@ export async function GET(request: Request) {
     const expiresAt = result.expiresIn
       ? new Date(Date.now() + result.expiresIn * 1000).toISOString()
       : null;
-    const admin = createAdminClient() as any;
+    const admin = createAdminClient();
     const { error } = await admin.rpc(
       "store_organization_integration_credentials",
       {
@@ -124,6 +130,7 @@ export async function GET(request: Request) {
           instagram_login_user_id: result.userId,
           instagram_login_username: result.username || null,
           instagram_login_token_expires_at: expiresAt,
+          instagram_login_token_issued_at: new Date().toISOString(),
         },
         p_configuration: {
           ...config,
@@ -134,16 +141,12 @@ export async function GET(request: Request) {
           instagram_login_profile_picture_url:
             result.profilePictureUrl || null,
           instagram_login_token_expires_at: expiresAt,
-          instagram_login_granted_permissions:
-            result.returnedPermissions.length
-              ? result.returnedPermissions
-              : [...INSTAGRAM_LOGIN_SCOPES],
+          instagram_login_token_issued_at: new Date().toISOString(),
+          instagram_login_granted_permissions: result.returnedPermissions,
           instagram_publishing_ready:
             result.returnedPermissions.includes(
               "instagram_business_content_publish",
-            ) || INSTAGRAM_LOGIN_SCOPES.includes(
-              "instagram_business_content_publish",
-            ),
+            ) && result.returnedPermissions.includes("instagram_business_basic"),
           instagram_api_version: apiVersion,
         },
       },
