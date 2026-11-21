@@ -111,3 +111,21 @@ test('admin access guard checks the active server context and blocks cross-works
   await assert.rejects(exports.requireRealtySocialAdmin(),/Select/);organizationId=app.policy.REALTY_SOCIAL_ORGANIZATION;
   await exports.requireRealtySocialAdmin();await assert.rejects(exports.requireFluxSocialProviderWorkspace(),/Fluxknight workspace/);
 });
+test('setup preserves its brand after an audit outage and a retry repairs logging without enabling jobs',async()=>{
+  const app=setup(),db=memoryDb({social_brands:[],audit_logs:[]});let fail=true;
+  const from=db.from;db.from=table=>{const q=from(table);if(table==='audit_logs'&&fail)q.insert=()=>Promise.resolve({error:Error('Synthetic audit outage')});return q;};
+  const exports={},source=ts.transpileModule(readFileSync('app/dashboard/social/real-estate-actions.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  vm.runInNewContext(source,{exports,require:name=>{
+    if(name==='next/cache')return {revalidatePath:()=>{}};
+    if(name==='next/navigation')return {redirect:()=>{throw Error('SYNTHETIC_REDIRECT');}};
+    if(name==='@/lib/social-real-estate-access')return {requireRealtySocialAdmin:async()=>({supabase:db,organizationId:app.policy.REALTY_SOCIAL_ORGANIZATION,user:{email:input.actor}})};
+    if(name==='@/lib/social-real-estate-policy')return app.policy;
+    if(name==='@/lib/social-real-estate')return app.core;
+    throw Error('Unexpected dependency '+name);
+  }});
+  await assert.rejects(exports.setupRealtySocialAction(),/Brand saved/);assert.equal(db.tables.social_brands.length,1);
+  db.tables.social_brands[0].tone='Owner customization';fail=false;
+  await assert.rejects(exports.setupRealtySocialAction(),/SYNTHETIC_REDIRECT/);
+  await assert.rejects(exports.setupRealtySocialAction(),/SYNTHETIC_REDIRECT/);
+  assert.equal(db.tables.social_brands.length,1);assert.equal(db.tables.social_brands[0].tone,'Owner customization');assert.equal(db.tables.audit_logs.length,1);assert.equal(db.tables.social_brands[0].metadata.daily_publishing.enabled,false);
+});
