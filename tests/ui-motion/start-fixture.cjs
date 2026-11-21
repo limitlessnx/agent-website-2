@@ -6,8 +6,20 @@ const { fixture } = require("../responsive/fixture-data.cjs");
 const fixturePort = 4401;
 let workflowUnavailable = false;
 let periodUnavailable = false;
+let planCode = "basic";
+let manageIntegrations = false;
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, "http://127.0.0.1");
+  if (url.pathname === "/__qa/integration-management") {
+    manageIntegrations = url.searchParams.get("value") === "1";
+    response.writeHead(200,{"Content-Type":"application/json"});
+    return response.end(JSON.stringify({manageIntegrations}));
+  }
+  if (url.pathname === "/__qa/plan") {
+    planCode = url.searchParams.get("value") === "business" ? "business" : "basic";
+    response.writeHead(200,{"Content-Type":"application/json"});
+    return response.end(JSON.stringify({planCode}));
+  }
   if (url.pathname === "/__qa/workflow-unavailable") {
     workflowUnavailable = url.searchParams.get("value") === "1";
     response.writeHead(200,{"Content-Type":"application/json"}); return response.end(JSON.stringify({ok:true}));
@@ -30,7 +42,7 @@ const server = http.createServer((request, response) => {
   // These RPCs are simulated locally; nothing is forwarded or persisted.
   if (url.pathname === "/rest/v1/rpc/ensure_flux_credit_wallet") {
     response.writeHead(200,{"Content-Type":"application/json"});
-    return response.end(JSON.stringify({id:"qa-wallet", organization_id:"10000000-0000-4000-8000-000000000001",plan_code:"basic",monthly_allowance:1000,balance:1000,bonus_balance:0,top_up_balance:0,status:"active",current_period_start:"2026-11-01T00:00:00Z",current_period_end:null,trial_ends_at:null,trial_credit_limit:null}));
+    return response.end(JSON.stringify({id:"qa-wallet", organization_id:"10000000-0000-4000-8000-000000000001",plan_code:planCode,monthly_allowance:1000,balance:1000,bonus_balance:0,top_up_balance:0,status:"active",current_period_start:"2026-11-01T00:00:00Z",current_period_end:null,trial_ends_at:null,trial_credit_limit:null}));
   }
   if (url.pathname === "/rest/v1/rpc/get_flux_commercial_snapshot") {
     response.writeHead(200,{"Content-Type":"application/json"});
@@ -61,6 +73,7 @@ const server = http.createServer((request, response) => {
     const table = url.pathname.split("/").pop();
     if (table === "organization_systems") return {...row,id:"qa-installation",requested_at:"2026-11-01T00:00:00Z",system_catalog:{...row.system_catalog,name:"Appointment system",summary:"Organization-scoped booking configuration",capabilities:["Bookings","Availability"]}};
     if (table === "organizations") return {...row, name: row.name + " — The International Customer Experience and Business Operations Group", created_at:"2026-11-01T00:00:00Z"};
+    if (table === "organization_memberships" && manageIntegrations) row = {...row,membership_roles:row.membership_roles.map(binding=>({...binding,roles:{...binding.roles,role_permissions:[...binding.roles.role_permissions,{permissions:{key:"integrations.manage"}}]}}))};
     if (table === "organization_memberships") return {...row, user_id:"30000000-0000-4000-8000-000000000001", created_at:"2026-11-01T00:00:00Z"};
     if (table === "client_onboarding_profiles") return {...row, user_id:"30000000-0000-4000-8000-000000000001", business_name: row.business_name + " — The International Customer Experience and Business Operations Group", business_email:"a-very-long-customer-success-and-reservations-address@example.test", human_contact_email:"customer-experience-and-operations-supervisor@example.test", human_contact_name:"Customer Experience and Business Operations Supervisor"};
     return row;

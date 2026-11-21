@@ -10,10 +10,12 @@ export default function VoiceOnboardingPanel({ available, initialGate, canManage
   const [gate, setGate] = useState<Gate | null>(initialGate);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [noticeError, setNoticeError] = useState(false);
 
   async function save() {
     setBusy(true);
     setNotice("");
+    setNoticeError(false);
     try {
       const response = await fetch("/api/integrations/voice/readiness", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessPhone, transferNumber }) });
       const data = await response.json();
@@ -21,6 +23,7 @@ export default function VoiceOnboardingPanel({ available, initialGate, canManage
       setGate(data.gate);
       setNotice("Phone details saved. Fluxknight Super Admin will complete the provider setup and publish the Voice agent.");
     } catch (error) {
+      setNoticeError(true);
       setNotice(error instanceof Error ? error.message : "Unable to save Voice setup.");
     } finally {
       setBusy(false);
@@ -36,7 +39,7 @@ export default function VoiceOnboardingPanel({ available, initialGate, canManage
       <div className="portal-field"><label htmlFor="voice-transfer-number">Human transfer number (optional)</label><input id="voice-transfer-number" value={transferNumber} disabled={!canManage || busy} onChange={(event) => setTransferNumber(event.target.value)} placeholder="+2348098765432" /></div>
       <div><button type="button" disabled={!canManage || busy || !businessPhone} onClick={() => void save()}>{busy ? "Saving..." : "Confirm Voice setup details"}</button></div>
     </div>
-    {notice ? <p className="portal-muted" style={{ marginTop: 12 }}>{notice}</p> : null}
+    {notice ? <p role={noticeError ? "alert" : "status"} className="portal-muted" style={{ marginTop: 12 }}>{notice}</p> : null}
     {gate?.checks?.length ? <div className="portal-list" style={{ marginTop: 16 }}>{gate.checks.map((check) => <div className="portal-list-row compact" key={check.key}><div><strong>{check.ok ? "Ready" : "Pending"} · {check.key.replaceAll("_", " ")}</strong><span>{check.detail}</span></div></div>)}</div> : null}
   </section>;
 }

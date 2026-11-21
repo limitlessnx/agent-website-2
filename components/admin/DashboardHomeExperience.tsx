@@ -101,7 +101,7 @@ function LegacyOrganizationView({ metrics, notices, agents, isGencouv }: { metri
       <section className={styles.teamSection}>
         <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>AI WORKFORCE</span><h2>Your AI Team</h2></div><Link href="/dashboard/agents">View all agents <ChevronRight size={14} /></Link></header>
         <div className={styles.agentGrid}>
-          {agents.map((agent) => <Link href={agent.href} className={styles.agentCard} key={agent.name}><div className={styles.agentHead}><span className={styles.avatar}><Bot size={20} /></span><div><div className={styles.agentTitle}><strong>{agent.name}</strong><span className={[styles.agentStatus, styles[agent.status]].join(" ")}><i />{agent.status}</span></div><p>{agent.role}</p><small>{agent.channel}</small></div><ChevronRight size={18} /></div><div className={styles.agentMetrics}>{agent.metrics.map((metric) => <div key={metric.label}><strong>{metric.value}</strong><span>{metric.label}</span></div>)}</div><p className={styles.agentNote}>{agent.note}</p></Link>)}
+          {agents.map((agent) => <Link href={agent.href} className={styles.agentCard} key={agent.name}><div className={styles.agentHead}><span className={styles.avatar}><Bot size={20} /></span><div><div className={styles.agentTitle}><strong>{agent.name}</strong><span className={[styles.agentStatus, styles[agent.status]].join(" ")}><i />{agent.status === "live" ? "Configured" : agent.status}</span></div><p>{agent.role}</p><small>{agent.channel}</small></div><ChevronRight size={18} /></div><div className={styles.agentMetrics}>{agent.metrics.map((metric) => <div key={metric.label}><strong>{metric.value}</strong><span>{metric.label}</span></div>)}</div><p className={styles.agentNote}>{agent.note}</p></Link>)}
         </div>
       </section>
     </>
@@ -134,9 +134,9 @@ export default function DashboardHomeExperience({
           <span className={styles.eyebrow}>{limitless ? "LIMITLESS REALTY · COMMAND CENTER" : workspaceName ? workspaceName.toUpperCase() + " · COMMAND CENTER" : "COMMAND CENTER"}</span>
           <h1>{greeting()}, {name} <span aria-hidden="true">👋</span></h1>
           <p>{healthy ? "Here’s what’s happening across your business today." : "Your workspace is active, with a few items that need your attention."}</p>
-          <div className={styles.heroStatus}><span className={healthy ? styles.statusDot : styles.statusDotWarning} />{xposureDashboard ? (healthy ? "Workspace data connected" : "Workspace data needs attention") : healthy ? "All systems active" : health}</div>
+          <div className={styles.heroStatus}><span className={healthy ? styles.statusDot : styles.statusDotWarning} />{xposureDashboard ? (healthy ? "Workspace data connected" : "Workspace data needs attention") : healthy ? "Workspace data connected" : health}</div>
         </div>
-        {maia ? <Link href={maia.href} className={styles.maiaCard}><span className={styles.maiaAvatar}><Bot size={20} /></span><span><strong>{maia.name}</strong><small>{limitless ? "Limitless Realty assistant · " : ""}{maia.status === "live" ? "Online" : maia.status}</small></span><ChevronRight size={18} /></Link> : null}
+        {maia ? <Link href={maia.href} className={styles.maiaCard}><span className={styles.maiaAvatar}><Bot size={20} /></span><span><strong>{maia.name}</strong><small>{limitless ? "Limitless Realty assistant · " : ""}{maia.status === "live" ? "Configured" : maia.status}</small></span><ChevronRight size={18} /></Link> : null}
       </header>
 
       {xposureDashboard ? (

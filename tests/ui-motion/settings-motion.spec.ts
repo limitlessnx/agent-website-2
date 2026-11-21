@@ -13,7 +13,7 @@ test.beforeEach(async({context})=>{
  if(u.pathname==="/api/admin/appointment-availability-settings"&&r.method()==="GET")return route.fulfill({json:{maxConcurrentAppointments:1}});
  if(!["GET","HEAD"].includes(r.method()))return route.abort();return route.continue();});
 });
-async function capture(page:Page,name:string,width:number){mkdirSync("docs/phase3-evidence/after",{recursive:true});await page.screenshot({path:`docs/phase3-evidence/after/${name}-${width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});}
+async function capture(page:Page,name:string,width:number){mkdirSync("test-results/ui-motion-captures",{recursive:true});await page.screenshot({path:`test-results/ui-motion-captures/${name}-${width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});}
 const routes=[['platform-settings','/dashboard/settings','admin'],['platform-integrations','/dashboard/integrations','admin'],['platform-billing','/dashboard/billing','admin'],['tenant-settings','/portal/settings','tenant'],['tenant-integrations','/portal/integrations','tenant'],['tenant-billing','/portal/billing','tenant'],['campaign-templates','/portal/campaigns','hotel'],['tenant-agents','/portal/agents','tenant'],['leo','/dashboard/support','admin']];
 for(const [name,url,role] of routes)test(name,async({page,context},info)=>{
  await authenticate(context,role);const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));const r=await page.goto(url,{waitUntil:"networkidle"});expect(r?.status()).toBe(200); await expect(page.locator(".flux-safe-error")).toHaveCount(0); await expect(page.locator("main, .admin-page, .portal-page").first()).toBeVisible();
@@ -70,8 +70,8 @@ for(const role of ["admin","tenant"])test(`billing period totals and unavailable
   await expect(section).toContainText(role==="admin"?"Credits charged":"42 credits charged across 21 usage events");
   await expect(section).toContainText("42");
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width+1);
-  mkdirSync("docs/phase7-channel-evidence/after",{recursive:true});
-  await page.screenshot({path:`docs/phase7-channel-evidence/after/${role}-period-${page.viewportSize()!.width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});
+  mkdirSync("test-results/ui-motion-captures/billing",{recursive:true});
+  await page.screenshot({path:`test-results/ui-motion-captures/billing/${role}-period-${page.viewportSize()!.width}.png`,fullPage:true,animations:"disabled",style:"nextjs-portal{display:none!important}"});
   await info.attach("billing-period",{body:await page.screenshot({animations:"disabled"}),contentType:"image/png"});
   await page.request.get("http://127.0.0.1:4401/__qa/period-unavailable?value=1");await page.reload({waitUntil:"networkidle"});
   await expect(page.getByRole("status").filter({hasText:"Billing-period usage is unavailable"})).toBeVisible();
