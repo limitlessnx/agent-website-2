@@ -1,13 +1,20 @@
 import { getSocialBrand } from "@/lib/social";
 import { socialWeeklyPostCount } from "@/lib/social-week";
 import Link from "next/link";
+import RealtySocialCenter from "@/components/admin/RealtySocialCenter";
+import { requireTenant } from "@/lib/tenant";
+import { REALTY_SOCIAL_ORGANIZATION } from "@/lib/social-real-estate-policy";
 import { createSocialPostAction, generateWeeklySocialPlanAction } from "@/app/dashboard/social/actions";
 
 const fieldStyle = { display: "grid", gap: 8 } as const;
 const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 10, border: "1px solid var(--admin-border, #2d2d35)", background: "transparent", color: "inherit" } as const;
 
-export default async function CreateSocialPostPage() {
+export const maxDuration = 300;
+
+export default async function CreateSocialPostPage({searchParams}:{searchParams:Promise<{error?:string}>}) {
   const brand = await getSocialBrand();
+  const {organizationId} = await requireTenant();
+  if(organizationId===REALTY_SOCIAL_ORGANIZATION) return <RealtySocialCenter brand={brand} error={(await searchParams).error}/>;
   const postCount = socialWeeklyPostCount(brand?.metadata);
   return (
     <main className="admin-page">

@@ -1,7 +1,12 @@
 import Link from "next/link";
+import RealtySocialCenter from "@/components/admin/RealtySocialCenter";
+import { requireTenant } from "@/lib/tenant";
+import { REALTY_SOCIAL_ORGANIZATION } from "@/lib/social-real-estate-policy";
 import { getSocialBrand, listSocialPosts, listSocialPublishJobs, listSocialSchedules } from "@/lib/social";
 
 export default async function SocialOverviewPage() {
+  const { organizationId } = await requireTenant();
+  if (organizationId === REALTY_SOCIAL_ORGANIZATION) return <RealtySocialCenter brand={await getSocialBrand()}/>;
   const [brand, posts, schedules, jobs] = await Promise.all([
     getSocialBrand(),
     listSocialPosts(100),

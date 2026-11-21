@@ -11,6 +11,7 @@ const load = (file, dependencies = {}, globals = {}) => {
 };
 const readiness=load('lib/social-review-readiness.ts');
 const policy=load('lib/social-daily-policy.ts',{'@/lib/social-review-readiness':readiness});
+const realtyPolicy=load('lib/social-real-estate-policy.ts',{});
 const service=load('lib/social-daily-publishing.ts',{'@/lib/social-daily-policy':policy});
 const configuration={enabled:true,timezone:'Africa/Lagos',local_time:'18:00',enabled_at:'2026-11-17T07:45:00.000Z',minimum_week_start:'2026-11-16'};
 function post(index, extra={}) { return {id:`post-${index}`,organization_id:policy.DAILY_ORGANIZATION,brand_id:policy.DAILY_BRAND,status:'approved',approved_at:'2026-11-16T09:50:00.000Z',published_at:null,format:'carousel',platforms:['instagram'],content:{week_start:'2026-11-16',planned_index:index},metadata:{carousel_render_status:'ready',carousel_asset_ids:['slide1','slide2']},created_at:'2026-11-16T09:00:00.000Z',...extra}; }
@@ -95,7 +96,7 @@ test('competing schedule claims cannot dispatch the same slot twice',async()=>{
 });
 test('manually changing an automatic date preserves its delivery and approval metadata',async()=>{
  const db=setup();await service.runDailyPublishing(db,morning,true,async()=>{});
- const social=load('lib/social.ts',{'@/lib/tenant':{requireTenant:async()=>({supabase:db,organizationId:policy.DAILY_ORGANIZATION})}}, {Date:class extends Date {static now(){return Date.parse('2026-11-17T08:00:00Z');}}});
+ const social=load('lib/social.ts',{'@/lib/social-real-estate-policy':realtyPolicy,'@/lib/tenant':{requireTenant:async()=>({supabase:db,organizationId:policy.DAILY_ORGANIZATION})}}, {Date:class extends Date {static now(){return Date.parse('2026-11-17T08:00:00Z');}}});
  await social.scheduleSocialPost({postId:'post-1',scheduledFor:'2026-12-01T17:00:00Z',timezone:'Africa/Lagos',platforms:['instagram']});
  const schedule=db.tables.social_schedules.find((slot)=>slot.post_id==='post-1');
  assert.equal(schedule.metadata.source,policy.DAILY_SOURCE);assert.equal(schedule.metadata.manual_schedule_override,true);

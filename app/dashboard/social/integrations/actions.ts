@@ -9,8 +9,10 @@ import {
   saveMetaCredentials,
 } from "@/lib/meta-integration";
 import { runMetaAnalyticsSync } from "@/lib/social-meta-sync";
+import { requireFluxSocialProviderWorkspace } from "@/lib/social-real-estate-access";
 
 export async function saveMetaAppCredentials(formData: FormData) {
+  await requireFluxSocialProviderWorkspace();
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard/social/integrations");
 
@@ -69,6 +71,7 @@ export async function saveMetaAppCredentials(formData: FormData) {
 }
 
 export async function syncFluxknightMetaAnalytics() {
+  await requireFluxSocialProviderWorkspace();
   const session = await getAdminSession();
   if (!session) redirect("/login?next=/dashboard/social/integrations");
 

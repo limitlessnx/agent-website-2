@@ -15,6 +15,7 @@ import { createSocialAssetSignedUrl, listSocialAssets } from "@/lib/social-asset
 import { getSocialReviewReadiness } from "@/lib/social-review";
 import { socialWeekStart, validSocialWeek } from "@/lib/social-week";
 import { getSocialBrand, listSocialPosts } from "@/lib/social";
+import { isRealtySocialBrand } from "@/lib/social-real-estate-policy";
 import styles from "./review.module.css";
 import { ReviewSubmitButton } from "./ReviewSubmitButton";
 import { ReviewStatusRefresh } from "./ReviewStatusRefresh";
@@ -41,6 +42,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
   const selectedWeek = requestedWeek === "all" ? "all" : validSocialWeek(requestedWeek) ? requestedWeek : socialWeekStart();
   const [allPosts, allAssets, brand] = await Promise.all([listSocialPosts(200), listSocialAssets(), getSocialBrand()]);
   const automatic = (brand?.metadata.daily_publishing as { enabled?: boolean } | undefined)?.enabled === true;
+  const realty = isRealtySocialBrand(brand);
   const weeks = [...new Set([socialWeekStart(), ...allPosts.map((post) => String(post.content?.week_start || "")).filter(validSocialWeek)])].sort().reverse();
   const weeklyPosts = allPosts.filter((post) => selectedWeek === "all" || post.content?.week_start === selectedWeek);
   const posts = weeklyPosts.filter((post) => ["draft", "review", "approved"].includes(post.status))
@@ -72,7 +74,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
     <main className={`admin-page ${styles.reviewPage}`}>
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Fluxknight Social · Phase 3.6</p>
+          <p className="admin-kicker">{brand?.name || "Fluxknight"} Social · Review</p>
           <h1>Review & Approval</h1>
           <p>Review copy and creative together. Edits invalidate prior approval; only media-complete posts can be approved.</p>
         </div>
@@ -88,7 +90,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
           <button type="submit" className="admin-status">Show posts</button>
           <span>{weeklyPosts.length} posts · {weeklyPosts.filter((post) => post.status === "scheduled").length} scheduled · {weeklyPosts.filter((post) => post.status === "published").length} published · {posts.filter((post) => post.status === "approved").length} approved · {posts.filter((post) => post.status === "draft").length} drafts</span>
           <Link href="/dashboard/social/calendar">View publishing calendar</Link>
-          <Link href="/dashboard/social/create">Prepare this week</Link>
+          <Link href="/dashboard/social/create">{realty ? "Prepare new drafts" : "Prepare this week"}</Link>
         </form>
         <p style={{ padding: "0 16px" }}>Review each post, approve it or return it to draft with feedback. {automatic ? "Approved Instagram posts join the daily publishing queue for the next available 6 p.m. WAT slot." : "Approval does not publish it."}</p>
         <div className={`admin-list ${styles.reviewQueue}`}>
@@ -134,6 +136,8 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
                 <div className={`admin-panel-header ${styles.reviewHeader}`}>
                   <div>
                     <h2>{post.title || "Untitled post"}</h2>
+                    {Array.isArray(post.content?.source_links) && post.content.source_links.length > 0 ? <aside aria-label="Research sources"><strong>Research sources</strong><p>Coverage researched {String(post.content.research_observed_at || "")}. Topic candidates; popularity is not independently measured.</p><ul>{(post.content.source_links as {url:string;title:string}[]).filter(source=>typeof source.url==="string" && source.url.startsWith("https://")).map(source=><li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" style={{overflowWrap:"anywhere"}}>{source.title}</a></li>)}</ul></aside> : null}
+                    {typeof post.content?.manual_idea === "string" ? <details><summary>Original post idea</summary><p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{post.content.manual_idea}</p></details> : null}
                     <p>{post.format} · {post.platforms.join(", ")} · {post.status}</p>
                   </div>
                   <span className={approvalReady ? styles.readinessReady : styles.readinessPending}>
@@ -226,7 +230,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
                     </details>
 
                     <section className={styles.productionActions} aria-label="Generate media">
-                      <div className={styles.sectionHeading}><strong>Next action</strong><span>Flux Social generates new weekly carousels automatically. Regeneration is an optional manual override.</span></div>
+                      <div className={styles.sectionHeading}><strong>Next action</strong><span>{realty ? "Prepare the final graphic, then review its copy and sources. Media generation does not approve or publish this draft." : "Flux Social generates new weekly carousels automatically. Regeneration is an optional manual override."}</span></div>
                       {post.format === "carousel" && ["queued", "rendering"].includes(carouselRenderStatus) ? (
                         <div className={styles.progressControls}>
                           <span role="status">Carousel slides are being generated automatically.</span>
