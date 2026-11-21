@@ -528,6 +528,7 @@ export async function publishMetaPost(input: {
   const videos = videoAssets(orderedAssets);
 
   if (input.platform === "facebook") {
+    if (!input.config.accessToken || !input.config.pageId) throw new Error("Facebook publishing requires this organization's Page credentials.");
     if (input.post.format === "carousel") {
       if (images.length < 2) {
         throw new Error("Facebook carousel publishing requires at least two image assets.");
@@ -618,7 +619,7 @@ export async function metaPublisherConfigFromIntegration(
   supabase: SupabaseClient,
   organizationId: string,
 ): Promise<MetaPublisherConfig> {
-  const rpcClient = supabase as any;
+  const rpcClient = supabase;
 
   const [
     { data: credentials, error: credentialError },
@@ -652,7 +653,10 @@ export async function metaPublisherConfigFromIntegration(
       : "";
   const pageId = typeof config.page_id === "string" ? config.page_id : "";
 
-  if (!accessToken || !pageId) {
+  const directInstagramId = typeof secret.instagram_login_user_id === "string"
+    ? secret.instagram_login_user_id : typeof config.instagram_login_user_id === "string" ? config.instagram_login_user_id : "";
+  if (instagramAccessToken && !directInstagramId) throw new Error("Instagram Login token requires its matching authorized account ID.");
+  if ((!accessToken || !pageId) && (!instagramAccessToken || !directInstagramId)) {
     throw new Error("Meta publishing credentials are incomplete.");
   }
 
@@ -661,14 +665,8 @@ export async function metaPublisherConfigFromIntegration(
     apiVersion:
       typeof config.api_version === "string" ? config.api_version : "v24.0",
     pageId,
-    instagramBusinessAccountId:
-      typeof secret.instagram_login_user_id === "string"
-        ? secret.instagram_login_user_id
-        : typeof config.instagram_login_user_id === "string"
-          ? config.instagram_login_user_id
-          : typeof config.instagram_business_account_id === "string"
-            ? config.instagram_business_account_id
-            : undefined,
+    instagramBusinessAccountId: instagramAccessToken ? directInstagramId
+      : typeof config.instagram_business_account_id === "string" ? config.instagram_business_account_id : undefined,
     instagramAccessToken: instagramAccessToken || undefined,
     instagramGraphHost: instagramAccessToken
       ? "graph.instagram.com"

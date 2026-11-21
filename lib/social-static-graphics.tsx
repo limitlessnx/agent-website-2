@@ -3,6 +3,7 @@ import { getSocialBrand } from "@/lib/social";
 import { getPrimaryLogoAsset } from "@/lib/social-brand-assets";
 import { uploadSocialAsset } from "@/lib/social-assets";
 import { requireTenant } from "@/lib/tenant";
+import { isRealtySocialBrand } from "@/lib/social-real-estate-policy";
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
@@ -18,6 +19,8 @@ function renderGraphic(input: {
   hook: string;
   eyebrow?: string;
   footer?: string;
+  descriptor?: string;
+  signature?: string;
 }) {
   return new ImageResponse(
     (
@@ -56,7 +59,7 @@ function renderGraphic(input: {
               <span style={{ fontSize: 27, letterSpacing: "0.06em", fontWeight: 800 }}>{input.brandName}</span>
             )}
           </div>
-          <div style={{ fontSize: 18, color: "#a1a1aa", letterSpacing: "0.08em" }}>AI BUSINESS SYSTEMS</div>
+          <div style={{ fontSize: 18, color: "#a1a1aa", letterSpacing: "0.08em" }}>{input.descriptor || "AI BUSINESS SYSTEMS"}</div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 28, position: "relative", maxWidth: 900 }}>
@@ -85,7 +88,7 @@ function renderGraphic(input: {
           <div style={{ fontSize: 22, color: "#d4d4d8", maxWidth: 620, lineHeight: 1.35 }}>
             {clampText(input.footer || "Systems that follow up, support customers and move work forward.", 110)}
           </div>
-          <div style={{ fontSize: 21, color: "#a78bfa", fontWeight: 700 }}>{input.brandName}.space</div>
+          <div style={{ fontSize: 21, color: "#a78bfa", fontWeight: 700 }}>{input.signature ?? `${input.brandName}.space`}</div>
         </div>
       </div>
     ),
@@ -105,12 +108,14 @@ export async function generateStaticGraphicForPost(postId: string) {
     .eq("id", postId)
     .single();
   if (error) throw error;
+  if (post.brand_id !== brand.id) throw new Error("Post and active Social Brand do not match.");
 
   const content = (post.content || {}) as Record<string, unknown>;
   const metadata = (post.metadata || {}) as Record<string, unknown>;
-  const hook = String(content.hook || metadata.hook || post.title || "Build a smarter operating system.");
-  const pillar = String(content.pillar || metadata.pillar || "AI automation");
-  const objective = String(content.objective || metadata.objective || post.caption || "Smarter operations with Fluxknight.");
+  const realty = isRealtySocialBrand(brand);
+  const hook = String(content.hook || metadata.hook || post.title || (realty ? "Make an informed property decision." : "Build a smarter operating system."));
+  const pillar = String(content.pillar || metadata.pillar || (realty ? "Nigerian real estate" : "AI automation"));
+  const objective = String(content.objective || metadata.objective || post.caption || (realty ? "Message Limitless Realty to discuss your property needs." : "Smarter operations with Fluxknight."));
 
   const logo = await getPrimaryLogoAsset(brand.id);
   const response = renderGraphic({
@@ -119,6 +124,7 @@ export async function generateStaticGraphicForPost(postId: string) {
     hook,
     eyebrow: pillar,
     footer: objective,
+    ...(isRealtySocialBrand(brand) ? { descriptor: "NIGERIAN REAL ESTATE", signature: brand.name } : {}),
   });
   const bytes = new Uint8Array(await response.arrayBuffer());
 

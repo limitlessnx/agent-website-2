@@ -231,6 +231,7 @@ export default function DashboardHomeExperience({
           </section>
         </>
       ) : <LegacyOrganizationView metrics={metrics} notices={notices} agents={agents} isGencouv={/gencouv/i.test(workspaceName || name)} />}
+      {limitless && agents.filter(agent=>agent.name==="Flux Social").map(agent=><section key={agent.name} className={styles.sectionCard} aria-label="Limitless Realty Flux Social"><header className={styles.sectionHeader} style={{flexWrap:"wrap"}}><div style={{minWidth:0,flex:"1 1 220px"}}><span className={styles.sectionKicker}>CONTENT WORKSPACE</span><h2>Flux Social</h2><p>{agent.role} · {agent.note}</p></div><Link href={agent.href} style={{flexShrink:0,minHeight:44}}>Open content studio <ChevronRight size={14}/></Link></header><div className={styles.agentMetrics}>{agent.metrics.map(metric=><div key={metric.label}><strong>{metric.value}</strong><span>{metric.label}</span></div>)}</div></section>)}
       {realEstateWorkspace && !xposureDashboard && !limitless ? <section className={styles.sectionCard} aria-label="Real estate management">
         <header className={styles.sectionHeader}><div><span className={styles.sectionKicker}>REAL ESTATE OPERATIONS</span><h2>Estate Catalog & Operations</h2><p>Tenant-scoped listings, viewing requests, human handover, Leo approvals and delivery status.</p></div><Link href="/dashboard/real-estate">Open operations hub <ChevronRight size={14} /></Link></header>
         <div className={styles.businessActions}>

@@ -12,7 +12,7 @@ export default async function SocialBrandPage() {
     <main className="admin-page">
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Fluxknight Social</p>
+          <p className="admin-kicker">{brand?.name || "Fluxknight"} Social</p>
           <h1>Brand Brain</h1>
           <p>Canonical context for strategy, copy and creative agents. One source of truth beats seven prompts disagreeing with each other.</p>
         </div>

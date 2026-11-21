@@ -1,4 +1,5 @@
 import { requireTenant } from "@/lib/tenant";
+import {REALTY_SOCIAL_ORGANIZATION,REALTY_SOCIAL_PROFILE,REALTY_SOCIAL_SCHEDULE_SOURCE} from "@/lib/social-real-estate-policy";
 
 export const SOCIAL_POST_STATUSES = ["idea", "draft", "review", "approved", "scheduled", "published", "failed"] as const;
 export const SOCIAL_POST_FORMATS = ["text", "image", "carousel", "video", "reel", "story"] as const;
@@ -138,6 +139,7 @@ export async function createSocialPost(input: {
   platforms: SocialPlatform[];
 }) {
   const { supabase, organizationId } = await requireTenant();
+  if(organizationId===REALTY_SOCIAL_ORGANIZATION)throw new Error("Use Limitless Realty's content studio to create a sourced-topic or manual-idea draft.");
   const { data: brand, error: brandError } = await supabase
     .from("social_brands")
     .select("id")
@@ -214,7 +216,7 @@ export async function scheduleSocialPost(input: {
   timezone: string;
   platforms?: SocialPlatform[];
 }) {
-  const { supabase, organizationId } = await requireTenant();
+  const { supabase, organizationId, user } = await requireTenant();
   const scheduledAt = new Date(input.scheduledFor);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error("Choose a valid publication time.");
   if (scheduledAt.getTime() <= Date.now()) {
@@ -254,6 +256,18 @@ export async function scheduleSocialPost(input: {
   }
 
   let automaticMetadata: Record<string, unknown> = {};
+  if(organizationId===REALTY_SOCIAL_ORGANIZATION){
+    if(!post.approved_at)throw new Error("Review and approve this post before scheduling.");
+    const [{data:brand,error:brandError},{data:integration,error:integrationError}]=await Promise.all([
+      supabase.from("social_brands").select("metadata").eq("organization_id",organizationId).eq("id",post.brand_id).single(),
+      supabase.from("organization_integrations").select("status,configuration").eq("organization_id",organizationId).eq("provider","meta").maybeSingle(),
+    ]);
+    if(brandError)throw brandError;if(integrationError)throw integrationError;
+    if(brand?.metadata?.strategy_profile!==REALTY_SOCIAL_PROFILE||integration?.status!=="connected"||!integration.configuration?.instagram_login_user_id)throw new Error("Connect Limitless Realty's own Instagram account before scheduling.");
+    automaticMetadata={source:REALTY_SOCIAL_SCHEDULE_SOURCE,approval_snapshot:post.approved_at,instagram_account_id:integration.configuration.instagram_login_user_id};
+    const audit=await supabase.from("audit_logs").insert({organization_id:organizationId,action:"social.real_estate.schedule_requested",resource_type:"social_post",resource_id:post.id,metadata:{actor_id:user.email||user.id,outcome:"requested",scheduled_for:scheduledAt.toISOString(),approval_snapshot:post.approved_at,publish_platforms:publishPlatforms}});
+    if(audit.error)throw new Error("Scheduling audit could not be saved. No schedule was written; retry when logging is available.");
+  }
   if (organizationId === "15046426-e520-438b-8694-7662a6986efb" && post.brand_id === "a330b65a-d5b2-45f3-b211-451616f2fa8d") {
     const { data: existingSchedule, error: existingError } = await supabase.from("social_schedules").select("metadata")
       .eq("organization_id", organizationId).eq("post_id", input.postId).maybeSingle();

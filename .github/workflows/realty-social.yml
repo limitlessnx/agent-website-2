@@ -1,0 +1,52 @@
+name: Limitless Realty Social verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/social*.ts'
+      - 'lib/social*.tsx'
+      - 'lib/admin-organization-data.ts'
+      - 'src/trigger/social-*'
+      - 'app/dashboard/social/**'
+      - 'app/api/social/realty/**'
+      - 'components/admin/RealtySocial*'
+      - 'components/admin/DashboardHomeExperience.tsx'
+      - 'tests/*social*.test.mjs'
+      - 'tests/social-realty/**'
+      - 'playwright.social-realty.config.ts'
+      - '.github/workflows/realty-social.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Real estate behavior and existing social regressions
+        run: node --test tests/*social*.test.mjs
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped lint
+        run: npx eslint lib/social-real-estate*.ts lib/social-realty*.ts lib/social.ts lib/admin-organization-data.ts src/trigger/social-publisher.ts src/trigger/social-daily-publishing.ts components/admin/RealtySocial*.tsx components/admin/DashboardHomeExperience.tsx app/dashboard/social/real-estate-actions.ts app/dashboard/social/layout.tsx app/dashboard/social/create/page.tsx app/dashboard/social/page.tsx app/dashboard/social/review/page.tsx app/dashboard/social/posts/page.tsx app/dashboard/social/brand/page.tsx lib/social-ai.ts lib/social-static-graphics.tsx lib/social-meta-publisher.ts app/dashboard/social/integrations/actions.ts app/dashboard/social/integrations/page.tsx app/api/social/realty/instagram/*/route.ts tests/social-realty/*.ts tests/social-realty/*.cjs tests/social-real-estate.test.mjs tests/social-realty-instagram.test.mjs tests/social-realty-dispatch.test.mjs playwright.social-realty.config.ts
+      - run: npx playwright install --with-deps chromium
+      - name: Six-width synthetic generation, review, errors and isolation
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npx playwright test --config playwright.social-realty.config.ts
+      - name: Preserve synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: realty-social-browser-evidence
+          path: |
+            test-results/social-realty-results.json
+            test-results/social-realty/
+            test-results/social-realty-captures/
+          retention-days: 14

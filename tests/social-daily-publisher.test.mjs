@@ -7,6 +7,7 @@ import { memoryDb } from './helpers/social-memory-db.mjs';
 function load(file, dependencies, globals={}){const exports={};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Date,Map,Set,require:(name)=>dependencies[name],...globals});return exports;}
 const ready=load('lib/social-review-readiness.ts',{});
 const policy=load('lib/social-daily-policy.ts',{'@/lib/social-review-readiness':ready});
+const realtyPolicy=load('lib/social-real-estate-policy.ts',{});
 const config={enabled:true,timezone:'Africa/Lagos',local_time:'18:00',enabled_at:'2026-11-17T07:45:00Z',minimum_week_start:'2026-11-16'};
 function setup({time='2026-11-17T17:01:00Z',status='scheduled',changedApproval=false,started=false,providerError=false}={}){
  const approval='2026-11-16T09:50:00Z';const calls=[];
@@ -16,7 +17,7 @@ function setup({time='2026-11-17T17:01:00Z',status='scheduled',changedApproval=f
  social_assets:[1,2,3].map((i)=>({id:`slide${i}`,organization_id:policy.DAILY_ORGANIZATION,post_id:'post',status:'ready',asset_type:'carousel_slide',mime_type:'image/png',bucket_id:'private',storage_path:`${i}.png`,metadata:{position:i}})),social_post_platform_refs:[],
  social_publish_jobs:started?[{id:'job',schedule_id:'schedule',platform:'instagram',status:'running',attempt_count:1,max_attempts:3,metadata:{automatic_delivery_started_at:'2026-11-17T17:00:00Z'}}]:[]});
  class Clock extends Date {constructor(...args){super(...(args.length?args:[time]));}static now(){return Date.parse(time);}}
- const task=load('src/trigger/social-publisher.ts',{'@supabase/supabase-js':{createClient:()=>db},'@trigger.dev/sdk':{task:(definition)=>definition,AbortTaskRunError:class extends Error{},logger:{info(){}}},'@/lib/social-daily-policy':policy,'@/lib/social-meta-publisher':{metaPublisherConfigFromIntegration:async()=>({}),publishMetaPost:async(input)=>{calls.push(input);if(providerError)throw new Error('Ambiguous provider response');return{platform:'instagram',externalPostId:'ig-media',externalAccountId:'owned-account',publishedUrl:'https://example.invalid/post',provider:'meta-graph-api',metadata:{}};}}},{Date:Clock,process:{env:{SUPABASE_SERVICE_ROLE_KEY:'test'}}});
+ const task=load('src/trigger/social-publisher.ts',{'@supabase/supabase-js':{createClient:()=>db},'@trigger.dev/sdk':{task:(definition)=>definition,AbortTaskRunError:class extends Error{},logger:{info(){}}},'@/lib/social-daily-policy':policy,'@/lib/social-real-estate-policy':realtyPolicy,'@/lib/social-meta-publisher':{metaPublisherConfigFromIntegration:async()=>({}),publishMetaPost:async(input)=>{calls.push(input);if(providerError)throw new Error('Ambiguous provider response');return{platform:'instagram',externalPostId:'ig-media',externalAccountId:'owned-account',publishedUrl:'https://example.invalid/post',provider:'meta-graph-api',metadata:{}};}}},{Date:Clock,process:{env:{SUPABASE_SERVICE_ROLE_KEY:'test'}}});
  return{db,calls,run:()=>task.fluxSocialPublishPost.run({scheduleId:'schedule'})};
 }
 test('future slots cannot publish even if the worker is triggered early',async()=>{const app=setup({time:'2026-11-17T16:59:59Z'});assert.equal((await app.run()).reason,'not_due');assert.equal(app.calls.length,0);assert.equal(app.db.changes.length,0);});

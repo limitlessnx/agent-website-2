@@ -6,7 +6,7 @@ import { scheduleSocialPostAction, transitionSocialPostAction } from "@/app/dash
 import { generateCarouselAction } from "@/app/dashboard/social/carousels/actions";
 import { generateStaticGraphicAction } from "@/app/dashboard/social/graphics/actions";
 import { generateReelPlanAction, renderReelAction } from "@/app/dashboard/social/video/actions";
-import { listSocialPosts, listSocialSchedules, type SocialPostStatus } from "@/lib/social";
+import { getSocialBrand, listSocialPosts, listSocialSchedules, type SocialPostStatus } from "@/lib/social";
 
 const NEXT_ACTIONS: Partial<Record<SocialPostStatus, Array<{ status: SocialPostStatus; label: string }>>> = {
   idea: [{ status: "draft", label: "Move to draft" }],
@@ -25,14 +25,14 @@ function contentString(content: Record<string, unknown>, key: string) {
 }
 
 export default async function SocialPostsPage() {
-  const [posts, schedules] = await Promise.all([listSocialPosts(200), listSocialSchedules(200)]);
+  const [posts, schedules, brand] = await Promise.all([listSocialPosts(200), listSocialSchedules(200), getSocialBrand()]);
   const scheduleByPost = new Map(schedules.map((schedule) => [schedule.post_id, schedule]));
 
   return (
     <main className={`admin-page ${styles.postsPage}`}>
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Fluxknight Social</p>
+          <p className="admin-kicker">{brand?.name || "Fluxknight"} Social</p>
           <h1>Posts</h1>
           <p>Controlled lifecycle: draft → review → approved → scheduled → published. AI-generated plans enter review before anything can move toward publishing.</p>
         </div>

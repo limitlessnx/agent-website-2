@@ -4,8 +4,9 @@ import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 export default async function SocialOrganizationLayout({ children }: { children: React.ReactNode }) {
   const organization = await getAdminOrganizationContext();
   const fluxknightSelected = organization.kind === "system" && organization.id === "fluxknight";
+  const realtySelected = organization.kind === "system" && organization.id === "limitless-realty";
 
-  if (fluxknightSelected) return <>{children}</>;
+  if (fluxknightSelected || realtySelected) return <>{children}</>;
 
   const name = organization.kind === "system" ? organization.name : "This organization";
   return (
@@ -22,7 +23,7 @@ export default async function SocialOrganizationLayout({ children }: { children:
         <div className="admin-panel-header">
           <div>
             <h2>Organization-specific module</h2>
-            <p>The current Socials implementation belongs to Fluxknight. Other system and tenant organizations will receive their own isolated social workspace when configured.</p>
+            <p>Social workspaces are configured separately for Fluxknight and Limitless Realty. Other organizations need their own isolated strategy and authorized publishing connection.</p>
           </div>
         </div>
         <Link className="admin-button secondary-button" href="/dashboard">Return to workspace</Link>

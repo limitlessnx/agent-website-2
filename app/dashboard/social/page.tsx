@@ -1,7 +1,12 @@
 import Link from "next/link";
+import RealtySocialCenter from "@/components/admin/RealtySocialCenter";
+import { requireTenant } from "@/lib/tenant";
+import { REALTY_SOCIAL_ORGANIZATION } from "@/lib/social-real-estate-policy";
 import { getSocialBrand, listSocialPosts, listSocialPublishJobs, listSocialSchedules } from "@/lib/social";
 
 export default async function SocialOverviewPage() {
+  const { organizationId } = await requireTenant();
+  if (organizationId === REALTY_SOCIAL_ORGANIZATION) return <RealtySocialCenter brand={await getSocialBrand()}/>;
   const [brand, posts, schedules, jobs] = await Promise.all([
     getSocialBrand(),
     listSocialPosts(100),
@@ -36,7 +41,7 @@ export default async function SocialOverviewPage() {
 
       <section className="admin-grid two" aria-label="Social workspace navigation">
         <Link href="/dashboard/social/create" className="admin-panel compact">
-          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week's AI content plan.</p></div></div>
+          <div className="admin-panel-header"><div><h2>Create</h2><p>Draft a post or generate this week&apos;s AI content plan.</p></div></div>
         </Link>
         <Link href="/dashboard/social/review" className="admin-panel compact">
           <div className="admin-panel-header"><div><h2>Review & Approval</h2><p>Preview copy and media together, edit, reject, regenerate or approve.</p></div><span className={reviewCount ? "admin-status warning" : "admin-status live"}>{reviewCount}</span></div>

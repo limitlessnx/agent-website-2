@@ -7,6 +7,7 @@ import {
 } from "@/lib/social-meta-publisher";
 
 import { DAILY_SOURCE, DAILY_BRAND, DAILY_ORGANIZATION, dailyPolicy, eligibleDailyPost, lagosDay, sameApproval, type DailyPost } from "@/lib/social-daily-policy";
+import {REALTY_SOCIAL_ORGANIZATION,REALTY_SOCIAL_PROFILE,REALTY_SOCIAL_SCHEDULE_SOURCE} from "@/lib/social-real-estate-policy";
 
 const ACTIVE_SUPABASE_URL = "https://tacxegmlppngnuvldojy.supabase.co";
 const META_PLATFORMS = new Set(["instagram"]);
@@ -160,6 +161,10 @@ export const fluxSocialPublishPost = task({
     if (!Number.isFinite(Date.parse(schedule.scheduled_for))) throw new AbortTaskRunError("Invalid publication time.");
     if (Date.parse(schedule.scheduled_for) > Date.now()) return { scheduleId: schedule.id, skipped: true, reason: "not_due" };
     const automatic = schedule.metadata?.source === DAILY_SOURCE;
+    const explicitRealty = schedule.metadata?.source === REALTY_SOCIAL_SCHEDULE_SOURCE;
+    const guardedDelivery = automatic || explicitRealty;
+    if(explicitRealty&&schedule.organization_id!==REALTY_SOCIAL_ORGANIZATION)throw new AbortTaskRunError("Real estate schedules must belong to Limitless Realty.");
+    if(explicitRealty&&schedule.status!=="claimed")return {scheduleId:schedule.id,skipped:true,reason:"explicit_schedule_not_claimed"};
 
     const { data: rawPost, error: postError } = await supabase
       .from("social_posts")
@@ -201,6 +206,14 @@ export const fluxSocialPublishPost = task({
       if (!policy || organization.status !== "active") throw new AbortTaskRunError("Automatic publishing is disabled for this brand or organization.");
       if (lagosDay(new Date(schedule.scheduled_for)) !== lagosDay(new Date())) throw new AbortTaskRunError("Missed daily slots must be rescheduled, not published in a catch-up burst.");
       if (!eligibleDailyPost(post as DailyPost, policy) || !sameApproval(post as DailyPost, schedule)) throw new AbortTaskRunError("The approved media or approval snapshot changed. Return this post to Review.");
+    }
+    if(schedule.organization_id===REALTY_SOCIAL_ORGANIZATION){
+      const [{data:brand,error:brandError},{data:organization,error:organizationError}]=await Promise.all([
+        supabase.from("social_brands").select("metadata").eq("organization_id",schedule.organization_id).eq("id",post.brand_id).single(),
+        supabase.from("organizations").select("status").eq("id",schedule.organization_id).single(),
+      ]);
+      if(brandError)throw brandError;if(organizationError)throw organizationError;
+      if(schedule.metadata?.source!==REALTY_SOCIAL_SCHEDULE_SOURCE||brand?.metadata?.strategy_profile!==REALTY_SOCIAL_PROFILE||organization?.status!=="active"||!post.approved_at||post.published_at||!sameApproval(post as DailyPost,schedule))throw new AbortTaskRunError("Limitless Realty requires a current explicit schedule and unchanged human approval.");
     }
 
     const platforms = publishTargets(schedule, post);
@@ -246,10 +259,16 @@ export const fluxSocialPublishPost = task({
 
     if (["reel", "video", "image"].includes(post.format) && assets.length !== 1) throw new AbortTaskRunError("The approved active media asset is unavailable.");
 
-    const metaConfig = await metaPublisherConfigFromIntegration(
-      supabase,
-      schedule.organization_id,
-    );
+    let metaConfig;
+    try { metaConfig=await metaPublisherConfigFromIntegration(supabase,schedule.organization_id); }
+    catch(error){
+      if(explicitRealty){await supabase.from("social_schedules").update({status:"failed",last_error:"The organization's Instagram connection is unavailable. Reconnect, review and explicitly schedule again."}).eq("organization_id",schedule.organization_id).eq("id",schedule.id);throw new AbortTaskRunError("Limitless Realty Instagram connection needs attention.");}
+      throw error;
+    }
+    if(explicitRealty&&(!schedule.metadata?.instagram_account_id||schedule.metadata.instagram_account_id!==metaConfig.instagramBusinessAccountId)){
+      await supabase.from("social_schedules").update({status:"failed",last_error:"Authorized Instagram account changed. Review and explicitly schedule for the new account."}).eq("organization_id",schedule.organization_id).eq("id",schedule.id);
+      throw new AbortTaskRunError("The scheduled Instagram account changed.");
+    }
 
     for (const platform of platforms) {
       const { error: upsertError } = await supabase
@@ -291,7 +310,7 @@ export const fluxSocialPublishPost = task({
         throw new Error(`${platform} publish attempts exhausted.`);
       }
 
-      if (automatic && job.metadata?.automatic_delivery_started_at) {
+      if (guardedDelivery && (job.metadata?.automatic_delivery_started_at || job.metadata?.manual_delivery_started_at)) {
         // A crash or ambiguous provider response may have already published.
         // Do not create a second public post automatically.
         await supabase.from("social_schedules").update({ status: "failed", last_error: "A previous delivery started. Check Instagram before retrying to avoid a duplicate." }).eq("id", schedule.id);
@@ -310,6 +329,7 @@ export const fluxSocialPublishPost = task({
             publisher: "meta-graph-api",
             attempt: nextAttempt,
             ...(automatic ? { automatic_delivery_started_at: now } : {}),
+            ...(explicitRealty ? { manual_delivery_started_at: now } : {}),
           },
         })
         .eq("id", job.id).eq("status", job.status).eq("attempt_count", job.attempt_count)
@@ -362,12 +382,12 @@ export const fluxSocialPublishPost = task({
           .from("social_publish_jobs")
           .update({
             status:
-              automatic || nextAttempt >= job.max_attempts
+              guardedDelivery || nextAttempt >= job.max_attempts
                 ? "failed"
                 : "retry_scheduled",
             last_error: message,
             next_attempt_at:
-              automatic || nextAttempt >= job.max_attempts
+              guardedDelivery || nextAttempt >= job.max_attempts
                 ? null
                 : new Date(
                     Date.now() + 60_000 * nextAttempt,
@@ -378,13 +398,14 @@ export const fluxSocialPublishPost = task({
         await supabase
           .from("social_schedules")
           .update({
-            status: automatic ? "failed" : "pending",
+            status: guardedDelivery ? "failed" : "pending",
             claimed_at: null,
             last_error: message,
           })
           .eq("id", schedule.id);
 
         if (automatic) throw new AbortTaskRunError(`Automatic delivery stopped: ${message}. Check Instagram before retrying.`);
+        if (explicitRealty) throw new AbortTaskRunError("Scheduled delivery stopped. Check Instagram before retrying to avoid a duplicate.");
         throw error;
       }
     }

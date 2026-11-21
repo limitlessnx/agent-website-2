@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { requireTenant } from "@/lib/tenant";
+import { REALTY_SOCIAL_ORGANIZATION } from "@/lib/social-real-estate-policy";
 import {
   getFluxknightOrganization,
   getMetaCredentials,
@@ -17,6 +19,18 @@ export default async function SocialIntegrationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const {organizationId} = await requireTenant();
+  if(organizationId===REALTY_SOCIAL_ORGANIZATION) {
+    const ownIntegration=await getMetaIntegration(organizationId);
+    const ownConfig=(ownIntegration?.configuration||{}) as Record<string,unknown>;
+    return <main className="admin-page"><header className="admin-page-header"><div><p className="admin-kicker">Limitless Realty · Flux Social</p><h1>Social connection status</h1><p>Drafts and review are available before connecting a publishing account.</p></div></header>
+      {typeof params.error==="string"?<p className="admin-panel" role="alert">{params.error}</p>:null}
+      {params.instagram==="connected"?<p className="admin-panel" role="status">Instagram authorization saved. Review the connected identity before scheduling anything.</p>:null}
+      <section className="admin-panel"><h2>Limitless Realty&apos;s Meta connection</h2><p>Stored connection status: {ownIntegration?.status || "Not connected"}. This does not confirm Instagram publishing permissions.</p>{typeof ownConfig.instagram_login_username==="string"?<p>Authorized account: @{ownConfig.instagram_login_username}</p>:null}<p>Authorize Limitless Realty&apos;s own Instagram professional account. The connected identity must match the handle below. Fluxknight&apos;s account and tokens are separate.</p>
+        <form action="/api/social/realty/instagram/connect" method="get" style={{display:"grid",gap:12,maxWidth:560}}><label htmlFor="realty-instagram-account">Limitless Realty Instagram handle</label><input id="realty-instagram-account" name="account" required maxLength={31} placeholder="@your_limitless_realty_account" defaultValue={typeof ownConfig.instagram_login_username==="string"?ownConfig.instagram_login_username:""} style={{minWidth:0,width:"100%",padding:12,background:"transparent",color:"inherit",border:"1px solid var(--admin-border)",borderRadius:10}}/><button className="admin-status" type="submit">Connect Limitless Realty Instagram</button></form>
+        <details style={{marginTop:20}}><summary>Provider application setup</summary><p>The platform Instagram application must allow this exact callback before authorization:</p><code style={{overflowWrap:"anywhere"}}>https://fluxknight.space/api/social/realty/instagram/callback</code><p>Use the production domain for connection. Authorization does not approve or publish any post.</p></details><p><Link href="/dashboard/social">Return to content studio</Link></p></section></main>;
+  }
+  if(organizationId!=="15046426-e520-438b-8694-7662a6986efb") return <main className="admin-page"><h1>Social connection not configured</h1><p>Select an authorized social workspace to manage its connection.</p></main>;
   const organization = await getFluxknightOrganization();
   const integration = await getMetaIntegration(organization.id);
   const credentials = await getMetaCredentials(organization.id);

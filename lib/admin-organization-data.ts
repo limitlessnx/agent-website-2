@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 import { getProperties, LIMITLESS_REALTY_ORGANIZATION_ID, type PropertyRecord } from "@/lib/limitless-data";
+import { isRealtySocialBrand } from "@/lib/social-real-estate-policy";
 
 type MetricIcon = "leads" | "conversations" | "followups" | "qualified" | "revenue";
 
@@ -297,6 +298,24 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
   const qualified = active.filter((lead) => ["hot", "high", "qualified", "ready"].includes(lower(lead.score)) || Number(lead.score || 0) >= 70 || lower(lead.status).includes("qualified"));
   const notices = await notificationNotices(scope.organizationId);
 
+  let socialAgent: OrganizationAgentCard | null = null;
+  try {
+    const brand = await admin.from("social_brands").select("id,organization_id,metadata").eq("organization_id",scope.organizationId).eq("slug","limitless-realty").maybeSingle();
+    if(brand.error)throw brand.error;
+    if(brand.data&&isRealtySocialBrand(brand.data)){
+      const [posts,connection]=await Promise.all([
+        admin.from("social_posts").select("status").eq("organization_id",scope.organizationId).eq("brand_id",brand.data.id).order("created_at",{ascending:false}).limit(100),
+        admin.from("organization_integrations").select("status,configuration").eq("organization_id",scope.organizationId).eq("provider","meta").maybeSingle(),
+      ]);
+      if(posts.error)throw posts.error;if(connection.error)throw connection.error;
+      const recent=posts.data||[],review=recent.filter(post=>["draft","review"].includes(post.status)).length;
+      const connected=connection.data?.status==="connected"&&Boolean(connection.data.configuration?.instagram_login_user_id);
+      socialAgent={name:"Flux Social",role:"Real Estate Content Editor",channel:"Limitless Realty · Instagram",href:"/dashboard/social",status:review?"attention":connected?"live":"limited",note:connected?"Stored Instagram identity configured. Sources, final media and explicit scheduling require human review.":"Content studio configured. Connect Limitless Realty's own Instagram account before scheduling.",metrics:[{label:"Recent posts",value:recent.length},{label:"In review",value:review},{label:"Recent published",value:recent.filter(post=>post.status==="published").length}]};
+    }
+  } catch {
+    socialAgent={name:"Flux Social",role:"Real Estate Content Editor",channel:"Limitless Realty",href:"/dashboard/social",status:"limited",note:"Social setup status is unavailable. Open the workspace to retry; Maia and the CRM remain available.",metrics:[]};
+  }
+
   const items = active.slice(0, 12).map((lead) => ({
     id: String(lead.id),
     title: text(lead.name, "Unnamed lead"),
@@ -336,7 +355,7 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
         { label: "Conversations", value: conversations.length },
         { label: "Follow-ups", value: followUps.length },
       ],
-    }],
+    },...(socialAgent?[socialAgent]:[])],
     conversations: items,
     activity: items,
     attentionCount: followUps.length,
