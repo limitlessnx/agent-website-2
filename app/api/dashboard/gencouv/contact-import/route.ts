@@ -102,6 +102,9 @@ export async function POST(request: NextRequest) {
     for (const row of existing || []) found.set(normalize(row.email), row.id);
   }
   const fresh = parsed.contacts.filter(c => !found.has(c.email));
+  const consentConfirmed = form?.get("consent_confirmed") === "true";
+  const consentSource = clean(form?.get("consent_source")).slice(0, 200);
+  if (consentConfirmed && !consentSource) return fail("Record the source of marketing consent for this import.");
   const preview = form?.get("preview") !== "false";
   if (preview) return NextResponse.json({
     preview: true, total: parsed.contacts.length, new_contacts: fresh.length,
@@ -117,11 +120,12 @@ export async function POST(request: NextRequest) {
     const { data, error } = await db.from("crm_customers").insert({
       organization_id: organizationId, full_name: contact.full_name || null,
       email: contact.email, company_name: contact.company_name || null,
-      metadata: { source: "gencouv_document_import", import_filename: file.name.slice(0, 180), marketing_consent: "unknown", imported_at: new Date().toISOString() }
+      metadata: { source: "gencouv_document_import", import_filename: file.name.slice(0, 180), marketing_consent: consentConfirmed ? "granted" : "unknown", consent_source: consentConfirmed ? consentSource : null, consent_recorded_at: consentConfirmed ? new Date().toISOString() : null, imported_at: new Date().toISOString() }
     }).select("id").single();
     if (error || !data) { failed++; continue; }
     savedIds.push(data.id);
   }
+  // Existing contacts retain their prior consent state; an upload never silently overrides it.
   if (categoryId) {
     const ids = [...savedIds, ...Array.from(found.values())];
     for (const id of ids) {
