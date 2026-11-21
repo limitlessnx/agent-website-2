@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { createHash, createHmac } from "node:crypto";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const secret = "synthetic-local-test-secret";
@@ -28,6 +28,35 @@ test.beforeEach(async ({ context, page }) => {
     return route.continue();
   });
 });
+// Released admin/general layouts and the expanded shared demo have a versioned
+// review set; original industry and unchanged dialog/drawer goldens remain intact.
+async function visualCheck(
+  page: import("@playwright/test").Page,
+  testInfo: import("@playwright/test").TestInfo,
+  state = "",
+  fullPage = false,
+) {
+  if (process.env.FLUX_VISUAL_COMPARE !== "1") return;
+  const currentDemo = (testInfo.title.startsWith("shared component") && !["dialog", "drawer"].includes(state)) || testInfo.title === "tenant general" || testInfo.title.startsWith("admin ");
+  const name = `${testInfo.title.replace(/[^a-z0-9]+/gi, "-").replace(/-$/, "")}-${testInfo.project.name}${state ? `-${state}` : ""}.png`;
+  const directory = join(process.cwd(), "docs/phase2-evidence/after", ...(currentDemo ? ["phase23-reviewed"] : []));
+  const path = join(directory, name);
+  if (process.env.FLUX_CAPTURE_REVIEW_BASELINES === "1") {
+    if (!currentDemo) return; // Capture mode does not approve or update any existing baseline.
+    mkdirSync(directory, { recursive: true });
+    await page.screenshot({ path, fullPage, animations: "disabled", style: screenshotStyle });
+    return;
+  }
+  const review = JSON.parse(readFileSync(join(process.cwd(), `tests/responsive/${currentDemo ? "phase23-visual-review" : "visual-review"}.json`), "utf8"));
+  expect(review.status, "Visual comparisons require a recorded implementation review.").toBe("reviewed");
+  if (currentDemo) expect(createHash("sha256").update(readFileSync(path)).digest("hex"), "Reviewed baseline hash must match.").toBe(review.hashes[name]);
+  await expect(page).toHaveScreenshot(currentDemo ? ["phase23-reviewed", name] : name, {
+    fullPage, animations: "disabled",
+    stylePath: join(process.cwd(), "tests/responsive/visual-stability.css"),
+    maxDiffPixelRatio: 0.002,
+  });
+}
+
 async function captureState(
   page: import("@playwright/test").Page,
   testInfo: import("@playwright/test").TestInfo,
@@ -40,21 +69,7 @@ async function captureState(
     }),
     contentType: "image/png",
   });
-  if (process.env.FLUX_VISUAL_COMPARE === "1") {
-    const review = JSON.parse(
-      readFileSync(
-        join(process.cwd(), "tests/responsive/visual-review.json"),
-        "utf8",
-      ),
-    );
-    expect(review.status).toBe("reviewed");
-    const name = `${testInfo.title.replace(/[^a-z0-9]+/gi, "-").replace(/-$/, "")}-${testInfo.project.name}-${state}.png`;
-    await expect(page).toHaveScreenshot(name, {
-      animations: "disabled",
-      stylePath: join(process.cwd(), "tests/responsive/visual-stability.css"),
-      maxDiffPixelRatio: 0.002,
-    });
-  }
+  await visualCheck(page, testInfo, state);
 }
 
 async function audit(
@@ -125,25 +140,7 @@ async function audit(
     }),
     contentType: "image/png",
   });
-  if (process.env.FLUX_VISUAL_COMPARE === "1") {
-    const review = JSON.parse(
-      readFileSync(
-        join(process.cwd(), "tests/responsive/visual-review.json"),
-        "utf8",
-      ),
-    );
-    expect(
-      review.status,
-      "Visual baselines must have a recorded implementation review.",
-    ).toBe("reviewed");
-    const name = `${testInfo.title.replace(/[^a-z0-9]+/gi, "-").replace(/-$/, "")}-${testInfo.project.name}.png`;
-    await expect(page).toHaveScreenshot(name, {
-      fullPage: true,
-      animations: "disabled",
-      stylePath: join(process.cwd(), "tests/responsive/visual-stability.css"),
-      maxDiffPixelRatio: 0.002,
-    });
-  }
+  await visualCheck(page, testInfo, "", true);
   // Captures are audit evidence, never silently blessed as visual baselines.
   expect(
     layout.documentWidth,
@@ -168,8 +165,15 @@ for (const route of ["/dashboard", "/dashboard/clients"]) {
     expect(response?.status()).toBe(200);
     expect(new URL(page.url()).pathname).toBe(route);
     await expect(page.locator("#dashboard-theme-root")).toBeVisible();
+    if(route === "/dashboard") {
+      await expect(page.getByText("Workspace data connected",{exact:true})).toBeVisible();
+      await expect(page.getByText("All systems active",{exact:true})).toHaveCount(0);
+      await expect(page.getByText("Online",{exact:true})).toHaveCount(0);
+    }
     await audit(page, testInfo);
     expect(errors).toEqual([]);
+    const collapse=page.getByRole("button",{name:/^(Collapse|Expand) dashboard navigation$/});
+    if(await collapse.isVisible()) expect((await collapse.locator("svg").boundingBox())!.width).toBeGreaterThanOrEqual(16);
     const menu = page.getByRole("button", {
       name: "Open navigation menu",
       exact: true,
@@ -179,6 +183,9 @@ for (const route of ["/dashboard", "/dashboard/clients"]) {
       await expect(
         page.getByRole("dialog", { name: "Admin navigation" }),
       ).toBeVisible();
+      const close=page.getByRole("dialog",{name:"Admin navigation"}).getByRole("button",{name:"Close navigation menu",exact:true});
+      expect((await close.locator("svg").boundingBox())!.width).toBeGreaterThanOrEqual(16);
+      await close.click();await expect(menu).toBeFocused();await menu.click();
       await captureState(page, testInfo, "mobile-navigation");
       await page.keyboard.press("Escape");
       await expect(menu).toBeFocused();

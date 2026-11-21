@@ -35,6 +35,7 @@
     "test:design-system": "node --test tests/dashboard-design-tokens.test.cjs",
     "test:admin-auth": "node --test tests/platform-admin-account-login.test.cjs tests/client-workspace-onboarding-routes.test.cjs tests/workspace-and-google-auth.test.mjs tests/client-manager-onboarding-handoffs.test.mjs",
     "test:admin-auth-browser": "node tests/admin-account-login-browser.cjs",
+    "test:phase23-ui": "playwright test --config playwright.motion.config.ts settings-motion.spec.ts phase23-closure.spec.ts",
     "test:ui-motion": "playwright test --config playwright.motion.config.ts",
     "test:leo-keyboard": "playwright test --config playwright.leo-keyboard.config.ts",
     "test:ai-presence": "node --test tests/ai-presence-state.test.cjs",

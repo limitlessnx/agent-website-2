@@ -1,0 +1,15 @@
+{
+  "baseCommit": "114cef32627a534c62a56ec7b8221d06c0ee3f3e",
+  "physicalIPhoneKeyboard": "user-confirmed-pass",
+  "supportRegressionFiles": {"passed":85,"failed":0},
+  "maiaRegressionFiles": {"passed":25,"failed":0},
+  "initialRepositoryLint": {"errors":445,"warnings":72,"filesWithErrors":149,"scannedFiles":1344},
+  "changedSourceLint": {"errors":0,"existingWarnings":2},
+  "typeCheck":"passed",
+  "optimizedBuild":"passed",
+  "finalBrowserResults":"pending",
+  "hostedResults":"pending",
+  "hostedAuthenticatedAcceptance":"not available; synthetic sessions only",
+  "liveManagerAndElevenLabs":"user-deferred",
+  "productionModifiedThisVerification":false
+}

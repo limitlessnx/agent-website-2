@@ -82,3 +82,7 @@
 }
 @media(max-width:900px){.collapseToggle{display:none!important}.compactLogo{display:none!important}}
 
+
+/* Icon-only controls must not inherit text-button padding. */
+.mobileHeader button { padding:0!important;min-width:44px;min-height:44px; }
+.collapseToggle { padding:0!important; }

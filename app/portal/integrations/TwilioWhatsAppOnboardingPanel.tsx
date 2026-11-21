@@ -23,6 +23,8 @@ type Binding={
   last_error_message?:string|null;
 };
 
+type SignupEvent={type?:string;event?:string;data?:{current_step?:unknown;error_message?:unknown;waba_id?:unknown;phone_number_id?:unknown}};
+
 type Bootstrap={
   sessionId:string;
   appId:string;
@@ -74,7 +76,7 @@ export default function TwilioWhatsAppOnboardingPanel({
   useEffect(()=>{
     const listener=(event:MessageEvent)=>{
       if(!event.origin.endsWith("facebook.com")) return;
-      let data:any;
+      let data:SignupEvent|null;
       try{data=typeof event.data==="string"?JSON.parse(event.data):event.data;}catch{return;}
       if(data?.type!=="WA_EMBEDDED_SIGNUP") return;
       if(data.event==="CANCEL"){
@@ -216,11 +218,11 @@ export default function TwilioWhatsAppOnboardingPanel({
     </div>
 
     {canManage&&!connected?<div className="portal-form-grid" style={{marginTop:18}}>
-      <div className="portal-field"><label>WhatsApp phone number</label>
-        <input value={phone} onChange={(e)=>setPhone(e.target.value)} disabled={busy} placeholder="+2348012345678" />
+      <div className="portal-field"><label htmlFor="whatsapp-onboarding-phone">WhatsApp phone number</label>
+        <input id="whatsapp-onboarding-phone" value={phone} onChange={(e)=>setPhone(e.target.value)} disabled={busy} placeholder="+2348012345678" />
       </div>
-      <div className="portal-field"><label>Business display name</label>
-        <input value={profileName} onChange={(e)=>setProfileName(e.target.value)} disabled={busy} placeholder="Company name" />
+      <div className="portal-field"><label htmlFor="whatsapp-onboarding-name">Business display name</label>
+        <input id="whatsapp-onboarding-name" value={profileName} onChange={(e)=>setProfileName(e.target.value)} disabled={busy} placeholder="Company name" />
       </div>
       <div><button type="button" onClick={()=>void start()} disabled={busy}>{busy?"Connecting...":"Connect WhatsApp with Meta"}</button></div>
     </div>:null}
@@ -235,7 +237,7 @@ export default function TwilioWhatsAppOnboardingPanel({
       <button type="button" onClick={()=>void disconnect()} disabled={busy}>Disconnect WhatsApp</button>
     </div>:null}
 
-    {message?<p className="portal-empty">{message}</p>:null}
-    {error?<p className="portal-empty">{error}</p>:null}
+    {message?<p role="status" className="portal-empty">{message}</p>:null}
+    {error?<p role="alert" className="portal-empty">{error}</p>:null}
   </section>;
 }

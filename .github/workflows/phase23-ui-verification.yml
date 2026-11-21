@@ -1,0 +1,62 @@
+name: Phase 2-3 UI verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/dashboard/**"
+      - "app/portal/**"
+      - "components/ui/**"
+      - "components/admin/**"
+      - "components/portal/**"
+      - "tests/responsive/**"
+      - "tests/ui-motion/**"
+      - "docs/phase2-evidence/after/phase23-reviewed/**"
+      - "playwright*.ts"
+      - "package.json"
+      - ".github/workflows/phase23-ui-verification.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ui:
+    name: phase23-${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [visual, settings-motion, team]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Reviewed visual comparisons across six widths
+        if: matrix.suite == 'visual'
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:visual
+      - name: Settings, AI state, accessibility, zoom and client performance checks
+        if: matrix.suite == 'settings-motion'
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npm run test:phase23-ui
+      - name: Scoped UI and fixture lint
+        if: matrix.suite == 'settings-motion'
+        run: npx eslint components/admin/DashboardHomeExperience.tsx app/portal/integrations/TwilioWhatsAppOnboardingPanel.tsx app/portal/integrations/VoiceOnboardingPanel.tsx tests/responsive/dashboard.spec.ts tests/ui-motion/phase23-closure.spec.ts tests/ui-motion/settings-motion.spec.ts tests/ui-motion/start-fixture.cjs
+      - name: Design tokens, AI event mapping and integration guards
+        if: matrix.suite == 'settings-motion'
+        run: node --test tests/dashboard-design-tokens.test.cjs tests/ai-presence-state.test.cjs tests/dialog-focus-return.test.cjs tests/tenant-f7-twilio-whatsapp-onboarding.test.mjs
+      - name: Synthetic team permissions and industry workspace checks
+        if: matrix.suite == 'team'
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npx playwright test --config playwright.team.config.ts
+      - name: Preserve synthetic review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase23-${{ matrix.suite }}-evidence
+          path: |
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
