@@ -390,6 +390,8 @@ export default async function GencouvWorkspacePage() {
         {[
           {label:"Leads & CRM",href:"#lead-contacts",detail:"Contact records"},
           {label:"Email inbox",href:"#email-inbox",detail:"Messages and replies"},
+          {label:"Email marketing",href:"/dashboard/gencouv/marketing",detail:"Create and send campaigns"},
+          {label:"Import emails",href:"/dashboard/gencouv/contacts",detail:"Upload CSV or Excel contacts"},
           {label:"Follow-ups",href:"#email-control",detail:"Sequence controls"},
           {label:"Categories",href:"/dashboard/gencouv/categories",detail:"Custom lead tags"},
           {label:"Analytics",href:"#website-funnel",detail:"Website performance"},
