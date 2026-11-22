@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { verifyGencouvResendSignature } from "@/lib/gencouv-resend-signature";
+import { resendApi } from "@/lib/fluxknight-mail";
 import { GENCOUV_SENDERS } from "@/lib/gencouv-admin";
 
 type ThreadMessage={id:string;sequence_id?:string;sequence_step_id?:string;lead_id?:string;provider_message_id?:string;message_id_header?:string};
@@ -136,14 +137,11 @@ export async function POST(request: Request) {
     if (!verifyGencouvResendSignature(raw, request.headers, secret)) return NextResponse.json({ success: false, message: "Invalid webhook signature." }, { status: 401 });
     const payload = JSON.parse(raw);
     const type = String(payload?.type || "unknown");
-    const data = payload?.data || {};
+    let data = payload?.data || {};
     const providerEmailId = String(data?.email_id || data?.id || "");
     const occurredAt = iso(payload?.created_at || data?.created_at);
     const providerEventId = request.headers.get("svix-id") || String(payload?.id || `${type}:${providerEmailId}:${occurredAt}`);
 
-    const messageIdHeader = textValue(data?.message_id || headerValue(data, "Message-ID"));
-    const inReplyToHeader = textValue(data?.in_reply_to || headerValue(data, "In-Reply-To"));
-    const referencesHeader = textValue(data?.references || headerValue(data, "References"));
     const isInbound = type === "email.received";
     if (!isInbound) {
       if (!GENCOUV_SENDERS.has(firstEmail(data.from))) return NextResponse.json({ success: true, ignored: true });
@@ -154,18 +152,29 @@ export async function POST(request: Request) {
     }
     const inboundRecipients = Array.isArray(data.to) ? data.to : [data.to];
     if (!inboundRecipients.some((recipient: unknown) => GENCOUV_SENDERS.has(firstEmail(recipient)))) return NextResponse.json({ success: true, ignored: true });
-    const autoReply = isInbound ? classifyAutoReply(data) : false;
 
     const existing = await supabaseServerRequest<ThreadMessage[]>(
       `gencouv_email_events?organization_id=eq.${GENCOUV_ORG_ID}&select=id&provider_event_id=eq.${encodeURIComponent(providerEventId)}&limit=1`,
     );
     if (existing.length) return NextResponse.json({ success: true, duplicate: true });
+    // Received-event payloads contain metadata, not the message body. Fetch the
+    // received email before acknowledging, so provider retries can recover a read failure.
+    if(!data.text && !data.html && !data.text_body && !data.html_body){
+      const received=await resendApi("/emails/receiving/"+encodeURIComponent(providerEmailId));
+      data={...received,...data,headers:received.headers||data.headers,text:received.text||data.text,html:received.html||data.html};
+    }
+    const messageIdHeader = textValue(data?.message_id || headerValue(data, "Message-ID"));
+    const inReplyToHeader = textValue(data?.in_reply_to || headerValue(data, "In-Reply-To"));
+    const referencesHeader = textValue(data?.references || headerValue(data, "References"));
+    const autoReply=classifyAutoReply(data);
+
 
     let message;
     if (isInbound) {
       const inboundSender = firstEmail(data?.from);
       const threadMessage = await findThreadMessage(data, inboundSender);
-      const created = await supabaseServerRequest<ThreadMessage[]>("gencouv_email_messages", {
+      const created = await supabaseServerRequest<ThreadMessage[]>("gencouv_email_messages?on_conflict=provider_email_id", {
+        headers: {Prefer:"resolution=ignore-duplicates,return=representation"},
         method: "POST",
         body: JSON.stringify({
           organization_id: GENCOUV_ORG_ID,
@@ -200,7 +209,8 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         }),
       });
-      message = created[0];
+      message = created[0] || (await supabaseServerRequest<ThreadMessage[]>(`gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`))[0];
+      if(!message)throw new Error("Inbound ledger unavailable");
 
       if (!autoReply && threadMessage?.id) {
         await supabaseServerRequest(`gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&id=eq.${threadMessage.id}`, {
@@ -222,7 +232,8 @@ export async function POST(request: Request) {
       });
     }
 
-    await supabaseServerRequest("gencouv_email_events", {
+    await supabaseServerRequest("gencouv_email_events?on_conflict=provider,provider_event_id", {
+      headers:{Prefer:"resolution=ignore-duplicates,return=representation"},
       method: "POST",
       body: JSON.stringify({
         organization_id: GENCOUV_ORG_ID,

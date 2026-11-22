@@ -34,6 +34,10 @@ alter table public.gencouv_email_messages add constraint gencouv_message_campaig
 create unique index if not exists gencouv_campaign_recipient_reservation on public.gencouv_email_messages(bulk_campaign_id,lower(recipient_email))
   where bulk_campaign_id is not null and (status <> 'failed' or provider_email_id is not null);
 create index if not exists gencouv_batch_history on public.gencouv_send_batches(organization_id,created_at desc);
+create index if not exists gencouv_campaign_draft_history on public.gencouv_bulk_campaigns(organization_id,updated_at desc);
+create index if not exists gencouv_batch_campaign_scope on public.gencouv_send_batches(campaign_id,organization_id) where campaign_id is not null;
+create index if not exists gencouv_message_batch_scope on public.gencouv_email_messages(send_batch_id,organization_id) where send_batch_id is not null;
+create index if not exists gencouv_message_campaign_scope on public.gencouv_email_messages(bulk_campaign_id,organization_id) where bulk_campaign_id is not null;
 alter table public.gencouv_bulk_campaigns enable row level security;
 alter table public.gencouv_send_batches enable row level security;
 revoke all on public.gencouv_bulk_campaigns,public.gencouv_send_batches from public,anon,authenticated;
@@ -101,7 +105,8 @@ begin
   end loop;
   if nullif(p_input->>'reply_message_id','') is not null then
     if v_mode<>'proposal' or not exists(select 1 from public.gencouv_email_messages where id=(p_input->>'reply_message_id')::uuid and organization_id=p_organization_id and direction='inbound' and lower(recipient_email)=v_email) then raise exception 'Invalid reply context'; end if;
-    update public.gencouv_email_messages set reply_to_message_id=(p_input->>'reply_message_id')::uuid,in_reply_to_header=p_input->'reply_headers'->>'In-Reply-To',references_header=p_input->'reply_headers'->>'References' where send_batch_id=v_batch and organization_id=p_organization_id;
+    update public.gencouv_email_messages outgoing set reply_to_message_id=inbound.id,in_reply_to_header=p_input->'reply_headers'->>'In-Reply-To',references_header=p_input->'reply_headers'->>'References',sequence_id=inbound.sequence_id,sequence_step_id=inbound.sequence_step_id,lead_id=inbound.lead_id
+    from public.gencouv_email_messages inbound where inbound.id=(p_input->>'reply_message_id')::uuid and inbound.organization_id=p_organization_id and outgoing.send_batch_id=v_batch and outgoing.organization_id=p_organization_id;
   end if;
   if v_campaign is not null then update public.gencouv_bulk_campaigns set status='ready',consent_confirmed=true,consent_confirmed_at=now(),updated_at=now() where id=v_campaign and organization_id=p_organization_id; end if;
   insert into public.audit_logs(organization_id,action,resource_type,resource_id,metadata) values(p_organization_id,'gencouv.email_batch_reserved','gencouv_send_batch',v_batch::text,jsonb_build_object('actor_email',p_actor,'recipients',v_count,'mode',v_mode));
@@ -141,6 +146,9 @@ begin
       status=case when status not in ('queued','submitted','unknown') then status when v_provider is not null then 'submitted' when p_outcome='failed' then 'failed' else 'unknown' end,
       error_message=case when v_provider is not null then null else p_error end,updated_at=now()
       where id=v_message.id and organization_id=p_organization_id;
+    if v_provider is not null and v_message.reply_to_message_id is not null then
+      update public.gencouv_email_messages set read_at=coalesce(read_at,now()),replied_from_dashboard_at=coalesce(replied_from_dashboard_at,now()),updated_at=now() where id=v_message.reply_to_message_id and organization_id=p_organization_id and direction='inbound';
+    end if;
     v_index:=v_index+1;
   end loop;
   update public.gencouv_send_batches set status=p_outcome,error_summary=p_error,updated_at=now() where id=p_batch_id and organization_id=p_organization_id;
@@ -205,7 +213,7 @@ $$;
 create or replace function public.gencouv_apply_delivery_event(p_event_id text,p_type text,p_data jsonb,p_occurred_at timestamptz)
 returns jsonb language plpgsql security invoker set search_path=public as $$
 declare
-  v_org uuid:='05737e03-f8f0-4202-8e9b-0a8982a1091c';v_message record;v_provider text:=coalesce(p_data->>'email_id',p_data->>'id');v_id text;v_status text:=replace(p_type,'email.','');v_email text;v_inserted uuid;v_next text;
+  v_org uuid:='05737e03-f8f0-4202-8e9b-0a8982a1091c';v_message record;v_provider text:=coalesce(p_data->>'email_id',p_data->>'id');v_id text;v_status text:=replace(p_type,'email.','');v_email text;v_inserted uuid;v_next text;v_sender text;v_recipient text;
 begin
   if v_status not in ('sent','delivered','opened','clicked','bounced','failed','complained','suppressed','unsubscribed','delivery_delayed','scheduled') or length(coalesce(p_event_id,''))<3 then raise exception 'Unsupported event'; end if;
   select * into v_message from public.gencouv_email_messages where organization_id=v_org and provider_email_id=v_provider for update;
@@ -213,7 +221,18 @@ begin
     v_id:=case when jsonb_typeof(p_data->'tags')='object' then p_data->'tags'->>'gencouv_message_id' else (select t->>'value' from jsonb_array_elements(case when jsonb_typeof(p_data->'tags')='array' then p_data->'tags' else '[]' end) t where t->>'name'='gencouv_message_id' limit 1) end;
     if v_id~'^[0-9a-f-]{36}$' then select * into v_message from public.gencouv_email_messages where organization_id=v_org and id=v_id::uuid for update; end if;
   end if;
-  if v_message.id is null then return jsonb_build_object('ignored',true,'reason','message_not_owned'); end if;
+  if v_message.id is null then
+    -- Preserve the existing mirror of genuine external Gencouv sends. The HTTP
+    -- handler verifies the provider signature; the RPC additionally filters the
+    -- actual sender, so events from other organizations are never imported here.
+    v_sender:=lower(substring(p_data->>'from' from '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'));
+    v_recipient:=lower(substring(case when jsonb_typeof(p_data->'to')='array' then p_data->'to'->>0 else p_data->>'to' end from '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'));
+    if v_sender not in ('info@gencouv.com','support@gencouv.com','onboarding@gencouv.com') or v_sender is null or v_recipient is null or v_provider is null then return jsonb_build_object('ignored',true,'reason','message_not_owned'); end if;
+    insert into public.gencouv_email_messages(organization_id,recipient_email,from_email,provider,provider_email_id,subject,status,direction,metadata,created_at,updated_at)
+      values(v_org,v_recipient,v_sender,'resend',v_provider,coalesce(p_data->>'subject',''),'submitted','outbound',jsonb_build_object('source','verified_external_resend_event'),p_occurred_at,now()) on conflict(provider_email_id) do nothing;
+    select * into v_message from public.gencouv_email_messages where organization_id=v_org and provider_email_id=v_provider for update;
+    if not found then return jsonb_build_object('ignored',true,'reason','message_not_owned'); end if;
+  end if;
   if v_message.provider_email_id is not null and v_message.provider_email_id<>v_provider then raise exception 'Provider message identity mismatch'; end if;
   insert into public.gencouv_email_events(organization_id,email_message_id,provider,provider_event_id,provider_email_id,event_type,occurred_at,payload)
     values(v_org,v_message.id,'resend',p_event_id,v_provider,p_type,p_occurred_at,jsonb_build_object('type',p_type,'data',p_data)) on conflict(provider,provider_event_id) do nothing returning id into v_inserted;
