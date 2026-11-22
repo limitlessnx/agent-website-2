@@ -69,7 +69,7 @@ export default function GencouvBulkCampaigns(){
     <label className="gencouv-confirmation"><input type="checkbox" disabled={busy||Boolean(batch)} checked={confirmed} onChange={event=>setConfirmed(event.target.checked)}/>I reviewed the recipients, sender, subject and message and authorize this one-time batch.</label>
     <button className="gencouv-primary" disabled={busy||Boolean(batch)||dirty||!campaignId||!reviewed||!selected.length||!confirmed||!consentConfirmed} onClick={()=>void send()}>{busy?"Processing…":`Send one-time email to ${selected.length} recipient${selected.length===1?"":"s"}`}</button>
     {batch?<p><Link href="#email-history">Review this batch in Email history</Link>. No further send was scheduled.</p>:null}
-    {batch?.status==="failed"?<button disabled={busy} onClick={()=>{resetReview();setStatus("Review and explicitly confirm a new attempt after correcting the rejection.");}}>Prepare a new reviewed attempt</button>:null}
+    {batch&&["failed","cancelled"].includes(batch.status)?<button disabled={busy} onClick={()=>{resetReview();setStatus("Review and explicitly confirm a new attempt after correcting the rejection.");}}>Prepare a new reviewed attempt</button>:null}
     {error?<p role="alert">{error}</p>:null}{status?<p role={batch&&["unknown","partial","submitting"].includes(batch.status)?"alert":"status"}>{status}</p>:null}
   </section>;
 }

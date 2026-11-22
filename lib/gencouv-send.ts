@@ -57,7 +57,9 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   }
   const reservation = data as Reservation;
   if (!reservation?.batch_id || !Array.isArray(reservation.messages)) throw new GencouvRequestError("Reservation could not be confirmed. Check history before retrying.", 503);
-  if (!reservation.created) return savedResult(reservation, true);
+  // Only a queued reservation is provably before provider authorization.
+  // An explicit retry may claim it once; submitting/unknown outcomes stay held.
+  if (!reservation.created && reservation.status !== "queued") return savedResult(reservation, true);
   const authorized = await db.rpc("gencouv_authorize_send_batch", { p_organization_id: organizationId, p_batch_id: reservation.batch_id });
   if (authorized.error || authorized.data !== true) throw new GencouvRequestError("The saved batch is not authorized for submission. Check its history before retrying.", 409);
   const unsubscribeOrigin = (process.env.NEXT_PUBLIC_SITE_URL || "https://fluxknight.space").replace(/\/$/, "");
