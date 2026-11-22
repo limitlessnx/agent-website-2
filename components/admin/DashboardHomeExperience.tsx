@@ -27,12 +27,12 @@ import styles from "./DashboardHomeExperience.module.css";
 import RevenueHero from "./RevenueHero";
 import XposureStudioOverview from "./XposureStudioOverview";
 
-type Metric = { label: string; value: number | string; detail: string; icon: "leads" | "conversations" | "followups" | "qualified" | "revenue" };
+type Metric = { label: string; value: number | string; detail: string; icon: "leads" | "conversations" | "followups" | "qualified" | "revenue" | "reminders" };
 type Notice = { title: string; detail: string; href: string; type: string };
 type AgentMetric = { label: string; value: number | string };
 type Agent = { name: string; role: string; channel: string; status: "live" | "attention" | "limited"; href: string; note: string; metrics: AgentMetric[] };
 
-const icons = { leads: Users, conversations: MessageSquareText, followups: Workflow, qualified: Target, revenue: WalletCards };
+const icons = { leads: Users, conversations: MessageSquareText, followups: Workflow, qualified: Target, revenue: WalletCards, reminders: CalendarDays };
 
 function noticeTone(type: string) {
   const value = String(type || "").toLowerCase();
@@ -152,9 +152,9 @@ export default function DashboardHomeExperience({
           />
 
           <section className={styles.kpiGrid} aria-label="Business KPIs">
-            {metrics.filter((metric) => metric.icon !== "revenue").slice(0, 4).map((metric) => {
+            {metrics.filter((metric) => metric.icon !== "revenue").map((metric) => {
               const Icon = icons[metric.icon];
-              const href = metric.icon === "conversations" ? "/dashboard/conversations" : "/dashboard/limitless/leads";
+              const href = metric.icon === "conversations" ? "/dashboard/conversations" : metric.icon === "followups" ? "/dashboard/limitless/followups" : metric.icon === "reminders" ? "/dashboard/limitless/payments#reminder-status" : "/dashboard/limitless/leads";
               return <Link href={href} key={metric.label} className={styles.kpiCard}><span className={styles.kpiIcon}><Icon size={16} /></span><strong>{metric.value}</strong><span>{metric.label}</span><small>{metric.detail}</small></Link>;
             })}
           </section>

@@ -8,6 +8,7 @@ import PhoneContactsImporter from "@/components/admin/PhoneContactsImporter";
 import styles from "./page.module.css";
 import { getCampaignGroups } from "@/lib/campaign-groups";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
+import { getLeadFollowupStates } from "@/lib/lead-followup-state";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,10 @@ export default async function LeadsPage({
 }) {
   const { organizationId } = await resolveAdminOrganizationScope();
   const params = searchParams ? await searchParams : {};
-  const [leads, groups] = await Promise.all([
+  const [leads, groups, followups] = await Promise.all([
     getCampaignAudienceLeads(organizationId, 1000),
     getCampaignGroups(100),
+    getLeadFollowupStates(organizationId).then(states => ({ states, error: "" })).catch(() => ({ states: null, error: "Follow-up status could not be loaded. Refresh to try again." })),
   ]);
   const hotLeads = leads.filter((lead) => {
     const score = String(lead.score || "").toLowerCase();
@@ -51,6 +53,7 @@ export default async function LeadsPage({
       <nav className={styles.pageActions} aria-label="Lead CRM shortcuts">
         <a href="#lead-control">Review pipeline</a>
         <a href="#lead-tools">Add or import contacts</a>
+        <a href="/dashboard/limitless/followups">Follow-up Control</a>
       </nav>
 
       {saveError ? (
@@ -78,7 +81,7 @@ export default async function LeadsPage({
       ) : null}
 
       <div id="lead-control">
-        <LeadsCrm leads={leads} groups={groups} />
+        <LeadsCrm leads={leads} groups={groups} followupStates={followups.states} followupLoadError={followups.error} />
       </div>
 
       <section id="lead-tools" className={styles.toolsGrid}>

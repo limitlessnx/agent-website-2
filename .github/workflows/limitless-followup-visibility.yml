@@ -1,0 +1,52 @@
+name: Limitless follow-up and reminder visibility
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/lead-followup-state.ts'
+      - 'lib/followup-delivery-state.ts'
+      - 'lib/followup-control.ts'
+      - 'lib/installment-reminder-counts.ts'
+      - 'lib/admin-organization-data.ts'
+      - 'components/admin/LeadsCrm.tsx'
+      - 'components/admin/FollowupControlCenter.tsx'
+      - 'components/admin/DashboardHomeExperience.tsx'
+      - 'app/dashboard/limitless/**'
+      - 'tests/*followup*.test.*'
+      - 'tests/installment-*.test.*'
+      - 'tests/followup-visibility/**'
+      - 'playwright.followup-visibility.config.ts'
+      - '.github/workflows/limitless-followup-visibility.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Read state, activation, delivery and installment regressions
+        run: node --test tests/lead-followup-state.test.cjs tests/followup-delivery-state.test.cjs tests/limitless-manual-followup*.test.cjs tests/limitless-runtime-followup.test.cjs tests/limitless-maia-followup*.test.* tests/limitless-realty-followups-release.test.mjs tests/installment-*.test.*
+      - run: npx tsc --noEmit
+      - name: Scoped lint
+        run: npx eslint lib/lead-followup-state.ts lib/followup-delivery-state.ts lib/installment-reminder-counts.ts lib/followup-control.ts lib/admin-organization-data.ts components/admin/LeadsCrm.tsx components/admin/FollowupControlCenter.tsx components/admin/DashboardHomeExperience.tsx app/dashboard/limitless/leads/page.tsx app/dashboard/limitless/followups/page.tsx app/dashboard/limitless/payments/page.tsx app/dashboard/limitless/payments/installments/page.tsx tests/followup-visibility/* playwright.followup-visibility.config.ts
+      - run: npx playwright install --with-deps chromium
+      - name: Six-width read-only dashboard, CRM, controls and reminder checks
+        run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npx playwright test --config playwright.followup-visibility.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: limitless-followup-reminder-evidence
+          path: |
+            test-results/followup-visibility-results.json
+            test-results/followup-visibility/
+            test-results/followup-visibility-captures/
+          retention-days: 14

@@ -1,6 +1,7 @@
 import { isServerSupabaseConfigured, supabaseServerRequest } from "@/lib/supabase-server-rest";
 import { LIMITLESS_REALTY_ORGANIZATION_ID } from "@/lib/limitless-data";
 import { followupErrorSummary } from "@/lib/limitless-followup-contract";
+import { getFollowupDeliveryStates } from "@/lib/followup-delivery-state";
 
 export type FollowupStep = {
   id: string;
@@ -42,6 +43,7 @@ export type FollowupEnrollment = {
   stop_actor: string | null;
   control_reason: string | null;
   error_summary: string | null;
+  delivery_status?: string | null;
   attempt_count: number;
   current_step: number;
   next_run_at: string | null;
@@ -118,6 +120,7 @@ async function load(organizationId: string, limit = 100) {
 
 export async function getFollowupControlSummary(organizationId = LIMITLESS_REALTY_ORGANIZATION_ID) {
   const rows = await load(organizationId);
+  const deliveryStates = await getFollowupDeliveryStates(organizationId, rows.map(row => row.id));
   const leadIds = [...new Set(rows.map((row) => row.lead_id).filter(Boolean))];
   const propertyIds = [...new Set(rows.map((row) => row.property_id).filter((id): id is string => Boolean(id)))];
   const sequenceIds = [...new Set(rows.map((row) => row.sequence_id).filter((id): id is string => Boolean(id)))];
@@ -172,7 +175,8 @@ export async function getFollowupControlSummary(organizationId = LIMITLESS_REALT
       stop_reason: sequence?.stop_reason || null,
       stop_actor: sequence?.stop_actor || null,
       control_reason: row.control_reason || null,
-      error_summary: followupErrorSummary(row.last_error),
+      error_summary: followupErrorSummary(deliveryStates[row.id]?.error_message || row.last_error),
+      delivery_status: deliveryStates[row.id]?.delivery_status || (row.status === "sent" ? "accepted" : null),
       attempt_count: Number(row.attempt_count || 0),
       current_step: row.stage || 0,
       next_run_at: runnable ? row.scheduled_at : null,
@@ -192,11 +196,11 @@ export async function getFollowupControlSummary(organizationId = LIMITLESS_REALT
     organization_id: row.organization_id,
     lead_id: row.lead_id,
     channel: row.channel,
-    status: row.status,
+    status: deliveryStates[row.id]?.delivery_status || (row.status === "sent" ? "accepted" : row.status),
     n8n_execution_id: null,
     scheduled_for: row.scheduled_at,
     executed_at: row.last_attempt_at || row.sent_at || null,
-    error_message: followupErrorSummary(row.last_error),
+    error_message: followupErrorSummary(deliveryStates[row.id]?.error_message || row.last_error),
     attempt_count: Number(row.attempt_count || 0),
     created_at: row.last_attempt_at || row.sent_at || row.created_at || row.scheduled_at,
   })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
