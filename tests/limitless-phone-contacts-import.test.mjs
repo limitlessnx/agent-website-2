@@ -33,5 +33,5 @@ test("phone contact picker requests only user-selected contacts and offers a VCF
   assert.match(component, /picker\.select\(\["name", "tel", "email"\], \{ multiple: true \}\)/);
   assert.match(component, /onClick=\{chooseFromPhone\}/);
   assert.match(component, /accept="\.vcf,\.vcard,text\/vcard,text\/x-vcard,application\/vcard"/);
-  assert.match(component, /Import \.vcf file/);
+  assert.match(component, /Choose \.vcf contact file/);
 });
