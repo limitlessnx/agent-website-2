@@ -6,7 +6,7 @@ import { socialWeekStart } from "@/lib/social-week";
 
 export type RealtySource = { url: string; title: string };
 type Draft = { title: string; hook: string; caption: string; cta: string; visual_brief: string; source_urls: string[] };
-export type RealtyDraftRequest = { mode: "research" | "idea"; idea: string; requestId: string; actor: string };
+export type RealtyDraftRequest = { mode: "research" | "idea"; idea: string; requestId: string; actor: string; format?: "image"|"carousel" };
 
 function publicUrl(value: string) {
   try {
@@ -44,22 +44,23 @@ async function responses(body: Record<string, unknown>) {
   return await response.json() as Record<string, unknown>;
 }
 
-export async function generateRealtyDraftCopy(brand: SocialBrand, request: RealtyDraftRequest) {
+export async function generateRealtyDraftCopy(brand: SocialBrand, request: RealtyDraftRequest, formats?: Array<"carousel"|"reel">) {
   if (!isRealtySocialBrand(brand)) throw new Error("Real estate strategy is not enabled for this organization.");
-  const count = request.mode === "research" ? 3 : 1;
+  const count = formats?.length || (request.mode === "research" ? 3 : 1);
+  if(formats && (request.mode!=="research"||count!==7||formats.some(f=>f!=="carousel")))throw Error("Limitless Realty weekly planning currently requires seven carousels.");
   let sources: RealtySource[] = [], coverage = "";
   if (request.mode === "research") {
     const researched = await responses({
       tools: [{ type: "web_search", user_location: { type: "approximate", country: "NG" } }], tool_choice: "required",
       include: ["web_search_call.action.sources"],
-      input: [{ role: "system", content: REALTY_SOCIAL_PROMPT }, { role: "user", content: `Today is ${new Date().toISOString().slice(0,10)}. Research recent Nigerian real estate coverage, preferably from the past 14 days, prioritizing original reporting and government/official sources. Include relevant Edo State/Benin City developments if supported. Summarize three useful topic candidates, dates when explicitly available and caveats. Do not claim measured popularity. Search the web; do not use memory as current evidence.` }],
+      input: [{ role: "system", content: REALTY_SOCIAL_PROMPT }, { role: "user", content: `Today is ${new Date().toISOString().slice(0,10)}. Research recent Nigerian real estate coverage, preferably from the past 14 days, prioritizing original reporting and government/official sources. Include relevant Edo State/Benin City developments if supported. Summarize ${count} distinct useful topic candidates, dates when explicitly available and caveats. Do not claim measured popularity. Search the web; do not use memory as current evidence.` }],
     });
     sources = realtyResearchSources(researched); coverage = outputText(researched).slice(0, 18000);
     if (!sources.length || !coverage.trim()) throw new Error("Research returned no usable sourced coverage. No news drafts were created.");
   }
   const fields = { title: {type:"string"}, hook: {type:"string"}, caption: {type:"string"}, cta: {type:"string"}, visual_brief: {type:"string"}, source_urls: {type:"array",items:{type:"string"}} };
   const generated = await responses({
-    input: [{role:"system",content:REALTY_SOCIAL_PROMPT},{role:"user",content:JSON.stringify({ instruction:`Create ${count} distinct review drafts. Format is a static image with caption.`, brand:{name:brand.name,tone:brand.tone,audience:brand.audience,ctas:brand.ctas,content_pillars:brand.content_pillars}, mode:request.mode, idea:request.idea, coverage, sources })}],
+    input: [{role:"system",content:REALTY_SOCIAL_PROMPT},{role:"user",content:JSON.stringify({ instruction:`Create ${count} distinct review concepts. ${formats ? `Formats in order: ${formats.join(", ")}. Each concept must support that medium and a complete caption, not contain production instructions as audience copy.` : request.format==="carousel"?"Format is a carousel concept with a complete caption and truthful visual brief.":"Format is a static image with caption."}`, brand:{name:brand.name,tone:brand.tone,audience:brand.audience,ctas:brand.ctas,content_pillars:brand.content_pillars}, mode:request.mode, idea:request.idea, coverage, sources, context:brand.visual_rules?.weekly_context||null })}],
     text:{format:{type:"json_schema",name:"realty_social_drafts",strict:true,schema:{type:"object",additionalProperties:false,required:["posts"],properties:{posts:{type:"array",minItems:count,maxItems:count,items:{type:"object",additionalProperties:false,required:Object.keys(fields),properties:fields}}}}}},
   });
   let parsed: {posts: Draft[]};
@@ -82,6 +83,7 @@ export async function prepareRealtySocialDrafts(db: SupabaseClient, organization
   if (organizationId !== REALTY_SOCIAL_ORGANIZATION || !request.actor.trim()) throw new Error("Limitless Realty administrator access is required.");
   if (!["research","idea"].includes(request.mode) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.requestId)) throw new Error("Invalid content request.");
   if (request.idea.length > 4000 || (request.mode==="idea" && !request.idea.trim())) throw new Error("Enter a post idea of up to 4000 characters.");
+  if(request.format&&!['image','carousel'].includes(request.format))throw Error("Choose a supported draft format.");
   const {data:brand,error:brandError} = await db.from("social_brands").select("*").eq("organization_id",organizationId).eq("slug","limitless-realty").maybeSingle();
   if (brandError) throw brandError;
   if (!isRealtySocialBrand(brand)) throw new Error("Set up the Limitless Realty Social Brand first.");
@@ -99,7 +101,7 @@ export async function prepareRealtySocialDrafts(db: SupabaseClient, organization
   const rows = result.posts.map((post,index)=>{
     const hex=createHash("sha256").update(`${organizationId}:${request.requestId}:${index}`).digest("hex");
     const id=`${hex.slice(0,8)}-${hex.slice(8,12)}-5${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
-    return {id,organization_id:organizationId,brand_id:brand.id,title:post.title,caption:post.caption,format:"image",platforms:["instagram"],status:"review",approved_at:null,published_at:null,media:[],
+    return {id,organization_id:organizationId,brand_id:brand.id,title:post.title,caption:post.caption,format:request.format||"image",platforms:["instagram"],status:"review",approved_at:null,published_at:null,media:[],
       content:{source:"limitless_realty_editor",hook:post.hook,cta:post.cta,pillar:"Nigerian real estate",objective:post.cta,creative_brief:post.visual_brief,source_links:result.sources.filter(s=>post.source_urls.includes(s.url)),research_observed_at:request.mode==="research"?observedAt:null,week_start:socialWeekStart(),manual_idea:request.mode==="idea"?request.idea:null},
       metadata:{realty_request_id:request.requestId,generation_mode:request.mode,ai_generated:true,requires_human_review:true,popularity_verified:false}};
   });

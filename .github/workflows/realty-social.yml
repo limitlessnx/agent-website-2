@@ -9,7 +9,7 @@ on:
       - 'src/trigger/social-*'
       - 'app/dashboard/social/**'
       - 'app/api/social/realty/**'
-      - 'components/admin/RealtySocial*'
+      - 'components/admin/Realty*'
       - 'components/admin/DashboardHomeExperience.tsx'
       - 'components/admin/AdminSidebar.tsx'
       - 'components/admin/WorkspaceRail.tsx'
@@ -39,7 +39,7 @@ jobs:
       - name: TypeScript
         run: npx tsc --noEmit
       - name: Scoped lint
-        run: npx eslint lib/social-real-estate*.ts lib/social-realty*.ts lib/social.ts lib/admin-organization-data.ts src/trigger/social-publisher.ts src/trigger/social-daily-publishing.ts components/admin/RealtySocial*.tsx components/admin/DashboardHomeExperience.tsx components/admin/AdminSidebar.tsx components/admin/WorkspaceRail.tsx components/admin/navigationConfig.ts app/dashboard/social/real-estate-actions.ts app/dashboard/social/layout.tsx app/dashboard/social/create/page.tsx app/dashboard/social/page.tsx app/dashboard/social/review/page.tsx app/dashboard/social/posts/page.tsx app/dashboard/social/brand/page.tsx lib/social-ai.ts lib/social-static-graphics.tsx lib/social-meta-publisher.ts app/dashboard/social/integrations/actions.ts app/dashboard/social/integrations/page.tsx app/api/social/realty/instagram/*/route.ts tests/social-realty/*.ts tests/social-realty/*.cjs tests/social-real-estate.test.mjs tests/social-realty-instagram.test.mjs tests/social-realty-dispatch.test.mjs playwright.social-realty.config.ts
+        run: npx eslint lib/social-real-estate*.ts lib/social-realty*.ts lib/social-media-identity.ts lib/social-carousel-core.tsx lib/social-carousels.tsx lib/social-weekly-plan.ts lib/social.ts lib/admin-organization-data.ts src/trigger/social-publisher.ts src/trigger/social-daily-publishing.ts src/trigger/social-carousel-renderer.tsx src/trigger/social-review-week.ts src/trigger/social-weekly-cycle.ts components/admin/Realty*.tsx components/admin/DashboardHomeExperience.tsx components/admin/AdminSidebar.tsx components/admin/WorkspaceRail.tsx components/admin/navigationConfig.ts app/dashboard/social/real-estate-actions.ts app/dashboard/social/real-estate-brand-actions.ts app/dashboard/social/manual/page.tsx app/dashboard/social/assets/page.tsx app/dashboard/social/layout.tsx app/dashboard/social/create/page.tsx app/dashboard/social/page.tsx app/dashboard/social/review/page.tsx app/dashboard/social/posts/page.tsx app/dashboard/social/brand/page.tsx lib/social-ai.ts lib/social-static-graphics.tsx lib/social-meta-publisher.ts app/dashboard/social/integrations/actions.ts app/dashboard/social/integrations/page.tsx app/api/social/realty/instagram/*/route.ts tests/social-realty/*.ts tests/social-realty/*.cjs tests/social-real-estate.test.mjs tests/social-realty-instagram.test.mjs tests/social-realty-dispatch.test.mjs tests/social-realty-brand-pipeline.test.mjs playwright.social-realty.config.ts
       - run: npx playwright install --with-deps chromium
       - name: Six-width synthetic generation, review, errors and isolation
         run: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$(node -p 'require("@playwright/test").chromium.executablePath()')" npx playwright test --config playwright.social-realty.config.ts

@@ -1,3 +1,5 @@
+import RealtyBrandIdentityForm from "@/components/admin/RealtyBrandIdentityForm";
+import {isRealtySocialBrand} from "@/lib/social-real-estate-policy";
 import Link from "next/link";
 import { updateSocialBrandAction } from "@/app/dashboard/social/actions";
 import { getSocialBrand } from "@/lib/social";
@@ -49,7 +51,7 @@ export default async function SocialBrandPage() {
             </label>
 
             <div className="admin-list-row">
-              <div><strong>Visual system</strong><span>{Object.entries(brand.visual_rules).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</span></div>
+              <div><strong>Visual system</strong><span>{isRealtySocialBrand(brand)?"Manage the approved logo, palette, typography and footer below.":Object.entries(brand.visual_rules).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</span></div>
               <em>locked</em>
             </div>
 
@@ -57,6 +59,7 @@ export default async function SocialBrandPage() {
           </form>
         ) : <p>No Social Brand exists for this organization.</p>}
       </section>
+      {brand&&isRealtySocialBrand(brand)?<RealtyBrandIdentityForm identity={(brand.visual_rules.identity||{}) as Record<string,unknown>} weekly={brand.metadata.weekly_review_enabled===true}/>:null}
     </main>
   );
 }

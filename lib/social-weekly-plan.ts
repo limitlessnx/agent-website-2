@@ -1,3 +1,5 @@
+import {isRealtySocialBrand} from "@/lib/social-real-estate-policy";
+import {realtyBrandReadiness} from "@/lib/social-realty-brand";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { tasks } from "@trigger.dev/sdk";
 import { socialWeeklyFormatMix } from "@/lib/social-week";
@@ -17,6 +19,8 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
 
   if (brandError) throw brandError;
   if (!brand) throw new Error("Create a Social Brand before generating content.");
+  const realty=isRealtySocialBrand(brand);
+  if(realty){const readiness=await realtyBrandReadiness(supabase,brand);if(!readiness.ready)throw Error(readiness.blockers.join(" "));}
 
   const { data: existingPlan, error: existingPlanError } = await supabase
     .from("social_content_plans")
@@ -58,6 +62,7 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
       throw new Error("Fluxknight weekly review supports Instagram only.");
     }
   }
+  if(realty && (plan.posts.length!==7||plan.posts.some(post=>post.format!=="carousel"||post.platforms.some(platform=>platform!=="instagram")||!post.source_links?.length)))throw Error("Limitless Realty needs seven sourced Instagram carousels.");
   const generatedAt = new Date().toISOString();
 
   const { data: savedPlan, error: planError } = await supabase
@@ -107,10 +112,12 @@ export async function prepareSocialReviewWeek(supabase: SupabaseClient, organiza
       audience_angle: plan.audience_angle,
       planned_index: index + 1,
       week_start: weekStart,
+      ...(realty ? {source_links:post.source_links,research_observed_at:post.research_observed_at} : {}),
     },
     media: [],
     metadata: {
       ai_generated: true,
+      ...(realty ? {requires_human_review:true,popularity_verified:false,generation_mode:"weekly_research"} : {}),
       model,
       generation_phase: "3.1",
       generated_at: generatedAt,

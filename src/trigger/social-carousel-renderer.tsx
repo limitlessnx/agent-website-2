@@ -1,4 +1,7 @@
-import { task } from "@trigger.dev/sdk";
+import {refreshRealtyWeekStatus} from "@/lib/social-realty-week-status";
+import {socialMediaIdentity} from "@/lib/social-media-identity";
+import {REALTY_SOCIAL_PROMPT} from "@/lib/social-real-estate-policy";
+import { logger, task } from "@trigger.dev/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   FLUX_SOCIAL_CAROUSEL_TEMPLATE, HEIGHT, WIDTH,
@@ -29,56 +32,66 @@ export const fluxSocialRenderCarousel = task({
       return { skipped: true, reason: "Carousel already generated" };
     }
     const { data: brand, error: brandError } = await supabase.from("social_brands")
-      .select("id,name,audience").eq("organization_id", payload.organizationId)
+      .select("id,name,audience,organization_id,metadata,visual_rules").eq("organization_id", payload.organizationId)
       .eq("id", post.brand_id).single();
     if (brandError) throw brandError;
+    let identity:ReturnType<typeof socialMediaIdentity>;
+    try{identity=socialMediaIdentity(brand);}catch(error){
+      await supabase.from("social_posts").update({metadata:{...originalMetadata,carousel_render_status:"failed",carousel_render_error:error instanceof Error?error.message:"Approve the visual identity first."}}).eq("organization_id",payload.organizationId).eq("id",post.id).in("status",["draft","review"]);
+      if(typeof post.content?.week_start==="string")try{await refreshRealtyWeekStatus(supabase,payload.organizationId,brand.id,post.content.week_start);}catch{logger.warn("Weekly summary refresh unavailable",{postId:post.id});}
+      throw error;
+    }
 
-    const { error: startedError } = await supabase.from("social_posts").update({
+    const { data: started, error: startedError } = await supabase.from("social_posts").update({
       metadata: { ...originalMetadata, carousel_render_status: "rendering", carousel_render_error: null },
-    }).eq("organization_id", payload.organizationId).eq("id", post.id);
+    }).eq("organization_id", payload.organizationId).eq("id", post.id).in("status",["draft","review"]).select("id").maybeSingle();
+    if(!started&&!startedError)return{skipped:true,reason:"Post left draft review before rendering."};
     if (startedError) throw startedError;
 
     try {
       const content = (post.content || {}) as Record<string, unknown>;
-      const { plan, model } = await generateCarouselPlan({
-        title: post.title || "",
-        hook: String(content.hook || post.title || ""),
-        caption: post.caption || "",
-        cta: String(content.cta || "See how Fluxknight works"),
-        contentPillar: String(content.content_pillar || "Business automation"),
-        objective: String(content.objective || ""),
-        creativeBrief: String(content.creative_brief || ""),
-        audience: brand.audience || "",
-      });
-
       const { data: registeredLogo, error: logoRefError } = await supabase.from("social_brand_assets")
         .select("social_asset_id")
         .eq("organization_id", payload.organizationId)
         .eq("brand_id", brand.id)
         .eq("asset_role", "logo_primary")
         .eq("is_active", true)
-        .limit(1).maybeSingle();
+        .order("created_at",{ascending:true}).limit(1).maybeSingle();
       if (logoRefError) throw logoRefError;
       let logoUrl: string | null = null;
       if (registeredLogo?.social_asset_id) {
         const { data: logoAsset, error: logoError } = await supabase.from("social_assets")
-          .select("bucket_id,storage_path")
+          .select("bucket_id,storage_path,brand_id,status,mime_type")
           .eq("organization_id", payload.organizationId)
           .eq("id", registeredLogo.social_asset_id).single();
         if (logoError) throw logoError;
+        if(identity&&(registeredLogo.social_asset_id!==identity.logoAssetId||logoAsset.brand_id!==brand.id||logoAsset.status!=="ready"||logoAsset.mime_type!=="image/png"||logoAsset.bucket_id!==BUCKET||!String(logoAsset.storage_path||"").startsWith(payload.organizationId+"/")))throw Error("The approved logo changed or is unavailable. Review the visual identity first.");
         const { data: signed, error: signedError } = await supabase.storage
           .from(logoAsset.bucket_id).createSignedUrl(logoAsset.storage_path, 3600);
         if (signedError) throw signedError;
         logoUrl = signed.signedUrl;
       }
 
+      if(identity && !logoUrl)throw Error("Register Limitless Realty's approved primary logo before rendering branded media.");
+      const { plan, model } = await generateCarouselPlan({
+        title: post.title || "",
+        hook: String(content.hook || post.title || ""),
+        caption: post.caption || "",
+        cta: String(content.cta || (identity ? "Message Limitless Realty to discuss your property needs." : "See how Fluxknight works")),
+        contentPillar: String(content.content_pillar || (identity ? "Nigerian real estate" : "Business automation")),
+        objective: String(content.objective || ""),
+        creativeBrief: String(content.creative_brief || ""),
+        audience: brand.audience || "",
+        ...(identity ? {brandContext:{name:brand.name,editorialPolicy:REALTY_SOCIAL_PROMPT,sourceLinks:Array.isArray(content.source_links)?content.source_links:[]}} : {}),
+      });
+
       const ids: string[] = [];
       for (let i = 0; i < plan.slides.length; i += 1) {
         const slide = plan.slides[i];
         const response = await renderSlide({
-          brandName: brand.name, logoUrl, slide, index: i + 1,
+          brandName: brand.name, logoUrl, identity, slide, index: i + 1,
           total: plan.slides.length,
-          pillar: String(content.content_pillar || "Business automation"),
+          pillar: String(content.content_pillar || (identity ? "Nigerian real estate" : "Business automation")),
         });
         const bytes = new Uint8Array(await response.arrayBuffer());
         const storagePath = `${payload.organizationId}/${post.id}/${crypto.randomUUID()}-carousel-${i + 1}.png`;
@@ -107,6 +120,7 @@ export const fluxSocialRenderCarousel = task({
               carousel_total: plan.slides.length,
               slide_type: slide.type,
               generated_from: slide,
+              ...(identity ? {media_identity:identity} : {}),
               model,
               storage_policy: "supabase-only",
             },
@@ -144,6 +158,7 @@ export const fluxSocialRenderCarousel = task({
       }).eq("organization_id", payload.organizationId).eq("id", post.id)
         .in("status", ["draft", "review"]);
       if (updateError) throw updateError;
+      if(identity && typeof content.week_start==="string")try{await refreshRealtyWeekStatus(supabase,payload.organizationId,brand.id,content.week_start);}catch{logger.warn("Carousel saved; weekly summary needs refresh",{postId:post.id});}
       return { postId: post.id, carouselAssetIds: ids, template: FLUX_SOCIAL_CAROUSEL_TEMPLATE };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -158,6 +173,7 @@ export const fluxSocialRenderCarousel = task({
         },
       }).eq("organization_id", payload.organizationId).eq("id", post.id)
         .in("status", ["draft", "review"]);
+      if(identity && typeof post.content?.week_start==="string")try{await refreshRealtyWeekStatus(supabase,payload.organizationId,brand.id,post.content.week_start);}catch{logger.warn("Weekly summary refresh unavailable",{postId:post.id});}
       throw error;
     }
   },

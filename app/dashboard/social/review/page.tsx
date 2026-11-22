@@ -230,7 +230,7 @@ export default async function SocialReviewPage({ searchParams }: { searchParams:
                     </details>
 
                     <section className={styles.productionActions} aria-label="Generate media">
-                      <div className={styles.sectionHeading}><strong>Next action</strong><span>{realty ? "Prepare the final graphic, then review its copy and sources. Media generation does not approve or publish this draft." : "Flux Social generates new weekly carousels automatically. Regeneration is an optional manual override."}</span></div>
+                      <div className={styles.sectionHeading}><strong>Next action</strong><span>{realty ? (post.format==="carousel"?"Inspect every carousel slide, then review its copy and sources. Media generation does not approve or publish this draft.":"Prepare the final graphic, then review its copy and sources. Media generation does not approve or publish this draft.") : "Flux Social generates new weekly carousels automatically. Regeneration is an optional manual override."}</span></div>
                       {post.format === "carousel" && ["queued", "rendering"].includes(carouselRenderStatus) ? (
                         <div className={styles.progressControls}>
                           <span role="status">Carousel slides are being generated automatically.</span>

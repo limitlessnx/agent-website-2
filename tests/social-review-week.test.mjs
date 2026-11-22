@@ -12,7 +12,9 @@ function setup({ enabled = true, active = true, metricsFail = false } = {}) {
     if (name === '@trigger.dev/sdk') return { logger: { info() {}, warn() {} }, task: (definition) => definition, schedules: { task: (definition) => definition } };
     if (name === '@/lib/supabase/admin') return { createAdminClient: () => db };
     if (name === '@/lib/social-weekly-plan') return { prepareSocialReviewWeek: async (...args) => { prepared.push(args); return { postIds: ['draft'] }; } };
-    if (name === '@/lib/social-week') return { socialWeekStart: () => '2026-11-16' };
+    if (name === '@/lib/social-realty-week-status') return {refreshRealtyWeekStatus:()=>assert.fail('Fluxknight must not update Realty status')};
+    if (name === '@/lib/social-real-estate-policy') return {REALTY_SOCIAL_ORGANIZATION:'b15f21b4-5697-4d21-9421-8a34eae3476d',isRealtySocialBrand:()=>false};
+    if (name === '@/lib/social-week') return { validSocialWeek:()=>true, socialWeekStart: () => '2026-11-16' };
     if (name === '@/lib/social-meta-sync') return { runMetaAnalyticsSync: async () => { if (metricsFail) throw new Error('Offline'); return { collected: {}, ingestion: { status: 'succeeded' } }; } };
     throw new Error(name);
   } });
