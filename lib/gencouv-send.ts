@@ -37,6 +37,8 @@ function savedResult(reservation: Reservation, replayed: boolean) {
     messages: messages.map(message => ({ id: message.id, status: message.status, provider_email_id: message.provider_email_id || null })),
     note: ["unknown", "partial", "submitting"].includes(reservation.status)
       ? "This submission needs reconciliation. Do not create another send request for these recipients."
+      : reservation.status === "failed" ? "The provider rejected this batch. Correct the problem before preparing a new reviewed attempt."
+      : reservation.status === "cancelled" ? "This batch was cancelled before provider submission. Review recipient eligibility before a new attempt."
       : replayed ? "The saved result was returned. No duplicate provider submission was made."
       : "Provider submission recorded. Acceptance does not confirm delivery." };
 }

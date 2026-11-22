@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 type Category={id:string;name:string};
 type Contact={id:string;email:string;full_name:string|null;eligible:boolean;reason:string};
-type Audience={total:number;eligible:number;suppressed:number;unverified:number;truncated:boolean;contacts:Contact[]};
+type Audience={total:number;eligible:number;suppressed:number;unverified:number;reserved?:number;invalid?:number;truncated:boolean;contacts:Contact[]};
 type Campaign={id:string;from_email:string;subject:string;text_body:string;status:string;category_id:string|null};
 type Settings={enabled:boolean;daily_limit:number;manual_daily_limit:number;worker_verified:boolean};
 export default function GencouvBulkCampaigns(){
@@ -60,7 +60,7 @@ export default function GencouvBulkCampaigns(){
     <div className="gencouv-action-row"><button disabled={busy||locked||!subject.trim()||!message.trim()} onClick={()=>void saveDraft()}>Save campaign draft</button><button disabled={busy||!campaignId||dirty} onClick={()=>void preview()}>Preview eligible audience</button><button disabled={busy||!subject.trim()||!message.trim()} onClick={()=>setReviewed(true)}>Preview message</button></div>
     {locked?<p>This campaign’s content is locked after its first reservation. Previously reserved recipients are excluded from subsequent batches. Choose New campaign for different content.</p>:null}
     {reviewed?<section className="gencouv-message-preview" aria-label="Campaign message preview"><h3>{subject}</h3><p>{message}</p><small>Names are personalized for each selected contact. Unsubscribe is included on every marketing email.</small></section>:null}
-    {audience?<div className="gencouv-audience" aria-label="Eligible recipient selection"><p>{audience.total} reviewed · {audience.eligible} eligible · {audience.unverified} permission unverified · {audience.suppressed} suppressed</p>{audience.truncated?<p role="status">Showing up to 500 contacts. Use a category to narrow this audience.</p>:null}
+    {audience?<div className="gencouv-audience" aria-label="Eligible recipient selection"><p>{audience.total} reviewed · {audience.eligible} eligible · {audience.unverified} permission unverified · {audience.suppressed} suppressed · {audience.reserved||0} already reserved · {audience.invalid||0} invalid addresses</p>{audience.truncated?<p role="status">Showing up to 500 contacts. Use a category to narrow this audience.</p>:null}
       <button disabled={busy||Boolean(batch)} onClick={()=>{setSelected(audience.contacts.filter(contact=>contact.eligible).slice(0,100).map(contact=>contact.id));setConfirmed(false);requestId.current=null;}}>Select up to 100 eligible contacts</button>
       <div className="gencouv-recipient-list">{audience.contacts.map(contact=><label key={contact.id}><input type="checkbox" checked={selected.includes(contact.id)} disabled={busy||Boolean(batch)||!contact.eligible||selected.length>=100&&!selected.includes(contact.id)} onChange={event=>{setSelected(current=>event.target.checked?[...current,contact.id]:current.filter(id=>id!==contact.id));setConfirmed(false);requestId.current=null;}}/><span><strong>{contact.full_name||"Unnamed contact"}</strong><span>{contact.email}</span><small>{contact.reason.replaceAll("_"," ")}</small></span></label>)}</div>
     </div>:null}
@@ -70,6 +70,6 @@ export default function GencouvBulkCampaigns(){
     <button className="gencouv-primary" disabled={busy||Boolean(batch)||dirty||!campaignId||!reviewed||!selected.length||!confirmed||!consentConfirmed} onClick={()=>void send()}>{busy?"Processing…":`Send one-time email to ${selected.length} recipient${selected.length===1?"":"s"}`}</button>
     {batch?<p><Link href="#email-history">Review this batch in Email history</Link>. No further send was scheduled.</p>:null}
     {batch&&["failed","cancelled"].includes(batch.status)?<button disabled={busy} onClick={()=>{resetReview();setStatus("Review and explicitly confirm a new attempt after correcting the rejection.");}}>Prepare a new reviewed attempt</button>:null}
-    {error?<p role="alert">{error}</p>:null}{status?<p role={batch&&["unknown","partial","submitting"].includes(batch.status)?"alert":"status"}>{status}</p>:null}
+    {error?<p role="alert">{error}</p>:null}{status?<p role={batch&&["unknown","partial","submitting","failed","cancelled"].includes(batch.status)?"alert":"status"}>{status}</p>:null}
   </section>;
 }

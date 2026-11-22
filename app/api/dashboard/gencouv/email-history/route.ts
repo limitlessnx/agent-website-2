@@ -9,7 +9,16 @@ export async function GET(request: Request) {
     const page = Math.floor(Math.max(0, Math.min(10000, Number(new URL(request.url).searchParams.get("page")) || 0)));
     const result = await db.from("gencouv_email_messages").select("id,recipient_email,subject,status,provider_email_id,created_at,sent_at,delivered_at,error_message,send_batch_id,direction,from_email", { count: "exact" }).eq("organization_id", organizationId).eq("direction", "outbound").order("created_at", { ascending: false }).order("id").range(page * 50, page * 50 + 49);
     if (result.error) throw result.error;
-    return NextResponse.json({ messages: result.data || [], total: result.count, page }, { headers: gencouvPrivateHeaders });
+    const batchIds=[...new Set((result.data||[]).flatMap(message=>message.send_batch_id?[message.send_batch_id]:[]))];
+    const batches=batchIds.length?await db.from("gencouv_send_batches").select("id,status,error_summary").eq("organization_id",organizationId).in("id",batchIds):{data:[],error:null};
+    if(batches.error)throw batches.error;
+    const states=new Map((batches.data||[]).map(batch=>[batch.id,batch]));
+    const messages=(result.data||[]).map(message=>{
+      const batch=states.get(message.send_batch_id||"");
+      const pending=message.status==="queued"&&batch&&["submitting","unknown","partial"].includes(batch.status);
+      return{...message,status:pending?"unknown":message.status,submission_status:batch?.status||null,error_message:pending?(batch.error_summary||"Provider outcome is awaiting confirmation. Reconcile this batch without resending."):message.error_message};
+    });
+    return NextResponse.json({ messages, total: result.count, page }, { headers: gencouvPrivateHeaders });
   } catch (error) { const safe = gencouvError(error); return NextResponse.json({ error: safe.message }, { status: safe.status, headers: gencouvPrivateHeaders }); }
 }
 function email(value: unknown) { return String(value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || ""; }

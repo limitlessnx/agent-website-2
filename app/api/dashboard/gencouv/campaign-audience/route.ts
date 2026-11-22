@@ -60,16 +60,18 @@ export async function GET(request: NextRequest) {
     if (suppressionError) return NextResponse.json({error:"Suppression check unavailable. Audience withheld."},{status:503,headers});
     for (const row of stopped || []) suppressed.add(String(row.normalized_email).toLowerCase());
   }
-  const stats={eligible:0,unverified:0,suppressed:0};
+  const stats={eligible:0,unverified:0,suppressed:0,reserved:0,invalid:0};
   const contacts = rows.map(row=>{
     const email=String(row.email||"").trim().toLowerCase();
     const blocked = suppressed.has(email)||["blocked","archived","unsubscribed","bounced","complained"].includes(row.status||"");
     const previouslyReserved=reserved.has(email);
     const eligible = !blocked && !previouslyReserved && GENCOUV_EMAIL.test(email) && hasGencouvMarketingConsent(row);
     if (blocked) stats.suppressed++;
+    else if (previouslyReserved) stats.reserved++;
+    else if (!GENCOUV_EMAIL.test(email))stats.invalid++;
     else if (eligible) stats.eligible++;
     else stats.unverified++;
-    return {id:row.id,full_name:row.full_name,email,eligible,reason:blocked?"suppressed":previouslyReserved?"already_reserved":eligible?"consent_granted":"consent_unverified"};
+    return {id:row.id,full_name:row.full_name,email,eligible,reason:blocked?"suppressed":previouslyReserved?"already_reserved":!GENCOUV_EMAIL.test(email)?"invalid_email":eligible?"consent_granted":"consent_unverified"};
   });
   return NextResponse.json({total:contacts.length,...stats,truncated,contacts:contacts.slice(0,500),note:"Preview only. No audience is enrolled or emailed."},{headers});
 }
