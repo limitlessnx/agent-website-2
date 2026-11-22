@@ -28,6 +28,7 @@ const limitless: Item[] = [
   { href: "/dashboard/activity", label: "Activity", Icon: Activity },
   { href: "/dashboard/limitless/properties", label: "Properties", Icon: Home },
   { href: "/dashboard/limitless/agentic", label: "Agentic", Icon: BrainCircuit },
+  { href: "/dashboard/social", label: "Flux Social", Icon: Megaphone },
   { href: "/dashboard/workflows", label: "Automations", Icon: Zap },
   { href: "/dashboard/limitless/payments", label: "Payments", Icon: Activity },
 ];

@@ -87,6 +87,12 @@ export function isAdminNavItemActive(pathname:string,href:string,exact=false){
   return exact?pathname===route:pathname===route||pathname.startsWith(`${route}/`);
 }
 
-export function getActiveAdminNavGroup(pathname:string){
-  return ADMIN_NAV_GROUPS.find((group)=>group.sections.some((section)=>section.items.some((item)=>isAdminNavItemActive(pathname,item.href,item.exact))))?.id;
+// Presentation only: route and action authorization still resolve server-side.
+export function getAdminNavGroupsForWorkspace(workspace:{kind:"system"|"tenant";id:string}):AdminNavGroup[]{
+  if(workspace.kind!=="system"||!["fluxknight","limitless-realty"].includes(workspace.id))return ADMIN_NAV_GROUPS;
+  return ADMIN_NAV_GROUPS.map(group=>group.id!=="communications"?group:{...group,sections:group.sections.map((section,index)=>index!==0?section:{...section,items:[{href:"/dashboard/social",label:"Flux Social"},...section.items]})});
+}
+
+export function getActiveAdminNavGroup(pathname:string,groups:AdminNavGroup[]=ADMIN_NAV_GROUPS){
+  return groups.find((group)=>group.sections.some((section)=>section.items.some((item)=>isAdminNavItemActive(pathname,item.href,item.exact))))?.id;
 }
