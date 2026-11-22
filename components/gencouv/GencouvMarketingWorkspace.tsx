@@ -46,7 +46,7 @@ export default function GencouvMarketingWorkspace(){
         <label className="admin-field">Subject<input value={subject} maxLength={200} onChange={e=>{setSubject(e.target.value);setConfirmed(false);requestId.current=null;}}/></label>
         <label className="admin-field">Message<textarea value={message} rows={10} maxLength={30000} onChange={e=>{setMessage(e.target.value);setConfirmed(false);requestId.current=null;}}/></label>
         <label style={{display:"flex",gap:8,alignItems:"start"}}><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> I have checked the recipient, replaced all placeholders, and reviewed this one-to-one email.</label>
-        <button type="button" disabled={sending||!confirmed||!to||!subject.trim()||!message.trim()} onClick={()=>void send()}>{sending?"Sending…":"Send individual email"}</button>
+        <button className="gencouv-primary" type="button" disabled={sending||!confirmed||!to||!subject.trim()||!message.trim()} onClick={()=>void send()}>{sending?"Sending…":"Send individual email"}</button>
       </div>
       {error&&<p role="alert" style={{color:"#fca5a5"}}>{error}</p>}
       {feedback&&<p role="status">{feedback}</p>}

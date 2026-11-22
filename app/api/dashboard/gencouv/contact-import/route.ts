@@ -9,7 +9,7 @@ export async function GET() {
     const { db, organizationId } = await requireGencouvAdmin();
     const [contacts, history] = await Promise.all([
       db.from("crm_customers").select("id,full_name,email,company_name,metadata,created_at").eq("organization_id", organizationId).not("email", "is", null).order("created_at", { ascending: false }).limit(100),
-      db.from("gencouv_sync_runs").select("id,status,records_read,records_written,metadata,started_at,completed_at").eq("organization_id", organizationId).eq("source", "document_import").order("started_at", { ascending: false }).limit(20),
+      db.from("gencouv_sync_runs").select("id,status,records_read,records_written,metadata,started_at,completed_at").eq("organization_id", organizationId).eq("source", "dashboard").eq("metadata->>import_kind", "document_import").order("started_at", { ascending: false }).limit(20),
     ]);
     if (contacts.error) throw contacts.error;
     return NextResponse.json({ contacts: contacts.data || [], history: history.error ? null : history.data || [], history_unavailable: Boolean(history.error) }, { headers: gencouvPrivateHeaders });

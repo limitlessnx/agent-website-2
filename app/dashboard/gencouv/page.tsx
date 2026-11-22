@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { loadGencouvDashboardFeed } from "@/lib/gencouv-dashboard-feed";
 import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 import GencouvWorkspaceSwitcher from "@/components/gencouv/GencouvWorkspaceSwitcher";
 import { Activity, Bot, CircleDollarSign, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
@@ -150,37 +151,7 @@ function isVisibleEmailLead(lead: Lead) {
 }
 
 async function getGencouvDashboard() {
-  const secret = process.env.GENCOUV_DASHBOARD_SECRET;
-
-  if (!secret) {
-    return {
-      data: null as DashboardData | null,
-      error: "GENCOUV_DASHBOARD_SECRET is not configured in Flux Knight.",
-    };
-  }
-
-  try {
-    const response = await fetch(dashboardUrl, {
-      headers: { "x-gencouv-dashboard-secret": secret },
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-    });
-    const data = (await response.json()) as DashboardData;
-
-    if (!response.ok || !data || typeof data !== "object" || Array.isArray(data) || data.success === false) {
-      return {
-        data: null as DashboardData | null,
-        error: "The Gencouv dashboard feed rejected the request.",
-      };
-    }
-
-    return { data, error: null as string | null };
-  } catch {
-    return {
-      data: null as DashboardData | null,
-      error: "The Gencouv dashboard feed is not reachable.",
-    };
-  }
+  return loadGencouvDashboardFeed<DashboardData>(dashboardUrl,process.env.GENCOUV_DASHBOARD_SECRET);
 }
 
 function total(data: DashboardData | null, key: string) {

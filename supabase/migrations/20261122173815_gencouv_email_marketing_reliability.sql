@@ -165,7 +165,7 @@ begin
   end if;
   if p_category_id is not null and not exists(select 1 from public.crm_lead_categories where id=p_category_id and organization_id=p_organization_id) then raise exception 'Invalid category'; end if;
   insert into public.gencouv_sync_runs(id,organization_id,source,direction,status,records_read,metadata)
-    values(p_batch_id,p_organization_id,'document_import','inbound','running',jsonb_array_length(p_contacts),jsonb_build_object('request_hash',p_hash,'filename',left(p_filename,180),'consent_confirmed',p_consent,'consent_source',case when p_consent then p_consent_source else null end,'confirmed_by',p_actor,'confirmed_at',now()));
+    values(p_batch_id,p_organization_id,'dashboard','inbound','running',jsonb_array_length(p_contacts),jsonb_build_object('import_kind','document_import','request_hash',p_hash,'filename',left(p_filename,180),'consent_confirmed',p_consent,'consent_source',case when p_consent then p_consent_source else null end,'confirmed_by',p_actor,'confirmed_at',now()));
   for v_row in select value from jsonb_array_elements(p_contacts) loop
     v_email:=lower(btrim(v_row->>'email'));
     if v_email is null or v_email!~'^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$' then raise exception 'Invalid email'; end if;

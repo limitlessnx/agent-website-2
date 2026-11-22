@@ -79,7 +79,7 @@ export default function GencouvContactImport() {
       <div style={{ display: "grid", gap: 14 }}>
         <label style={{ display: "grid", gap: 7 }}>
           <strong>Contact document</strong>
-          <input id="gencouv-upload" type="file" accept=".csv,.xlsx,.xls,.txt" onChange={e => { setFile(e.target.files?.[0] || null);batchId.current=null;setConsentConfirmed(false);setConsentSource(""); setPreview(null); setMessage(""); }} />
+          <input id="gencouv-upload" aria-label="Contact document" disabled={busy} type="file" accept=".csv,.xlsx,.xls,.txt" onChange={e => { setFile(e.target.files?.[0] || null);batchId.current=null;setConsentConfirmed(false);setConsentSource(""); setPreview(null); setMessage(""); }} />
           <small>CSV, Excel, or TXT, maximum 2 MB and 500 rows. Excel/CSV files need an Email column.</small>
         </label>
         <label style={{ display: "grid", gap: 7 }}>

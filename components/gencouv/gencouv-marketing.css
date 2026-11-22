@@ -25,3 +25,8 @@
 .gencouv-marketing th,.gencouv-marketing td{text-align:left;padding:12px;vertical-align:top;max-width:340px;overflow-wrap:anywhere;border-bottom:1px solid var(--admin-border,#493268)}
 @media(max-width:600px){.gencouv-campaign-form{grid-template-columns:minmax(0,1fr)}.gencouv-action-row>button,.gencouv-automation-status>button{flex:1 1 100%}.gencouv-marketing .admin-panel{padding:16px}.gencouv-marketing .admin-panel-header>div{min-width:0;width:100%}}
 @media(prefers-reduced-motion:reduce){.gencouv-marketing *{transition:none!important;animation:none!important}}
+
+.gencouv-marketing button.gencouv-primary{background:#7c3aed;border-color:#a78bfa;color:#fff;font-weight:600}
+.gencouv-marketing button.gencouv-primary:hover:not(:disabled){background:#6d28d9}
+.gencouv-email-history td span,.gencouv-email-history td small{display:block;margin-top:5px}
+.gencouv-email-history nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
