@@ -14,7 +14,7 @@ export const maxDuration = 300;
 export default async function CreateSocialPostPage({searchParams}:{searchParams:Promise<{error?:string}>}) {
   const brand = await getSocialBrand();
   const {organizationId} = await requireTenant();
-  if(organizationId===REALTY_SOCIAL_ORGANIZATION) return <RealtySocialCenter brand={brand} error={(await searchParams).error}/>;
+  if(organizationId===REALTY_SOCIAL_ORGANIZATION) return <RealtySocialCenter brand={brand} error={(await searchParams).error} manual/>;
   const postCount = socialWeeklyPostCount(brand?.metadata);
   return (
     <main className="admin-page">

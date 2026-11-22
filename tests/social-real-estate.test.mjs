@@ -18,7 +18,7 @@ function load(overrides={}) {
     vm.runInNewContext(source,{exports,require:request,URL,Date,Map,Set,AbortSignal,process:{env:{OPENAI_API_KEY:'synthetic-test-key'}},fetch:overrides.fetch||(()=>{throw Error('External network forbidden')})});
     return exports;
   };
-  return {core:request('@/lib/social-real-estate'),policy:request('@/lib/social-real-estate-policy')};
+  return {core:request('@/lib/social-real-estate'),policy:request('@/lib/social-real-estate-policy'),request};
 }
 const input={mode:'idea',idea:'Questions to ask before a land inspection',requestId:'12345678-1234-4123-8123-123456789abc',actor:'admin@example.test'};
 const post=(sources=[])=>({title:'Inspect before deciding',hook:'Ask these questions before buying land',caption:'Check the available documents and arrange an inspection. #NigerianRealEstate',cta:'Message Limitless Realty to discuss an inspection.',visual_brief:'An illustrative checklist, not a property photo.',source_urls:sources});
@@ -96,10 +96,10 @@ test('brand defaults do not copy Fluxknight daily publishing, weekly jobs, accou
 test('legacy brand CTAs are rejected rather than leaking into a realty draft',async()=>{
   const app=setup(async()=>response({posts:[{...post(),cta:'Talk to Leo at fluxknight.space'}]}));await assert.rejects(app.core.generateRealtyDraftCopy(app.brand,input),/another brand/);
 });
-test('the existing Fluxknight weekly planner rejects a realty brand before provider access',async()=>{
+test('the shared weekly planner requires approved Realty identity before provider access',async()=>{
   const app=setup(),exports={};const source=ts.transpileModule(readFileSync('lib/social-ai.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
-  vm.runInNewContext(source,{exports,require:name=>name==='@/lib/social-real-estate-policy'?app.policy:{socialWeeklyPostCount:()=>assert.fail('Should reject before planning')},fetch:()=>assert.fail('Provider should not run'),process:{env:{}}});
-  await assert.rejects(exports.generateWeeklySocialPlan(app.brand),/instead of Fluxknight/);
+  vm.runInNewContext(source,{exports,require:name=>name==='@/lib/social-real-estate-policy'?app.policy:name==='@/lib/social-realty-weekly-plan'?app.request(name):{socialWeeklyPostCount:()=>assert.fail('Should reject before planning')},fetch:()=>assert.fail('Provider should not run'),process:{env:{}}});
+  await assert.rejects(exports.generateWeeklySocialPlan(app.brand),/Approve.*identity/);
 });
 test('admin access guard checks the active server context and blocks cross-workspace provider administration',async()=>{
   let session=null,organizationId='another-org';
@@ -121,6 +121,10 @@ test('setup preserves its brand after an audit outage and a retry repairs loggin
     if(name==='@/lib/social-real-estate-access')return {requireRealtySocialAdmin:async()=>({supabase:db,organizationId:app.policy.REALTY_SOCIAL_ORGANIZATION,user:{email:input.actor}})};
     if(name==='@/lib/social-real-estate-policy')return app.policy;
     if(name==='@/lib/social-real-estate')return app.core;
+    if(name==='@/lib/social')return {getSocialBrand:async()=>app.brand};
+    if(name==='@/lib/social-realty-brand')return app.request(name);
+    if(name==='@/lib/social-week')return app.request(name);
+    if(name==='@trigger.dev/sdk')return {tasks:{trigger:()=>assert.fail('Setup must not queue media')}};
     throw Error('Unexpected dependency '+name);
   }});
   await assert.rejects(exports.setupRealtySocialAction(),/Brand saved/);assert.equal(db.tables.social_brands.length,1);

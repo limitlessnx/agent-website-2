@@ -27,6 +27,8 @@ function setup({ existing = false, queueFails = false, format = 'carousel', form
   const exports = {};
   vm.runInNewContext(source, { exports, Date, Map, require(name) {
     if (name === '@/lib/social-week') return week;
+    if (name === '@/lib/social-real-estate-policy') return {isRealtySocialBrand:brand=>brand.organization_id==='b15f21b4-5697-4d21-9421-8a34eae3476d'};
+    if (name === '@/lib/social-realty-brand') return {realtyBrandReadiness:()=>assert.fail('Fluxknight must not use Realty brand readiness')};
     if (name === '@trigger.dev/sdk') return { tasks: { async trigger(id, payload) { queued.push({ id, payload }); if (queueFails) throw new Error('Provider unavailable'); } } };
     if (name === '@/lib/social-ai') return { async generateWeeklySocialPlan() { planned++; return { plan, model: 'test' }; } };
     throw new Error(`Unexpected dependency: ${name}`);

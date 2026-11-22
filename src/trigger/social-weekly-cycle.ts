@@ -1,3 +1,4 @@
+import {REALTY_SOCIAL_ORGANIZATION} from "@/lib/social-real-estate-policy";
 import { createClient } from "@supabase/supabase-js";
 import { logger, task } from "@trigger.dev/sdk";
 import { generateWeeklySocialPlan } from "@/lib/social-ai";
@@ -57,6 +58,7 @@ export const fluxSocialWeeklyCycle = task({
   maxDuration: 900,
   retry: { maxAttempts: 2, minTimeoutInMs: 15_000, maxTimeoutInMs: 60_000, factor: 2 },
   run: async (payload: { organizationId: string; brandId: string; weekStart?: string }) => {
+    if(payload.organizationId===REALTY_SOCIAL_ORGANIZATION)throw Error("Limitless Realty uses the shared review-week preparation task with approved branding.");
     const supabase = createSocialAdminClient();
     const weekStart = payload.weekStart || weekStartUtc();
 

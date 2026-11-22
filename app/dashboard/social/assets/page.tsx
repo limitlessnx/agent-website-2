@@ -1,3 +1,4 @@
+import {isRealtySocialBrand} from "@/lib/social-real-estate-policy";
 import Link from "next/link";
 import { uploadSocialAssetAction, uploadPrimarySocialLogoAction } from "@/app/dashboard/social/assets/actions";
 import { getSocialBrand } from "@/lib/social";
@@ -26,9 +27,9 @@ export default async function SocialAssetsPage() {
     <main className="admin-page">
       <header className="admin-page-header">
         <div>
-          <p className="admin-kicker">Fluxknight Social · Phase 3.2</p>
+          <p className="admin-kicker">{isRealtySocialBrand(brand)?"Limitless Realty Social · Brand assets":"Fluxknight Social · Phase 3.2"}</p>
           <h1>Asset Library</h1>
-          <p>Media is stored in private Supabase Storage. Vercel is execution only and never the persistent media store.</p>
+          <p>{isRealtySocialBrand(brand)?"Manage the approved logo and media used in Limitless Realty content.":"Media is stored in private Supabase Storage. Vercel is execution only and never the persistent media store."}</p>
         </div>
         <Link href="/dashboard/social" className="admin-status">Back to Social</Link>
       </header>

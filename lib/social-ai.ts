@@ -1,3 +1,4 @@
+import {generateRealtyWeeklyPlan} from "@/lib/social-realty-weekly-plan";
 import { socialWeeklyPostCount } from "@/lib/social-week";
 import { REALTY_SOCIAL_ORGANIZATION } from "@/lib/social-real-estate-policy";
 import type { SocialBrand, SocialPlatform, SocialPostFormat } from "@/lib/social";
@@ -12,6 +13,8 @@ export type WeeklySocialPostIdea = {
   content_pillar: string;
   objective: string;
   creative_brief: string;
+  source_links?: Array<{url:string;title:string}>;
+  research_observed_at?: string;
 };
 
 export type WeeklySocialPlan = {
@@ -134,7 +137,7 @@ function assertPlan(value: unknown, postCount: number): asserts value is WeeklyS
 }
 
 export async function generateWeeklySocialPlan(brand: SocialBrand) {
-  if (brand.organization_id === REALTY_SOCIAL_ORGANIZATION) throw new Error("Use Limitless Realty's researched-topic or manual-idea workflow instead of Fluxknight's weekly planner.");
+  if (brand.organization_id === REALTY_SOCIAL_ORGANIZATION) return generateRealtyWeeklyPlan(brand);
   const postCount = socialWeeklyPostCount(brand.metadata);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured for Flux Social.");
