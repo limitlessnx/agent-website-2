@@ -20,11 +20,14 @@ export default function GencouvContactImport() {
   const [categoryId, setCategoryId] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [loading,setLoading]=useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
+    setLoading(true);
+    try {
     const [contactResult, categoriesResult] = await Promise.all([
       fetch(endpoint, { cache: "no-store" }),
       fetch("/api/dashboard/gencouv/categories", { cache: "no-store" })
@@ -36,6 +39,7 @@ export default function GencouvContactImport() {
     setHistory(contactData.history || []);
     if(contactData.history_unavailable)setError("Import history is temporarily unavailable.");
     setCategories(categoryData.categories || []);
+    } finally {setLoading(false);}
   }, []);
   useEffect(() => { const timer=setTimeout(()=>void load().catch(e => setError(String(e.message))),0);return()=>clearTimeout(timer); }, [load]);
 
@@ -97,6 +101,7 @@ export default function GencouvContactImport() {
           <button type="button" disabled={!file || busy || !preview || (consentConfirmed && !consentSource.trim())} onClick={() => void submit(false)}>Save reviewed contacts</button>
         </div>
       </div>
+      {busy&&<p role="status">Processing the reviewed contact document…</p>}
       {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
       {message && <p role="status">{message}</p>}
       {preview && <div style={{ marginTop: 18, borderTop: "1px solid var(--admin-border)", paddingTop: 14 }}>
@@ -108,6 +113,8 @@ export default function GencouvContactImport() {
     </section>
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Saved Gencouv contacts</h2><p>Most recent 100 records, including existing CRM contacts. Imported addresses require consent verification before marketing.</p></div><span className="admin-status">{contacts.length} shown</span></div>
+      <button type="button" disabled={busy||loading} onClick={()=>{setError("");void load().catch(()=>setError("Unable to refresh contacts. Please retry."));}}>Refresh contacts</button>
+      {loading?<p role="status">Loading saved contacts and categories…</p>:null}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: 600, borderCollapse: "collapse" }}>
           <thead><tr><th align="left">Contact</th><th align="left">Email</th><th align="left">Company</th><th align="left">Marketing consent</th></tr></thead>
@@ -118,7 +125,7 @@ export default function GencouvContactImport() {
             <td style={{ padding: 12 }}>{c.metadata?.marketing_consent || "Not verified"}</td>
           </tr>)}</tbody>
         </table>
-        {!contacts.length && <p>No saved contacts yet.</p>}
+        {!loading&&!error&&!contacts.length && <p>No saved contacts yet.</p>}
       </div>
     </section>
     <section className="admin-panel"><h2>Import history</h2>{history.length?history.map(run=><p key={run.id}>{new Date(run.started_at).toLocaleString()} · {run.records_written} saved · {run.status}</p>):<p>No recorded imports.</p>}</section>
