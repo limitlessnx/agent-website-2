@@ -13,7 +13,7 @@ import FluxknightLogo from "@/components/admin/FluxknightLogo";
 import FluxknightMark from "@/components/admin/FluxknightMark";
 import { useMobileNavigation } from "@/components/admin/MobileNavigationContext";
 import {
-  ADMIN_NAV_GROUPS,
+  getAdminNavGroupsForWorkspace,
   PUBLIC_SITE_NAV,
   getActiveAdminNavGroup,
   isAdminNavItemActive,
@@ -89,8 +89,8 @@ type ActiveOrganization = { kind: "system" | "tenant"; id: string; name: string 
 
 export default function AdminSidebar({ email, tenants, activeOrganization }: { email: string; tenants: TenantNavItem[]; activeOrganization: ActiveOrganization }) {
   const pathname = usePathname();
-  const platformGroups = useMemo<NavGroup[]>(() => ADMIN_NAV_GROUPS.map((group) => withIcons(group)), []);
-  const activeGroupId = getActiveAdminNavGroup(pathname);
+  const platformGroups = useMemo<NavGroup[]>(() => getAdminNavGroupsForWorkspace({kind:activeOrganization.kind,id:activeOrganization.id}).map((group) => withIcons(group)), [activeOrganization.kind,activeOrganization.id]);
+  const activeGroupId = getActiveAdminNavGroup(pathname,platformGroups);
   const [openGroups, setOpenGroups] = useState<string[]>(() => (activeGroupId ? [activeGroupId] : ["overview"]));
   const [openSections, setOpenSections] = useState<string[]>([]);
   const [publicSiteOpen, setPublicSiteOpen] = useState(false);

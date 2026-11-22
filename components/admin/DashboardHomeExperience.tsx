@@ -160,6 +160,7 @@ export default function DashboardHomeExperience({
           </section>
 
           <nav className={styles.businessActions} aria-label="Limitless Realty quick actions">
+            <Link href="/dashboard/social"><Megaphone size={16} /><span><strong>Flux Social</strong><small>Research & create posts</small></span></Link>
             <Link href="/dashboard/limitless/properties"><Plus size={16} /><span><strong>Add Property</strong><small>Manage catalog</small></span></Link>
             <Link href="/dashboard/limitless/leads"><UserRound size={16} /><span><strong>Add Lead</strong><small>Capture opportunity</small></span></Link>
             <Link href="/dashboard/limitless/appointments"><CalendarDays size={16} /><span><strong>Schedule Viewing</strong><small>Book a viewing</small></span></Link>
