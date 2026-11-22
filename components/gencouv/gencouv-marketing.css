@@ -30,3 +30,6 @@
 .gencouv-marketing button.gencouv-primary:hover:not(:disabled){background:#6d28d9}
 .gencouv-email-history td span,.gencouv-email-history td small{display:block;margin-top:5px}
 .gencouv-email-history nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+
+.gencouv-email-history table{min-width:760px}
+.gencouv-email-history td:nth-child(3),.gencouv-email-history th:nth-child(3){min-width:90px;white-space:nowrap;overflow-wrap:normal}
