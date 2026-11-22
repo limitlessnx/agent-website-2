@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CreditCard, BellRing, WalletCards, AlertTriangle } from "@/components/admin/ServerIcons";
 import { getPaymentPlans, getPaymentRecords, getReminderAttempts, getReminderTemplates, formatMoney } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
+import { getInstallmentReminderCounts } from "@/lib/installment-reminder-counts";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import { createOutrightPaymentAction, createPaymentPlanAction, recordPaymentAction, retryReminderAttemptAction, saveReminderTemplateAction, updatePlanStatusAction } from "./actions";
 import ContactPicker from "@/components/admin/ContactPicker";
@@ -19,7 +20,7 @@ export default async function PaymentsPage() {
   let templates = [] as Awaited<ReturnType<typeof getReminderTemplates>>;
   let failedAttempts = [] as Awaited<ReturnType<typeof getReminderAttempts>>;
   let error = "";
-  const [properties, contacts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(organizationId, 1000)]);
+  const [properties, contacts, reminderCounts] = await Promise.all([getProperties(200), getCampaignAudienceLeads(organizationId, 1000), getInstallmentReminderCounts(organizationId).catch(() => null)]);
   try {
     [plans, records, templates, failedAttempts] = await Promise.all([getPaymentPlans(organizationId, 250), getPaymentRecords(organizationId, 500), getReminderTemplates(organizationId), getReminderAttempts(organizationId)]);
   } catch (cause) {
@@ -47,7 +48,20 @@ export default async function PaymentsPage() {
         <article className="admin-metric-card"><p><AlertTriangle size={15}/> Overdue</p><strong>{overdue}</strong><span>Plans needing attention</span></article>
       </div>
 
-      {error ? <section className="admin-panel"><p className="admin-empty">{error} Run migration 005 before using this module.</p></section> : null}
+      <section className="admin-panel" id="reminder-status" aria-labelledby="reminder-status-heading">
+        <div className="admin-panel-header"><div><h2 id="reminder-status-heading">Installment reminder status</h2><p>Current enabled plans and recorded reminder attempts. Provider acceptance does not confirm delivery.</p></div></div>
+        {!reminderCounts ? <p role="alert">Installment reminder counts are temporarily unavailable. Refresh to retry.</p> : <div className="admin-metric-grid">
+          {[
+            ["Active reminder plans", reminderCounts.activePlans, "Active installment plans with reminders enabled and a balance remaining"],
+            ["Pending attempts", reminderCounts.pending, "Recorded attempts awaiting an outcome"],
+            ["Provider accepted", reminderCounts.accepted, "All-time accepted attempts; check receipts for delivery"],
+            ["Failed attempts", reminderCounts.failed, "All-time explicitly failed attempts; review below"],
+            ["Unknown outcomes", reminderCounts.unknown, "Reconcile before considering any retry"],
+          ].map(([label, count, detail]) => <article className="admin-metric-card" key={label}><p>{label}</p><strong>{count}</strong><span>{detail}</span></article>)}
+        </div>}
+      </section>
+
+      {error ? <section className="admin-panel" role="alert"><p className="admin-empty">Payment data could not be loaded. Refresh to retry.</p></section> : null}
 
       <section className="admin-panel outright-payment-panel" id="add-outright-payment">
         <div className="admin-panel-header">

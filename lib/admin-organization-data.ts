@@ -3,8 +3,10 @@ import type { AdminOrganizationScope } from "@/lib/admin-organization-scope";
 import { getWorkflowRegistrySummary } from "@/lib/workflow-registry";
 import { getProperties, LIMITLESS_REALTY_ORGANIZATION_ID, type PropertyRecord } from "@/lib/limitless-data";
 import { isRealtySocialBrand } from "@/lib/social-real-estate-policy";
+import { getLeadFollowupStates } from "@/lib/lead-followup-state";
+import { getInstallmentReminderCounts } from "@/lib/installment-reminder-counts";
 
-type MetricIcon = "leads" | "conversations" | "followups" | "qualified" | "revenue";
+type MetricIcon = "leads" | "conversations" | "followups" | "qualified" | "revenue" | "reminders";
 
 export type OrganizationHomeMetric = {
   label: string;
@@ -273,7 +275,7 @@ async function getLimitlessDashboardData(admin: ReturnType<typeof createAdminCli
 
 async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<OrganizationOperationalSnapshot> {
   const admin = createAdminClient();
-  const [{ data }, { data: paymentPlans }, limitlessDashboard] = await Promise.all([
+  const [{ data }, { data: paymentPlans }, limitlessDashboard, followupState, reminderCounts] = await Promise.all([
     admin
       .from("leads")
       .select("id,name,phone,email,status,score,budget,location_preference,follow_up_stage,last_follow_up_at,last_contacted_at,created_at,updated_at")
@@ -286,6 +288,8 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
       .eq("organization_id", scope.organizationId)
       .limit(500),
     getLimitlessDashboardData(admin),
+    getLeadFollowupStates(scope.organizationId).catch(() => null),
+    getInstallmentReminderCounts(scope.organizationId).catch(() => null),
   ]);
 
   const leads = data || [];
@@ -294,7 +298,9 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
   const conversations = active.filter((lead) =>
     Boolean(lead.last_contacted_at) || ["in_conversation", "contacted", "engaged", "qualified"].some((state) => lower(lead.status).includes(state))
   );
-  const followUps = active.filter((lead) => Boolean(lead.last_follow_up_at) || Number(lead.follow_up_stage || 0) > 0 || lower(lead.status).includes("follow"));
+  const followUps = leads.filter((lead) => followupState?.[lead.id]?.active);
+  const activeFollowupCount = followupState ? Object.values(followupState).filter(state => state.active).length : null;
+  const followupIssues = followupState ? Object.values(followupState).filter(state => state.needsReview).length : 0;
   const qualified = active.filter((lead) => ["hot", "high", "qualified", "ready"].includes(lower(lead.score)) || Number(lead.score || 0) >= 70 || lower(lead.status).includes("qualified"));
   const notices = await notificationNotices(scope.organizationId);
 
@@ -330,11 +336,15 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
     metrics: [
       { label: "New leads", value: leads.filter((lead) => lower(lead.status) === "new").length, detail: "Entered the Limitless CRM", icon: "leads" },
       { label: "Conversations", value: conversations.length, detail: "Leads currently engaged", icon: "conversations" },
-      { label: "Follow-ups", value: followUps.length, detail: "Leads needing continued contact", icon: "followups" },
+      { label: "Follow-ups", value: activeFollowupCount ?? "—", detail: followupState ? `${followupIssues} need review · active clients in canonical sequences` : "Follow-up status unavailable. Open Follow-up Control to retry.", icon: "followups" },
       { label: "Qualified leads", value: qualified.length, detail: "Ready for the next sales step", icon: "qualified" },
+      { label: "Installment reminders", value: reminderCounts?.activePlans ?? "—", detail: reminderCounts ? "Active installment plans with reminders enabled" : "Reminder counts unavailable. Open Payments to retry.", icon: "reminders" },
       { label: "Revenue collected", value: new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(revenueCollected), detail: "Recorded payments across installment plans", icon: "revenue" },
     ],
     notices: [
+      ...(!followupState ? [{ title: "Follow-up status unavailable", detail: "Active follow-up counts could not be loaded. Retry in Follow-up Control.", href: "/dashboard/limitless/followups", type: "attention" }] : []),
+      ...(followupIssues ? [{ title: `${followupIssues} follow-up clients need review`, detail: "A sequence has incomplete consent or failed/unknown message outcomes. Review before retrying.", href: "/dashboard/limitless/followups", type: "attention" }] : []),
+      ...(!reminderCounts ? [{ title: "Installment reminder counts unavailable", detail: "Retry in Payments & Installments.", href: "/dashboard/limitless/payments", type: "attention" }] : []),
       ...notices,
       ...followUps.slice(0, Math.max(0, 4 - notices.length)).map((lead) => ({
         title: `Follow up with ${text(lead.name, "lead")}`,
@@ -349,16 +359,16 @@ async function limitlessSnapshot(scope: AdminOrganizationScope): Promise<Organiz
       channel: "WhatsApp · Limitless Realty",
       status: "live",
       href: "/dashboard/agents/maia",
-      note: `${qualified.length} qualified · ${followUps.length} follow-ups · ${conversations.length} engaged`,
+      note: `${qualified.length} qualified · ${activeFollowupCount ?? "unavailable"} follow-up clients · ${conversations.length} engaged`,
       metrics: [
         { label: "Leads", value: leads.length },
         { label: "Conversations", value: conversations.length },
-        { label: "Follow-ups", value: followUps.length },
+        { label: "Follow-ups", value: activeFollowupCount ?? "—" },
       ],
     },...(socialAgent?[socialAgent]:[])],
     conversations: items,
     activity: items,
-    attentionCount: followUps.length,
+    attentionCount: followupIssues + (!followupState ? 1 : 0) + (!reminderCounts ? 1 : 0),
     limitlessDashboard,
   };
 }

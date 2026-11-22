@@ -73,10 +73,10 @@ test("installment action buttons expose truthful pending labels while preserving
 });
 
 
-test("new installment form defaults the first scheduled reminder to a future Lagos date", () => {
-  assert.match(page, /function defaultReminderDate\(\)/);
-  assert.match(page, /timeZone: "Africa\/Lagos"/);
-  assert.match(page, /Date\.now\(\) \+ 24 \* 60 \* 60 \* 1000/);
-  assert.match(page, /name="reminder_start_date" type="date" defaultValue=\{defaultReminderDate\(\)\}/);
-  assert.match(actions, /The scheduled first reminder must be in the future/);
+test("new installment form derives reminders from its required due date and saved template timing", () => {
+  assert.match(page, /name="next_due_date" type="date" required/);
+  assert.match(page, /name="first_reminder_mode" value="due_date"/);
+  assert.match(page, /19:30 Africa\/Lagos/);
+  assert.match(actions, /first_reminder_mode.*due_date/);
+  assert.match(actions, /next_due_date: nextDueDate/);
 });

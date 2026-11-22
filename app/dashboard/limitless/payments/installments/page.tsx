@@ -2,6 +2,7 @@ import { resolveAdminOrganizationScope } from "@/lib/admin-organization-scope";
 import Link from "next/link";
 import { getPaymentPlans, formatNaira } from "@/lib/limitless-payments";
 import { getProperties } from "@/lib/limitless-data";
+import { getInstallmentReminderCounts } from "@/lib/installment-reminder-counts";
 import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import { createPaymentPlanAction, recordPaymentAction, updatePlanStatusAction } from "../actions";
 import ContactPicker from "@/components/admin/ContactPicker";
@@ -15,10 +16,11 @@ const PAGE_SIZE = 10;
 export default async function InstallmentsPage({ searchParams }: { searchParams?: Promise<{ success?: string; page?: string }> }) {
   const { organizationId } = await resolveAdminOrganizationScope();
   const params = searchParams ? await searchParams : {};
-  const [plans, properties, contacts] = await Promise.all([
+  const [plans, properties, contacts, reminderCounts] = await Promise.all([
     getPaymentPlans(organizationId, 250),
     getProperties(200),
     getCampaignAudienceLeads(organizationId, 1000),
+    getInstallmentReminderCounts(organizationId).catch(() => null),
   ]);
 
   const totalAgreed = plans.reduce((s, p) => s + Number(p.agreed_price || 0), 0);
@@ -78,6 +80,7 @@ export default async function InstallmentsPage({ searchParams }: { searchParams?
 
     <div className="admin-metric-grid">
       <article className="admin-metric-card"><p>Clients</p><strong>{plans.length}</strong><span>Installment plans</span></article>
+      <Link href="/dashboard/limitless/payments#reminder-status" className="admin-metric-card"><p>Active reminder plans</p><strong>{reminderCounts?.activePlans ?? "—"}</strong><span>{reminderCounts ? "Enabled installment plans with an outstanding balance" : "Reminder counts unavailable. Open Payments to retry."}</span></Link>
       <article className="admin-metric-card"><p>Agreed revenue</p><strong>{formatNaira(totalAgreed)}</strong><span>Total contract value</span></article>
       <article className="admin-metric-card"><p>Collected</p><strong>{formatNaira(totalPaid)}</strong><span>Recorded payments</span></article>
       <article className="admin-metric-card"><p>Outstanding</p><strong>{formatNaira(outstanding)}</strong><span>Still collectible</span></article>

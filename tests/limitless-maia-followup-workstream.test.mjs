@@ -155,7 +155,7 @@ test("dashboard shows property, consent, pause/close reasons and attempts withou
   assert.match(control, /Close deal/);
   assert.match(control, /error_summary/);
   assert.match(control, /Attempts/);
-  assert.match(summary, /followupErrorSummary\(row\.last_error\)/);
+  assert.match(summary, /followupErrorSummary\(deliveryStates\[row\.id\]\?\.error_message \|\| row\.last_error\)/);
   assert.doesNotMatch(summary, /last_error: row\.last_error/);
 });
 
@@ -193,6 +193,7 @@ test("closing one client-property sequence never mutates a sibling property sequ
     return [];
   };
   const controls = load("lib/followup-control.ts", {
+    "@/lib/followup-delivery-state": { getFollowupDeliveryStates: async () => ({}) },
     "@/lib/supabase-server-rest": { isServerSupabaseConfigured: () => true, supabaseServerRequest },
     "@/lib/limitless-data": { LIMITLESS_REALTY_ORGANIZATION_ID: identity.organization_id },
     "@/lib/limitless-followup-contract": { followupErrorSummary: () => null },

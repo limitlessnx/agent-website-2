@@ -6,6 +6,7 @@ import { ChevronDown, Clock3, Pause, Play, RotateCcw, XCircle } from "@/componen
 import type { FollowupEnrollment, FollowupLog } from "@/lib/followup-control";
 
 type LeadOption = { id: string; name: string; phone: string };
+type FollowupDraft = { id: string; status: string; reason: string; notes?: string; created_at: string; leads?: { name?: string }; properties?: { title?: string }; eligibility_snapshot?: { system_recommendation?: string; opted_out?: boolean } };
 type Props = {
   leads: LeadOption[];
   sequences: unknown[];
@@ -46,13 +47,16 @@ function statusLabel(item: FollowupEnrollment) {
   if (status === "stopped") return "Admin stopped";
   if (status === "closed") return "Deal closed";
   if (status === "active") return "Scheduled";
+  if (item.delivery_status === "failed") return "Delivery failed · review required";
+  if (item.delivery_status === "delivered" || item.delivery_status === "read") return "Delivered";
+  if (item.delivery_status === "accepted") return "Provider accepted · delivery unconfirmed";
   return status;
 }
 
 export default function FollowupControlCenter(props: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [drafts, setDrafts] = useState<Array<Record<string, any>>>([]);
+  const [drafts, setDrafts] = useState<FollowupDraft[]>([]);
   const [draftBusy, setDraftBusy] = useState("");
   const [draftsLoading, setDraftsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -64,7 +68,7 @@ export default function FollowupControlCenter(props: Props) {
     fetch("/api/limitless/followup-drafts").then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load drafts.");
-      if (active) setDrafts((data.drafts || []).filter((draft: Record<string, any>) => draft.status === "draft"));
+      if (active) setDrafts((data.drafts || []).filter((draft: FollowupDraft) => draft.status === "draft"));
     }).catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load follow-up drafts."); })
       .finally(() => { if (active) setDraftsLoading(false); });
     return () => { active = false; };
@@ -92,7 +96,7 @@ export default function FollowupControlCenter(props: Props) {
     return props.logs.filter((entry) => {
       const status = String(entry.status || "").toLowerCase();
       const statusMatches = logStatus === "all"
-        || (logStatus === "success" && ["success", "sent", "delivered", "completed"].includes(status))
+        || (logStatus === "success" && ["success", "delivered", "read"].includes(status))
         || (logStatus === "failed" && failureStatuses.has(status))
         || (logStatus === "blocked" && status === "blocked");
       if (!statusMatches) return false;
@@ -175,6 +179,7 @@ export default function FollowupControlCenter(props: Props) {
                 <div><dt>Property</dt><dd>{item.property_title || item.property_id || "Not linked"}</dd></div>
                 <div><dt>Consent</dt><dd>{item.consent_state || "Unknown"}</dd></div>
                 <div><dt>Sequence state</dt><dd>{item.sequence_status || item.status}</dd></div>
+                <div><dt>Delivery outcome</dt><dd>{item.delivery_status || "Not submitted"}{item.delivery_status === "failed" ? " · review required; no automatic retry" : item.delivery_status === "accepted" ? " · delivery not yet confirmed" : ""}</dd></div>
                 <div><dt>Next follow-up</dt><dd>{formatDate(item.next_run_at)}</dd></div>
                 <div><dt>Last attempt</dt><dd>{formatDate(item.last_run_at)}</dd></div>
                 <div><dt>Attempts</dt><dd>{item.attempt_count}</dd></div>
