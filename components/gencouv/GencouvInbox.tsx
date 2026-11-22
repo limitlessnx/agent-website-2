@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
-type EmailMessage = {
+export type EmailMessage = {
   id?: string;
   lead_id?: string;
   recipient_email?: string;
@@ -42,6 +42,8 @@ function preview(message: EmailMessage) {
 }
 
 export default function GencouvInbox({ messages }: { messages: EmailMessage[] }) {
+  const replyRequestId=useRef<string|null>(null);
+
   const [selectedId, setSelectedId] = useState(messages.find((message) => !message.archived_at)?.id || messages[0]?.id || "");
   const [replyText, setReplyText] = useState("");
   const [status, setStatus] = useState("Ready.");
@@ -65,7 +67,7 @@ export default function GencouvInbox({ messages }: { messages: EmailMessage[] })
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            inbound_message_id: selected.id,
+            request_id: replyRequestId.current ||= crypto.randomUUID(), confirmed: true, inbound_message_id: selected.id,
             to: selected.from_email || selected.recipient_email,
             subject: selected.subject,
             message: replyText,
@@ -178,7 +180,7 @@ export default function GencouvInbox({ messages }: { messages: EmailMessage[] })
               <div style={{ display: "grid", gap: 10 }}>
                 <label className="admin-field">
                   Reply as Gencouv &lt;info@gencouv.com&gt;
-                  <textarea rows={7} value={replyText} onChange={(event) => setReplyText(event.target.value)} placeholder="Write your reply..." />
+                  <textarea rows={7} value={replyText} onChange={(event) => {setReplyText(event.target.value);replyRequestId.current=null;}} placeholder="Write your reply..." />
                 </label>
                 <button type="button" onClick={sendReply} disabled={isPending || !replyText.trim()}>
                   {isPending ? "Sending..." : "Send reply"}

@@ -1,0 +1,64 @@
+import { NextResponse } from "next/server";
+import { requireGencouvAdmin, gencouvError, gencouvPrivateHeaders, GENCOUV_UUID, GENCOUV_SENDERS, GencouvRequestError } from "@/lib/gencouv-admin";
+import { resendApi } from "@/lib/fluxknight-mail";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+export async function GET(request: Request) {
+  try {
+    const { db, organizationId } = await requireGencouvAdmin();
+    const page = Math.floor(Math.max(0, Math.min(10000, Number(new URL(request.url).searchParams.get("page")) || 0)));
+    const result = await db.from("gencouv_email_messages").select("id,recipient_email,subject,status,provider_email_id,created_at,sent_at,delivered_at,error_message,send_batch_id,direction,from_email", { count: "exact" }).eq("organization_id", organizationId).eq("direction", "outbound").order("created_at", { ascending: false }).order("id").range(page * 50, page * 50 + 49);
+    if (result.error) throw result.error;
+    return NextResponse.json({ messages: result.data || [], total: result.count, page }, { headers: gencouvPrivateHeaders });
+  } catch (error) { const safe = gencouvError(error); return NextResponse.json({ error: safe.message }, { status: safe.status, headers: gencouvPrivateHeaders }); }
+}
+function email(value: unknown) { return String(value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || ""; }
+function tag(value: unknown, name: string) {
+  if (Array.isArray(value)) return value.find(item => item?.name === name)?.value;
+  if (value && typeof value === "object") return (value as Record<string, unknown>)[name];
+  return null;
+}
+export async function POST(request: Request) {
+  try {
+    const { db, organizationId, session } = await requireGencouvAdmin(request);
+    const input = await request.json().catch(() => null);const batchId = String(input?.batch_id || "");
+    if (!GENCOUV_UUID.test(batchId)) throw new GencouvRequestError("Choose a saved batch to reconcile.");
+    const [batch, messages] = await Promise.all([
+      db.from("gencouv_send_batches").select("id,status,from_email,subject,submitted_at").eq("organization_id", organizationId).eq("id", batchId).maybeSingle(),
+      db.from("gencouv_email_messages").select("id,recipient_email,provider_email_id,status").eq("organization_id", organizationId).eq("send_batch_id", batchId).order("created_at"),
+    ]);
+    if (batch.error || messages.error) throw new GencouvRequestError("Batch history is unavailable.", 503);
+    if (!batch.data || !messages.data?.length) throw new GencouvRequestError("Batch not found.", 404);
+    const savedBatch = batch.data;
+    let recent: Array<Record<string, unknown>> = [];
+    if (messages.data.some(message => !message.provider_email_id) && ["unknown", "partial", "submitting"].includes(batch.data.status)) {
+      const list = await resendApi("/emails?limit=100"); recent = Array.isArray(list.data) ? list.data : [];
+    }
+    let checked = 0;let unresolved = 0;
+    for (const message of messages.data) {
+      const candidates = message.provider_email_id ? [{ id: message.provider_email_id }] : recent.filter(item =>
+        item.subject === savedBatch.subject && email(item.from) === savedBatch.from_email && Array.isArray(item.to) && item.to.some(to => email(to) === message.recipient_email)
+        && new Date(String(item.created_at)).getTime() >= new Date(savedBatch.submitted_at || "").getTime() - 60000);
+      let details: Record<string, unknown> | null = null;
+      for (const candidate of candidates.slice(0, 5)) {
+        if (!GENCOUV_UUID.test(String(candidate.id || ""))) continue;
+        const detail = await resendApi("/emails/" + encodeURIComponent(String(candidate.id)));
+        if (!GENCOUV_SENDERS.has(email(detail.from)) || !Array.isArray(detail.to) || !detail.to.some(to => email(to) === message.recipient_email)) continue;
+        if (!message.provider_email_id && tag(detail.tags, "gencouv_message_id") !== message.id) continue;
+        details = detail;break;
+      }
+      if (!details || !["sent", "delivered", "bounced", "complained", "failed", "opened", "clicked", "suppressed"].includes(String(details.last_event))) { unresolved++;continue; }
+      const status = String(details.last_event);
+      const applied = await db.rpc("gencouv_apply_delivery_event", { p_event_id: `reconcile:${details.id}:${status}`, p_type: `email.${status}`, p_data: { ...details, email_id: details.id, tags: { gencouv_message_id: message.id }, verification_source: "resend_api" }, p_occurred_at: new Date().toISOString() });
+      if (applied.error) throw new GencouvRequestError("A provider result was read but could not be recorded. No email was resent.", 503);
+      checked++;
+    }
+    if (!unresolved && checked === messages.data.length) {
+      const updated = await db.from("gencouv_send_batches").update({ status: "submitted", error_summary: null, updated_at: new Date().toISOString() }).eq("organization_id", organizationId).eq("id", batchId).in("status", ["unknown", "partial", "submitting"]);
+      if (updated.error) throw updated.error;
+    }
+    const audit = await db.from("audit_logs").insert({ organization_id: organizationId, action: "gencouv.email_batch_reconciled", resource_type: "gencouv_send_batch", resource_id: batchId, metadata: { actor_email: session.email, checked, unresolved, resent: false } });
+    if (audit.error) throw audit.error;
+    return NextResponse.json({ checked, unresolved, note: unresolved ? "Some provider outcomes remain unconfirmed. They stay held; no email was resent." : "Provider outcomes refreshed. No email was resent." }, { headers: gencouvPrivateHeaders });
+  } catch (error) { const safe = gencouvError(error); return NextResponse.json({ error: safe.message }, { status: safe.status, headers: gencouvPrivateHeaders }); }
+}

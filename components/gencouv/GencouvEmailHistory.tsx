@@ -1,0 +1,17 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { gencouvEmailDisplayStatus } from "@/lib/gencouv-email-policy";
+type Message = { id: string; recipient_email: string; subject: string; status: string; provider_email_id: string | null; created_at: string; send_batch_id: string | null; error_message?: string | null };
+export default function GencouvEmailHistory() {
+  const [messages,setMessages]=useState<Message[]>([]),[page,setPage]=useState(0),[total,setTotal]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+  const load=useCallback(async()=>{setBusy(true);setError("");try{const response=await fetch(`/api/dashboard/gencouv/email-history?page=${page}`,{cache:"no-store"});const data=await response.json();if(!response.ok)throw new Error(data.error||"History unavailable.");setMessages(data.messages);setTotal(data.total||0);}catch(error){setError(error instanceof Error?error.message:"History unavailable.");}finally{setBusy(false);}},[page]);
+  useEffect(()=>{const timer=setTimeout(()=>void load(),0);return()=>clearTimeout(timer);},[load]);
+  async function reconcile(batchId:string){setBusy(true);setError("");try{const response=await fetch("/api/dashboard/gencouv/email-history",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({batch_id:batchId})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Reconciliation unavailable.");setNotice(data.note);await load();}catch(error){setError(error instanceof Error?error.message:"Reconciliation unavailable.");}finally{setBusy(false);}}
+  return <section className="admin-panel gencouv-email-history" id="email-history" aria-labelledby="email-history-title">
+    <div className="admin-panel-header"><div><h2 id="email-history-title">Email history</h2><p>Submission is separate from confirmed delivery. Refresh outcomes reads Resend without sending again.</p></div><button disabled={busy} onClick={()=>void load()}>Refresh history</button></div>
+    {error?<p role="alert">{error}</p>:busy?<p role="status">Loading saved email history…</p>:!messages.length?<p>No saved outbound messages.</p>:null}
+    {notice?<p role="status">{notice}</p>:null}
+    <div className="gencouv-history-scroll" tabIndex={0} role="region" aria-label="Email delivery history table"><table><thead><tr><th>Recipient / subject</th><th>Submitted</th><th>Status</th><th>Provider / batch</th><th>Action</th></tr></thead><tbody>{messages.map(message=><tr key={message.id}><td><strong>{message.recipient_email}</strong><span>{message.subject}</span></td><td>{new Date(message.created_at).toLocaleString()}</td><td>{gencouvEmailDisplayStatus(message.status)}{message.error_message?<small>Review required</small>:null}</td><td><span>{message.provider_email_id||"Provider ID not confirmed"}</span><small>{message.send_batch_id||"Legacy message"}</small></td><td>{message.send_batch_id?<button disabled={busy} onClick={()=>void reconcile(message.send_batch_id!)}>Refresh outcomes</button>:null}</td></tr>)}</tbody></table></div>
+    <nav aria-label="Email history pages"><button disabled={busy||page===0} onClick={()=>setPage(page-1)}>Previous</button><span>{total?page*50+1:0}–{page*50+messages.length} of {total}</span><button disabled={busy||(page+1)*50>=total} onClick={()=>setPage(page+1)}>Next</button></nav>
+  </section>;
+}

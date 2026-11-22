@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
+import { requireGencouvAdmin, gencouvError, GENCOUV_SENDERS, GencouvRequestError } from "@/lib/gencouv-admin";
+import { getGencouvCampaignSettings } from "@/lib/gencouv-campaign-settings";
+
+type SequenceStep={id:string;step_order:number};
+type Sequence={id:string;gencouv_email_sequence_steps?:SequenceStep[]};
+
 const GENCOUV_ORG_ID = "05737e03-f8f0-4202-8e9b-0a8982a1091c";
 
 function cleanText(value: unknown, max = 20000) {
@@ -15,7 +21,8 @@ function clampInt(value: unknown, min: number, max: number, fallback: number) {
 
 export async function GET() {
   try {
-    const sequences = await supabaseServerRequest<any[]>(
+    await requireGencouvAdmin();
+    const sequences = await supabaseServerRequest<Sequence[]>(
       `gencouv_email_sequences?select=*,gencouv_email_sequence_steps(*)&organization_id=eq.${GENCOUV_ORG_ID}&order=created_at.asc`,
     );
 
@@ -24,21 +31,22 @@ export async function GET() {
       sequences: sequences.map((sequence) => ({
         ...sequence,
         steps: [...(sequence.gencouv_email_sequence_steps || [])].sort(
-          (a: any, b: any) => a.step_order - b.step_order,
+          (a: SequenceStep, b: SequenceStep) => a.step_order - b.step_order,
         ),
         gencouv_email_sequence_steps: undefined,
       })),
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Unable to load sequences." },
-      { status: 500 },
+      { success: false, message: gencouvError(error).message },
+      { status: gencouvError(error).status },
     );
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const {db,organizationId}=await requireGencouvAdmin(request);
     const body = await request.json();
     const sequenceId = cleanText(body.sequence_id, 100);
     const senderName = cleanText(body.sender_name, 120) || "Gencouv";
@@ -47,6 +55,8 @@ export async function POST(request: Request) {
     const name = cleanText(body.name, 160) || "Gencouv email sequence";
     const description = cleanText(body.description, 1000);
     const status = ["draft", "active", "paused", "archived"].includes(body.status) ? body.status : "draft";
+    if(!GENCOUV_SENDERS.has(senderEmail)||!GENCOUV_SENDERS.has(replyToEmail))throw new GencouvRequestError("Choose a verified Gencouv sender.");
+    if(status === "active"){const state=await getGencouvCampaignSettings(db,organizationId);if(!state.worker_verified||!state.enabled)throw new GencouvRequestError("Automation must be verified and enabled before activating a sequence.",409);}
     const dailyLimit = clampInt(body.daily_limit, 1, 500, 10);
     const steps = Array.isArray(body.steps) ? body.steps.slice(0, 30) : [];
 
@@ -67,15 +77,15 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     };
 
-    let savedSequence: any;
+    let savedSequence: Sequence | undefined;
     if (sequenceId) {
-      const rows = await supabaseServerRequest<any[]>(
+      const rows = await supabaseServerRequest<Sequence[]>(
         `gencouv_email_sequences?id=eq.${encodeURIComponent(sequenceId)}&organization_id=eq.${GENCOUV_ORG_ID}`,
         { method: "PATCH", body: JSON.stringify(sequencePayload) },
       );
       savedSequence = rows[0];
     } else {
-      const rows = await supabaseServerRequest<any[]>("gencouv_email_sequences", {
+      const rows = await supabaseServerRequest<Sequence[]>("gencouv_email_sequences", {
         method: "POST",
         body: JSON.stringify({ ...sequencePayload, created_at: new Date().toISOString() }),
       });
@@ -84,10 +94,10 @@ export async function POST(request: Request) {
 
     if (!savedSequence?.id) throw new Error("Supabase did not return a saved sequence.");
 
-    const existing = await supabaseServerRequest<any[]>(
+    const existing = await supabaseServerRequest<Sequence[]>(
       `gencouv_email_sequence_steps?select=id&sequence_id=eq.${savedSequence.id}`,
     );
-    const incomingIds = new Set(steps.map((step: any) => cleanText(step.id, 100)).filter(Boolean));
+    const incomingIds = new Set(steps.map((step: {id?:unknown}) => cleanText(step.id, 100)).filter(Boolean));
 
     for (const oldStep of existing) {
       if (!incomingIds.has(oldStep.id)) {
@@ -115,11 +125,11 @@ export async function POST(request: Request) {
       };
 
       const rows = stepId
-        ? await supabaseServerRequest<any[]>(`gencouv_email_sequence_steps?id=eq.${stepId}&sequence_id=eq.${savedSequence.id}`, {
+        ? await supabaseServerRequest<Sequence[]>(`gencouv_email_sequence_steps?id=eq.${stepId}&sequence_id=eq.${savedSequence.id}`, {
             method: "PATCH",
             body: JSON.stringify(payload),
           })
-        : await supabaseServerRequest<any[]>("gencouv_email_sequence_steps", {
+        : await supabaseServerRequest<Sequence[]>("gencouv_email_sequence_steps", {
             method: "POST",
             body: JSON.stringify({ ...payload, created_at: new Date().toISOString() }),
           });
@@ -161,8 +171,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, sequence: savedSequence, steps: savedSteps });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Unable to save sequence." },
-      { status: 500 },
+      { success: false, message: gencouvError(error).message },
+      { status: gencouvError(error).status },
     );
   }
 }

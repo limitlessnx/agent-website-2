@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
-const migration = read("supabase/migrations/20261112230000_crm_custom_lead_categories.sql");
+const migration = read("supabase/migrations/20261113071933_crm_custom_lead_categories.sql");
 const api = read("app/api/dashboard/gencouv/categories/route.ts");
 const ui = read("components/gencouv/GencouvCategories.tsx");
 const page = read("app/dashboard/gencouv/categories/page.tsx");
