@@ -38,3 +38,7 @@ The single authorized real inbox has not been emailed by this follow-up. A norma
 - The audit triggered zero tasks, sent zero emails and performed zero production writes. No real inbox email has been sent by this follow-up.
 
 Review: https://github.com/limitlessnx/agent-website-2/pull/456. Application release readiness and final-head CI must be verified before merging; the applied database functions alone are not a Vercel release.
+
+Additional visual review corrected the inherited `ready`/`Cold` fallbacks for contacts without recorded sequence/temperature state: no sequence now displays `not_enrolled`, and a classification alone never implies permission to send.
+
+The normal Vercel preview build for commit `2fab451b72177a9644c92397953701a2e18e4d86` reached READY. Locally, default Turbopack builds hit this execution sandbox's child-process port restriction. The Webpack fallback failed on existing global selectors in `AdminSidebar.module.css`, `LeoRealtimeVoice.module.css` and `HotelWelcomeTour.module.css`; unrelated CSS was preserved. Those local build attempts are failures/limitations, not claimed passes. The final release uses the normal Vercel build and hosted checks for its exact commit.

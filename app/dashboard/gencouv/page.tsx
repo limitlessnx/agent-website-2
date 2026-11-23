@@ -228,7 +228,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       <div className="admin-checklist">
         <span>{lead.product_interest || "General"}</span>
         <span>{lead.broker || "Broker unknown"}</span>
-        <span>{lead.email_sequence_status || "not_ready"}</span>
+        <span>{lead.email_sequence_status || "not_enrolled"}</span>
         <span>{lead.pipeline_stage || lead.lifecycle_status || "new"}</span>
       </div>
       <p style={{ color: "var(--admin-text-soft)", lineHeight: 1.6, margin: "16px 0 0" }}>
@@ -540,12 +540,12 @@ export default async function GencouvWorkspacePage() {
         <div className="admin-panel-header">
           <div>
             <h2><Bot size={18} /> High-priority leads</h2>
-            <p>Prospects with valid email addresses that are ready for the Get on board flow.</p>
+            <p>Contacts classified as hot. Review campaign permission and eligibility before sending.</p>
           </div>
           <span className="admin-status live">{hotLeads.length} visible</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 }}>
-          {hotLeads.length ? hotLeads.map((lead) => <LeadCard key={lead.lead_id || `${lead.email}-${lead.last_contact_at}`} lead={lead} />) : <p>No email-ready hot leads yet.</p>}
+          {hotLeads.length ? hotLeads.map((lead) => <LeadCard key={lead.lead_id || `${lead.email}-${lead.last_contact_at}`} lead={lead} />) : <p>No contacts classified as hot yet.</p>}
         </div>
       </section>
 
@@ -558,7 +558,7 @@ export default async function GencouvWorkspacePage() {
           <span className="admin-status">{recentLeads.length} records</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 }}>
-          {recentLeads.length ? recentLeads.map((lead) => <LeadCard key={`${lead.lead_id}-${lead.name}-${lead.last_contact_at}`} lead={lead} />) : <p>No recent email-ready leads yet.</p>}
+          {recentLeads.length ? recentLeads.map((lead) => <LeadCard key={`${lead.lead_id}-${lead.name}-${lead.last_contact_at}`} lead={lead} />) : <p>No recent contacts with a valid email address.</p>}
         </div>
       </section>
     </main>

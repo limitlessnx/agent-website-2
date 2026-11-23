@@ -73,7 +73,7 @@ export default function GencouvMailLeads({ leads, messages }: { leads: Lead[]; m
               <summary style={{ cursor: "pointer", listStyle: "none", padding: "14px 16px", display: "grid", gridTemplateColumns: "minmax(150px,1.2fr) minmax(180px,1.5fr) minmax(110px,.7fr) minmax(130px,.8fr)", gap: 12, alignItems: "center" }}>
                 <strong>{lead.name || "Unnamed lead"}</strong>
                 <span style={{ color: "var(--admin-text-soft)", overflowWrap: "anywhere" }}>{lead.email}</span>
-                <span className={statusClass(latest?.status)}>{latest?.status || lead.email_sequence_status || "ready"}</span>
+                <span className={statusClass(latest?.status)}>{latest?.status || lead.email_sequence_status || "not_enrolled"}</span>
                 <span style={{ color: "var(--admin-text-muted)", fontSize: ".82rem" }}>{formatTime(latest?.scheduled_at || lead.next_follow_up_at)}</span>
               </summary>
 
