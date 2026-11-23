@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import GencouvEmailHistory from "@/components/gencouv/GencouvEmailHistory";
 import "./gencouv-marketing.css";
+import GencouvContactImport from "@/components/gencouv/GencouvContactImport";
 import GencouvBulkCampaigns from "@/components/gencouv/GencouvBulkCampaigns";
 
 const templates = {
@@ -36,6 +37,7 @@ export default function GencouvMarketingWorkspace(){
     finally{submissionLock.current=false;setSending(false);}
   }
   return <div className="gencouv-marketing" style={{display:"grid",gap:18,maxWidth:1060,margin:"0 auto"}}>
+    <GencouvContactImport compact />
     <GencouvBulkCampaigns />
     <section id="gencouv-proposal" className="admin-panel">
       <div className="admin-panel-header"><div><h2>Compose an individual proposal</h2><p>Send a manually reviewed, one-recipient Gencouv email via Resend. This does not start a marketing campaign.</p></div><span className="admin-status">Resend</span></div>
