@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import GencouvMessageTemplates, { useGencouvMessageTemplates } from "@/components/gencouv/GencouvMessageTemplates";
 import Link from "next/link";
 type Category={id:string;name:string};
 type Contact={id:string;email:string;full_name:string|null;eligible:boolean;reason:string};
@@ -7,6 +8,7 @@ type Audience={total:number;eligible:number;suppressed:number;unverified:number;
 type Campaign={id:string;from_email:string;subject:string;text_body:string;status:string;category_id:string|null};
 type Settings={enabled:boolean;daily_limit:number;manual_daily_limit:number;worker_verified:boolean};
 export default function GencouvBulkCampaigns(){
+  const messageLibrary=useGencouvMessageTemplates();
   const [categories,setCategories]=useState<Category[]>([]),[campaigns,setCampaigns]=useState<Campaign[]>([]),[settings,setSettings]=useState<Settings|null>(null);
   const [campaignId,setCampaignId]=useState(""),[category,setCategory]=useState(""),[audience,setAudience]=useState<Audience|null>(null),[selected,setSelected]=useState<string[]>([]);
   const [from,setFrom]=useState("info@gencouv.com"),[subject,setSubject]=useState(""),[message,setMessage]=useState("");
@@ -32,7 +34,7 @@ export default function GencouvBulkCampaigns(){
   }
   async function saveDraft(){
     setBusy(true);setError("");
-    try{const response=await fetch("/api/dashboard/gencouv/campaigns",{method:campaignId?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:campaignId||undefined,from,subject,text:message,category_id:category})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Draft could not be saved.");setCampaignId(data.campaign.id);setStatus(data.note);resetReview();await refresh();}catch(error){setError(error instanceof Error?error.message:"Draft could not be saved.");}finally{setBusy(false);}
+    try{const response=await fetch("/api/dashboard/gencouv/campaigns",{method:campaignId?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:campaignId||undefined,from,subject,text:message,category_id:category})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Draft could not be saved.");setCampaignId(data.campaign.id);setStatus(data.note);resetReview();await refresh();await messageLibrary.reload();}catch(error){setError(error instanceof Error?error.message:"Draft could not be saved.");}finally{setBusy(false);}
   }
   async function preview(){
     setBusy(true);setError("");setSelected([]);setAudience(null);resetReview();
@@ -58,6 +60,7 @@ export default function GencouvBulkCampaigns(){
       <label className="admin-field gencouv-wide">Campaign message<textarea aria-label="Campaign message" disabled={busy||locked} value={message} rows={8} maxLength={30000} onChange={event=>{setMessage(event.target.value);resetReview();}}/><small>Use [Name] for the recipient’s saved name. An unsubscribe link is included automatically.</small></label>
     </div>
     <div className="gencouv-action-row"><button disabled={busy||locked||!subject.trim()||!message.trim()} onClick={()=>void saveDraft()}>Save campaign draft</button><button disabled={busy||!campaignId||dirty} onClick={()=>void preview()}>Preview eligible audience</button><button disabled={busy||!subject.trim()||!message.trim()} onClick={()=>setReviewed(true)}>Preview message</button></div>
+    <GencouvMessageTemplates label="Saved campaign message template" content={{from,subject,text:message}} disabled={busy||Boolean(batch&&!['submitted','failed','cancelled'].includes(batch.status))} onUse={template=>{setCampaignId("");setFrom(template.from_email);setSubject(template.subject);setMessage(template.text_body);setCategory("");setAudience(null);setSelected([]);setConsentConfirmed(false);resetReview();setError("");setStatus("");}} />
     {locked?<p>This campaign’s content is locked after its first reservation. Previously reserved recipients are excluded from subsequent batches. Choose New campaign for different content.</p>:null}
     {reviewed?<section className="gencouv-message-preview" aria-label="Campaign message preview"><h3>{subject}</h3><p>{message}</p><small>Names are personalized for each selected contact. Unsubscribe is included on every marketing email.</small></section>:null}
     {audience?<div className="gencouv-audience" aria-label="Eligible recipient selection"><p>{audience.total} reviewed · {audience.eligible} eligible · {audience.unverified} permission unverified · {audience.suppressed} suppressed · {audience.reserved||0} already reserved · {audience.invalid||0} invalid addresses</p>{audience.truncated?<p role="status">Showing up to 500 contacts. Use a category to narrow this audience.</p>:null}

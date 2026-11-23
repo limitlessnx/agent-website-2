@@ -18,7 +18,7 @@ jobs:
       - name: Gencouv runtime, database and regression tests
         run: node --test tests/gencouv-marketing-runtime.test.cjs tests/gencouv-marketing-database.test.cjs tests/gencouv-custom-lead-categories.test.mjs tests/gencouv-dashboard-navigation.test.mjs
       - name: Scoped lint
-        run: npx eslint app/api/dashboard/gencouv/{bulk-send,contact-import,outbound-settings,proposals,campaigns,email-history,campaign-audience}/route.ts lib/gencouv-*.ts components/gencouv/{GencouvBulkCampaigns,GencouvMarketingWorkspace,GencouvContactImport,GencouvEmailHistory,GencouvInbox,GencouvEmailControls}.tsx app/api/gencouv/{email-control,email-reply,inbox-action,email-sequences,resend-webhook,unsubscribe}/route.ts app/dashboard/gencouv/page.tsx
+        run: npx eslint app/api/dashboard/gencouv/{bulk-send,contact-import,outbound-settings,proposals,campaigns,email-history,campaign-audience}/route.ts lib/gencouv-*.ts components/gencouv/{GencouvBulkCampaigns,GencouvMarketingWorkspace,GencouvContactImport,GencouvEmailHistory,GencouvInbox,GencouvEmailControls,GencouvMessageTemplates}.tsx app/api/gencouv/{email-control,email-reply,inbox-action,email-sequences,resend-webhook,unsubscribe}/route.ts app/dashboard/gencouv/page.tsx
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Browser checks with synthetic contacts and blocked external providers

@@ -38,3 +38,4 @@
 #gencouv-contact-import{scroll-margin-top:100px}
 .gencouv-marketing .gencouv-upload-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:100%;padding:10px 16px;box-sizing:border-box;border:1px solid #a78bfa;border-radius:12px;background:#7c3aed;color:#fff;font-weight:600;text-decoration:none}
 .gencouv-marketing .gencouv-upload-link:hover{background:#6d28d9}
+.gencouv-message-library{min-width:0;margin-block:20px;padding:16px;border:1px solid var(--admin-border,#493268);border-radius:14px;background:var(--admin-bg,#10091e)}

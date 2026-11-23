@@ -34,3 +34,23 @@ test('native overview and lead classification work without an external workflow'
  const state=await(await context.request.get('http://127.0.0.1:4401/__qa/state')).json();expect(state.calls).toBe(0);expect(state.settings[0].sending_enabled).toBe(false);
  await capture(page,'native-overview',info.project.use.viewport!.width);
 });
+test('saved message templates persist and can be reused across composers without copying send state',async({page,context},info)=>{
+ await signIn(context);await page.goto('/dashboard/gencouv/marketing',{waitUntil:'networkidle'});
+ const bulk=page.locator('#bulk-campaigns'),proposal=page.locator('#gencouv-proposal');
+ const subject='Reusable Gencouv message with a long subject for persistent templates and responsive controls';
+ await bulk.getByLabel('Campaign subject',{exact:true}).fill(subject);await bulk.getByRole('textbox',{name:'Campaign message',exact:true}).fill('Reusable synthetic content. No external email is sent.');
+ await bulk.getByRole('button',{name:'Save message as template',exact:true}).click();await expect(bulk.getByText('Message template saved. No email was sent.',{exact:true})).toBeVisible();
+ let saved=(await(await context.request.get('/api/dashboard/gencouv/campaigns')).json()).campaigns.find((item:{subject:string})=>item.subject===subject);expect(saved).toBeTruthy();
+ await context.request.post('http://127.0.0.1:4401/__qa/lock-campaign',{data:{id:saved.id}});await page.reload({waitUntil:'networkidle'});
+ await proposal.getByLabel('Recipient',{exact:true}).fill('previous@example.test');await proposal.getByRole('checkbox').check();
+ await proposal.getByRole('combobox',{name:'Saved proposal message template',exact:true}).selectOption(saved.id);await proposal.getByRole('button',{name:'Load selected template',exact:true}).click();
+ await expect(proposal.getByLabel('Subject',{exact:true})).toHaveValue(subject);await expect(proposal.getByRole('textbox',{name:'Individual email message',exact:true})).toHaveValue('Reusable synthetic content. No external email is sent.');await expect(proposal.getByLabel('Recipient',{exact:true})).toHaveValue('');await expect(proposal.getByRole('checkbox')).not.toBeChecked();await expect(proposal.getByRole('button',{name:'Send individual email',exact:true})).toBeDisabled();
+ await bulk.getByRole('combobox',{name:'Saved campaign',exact:true}).selectOption(saved.id);await expect(bulk.getByLabel('Campaign subject',{exact:true})).toBeDisabled();
+ await bulk.getByRole('combobox',{name:'Saved campaign message template',exact:true}).selectOption(saved.id);await bulk.getByRole('button',{name:'Load selected template',exact:true}).click();
+ await expect(bulk.getByRole('combobox',{name:'Saved campaign',exact:true})).toHaveValue('');await expect(bulk.getByLabel('Campaign subject',{exact:true})).toBeEnabled();await expect(bulk.getByLabel('Campaign subject',{exact:true})).toHaveValue(subject);await expect(bulk.getByRole('button',{name:'Send one-time email to 0 recipients',exact:true})).toBeDisabled();
+ await bulk.getByRole('button',{name:'Save campaign draft',exact:true}).click();await expect(bulk.getByRole('status').filter({hasText:'Draft saved'})).toBeVisible();
+ const campaigns=(await(await context.request.get('/api/dashboard/gencouv/campaigns')).json()).campaigns;
+ expect(campaigns).toHaveLength(2);expect(campaigns.find((item:{id:string})=>item.id===saved.id).status).toBe('ready');
+ const state=await(await context.request.get('http://127.0.0.1:4401/__qa/state')).json();expect(state.calls).toBe(0);expect(state.messages).toHaveLength(0);expect(state.settings[0].sending_enabled).toBe(false);
+ await capture(page,'saved-templates',info.project.use.viewport!.width);
+});
