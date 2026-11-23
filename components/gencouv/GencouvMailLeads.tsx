@@ -56,9 +56,9 @@ export default function GencouvMailLeads({ leads, messages }: { leads: Lead[]; m
       <div className="admin-panel-header">
         <div>
           <h2>Mail leads</h2>
-          <p>Only valid, email-eligible leads appear here. Open a row to view sequence and delivery history.</p>
+          <p>Contacts with a valid email address. Campaign consent and suppression are checked separately before sending.</p>
         </div>
-        <span className="admin-status live">{leads.length} eligible</span>
+        <span className="admin-status live">{leads.length} contacts</span>
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>

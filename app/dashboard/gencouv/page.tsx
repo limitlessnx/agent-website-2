@@ -199,7 +199,7 @@ function Breakdown({ title, items }: { title: string; items?: Record<string, num
       <div className="admin-panel-header">
         <div>
           <h2>{title}</h2>
-          <p>Live split from the Gencouv CRM sheet.</p>
+          <p>Live split from Gencouv database records.</p>
         </div>
       </div>
       <div className="admin-checklist">
@@ -221,15 +221,15 @@ function LeadCard({ lead }: { lead: Lead }) {
           <h2 style={{ fontSize: "1rem" }}>{lead.name || "Unknown lead"}</h2>
           <p>{lead.email}</p>
         </div>
-        <span className={lead.dashboard_priority === "High" ? "admin-status live" : "admin-status"}>
-          {lead.dashboard_priority || "Low"}
+        <span className={lead.lead_temperature === "hot" || lead.dashboard_priority === "High" ? "admin-status live" : "admin-status"}>
+          {lead.lead_temperature || lead.dashboard_priority || "Unclassified"}
         </span>
       </div>
       <div className="admin-checklist">
         <span>{lead.product_interest || "General"}</span>
         <span>{lead.broker || "Broker unknown"}</span>
         <span>{lead.email_sequence_status || "not_ready"}</span>
-        <span>{lead.lifecycle_status || "Cold"}</span>
+        <span>{lead.pipeline_stage || lead.lifecycle_status || "new"}</span>
       </div>
       <p style={{ color: "var(--admin-text-soft)", lineHeight: 1.6, margin: "16px 0 0" }}>
         {lead.message || "No message preview available."}
@@ -553,7 +553,7 @@ export default async function GencouvWorkspacePage() {
         <div className="admin-panel-header">
           <div>
             <h2><LineChart size={18} /> Recent Gencouv activity</h2>
-            <p>Last sync: {formatTime(data?.generated_at)}</p>
+            <p>Snapshot generated: {formatTime(data?.generated_at)}</p>
           </div>
           <span className="admin-status">{recentLeads.length} records</span>
         </div>

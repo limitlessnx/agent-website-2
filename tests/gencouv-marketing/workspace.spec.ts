@@ -29,6 +29,7 @@ test('native overview and lead classification work without an external workflow'
  await expect(contact).toHaveCount(1);await contact.getByRole('button',{name:'Hot',exact:true}).click();
  await expect(page.getByRole('status').filter({hasText:'Contact classification saved'})).toBeVisible();
  await expect(page.locator('article').filter({has:page.getByRole('heading',{name:'Native Snapshot Contact',exact:true})})).toHaveCount(2);
+ await expect(page.locator('.admin-status').filter({hasText:/^hot$/})).toHaveCount(2);
  const state=await(await context.request.get('http://127.0.0.1:4401/__qa/state')).json();expect(state.calls).toBe(0);expect(state.settings[0].sending_enabled).toBe(false);
  await capture(page,'native-overview',info.project.use.viewport!.width);
 });

@@ -27,3 +27,14 @@ Local type check and scoped lint passed. Sixteen database tests and sixteen runt
 Automated sending remains OFF and unverified. No Gencouv-specific automated sender has passed deployed-task acceptance. This follow-up does not add a replacement campaign sender merely to satisfy a green connection indicator.
 
 The single authorized real inbox has not been emailed by this follow-up. A normal administrator browser login with Gencouv selected is still required for true production dashboard acceptance; no separate account/password is needed. Synthetic browser sessions do not establish real-session acceptance.
+
+## Executed evidence (2026-11-23)
+
+- Local TypeScript and scoped ESLint passed; 17 database tests, 16 runtime tests, navigation/category regressions and four migration-ledger checks passed.
+- The full rendered suite passed 42 checks at 360, 430, 768, 1024, 1440 and 1920px. A screenshot review identified the inherited Cold fallback; the affected six native-overview cases were rerun after showing the real saved temperature. Evidence is in `test-results/gencouv-captures/native-overview-*.png` and the standard import/review/history/error screenshots. These are synthetic rendered screenshots, not authenticated production acceptance.
+- Additive function migration registered in production as `20261123075453_gencouv_native_dashboard_controls`. Readback confirms security invoker, pinned search path, no anon/authenticated execution, and service-role execution. Native snapshot succeeds with automation OFF. Existing security advisory categories/counts are unchanged. No customer records were updated.
+- Read-only deployed audit job 137557087601, run [45134395831](https://github.com/limitlessnx/agent-website-2/actions/runs/45134395831), passed. Production Trigger deployment `deployment_wwien955oyi5dkyynt8vt`, version `20261123.1`, is DEPLOYED for main `dd466bc82be22fcf74f3af140f3088b9d956fcad`. Its existing database configuration could read Gencouv's persisted paused state from CI. This is configuration verification, not execution of a Gencouv sender in the worker.
+- The audit found **no `RESEND_API_KEY` in the worker environment**, no Gencouv task candidate in the deployed source, `workerVerified: false`, and `automationEnabled: false`. Vercel manual Resend delivery is separate; its credential was not removed or changed. Gencouv automated email is an identified implementation/configuration gap, not an n8n reconnection task.
+- The audit triggered zero tasks, sent zero emails and performed zero production writes. No real inbox email has been sent by this follow-up.
+
+Review: https://github.com/limitlessnx/agent-website-2/pull/456. Application release readiness and final-head CI must be verified before merging; the applied database functions alone are not a Vercel release.
