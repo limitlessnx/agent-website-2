@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { loadGencouvDashboardFeed } from "@/lib/gencouv-dashboard-feed";
+import { loadGencouvNativeDashboard } from "@/lib/gencouv-dashboard-feed";
 import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 import GencouvWorkspaceSwitcher from "@/components/gencouv/GencouvWorkspaceSwitcher";
 import { Activity, Bot, CircleDollarSign, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
@@ -123,10 +123,6 @@ type WebEvent = {
   country?: string;
 };
 
-const dashboardUrl =
-  process.env.GENCOUV_DASHBOARD_API_URL ||
-  "https://n8n.srv1720757.hstgr.cloud/webhook/gencouv-dashboard-data";
-
 const TEST_MARKERS = ["codex", "test lead", "clean test", "sanitized test", "dummy", "sample lead"];
 const BLOCKED_EMAIL_STATES = ["do_not_contact", "bounced", "complained", "suppressed", "unsubscribed", "failed"];
 
@@ -151,7 +147,7 @@ function isVisibleEmailLead(lead: Lead) {
 }
 
 async function getGencouvDashboard() {
-  return loadGencouvDashboardFeed<DashboardData>(dashboardUrl,process.env.GENCOUV_DASHBOARD_SECRET);
+  return loadGencouvNativeDashboard<DashboardData>();
 }
 
 function total(data: DashboardData | null, key: string) {
@@ -379,7 +375,7 @@ export default async function GencouvWorkspacePage() {
         <details style={{marginBottom:18,padding:"12px 14px",border:"1px solid var(--fk-border)",borderRadius:12,background:"var(--fk-surface)",minWidth:0}}>
           <summary style={{cursor:"pointer",fontWeight:600,overflowWrap:"anywhere"}}>Dashboard feed unavailable · View setup details</summary>
           <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>{dashboard.error}</p>
-          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>The external overview is temporarily unavailable. Contact imports, saved campaigns, manual sending and email history remain available through the workspace links above. Automated campaigns keep their saved state.</p>
+          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>The database overview is temporarily unavailable. Contact imports, saved campaigns, manual sending and email history remain available through the workspace links above. Automated campaigns keep their saved state.</p>
         </details>
       ) : null}
 
@@ -493,7 +489,7 @@ export default async function GencouvWorkspacePage() {
         <GencouvEmailControls
           dailyLimit={settings.daily_send_limit || data?.email_controls?.daily_send_limit || 10}
           maxDailyLimit={30}
-          sendingEnabled={Boolean(settings.sending_enabled || data?.email_controls?.sending_enabled)}
+          sendingEnabled={settings.sending_enabled === true}
         />
       </div>
 

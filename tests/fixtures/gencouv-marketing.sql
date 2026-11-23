@@ -2,7 +2,7 @@ create role anon;
 create role authenticated;
 create role service_role bypassrls;
 create table organizations(id uuid primary key);
-create table crm_customers(id uuid primary key default gen_random_uuid(),organization_id uuid,full_name text,email text,company_name text,status text default 'active' check(status in ('active','inactive','blocked','archived')),metadata jsonb default '{}',created_at timestamptz default now(),updated_at timestamptz default now(),unique(id,organization_id));
+create table crm_customers(id uuid primary key default gen_random_uuid(),organization_id uuid,full_name text,email text,phone text,company_name text,status text default 'active' check(status in ('active','inactive','blocked','archived')),metadata jsonb default '{}',created_at timestamptz default now(),updated_at timestamptz default now(),unique(id,organization_id));
 create unique index crm_customers_org_email_unique on crm_customers(organization_id,lower(email)) where email is not null;
 create table crm_lead_categories(id uuid primary key,organization_id uuid,name text);
 create table crm_customer_category_assignments(organization_id uuid,customer_id uuid,category_id uuid,primary key(organization_id,customer_id,category_id));
@@ -15,3 +15,5 @@ create table gencouv_campaign_settings(id uuid primary key default gen_random_uu
 create table gencouv_sync_runs(id uuid primary key,organization_id uuid,source text check(source in ('google_sheets','resend','n8n','dashboard')),direction text check(direction in ('inbound','outbound','bidirectional')),status text check(status in ('running','completed','failed','partial')),records_read integer,records_written integer,metadata jsonb default '{}',completed_at timestamptz);
 
 create table gencouv_qualified_leads(id uuid primary key default gen_random_uuid(),organization_id uuid,normalized_email text,email text,first_name text,last_name text,full_name text,product_interest text,broker text,quality_score numeric default 1,created_at timestamptz default now(),qualification_status text default 'qualified',validation_status text default 'valid',do_not_contact boolean default false,suppression_status text,unsubscribe_status text,bounce_status text,campaign_status text,email_sequence_status text,source text,source_id text,raw_lead_id uuid,campaign_enrolled_at timestamptz,last_event_at timestamptz,updated_at timestamptz);
+
+alter table gencouv_qualified_leads add column metadata jsonb default '{}', add column phone text, add column lifecycle_status text, add column last_email_sent_at timestamptz, add column next_follow_up_at timestamptz;

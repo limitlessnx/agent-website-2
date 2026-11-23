@@ -76,35 +76,6 @@ async function findThreadMessage(data: Record<string, unknown>, senderEmail: str
   return fallback[0] || null;
 }
 
-async function syncEventToN8n(payload: unknown, eventType: string, providerEventId: string) {
-  const enabled = process.env.GENCOUV_RESEND_N8N_SYNC_ENABLED === "true";
-  if (!enabled) return { attempted: false, ok: false, disabled: true };
-
-  const url = process.env.GENCOUV_RESEND_N8N_SYNC_URL || "";
-  const secret = process.env.GENCOUV_EMAIL_EVENT_SECRET || process.env.GENCOUV_DASHBOARD_SECRET || "";
-  if (!url || !secret) return { attempted: false, ok: false };
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-gencouv-event-secret": secret,
-      },
-      signal: AbortSignal.timeout(5000),
-      body: JSON.stringify({
-        ...(payload && typeof payload === "object" ? payload : { payload }),
-        provider_event_id: providerEventId,
-        event_type: eventType,
-        source: "resend-webhook",
-      }),
-    });
-    return { attempted: true, ok: response.ok, status: response.status };
-  } catch {
-    return { attempted: true, ok: false };
-  }
-}
-
 async function updateEnrollment(email: string, patch: Record<string, unknown>) {
   if (!email) return;
   await supabaseServerRequest(
@@ -147,7 +118,7 @@ export async function POST(request: Request) {
       if (!GENCOUV_SENDERS.has(firstEmail(data.from))) return NextResponse.json({ success: true, ignored: true });
       if (!["email.sent", "email.delivered", "email.opened", "email.clicked", "email.bounced", "email.failed", "email.complained", "email.suppressed", "email.unsubscribed", "email.delivery_delayed", "email.scheduled"].includes(type)) return NextResponse.json({ success: true, ignored: true });
       const result = await supabaseServerRequest("rpc/gencouv_apply_delivery_event", { method: "POST", body: JSON.stringify({ p_event_id: providerEventId, p_type: type, p_data: data, p_occurred_at: occurredAt }) });
-      const sheetSync=await syncEventToN8n(payload,type,providerEventId);
+      const sheetSync={ attempted: false, ok: false, disabled: true };
       return NextResponse.json({ success: true, result, sheet_sync:sheetSync });
     }
     const inboundRecipients = Array.isArray(data.to) ? data.to : [data.to];
@@ -247,7 +218,7 @@ export async function POST(request: Request) {
       }),
     });
 
-    const sheetSync = await syncEventToN8n(payload, type, providerEventId);
+    const sheetSync = { attempted: false, ok: false, disabled: true };
 
     return NextResponse.json({ success: true, synced_message: Boolean(message?.id), sheet_sync: sheetSync });
   } catch {

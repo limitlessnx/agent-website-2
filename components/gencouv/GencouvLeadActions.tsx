@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 type Props = {
@@ -18,6 +19,7 @@ const actions = [
 ];
 
 export default function GencouvLeadActions({ leadId, email, name }: Props) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState("");
 
@@ -39,7 +41,8 @@ export default function GencouvLeadActions({ leadId, email, name }: Props) {
         if (!response.ok || data.success === false) {
           throw new Error(data.message || "Action failed.");
         }
-        setStatus("Recorded");
+        setStatus(data.message || "Saved");
+        router.refresh();
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Action failed.");
       }
@@ -68,7 +71,7 @@ export default function GencouvLeadActions({ leadId, email, name }: Props) {
         </button>
       ))}
       {status ? (
-        <span style={{ color: "var(--admin-text-muted)", fontSize: ".78rem", alignSelf: "center" }}>
+        <span role="status" style={{ color: "var(--admin-text-muted)", fontSize: ".78rem", alignSelf: "center" }}>
           {isPending ? "Saving..." : status}
         </span>
       ) : null}
