@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireGencouvAdmin, gencouvError, gencouvPrivateHeaders, GENCOUV_UUID, GENCOUV_SENDERS, GencouvRequestError } from "@/lib/gencouv-admin";
 export const dynamic = "force-dynamic";
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { db, organizationId } = await requireGencouvAdmin();
-    const result = await db.from("gencouv_bulk_campaigns").select("id,from_email,subject,text_body,status,category_id,updated_at").eq("organization_id", organizationId).order("updated_at", { ascending: false }).limit(100);
+    const offsetValue = new URL(request.url).searchParams.get("offset") || "0";
+    if (!/^\d{1,6}$/.test(offsetValue)) throw new GencouvRequestError("Invalid saved message page.");
+    const offset = Number(offsetValue);
+    const result = await db.from("gencouv_bulk_campaigns").select("id,from_email,subject,text_body,status,category_id,updated_at").eq("organization_id", organizationId).order("updated_at", { ascending: false }).order("id", { ascending: true }).range(offset, offset + 100);
     if (result.error) throw result.error;
-    return NextResponse.json({ campaigns: result.data || [] }, { headers: gencouvPrivateHeaders });
+    return NextResponse.json({ campaigns: (result.data || []).slice(0, 100), has_more: (result.data || []).length > 100, next_offset: offset + 100 }, { headers: gencouvPrivateHeaders });
   } catch (error) { const safe = gencouvError(error); return NextResponse.json({ error: safe.message }, { status: safe.status, headers: gencouvPrivateHeaders }); }
 }
 async function save(request: Request) {
