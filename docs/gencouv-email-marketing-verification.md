@@ -45,6 +45,11 @@ The external dashboard feed has a bounded timeout and validated response contrac
 
 A successful direct provider test from an earlier session does not establish dashboard acceptance. This work has not sent the authorized live acceptance email. A signed-in production browser is required to complete that one-recipient dashboard submission and verify its provider delivery and saved history. Do not replace it with a direct provider send or broaden the recipient's permission into ongoing marketing consent.
 
-Direct access to the external n8n host is blocked by this execution environment. No Gencouv-specific Trigger sender was found in the repository, and the live n8n sender/queued-work pause policy is not verified. Its ON control remains unavailable until the actual worker's pre-send permission, suppression, quota and persisted-state checks are reviewed. Do not mark the worker verified merely because database tests pass. Live feed authentication/response health also remains unverified; feed failure isolation is tested.
+The user confirmed Trigger.dev is the current automation platform. The n8n requirement in the original brief is obsolete. Trigger's deployment from main `dd466bc82be22fcf74f3af140f3088b9d956fcad` passed (Actions run 45119768044), but the deployed source has no Gencouv email task. Manual delivery uses the existing Resend adapter directly. Do not mark automated sending verified or enable it until its actual sender is implemented and its pre-send state, consent, suppression and quota checks pass. The follow-up replaces the overview feed and contact classification hooks with service-only database operations and removes obsolete webhook forwarding; no n8n reconnection is required.
 
 PR: https://github.com/limitlessnx/agent-website-2/pull/455. Release/preview status must be checked against the final implementation commit; an earlier READY preview is insufficient.
+
+
+## Trigger correction follow-up
+
+See `docs/gencouv-trigger-correction-verification.md` for the separate branch, native dashboard controls, read-only deployed connection audit and remaining acceptance gates.

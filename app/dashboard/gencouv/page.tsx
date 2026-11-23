@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { loadGencouvDashboardFeed } from "@/lib/gencouv-dashboard-feed";
+import { loadGencouvNativeDashboard } from "@/lib/gencouv-dashboard-feed";
 import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 import GencouvWorkspaceSwitcher from "@/components/gencouv/GencouvWorkspaceSwitcher";
 import { Activity, Bot, CircleDollarSign, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
@@ -123,10 +123,6 @@ type WebEvent = {
   country?: string;
 };
 
-const dashboardUrl =
-  process.env.GENCOUV_DASHBOARD_API_URL ||
-  "https://n8n.srv1720757.hstgr.cloud/webhook/gencouv-dashboard-data";
-
 const TEST_MARKERS = ["codex", "test lead", "clean test", "sanitized test", "dummy", "sample lead"];
 const BLOCKED_EMAIL_STATES = ["do_not_contact", "bounced", "complained", "suppressed", "unsubscribed", "failed"];
 
@@ -151,7 +147,7 @@ function isVisibleEmailLead(lead: Lead) {
 }
 
 async function getGencouvDashboard() {
-  return loadGencouvDashboardFeed<DashboardData>(dashboardUrl,process.env.GENCOUV_DASHBOARD_SECRET);
+  return loadGencouvNativeDashboard<DashboardData>();
 }
 
 function total(data: DashboardData | null, key: string) {
@@ -203,7 +199,7 @@ function Breakdown({ title, items }: { title: string; items?: Record<string, num
       <div className="admin-panel-header">
         <div>
           <h2>{title}</h2>
-          <p>Live split from the Gencouv CRM sheet.</p>
+          <p>Live split from Gencouv database records.</p>
         </div>
       </div>
       <div className="admin-checklist">
@@ -225,15 +221,15 @@ function LeadCard({ lead }: { lead: Lead }) {
           <h2 style={{ fontSize: "1rem" }}>{lead.name || "Unknown lead"}</h2>
           <p>{lead.email}</p>
         </div>
-        <span className={lead.dashboard_priority === "High" ? "admin-status live" : "admin-status"}>
-          {lead.dashboard_priority || "Low"}
+        <span className={lead.lead_temperature === "hot" || lead.dashboard_priority === "High" ? "admin-status live" : "admin-status"}>
+          {lead.lead_temperature || lead.dashboard_priority || "Unclassified"}
         </span>
       </div>
       <div className="admin-checklist">
         <span>{lead.product_interest || "General"}</span>
         <span>{lead.broker || "Broker unknown"}</span>
-        <span>{lead.email_sequence_status || "not_ready"}</span>
-        <span>{lead.lifecycle_status || "Cold"}</span>
+        <span>{lead.email_sequence_status || "not_enrolled"}</span>
+        <span>{lead.pipeline_stage || lead.lifecycle_status || "new"}</span>
       </div>
       <p style={{ color: "var(--admin-text-soft)", lineHeight: 1.6, margin: "16px 0 0" }}>
         {lead.message || "No message preview available."}
@@ -379,7 +375,7 @@ export default async function GencouvWorkspacePage() {
         <details style={{marginBottom:18,padding:"12px 14px",border:"1px solid var(--fk-border)",borderRadius:12,background:"var(--fk-surface)",minWidth:0}}>
           <summary style={{cursor:"pointer",fontWeight:600,overflowWrap:"anywhere"}}>Dashboard feed unavailable · View setup details</summary>
           <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>{dashboard.error}</p>
-          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>The external overview is temporarily unavailable. Contact imports, saved campaigns, manual sending and email history remain available through the workspace links above. Automated campaigns keep their saved state.</p>
+          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>The database overview is temporarily unavailable. Contact imports, saved campaigns, manual sending and email history remain available through the workspace links above. Automated campaigns keep their saved state.</p>
         </details>
       ) : null}
 
@@ -493,7 +489,7 @@ export default async function GencouvWorkspacePage() {
         <GencouvEmailControls
           dailyLimit={settings.daily_send_limit || data?.email_controls?.daily_send_limit || 10}
           maxDailyLimit={30}
-          sendingEnabled={Boolean(settings.sending_enabled || data?.email_controls?.sending_enabled)}
+          sendingEnabled={settings.sending_enabled === true}
         />
       </div>
 
@@ -544,12 +540,12 @@ export default async function GencouvWorkspacePage() {
         <div className="admin-panel-header">
           <div>
             <h2><Bot size={18} /> High-priority leads</h2>
-            <p>Prospects with valid email addresses that are ready for the Get on board flow.</p>
+            <p>Contacts classified as hot. Review campaign permission and eligibility before sending.</p>
           </div>
           <span className="admin-status live">{hotLeads.length} visible</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 }}>
-          {hotLeads.length ? hotLeads.map((lead) => <LeadCard key={lead.lead_id || `${lead.email}-${lead.last_contact_at}`} lead={lead} />) : <p>No email-ready hot leads yet.</p>}
+          {hotLeads.length ? hotLeads.map((lead) => <LeadCard key={lead.lead_id || `${lead.email}-${lead.last_contact_at}`} lead={lead} />) : <p>No contacts classified as hot yet.</p>}
         </div>
       </section>
 
@@ -557,12 +553,12 @@ export default async function GencouvWorkspacePage() {
         <div className="admin-panel-header">
           <div>
             <h2><LineChart size={18} /> Recent Gencouv activity</h2>
-            <p>Last sync: {formatTime(data?.generated_at)}</p>
+            <p>Snapshot generated: {formatTime(data?.generated_at)}</p>
           </div>
           <span className="admin-status">{recentLeads.length} records</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 }}>
-          {recentLeads.length ? recentLeads.map((lead) => <LeadCard key={`${lead.lead_id}-${lead.name}-${lead.last_contact_at}`} lead={lead} />) : <p>No recent email-ready leads yet.</p>}
+          {recentLeads.length ? recentLeads.map((lead) => <LeadCard key={`${lead.lead_id}-${lead.name}-${lead.last_contact_at}`} lead={lead} />) : <p>No recent contacts with a valid email address.</p>}
         </div>
       </section>
     </main>

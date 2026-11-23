@@ -1,3 +1,4 @@
+import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 export type GencouvFeedResult<T>={data:T|null;error:string|null};
 const record=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==='object'&&!Array.isArray(value);
 export function isGencouvDashboardFeed(value:unknown):boolean{
@@ -9,14 +10,15 @@ export function isGencouvDashboardFeed(value:unknown):boolean{
   if(value.email_controls!==undefined&&!record(value.email_controls))return false;
   return true;
 }
-/** Feed failures remain independent from the CRM and manual email APIs. */
-export async function loadGencouvDashboardFeed<T>(url:string,secret:string|undefined):Promise<GencouvFeedResult<T>>{
-  if(!secret)return{data:null,error:'The external dashboard feed is not configured. CRM and manual email tools remain available.'};
-  try{
-    const response=await fetch(url,{headers:{'x-gencouv-dashboard-secret':secret},cache:'no-store',signal:AbortSignal.timeout(5000)});
-    if(!response.ok)return{data:null,error:'The external dashboard feed rejected the request. CRM and manual email tools remain available.'};
-    const data:unknown=await response.json();
-    if(!isGencouvDashboardFeed(data))return{data:null,error:'The external dashboard feed returned an invalid response. CRM and manual email tools remain available.'};
-    return{data:data as T,error:null};
-  }catch{return{data:null,error:'The external dashboard feed is unavailable or timed out. CRM and manual email tools remain available.'};}
+/** Native snapshot reuses CRM, qualified leads and persisted campaign state; no external automation dependency. */
+export async function loadGencouvNativeDashboard<T>(): Promise<GencouvFeedResult<T>> {
+  try {
+    const data: unknown = await supabaseServerRequest("rpc/gencouv_dashboard_snapshot", {
+      method: "POST", body: JSON.stringify({ p_organization_id: "05737e03-f8f0-4202-8e9b-0a8982a1091c" }),
+    });
+    if (!isGencouvDashboardFeed(data)) throw new Error("Invalid snapshot");
+    return { data: data as T, error: null };
+  } catch {
+    return { data: null, error: "The database overview is temporarily unavailable. Contact imports and manual email tools remain available." };
+  }
 }

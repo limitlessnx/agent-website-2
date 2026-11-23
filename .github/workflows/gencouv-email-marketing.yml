@@ -29,3 +29,16 @@ jobs:
           name: gencouv-synthetic-responsive-evidence
           path: test-results/
           retention-days: 14
+  verify-trigger:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Read-only production Trigger connection and Gencouv pause verification
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: node scripts/verify-gencouv-trigger.mjs
