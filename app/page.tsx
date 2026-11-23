@@ -4,6 +4,7 @@ import { ArrowRight } from "@/components/admin/ServerIcons";
 import IndustryExplorer from "@/components/home/IndustryExplorer";
 import MaiaCaseStudyTeaser from "@/components/MaiaCaseStudyTeaser";
 import ProductLedHero from "@/components/home/ProductLedHero";
+import BrandFilmSection from "@/components/home/BrandFilmSection";
 import ProductShowcase from "@/components/home/ProductShowcase";
 import HotelExperienceShowroom from "@/components/home/HotelExperienceShowroom";
 import MaiaInteractiveDemo from "@/components/home/MaiaInteractiveDemo";
@@ -14,6 +15,7 @@ export default function HomePage() {
   return (
     <div className="quantix-home">
       <ProductLedHero />
+      <BrandFilmSection />
       <AutomationJourney />
       <IndustryExplorer />
       <ProductShowcase />
