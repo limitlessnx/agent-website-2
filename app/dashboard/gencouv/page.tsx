@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { loadGencouvDashboardFeed } from "@/lib/gencouv-dashboard-feed";
 import { getAdminOrganizationContext } from "@/lib/admin-organization-context";
 import GencouvWorkspaceSwitcher from "@/components/gencouv/GencouvWorkspaceSwitcher";
-import { Activity, Bot, CircleDollarSign, Flame, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
+import { Activity, Bot, CircleDollarSign, LineChart, Mail, ShieldCheck, Users } from "@/components/admin/ServerIcons";
 import MetricCard from "@/components/admin/MetricCard";
 import GencouvCohorts from "@/components/gencouv/GencouvCohorts";
 import GencouvEmailControls from "@/components/gencouv/GencouvEmailControls";
-import GencouvInbox from "@/components/gencouv/GencouvInbox";
+import GencouvInbox, {type EmailMessage as InboxMessage} from "@/components/gencouv/GencouvInbox";
 import GencouvLeadActions from "@/components/gencouv/GencouvLeadActions";
 import GencouvMailLeads from "@/components/gencouv/GencouvMailLeads";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
@@ -150,36 +151,7 @@ function isVisibleEmailLead(lead: Lead) {
 }
 
 async function getGencouvDashboard() {
-  const secret = process.env.GENCOUV_DASHBOARD_SECRET;
-
-  if (!secret) {
-    return {
-      data: null as DashboardData | null,
-      error: "GENCOUV_DASHBOARD_SECRET is not configured in Flux Knight.",
-    };
-  }
-
-  try {
-    const response = await fetch(dashboardUrl, {
-      headers: { "x-gencouv-dashboard-secret": secret },
-      cache: "no-store",
-    });
-    const data = (await response.json()) as DashboardData;
-
-    if (!response.ok || data.success === false) {
-      return {
-        data: null as DashboardData | null,
-        error: "The Gencouv dashboard feed rejected the request.",
-      };
-    }
-
-    return { data, error: null as string | null };
-  } catch {
-    return {
-      data: null as DashboardData | null,
-      error: "The Gencouv dashboard feed is not reachable.",
-    };
-  }
+  return loadGencouvDashboardFeed<DashboardData>(dashboardUrl,process.env.GENCOUV_DASHBOARD_SECRET);
 }
 
 function total(data: DashboardData | null, key: string) {
@@ -274,21 +246,22 @@ function LeadCard({ lead }: { lead: Lead }) {
   );
 }
 
+function dashboardTimeWindow(){const now=Date.now();return{thirtyDaysAgo:new Date(now-30*24*60*60*1000).toISOString(),sevenDaysAgo:now-7*24*60*60*1000};}
+
 export default async function GencouvWorkspacePage() {
   const selectedWorkspace = await getAdminOrganizationContext();
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const {thirtyDaysAgo,sevenDaysAgo}=dashboardTimeWindow();
   const [organizations, dashboard, emailMessages, campaignEnrollments, rawLeads, rejectedLeads, qualifiedLeads, dailyCohorts, campaignSettings, websiteEvents] = await Promise.all([
-    supabaseServerRequest<any[]>("organizations?select=id,name,slug,status,metadata&slug=eq.gencouv&limit=1").catch(() => []),
+    supabaseServerRequest<Array<{id:string;name:string;slug:string;status:string;metadata:Record<string,unknown>}>>("organizations?select=id,name,slug,status,metadata&slug=eq.gencouv&limit=1").catch(() => []),
     getGencouvDashboard(),
-    supabaseServerRequest<any[]>("gencouv_email_messages?select=*&order=created_at.desc&limit=500").catch(() => []),
-    supabaseServerRequest<any[]>("gencouv_campaign_enrollments?select=*&order=cohort_date.desc,created_at.desc&limit=500").catch(() => []),
-    supabaseServerRequest<PipelineLead[]>("gencouv_raw_leads?select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
-    supabaseServerRequest<PipelineLead[]>("gencouv_rejected_leads?select=id,email,normalized_email,processing_status,validation_result,created_at&order=created_at.desc&limit=1000").catch(() => []),
-    supabaseServerRequest<PipelineLead[]>("gencouv_qualified_leads?select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
-    supabaseServerRequest<DailyCohort[]>("gencouv_daily_cohorts?select=*&order=cohort_date.desc&limit=30").catch(() => []),
-    supabaseServerRequest<CampaignSettings[]>("gencouv_campaign_settings?select=*&campaign_key=eq.gencouv_long_form_copy_trading&limit=1").catch(() => []),
-    supabaseServerRequest<WebEvent[]>(`gencouv_web_events?select=id,created_at,event_name,session_id,page,landing_page,cta_name,campaign,cohort,utm_source,utm_medium,utm_campaign,device,country&created_at=gte.${encodeURIComponent(thirtyDaysAgo)}&order=created_at.desc&limit=10000`).catch(() => []),
+    supabaseServerRequest<InboxMessage[]>("gencouv_email_messages?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=*&order=created_at.desc&limit=500").catch(() => []),
+    supabaseServerRequest<Array<{campaign_status:string;cohort_date:string;created_at:string;normalized_email:string;do_not_contact:boolean}>>("gencouv_campaign_enrollments?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=*&order=cohort_date.desc,created_at.desc&limit=500").catch(() => []),
+    supabaseServerRequest<PipelineLead[]>("gencouv_raw_leads?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
+    supabaseServerRequest<PipelineLead[]>("gencouv_rejected_leads?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=id,email,normalized_email,processing_status,validation_result,created_at&order=created_at.desc&limit=1000").catch(() => []),
+    supabaseServerRequest<PipelineLead[]>("gencouv_qualified_leads?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=id,email,normalized_email,campaign_status,validation_status,qualification_status,cohort_date,created_at&order=created_at.desc&limit=1000").catch(() => []),
+    supabaseServerRequest<DailyCohort[]>("gencouv_daily_cohorts?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=*&order=cohort_date.desc&limit=30").catch(() => []),
+    supabaseServerRequest<CampaignSettings[]>("gencouv_campaign_settings?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=*&campaign_key=eq.gencouv_long_form_copy_trading&limit=1").catch(() => []),
+    supabaseServerRequest<WebEvent[]>(`gencouv_web_events?organization_id=eq.05737e03-f8f0-4202-8e9b-0a8982a1091c&select=id,created_at,event_name,session_id,page,landing_page,cta_name,campaign,cohort,utm_source,utm_medium,utm_campaign,device,country&created_at=gte.${encodeURIComponent(thirtyDaysAgo)}&order=created_at.desc&limit=10000`).catch(() => []),
   ]);
 
   const organization = organizations[0];
@@ -333,7 +306,7 @@ export default async function GencouvWorkspacePage() {
   const rawToday = rawLeads.filter((lead) => lead.cohort_date === today || lead.created_at?.startsWith(today)).length;
   const rejectedToday = rejectedLeads.filter((lead) => lead.created_at?.startsWith(today)).length;
   const qualifiedToday = qualifiedLeads.filter((lead) => lead.cohort_date === today || lead.created_at?.startsWith(today)).length;
-  const enrolledToday = campaignEnrollments.filter((row: any) => row.cohort_date === today).length;
+  const enrolledToday = campaignEnrollments.filter(row => row.cohort_date === today).length;
 
   const pageViews = websiteEvents.filter((event) => event.event_name === "page_view");
   const telegramClicks = websiteEvents.filter((event) => event.event_name === "telegram_cta_click");
@@ -406,7 +379,7 @@ export default async function GencouvWorkspacePage() {
         <details style={{marginBottom:18,padding:"12px 14px",border:"1px solid var(--fk-border)",borderRadius:12,background:"var(--fk-surface)",minWidth:0}}>
           <summary style={{cursor:"pointer",fontWeight:600,overflowWrap:"anywhere"}}>Dashboard feed unavailable · View setup details</summary>
           <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>{dashboard.error}</p>
-          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>Configure GENCOUV_DASHBOARD_SECRET on the server. Email sequences must remain disabled until approved.</p>
+          <p style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}>The external overview is temporarily unavailable. Contact imports, saved campaigns, manual sending and email history remain available through the workspace links above. Automated campaigns keep their saved state.</p>
         </details>
       ) : null}
 

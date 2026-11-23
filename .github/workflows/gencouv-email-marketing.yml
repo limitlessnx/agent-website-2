@@ -1,0 +1,31 @@
+name: Gencouv email marketing verification
+on:
+  pull_request:
+    branches: [main]
+    paths: ['app/**/gencouv/**', 'components/gencouv/**', 'lib/gencouv-*.ts', 'supabase/migrations/*gencouv*', 'tests/gencouv*', 'tests/gencouv-marketing/**', 'playwright.gencouv.config.ts', '.github/workflows/gencouv-email-marketing.yml']
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm}
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Gencouv runtime, database and regression tests
+        run: node --test tests/gencouv-marketing-runtime.test.cjs tests/gencouv-marketing-database.test.cjs tests/gencouv-custom-lead-categories.test.mjs tests/gencouv-dashboard-navigation.test.mjs
+      - name: Scoped lint
+        run: npx eslint app/api/dashboard/gencouv/{bulk-send,contact-import,outbound-settings,proposals,campaigns,email-history,campaign-audience}/route.ts lib/gencouv-*.ts components/gencouv/{GencouvBulkCampaigns,GencouvMarketingWorkspace,GencouvContactImport,GencouvEmailHistory,GencouvInbox,GencouvEmailControls}.tsx app/api/gencouv/{email-control,email-reply,inbox-action,email-sequences,resend-webhook,unsubscribe}/route.ts app/dashboard/gencouv/page.tsx
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser checks with synthetic contacts and blocked external providers
+        run: npx playwright test --config playwright.gencouv.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gencouv-synthetic-responsive-evidence
+          path: test-results/
+          retention-days: 14

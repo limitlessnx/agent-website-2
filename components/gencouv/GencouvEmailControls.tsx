@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import GencouvSequenceEditor from "@/components/gencouv/GencouvSequenceEditor";
 
 type Props = {
@@ -13,9 +13,6 @@ const quickActions = [
   { label: "Preview Sequence", action: "preview_sequence" },
   { label: "Pause Sequence", action: "pause_sequence" },
   { label: "Stop Sequence", action: "stop_sequence" },
-  { label: "Move to Following Up", action: "move_following_up" },
-  { label: "Move to Onboarding", action: "move_onboarding" },
-  { label: "Do Not Contact", action: "do_not_contact" },
 ];
 
 async function sendDashboardAction(payload: Record<string, unknown>) {
@@ -31,9 +28,11 @@ async function sendDashboardAction(payload: Record<string, unknown>) {
   return data;
 }
 
-export default function GencouvEmailControls({ dailyLimit, maxDailyLimit, sendingEnabled }: Props) {
+export default function GencouvEmailControls({ dailyLimit, maxDailyLimit }: Props) {
   const [selectedLimit, setSelectedLimit] = useState(Math.min(Math.max(dailyLimit || 10, 1), maxDailyLimit || 10));
-  const [message, setMessage] = useState("Email sending is locked. Controls record sequence intent only.");
+  const [enabled,setEnabled]=useState<boolean|null>(null);
+  const [message, setMessage] = useState("Loading persisted campaign settings…");
+  useEffect(()=>{let active=true;void fetch("/api/dashboard/gencouv/outbound-settings",{cache:"no-store"}).then(async response=>{const data=await response.json();if(!response.ok)throw new Error("Campaign settings unavailable.");if(active){setEnabled(data.enabled);setSelectedLimit(data.daily_limit);setMessage("Manual sending remains available when automated campaigns are OFF.");}}).catch(()=>{if(active)setMessage("Campaign settings unavailable. Retry before changing controls.");});return()=>{active=false;};},[]);
   const [isPending, startTransition] = useTransition();
 
   const runAction = (action: string, extra: Record<string, unknown> = {}) => {
@@ -45,6 +44,7 @@ export default function GencouvEmailControls({ dailyLimit, maxDailyLimit, sendin
           requested_by: "flux-knight-dashboard",
           ...extra,
         });
+        if(typeof result.enabled==="boolean")setEnabled(result.enabled);
         setMessage(result.message || "Dashboard action recorded.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "The dashboard action failed.");
@@ -60,8 +60,8 @@ export default function GencouvEmailControls({ dailyLimit, maxDailyLimit, sendin
             <h2>Email control center</h2>
             <p>Control sequence readiness, follow-up state, and sender warm-up without exposing backend workflow machinery.</p>
           </div>
-          <span className={sendingEnabled ? "admin-status live" : "admin-status warning"}>
-            {sendingEnabled ? "sending enabled" : "sending locked"}
+          <span className={enabled ? "admin-status live" : "admin-status warning"}>
+            {enabled ? "automation ON" : enabled===false?"automation OFF":"state unavailable"}
           </span>
         </div>
 

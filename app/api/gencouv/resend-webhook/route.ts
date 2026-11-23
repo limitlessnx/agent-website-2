@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
+import { verifyGencouvResendSignature } from "@/lib/gencouv-resend-signature";
+import { resendApi } from "@/lib/fluxknight-mail";
+import { GENCOUV_SENDERS } from "@/lib/gencouv-admin";
+
+type ThreadMessage={id:string;sequence_id?:string;sequence_step_id?:string;lead_id?:string;provider_message_id?:string;message_id_header?:string};
 
 const GENCOUV_ORG_ID = "05737e03-f8f0-4202-8e9b-0a8982a1091c";
 
 function iso(value: unknown) {
   const date = value ? new Date(String(value)) : new Date();
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
-}
-
-function eventStatus(type: string) {
-  return type.replace(/^email\./, "");
 }
 
 function firstEmail(value: unknown) {
@@ -62,15 +63,15 @@ async function findThreadMessage(data: Record<string, unknown>, senderEmail: str
 
   for (const candidate of candidates) {
     const encoded = encodeURIComponent(candidate);
-    const matches = await supabaseServerRequest<any[]>(
-      `gencouv_email_messages?select=*&or=(message_id_header.eq.${encoded},provider_message_id.eq.${encoded})&limit=1`,
+    const matches = await supabaseServerRequest<ThreadMessage[]>(
+      `gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&select=*&or=(message_id_header.eq.${encoded},provider_message_id.eq.${encoded})&limit=1`,
     ).catch(() => []);
     if (matches[0]) return matches[0];
   }
 
   if (!senderEmail) return null;
-  const fallback = await supabaseServerRequest<any[]>(
-    `gencouv_email_messages?select=*&recipient_email=eq.${encodeURIComponent(senderEmail)}&direction=eq.outbound&order=created_at.desc&limit=1`,
+  const fallback = await supabaseServerRequest<ThreadMessage[]>(
+    `gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&select=*&recipient_email=eq.${encodeURIComponent(senderEmail)}&direction=eq.outbound&order=created_at.desc&limit=1`,
   ).catch(() => []);
   return fallback[0] || null;
 }
@@ -90,6 +91,7 @@ async function syncEventToN8n(payload: unknown, eventType: string, providerEvent
         "content-type": "application/json",
         "x-gencouv-event-secret": secret,
       },
+      signal: AbortSignal.timeout(5000),
       body: JSON.stringify({
         ...(payload && typeof payload === "object" ? payload : { payload }),
         provider_event_id: providerEventId,
@@ -101,24 +103,6 @@ async function syncEventToN8n(payload: unknown, eventType: string, providerEvent
   } catch {
     return { attempted: true, ok: false };
   }
-}
-
-async function upsertSuppression(email: string, reason: string, eventType: string, providerEmailId: string, payload: unknown) {
-  if (!email) return;
-  await supabaseServerRequest("gencouv_suppression_list?on_conflict=organization_id,normalized_email", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-    body: JSON.stringify({
-      organization_id: GENCOUV_ORG_ID,
-      normalized_email: email,
-      reason,
-      source: "resend",
-      event_type: eventType,
-      provider_email_id: providerEmailId || null,
-      payload,
-      updated_at: new Date().toISOString(),
-    }),
-  }).catch(() => undefined);
 }
 
 async function updateEnrollment(email: string, patch: Record<string, unknown>) {
@@ -147,41 +131,50 @@ async function updateEnrollment(email: string, patch: Record<string, unknown>) {
 
 export async function POST(request: Request) {
   try {
-    const expectedToken = process.env.GENCOUV_RESEND_WEBHOOK_TOKEN;
-    const suppliedToken = new URL(request.url).searchParams.get("token");
-    if (expectedToken && suppliedToken !== expectedToken) {
-      return NextResponse.json({ success: false, message: "Invalid webhook token." }, { status: 401 });
-    }
-
-    const payload = await request.json();
+    const secret = process.env.GENCOUV_RESEND_WEBHOOK_SECRET || "";
+    if (!secret) return NextResponse.json({ success: false, message: "Webhook verification is not configured." }, { status: 503 });
+    const raw = await request.text();
+    if (!verifyGencouvResendSignature(raw, request.headers, secret)) return NextResponse.json({ success: false, message: "Invalid webhook signature." }, { status: 401 });
+    const payload = JSON.parse(raw);
     const type = String(payload?.type || "unknown");
-    const data = payload?.data || {};
+    let data = payload?.data || {};
     const providerEmailId = String(data?.email_id || data?.id || "");
     const occurredAt = iso(payload?.created_at || data?.created_at);
-    const providerEventId = String(payload?.id || `${type}:${providerEmailId}:${occurredAt}`);
-    const status = eventStatus(type);
+    const providerEventId = request.headers.get("svix-id") || String(payload?.id || `${type}:${providerEmailId}:${occurredAt}`);
+
+    const isInbound = type === "email.received";
+    if (!isInbound) {
+      if (!GENCOUV_SENDERS.has(firstEmail(data.from))) return NextResponse.json({ success: true, ignored: true });
+      if (!["email.sent", "email.delivered", "email.opened", "email.clicked", "email.bounced", "email.failed", "email.complained", "email.suppressed", "email.unsubscribed", "email.delivery_delayed", "email.scheduled"].includes(type)) return NextResponse.json({ success: true, ignored: true });
+      const result = await supabaseServerRequest("rpc/gencouv_apply_delivery_event", { method: "POST", body: JSON.stringify({ p_event_id: providerEventId, p_type: type, p_data: data, p_occurred_at: occurredAt }) });
+      const sheetSync=await syncEventToN8n(payload,type,providerEventId);
+      return NextResponse.json({ success: true, result, sheet_sync:sheetSync });
+    }
+    const inboundRecipients = Array.isArray(data.to) ? data.to : [data.to];
+    if (!inboundRecipients.some((recipient: unknown) => GENCOUV_SENDERS.has(firstEmail(recipient)))) return NextResponse.json({ success: true, ignored: true });
+
+    const existing = await supabaseServerRequest<ThreadMessage[]>(
+      `gencouv_email_events?organization_id=eq.${GENCOUV_ORG_ID}&select=id&provider_event_id=eq.${encodeURIComponent(providerEventId)}&limit=1`,
+    );
+    if (existing.length) return NextResponse.json({ success: true, duplicate: true });
+    // Received-event payloads contain metadata, not the message body. Fetch the
+    // received email before acknowledging, so provider retries can recover a read failure.
+    if(!data.text && !data.html && !data.text_body && !data.html_body){
+      const received=await resendApi("/emails/receiving/"+encodeURIComponent(providerEmailId));
+      data={...received,...data,headers:received.headers||data.headers,text:received.text||data.text,html:received.html||data.html};
+    }
     const messageIdHeader = textValue(data?.message_id || headerValue(data, "Message-ID"));
     const inReplyToHeader = textValue(data?.in_reply_to || headerValue(data, "In-Reply-To"));
     const referencesHeader = textValue(data?.references || headerValue(data, "References"));
-    const isInbound = type === "email.received";
-    const autoReply = isInbound ? classifyAutoReply(data) : false;
+    const autoReply=classifyAutoReply(data);
 
-    const existing = await supabaseServerRequest<any[]>(
-      `gencouv_email_events?select=id&provider_event_id=eq.${encodeURIComponent(providerEventId)}&limit=1`,
-    );
-    if (existing.length) return NextResponse.json({ success: true, duplicate: true });
 
-    let messages = !isInbound && providerEmailId
-      ? await supabaseServerRequest<any[]>(
-          `gencouv_email_messages?select=*&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`,
-        )
-      : [];
-    let message = messages[0];
-
+    let message;
     if (isInbound) {
       const inboundSender = firstEmail(data?.from);
       const threadMessage = await findThreadMessage(data, inboundSender);
-      const created = await supabaseServerRequest<any[]>("gencouv_email_messages", {
+      const created = await supabaseServerRequest<ThreadMessage[]>("gencouv_email_messages?on_conflict=provider_email_id", {
+        headers: {Prefer:"resolution=ignore-duplicates,return=representation"},
         method: "POST",
         body: JSON.stringify({
           organization_id: GENCOUV_ORG_ID,
@@ -216,10 +209,11 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         }),
       });
-      message = created[0];
+      message = created[0] || (await supabaseServerRequest<ThreadMessage[]>(`gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`))[0];
+      if(!message)throw new Error("Inbound ledger unavailable");
 
       if (!autoReply && threadMessage?.id) {
-        await supabaseServerRequest(`gencouv_email_messages?id=eq.${threadMessage.id}`, {
+        await supabaseServerRequest(`gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&id=eq.${threadMessage.id}`, {
           method: "PATCH",
           body: JSON.stringify({
             status: "replied",
@@ -238,36 +232,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // Resend Automations can send outside Fluxknight, so those messages may not
-    // already exist in gencouv_email_messages. Create the missing record from
-    // the webhook itself so the dashboard remains a true mirror of Resend.
-    if (!message && providerEmailId) {
-      const outboundRecipient = firstEmail(data?.to);
-      const created = await supabaseServerRequest<any[]>("gencouv_email_messages", {
-        method: "POST",
-        body: JSON.stringify({
-          organization_id: GENCOUV_ORG_ID,
-          provider: "resend",
-          provider_email_id: providerEmailId,
-          provider_message_id: messageIdHeader || null,
-          message_id_header: messageIdHeader || null,
-          recipient_email: outboundRecipient || "unknown@gencouv.invalid",
-          subject: String(data?.subject || ""),
-          status,
-          direction: "outbound",
-          scheduled_at: status === "scheduled" ? occurredAt : null,
-          sent_at: ["sent", "delivered", "opened", "clicked", "bounced", "complained", "failed", "suppressed"].includes(status)
-            ? occurredAt
-            : null,
-          last_event_at: occurredAt,
-          created_at: occurredAt,
-          updated_at: new Date().toISOString(),
-        }),
-      });
-      message = created[0];
-    }
-
-    await supabaseServerRequest("gencouv_email_events", {
+    await supabaseServerRequest("gencouv_email_events?on_conflict=provider,provider_event_id", {
+      headers:{Prefer:"resolution=ignore-duplicates,return=representation"},
       method: "POST",
       body: JSON.stringify({
         organization_id: GENCOUV_ORG_ID,
@@ -281,87 +247,12 @@ export async function POST(request: Request) {
       }),
     });
 
-    if (message?.id) {
-      const patch: Record<string, unknown> = {
-        status,
-        last_event_at: occurredAt,
-        updated_at: new Date().toISOString(),
-      };
-      if (messageIdHeader) {
-        patch.provider_message_id = message.provider_message_id || messageIdHeader;
-        patch.message_id_header = message.message_id_header || messageIdHeader;
-      }
-      const timestampColumns: Record<string, string> = {
-        scheduled: "scheduled_at",
-        sent: "sent_at",
-        delivered: "delivered_at",
-        opened: "opened_at",
-        clicked: "clicked_at",
-        bounced: "bounced_at",
-        complained: "complained_at",
-        failed: "failed_at",
-        suppressed: "suppressed_at",
-      };
-      if (timestampColumns[status]) patch[timestampColumns[status]] = occurredAt;
-      if (["bounced", "failed", "suppressed"].includes(status)) {
-        patch.error_code = String(data?.bounce?.type || data?.error?.code || status);
-        patch.error_message = String(data?.bounce?.message || data?.error?.message || "");
-      }
-      if (["bounced", "complained", "suppressed"].includes(status)) {
-        patch.stop_reason = status;
-      }
-      await supabaseServerRequest(`gencouv_email_messages?id=eq.${message.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(patch),
-      });
-    }
-
-    const affectedEmail = isInbound ? firstEmail(data?.from) : firstEmail(data?.to);
-    const enrollmentPatch: Record<string, unknown> = {
-      last_delivery_status: status,
-      last_event_at: occurredAt,
-    };
-    if (status === "sent") enrollmentPatch.last_email_sent_at = occurredAt;
-    if (status === "delivered") enrollmentPatch.last_delivery_status = "delivered";
-    if (status === "bounced") {
-      enrollmentPatch.bounce_status = "bounced";
-      enrollmentPatch.campaign_status = "stopped";
-      enrollmentPatch.do_not_contact = true;
-      enrollmentPatch.stop_reason = "bounced";
-      await upsertSuppression(affectedEmail, "bounced", type, providerEmailId, payload);
-    }
-    if (status === "complained") {
-      enrollmentPatch.campaign_status = "stopped";
-      enrollmentPatch.do_not_contact = true;
-      enrollmentPatch.stop_reason = "complained";
-      await upsertSuppression(affectedEmail, "complained", type, providerEmailId, payload);
-    }
-    if (status === "suppressed") {
-      enrollmentPatch.suppression_status = "suppressed";
-      enrollmentPatch.campaign_status = "stopped";
-      enrollmentPatch.do_not_contact = true;
-      enrollmentPatch.stop_reason = "suppressed";
-      await upsertSuppression(affectedEmail, "suppressed", type, providerEmailId, payload);
-    }
-    if (status === "failed") {
-      enrollmentPatch.campaign_status = "paused";
-      enrollmentPatch.stop_reason = "failed";
-    }
-    if (type === "email.unsubscribed") {
-      enrollmentPatch.unsubscribe_status = "unsubscribed";
-      enrollmentPatch.campaign_status = "stopped";
-      enrollmentPatch.do_not_contact = true;
-      enrollmentPatch.stop_reason = "unsubscribed";
-      await upsertSuppression(affectedEmail, "unsubscribed", type, providerEmailId, payload);
-    }
-    await updateEnrollment(affectedEmail, enrollmentPatch);
-
     const sheetSync = await syncEventToN8n(payload, type, providerEventId);
 
     return NextResponse.json({ success: true, synced_message: Boolean(message?.id), sheet_sync: sheetSync });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Webhook processing failed." },
+      { success: false, message: "Webhook processing failed. Retry the signed event." },
       { status: 500 },
     );
   }

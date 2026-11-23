@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { requireGencouvAdmin, gencouvError } from "@/lib/gencouv-admin";
 import { supabaseServerRequest } from "@/lib/supabase-server-rest";
 
 function clean(value: unknown, max = 500) {
@@ -7,18 +7,14 @@ function clean(value: unknown, max = 500) {
 }
 
 export async function POST(request: Request) {
-  const session = await getAdminSession();
-  if (!session) {
-    return NextResponse.json({ success: false, message: "Admin session required." }, { status: 401 });
-  }
-
   try {
+    const {session,organizationId,db}=await requireGencouvAdmin(request);
     const body = await request.json();
     const messageId = clean(body.message_id || body.id, 80);
     const action = clean(body.action, 80).toLowerCase();
     if (!messageId) return NextResponse.json({ success: false, message: "message_id is required." }, { status: 400 });
 
-    const rows = await supabaseServerRequest<any[]>(`gencouv_email_messages?select=*&id=eq.${encodeURIComponent(messageId)}&limit=1`);
+    const rows = await supabaseServerRequest<Array<{id:string;recipient_email:string;metadata:Record<string,unknown>;read_at:string|null;archived_at:string|null}>>(`gencouv_email_messages?organization_id=eq.${organizationId}&select=*&id=eq.${encodeURIComponent(messageId)}&limit=1`);
     const message = rows[0];
     if (!message) return NextResponse.json({ success: false, message: "Message not found." }, { status: 404 });
 
@@ -43,14 +39,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Unsupported inbox action." }, { status: 400 });
     }
 
-    await supabaseServerRequest(`gencouv_email_messages?id=eq.${messageId}`, {
+    await supabaseServerRequest(`gencouv_email_messages?organization_id=eq.${organizationId}&id=eq.${messageId}`, {
       method: "PATCH",
       body: JSON.stringify(patch),
     });
 
     if (action === "do_not_contact" && message.recipient_email) {
+      const result=await db.from("gencouv_suppression_list").upsert({organization_id:organizationId,normalized_email:String(message.recipient_email).toLowerCase(),reason:"manual_do_not_contact",source:"dashboard"},{onConflict:"organization_id,normalized_email"});
+      if(result.error)throw result.error;
       await supabaseServerRequest(
-        `gencouv_campaign_enrollments?normalized_email=eq.${encodeURIComponent(String(message.recipient_email).toLowerCase())}`,
+        `gencouv_campaign_enrollments?organization_id=eq.${organizationId}&normalized_email=eq.${encodeURIComponent(String(message.recipient_email).toLowerCase())}`,
         {
           method: "PATCH",
           body: JSON.stringify({
@@ -66,8 +64,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: "Inbox action recorded." });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Unable to update inbox item." },
-      { status: 500 },
+      { success: false, message: gencouvError(error).message },
+      { status: gencouvError(error).status },
     );
   }
 }

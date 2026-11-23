@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
-type EmailMessage = {
+export type EmailMessage = {
   id?: string;
   lead_id?: string;
   recipient_email?: string;
@@ -42,6 +42,10 @@ function preview(message: EmailMessage) {
 }
 
 export default function GencouvInbox({ messages }: { messages: EmailMessage[] }) {
+  const replyRequestId=useRef<string|null>(null);
+  const replyPayload=useRef<Record<string,unknown>|null>(null);
+  const [replyPending,setReplyPending]=useState(false);
+
   const [selectedId, setSelectedId] = useState(messages.find((message) => !message.archived_at)?.id || messages[0]?.id || "");
   const [replyText, setReplyText] = useState("");
   const [status, setStatus] = useState("Ready.");
@@ -58,25 +62,24 @@ export default function GencouvInbox({ messages }: { messages: EmailMessage[] })
 
   const sendReply = () => {
     if (!selected) return;
+    if(!replyPending)replyPayload.current={request_id:replyRequestId.current ||= crypto.randomUUID(),confirmed:true,inbound_message_id:selected.id,to:selected.from_email||selected.recipient_email,subject:selected.subject,message:replyText};
     startTransition(async () => {
       try {
-        setStatus("Sending reply from info@gencouv.com...");
+        setStatus("Checking reply from info@gencouv.com...");
         const response = await fetch("/api/gencouv/email-reply", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            inbound_message_id: selected.id,
-            to: selected.from_email || selected.recipient_email,
-            subject: selected.subject,
-            message: replyText,
-          }),
+          body: JSON.stringify(replyPayload.current),
         });
         const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.message || "Reply failed.");
-        setReplyText("");
-        setStatus("Reply sent. Refresh to see the updated thread state.");
+        if (!response.ok || !data.success) {if(response.status===400){replyRequestId.current=null;replyPayload.current=null;setReplyPending(false);setStatus(data.message||"Review the reply fields before sending.");return;}throw new Error(data.message || "Reply submission was not confirmed.");}
+        setStatus(data.message||data.note||"Reply outcome recorded. Provider acceptance is separate from delivery.");
+        if(data.status==="submitted"&&data.accepted===1){setReplyText("");replyRequestId.current=null;replyPayload.current=null;setReplyPending(false);}
+        else if(["failed","cancelled"].includes(data.status)){replyRequestId.current=null;replyPayload.current=null;setReplyPending(false);}
+        else setReplyPending(true);
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Unable to send reply.");
+        setReplyPending(true);
+        setStatus(error instanceof Error ? error.message : "Reply outcome is uncertain. Check the saved reply before another send.");
       }
     });
   };
@@ -124,7 +127,7 @@ export default function GencouvInbox({ messages }: { messages: EmailMessage[] })
               <button
                 key={message.id}
                 type="button"
-                onClick={() => setSelectedId(message.id || "")}
+                onClick={() => {setSelectedId(message.id || "");if(!replyPending&&!isPending){setReplyText("");replyRequestId.current=null;replyPayload.current=null;}}}
                 style={{
                   textAlign: "left",
                   border: "1px solid var(--admin-border)",
@@ -174,20 +177,21 @@ export default function GencouvInbox({ messages }: { messages: EmailMessage[] })
               <button type="button" onClick={() => recordAction("do_not_contact")} disabled={isPending}>Do Not Contact</button>
             </div>
 
-            {!selected?.is_auto_reply ? (
+            {!selected?.is_auto_reply || replyPending ? (
               <div style={{ display: "grid", gap: 10 }}>
                 <label className="admin-field">
                   Reply as Gencouv &lt;info@gencouv.com&gt;
-                  <textarea rows={7} value={replyText} onChange={(event) => setReplyText(event.target.value)} placeholder="Write your reply..." />
+                  <textarea aria-label="Gencouv reply message" disabled={isPending||replyPending} rows={7} value={replyText} onChange={(event) => {setReplyText(event.target.value);replyRequestId.current=null;}} placeholder="Write your reply..." />
                 </label>
                 <button type="button" onClick={sendReply} disabled={isPending || !replyText.trim()}>
-                  {isPending ? "Sending..." : "Send reply"}
+                  {isPending ? "Checking submission..." : replyPending?"Check saved reply":"Send reply"}
                 </button>
               </div>
             ) : (
               <p style={{ color: "var(--admin-text-muted)" }}>Auto-replies are recorded separately and should not stop the lead unless manually reviewed.</p>
             )}
-            <p style={{ color: "var(--admin-text-muted)", marginTop: 12 }}>{status}</p>
+            {replyPending?<p role="status">A reply is awaiting confirmation. Checks retain its original recipient and content, even if you view another thread.</p>:null}
+            <p role="status" style={{ color: "var(--admin-text-muted)", marginTop: 12 }}>{status}</p>
           </article>
         </div>
       ) : (

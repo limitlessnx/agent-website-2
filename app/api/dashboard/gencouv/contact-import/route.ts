@@ -1,143 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
-import { requireAdminSystemScope } from "@/lib/admin-organization-scope";
-import { createAdminClient } from "@/lib/supabase/admin";
-import * as XLSX from "xlsx";
-
+import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { requireGencouvAdmin, gencouvError, gencouvPrivateHeaders, GENCOUV_UUID, GencouvRequestError } from "@/lib/gencouv-admin";
+import { parseGencouvContacts, GENCOUV_IMPORT_BYTES } from "@/lib/gencouv-contact-import";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const headers = { "Cache-Control": "private, no-store" };
-const allowed = new Set(["csv", "xlsx", "xls", "txt"]);
-const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i;
-const emailFinder = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
-const maxBytes = 2 * 1024 * 1024;
-const maxContacts = 500;
-const clean = (value: unknown) => String(value ?? "").trim();
-const normalize = (value: unknown) => clean(value).toLowerCase();
-const fail = (error: string, status = 400) => NextResponse.json({ error }, { status, headers });
-async function scope() {
-  if (!(await getAdminSession())) return null;
-  try {
-    const result = await requireAdminSystemScope("gencouv");
-    return result.status !== "unavailable" ? result.organizationId : null;
-  } catch { return null; }
-}
-function parseContacts(buffer: Buffer, extension: string) {
-  const records: Array<{ email: string; full_name: string; company_name: string }> = [];
-  if (extension === "txt") {
-    for (const line of buffer.toString("utf8").split(/\r?\n/)) {
-      const emails = line.match(emailFinder) || [];
-      for (const email of emails) records.push({ email: normalize(email), full_name: "", company_name: "" });
-    }
-  } else {
-    const workbook = XLSX.read(buffer, { type: "buffer", dense: true, sheetRows: maxContacts + 100 });
-    for (const sheet of workbook.SheetNames.slice(0, 5)) {
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheet], { defval: "" });
-      for (const row of rows) {
-        const mapped = Object.fromEntries(Object.entries(row).map(([k, v]) => [k.toLowerCase().trim().replace(/[ _-]/g, ""), v]));
-        const email = normalize(mapped.email || mapped.emailaddress || mapped.workemail || mapped.businessemail);
-        if (!email) continue;
-        records.push({
-          email,
-          full_name: clean(mapped.fullname || mapped.name || [mapped.firstname, mapped.lastname].filter(Boolean).join(" ")).slice(0, 200),
-          company_name: clean(mapped.company || mapped.companyname).slice(0, 200),
-        });
-      }
-    }
-  }
-  const seen = new Set<string>();
-  const unique: typeof records = [];
-  let duplicatesInFile = 0, invalid = 0;
-  for (const row of records) {
-    if (!emailPattern.test(row.email) || row.email.length > 254) { invalid++; continue; }
-    if (seen.has(row.email)) { duplicatesInFile++; continue; }
-    seen.add(row.email);
-    unique.push(row);
-  }
-  return { contacts: unique, duplicatesInFile, invalid };
-}
-
 export async function GET() {
-  const organizationId = await scope();
-  if (!organizationId) return fail("Gencouv admin workspace required.", 403);
-  const db = createAdminClient();
-  const { data, error } = await db.from("crm_customers")
-    .select("id,full_name,email,company_name,metadata,created_at")
-    .eq("organization_id", organizationId)
-    .not("email", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(100);
-  if (error) return fail("Could not load saved contacts.", 500);
-  return NextResponse.json({ contacts: data || [] }, { headers });
+  try {
+    const { db, organizationId } = await requireGencouvAdmin();
+    const [contacts, history] = await Promise.all([
+      db.from("crm_customers").select("id,full_name,email,company_name,metadata,created_at").eq("organization_id", organizationId).not("email", "is", null).order("created_at", { ascending: false }).limit(100),
+      db.from("gencouv_sync_runs").select("id,status,records_read,records_written,metadata,started_at,completed_at").eq("organization_id", organizationId).eq("source", "dashboard").eq("metadata->>import_kind", "document_import").order("started_at", { ascending: false }).limit(20),
+    ]);
+    if (contacts.error) throw contacts.error;
+    return NextResponse.json({ contacts: contacts.data || [], history: history.error ? null : history.data || [], history_unavailable: Boolean(history.error) }, { headers: gencouvPrivateHeaders });
+  } catch (error) { const safe = gencouvError(error); return NextResponse.json({ error: safe.message }, { status: safe.status, headers: gencouvPrivateHeaders }); }
 }
-
-export async function POST(request: NextRequest) {
-  const organizationId = await scope();
-  if (!organizationId) return fail("Gencouv admin workspace required.", 403);
-  if (request.headers.get("origin") !== request.nextUrl.origin) return fail("Invalid request origin.", 403);
-  const form = await request.formData().catch(() => null);
-  const file = form?.get("file");
-  if (!(file instanceof File)) return fail("Select a document to import.");
-  const extension = file.name.split(".").pop()?.toLowerCase() || "";
-  if (!allowed.has(extension)) return fail("Supported formats: CSV, XLSX, XLS, and TXT.");
-  if (file.size < 1 || file.size > maxBytes) return fail("Files must be between 1 byte and 2 MB.");
-  let parsed: ReturnType<typeof parseContacts>;
-  try { parsed = parseContacts(Buffer.from(await file.arrayBuffer()), extension); }
-  catch { return fail("Could not read this document. Check the file format."); }
-  if (!parsed.contacts.length) return fail("No valid email addresses found. Use an Email column in spreadsheets.");
-  if (parsed.contacts.length > maxContacts) return fail("Import at most 500 unique contacts per document.");
-  const db = createAdminClient();
-  const categoryId = clean(form?.get("category_id"));
-  if (categoryId) {
-    const { data, error } = await db.from("crm_lead_categories").select("id")
-      .eq("organization_id", organizationId).eq("id", categoryId).maybeSingle();
-    if (error || !data) return fail("Select a valid Gencouv category.");
-  }
-  const emails = parsed.contacts.map(c => c.email);
-  const found = new Map<string, string>();
-  for (let i = 0; i < emails.length; i += 75) {
-    const { data: existing, error: lookupError } = await db.from("crm_customers")
-      .select("id,email").eq("organization_id", organizationId).in("email", emails.slice(i, i + 75));
-    if (lookupError) return fail("Unable to check existing contacts.", 500);
-    for (const row of existing || []) found.set(normalize(row.email), row.id);
-  }
-  const fresh = parsed.contacts.filter(c => !found.has(c.email));
-  const consentConfirmed = form?.get("consent_confirmed") === "true";
-  const consentSource = clean(form?.get("consent_source")).slice(0, 200);
-  if (consentConfirmed && !consentSource) return fail("Record the source of marketing consent for this import.");
-  const preview = form?.get("preview") !== "false";
-  if (preview) return NextResponse.json({
-    preview: true, total: parsed.contacts.length, new_contacts: fresh.length,
-    existing_contacts: parsed.contacts.length - fresh.length,
-    duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid,
-    sample: parsed.contacts.slice(0, 10)
-  }, { headers });
-  // No marketing consent is inferred from a document upload, and no campaign is enrolled.
-  const savedIds: string[] = [];
-  let skipped = parsed.contacts.length - fresh.length;
-  let failed = 0;
-  for (const contact of fresh) {
-    const { data, error } = await db.from("crm_customers").insert({
-      organization_id: organizationId, full_name: contact.full_name || null,
-      email: contact.email, company_name: contact.company_name || null,
-      metadata: { source: "gencouv_document_import", import_filename: file.name.slice(0, 180), marketing_consent: consentConfirmed ? "granted" : "unknown", consent_source: consentConfirmed ? consentSource : null, consent_recorded_at: consentConfirmed ? new Date().toISOString() : null, imported_at: new Date().toISOString() }
-    }).select("id").single();
-    if (error || !data) { failed++; continue; }
-    savedIds.push(data.id);
-  }
-  // Existing contacts retain their prior consent state; an upload never silently overrides it.
-  if (categoryId) {
-    const ids = [...savedIds, ...Array.from(found.values())];
-    for (const id of ids) {
-      const { error } = await db.from("crm_customer_category_assignments")
-        .upsert({ organization_id: organizationId, customer_id: id, category_id: categoryId },
-          { onConflict: "organization_id,customer_id,category_id", ignoreDuplicates: true });
-      if (error) failed++;
+export async function POST(request: Request) {
+  try {
+    const { db, organizationId, session } = await requireGencouvAdmin(request);
+    const form = await request.formData().catch(() => null); const file = form?.get("file");
+    if (!(file instanceof File) || file.size < 1 || file.size > GENCOUV_IMPORT_BYTES) throw new GencouvRequestError("Select a CSV, Excel or TXT document of up to 2 MB.");
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!["csv", "xlsx", "xls", "txt"].includes(extension)) throw new GencouvRequestError("Supported formats: CSV, XLSX, XLS and TXT.");
+    const bytes = Buffer.from(await file.arrayBuffer());
+    let parsed: ReturnType<typeof parseGencouvContacts>;
+    try { parsed = parseGencouvContacts(bytes, extension); } catch (error) { throw new GencouvRequestError(error instanceof Error ? error.message : "The document could not be parsed."); }
+    const categoryId = String(form?.get("category_id") || "");const batchId = String(form?.get("batch_id") || "");
+    if (!GENCOUV_UUID.test(batchId) || categoryId && !GENCOUV_UUID.test(categoryId)) throw new GencouvRequestError("Reload the import form and select a valid category.");
+    if (categoryId) {
+      const category = await db.from("crm_lead_categories").select("id").eq("organization_id", organizationId).eq("id", categoryId).maybeSingle();
+      if (category.error || !category.data) throw new GencouvRequestError("Category not found in Gencouv.");
     }
-  }
-  return NextResponse.json({
-    success: failed === 0, imported: savedIds.length, already_saved: skipped,
-    failed, duplicates_in_file: parsed.duplicatesInFile,
-    message: "Contacts saved for review. No marketing emails have been sent or scheduled."
-  }, { status: failed ? 207 : 200, headers });
+    const consent = form?.get("consent_confirmed") === "true";const consentSource = String(form?.get("consent_source") || "").trim();
+    if (consent && (consentSource.length < 8 || consentSource.length > 300)) throw new GencouvRequestError("Document the actual permission source in 8–300 characters. Publicly collected addresses are not an opt-in.");
+    const emails = parsed.contacts.map(contact => contact.email); let existingCount = 0;
+    for (let offset = 0; offset < emails.length; offset += 75) {
+      // Canonical CRM has a case-insensitive email uniqueness index. ILIKE checks
+      // legacy mixed-case rows too; the transaction repeats this lookup at commit.
+      const clauses = emails.slice(offset, offset + 75).map(email => `email.ilike.${JSON.stringify(email.replace(/[%_]/g, value => `\\${value}`))}`).join(",");
+      const existing = await db.from("crm_customers").select("id,email").eq("organization_id", organizationId).or(clauses);
+      if (existing.error) throw existing.error;
+      existingCount += existing.data?.length || 0;
+    }
+    if (form?.get("preview") !== "false") return NextResponse.json({ preview: true, total: parsed.contacts.length, new_contacts: parsed.contacts.length - existingCount, existing_contacts: existingCount, duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid, sample: parsed.contacts.slice(0, 10) }, { headers: gencouvPrivateHeaders });
+    const hash = createHash("sha256").update(bytes).update(JSON.stringify({ categoryId, consent, consentSource })).digest("hex");
+    const saved = await db.rpc("gencouv_import_contacts", { p_organization_id: organizationId, p_batch_id: batchId, p_hash: hash, p_contacts: parsed.contacts, p_category_id: categoryId || null, p_consent: consent, p_consent_source: consentSource, p_filename: file.name, p_actor: session.email });
+    if (saved.error || !saved.data) throw new GencouvRequestError("The reviewed import could not be committed. Retry the same document; no partial import was confirmed.", 503);
+    return NextResponse.json({ success: true, ...saved.data, duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid, message: "Contacts and import history saved. No email sent or campaign enrollment created." }, { headers: gencouvPrivateHeaders });
+  } catch (error) { const safe = gencouvError(error); return NextResponse.json({ error: safe.message }, { status: safe.status, headers: gencouvPrivateHeaders }); }
 }
