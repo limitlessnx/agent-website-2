@@ -9,7 +9,7 @@ type Contact = { id: string; full_name: string | null; email: string; company_na
 type Preview = { preview: true; total: number; new_contacts: number; existing_contacts: number; duplicates_in_file: number; invalid: number; sample: Array<{ email: string; full_name: string }> };
 const endpoint = "/api/dashboard/gencouv/contact-import";
 
-export default function GencouvContactImport() {
+export default function GencouvContactImport({ compact = false }: { compact?: boolean }) {
   const batchId = useRef<string|null>(null);
   const submissionLock=useRef(false);
   const [history,setHistory]=useState<Array<{id:string;status:string;records_written:number;started_at:string}>>([]);
@@ -72,11 +72,11 @@ export default function GencouvContactImport() {
   }
 
   return <div className="gencouv-marketing" style={{ display: "grid", gap: 18, maxWidth: 1050, margin: "0 auto" }}>
-    <section className="admin-panel">
+    <section className="admin-panel" id="gencouv-contact-import">
       <div className="admin-panel-header">
         <div>
-          <h2>Upload contact document</h2>
-          <p>Import saved contacts into Gencouv CRM, independently of Limitless Realty and other businesses.</p>
+          <h2>Upload email contacts</h2>
+          <p>Choose a CSV, Excel or TXT file. Preview and save the contacts before selecting campaign recipients. Uploading does not send emails.</p>
         </div>
         <span className="admin-status">No automatic sending</span>
       </div>
@@ -111,6 +111,7 @@ export default function GencouvContactImport() {
         <p>{consentConfirmed ? "New contacts will have consent recorded from the stated source. Existing contacts keep their prior consent status." : "Uploaded contacts will be saved with marketing consent unverified."} Saving does not send emails or enroll anyone in an automated campaign.</p>
       </div>}
     </section>
+    {compact ? <p><Link href="/dashboard/gencouv/contacts">View saved contacts and import history →</Link></p> : <>
     <section className="admin-panel">
       <div className="admin-panel-header"><div><h2>Saved Gencouv contacts</h2><p>Most recent 100 records, including existing CRM contacts. Imported addresses require consent verification before marketing.</p></div><span className="admin-status">{contacts.length} shown</span></div>
       <button type="button" disabled={busy||loading} onClick={()=>{setError("");void load().catch(()=>setError("Unable to refresh contacts. Please retry."));}}>Refresh contacts</button>
@@ -129,5 +130,6 @@ export default function GencouvContactImport() {
       </div>
     </section>
     <section className="admin-panel"><h2>Import history</h2>{history.length?history.map(run=><p key={run.id}>{new Date(run.started_at).toLocaleString()} · {run.records_written} saved · {run.status}</p>):<p>No recorded imports.</p>}</section>
+    </>}
   </div>;
 }

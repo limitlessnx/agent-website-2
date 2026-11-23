@@ -33,3 +33,8 @@
 
 .gencouv-email-history table{min-width:760px}
 .gencouv-email-history td:nth-child(3),.gencouv-email-history th:nth-child(3){min-width:90px;white-space:nowrap;overflow-wrap:normal}
+.gencouv-marketing input[type=file]::file-selector-button{min-height:44px;margin-inline-end:12px;padding:10px 14px;border:1px solid #a78bfa;border-radius:10px;background:#7c3aed;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.gencouv-marketing input[type=file]:disabled::file-selector-button{opacity:.55;cursor:not-allowed}
+#gencouv-contact-import{scroll-margin-top:100px}
+.gencouv-marketing .gencouv-upload-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:100%;padding:10px 16px;box-sizing:border-box;border:1px solid #a78bfa;border-radius:12px;background:#7c3aed;color:#fff;font-weight:600;text-decoration:none}
+.gencouv-marketing .gencouv-upload-link:hover{background:#6d28d9}

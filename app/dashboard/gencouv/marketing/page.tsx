@@ -12,7 +12,7 @@ export default async function GencouvMarketingPage(){
    <Link href="/dashboard/gencouv">← Gencouv dashboard</Link>
    <p style={{letterSpacing:2,fontSize:12,opacity:.7,marginTop:20}}>GENCOUV · EMAIL & PROPOSALS</p>
    <h1>Campaign audiences & proposals</h1>
-   <p>Review saved contacts, build audiences and compose one-to-one business correspondence.</p>
+   <p>Upload email contacts, create campaigns and send reviewed emails. Automated campaigns are controlled separately.</p>
   </header>
   <GencouvMarketingWorkspace />
  </main>;
