@@ -51,7 +51,7 @@ export default function BrandFilmSection() {
             See how connected automation works across industries.
           </p>
         </div>
-        <BrandFilmPlayer videoId={videoId} poster={`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`} />
+        <BrandFilmPlayer videoId={videoId} />
         <div className={styles.footer}>
           <p>One connected system for conversations, CRM, follow-ups and human oversight.</p>
           <Link href="/industries" className={styles.link} data-cta="brand-film-industries">
