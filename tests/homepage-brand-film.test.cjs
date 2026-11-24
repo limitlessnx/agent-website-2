@@ -11,12 +11,13 @@ test('homepage adds film without changing the existing customer journey order', 
   assert.match(homepage, /<IndustryExplorer\s*\/>/);
   assert.match(homepage, /<MeetLeoSection\s*\/>/);
 });
-test('film stays hidden until a valid YouTube ID or URL is configured', () => {
+test('film defaults to the approved official YouTube upload and accepts secure URL overrides', () => {
   const section = read('components/home/BrandFilmSection.tsx');
   assert.match(section, /NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL/);
   assert.match(section, /youtube\.com/);
   assert.match(section, /youtu\.be/);
   assert.match(section, /parsed\.protocol !== "https:"/);
+  assert.match(section, /JvxHWD_C_7s/);
   assert.match(section, /if \(!videoId\) return null/);
   assert.doesNotMatch(section, /NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_URL/);
 });
