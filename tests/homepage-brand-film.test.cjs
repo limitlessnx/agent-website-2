@@ -5,24 +5,27 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
-test('home page positions optional film immediately after existing hero', () => {
+test('homepage adds film without changing the existing customer journey order', () => {
   const homepage = read('app/page.tsx');
   assert.match(homepage, /<ProductLedHero\s*\/>\s*<BrandFilmSection\s*\/>\s*<AutomationJourney\s*\/>/);
   assert.match(homepage, /<IndustryExplorer\s*\/>/);
   assert.match(homepage, /<MeetLeoSection\s*\/>/);
 });
-test('film remains hidden until a secure public media URL is provided', () => {
+test('film stays hidden until a valid YouTube ID or URL is configured', () => {
   const section = read('components/home/BrandFilmSection.tsx');
-  assert.match(section, /NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_URL/);
-  assert.match(section, /parsed\.protocol === "https:"/);
-  assert.match(section, /if \(!src\) return null/);
+  assert.match(section, /NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL/);
+  assert.match(section, /youtube\.com/);
+  assert.match(section, /youtu\.be/);
+  assert.match(section, /parsed\.protocol !== "https:"/);
+  assert.match(section, /if \(!videoId\) return null/);
+  assert.doesNotMatch(section, /NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_URL/);
 });
-test('video loads only when requested and supports accessible playback', () => {
+test('YouTube iframe is deferred until play click and supports fullscreen', () => {
   const player = read('components/home/BrandFilmPlayer.tsx');
-  assert.match(player, /preload="none"/);
-  assert.match(player, /playsInline/);
-  assert.doesNotMatch(player, /autoPlay/);
-  assert.match(player, /video\.play\(\)/);
-  assert.match(player, /kind="captions"/);
-  assert.match(player, /role="alert"/);
+  assert.match(player, /www\.youtube-nocookie\.com\/embed/);
+  assert.match(player, /hasStarted \?/);
+  assert.match(player, /onClick=\{\(\) => setHasStarted\(true\)\}/);
+  assert.match(player, /allowFullScreen/);
+  assert.match(player, /Watch on YouTube/);
+  assert.doesNotMatch(player, /<video\b/);
 });
