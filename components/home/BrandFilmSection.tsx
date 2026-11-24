@@ -5,10 +5,10 @@ import styles from "./BrandFilmSection.module.css";
 /**
  * The commercial is hosted on YouTube rather than our application storage.
  * Use an 11-character YouTube ID or a canonical watch/share/shorts URL.
- * Keep the section hidden until the approved video has been published.
+ * The approved official Fluxknight video is now public; use it as a safe default.
  */
 function getYouTubeVideoId(): string | null {
-  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL?.trim();
+  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL?.trim() || "JvxHWD_C_7s";
   if (!candidate) return null;
   if (/^[a-zA-Z0-9_-]{11}$/.test(candidate)) return candidate;
 
