@@ -1,3 +1,4 @@
+import { personalizeGencouvMessage } from "@/lib/gencouv-personalization";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resendApi } from "@/lib/fluxknight-mail";
@@ -67,7 +68,7 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   const unsubscribeOrigin = (process.env.NEXT_PUBLIC_SITE_URL || "https://fluxknight.space").replace(/\/$/, "");
   const emails = reservation.messages.map(message => {
     const unsubscribe = `${unsubscribeOrigin}/api/gencouv/unsubscribe?message=${encodeURIComponent(message.id)}&token=${input.mode === "one_time" ? unsubscribeToken(message.id) : ""}`;
-    const body = input.text.replace(/\[Name\]/gi, message.recipient_name || "there");
+    const body = personalizeGencouvMessage(input.text, message.recipient_name);
     return { from: `Gencouv <${input.from}>`, to: [message.recipient_email], reply_to: input.from, subject: input.subject,
       text: input.mode === "one_time" ? `${body}\n\nUnsubscribe from Gencouv marketing: ${unsubscribe}` : body,
       ...(input.mode === "one_time" ? { headers: { "List-Unsubscribe": `<${unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } } : input.reply_headers ? {headers:input.reply_headers} : {}),
