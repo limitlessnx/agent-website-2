@@ -8,7 +8,7 @@ import styles from "./BrandFilmSection.module.css";
  * The approved official Fluxknight video is now public; use it as a safe default.
  */
 function getYouTubeVideoId(): string | null {
-  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL?.trim() || "JvxHWD_C_7s";
+  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL?.trim() || "UMdJ9zZ3fos";
   if (!candidate) return null;
   if (/^[a-zA-Z0-9_-]{11}$/.test(candidate)) return candidate;
 
