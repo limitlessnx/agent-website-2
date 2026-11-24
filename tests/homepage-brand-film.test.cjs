@@ -17,7 +17,7 @@ test('film defaults to the approved official YouTube upload and accepts secure U
   assert.match(section, /youtube\.com/);
   assert.match(section, /youtu\.be/);
   assert.match(section, /parsed\.protocol !== "https:"/);
-  assert.match(section, /JvxHWD_C_7s/);
+  assert.match(section, /UMdJ9zZ3fos/);
   assert.match(section, /if \(!videoId\) return null/);
   assert.doesNotMatch(section, /NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_URL/);
 });
