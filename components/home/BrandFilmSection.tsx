@@ -3,35 +3,42 @@ import BrandFilmPlayer from "./BrandFilmPlayer";
 import styles from "./BrandFilmSection.module.css";
 
 /**
- * Use a publicly streamable HTTPS URL (for example a managed video CDN), not a
- * sandbox download URL. Keep the section off until the master film is hosted.
+ * The commercial is hosted on YouTube rather than our application storage.
+ * Use an 11-character YouTube ID or a canonical watch/share/shorts URL.
+ * Keep the section hidden until the approved video has been published.
  */
-function getBrandFilmSource(): string | null {
-  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_URL?.trim();
+function getYouTubeVideoId(): string | null {
+  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_YOUTUBE_URL?.trim();
   if (!candidate) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(candidate)) return candidate;
 
   try {
     const parsed = new URL(candidate);
-    return parsed.protocol === "https:" ? candidate : null;
+    if (parsed.protocol !== "https:") return null;
+
+    const host = parsed.hostname.toLowerCase();
+    let videoId: string | null = null;
+
+    if (host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com" || host === "www.youtube-nocookie.com") {
+      if (parsed.pathname === "/watch") {
+        videoId = parsed.searchParams.get("v");
+      } else {
+        const match = parsed.pathname.match(/^\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]{11})\/?$/);
+        videoId = match?.[1] ?? null;
+      }
+    } else if (host === "youtu.be" || host === "www.youtu.be") {
+      videoId = parsed.pathname.match(/^\/([a-zA-Z0-9_-]{11})\/?$/)?.[1] ?? null;
+    }
+
+    return videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : null;
   } catch {
     return null;
   }
 }
 
-function getCaptionsSource(): string | undefined {
-  const candidate = process.env.NEXT_PUBLIC_FLUXKNIGHT_BRAND_FILM_CAPTIONS_URL?.trim();
-  if (!candidate) return undefined;
-  try {
-    const parsed = new URL(candidate);
-    return parsed.protocol === "https:" ? candidate : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export default function BrandFilmSection() {
-  const src = getBrandFilmSource();
-  if (!src) return null;
+  const videoId = getYouTubeVideoId();
+  if (!videoId) return null;
 
   return (
     <section className={styles.section} id="fluxknight-film" aria-labelledby="fluxknight-film-title">
@@ -44,11 +51,7 @@ export default function BrandFilmSection() {
             See how connected automation works across industries.
           </p>
         </div>
-        <BrandFilmPlayer
-          src={src}
-          captionsSrc={getCaptionsSource()}
-          poster="/opengraph-image"
-        />
+        <BrandFilmPlayer videoId={videoId} poster="/opengraph-image" />
         <div className={styles.footer}>
           <p>One connected system for conversations, CRM, follow-ups and human oversight.</p>
           <Link href="/industries" className={styles.link} data-cta="brand-film-industries">
