@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       if (existing.error) throw existing.error;
       existingCount += existing.data?.length || 0;
     }
-    if (form?.get("preview") !== "false") return NextResponse.json({ preview: true, total: parsed.contacts.length, new_contacts: parsed.contacts.length - existingCount, existing_contacts: existingCount, duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid, sample: parsed.contacts.slice(0, 10) }, { headers: gencouvPrivateHeaders });
+    if (form?.get("preview") !== "false") return NextResponse.json({ preview: true, total: parsed.contacts.length, new_contacts: parsed.contacts.length - existingCount, existing_contacts: existingCount, duplicates_in_file: parsed.duplicatesInFile, invalid: parsed.invalid, named_contacts: parsed.namedContacts, unnamed_contacts: parsed.contacts.length - parsed.namedContacts, sample: parsed.contacts.slice(0, 10) }, { headers: gencouvPrivateHeaders });
     const hash = createHash("sha256").update(bytes).update(JSON.stringify({ categoryId, consent, consentSource })).digest("hex");
     const saved = await db.rpc("gencouv_import_contacts", { p_organization_id: organizationId, p_batch_id: batchId, p_hash: hash, p_contacts: parsed.contacts, p_category_id: categoryId || null, p_consent: consent, p_consent_source: consentSource, p_filename: file.name, p_actor: session.email });
     if (saved.error || !saved.data) throw new GencouvRequestError("The reviewed import could not be committed. Retry the same document; no partial import was confirmed.", 503);

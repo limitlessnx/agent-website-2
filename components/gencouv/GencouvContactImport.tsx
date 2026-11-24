@@ -6,7 +6,7 @@ import "./gencouv-marketing.css";
 
 type Category = { id: string; name: string };
 type Contact = { id: string; full_name: string | null; email: string; company_name: string | null; metadata?: { marketing_consent?: string }; created_at: string };
-type Preview = { preview: true; total: number; new_contacts: number; existing_contacts: number; duplicates_in_file: number; invalid: number; sample: Array<{ email: string; full_name: string }> };
+type Preview = { preview: true; total: number; new_contacts: number; existing_contacts: number; duplicates_in_file: number; invalid: number; named_contacts: number; unnamed_contacts: number; sample: Array<{ email: string; full_name: string }> };
 const endpoint = "/api/dashboard/gencouv/contact-import";
 
 export default function GencouvContactImport({ compact = false }: { compact?: boolean }) {
@@ -60,7 +60,7 @@ export default function GencouvContactImport({ compact = false }: { compact?: bo
       if (!response.ok && response.status !== 207) throw new Error(result.error || "Import failed.");
       if (isPreview) { setPreview(result); }
       else {
-        setMessage(`${result.imported} saved; ${result.already_saved} already existed; ${result.failed} errors. No marketing messages sent.`);
+        setMessage(`${result.imported} saved; ${result.already_saved} already existed; ${result.failed} errors; ${result.names_added || 0} missing names filled. No marketing messages sent.`);
         setPreview(null);
         setFile(null);setConsentConfirmed(false);setConsentSource("");batchId.current=null;
         const input = document.getElementById("gencouv-upload") as HTMLInputElement | null;
@@ -84,7 +84,7 @@ export default function GencouvContactImport({ compact = false }: { compact?: bo
         <label style={{ display: "grid", gap: 7 }}>
           <strong>Contact document</strong>
           <input id="gencouv-upload" aria-label="Contact document" disabled={busy} type="file" accept=".csv,.xlsx,.xls,.txt" onChange={e => { setFile(e.target.files?.[0] || null);batchId.current=null;setConsentConfirmed(false);setConsentSource(""); setPreview(null); setMessage(""); }} />
-          <small>CSV, Excel, or TXT, maximum 2 MB and 500 rows. Excel/CSV files need an Email column.</small>
+          <small>CSV, Excel, or TXT, maximum 2 MB and 500 rows. Excel/CSV files need an Email column. Include Name, Full Name, or First Name / Last Name for personalization. TXT also supports Name &lt;email@example.com&gt;, one contact per line.</small>
         </label>
         <label style={{ display: "grid", gap: 7 }}>
           <strong>Optional category</strong>
@@ -107,6 +107,7 @@ export default function GencouvContactImport({ compact = false }: { compact?: bo
       {preview && <div style={{ marginTop: 18, borderTop: "1px solid var(--admin-border)", paddingTop: 14 }}>
         <h3>Import preview</h3>
         <p>{preview.total} unique valid contacts, {preview.new_contacts} new, {preview.existing_contacts} already saved, {preview.duplicates_in_file} duplicates removed, {preview.invalid} invalid.</p>
+        <p>{preview.named_contacts} contacts have names in this file; {preview.unnamed_contacts} have no name. Missing names use “there” in personalized greetings. Existing nonempty names and consent are preserved.</p>
         <ul>{preview.sample.map(row => <li key={row.email}>{row.full_name ? `${row.full_name} · ` : ""}{row.email}</li>)}</ul>
         <p>{consentConfirmed ? "New contacts will have consent recorded from the stated source. Existing contacts keep their prior consent status." : "Uploaded contacts will be saved with marketing consent unverified."} Saving does not send emails or enroll anyone in an automated campaign.</p>
       </div>}
