@@ -28,5 +28,8 @@ test('YouTube iframe is deferred until play click and supports fullscreen', () =
   assert.match(player, /onClick=\{\(\) => setHasStarted\(true\)\}/);
   assert.match(player, /allowFullScreen/);
   assert.match(player, /Watch on YouTube/);
+  assert.match(player, /\/fluxknight-mark\.svg/);
+  assert.match(player, /Running on agentic systems/);
+  assert.doesNotMatch(player, /ytimg\.com/);
   assert.doesNotMatch(player, /<video\b/);
 });
