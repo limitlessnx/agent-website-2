@@ -7,16 +7,16 @@ const cleanText = (value: unknown, max = 5000) => typeof value === "string" ? va
 const cleanList = (value: unknown) => Array.isArray(value) ? [...new Set(value.map((item) => String(item).trim()).filter(Boolean))].slice(0, 30) : undefined;
 const cleanKnowledge = (value: unknown) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, typeof item === "string" ? item.trim().slice(0, 10000) : ""]).filter(([, item]) => item));
+  return Object.fromEntries(Object.entries(value).filter(([key,item]) => /^[a-zA-Z0-9_-]{1,80}$/.test(key) && !["__proto__","constructor","prototype"].includes(key) && typeof item === "string").slice(0,50).map(([key,item]) => [key, (item as string).trim().slice(0,10000)]));
 };
 const cleanWhatsApp = (value: unknown): SaveOnboardingInput["whatsapp_preferences"] => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
   const connectionPath: NonNullable<SaveOnboardingInput["whatsapp_preferences"]>["connection_path"] =
-    raw.connection_path === "already_have_whatsapp_business" ? "already_have_whatsapp_business" : "need_help";
+    raw.connection_path === "already_have_whatsapp_business" || raw.connection_path === "need_help" ? raw.connection_path : undefined;
   return {
-    connection_path: connectionPath,
-    preferred_number: typeof raw.preferred_number === "string" ? raw.preferred_number.trim().slice(0, 60) : undefined,
+    ...(connectionPath ? {connection_path:connectionPath} : {}),
+    ...(typeof raw.preferred_number === "string" ? {preferred_number:raw.preferred_number.trim().slice(0,60)} : {}),
   };
 };
 const parseStep = (value: unknown) => { const step = Number(value); return Number.isInteger(step) && step >= 1 && step <= 5 ? step : undefined; };

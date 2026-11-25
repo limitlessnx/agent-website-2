@@ -7,10 +7,11 @@ const read = (path) => readFileSync(path, "utf8");
 test("new clients complete only identity setup before entering the dashboard", () => {
   const form = read("app/account/setup/SetupForm.tsx");
   const route = read("app/api/client-auth/setup-workspace/route.ts");
-  assert.match(form, /Your name/);
   assert.match(form, /Organization name/);
   assert.match(form, /open dashboard/);
-  assert.doesNotMatch(form, /industry_slug/);
+  assert.match(form, /industry_slug/);
+  assert.match(form, /Select organization type/);
+  assert.match(form, /required/);
   assert.match(route, /service-businesses/);
   assert.match(route, /redirect_to/);
   assert.match(route, /\/portal/);

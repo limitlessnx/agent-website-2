@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getClientSession, getActiveManagerOrganizations } from "@/lib/client-auth";
-import { getClientOnboardingProfile, ensureClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getClientOnboardingProfile, ensureClientOnboardingProfile, getClientWorkspaceIndustry } from "@/lib/client-workspace-onboarding";
 import { getOrganizationUnreadNotificationCount, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
 import { getPortalCapabilities } from "@/lib/portal-access";
 import { getIndustryExperience } from "@/lib/industryExperience";
@@ -34,7 +34,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
   ]);
   // A missing profile must not cause a portal/onboarding redirect loop.
   if(!profile) return <main className="portal-page"><section className="portal-card" role="alert"><h1>Workspace information unavailable</h1><p>Your account is signed in. Retry loading your workspace without creating another organization.</p><Link className="portal-button" href="/portal">Retry dashboard</Link><ClientLogoutButton/></section></main>;
-  const experience=getIndustryExperience(profile.industry);
+  const experience=getIndustryExperience(await getClientWorkspaceIndustry(session.organizationId,profile));
 
   await syncLifecycleDashboardNotifications(session.organizationId).catch(()=>undefined);
   const unreadNotifications=await getOrganizationUnreadNotificationCount(session.organizationId,session.userId).catch(()=>0);

@@ -55,6 +55,11 @@ async function assertOrganizationExists(organizationId: string) {
   return rows[0];
 }
 
+export async function getClientWorkspaceIndustry(organizationId: string, profile?: ClientOnboardingProfile | null) {
+  const organization = await assertOrganizationExists(organizationId);
+  return organization.metadata?.industry_slug || profile?.industry || null;
+}
+
 export async function getClientOnboardingProfile(organizationId: string) {
   const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
     `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&select=${profileFields}&limit=1`,
@@ -127,11 +132,20 @@ export async function saveClientOnboardingProfile(
   };
   const payload = Object.fromEntries(Object.entries(allowed).filter(([, value]) => value !== undefined));
 
-  const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
-    `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
-  return rows[0] || null;
+  // Merge nested patches against the latest row; retry conflicting concurrent writes.
+  for (let attempt=0; attempt<3; attempt++) {
+    const current = await getClientOnboardingProfile(organizationId);
+    if (!current || current.user_id !== userId) return null;
+    const merged = {...payload, updated_at:new Date().toISOString()};
+    if (input.business_knowledge !== undefined) Object.assign(merged,{business_knowledge:{...current.business_knowledge,...input.business_knowledge}});
+    if (input.whatsapp_preferences !== undefined) Object.assign(merged,{whatsapp_preferences:{...current.whatsapp_preferences,...input.whatsapp_preferences}});
+    const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
+      `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}&updated_at=eq.${encodeURIComponent(current.updated_at)}`,
+      {method:"PATCH",body:JSON.stringify(merged)},
+    );
+    if(rows[0]) return rows[0];
+  }
+  throw new Error("Setup changed in another session. Reload and try again.");
 }
 
 export async function submitClientOnboarding(
