@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchMaiaPropertyMedia } from "@/lib/ai/maia-property-media-dispatch";
 
@@ -185,7 +184,7 @@ export async function sendLegacyMaiaPropertyMedia(args: { organizationId: string
   if (!publicUrl) throw new Error("The approved media asset has no deliverable URL.");
 
   const result = await dispatchMaiaPropertyMedia({
-    commandId: `maia-legacy-property-media:${lead.id}:${asset.id}:${randomUUID()}`,
+    commandId: `maia-property-media:${args.organizationId}:legacy:${lead.id}:${new Date(inboundAt).toISOString()}:${asset.id}`,
     organizationId: args.organizationId,
     recipient: text(lead.phone),
     propertyId: String(property.id),
