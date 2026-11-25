@@ -19,7 +19,8 @@ import "@/components/ui/dashboard-foundation.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortalLayout({children}:{children:React.ReactNode}) {
+export default async function PortalLayout({session.role === "owner" && !session.isAdminPreview && profile.status === "in_progress" ? <div className="portal-actions" style={{padding:"12px 16px",flexWrap:"wrap"}}><Link className="portal-button secondary" href="/portal/setup">Continue workspace setup</Link></div> : null}
+        {children}:{children:React.ReactNode}) {
   const session=await getClientSession();
   if(!session)redirect("/account/login");
 
