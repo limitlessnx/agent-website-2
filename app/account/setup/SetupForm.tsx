@@ -31,7 +31,7 @@ export default function SetupForm() {
         return;
       }
 
-      router.push(String(result.redirect_to || "/onboarding"));
+      router.push(String(result.redirect_to || "/portal"));
       router.refresh();
     } catch {
       setError("We could not connect to the workspace service. Check your connection and try again.");
@@ -46,7 +46,7 @@ export default function SetupForm() {
       <div>
         <p className="admin-kicker">Fluxknight Client Portal</p>
         <h1>Welcome to your workspace</h1>
-        <p className="admin-muted">Choose your business type and name. We will open your private workspace and guide you through the remaining setup.</p>
+        <p className="admin-muted">Enter your organization name and type to open your dashboard. Complete the remaining setup whenever you are ready.</p>
       </div>
       <label>
         Organization name
@@ -54,7 +54,8 @@ export default function SetupForm() {
       </label>
       <label>
         Business type
-        <select name="industry_slug" defaultValue="real-estate" required>
+        <select name="industry_slug" defaultValue="" required>
+          <option value="" disabled>Select organization type</option>
           <option value="real-estate">Real estate</option>
           <option value="hotels">Hotels & hospitality</option>
           <option value="photography-studio">Photography studio</option>
@@ -71,7 +72,7 @@ export default function SetupForm() {
         </select>
       </label>
       {error ? <p className="admin-error" role="alert">{error}</p> : null}
-      <button type="submit" disabled={loading}>{loading ? "Opening workspace..." : "Create workspace & continue setup"}</button>
+      <button type="submit" disabled={loading}>{loading ? "Opening workspace..." : "Create workspace & open dashboard"}</button>
     </form>
   );
 }
