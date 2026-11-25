@@ -36,11 +36,11 @@ async function requireSession() { const session = await getClientSession(); if (
 const failure = (error: unknown) => NextResponse.json({ error: error instanceof Error ? error.message : "Onboarding request failed." }, { status: /authentication/i.test(String(error)) ? 401 : 400 });
 
 export async function GET() {
-  try { const session = await requireSession(); const profile = await ensureClientOnboardingProfile({ organizationId: session.organizationId, membershipId: session.membershipId, userId: session.userId, businessName: session.organizationSlug, email: session.email }); return NextResponse.json({ profile }); } catch (error) { return failure(error); }
+  try { const session = await requireSession(); const profile = session.role === "owner" && !session.isAdminPreview ? await ensureClientOnboardingProfile({ organizationId: session.organizationId, membershipId: session.membershipId, userId: session.userId, businessName: session.organizationSlug, email: session.email }) : await getClientOnboardingProfile(session.organizationId); return NextResponse.json({ profile }); } catch (error) { return failure(error); }
 }
 
 export async function PATCH(request: NextRequest) {
-  try { const session = await requireSession(); const body = await request.json().catch(() => ({})); await ensureClientOnboardingProfile({ organizationId: session.organizationId, membershipId: session.membershipId, userId: session.userId, businessName: session.organizationSlug, email: session.email }); const profile = await saveClientOnboardingProfile(session.organizationId, session.userId, sanitize(body)); if (!profile) throw new Error("Onboarding profile could not be updated."); return NextResponse.json({ profile }); } catch (error) { return failure(error); }
+  try { const session = await requireSession(); if(session.role !== "owner" || session.isAdminPreview) return NextResponse.json({error:"Owner access required."},{status:403}); const body = await request.json().catch(() => ({})); await ensureClientOnboardingProfile({ organizationId: session.organizationId, membershipId: session.membershipId, userId: session.userId, businessName: session.organizationSlug, email: session.email }); const profile = await saveClientOnboardingProfile(session.organizationId, session.userId, sanitize(body)); if (!profile) throw new Error("Onboarding profile could not be updated."); return NextResponse.json({ profile }); } catch (error) { return failure(error); }
 }
 
 export async function POST(request: NextRequest) {
