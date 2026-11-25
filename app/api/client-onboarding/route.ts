@@ -45,7 +45,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSession(); const body = await request.json().catch(() => ({}));
+    const session = await requireSession(); if(session.role !== "owner" || session.isAdminPreview) return NextResponse.json({error:"Owner access required."},{status:403}); const body = await request.json().catch(() => ({}));
     if (body.action !== "complete") return NextResponse.json({ error: "Unsupported onboarding action." }, { status: 400 });
     const profile = await getClientOnboardingProfile(session.organizationId);
     if (!profile?.business_name?.trim()) throw new Error("Business name is required.");
