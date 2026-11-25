@@ -13,10 +13,10 @@ function setupRoute(overrides = {}) {
   const calls = { provision: [], sessions: [], pendingWrites: [] };
   const auth = {
     getPendingClientSetupSession: async () => ({ userId: 'verified-user-id', email: 'owner@example.test', ...overrides.pending }),
-    getPrimaryMembership: async () => ({
+    getPrimaryMembership: async () => (overrides.existing || calls.provision.length ? {
       organizationId: 'org-id', organizationSlug: 'haven-homes', membershipId: 'membership-id', role: 'owner',
       ...overrides.membership,
-    }),
+    } : null),
     setClientSession: async value => calls.sessions.push(value),
     setPendingClientSetupSession: async value => calls.pendingWrites.push(value),
   };
@@ -179,5 +179,29 @@ test('failed invitation login never invokes owner workspace provisioning', async
     assert.equal(response.status, 409);
     assert.equal(route.calls.provision.length, 0);
     assert.equal(route.calls.pendingWrites.length, 0);
+  }
+});
+
+test('existing owner resumes without reprovisioning or resetting workspace', async () => {
+  const route = setupRoute({ existing: true });
+  const response = await route.POST(request({company_name:'Haven Homes',industry_slug:'real-estate'}));
+  assert.equal(response.status,200);
+  assert.equal(route.calls.provision.length,0);
+  assert.equal(route.calls.sessions[0].organizationId,'org-id');
+  assert.equal(response.body.redirect_to,'/portal');
+});
+test('existing non-owner cannot provision or establish an owner session', async () => {
+  const route = setupRoute({ existing:true,membership:{role:'manager'} });
+  const response = await route.POST(request({company_name:'Haven Homes',industry_slug:'real-estate'}));
+  assert.equal(response.status,403);
+  assert.equal(route.calls.provision.length,0);
+  assert.equal(route.calls.sessions.length,0);
+});
+test('unsupported or missing industry cannot provision', async () => {
+  for(const industry_slug of ['', 'unknown-industry']) {
+    const route=setupRoute();
+    const response=await route.POST(request({company_name:'Haven Homes',industry_slug}));
+    assert.equal(response.status,400);
+    assert.equal(route.calls.provision.length,0);
   }
 });
