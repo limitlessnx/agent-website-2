@@ -18,10 +18,11 @@ function setupRoute(overrides = {}) {
       ...overrides.membership,
     }),
     setClientSession: async value => calls.sessions.push(value),
+    setPendingClientSetupSession: async value => calls.pendingWrites.push(value),
   };
   const route = load('app/api/client-auth/setup-workspace/route.ts', {
     'next/server': nextServer,
-    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email_confirmed_at: '2026-11-18' } } }) } }) },
+    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email: 'owner@example.test', email_confirmed_at: '2026-11-18' } } }) } }) },
     '@/lib/client-onboarding': { provisionClientWorkspace: async input => calls.provision.push(input) },
     '@/lib/client-auth': { getClientAccountMode: async () => 'organization', ...auth, ...overrides.auth },
   }, '', { URL });
@@ -161,4 +162,22 @@ test('failed invitation login never invokes owner workspace provisioning', async
   assert.notEqual(response.status, 200);
   assert.equal(route.calls.provision.length, 0);
   assert.equal(route.calls.sessions.length, 0);
+});
+
+ test('verified owner recovers missing setup cookie using live identity', async () => {
+  const route = setupRoute({ auth: { getPendingClientSetupSession: async () => null } });
+  const response = await route.POST(request({ company_name: 'Haven Homes', industry_slug: 'real-estate', user_id: 'forged' }));
+  assert.equal(response.status, 200);
+  assert.equal(route.calls.pendingWrites[0].userId, 'verified-user-id');
+  assert.equal(route.calls.provision[0].userId, 'verified-user-id');
+  assert.equal(response.body.redirect_to, '/portal');
+});
+ test('missing cookie never provisions manager or unselected accounts', async () => {
+  for (const mode of ['manager', null]) {
+    const route = setupRoute({ auth: { getPendingClientSetupSession: async () => null, getClientAccountMode: async () => mode } });
+    const response = await route.POST(request({ company_name: 'Haven Homes' }));
+    assert.equal(response.status, 409);
+    assert.equal(route.calls.provision.length, 0);
+    assert.equal(route.calls.pendingWrites.length, 0);
+  }
 });
