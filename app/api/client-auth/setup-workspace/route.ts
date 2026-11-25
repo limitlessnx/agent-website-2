@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       ? rawBody as Record<string, unknown>
       : {};
     const companyName = String(body.company_name || "").trim();
-    const industrySlug = String(body.industry_slug || "service-businesses").trim();
+    const industrySlug = String(body.industry_slug || "").trim();
     const companySlug = slugify(String(body.company_slug || companyName));
 
     if (companyName.length < 2 || companyName.length > 120) {
