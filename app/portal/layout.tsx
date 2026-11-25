@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getClientSession, getActiveManagerOrganizations } from "@/lib/client-auth";
-import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getClientOnboardingProfile, ensureClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import { getOrganizationUnreadNotificationCount, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
 import { getPortalCapabilities } from "@/lib/portal-access";
 import { getIndustryExperience } from "@/lib/industryExperience";
@@ -19,13 +19,16 @@ import "@/components/ui/dashboard-foundation.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortalLayout({session.role === "owner" && !session.isAdminPreview && profile.status === "in_progress" ? <div className="portal-actions" style={{padding:"12px 16px",flexWrap:"wrap"}}><Link className="portal-button secondary" href="/portal/setup">Continue workspace setup</Link></div> : null}
+export default async function PortalLayout({session.role === "owner" && !session.isAdminPreview && profile.status === "in_progress" ? <div className="portal-actions" style={{padding:"12px 16px",flexWrap:"wrap"}}><Link className="portal-button secondary" href="/portal/setup">Continue workspace setup ({Math.round(100 * [profile.business_name && profile.industry, profile.business_description?.trim(), profile.ai_requirements?.trim(), profile.human_contact_name?.trim() && profile.human_contact_email?.trim()].filter(Boolean).length / 4)}% of basic profile)</Link></div> : null}
         {children}:{children:React.ReactNode}) {
   const session=await getClientSession();
   if(!session)redirect("/account/login");
 
   const [profile,capabilities,managerOrganizations]=await Promise.all([
-    getClientOnboardingProfile(session.organizationId).catch(()=>null),
+    getClientOnboardingProfile(session.organizationId).then(profile => {
+      if (profile || session.role !== "owner" || session.isAdminPreview) return profile;
+      return ensureClientOnboardingProfile({organizationId:session.organizationId,membershipId:session.membershipId,userId:session.userId,businessName:session.organizationSlug,email:session.email});
+    }).catch(()=>null),
     getPortalCapabilities(session),
     session.role === "manager" ? getActiveManagerOrganizations(session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
