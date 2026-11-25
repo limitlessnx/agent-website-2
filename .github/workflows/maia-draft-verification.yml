@@ -108,3 +108,29 @@ jobs:
         env:
           ELEVENLABS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/receipt_test
         run: node tests/elevenlabs-receipt-concurrency.mjs
+
+  workspace-provisioning-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: workspace_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workspace_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify independent concurrent workspace provisioning
+        env:
+          WORKSPACE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/workspace_test
+        run: node tests/workspace-provisioning-concurrency.mjs
