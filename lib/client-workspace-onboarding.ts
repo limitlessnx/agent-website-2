@@ -48,8 +48,8 @@ const profileFields = [
 ].join(",");
 
 async function assertOrganizationExists(organizationId: string) {
-  const rows = await supabaseServerRequest<Array<{ id: string; status?: string }>>(
-    `organizations?id=eq.${encodeURIComponent(organizationId)}&select=id,status&limit=1`,
+  const rows = await supabaseServerRequest<Array<{ id: string; status?: string; name?: string; metadata?: { industry_slug?: string } }>>(
+    `organizations?id=eq.${encodeURIComponent(organizationId)}&select=id,status,name,metadata&limit=1`,
   );
   if (!rows[0]?.id) throw new Error("Your organization session is no longer valid. Please sign in again.");
   return rows[0];
@@ -69,17 +69,19 @@ export async function ensureClientOnboardingProfile(input: {
   businessName: string;
   email: string;
 }) {
-  await assertOrganizationExists(input.organizationId);
+  const organization = await assertOrganizationExists(input.organizationId);
   const current = await getClientOnboardingProfile(input.organizationId);
   if (current) return current;
 
+  try {
   const rows = await supabaseServerRequest<ClientOnboardingProfile[]>("client_onboarding_profiles", {
     method: "POST",
     body: JSON.stringify({
       organization_id: input.organizationId,
       membership_id: input.membershipId,
       user_id: input.userId,
-      business_name: input.businessName,
+      business_name: organization.name || input.businessName,
+      industry: organization.metadata?.industry_slug || null,
       business_email: input.email,
       status: "in_progress",
       current_step: 1,
@@ -88,6 +90,11 @@ export async function ensureClientOnboardingProfile(input: {
     }),
   });
   return rows[0];
+  } catch (error) {
+    const recovered = await getClientOnboardingProfile(input.organizationId);
+    if (recovered) return recovered;
+    throw error;
+  }
 }
 
 export async function saveClientOnboardingProfile(
