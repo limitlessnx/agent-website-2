@@ -99,6 +99,7 @@ async function database() {
   `);
   await db.exec(retryMigration);
   await db.exec(aclMigration);
+  await db.exec(fs.readFileSync('supabase/migrations/20261125195017_preserve_workspace_state_on_provisioning_retry.sql','utf8'));
   return db;
 }
 
@@ -229,5 +230,22 @@ test('general and remaining industry workspaces keep isolated identity and recei
     assert.equal(organizations.size,industries.length);
     assert.equal(await count(db,'organization_memberships'),industries.length);
     assert.equal(await count(db,'agent_families'),0);assert.equal(await count(db,'projects'),0);
+  } finally { await db.close(); }
+});
+
+test('installed production migration preserves configured profile, paid wallet and trial metadata on retry', async () => {
+  const db=await database();
+  try {
+    const first=await provision(db,USER_A,'Haven Homes','haven-homes','real-estate');
+    await db.query("UPDATE organizations SET metadata=metadata || '{\"workspace_mode\":\"paid\",\"trial_started\":true,\"onboarding_stage\":\"configured\"}'::jsonb WHERE id=$1",[first.organization_id]);
+    await db.query("UPDATE flux_credit_wallets SET balance=777,monthly_allowance=1000,plan_code='business_plus',status='active' WHERE organization_id=$1",[first.organization_id]);
+    await db.query("UPDATE client_onboarding_profiles SET status='configuration',current_step=4,business_email='saved@example.test',whatsapp_preferences='{\"connection_path\":\"already_have_whatsapp_business\",\"preferred_number\":\"saved\"}' WHERE organization_id=$1",[first.organization_id]);
+    const snapshot=async()=> (await db.query("SELECT o.metadata,p.status,p.current_step,p.business_email,p.whatsapp_preferences,w.plan_code,w.balance,w.monthly_allowance,w.status AS wallet_status FROM organizations o JOIN client_onboarding_profiles p ON p.organization_id=o.id JOIN flux_credit_wallets w ON w.organization_id=o.id WHERE o.id=$1",[first.organization_id])).rows[0];
+    const before=await snapshot();
+    const retry=await provision(db,USER_A,'Haven Homes','haven-homes','real-estate','changed@example.test');
+    assert.equal(retry.organization_id,first.organization_id);assert.equal(retry.workspace_mode,'paid');assert.equal(retry.trial_started,true);
+    assert.deepEqual(await snapshot(),before);
+    await assert.rejects(provision(db,USER_A,'Haven Homes','haven-homes','hotels'),/Workspace industry already exists/);
+    assert.deepEqual(await snapshot(),before);
   } finally { await db.close(); }
 });

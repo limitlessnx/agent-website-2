@@ -20,7 +20,7 @@ test("new clients complete only identity setup before entering the dashboard", (
 test("signup keeps the accepted client path dashboard-first", () => {
   const signup = read("app/api/client-auth/signup/route.ts");
   assert.match(signup, /nextPath:\"\/portal\"/);
-  assert.match(signup, /requires_workspace_setup:true/);
+  assert.match(signup, /const accountChoicePath = "\/account\/choose-mode"/);
 });
 
 test("dashboard-first acceptance does not publish customer-facing AI automatically", () => {

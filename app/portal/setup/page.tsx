@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getClientSession } from "@/lib/client-auth";
-import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { ensureClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
 import SetupProgress from "./SetupProgress";
 
 export const dynamic = "force-dynamic";

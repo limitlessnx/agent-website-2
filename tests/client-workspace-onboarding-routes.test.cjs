@@ -22,7 +22,7 @@ function setupRoute(overrides = {}) {
   };
   const route = load('app/api/client-auth/setup-workspace/route.ts', {
     'next/server': nextServer,
-    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email: 'owner@example.test', email_confirmed_at: '2026-11-18' } } }) } }) },
+    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email: 'owner@example.test', email_confirmed_at: overrides.unverified ? null : '2026-11-18' } } }) } }) },
     '@/lib/client-onboarding': { provisionClientWorkspace: async input => calls.provision.push(input) },
     '@/lib/client-auth': { getClientAccountMode: async () => 'organization', ...auth, ...overrides.auth },
   }, '', { URL });
@@ -205,3 +205,7 @@ test('unsupported or missing industry cannot provision', async () => {
     assert.equal(route.calls.provision.length,0);
   }
 });
+
+test('unverified users cannot provision workspaces', async()=>{const r=setupRoute({unverified:true});assert.equal((await r.POST(request({company_name:'Haven Homes',industry_slug:'hotels'}))).status,401);assert.equal(r.calls.provision.length,0);});
+test('missing organization name cannot provision',async()=>{const r=setupRoute();assert.equal((await r.POST(request({company_name:'',industry_slug:'hotels'}))).status,400);assert.equal(r.calls.provision.length,0);});
+test('each primary industry receives dashboard access with name and industry only',async()=>{for(const industry_slug of ['real-estate','hotels','photography-studio','restaurants','other']){const r=setupRoute();const result=await r.POST(request({company_name:'Haven Homes',industry_slug}));assert.equal(result.status,200);assert.equal(result.body.redirect_to,'/portal');assert.equal(r.calls.provision[0].industrySlug,industry_slug);}});
