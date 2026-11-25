@@ -28,7 +28,8 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
     getPortalCapabilities(session),
     session.role === "manager" ? getActiveManagerOrganizations(session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
-  if(!profile)redirect("/onboarding");
+  // A missing profile must not cause a portal/onboarding redirect loop.
+  if(!profile) return <main className="portal-page"><section className="portal-card" role="alert"><h1>Workspace information unavailable</h1><p>Your account is signed in. Retry loading your workspace without creating another organization.</p><Link className="portal-button" href="/portal">Retry dashboard</Link><ClientLogoutButton/></section></main>;
   const experience=getIndustryExperience(profile.industry);
 
   await syncLifecycleDashboardNotifications(session.organizationId).catch(()=>undefined);
