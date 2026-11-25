@@ -6,6 +6,7 @@ import {
   getClientAccountMode,
   getPrimaryMembership,
   setClientSession,
+  setPendingClientSetupSession,
 } from "@/lib/client-auth";
 
 function slugify(value: string) {
@@ -31,12 +32,26 @@ function safeInternalPath(value: unknown, fallback: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const pending = await getPendingClientSetupSession();
+    let pending = await getPendingClientSetupSession();
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    const user = data.user;
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (error || !user?.id || !email || !user.email_confirmed_at) {
+      return NextResponse.json({ error: "Verify your email and sign in before creating a workspace." }, { status: 401 });
+    }
+    if (pending && pending.userId !== user.id) {
+      return NextResponse.json({ error: "Your workspace setup session belongs to another account. Sign in again." }, { status: 401 });
+    }
+    const accountMode = await getClientAccountMode(user.id);
     if (!pending) {
-      return NextResponse.json(
-        { error: "Your workspace setup session has expired. Sign in again to continue." },
-        { status: 401 },
-      );
+      if (accountMode !== "organization") {
+        return NextResponse.json({ error: "Choose Organization owner before creating a workspace." }, { status: 409 });
+      }
+      pending = { userId: user.id, email, nextPath: "/portal", issuedAt: Date.now() };
+      await setPendingClientSetupSession(pending);
+    } else {
+      pending = { ...pending, email };
     }
     if (pending.invitationToken) {
       return NextResponse.json(
@@ -44,12 +59,6 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.getUser();
-    if (error || data.user?.id !== pending.userId || !data.user?.email_confirmed_at) {
-      return NextResponse.json({ error: "Verify your email and sign in before creating a workspace." }, { status: 401 });
-    }
-    const accountMode = await getClientAccountMode(pending.userId);
     if (accountMode === "manager") {
       return NextResponse.json({ error: "Manager accounts join an existing organization using its Access ID." }, { status: 403 });
     }
