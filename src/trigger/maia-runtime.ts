@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { captureTenantContactDates } from "@/lib/tenant-contact-dates";
 import { recordRealEstateCustomerInboundWindow } from "@/lib/real-estate-customer-service-window";
 import { dispatchMaiaOutboundMessage } from "@/lib/maia-outbound";
+import { sendMaiaWhatsAppTypingIndicator } from "@/lib/whatsapp-delivery";
 import { addCanonicalCrmMessage, getOrCreateCanonicalConversation, resolveCanonicalCustomer } from "@/lib/canonical-customer";
 import {
   queueLimitlessPropertyFollowupSequence,
@@ -208,6 +209,10 @@ export const maiaProcessInboundMessage = task({
         }
       }
 
+      // Start the optional signal alongside property lookup and AI preparation.
+      const typingSignal = payload.channel === "whatsapp" && payload.provider === "meta_whatsapp" && !stopIntent && conversationId
+        ? sendMaiaWhatsAppTypingIndicator(payload.organizationId, payload.externalEventId).catch(() => false)
+        : Promise.resolve(false);
       const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(effectiveMessage, payload.organizationId) : null;
       const runtimeMessage = propertyContext
         ? [effectiveMessage, "", "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:", JSON.stringify(propertyContext), "", "Use the verified property result when answering. Never invent availability, pricing, title, documentation or property media. If the customer asks about a named property, use the exact verified catalog match.", "For a clear property enquiry or buying intent, preserve the property context for follow-up scheduling."].join("\n")
@@ -257,6 +262,8 @@ export const maiaProcessInboundMessage = task({
         }).catch(() => undefined);
       }
 
+      // Observe the best-effort signal before the reply, without adding a chat message.
+      await Promise.race([typingSignal, new Promise<boolean>(resolve => setTimeout(() => resolve(false), 100))]);
       let delivery: Awaited<ReturnType<typeof dispatchMaiaOutboundMessage>> | null = null;
       if (payload.channel === "whatsapp" && payload.customerPhone) {
         delivery = await dispatchMaiaOutboundMessage({
