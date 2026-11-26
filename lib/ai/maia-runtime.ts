@@ -439,19 +439,26 @@ function safeToolPolicy(profile: RuntimeProfile, toolName: string) {
 export async function runMaia(input: MaiaRuntimeInput) {
   const startedAt = Date.now();
   const operationId = input.operationId || input.correlationId || crypto.randomUUID();
-  const agent = await loadAgent(input.organizationId, input.agentId);
-  const profile = await loadProfile(input.organizationId, input.agentId);
+  const [agent, profile] = await Promise.all([
+    loadAgent(input.organizationId, input.agentId),
+    loadProfile(input.organizationId, input.agentId),
+  ]);
+  const identityMs = Date.now() - startedAt;
   if (!profile.enabled) throw new Error("This agent's autonomous runtime is disabled.");
   const session = await createSession(input);
   const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId, customerId: input.customerId, conversationId: input.conversationId, correlationId: input.correlationId };
   const model = await chooseModel(input.organizationId, profile, input.message);
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
   await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
-  const business = await loadBusinessContext(input.organizationId);
   const admin = createAdminClient();
-  const { data: historyRows } = profile.memory_enabled ? await admin.from("agent_runtime_messages").select("role,content,tool_name,tool_call_id,metadata").eq("session_id", session.id).order("created_at", { ascending: false }).limit(16) : { data: [] };
+  const contextStartedAt = Date.now();
+  const [business, { data: historyRows }, { data: runtimeOrganization }] = await Promise.all([
+    loadBusinessContext(input.organizationId),
+    profile.memory_enabled ? admin.from("agent_runtime_messages").select("role,content,tool_name,tool_call_id,metadata").eq("session_id", session.id).eq("organization_id", input.organizationId).eq("agent_id", input.agentId).order("created_at", { ascending: false }).limit(16) : Promise.resolve({ data: [] }),
+    admin.from("organizations").select("slug,metadata").eq("id",input.organizationId).maybeSingle(),
+  ]);
+  const contextMs = Date.now() - contextStartedAt;
   const history = (historyRows || []).reverse().filter((row) => ["user", "assistant", "tool"].includes(row.role)).map((row) => ({ role: row.role, content: row.content || "", ...(row.tool_name ? { name: row.tool_name } : {}), ...(row.tool_call_id ? { tool_call_id: row.tool_call_id } : {}) }));
-  const {data:runtimeOrganization}=await admin.from("organizations").select("slug,metadata").eq("id",input.organizationId).maybeSingle();
   const realEstateContext=Boolean(runtimeOrganization&&isRealEstateOrganization(runtimeOrganization));
   const hotelContext=isHotelOrganization(runtimeOrganization || {}) || isHotelOrganization({metadata:{industry:json(business.profile).industry}});
   const tools = [...toolSet(),...(realEstateContext?maiaEstateTools():[]),...(hotelContext?maiaHotelTools():[])].filter((tool) => safeToolPolicy(profile, tool.name));
@@ -494,13 +501,18 @@ export async function runMaia(input: MaiaRuntimeInput) {
   const messages: MaiaMessage[] = modelMessages(systemPrompt, history, input.message);
   let finalText = "";
   let steps = 0;
+  const preparationMs = Date.now() - startedAt;
+  let modelMs = 0;
+  let toolMs = 0;
   const toolResults: Array<Record<string, unknown>> = [];
   if (estateKnowledgeContext !== null) toolResults.push({ tool: "get_estate_knowledge", ok: estateKnowledgePreloaded, preloaded: true });
   while (steps < Math.max(1, Math.min(profile.max_steps, 20))) {
     steps += 1;
     await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
+    const modelStartedAt = Date.now();
     const payload = await withFluxAiOperation({organizationId:input.organizationId,feature:"core_ai_support",action:"web_ai",source:"maia_runtime",context:{agent_id:input.agentId,session_id:session.id,step:steps},operationId:operationId+":"+steps,request:{agentId:input.agentId,model:model.id,messages},failure:"ai"},
       () => callOpenAI(model, messages, tools), value => ({accepted:true,provider:model.provider,model:model.model_key,reference:typeof value.id === "string" ? value.id : null,usage:chatUsage(value)}));
+    modelMs += Date.now() - modelStartedAt;
     const choice = payload?.choices?.[0];
     const assistant = choice?.message;
     if (!assistant) throw new Error("AI model returned no message.");
@@ -514,6 +526,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
       const rawArguments = call.function?.arguments;
       try { args = typeof rawArguments === "string" && rawArguments ? JSON.parse(rawArguments) : {}; } catch { args = {}; }
       if (!tool) { messages.push({ role: "tool", tool_call_id: call.id, name, content: JSON.stringify({ error: "Tool is not available to this agent." }) }); continue; }
+      const toolStartedAt = Date.now();
       try {
         const output = await tool.execute(args, ctx);
         toolResults.push({ tool: name, ok: true });
@@ -529,12 +542,14 @@ export async function runMaia(input: MaiaRuntimeInput) {
         toolResults.push({ tool: name, ok: false });
         await logTool(ctx, name, args, output, "failed");
         messages.push({ role: "tool", tool_call_id: call.id, name, content: JSON.stringify(output) });
+      } finally {
+        toolMs += Date.now() - toolStartedAt;
       }
     }
     if (finalText) break;
   }
   if (!finalText) finalText = "I reached the configured action limit before completing the task. I have preserved the work already completed and can hand the remaining step to a human or another assigned agent.";
-  await saveMessage(ctx, "assistant", finalText, { modelId: model.id, model: model.model_key, provider: model.provider, steps, toolResults, latencyMs: Date.now() - startedAt });
+  await saveMessage(ctx, "assistant", finalText, { modelId: model.id, model: model.model_key, provider: model.provider, steps, toolResults, latencyMs: Date.now() - startedAt, timing: { identityMs, contextMs, preparationMs, modelMs, toolMs } });
   await admin.from("agent_runtime_sessions").update({ last_model_id: model.id === "fallback" ? null : model.id, step_count: steps, updated_at: new Date().toISOString() }).eq("id", session.id).eq("organization_id", input.organizationId);
   return { reply: finalText, sessionId: session.id, agent: { id: agent.id, name: agent.name }, model: { id: model.id, provider: model.provider, model: model.model_key }, steps, toolResults, autonomous: input.autonomous ?? profile.autonomy_mode === "autonomous" };
 }
