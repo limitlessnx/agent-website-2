@@ -31,3 +31,10 @@ test('Maia property media cannot accept an arbitrary recipient or media URL from
   assert.match(tools, /approvedMedia\(asset\.metadata\)/);
   assert.match(tools, /resolveTrustedWhatsAppRecipient\(ctx\)/);
 });
+
+
+test('Limitless conversational replies cannot infer another property attachment', () => {
+  const outbound = readFileSync('lib/maia-outbound.ts', 'utf8');
+  assert.match(outbound, /textOnly: input\.organizationId === "b15f21b4-5697-4d21-9421-8a34eae3476d"/);
+  assert.equal((delivery.match(/new Set\([^\n]*filter\(isDirectPublicImageUrl\)/g) || []).length, 3);
+});
