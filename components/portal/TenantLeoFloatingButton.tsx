@@ -21,7 +21,7 @@ export default function TenantLeoFloatingButton() {
   const pageContext = { pathname, section: section || "overview", resourceType: resource || section || "portal" };
 
   useEffect(() => {
-    if (open && !voice) input.current?.focus({ preventScroll: true });
+    if (open && !voice && window.matchMedia("(pointer: fine)").matches) input.current?.focus({ preventScroll: true });
   }, [open, voice]);
 
   useEffect(() => {
@@ -38,11 +38,11 @@ export default function TenantLeoFloatingButton() {
   return <>
     <button ref={launcher} type="button" className={`leo-launcher ${pathname === "/portal/campaigns" ? "leo-campaign-launcher" : ""} fixed bottom-6 right-6 z-[120] flex h-12 items-center gap-2 rounded-full border border-violet-300/30 bg-slate-950 px-4 text-sm font-semibold text-white shadow-2xl`} aria-expanded={open} aria-controls={open ? "tenant-leo-chat" : undefined} onClick={() => open ? close() : setOpen(true)}><Bot size={18}/>Super Leo</button>
     {open && <aside ref={viewportRef} id="tenant-leo-chat" aria-label="Tenant Super Leo" onKeyDown={event => { if (event.key === "Escape") close(); }} className="leo-viewport-panel tenant-leo-viewport fixed inset-x-3 bottom-20 z-[121] flex h-[min(640px,calc(100dvh-100px))] min-h-0 flex-col overflow-hidden rounded-2xl border border-violet-300/25 bg-slate-950 text-white shadow-2xl sm:left-auto sm:right-6 sm:w-[420px]">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
-        <div><strong className="block text-base">Super Leo</strong><small className="block text-xs leading-4 text-slate-400">Leo is locked to this organization and your current permissions.</small></div>
-        <div className="flex gap-1">
+      <header className="tenant-leo-header flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
+        <div className="tenant-leo-title"><strong className="block text-base">Super Leo</strong><small className="block text-xs leading-4 text-slate-400">Leo is locked to this organization and your current permissions.</small></div>
+        <div className="tenant-leo-header-actions flex gap-1">
           <button type="button" onClick={() => setVoice(!voice)} aria-pressed={voice} className="grid h-11 min-w-11 place-items-center rounded-lg px-2 text-sm hover:bg-white/10" aria-label={voice ? "Return to messages" : "Open voice controls"}>{voice ? "Chat" : <Mic size={18}/>}</button>
-          <button type="button" onClick={close} aria-label="Close Super Leo" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/10"><X size={18}/></button>
+          <button type="button" onClick={close} aria-label="Close Super Leo" className="tenant-leo-close rounded-lg"><X size={18} aria-hidden="true"/><span>Close</span></button>
         </div>
       </header>
       <div ref={log} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">

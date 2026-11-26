@@ -39,3 +39,13 @@
 
 .leo-viewport-panel button[aria-label="Send message"]{display:grid!important;place-items:center!important;padding:0!important;min-width:44px;min-height:44px}
 .leo-viewport-panel button svg{flex-shrink:0}
+
+/* Tenant chat dismissal must remain visible even with long identity copy or narrow mobile viewports. */
+#tenant-leo-chat .tenant-leo-header{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start!important;gap:8px!important;min-width:0!important;}
+#tenant-leo-chat .tenant-leo-title{min-width:0;overflow-wrap:anywhere;}
+#tenant-leo-chat .tenant-leo-header-actions{display:flex!important;flex:none!important;align-items:center!important;gap:4px!important;}
+#tenant-leo-chat .tenant-leo-header-actions button{flex:none!important;min-width:44px!important;min-height:44px!important;color:#fff!important;}
+#tenant-leo-chat button.tenant-leo-close{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:0 9px!important;border:1px solid #a78bfa!important;background:#292044!important;white-space:nowrap!important;font-size:13px!important;font-weight:600!important;}
+#tenant-leo-chat button.tenant-leo-close svg{display:block!important;width:18px!important;height:18px!important;flex:none!important;}
+@media(max-width:480px){#tenant-leo-chat .tenant-leo-header{padding:8px 10px!important;}#tenant-leo-chat .tenant-leo-title small{font-size:11px!important;line-height:1.3!important;}}
+#tenant-leo-chat[data-chat-compact=true] .tenant-leo-title small{display:none!important;}
