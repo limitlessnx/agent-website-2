@@ -1,6 +1,6 @@
 import { transcribeWhatsAppAudio } from "@/lib/whatsapp-media-transcription";
 import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
-import { runMaia } from "@/lib/ai/maia-runtime";
+import { runMaia, isMaiaSimpleGreeting } from "@/lib/ai/maia-runtime";
 import { runOptionalRealEstateOperation } from "@/lib/ai/optional-real-estate-operation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureTenantContactDates } from "@/lib/tenant-contact-dates";
@@ -213,7 +213,7 @@ export const maiaProcessInboundMessage = task({
       const typingSignal = payload.channel === "whatsapp" && payload.provider === "meta_whatsapp" && !stopIntent && conversationId
         ? sendMaiaWhatsAppTypingIndicator(payload.organizationId, payload.externalEventId).catch(() => false)
         : Promise.resolve(false);
-      const propertyContext = isLimitlessRealty ? await searchLimitlessProperties(effectiveMessage, payload.organizationId) : null;
+      const propertyContext = isLimitlessRealty && !isMaiaSimpleGreeting(effectiveMessage) ? await searchLimitlessProperties(effectiveMessage, payload.organizationId) : null;
       const runtimeMessage = propertyContext
         ? [effectiveMessage, "", "VERIFIED LIMITLESS REALTY PROPERTY SEARCH RESULT:", JSON.stringify(propertyContext), "", "Use the verified property result when answering. Never invent availability, pricing, title, documentation or property media. If the customer asks about a named property, use the exact verified catalog match.", "For a clear property enquiry or buying intent, preserve the property context for follow-up scheduling."].join("\n")
         : effectiveMessage;
