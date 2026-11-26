@@ -38,6 +38,8 @@ export default function SetupProgress({profile}:{profile:ClientOnboardingProfile
   const [draft,setDraft]=useState(()=>initial(profile));
   const [baseline,setBaseline]=useState(()=>initial(profile));
   const [busy,setBusy]=useState(false);
+  const [hydrated,setHydrated]=useState(false);
+  useEffect(()=>setHydrated(true),[]);
   const [error,setError]=useState("");
   const [saved,setSaved]=useState("");
   const experience=getIndustryExperience(profile.industry);
@@ -69,9 +71,9 @@ export default function SetupProgress({profile}:{profile:ClientOnboardingProfile
   return <main className="portal-page"><section className="portal-card">
     <h1>Workspace setup</h1><p>Configure your {experience.name} workspace at your own pace. None of these steps are required to access the dashboard.</p>
     <p>Step {step+1} of {steps.length} · {profile.status==="in_progress"?"Setup in progress":"Setup already submitted or configured"}</p>
-    <nav aria-label="Setup sections" style={{display:"flex",flexWrap:"wrap",gap:8}}>{steps.map((title,i)=><button key={title} type="button" className="portal-button secondary" aria-current={i===step?"step":undefined} disabled={busy} onClick={()=>navigate(i)}>{i+1}. {title} · {provided[i]?"Saved details":"Optional"}</button>)}</nav>
+    <nav aria-label="Setup sections" style={{display:"flex",flexWrap:"wrap",gap:8}}>{steps.map((title,i)=><button key={title} type="button" className="portal-button secondary" aria-current={i===step?"step":undefined} disabled={!hydrated||busy} onClick={()=>navigate(i)}>{i+1}. {title} · {provided[i]?"Saved details":"Optional"}</button>)}</nav>
     <h2>{steps[step]}</h2>
-    <fieldset disabled={busy} style={{display:"grid",gap:12,border:0,padding:0,minWidth:0}}>
+    <fieldset disabled={!hydrated||busy} style={{display:"grid",gap:12,border:0,padding:0,minWidth:0}}>
       {textFields[step].map(([key,label])=><label key={key} style={fieldStyle}>{label}<textarea style={{width:"100%",maxWidth:"100%"}} rows={["business_description","ai_requirements","notes"].includes(key)?4:1} value={draft.texts[key]} onChange={e=>setDraft(d=>({...d,texts:{...d.texts,[key]:e.target.value}}))}/></label>)}
       {step===1&&<><h3>Business goals</h3>{goals.map(([value,label])=><label key={value}><input type="checkbox" checked={draft.business_goals.includes(value)} onChange={()=>toggle("business_goals",value)}/> {label}</label>)}</>}
       {step===2&&<>{experience.workspaceSetupNote&&<p>{experience.workspaceSetupNote}</p>}{knowledgeFields.map(([key,label])=><label key={key} style={fieldStyle}>{label}<textarea style={{width:"100%",maxWidth:"100%"}} rows={4} value={draft.knowledge[key]||""} onChange={e=>setDraft(d=>({...d,knowledge:{...d.knowledge,[key]:e.target.value}}))}/></label>)}</>}
@@ -80,11 +82,11 @@ export default function SetupProgress({profile}:{profile:ClientOnboardingProfile
     </fieldset>
     {error&&<p role="alert">{error}</p>}{saved&&<p role="status">{saved}</p>}
     <div className="portal-actions" style={{flexWrap:"wrap",gap:8,alignItems:"stretch"}}>
-      <button className="portal-button" disabled={busy} onClick={()=>save("next")}>{busy?"Saving…":step===4?"Save & finish for now":"Save & continue"}</button>
-      <button className="portal-button secondary" disabled={busy} onClick={()=>save("exit")}>Save & exit</button>
-      <button className="portal-button secondary" disabled={busy||step===0} onClick={()=>navigate(step-1)}>Back</button>
-      <button className="portal-button secondary" disabled={busy} onClick={()=>save("skip")}>Skip for now</button>
+      <button className="portal-button" disabled={!hydrated||busy} onClick={()=>save("next")}>{busy?"Saving…":step===4?"Save & finish for now":"Save & continue"}</button>
+      <button className="portal-button secondary" disabled={!hydrated||busy} onClick={()=>save("exit")}>Save & exit</button>
+      <button className="portal-button secondary" disabled={!hydrated||busy||step===0} onClick={()=>navigate(step-1)}>Back</button>
+      <button className="portal-button secondary" disabled={!hydrated||busy} onClick={()=>save("skip")}>Skip for now</button>
     </div>
-    <button className="portal-button secondary" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Leave without saving this section?"))router.push("/portal");}}>Return to dashboard</button>
+    <button className="portal-button secondary" disabled={!hydrated||busy} onClick={()=>{if(!dirty||window.confirm("Leave without saving this section?"))router.push("/portal");}}>Return to dashboard</button>
   </section></main>;
 }

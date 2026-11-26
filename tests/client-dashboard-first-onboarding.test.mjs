@@ -19,7 +19,10 @@ test("new clients complete only identity setup before entering the dashboard", (
 
 test("signup keeps the accepted client path dashboard-first", () => {
   const signup = read("app/api/client-auth/signup/route.ts");
-  assert.match(signup, /nextPath:\"\/portal\"/);
+  assert.match(signup, /const invitationNextPath = safeInternalPath\(body\.post_signup_path, "\/portal"\)/);
+  assert.match(signup, /const nextPath = joiningOrganization \? invitationNextPath : accountChoicePath/);
+  assert.match(signup, /requires_email_confirmation: true/);
+  assert.match(signup, /redirect_to: accountChoicePath/);
   assert.match(signup, /const accountChoicePath = "\/account\/choose-mode"/);
 });
 
