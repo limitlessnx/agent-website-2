@@ -454,20 +454,20 @@ export async function runMaia(input: MaiaRuntimeInput) {
   ]);
   const identityMs = Date.now() - startedAt;
   if (!profile.enabled) throw new Error("This agent's autonomous runtime is disabled.");
-  const [session, model] = await Promise.all([
+  const admin = createAdminClient();
+  const contextStartedAt = Date.now();
+  const [session, model, business, { data: runtimeOrganization }] = await Promise.all([
     createSession(input),
     chooseModel(input.organizationId, profile, input.message),
+    loadBusinessContext(input.organizationId),
+    admin.from("organizations").select("slug,metadata").eq("id",input.organizationId).maybeSingle(),
   ]);
   const ctx: ToolContext = { organizationId: input.organizationId, agentId: input.agentId, sessionId: session.id, externalConversationId: input.externalConversationId, customerId: input.customerId, conversationId: input.conversationId, correlationId: input.correlationId };
   if (!model) throw new Error("No usable AI model is assigned to this organization and no platform fallback model is configured.");
   await preflightChargeableFluxAi({ organizationId: input.organizationId, feature: "core_ai_support", action: "web_ai" });
-  const admin = createAdminClient();
-  const contextStartedAt = Date.now();
-  const [business, { data: historyRows }, { data: runtimeOrganization }] = await Promise.all([
-    loadBusinessContext(input.organizationId),
-    profile.memory_enabled ? admin.from("agent_runtime_messages").select("role,content,tool_name,tool_call_id,metadata").eq("session_id", session.id).eq("organization_id", input.organizationId).eq("agent_id", input.agentId).order("created_at", { ascending: false }).limit(16) : Promise.resolve({ data: [] }),
-    admin.from("organizations").select("slug,metadata").eq("id",input.organizationId).maybeSingle(),
-  ]);
+  const { data: historyRows } = profile.memory_enabled
+    ? await admin.from("agent_runtime_messages").select("role,content,tool_name,tool_call_id,metadata").eq("session_id", session.id).eq("organization_id", input.organizationId).eq("agent_id", input.agentId).order("created_at", { ascending: false }).limit(16)
+    : { data: [] };
   const contextMs = Date.now() - contextStartedAt;
   const history = (historyRows || []).reverse().filter((row) => ["user", "assistant", "tool"].includes(row.role)).map((row) => ({ role: row.role, content: row.content || "", ...(row.tool_name ? { name: row.tool_name } : {}), ...(row.tool_call_id ? { tool_call_id: row.tool_call_id } : {}) }));
   const realEstateContext=Boolean(runtimeOrganization&&isRealEstateOrganization(runtimeOrganization));

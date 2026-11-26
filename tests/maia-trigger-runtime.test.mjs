@@ -212,7 +212,7 @@ test("Maia cutover readiness recognizes tenant-specific Maia slugs", () => {
 
 test("Maia parallelizes independent tenant context reads and records timing", () => {
   assert.match(maiaRuntime, /const \[agent, profile\] = await Promise\.all/);
-  assert.match(maiaRuntime, /const \[business, \{ data: historyRows \}, \{ data: runtimeOrganization \}\] = await Promise\.all/);
+  assert.match(maiaRuntime, /const \[session, model, business, \{ data: runtimeOrganization \}\] = await Promise\.all/);
   assert.match(maiaRuntime, /\.eq\("session_id", session\.id\)\.eq\("organization_id", input\.organizationId\)\.eq\("agent_id", input\.agentId\)/);
   assert.match(maiaRuntime, /timing: \{ identityMs, contextMs, preparationMs, modelMs, toolMs \}/);
   assert.match(maiaRuntime, /if \(!profile\.enabled\) throw/);
@@ -246,7 +246,7 @@ test("Maia typing indicator is tenant-scoped and follows suppression checks", ()
 
 test("Maia V3 avoids greeting-only catalog retrieval and parallelizes model selection", () => {
   assert.match(triggerTask, /isLimitlessRealty && !isMaiaSimpleGreeting\(effectiveMessage\) \? await searchLimitlessProperties\(effectiveMessage, payload\.organizationId\)/);
-  assert.match(maiaRuntime, /const \[session, model\] = await Promise\.all\(\[\s*createSession\(input\),\s*chooseModel\(input\.organizationId, profile, input\.message\),/);
+  assert.match(maiaRuntime, /const \[session, model, business, \{ data: runtimeOrganization \}\] = await Promise\.all\(\[\s*createSession\(input\),\s*chooseModel\(input\.organizationId, profile, input\.message\),\s*loadBusinessContext\(input\.organizationId\),/);
   assert.match(maiaRuntime, /Do not repeat successful side-effect actions/);
   assert.match(maiaRuntime, /unless a policy requires a fresh check/);
   assert.match(maiaRuntime, /preflightChargeableFluxAi/);
