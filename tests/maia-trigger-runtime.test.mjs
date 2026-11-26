@@ -218,3 +218,15 @@ test("Maia parallelizes independent tenant context reads and records timing", ()
   assert.match(maiaRuntime, /if \(!profile\.enabled\) throw/);
   assert.match(maiaRuntime, /preflightChargeableFluxAi/);
 });
+
+
+test("Maia greeting routing is conservative and respects assigned models", () => {
+  const expression = maiaRuntime.match(/export function isMaiaSimpleGreeting\(message: string\): boolean \{\s*return (\/[^\n]+\/i)\.test\(message\.trim\(\)\);/);
+  assert.ok(expression);
+  const greeting = new RegExp(expression[1].slice(1,-2), "i");
+  for (const message of ["Hello", "hi!", "Good morning"]) assert.ok(greeting.test(message));
+  for (const message of ["Hello, send pictures", "yes", "thanks", "good morning, book an inspection", "hi\nproperty details"]) assert.ok(!greeting.test(message));
+  assert.match(maiaRuntime, /profile\.model_strategy !== "reasoning"/);
+  assert.match(maiaRuntime, /const fast = usable\.filter/);
+  assert.match(maiaRuntime, /routingCategory:/);
+});
