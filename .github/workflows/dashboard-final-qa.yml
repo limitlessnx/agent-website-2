@@ -119,6 +119,8 @@ jobs:
         run: npm run test:tenant-offboarding
       - name: Evaluation and conversation-center guardrails
         run: node --test tests/evaluation-and-conversation-center.test.mjs tests/workspace-and-google-auth.test.mjs
+      - name: Progressive owner onboarding and installed provisioning regression
+        run: node --test tests/progressive-owner-onboarding.test.cjs tests/client-dashboard-first-onboarding.test.mjs tests/client-workspace-onboarding-routes.test.cjs tests/client-workspace-provisioning-idempotency.test.cjs tests/hotel-onboarding-handoff.test.mjs
       - name: TypeScript
         run: npx tsc --noEmit
       - name: Production build

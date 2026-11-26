@@ -47,6 +47,7 @@ export default async function PortalSettingsPage() {
     <main className="portal-page portal-settings fk-motion-enter">
       <PageHeader title="Settings" description="Workspace identity, members, ownership, account state, and security scope." />
       {getIndustryExperience(profile?.industry).slug==="hotels"?<p><Link className="portal-button secondary" href="/portal/hotel/setup">Edit hotel information & policies</Link></p>:null}
+      {session.role === "owner" && !session.isAdminPreview ? <p><Link className="portal-button secondary" href="/portal/setup">Edit or resume business setup</Link></p> : null}
       <section className="portal-grid">
         <article className="portal-card">
           <div className="portal-card-head"><div><h2><Building2 size={17} /> Business profile</h2><p>Captured during onboarding.</p></div></div>

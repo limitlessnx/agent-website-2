@@ -48,11 +48,16 @@ const profileFields = [
 ].join(",");
 
 async function assertOrganizationExists(organizationId: string) {
-  const rows = await supabaseServerRequest<Array<{ id: string; status?: string }>>(
-    `organizations?id=eq.${encodeURIComponent(organizationId)}&select=id,status&limit=1`,
+  const rows = await supabaseServerRequest<Array<{ id: string; status?: string; name?: string; metadata?: { industry_slug?: string } }>>(
+    `organizations?id=eq.${encodeURIComponent(organizationId)}&select=id,status,name,metadata&limit=1`,
   );
   if (!rows[0]?.id) throw new Error("Your organization session is no longer valid. Please sign in again.");
   return rows[0];
+}
+
+export async function getClientWorkspaceIndustry(organizationId: string, profile?: ClientOnboardingProfile | null) {
+  const organization = await assertOrganizationExists(organizationId);
+  return organization.metadata?.industry_slug || profile?.industry || null;
 }
 
 export async function getClientOnboardingProfile(organizationId: string) {
@@ -69,17 +74,19 @@ export async function ensureClientOnboardingProfile(input: {
   businessName: string;
   email: string;
 }) {
-  await assertOrganizationExists(input.organizationId);
+  const organization = await assertOrganizationExists(input.organizationId);
   const current = await getClientOnboardingProfile(input.organizationId);
   if (current) return current;
 
+  try {
   const rows = await supabaseServerRequest<ClientOnboardingProfile[]>("client_onboarding_profiles", {
     method: "POST",
     body: JSON.stringify({
       organization_id: input.organizationId,
       membership_id: input.membershipId,
       user_id: input.userId,
-      business_name: input.businessName,
+      business_name: organization.name || input.businessName,
+      industry: organization.metadata?.industry_slug || null,
       business_email: input.email,
       status: "in_progress",
       current_step: 1,
@@ -88,6 +95,11 @@ export async function ensureClientOnboardingProfile(input: {
     }),
   });
   return rows[0];
+  } catch (error) {
+    const recovered = await getClientOnboardingProfile(input.organizationId);
+    if (recovered) return recovered;
+    throw error;
+  }
 }
 
 export async function saveClientOnboardingProfile(
@@ -120,11 +132,20 @@ export async function saveClientOnboardingProfile(
   };
   const payload = Object.fromEntries(Object.entries(allowed).filter(([, value]) => value !== undefined));
 
-  const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
-    `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
-  return rows[0] || null;
+  // Merge nested patches against the latest row; retry conflicting concurrent writes.
+  for (let attempt=0; attempt<3; attempt++) {
+    const current = await getClientOnboardingProfile(organizationId);
+    if (!current || current.user_id !== userId) return null;
+    const merged = {...payload, updated_at:new Date().toISOString()};
+    if (input.business_knowledge !== undefined) Object.assign(merged,{business_knowledge:{...current.business_knowledge,...input.business_knowledge}});
+    if (input.whatsapp_preferences !== undefined) Object.assign(merged,{whatsapp_preferences:{...current.whatsapp_preferences,...input.whatsapp_preferences}});
+    const rows = await supabaseServerRequest<ClientOnboardingProfile[]>(
+      `client_onboarding_profiles?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}&updated_at=eq.${encodeURIComponent(current.updated_at)}`,
+      {method:"PATCH",body:JSON.stringify(merged)},
+    );
+    if(rows[0]) return rows[0];
+  }
+  throw new Error("Setup changed in another session. Reload and try again.");
 }
 
 export async function submitClientOnboarding(

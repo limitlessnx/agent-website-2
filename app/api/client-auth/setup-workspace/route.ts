@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       ? rawBody as Record<string, unknown>
       : {};
     const companyName = String(body.company_name || "").trim();
-    const industrySlug = String(body.industry_slug || "service-businesses").trim();
+    const industrySlug = String(body.industry_slug || "").trim();
     const companySlug = slugify(String(body.company_slug || companyName));
 
     if (companyName.length < 2 || companyName.length > 120) {
@@ -80,11 +80,13 @@ export async function POST(request: NextRequest) {
     if (!companySlug) {
       return NextResponse.json({ error: "A valid organization name is required." }, { status: 400 });
     }
-    if (industrySlug.length > 64 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(industrySlug)) {
+    if (!["real-estate","hotels","photography-studio","restaurants","beauty-salons","auto-shops","gyms","clinics","ecommerce","sales-companies","professional-services","service-businesses","other"].includes(industrySlug)) {
       return NextResponse.json({ error: "Choose a valid business type." }, { status: 400 });
     }
 
-    await provisionClientWorkspace({
+    const existing = await getPrimaryMembership(pending.userId);
+    if (existing && existing.role !== "owner") return NextResponse.json({error:"Existing membership does not permit workspace creation."},{status:403});
+    if (!existing) await provisionClientWorkspace({
       userId: pending.userId,
       organizationName: companyName,
       organizationSlug: companySlug,
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
       businessEmail: pending.email,
     });
 
-    const membership = await getPrimaryMembership(pending.userId);
+    const membership = existing || await getPrimaryMembership(pending.userId);
     if (!membership) {
       throw new Error("Workspace membership could not be loaded after setup.");
     }

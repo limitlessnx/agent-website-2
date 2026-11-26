@@ -13,16 +13,16 @@ function setupRoute(overrides = {}) {
   const calls = { provision: [], sessions: [], pendingWrites: [] };
   const auth = {
     getPendingClientSetupSession: async () => ({ userId: 'verified-user-id', email: 'owner@example.test', ...overrides.pending }),
-    getPrimaryMembership: async () => ({
+    getPrimaryMembership: async () => (overrides.existing || calls.provision.length ? {
       organizationId: 'org-id', organizationSlug: 'haven-homes', membershipId: 'membership-id', role: 'owner',
       ...overrides.membership,
-    }),
+    } : null),
     setClientSession: async value => calls.sessions.push(value),
     setPendingClientSetupSession: async value => calls.pendingWrites.push(value),
   };
   const route = load('app/api/client-auth/setup-workspace/route.ts', {
     'next/server': nextServer,
-    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email: 'owner@example.test', email_confirmed_at: '2026-11-18' } } }) } }) },
+    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user-id', email: 'owner@example.test', email_confirmed_at: overrides.unverified ? null : '2026-11-18' } } }) } }) },
     '@/lib/client-onboarding': { provisionClientWorkspace: async input => calls.provision.push(input) },
     '@/lib/client-auth': { getClientAccountMode: async () => 'organization', ...auth, ...overrides.auth },
   }, '', { URL });
@@ -181,3 +181,31 @@ test('failed invitation login never invokes owner workspace provisioning', async
     assert.equal(route.calls.pendingWrites.length, 0);
   }
 });
+
+test('existing owner resumes without reprovisioning or resetting workspace', async () => {
+  const route = setupRoute({ existing: true });
+  const response = await route.POST(request({company_name:'Haven Homes',industry_slug:'real-estate'}));
+  assert.equal(response.status,200);
+  assert.equal(route.calls.provision.length,0);
+  assert.equal(route.calls.sessions[0].organizationId,'org-id');
+  assert.equal(response.body.redirect_to,'/portal');
+});
+test('existing non-owner cannot provision or establish an owner session', async () => {
+  const route = setupRoute({ existing:true,membership:{role:'manager'} });
+  const response = await route.POST(request({company_name:'Haven Homes',industry_slug:'real-estate'}));
+  assert.equal(response.status,403);
+  assert.equal(route.calls.provision.length,0);
+  assert.equal(route.calls.sessions.length,0);
+});
+test('unsupported or missing industry cannot provision', async () => {
+  for(const industry_slug of ['', 'unknown-industry']) {
+    const route=setupRoute();
+    const response=await route.POST(request({company_name:'Haven Homes',industry_slug}));
+    assert.equal(response.status,400);
+    assert.equal(route.calls.provision.length,0);
+  }
+});
+
+test('unverified users cannot provision workspaces', async()=>{const r=setupRoute({unverified:true});assert.equal((await r.POST(request({company_name:'Haven Homes',industry_slug:'hotels'}))).status,401);assert.equal(r.calls.provision.length,0);});
+test('missing organization name cannot provision',async()=>{const r=setupRoute();assert.equal((await r.POST(request({company_name:'',industry_slug:'hotels'}))).status,400);assert.equal(r.calls.provision.length,0);});
+test('each primary industry receives dashboard access with name and industry only',async()=>{for(const industry_slug of ['real-estate','hotels','photography-studio','restaurants','other']){const r=setupRoute();const result=await r.POST(request({company_name:'Haven Homes',industry_slug}));assert.equal(result.status,200);assert.equal(result.body.redirect_to,'/portal');assert.equal(r.calls.provision[0].industrySlug,industry_slug);}});

@@ -21,7 +21,7 @@ import { getCampaignAudienceLeads } from "@/lib/lead-profile-service";
 import OrganizationDashboard from "@/components/portal/OrganizationDashboard";
 import PhotographyDashboard from "@/components/portal/PhotographyDashboard";
 import HotelOverviewPage from "@/components/portal/hotel/HotelOverviewPage";
-import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getClientOnboardingProfile, getClientWorkspaceIndustry } from "@/lib/client-workspace-onboarding";
 import { getPortalCapabilities } from "@/lib/portal-access";
 import { getWorkspaceHealth, getWorkspaceModules } from "@/lib/workspace-overview";
 import WorkspacePresetPanel from "@/components/portal/WorkspacePresetPanel";
@@ -66,7 +66,8 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
     await admin.from("ai_business_evaluation_sessions").update({ organization_id: session.organizationId, user_id: session.userId, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", evaluationId).eq("status", "evaluated").or(`organization_id.is.null,organization_id.eq.${session.organizationId}`);
   }
   const onboarding = await getClientOnboardingProfile(session.organizationId).catch(() => null);
-  if (getIndustryExperience(onboarding?.industry).slug === "hotels") return <HotelOverviewPage/>;
+  const selectedIndustry = await getClientWorkspaceIndustry(session.organizationId,onboarding);
+  if (getIndustryExperience(selectedIndustry).slug === "hotels") return <HotelOverviewPage/>;
   const [summary, wallet, subscriptionResult, whatsappStatus, latestEvaluation] = await Promise.all([
     getClientPortalSummary(session.organizationId),
     getFluxWalletSummary(session.organizationId).catch(() => null),
@@ -86,7 +87,7 @@ export default async function ClientPortalPage({ searchParams }: { searchParams?
   const subscriptionUnavailable = subscriptionResult.unavailable;
 
   const businessName = summary.onboarding?.business_name || session.organizationSlug;
-  const experience = getIndustryExperience(summary.onboarding?.industry);
+  const experience = getIndustryExperience(selectedIndustry || summary.onboarding?.industry);
   if (experience.slug === "hotels") return <HotelOverviewPage/>;
   if (experience.name.toLowerCase().includes("real estate") || experience.name.toLowerCase().includes("realty")) {
     const [properties, leads, appointments] = await Promise.all([

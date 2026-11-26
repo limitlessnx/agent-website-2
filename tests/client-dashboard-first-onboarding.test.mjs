@@ -7,10 +7,11 @@ const read = (path) => readFileSync(path, "utf8");
 test("new clients complete only identity setup before entering the dashboard", () => {
   const form = read("app/account/setup/SetupForm.tsx");
   const route = read("app/api/client-auth/setup-workspace/route.ts");
-  assert.match(form, /Your name/);
   assert.match(form, /Organization name/);
   assert.match(form, /open dashboard/);
-  assert.doesNotMatch(form, /industry_slug/);
+  assert.match(form, /industry_slug/);
+  assert.match(form, /Select organization type/);
+  assert.match(form, /required/);
   assert.match(route, /service-businesses/);
   assert.match(route, /redirect_to/);
   assert.match(route, /\/portal/);
@@ -18,8 +19,11 @@ test("new clients complete only identity setup before entering the dashboard", (
 
 test("signup keeps the accepted client path dashboard-first", () => {
   const signup = read("app/api/client-auth/signup/route.ts");
-  assert.match(signup, /nextPath:\"\/portal\"/);
-  assert.match(signup, /requires_workspace_setup:true/);
+  assert.match(signup, /const invitationNextPath = safeInternalPath\(body\.post_signup_path, "\/portal"\)/);
+  assert.match(signup, /const nextPath = joiningOrganization \? invitationNextPath : accountChoicePath/);
+  assert.match(signup, /requires_email_confirmation: true/);
+  assert.match(signup, /redirect_to: accountChoicePath/);
+  assert.match(signup, /const accountChoicePath = "\/account\/choose-mode"/);
 });
 
 test("dashboard-first acceptance does not publish customer-facing AI automatically", () => {

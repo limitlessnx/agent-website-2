@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getClientSession, getActiveManagerOrganizations } from "@/lib/client-auth";
-import { getClientOnboardingProfile } from "@/lib/client-workspace-onboarding";
+import { getClientOnboardingProfile, ensureClientOnboardingProfile, getClientWorkspaceIndustry } from "@/lib/client-workspace-onboarding";
 import { getOrganizationUnreadNotificationCount, syncLifecycleDashboardNotifications } from "@/lib/dashboard-notifications";
 import { getPortalCapabilities } from "@/lib/portal-access";
 import { getIndustryExperience } from "@/lib/industryExperience";
@@ -20,16 +20,21 @@ import "@/components/ui/dashboard-foundation.css";
 export const dynamic = "force-dynamic";
 
 export default async function PortalLayout({children}:{children:React.ReactNode}) {
+
   const session=await getClientSession();
   if(!session)redirect("/account/login");
 
   const [profile,capabilities,managerOrganizations]=await Promise.all([
-    getClientOnboardingProfile(session.organizationId).catch(()=>null),
+    getClientOnboardingProfile(session.organizationId).then(profile => {
+      if (profile || session.role !== "owner" || session.isAdminPreview) return profile;
+      return ensureClientOnboardingProfile({organizationId:session.organizationId,membershipId:session.membershipId,userId:session.userId,businessName:session.organizationSlug,email:session.email});
+    }).catch(()=>null),
     getPortalCapabilities(session),
     session.role === "manager" ? getActiveManagerOrganizations(session.userId).catch(()=>[]) : Promise.resolve([]),
   ]);
-  if(!profile)redirect("/onboarding");
-  const experience=getIndustryExperience(profile.industry);
+  // A missing profile must not cause a portal/onboarding redirect loop.
+  if(!profile) return <main className="portal-page"><section className="portal-card" role="alert"><h1>Workspace information unavailable</h1><p>Your account is signed in. Retry loading your workspace without creating another organization.</p><Link className="portal-button" href="/portal">Retry dashboard</Link><ClientLogoutButton/></section></main>;
+  const experience=getIndustryExperience(await getClientWorkspaceIndustry(session.organizationId,profile));
 
   await syncLifecycleDashboardNotifications(session.organizationId).catch(()=>undefined);
   const unreadNotifications=await getOrganizationUnreadNotificationCount(session.organizationId,session.userId).catch(()=>0);
@@ -55,6 +60,7 @@ export default async function PortalLayout({children}:{children:React.ReactNode}
       />
       <section className="portal-main">
         <header className="portal-topbar">{experience.slug==="hotels"?<Link href="/portal" className={hotelStyles.mobileBrand} aria-label="Fluxknight hotel home"><FluxLogo/><small>Hotel &amp; Hospitality</small></Link>:null}<div className={experience.slug==="hotels"?hotelStyles.desktopIdentity:undefined}><span>{experience.name} workspace</span><strong>{profile.business_name||session.organizationSlug}</strong></div><div className="portal-topbar-actions">{experience.slug==="hotels"?<><Link href="/portal/notifications" className={hotelStyles.mobileAction} aria-label={`${unreadNotifications} unread notifications`}><Bell size={20}/>{unreadNotifications>0?<em>{unreadNotifications>99?"99+":unreadNotifications}</em>:null}</Link><Link href="/portal/settings" className={`${hotelStyles.mobileAction} ${hotelStyles.avatar}`} aria-label="Hotel settings">{(profile.business_name||session.organizationSlug).split(/\s+/).slice(0,2).map(word=>word[0]||"").join("").toUpperCase()}</Link></>:null}{session.isAdminPreview ? <Link prefetch={false} className="portal-button secondary" href="/dashboard/preview/exit">Exit tenant preview</Link> : null}{session.role === "manager" ? <ManagerWorkspaceSwitcher organizations={managerOrganizations} currentOrganizationId={session.organizationId}/> : null}{session.isAdminPreview ? null : <ClientLogoutButton/>}</div></header>
+        {session.role === "owner" && !session.isAdminPreview && profile.status === "in_progress" ? <div className="portal-actions" style={{padding:"12px 16px",flexWrap:"wrap"}}><Link className="portal-button secondary" href="/portal/setup">Continue workspace setup</Link></div> : null}
         {children}
       </section>
       {session.isAdminPreview
