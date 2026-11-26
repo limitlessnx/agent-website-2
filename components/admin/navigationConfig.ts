@@ -41,7 +41,8 @@ export const ADMIN_NAV_GROUPS:AdminNavGroup[]=[
   {id:"operations",label:"Operations & Monitoring",sections:[{items:[
     {href:"/dashboard/control-center",label:"Operations Center"},
     {href:"/dashboard/activity",label:"Activity"},
-    {href:"/dashboard/health",label:"Health & Failures"},
+    {href:"/dashboard/health",label:"Health & Failures",exact:true},
+    {href:"/dashboard/health/maia",label:"Maia Performance & Health"},
     {href:"/dashboard/analytics",label:"Analytics & Tenant Health"},
     {href:"/dashboard/support",label:"Support & Leo"},
   ]}]},
