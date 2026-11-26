@@ -169,7 +169,7 @@ async function resolvePropertyMediaFromText(organizationId: string, text: string
       const videos = assets.filter((a) => /video\//i.test(String(a.mime_type || ""))).map((a) => publicStorageUrl(a.storage_bucket, a.storage_path)).filter((u): u is string => Boolean(u) && isDirectPublicVideoUrl(u)).slice(0, 3);
       if (videos.length) return { videos, images: [] };
       const candidates: unknown[] = [row.cover_image_url, ...(Array.isArray(row.image_urls) ? row.image_urls : [])];
-      return { videos: [], images: candidates.filter(isDirectPublicImageUrl).slice(0, 3) };
+      return { videos: [], images: [...new Set(candidates.filter(isDirectPublicImageUrl))].slice(0, 3) };
     }
   } catch {}
   return { videos: [] as string[], images: [] as string[] };
@@ -233,7 +233,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
 
     if(!useTemplate && !input.textOnly){
       const suppliedVideos=(input.propertyVideoUrls||[]).filter(isDirectPublicVideoUrl).slice(0,3);
-      const suppliedImages=(input.propertyImageUrls||[]).filter(isDirectPublicImageUrl).slice(0,3);
+      const suppliedImages=[...new Set((input.propertyImageUrls||[]).filter(isDirectPublicImageUrl))].slice(0,3);
       const media=suppliedVideos.length||suppliedImages.length
         ?{videos:suppliedVideos,images:suppliedImages}
         :await resolvePropertyMediaFromText(input.organizationId,normalizedText||"");
@@ -305,7 +305,7 @@ export async function sendWhatsAppMessage(input: SendInput) {
 
   if (!useTemplate && !input.textOnly) {
     const suppliedVideos = (input.propertyVideoUrls || []).filter(isDirectPublicVideoUrl).slice(0, 3);
-    const suppliedImages = (input.propertyImageUrls || []).filter(isDirectPublicImageUrl).slice(0, 3);
+    const suppliedImages = [...new Set((input.propertyImageUrls || []).filter(isDirectPublicImageUrl))].slice(0, 3);
     const media = suppliedVideos.length || suppliedImages.length ? { videos: suppliedVideos, images: suppliedImages } : await resolvePropertyMediaFromText(input.organizationId, normalizedText || "");
     if (media.videos.length) for (const url of media.videos) await sendMetaMedia({ organizationId: input.organizationId, to, type: "video", url, credentials });
     else for (const url of media.images) await sendMetaMedia({ organizationId: input.organizationId, to, type: "image", url, credentials });
