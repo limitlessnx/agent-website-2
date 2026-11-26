@@ -71,9 +71,18 @@ function scoreModel(model: Model, strategy: RuntimeProfile["model_strategy"], me
   return score;
 }
 
+// Only standalone greetings qualify; contextual acknowledgements and all requests retain full routing.
+export function isMaiaSimpleGreeting(message: string): boolean {
+  return /^(?:hi|hello|hey|good morning|good afternoon|good evening)[!. ]*$/i.test(message.trim());
+}
+
 async function chooseModel(organizationId: string, profile: RuntimeProfile, message: string) {
   const assigned = await loadModels(organizationId);
   const usable = assigned.filter((model) => configuredProvider(model.provider));
+  if (profile.model_strategy !== "reasoning" && isMaiaSimpleGreeting(message)) {
+    const fast = usable.filter(model => model.provider === "openai" && /^(?:gpt-4o-mini|gpt-4\.1-mini|gpt-5-mini)(?:-\d{4}-\d{2}-\d{2})?$/.test(model.model_key) && json(model.capabilities).tools === true);
+    if (fast.length) return fast.sort((a,b) => scoreModel(b,"fastest",message)-scoreModel(a,"fastest",message))[0];
+  }
   if (usable.length) return usable.sort((a, b) => scoreModel(b, profile.model_strategy, message) - scoreModel(a, profile.model_strategy, message))[0];
   const fallbackKey = process.env.MAIA_DEFAULT_MODEL?.trim() || process.env.SUPPORT_AI_MODEL?.trim();
   if (process.env.OPENAI_API_KEY?.trim() && fallbackKey) return { id: "fallback", provider: "openai", model_key: fallbackKey, display_name: fallbackKey, capabilities: { text: true, tools: true } } as Model;
@@ -549,7 +558,7 @@ export async function runMaia(input: MaiaRuntimeInput) {
     if (finalText) break;
   }
   if (!finalText) finalText = "I reached the configured action limit before completing the task. I have preserved the work already completed and can hand the remaining step to a human or another assigned agent.";
-  await saveMessage(ctx, "assistant", finalText, { modelId: model.id, model: model.model_key, provider: model.provider, steps, toolResults, latencyMs: Date.now() - startedAt, timing: { identityMs, contextMs, preparationMs, modelMs, toolMs } });
+  await saveMessage(ctx, "assistant", finalText, { modelId: model.id, model: model.model_key, provider: model.provider, steps, toolResults, latencyMs: Date.now() - startedAt, routingCategory: isMaiaSimpleGreeting(input.message) ? "standalone_greeting" : "full_runtime", timing: { identityMs, contextMs, preparationMs, modelMs, toolMs } });
   await admin.from("agent_runtime_sessions").update({ last_model_id: model.id === "fallback" ? null : model.id, step_count: steps, updated_at: new Date().toISOString() }).eq("id", session.id).eq("organization_id", input.organizationId);
   return { reply: finalText, sessionId: session.id, agent: { id: agent.id, name: agent.name }, model: { id: model.id, provider: model.provider, model: model.model_key }, steps, toolResults, autonomous: input.autonomous ?? profile.autonomy_mode === "autonomous" };
 }
