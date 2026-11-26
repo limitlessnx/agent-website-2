@@ -101,6 +101,22 @@ async function resolveWhatsAppCredentials(organizationId: string): Promise<Whats
 
   throw new Error("WhatsApp credentials are not configured for this organization.");
 }
+/** Best-effort native typing/read signal; never sends a chat message. */
+export async function sendMaiaWhatsAppTypingIndicator(organizationId: string, messageId: string): Promise<boolean> {
+  if (!messageId.startsWith("wamid.")) return false;
+  try {
+    const credentials = await resolveWhatsAppCredentials(organizationId);
+    if (credentials.providerFamily !== "meta") return false;
+    const response = await fetch(`https://graph.facebook.com/${credentials.graphVersion}/${encodeURIComponent(credentials.phoneNumberId)}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${credentials.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", status: "read", message_id: messageId, typing_indicator: { type: "text" } }),
+      signal: AbortSignal.timeout(1500),
+      cache: "no-store",
+    });
+    return response.ok;
+  } catch { return false; }
+}
 async function getTemplateConfig(organizationId: string, purpose: string, requestedTemplateName?: string, strictTemplateContract?: SendInput["strictTemplateContract"], requestedTemplateLanguage?: string): Promise<TemplateConfig | null> {
   const strictLimitlessLookup = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && Boolean(strictTemplateContract);
   const templateFilter = (requestedTemplateName && !strictLimitlessLookup ? `&template_name=eq.${encodeURIComponent(requestedTemplateName)}` : "") + (requestedTemplateLanguage ? `&language_code=eq.${encodeURIComponent(requestedTemplateLanguage)}` : "");

@@ -230,3 +230,15 @@ test("Maia greeting routing is conservative and respects assigned models", () =>
   assert.match(maiaRuntime, /const fast = usable\.filter/);
   assert.match(maiaRuntime, /routingCategory:/);
 });
+
+
+test("Maia typing indicator is tenant-scoped and follows suppression checks", () => {
+  assert.match(whatsappDelivery, /export async function sendMaiaWhatsAppTypingIndicator/);
+  assert.match(whatsappDelivery, /typing_indicator: \{ type: "text" \}/);
+  assert.match(whatsappDelivery, /signal: AbortSignal\.timeout\(1500\)/);
+  const index = triggerTask.indexOf("const typingSignal =");
+  assert.ok(index > triggerTask.indexOf("human_handoff_active"));
+  assert.ok(index > triggerTask.indexOf("customer_opted_out"));
+  assert.ok(index < triggerTask.indexOf("const result = await runMaia"));
+  assert.match(triggerTask, /sendMaiaWhatsAppTypingIndicator\(payload\.organizationId, payload\.externalEventId\)\.catch/);
+});
