@@ -242,3 +242,12 @@ test("Maia typing indicator is tenant-scoped and follows suppression checks", ()
   assert.ok(index < triggerTask.indexOf("const result = await runMaia"));
   assert.match(triggerTask, /sendMaiaWhatsAppTypingIndicator\(payload\.organizationId, payload\.externalEventId\)\.catch/);
 });
+
+
+test("Maia V3 avoids greeting-only catalog retrieval and parallelizes model selection", () => {
+  assert.match(triggerTask, /isLimitlessRealty && !isMaiaSimpleGreeting\(effectiveMessage\) \? await searchLimitlessProperties\(effectiveMessage, payload\.organizationId\)/);
+  assert.match(maiaRuntime, /const \[session, model\] = await Promise\.all\(\[\s*createSession\(input\),\s*chooseModel\(input\.organizationId, profile, input\.message\),/);
+  assert.match(maiaRuntime, /Do not repeat successful side-effect actions/);
+  assert.match(maiaRuntime, /unless a policy requires a fresh check/);
+  assert.match(maiaRuntime, /preflightChargeableFluxAi/);
+});
