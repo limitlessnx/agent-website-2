@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     const { db, organizationId } = await requireGencouvAdmin();
     const page = Math.floor(Math.max(0, Math.min(10000, Number(new URL(request.url).searchParams.get("page")) || 0)));
-    const result = await db.from("gencouv_email_messages").select("id,recipient_email,subject,status,provider_email_id,created_at,sent_at,delivered_at,error_message,send_batch_id,direction,from_email", { count: "exact" }).eq("organization_id", organizationId).eq("direction", "outbound").order("created_at", { ascending: false }).order("id").range(page * 50, page * 50 + 49);
+    const result = await db.from("gencouv_email_messages").select("id,recipient_email,subject,status,provider,provider_email_id,created_at,sent_at,delivered_at,error_message,send_batch_id,direction,from_email", { count: "exact" }).eq("organization_id", organizationId).eq("direction", "outbound").order("created_at", { ascending: false }).order("id").range(page * 50, page * 50 + 49);
     if (result.error) throw result.error;
     const batchIds=[...new Set((result.data||[]).flatMap(message=>message.send_batch_id?[message.send_batch_id]:[]))];
     const batches=batchIds.length?await db.from("gencouv_send_batches").select("id,status,error_summary").eq("organization_id",organizationId).in("id",batchIds):{data:[],error:null};
@@ -34,10 +34,11 @@ export async function POST(request: Request) {
     if (!GENCOUV_UUID.test(batchId)) throw new GencouvRequestError("Choose a saved batch to reconcile.");
     const [batch, messages] = await Promise.all([
       db.from("gencouv_send_batches").select("id,status,from_email,subject,submitted_at").eq("organization_id", organizationId).eq("id", batchId).maybeSingle(),
-      db.from("gencouv_email_messages").select("id,recipient_email,provider_email_id,status").eq("organization_id", organizationId).eq("send_batch_id", batchId).order("created_at"),
+      db.from("gencouv_email_messages").select("id,recipient_email,provider,provider_email_id,status").eq("organization_id", organizationId).eq("send_batch_id", batchId).order("created_at"),
     ]);
     if (batch.error || messages.error) throw new GencouvRequestError("Batch history is unavailable.", 503);
     if (!batch.data || !messages.data?.length) throw new GencouvRequestError("Batch not found.", 404);
+    if (messages.data.some(message => message.provider === "brevo")) throw new GencouvRequestError("Brevo outcomes must be reconciled through Brevo delivery events. No email was resent.",409);
     const savedBatch = batch.data;
     let recent: Array<Record<string, unknown>> = [];
     if (messages.data.some(message => !message.provider_email_id) && ["unknown", "partial", "submitting"].includes(batch.data.status)) {
