@@ -1,6 +1,7 @@
 import "server-only";
 import { normalizeBrevoEvent } from "@/lib/gencouv-brevo-events";
-export async function readBrevoBatchEvents(batchId: string, sender: string) {
+export type BrevoBatchEvent = NonNullable<ReturnType<typeof normalizeBrevoEvent>>;
+export async function readBrevoBatchEvents(batchId: string, sender: string): Promise<BrevoBatchEvent[]> {
   const key=process.env.GENCOUV_BREVO_API_KEY;
   if(!key) throw new Error("Brevo not configured");
   const tag="gencouv-"+batchId;
@@ -12,7 +13,7 @@ export async function readBrevoBatchEvents(batchId: string, sender: string) {
   if(!response.ok) throw new Error("Brevo event lookup unavailable");
   const data=await response.json();
   if(!Array.isArray(data.events)||data.events.length>=5000) throw new Error("Incomplete Brevo event report");
-  return data.events.flatMap((row:Record<string,unknown>)=>{
+  return (data.events as Record<string,unknown>[]).flatMap((row:Record<string,unknown>)=>{
     if(String(row.from||"").trim().toLowerCase()!==sender.toLowerCase()) return [];
     let tags:unknown=row.tag;
     if(typeof tags==="string"&&tags.startsWith("[")){try{tags=JSON.parse(tags)}catch{return []}}
