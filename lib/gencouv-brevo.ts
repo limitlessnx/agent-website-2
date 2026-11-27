@@ -86,19 +86,28 @@ export async function sendGencouvBrevoIndividual(
   return { provider: "brevo", messageId };
 }
 
-/** Stop on first uncertain result; never retry or switch providers automatically. */
+/** Submit one bounded provider request, never retry an ambiguous response. */
 export async function submitGencouvBrevoBatch(emails: BrevoIndividualEmail[]) {
   const receiptIds: Array<string | null> = emails.map(() => null);
-  let outcome = "unknown";
-  for (let i = 0; i < emails.length; i++) {
-    try {
-      const result = await sendGencouvBrevoIndividual(emails[i]);
-      const id = result.messageId;
-      if (!id || id.length > 512 || /[\\r\\n]/.test(id) || receiptIds.includes(id)) break;
-      receiptIds[i] = id;
-    } catch { break; }
-  }
-  if (receiptIds.every(Boolean)) outcome = "submitted";
-  else if (receiptIds.some(Boolean)) outcome = "partial";
-  return { receiptIds, outcome, summary: outcome === "submitted" ? null : "Brevo submission incomplete; reconcile before any further submission." };
+  const incomplete = { receiptIds, outcome: "unknown", summary: "Brevo submission uncertain; reconcile before any further submission." };
+  const key = process.env.GENCOUV_BREVO_API_KEY;
+  if (!key || process.env.GENCOUV_BREVO_SENDING_ENABLED !== "true" || !emails.length || emails.length > 100) return incomplete;
+  const first = emails[0];
+  if (emails.some(e => !isGencouvBrevoSender(e.from) || e.from !== first.from || e.subject !== first.subject || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(e.to) || e.to.length > 254 || !e.text.trim() || e.text.length > 32000)) return incomplete;
+  // Each version has its own recipient, personalized body and unsubscribe headers.
+  // Until the provider contract has been verified, do not assume receipt ordering.
+  try {
+    const response = await fetch(BREVO_API + "/smtp/email", {
+      method:"POST", headers:{"api-key":key,"Content-Type":"application/json"},
+      body:JSON.stringify({sender:{email:first.from,name:"Gencouv Capital"},replyTo:{email:first.from},subject:first.subject,textContent:first.text,
+        messageVersions:emails.map(e=>({to:[{email:e.to}],textContent:e.text,headers:e.headers}))}),
+      cache:"no-store",signal:AbortSignal.timeout(25000)
+    });
+    if (!response.ok) return incomplete;
+    const data = await response.json();
+    const ids = data.messageIds;
+    if (!Array.isArray(ids) || ids.length !== emails.length || ids.some(id=>typeof id!=="string"||!id||id.length>512||/[\r\n]/.test(id)) || new Set(ids).size!==ids.length) return incomplete;
+    // Preserve uncertain ledger until provider receipt-to-recipient mapping is verified.
+    return { ...incomplete, summary:"Brevo accepted batch; recipient-level reconciliation required." };
+  } catch { return incomplete; }
 }
