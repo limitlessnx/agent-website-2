@@ -42,7 +42,7 @@ export async function sendGencouvBrevoIndividual(
   if (process.env.GENCOUV_BREVO_SENDING_ENABLED !== "true") {
     throw new Error("Gencouv Brevo sending is not enabled.");
   }
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = process.env.GENCOUV_BREVO_API_KEY;
   if (!apiKey) throw new Error("Brevo API key is not configured.");
   if (!isGencouvBrevoSender(email.from)) throw new Error("Unapproved Gencouv sender.");
   if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email.to) || email.to.length > 254) {
