@@ -7,7 +7,7 @@ type Category={id:string;name:string};
 type Contact={id:string;email:string;full_name:string|null;eligible:boolean;reason:string};
 type Audience={total:number;eligible:number;suppressed:number;unverified:number;reserved?:number;invalid?:number;truncated:boolean;contacts:Contact[]};
 type Campaign={id:string;from_email:string;subject:string;text_body:string;status:string;category_id:string|null};
-const resendSenders = ["info@gencouv.com", "support@gencouv.com", "onboarding@gencouv.com"];
+export const gencouvResendSenders = ["info@gencouv.com", "support@gencouv.com", "onboarding@gencouv.com"];
 type BrevoDomain = { domain: string; authenticated: boolean; senders: string[] };
 type Settings={enabled:boolean;daily_limit:number;manual_daily_limit:number;worker_verified:boolean};
 export default function GencouvBulkCampaigns(){
@@ -41,10 +41,10 @@ export default function GencouvBulkCampaigns(){
   function chooseCampaign(id:string){
     setCampaignId(id);setSelected([]);setAudience(null);resetReview();setStatus("");
     const draft=campaigns.find(item=>item.id===id);
-    const sender = draft?.from_email || (provider === "resend" ? resendSenders[0] : "");
+    const sender = draft?.from_email || (provider === "resend" ? gencouvResendSenders[0] : "");
     setFrom(sender);
     if (draft) {
-      setProvider(resendSenders.includes(sender) ? "resend" : "brevo");
+      setProvider(gencouvResendSenders.includes(sender) ? "resend" : "brevo");
       setBrevoDomain(sender.split("@")[1] || "");
     }
     setSubject(draft?.subject||"");setMessage(draft?.text_body||"");setCategory(draft?.category_id||"");
@@ -94,7 +94,7 @@ export default function GencouvBulkCampaigns(){
       <label className="admin-field">Email provider<select aria-label="Email provider" disabled={busy || Boolean(batch || requestId)} value={provider} onChange={event => {
         const selectedProvider = event.target.value === "brevo" ? "brevo" : "resend";
         setProvider(selectedProvider);
-        setFrom(selectedProvider === "resend" ? resendSenders[0] : "");
+        setFrom(selectedProvider === "resend" ? gencouvResendSenders[0] : "");
         setBrevoDomain("");
         resetReview();
         if (selectedProvider === "brevo") void checkBrevo();
@@ -111,7 +111,7 @@ export default function GencouvBulkCampaigns(){
         resetReview();
       }}>
         {provider === "brevo" && <option value="">Select a verified sender</option>}
-        {(provider === "resend" ? resendSenders : brevo?.domains?.find(domain => domain.domain === brevoDomain)?.senders ?? [])
+        {(provider === "resend" ? gencouvResendSenders : brevo?.domains?.find(domain => domain.domain === brevoDomain)?.senders ?? [])
           .map(sender => <option key={sender} value={sender}>{sender}</option>)}
       </select></label>
       <label className="admin-field">Recipient category<select aria-label="Recipient category" disabled={busy||locked} value={category} onChange={event=>{setCategory(event.target.value);setAudience(null);setSelected([]);resetReview();}}><option value="">All saved contacts</option>{categories.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -119,7 +119,14 @@ export default function GencouvBulkCampaigns(){
       <label className="admin-field gencouv-wide">Campaign message<textarea ref={messageInput} aria-label="Campaign message" disabled={busy||locked} value={message} rows={8} maxLength={30000} onChange={event=>{setMessage(event.target.value);resetReview();}}/><small>Use [Name] for each recipient’s saved name. Missing names use “there”. An unsubscribe link is included automatically.</small></label>
     </div>
     <div className="gencouv-action-row"><button type="button" disabled={busy||locked} onClick={insertName}>Insert recipient name</button><button disabled={busy||locked||!subject.trim()||!message.trim()} onClick={()=>void saveDraft()}>Save campaign draft</button><button disabled={busy||!campaignId||dirty} onClick={()=>void preview()}>Preview eligible audience</button><button disabled={busy||!subject.trim()||!message.trim()} onClick={()=>setReviewed(true)}>Preview message</button></div>
-    <GencouvMessageTemplates label="Saved campaign message template" content={{from,subject,text:message}} disabled={busy||Boolean(batch&&!['submitted','failed','cancelled'].includes(batch.status))} onUse={template=>{setCampaignId("");setFrom(template.from_email);setSubject(template.subject);setMessage(template.text_body);setCategory("");setAudience(null);setSelected([]);setConsentConfirmed(false);resetReview();setError("");setStatus("");}} />
+    <GencouvMessageTemplates label="Saved campaign message template" content={{from,subject,text:message}} disabled={busy||Boolean(batch&&!['submitted','failed','cancelled'].includes(batch.status))} onUse={template=>{
+      setCampaignId("");
+      if (provider === "resend" && gencouvResendSenders.includes(template.from_email)) setFrom(template.from_email);
+      if (provider === "brevo" && brevo?.verifiedSenders.includes(template.from_email)) {
+        setFrom(template.from_email);
+        setBrevoDomain(template.from_email.split("@")[1]);
+      }
+      setSubject(template.subject);setMessage(template.text_body);setCategory("");setAudience(null);setSelected([]);setConsentConfirmed(false);resetReview();setError("");setStatus("");}} />
     {locked?<p>This campaign’s content is locked after its first reservation. Previously reserved recipients are excluded from subsequent batches. Choose New campaign for different content.</p>:null}
     {reviewed?<section className="gencouv-message-preview" aria-label="Campaign message preview"><h3>{subject}</h3>{previewContacts.length?<label className="admin-field">Preview for recipient<select value={previewContact?.id||""} onChange={event=>setPreviewContactId(event.target.value)}>{previewContacts.map(contact=><option key={contact.id} value={contact.id}>{contact.full_name||"No name — neutral greeting"} · {contact.email}</option>)}</select></label>:<p>Select eligible recipients to preview their personalized messages.</p>}<p aria-label="Personalized message text">{previewContact?personalizeGencouvMessage(message,previewContact.full_name):message}</p><small>Names are personalized for each selected contact. Unsubscribe is included on every marketing email.</small></section>:null}
     {audience?<div className="gencouv-audience" aria-label="Eligible recipient selection"><p>{audience.total} reviewed · {audience.eligible} eligible · {audience.unverified} permission unverified · {audience.suppressed} suppressed · {audience.reserved||0} already reserved · {audience.invalid||0} invalid addresses</p>{audience.truncated?<p role="status">Showing up to 500 contacts. Use a category to narrow this audience.</p>:null}

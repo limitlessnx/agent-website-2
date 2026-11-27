@@ -77,6 +77,14 @@ test('Brevo and Resend show independent sending domains and approved senders', a
       ],
     },
   }));
+  const brevoTemplate = 'acacacac-1111-4111-8111-111111111111';
+  const resendTemplate = 'acacacac-2222-4222-8222-222222222222';
+  await page.route('**/api/dashboard/gencouv/campaigns?offset=*', route => route.fulfill({
+    json: { campaigns: [
+      { id: brevoTemplate, subject: 'Brevo template', text_body: 'Reusable content', from_email: 'news@first.example.test', status: 'draft' },
+      { id: resendTemplate, subject: 'Resend template', text_body: 'Reusable content', from_email: 'support@gencouv.com', status: 'draft' },
+    ] },
+  }));
   await page.goto('/dashboard/gencouv/marketing', { waitUntil: 'networkidle' });
   const provider = page.getByLabel('Email provider', { exact: true });
   const sender = page.getByLabel('Sender', { exact: true });
@@ -91,6 +99,16 @@ test('Brevo and Resend show independent sending domains and approved senders', a
   await sender.selectOption('updates@second.example.test');
   await expect(sender.getByRole('option', { name: 'info@gencouv.com' })).toHaveCount(0);
   await expect(page.getByText('Sending disabled', { exact: true })).toBeVisible();
+  const campaign = page.locator('#bulk-campaigns');
+  await campaign.getByRole('combobox', { name: 'Saved campaign message template', exact: true }).selectOption(resendTemplate);
+  await campaign.getByRole('button', { name: 'Load selected template' }).click();
+  await expect(campaign.getByLabel('Campaign subject', { exact: true })).toHaveValue('Resend template');
+  await expect(sender).toHaveValue('updates@second.example.test');
+  const proposal = page.locator('#gencouv-proposal');
+  await proposal.getByRole('combobox', { name: 'Saved proposal message template', exact: true }).selectOption(brevoTemplate);
+  await proposal.getByRole('button', { name: 'Load selected template' }).click();
+  await expect(proposal.getByLabel('Subject', { exact: true })).toHaveValue('Brevo template');
+  await expect(proposal.locator('select').first()).toHaveValue('info@gencouv.com');
   await provider.selectOption('resend');
   await expect(sender).toHaveValue('info@gencouv.com');
   await expect(domain).toHaveCount(0);
