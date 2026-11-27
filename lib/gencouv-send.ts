@@ -90,7 +90,7 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   try {
     if (input.provider === "brevo") {
       const { submitGencouvBrevoBatch } = await import("@/lib/gencouv-brevo");
-      const result = await submitGencouvBrevoBatch(emails.map((email,index)=>({from:input.from,to:email.to[0],subject:email.subject,text:email.text,headers:email.headers,idempotencyKey:reservation.messages[index].id})));
+      const result = await submitGencouvBrevoBatch(emails.map((email,index)=>({from:input.from,to:email.to[0],subject:email.subject,text:email.text,headers:email.headers,idempotencyKey:reservation.messages[index].id})), reservation.batch_id);
       receiptIds=result.receiptIds; outcome=result.outcome; summary=result.summary;
     } else {
     const result = await resendApi("/emails/batch", { method: "POST", headers: { "Idempotency-Key": `gencouv-batch-${reservation.batch_id}` }, body: JSON.stringify(emails) });
