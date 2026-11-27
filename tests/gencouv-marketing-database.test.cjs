@@ -102,3 +102,31 @@ test('Brevo receipt binding isolates providers and older delivery survives an ea
     contact_ids: [recipient],
   }), /permission or suppression/);
 });
+
+test('Brevo shares the credit ceiling across two domains and holds a campaign recipient across providers', async () => {
+  const [first, second] = (await db.query(
+    "select id from crm_customers where organization_id=$1 and email in ('batch1@example.test','batch2@example.test') order by email", [org],
+  )).rows.map(row => row.id);
+  await db.query("update gencouv_campaign_settings set metadata=metadata||$2::jsonb where organization_id=$1", [
+    org, JSON.stringify({ brevo_approved_senders: ['news@first.example.test', 'news@second.example.test'] }),
+  ]);
+  const campaignId = (await db.query(
+    "insert into gencouv_bulk_campaigns(organization_id,from_email,subject,text_body,consent_confirmed_by) values($1,'info@gencouv.com','Synthetic campaign','Synthetic message','operator@example.test') returning id",
+    [org],
+  )).rows[0].id;
+  const common = { provider: 'brevo', brevo_capacity: 2, campaign_id: campaignId };
+  await assert.rejects(() => reserve('abababab-4444-4444-8444-444444444444', 'restricted-inbox', {
+    ...common, from: 'news@first.example.test', contact_ids: [first], brevo_test_recipients: ['authorized@example.test'],
+  }), /Invalid recipient selection/);
+  const firstBatch = await reserve('abababab-5555-4555-8555-555555555555', 'first-domain', {
+    ...common, from: 'news@first.example.test', contact_ids: [first],
+  });
+  await db.query('select gencouv_authorize_send_batch($1,$2)', [org, firstBatch.batch_id]);
+  await db.query("select gencouv_finish_send_batch($1,$2,'unknown','[]','Synthetic timeout')", [org, firstBatch.batch_id]);
+  await assert.rejects(() => reserve('abababab-6666-4666-8666-666666666666', 'second-domain', {
+    ...common, from: 'news@second.example.test', contact_ids: [second],
+  }), /Daily sending limit reached/);
+  await assert.rejects(() => reserve('abababab-7777-4777-8777-777777777777', 'cross-provider', {
+    campaign_id: campaignId, contact_ids: [first],
+  }), /Duplicate campaign recipient/);
+});
