@@ -1,10 +1,12 @@
 import { personalizeGencouvMessage } from "@/lib/gencouv-personalization";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { submitGencouvBrevoBatch, type GencouvEmailProvider } from "@/lib/gencouv-brevo";
 import { resendApi } from "@/lib/fluxknight-mail";
 import { GENCOUV_EMAIL, GENCOUV_SENDERS, GENCOUV_UUID, GencouvRequestError } from "@/lib/gencouv-admin";
 
 export type GencouvSendInput = {
+  provider?: GencouvEmailProvider;
   request_id: string; from: string; subject: string; text: string; contact_ids?: string[];
   to?: string; category_id?: string; campaign_id?: string; mode: "one_time" | "proposal";
   reply_message_id?: string; reply_headers?: Record<string,string>;
@@ -14,6 +16,8 @@ type ReservedMessage = { id: string; recipient_email: string; recipient_name: st
 type Reservation = { created: boolean; batch_id: string; status: string; messages: ReservedMessage[] };
 
 export function validateGencouvSend(input: GencouvSendInput) {
+  if (input.provider !== undefined && input.provider !== "resend" && input.provider !== "brevo") throw new GencouvRequestError("Invalid provider selection.");
+  if (input.provider === "brevo" && input.mode !== "one_time") throw new GencouvRequestError("Brevo is limited to reviewed one-time campaigns.");
   const sender = String(input.from || "").trim().toLowerCase();
   const subject = String(input.subject || "").trim();
   const text = String(input.text || "").trim();
@@ -48,6 +52,12 @@ function savedResult(reservation: Reservation, replayed: boolean) {
 export async function sendGencouvBatch(db: SupabaseClient, organizationId: string, actor: string, raw: GencouvSendInput) {
   const input = validateGencouvSend(raw);
   if(input.mode === "one_time" && !unsubscribeSecret()) throw new GencouvRequestError("Unsubscribe signing is not configured. Nothing was submitted.",503);
+  if (input.provider === "brevo") {
+    if (process.env.GENCOUV_BREVO_SENDING_ENABLED !== "true" || !process.env.GENCOUV_BREVO_API_KEY) throw new GencouvRequestError("Brevo sending is not enabled.",503);
+    // Confirm the provider-aware schema exists before reserving a Brevo batch.
+    const schema = await db.from("gencouv_send_batches").select("provider").eq("organization_id",organizationId).limit(0);
+    if (schema.error) throw new GencouvRequestError("Brevo reservation migration is not available.",503);
+  }
   const requestHash = createHash("sha256").update(JSON.stringify(input)).digest("hex");
   const { data, error } = await db.rpc("gencouv_reserve_send_batch", {
     p_organization_id: organizationId, p_request_key: input.request_id, p_request_hash: requestHash,
@@ -78,12 +88,17 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   let outcome = "unknown";
   let summary: string | null = null;
   try {
+    if (input.provider === "brevo") {
+      const result = await submitGencouvBrevoBatch(emails.map((email,index)=>({from:input.from,to:email.to[0],subject:email.subject,text:email.text,headers:email.headers,idempotencyKey:reservation.messages[index].id})));
+      receiptIds=result.receiptIds; outcome=result.outcome; summary=result.summary;
+    } else {
     const result = await resendApi("/emails/batch", { method: "POST", headers: { "Idempotency-Key": `gencouv-batch-${reservation.batch_id}` }, body: JSON.stringify(emails) });
     const receipts = Array.isArray(result.data) ? result.data : [];
     receiptIds = emails.map((_, index) => typeof receipts[index]?.id === "string" && GENCOUV_UUID.test(receipts[index].id) ? receipts[index].id : null);
     const seen = new Set<string>(); receiptIds = receiptIds.map(id => { if(!id || seen.has(id)) return null; seen.add(id); return id; });
     outcome = receiptIds.length === receipts.length && receiptIds.every(Boolean) && new Set(receiptIds).size === receiptIds.length ? "submitted" : "partial";
     if (outcome === "partial") summary = "Provider response was incomplete. Reconcile saved recipient IDs before any further submission.";
+    }
   } catch (error) {
     // Network errors and 5xx can follow acceptance. Persist unknown and never auto-retry.
     const status = error instanceof Error ? error.message.match(/^Resend (\d{3}):/)?.[1] : null;
