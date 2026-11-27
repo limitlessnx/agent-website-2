@@ -1,3 +1,4 @@
+import { syncXposureFollowup } from "@/lib/xposure-followup-enrollment";
 import { transcribeWhatsAppAudio } from "@/lib/whatsapp-media-transcription";
 import { AbortTaskRunError, logger, task } from "@trigger.dev/sdk";
 import { runMaia, isMaiaSimpleGreeting } from "@/lib/ai/maia-runtime";
@@ -260,6 +261,13 @@ export const maiaProcessInboundMessage = task({
             skip_reason: typeof followupSummary?.skipped === "string" ? followupSummary.skipped : null,
           },
         }).catch(() => undefined);
+      }
+
+      if (!isLimitlessRealty && payload.channel === "whatsapp" && payload.provider === "meta_whatsapp" && customerId && conversationId) {
+        followup = await syncXposureFollowup({organizationId:payload.organizationId,agentId:payload.agentId,customerId,conversationId,eventId,message:effectiveMessage,stopIntent}).catch(error => {
+          logger.warn("Xposure follow-up enrollment failed", {organizationId:payload.organizationId,eventId,errorType:error instanceof Error ? error.name : "unknown"});
+          return {skipped:"enrollment_failed"};
+        });
       }
 
       // Observe the best-effort signal before the reply, without adding a chat message.
