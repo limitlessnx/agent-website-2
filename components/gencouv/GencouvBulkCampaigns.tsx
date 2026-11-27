@@ -10,6 +10,9 @@ type Campaign={id:string;from_email:string;subject:string;text_body:string;statu
 type Settings={enabled:boolean;daily_limit:number;manual_daily_limit:number;worker_verified:boolean};
 export default function GencouvBulkCampaigns(){
   const messageLibrary=useGencouvMessageTemplates();
+  const [brevo,setBrevo]=useState<{configured:boolean;reachable:boolean;verifiedSenders:string[]}|null>(null);
+  const [brevoChecking,setBrevoChecking]=useState(false);
+  async function checkBrevo(){setBrevoChecking(true);try{const response=await fetch("/api/dashboard/gencouv/brevo-readiness",{cache:"no-store"});if(!response.ok)throw new Error("Unavailable");setBrevo(await response.json());}catch{setBrevo(null);}finally{setBrevoChecking(false);}}
   const [categories,setCategories]=useState<Category[]>([]),[campaigns,setCampaigns]=useState<Campaign[]>([]),[settings,setSettings]=useState<Settings|null>(null);
   const [campaignId,setCampaignId]=useState(""),[category,setCategory]=useState(""),[audience,setAudience]=useState<Audience|null>(null),[selected,setSelected]=useState<string[]>([]);
   const [from,setFrom]=useState("info@gencouv.com"),[subject,setSubject]=useState(""),[message,setMessage]=useState("");
@@ -64,6 +67,7 @@ export default function GencouvBulkCampaigns(){
       <button disabled={busy||!settings||settings.enabled||!settings.worker_verified} onClick={()=>void toggle(true)}>Turn automation ON</button><button disabled={busy||!settings||!settings.enabled} onClick={()=>void toggle(false)}>Turn automation OFF</button><button disabled={busy} onClick={()=>void refresh()}>Refresh settings</button>
     </section>
     <label className="admin-field">Saved campaign<select value={campaignId} disabled={busy} onChange={event=>chooseCampaign(event.target.value)}><option value="">New campaign</option>{campaigns.map(campaign=><option key={campaign.id} value={campaign.id}>{campaign.subject} · {campaign.status}</option>)}</select></label>
+    <section className="gencouv-automation-status" aria-label="Email provider readiness"><div><strong>Email provider: Resend (active)</strong><p>Brevo: {brevo ? !brevo.configured ? "API key not configured" : !brevo.reachable ? "Connection not verified" : brevo.verifiedSenders.length ? "Verified sender available; sending integration pending" : "No verified Gencouv sender" : "Not checked"}</p>{brevo?.verifiedSenders.length ? <p>{brevo.verifiedSenders.join(", ")}</p> : null}</div><button type="button" disabled={busy||brevoChecking} onClick={()=>void checkBrevo()}>{brevoChecking?"Checking…":"Check Brevo connection"}</button></section>
     <div className="gencouv-campaign-form">
       <label className="admin-field">Sender<select disabled={busy||locked} value={from} onChange={event=>{setFrom(event.target.value);resetReview();}}>{["info@gencouv.com","support@gencouv.com","onboarding@gencouv.com"].map(sender=><option key={sender}>{sender}</option>)}</select></label>
       <label className="admin-field">Recipient category<select aria-label="Recipient category" disabled={busy||locked} value={category} onChange={event=>{setCategory(event.target.value);setAudience(null);setSelected([]);resetReview();}}><option value="">All saved contacts</option>{categories.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
