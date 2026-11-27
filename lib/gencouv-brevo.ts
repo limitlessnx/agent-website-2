@@ -31,6 +31,7 @@ export type BrevoIndividualEmail = {
   to: string;
   subject: string;
   text: string;
+  headers?: Record<string, string>;
   // Future integration must reserve this ID durably before any provider send.
   idempotencyKey: string;
 };
@@ -49,7 +50,7 @@ export async function sendGencouvBrevoIndividual(
     throw new Error("A valid individual recipient is required.");
   }
   if (!email.subject.trim() || email.subject.length > 200 || !email.text.trim() ||
-      email.text.length > 30000) {
+      email.text.length > 32000) {
     throw new Error("Valid subject and message required.");
   }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(email.idempotencyKey)) {
@@ -68,6 +69,9 @@ export async function sendGencouvBrevoIndividual(
       to: [{ email: email.to.trim().toLowerCase() }],
       subject: email.subject.trim(),
       textContent: email.text.trim(),
+      replyTo: { email: email.from.trim().toLowerCase() },
+      headers: email.headers,
+      tags: [email.idempotencyKey],
     }),
     cache: "no-store",
     signal: AbortSignal.timeout(15000),
@@ -80,4 +84,21 @@ export async function sendGencouvBrevoIndividual(
   const messageId = data && typeof data === "object" && "messageId" in data &&
     typeof data.messageId === "string" ? data.messageId : null;
   return { provider: "brevo", messageId };
+}
+
+/** Stop on first uncertain result; never retry or switch providers automatically. */
+export async function submitGencouvBrevoBatch(emails: BrevoIndividualEmail[]) {
+  const receiptIds: Array<string | null> = emails.map(() => null);
+  let outcome = "unknown";
+  for (let i = 0; i < emails.length; i++) {
+    try {
+      const result = await sendGencouvBrevoIndividual(emails[i]);
+      const id = result.messageId;
+      if (!id || id.length > 512 || /[\\r\\n]/.test(id) || receiptIds.includes(id)) break;
+      receiptIds[i] = id;
+    } catch { break; }
+  }
+  if (receiptIds.every(Boolean)) outcome = "submitted";
+  else if (receiptIds.some(Boolean)) outcome = "partial";
+  return { receiptIds, outcome, summary: outcome === "submitted" ? null : "Brevo submission incomplete; reconcile before any further submission." };
 }
