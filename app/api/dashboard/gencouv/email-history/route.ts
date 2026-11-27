@@ -42,9 +42,10 @@ export async function POST(request: Request) {
       if(messages.data.some(message=>message.provider!=="brevo"))throw new GencouvRequestError("Mixed provider batch cannot be reconciled.",409);
       const {readBrevoBatchEvents}=await import("@/lib/gencouv-brevo-reconcile");
       const events=await readBrevoBatchEvents(batchId,batch.data.from_email);
+      const submittedAt=Date.parse(batch.data.submitted_at||"");
       let checked=0;
       for(const message of messages.data){
-        const matches=events.filter(e=>e.email===message.recipient_email.toLowerCase()&&Date.parse(e.occurredAt)>=Date.parse(batch.data.submitted_at||"")-60000);
+        const matches=events.filter(e=>e.email===message.recipient_email.toLowerCase()&&Date.parse(e.occurredAt)>=submittedAt-60000);
         const ids=[...new Set(matches.map(e=>e.providerId))];
         if(ids.length!==1||(message.provider_email_id&&message.provider_email_id!==ids[0]))continue;
         const bound=await db.rpc("gencouv_bind_brevo_receipt",{p_batch_id:batchId,p_message_id:message.id,p_email:message.recipient_email,p_provider_id:ids[0]});
