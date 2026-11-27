@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
-    await requireGencouvAdmin(request);
+    const {db,organizationId}=await requireGencouvAdmin(request);
     const key = process.env.GENCOUV_BREVO_API_KEY;
     const configured = Boolean(key);
     let verifiedSenders: string[] = [];
@@ -38,8 +38,16 @@ export async function GET(request: Request) {
         }
       } catch { /* Fail closed. */ }
     }
-    return NextResponse.json({ configured, reachable, verifiedSenders, domainAuthenticated, sendingAvailable: false,
-      note: "Brevo delivery integration is pending. Resend remains the active provider." }, { headers: gencouvPrivateHeaders });
+    const start=new Date();start.setUTCHours(0,0,0,0);
+    const usage=await db.from("gencouv_send_batches").select("provider,recipient_count").eq("organization_id",organizationId).gte("created_at",start.toISOString()).not("status","in","(failed,cancelled)");
+    const schemaReady=!usage.error;
+    const activationEnabled=process.env.GENCOUV_BREVO_SENDING_ENABLED==="true";
+    const deliveryVerified=process.env.GENCOUV_BREVO_DELIVERY_VERIFIED==="true" && (process.env.GENCOUV_BREVO_WEBHOOK_SECRET||"").length>=32;
+    const used=schemaReady?(usage.data||[]).filter(row=>row.provider==="brevo").reduce((sum,row)=>sum+Number(row.recipient_count),0):null;
+    const resendUsed=schemaReady?(usage.data||[]).filter(row=>row.provider==="resend").reduce((sum,row)=>sum+Number(row.recipient_count),0):null;
+    const sendingAvailable=configured&&reachable&&domainAuthenticated&&verifiedSenders.length>0&&schemaReady&&activationEnabled&&deliveryVerified;
+    return NextResponse.json({ configured, reachable, verifiedSenders, domainAuthenticated, schemaReady, activationEnabled, deliveryVerified, sendingAvailable,
+      used,resendUsed,dailyLimit:300,remaining:used===null?null:Math.max(0,300-used),note:sendingAvailable?"Brevo manual sending enabled; account-wide credits may be lower.":"Brevo remains unavailable until all readiness gates pass." }, { headers: gencouvPrivateHeaders });
   } catch (error) {
     const safe = gencouvError(error);
     return NextResponse.json({ error: safe.message }, {status: safe.status, headers: gencouvPrivateHeaders});
