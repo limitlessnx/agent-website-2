@@ -1,7 +1,7 @@
 import { personalizeGencouvMessage } from "@/lib/gencouv-personalization";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { submitGencouvBrevoBatch, type GencouvEmailProvider } from "@/lib/gencouv-brevo";
+import type { GencouvEmailProvider } from "@/lib/gencouv-brevo";
 import { resendApi } from "@/lib/fluxknight-mail";
 import { GENCOUV_EMAIL, GENCOUV_SENDERS, GENCOUV_UUID, GencouvRequestError } from "@/lib/gencouv-admin";
 
@@ -53,7 +53,7 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   const input = validateGencouvSend(raw);
   if(input.mode === "one_time" && !unsubscribeSecret()) throw new GencouvRequestError("Unsubscribe signing is not configured. Nothing was submitted.",503);
   if (input.provider === "brevo") {
-    if (process.env.GENCOUV_BREVO_SENDING_ENABLED !== "true" || !process.env.GENCOUV_BREVO_API_KEY) throw new GencouvRequestError("Brevo sending is not enabled.",503);
+    if (process.env.GENCOUV_BREVO_SENDING_ENABLED !== "true" || !process.env.GENCOUV_BREVO_API_KEY || process.env.GENCOUV_BREVO_DELIVERY_VERIFIED !== "true") throw new GencouvRequestError("Brevo sending is not enabled.",503);
     // Confirm the provider-aware schema exists before reserving a Brevo batch.
     const schema = await db.from("gencouv_send_batches").select("provider").eq("organization_id",organizationId).limit(0);
     if (schema.error) throw new GencouvRequestError("Brevo reservation migration is not available.",503);
@@ -89,6 +89,7 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   let summary: string | null = null;
   try {
     if (input.provider === "brevo") {
+      const { submitGencouvBrevoBatch } = await import("@/lib/gencouv-brevo");
       const result = await submitGencouvBrevoBatch(emails.map((email,index)=>({from:input.from,to:email.to[0],subject:email.subject,text:email.text,headers:email.headers,idempotencyKey:reservation.messages[index].id})));
       receiptIds=result.receiptIds; outcome=result.outcome; summary=result.summary;
     } else {
