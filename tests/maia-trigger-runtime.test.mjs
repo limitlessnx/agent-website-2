@@ -251,3 +251,13 @@ test("Maia V3 avoids greeting-only catalog retrieval and parallelizes model sele
   assert.match(maiaRuntime, /unless a policy requires a fresh check/);
   assert.match(maiaRuntime, /preflightChargeableFluxAi/);
 });
+
+
+test("Xposure booking policy resolves future dates and does not request photography duration", () => {
+  assert.match(maiaRuntime, /runtimeOrganization\?\.slug === "xposure" \? \x60XPOSURE BOOKING POLICY/);
+  assert.match(maiaRuntime, /timeZone: "Africa\/Lagos", dateStyle: "full"/);
+  assert.match(maiaRuntime, /Never ask for a year when the date can be resolved/);
+  assert.match(maiaRuntime, /never suggest a past date/);
+  assert.match(maiaRuntime, /Only ask duration for studio rental/);
+  assert.match(maiaRuntime, /For photography availability omit durationMinutes and endAt/);
+});
