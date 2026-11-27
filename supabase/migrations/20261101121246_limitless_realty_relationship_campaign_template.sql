@@ -1,12 +1,5 @@
 insert into public.whatsapp_template_configs (
-  organization_id,
-  purpose,
-  template_name,
-  language_code,
-  variable_keys,
-  status,
-  metadata,
-  updated_at
+  organization_id, purpose, template_name, language_code, variable_keys, status, metadata, updated_at
 )
 values (
   'b15f21b4-5697-4d21-9421-8a34eae3476d',
@@ -27,19 +20,17 @@ values (
   now()
 )
 on conflict (organization_id, purpose) do update
-set
-  template_name = excluded.template_name,
-  language_code = excluded.language_code,
-  variable_keys = excluded.variable_keys,
-  status = 'active',
-  metadata = excluded.metadata,
-  updated_at = now();
+set template_name = excluded.template_name,
+    language_code = excluded.language_code,
+    variable_keys = excluded.variable_keys,
+    status = 'active',
+    metadata = excluded.metadata,
+    updated_at = now();
 
 do $$
 begin
   if not exists (
-    select 1
-    from public.whatsapp_template_configs
+    select 1 from public.whatsapp_template_configs
     where organization_id = 'b15f21b4-5697-4d21-9421-8a34eae3476d'
       and purpose = 'limitless_realty_relationship_campaign'
       and template_name = 'limitless_realty_relationship_campaign'

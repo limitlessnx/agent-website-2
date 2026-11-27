@@ -22,7 +22,7 @@ export function validateGencouvSend(input: GencouvSendInput) {
   const subject = String(input.subject || "").trim();
   const text = String(input.text || "").trim();
   if (!GENCOUV_UUID.test(String(input.request_id || ""))) throw new GencouvRequestError("A stable send request ID is required. Reload the composer.");
-  if (!GENCOUV_SENDERS.has(sender) || !subject || subject.length > 200 || /[\r\n]/.test(subject) || !text || text.length > 30000 || input.confirmed !== true) throw new GencouvRequestError("Review a valid sender, subject and message, then confirm the send.");
+  if (!(input.provider === "brevo" ? GENCOUV_EMAIL.test(sender) && sender.length <= 254 : GENCOUV_SENDERS.has(sender)) || !subject || subject.length > 200 || /[\r\n]/.test(subject) || !text || text.length > 30000 || input.confirmed !== true) throw new GencouvRequestError("Review a valid sender, subject and message, then confirm the send.");
   if (/\[[^\]\n]{1,80}\]/.test(subject) || /\[(?!Name\])[^\]\n]{1,80}\]/i.test(text)) throw new GencouvRequestError("Replace message placeholders before sending.");
   const ids = input.contact_ids || [];
   if (input.mode === "one_time") {
@@ -52,16 +52,28 @@ function savedResult(reservation: Reservation, replayed: boolean) {
 export async function sendGencouvBatch(db: SupabaseClient, organizationId: string, actor: string, raw: GencouvSendInput) {
   const input = validateGencouvSend(raw);
   if(input.mode === "one_time" && !unsubscribeSecret()) throw new GencouvRequestError("Unsubscribe signing is not configured. Nothing was submitted.",503);
+  let brevoCapacity: number | null = null;
+  let testRecipients: string[] | null = null;
   if (input.provider === "brevo") {
-    if (process.env.GENCOUV_BREVO_SENDING_ENABLED !== "true" || !process.env.GENCOUV_BREVO_API_KEY || process.env.GENCOUV_BREVO_DELIVERY_VERIFIED !== "true") throw new GencouvRequestError("Brevo sending is not enabled.",503);
-    // Confirm the provider-aware schema exists before reserving a Brevo batch.
-    const schema = await db.from("gencouv_send_batches").select("provider").eq("organization_id",organizationId).limit(0);
-    if (schema.error) throw new GencouvRequestError("Brevo reservation migration is not available.",503);
+    const { readGencouvBrevoReadiness, gencouvBrevoTestRecipients } = await import("@/lib/gencouv-brevo-readiness");
+    const readiness = await readGencouvBrevoReadiness(db, organizationId);
+    if (!readiness.sendingAvailable || !readiness.verifiedSenders.includes(input.from)) {
+      throw new GencouvRequestError("Brevo sending or the selected sender is unavailable.", 503);
+    }
+    if (readiness.remaining === null || input.contact_ids.length > readiness.remaining) {
+      throw new GencouvRequestError("Brevo account capacity is insufficient.", 409);
+    }
+    if (!input.campaign_id) throw new GencouvRequestError("Choose a saved campaign before sending with Brevo.");
+    if (readiness.testOnly) {
+      if (input.contact_ids.length !== 1) throw new GencouvRequestError("Controlled tests allow one authorized inbox per batch.");
+      testRecipients = gencouvBrevoTestRecipients();
+    }
+    brevoCapacity = readiness.accountCredits;
   }
   const requestHash = createHash("sha256").update(JSON.stringify(input)).digest("hex");
   const { data, error } = await db.rpc("gencouv_reserve_send_batch", {
     p_organization_id: organizationId, p_request_key: input.request_id, p_request_hash: requestHash,
-    p_input: input, p_actor: actor,
+    p_input: brevoCapacity === null ? input : { ...input, brevo_capacity: brevoCapacity, brevo_test_recipients: testRecipients }, p_actor: actor,
   });
   if (error) {
     const known = String(error.message || "");
@@ -73,24 +85,33 @@ export async function sendGencouvBatch(db: SupabaseClient, organizationId: strin
   // Only a queued reservation is provably before provider authorization.
   // An explicit retry may claim it once; submitting/unknown outcomes stay held.
   if (!reservation.created && reservation.status !== "queued") return savedResult(reservation, true);
+  if (testRecipients && (reservation.messages.length !== 1 ||
+      !testRecipients.includes(reservation.messages[0].recipient_email.toLowerCase()))) {
+    throw new GencouvRequestError("This recipient is outside the authorized Brevo test inboxes.", 403);
+  }
   const authorized = await db.rpc("gencouv_authorize_send_batch", { p_organization_id: organizationId, p_batch_id: reservation.batch_id });
   if (authorized.error || authorized.data !== true) throw new GencouvRequestError("The saved batch is not authorized for submission. Check its history before retrying.", 409);
   const unsubscribeOrigin = (process.env.NEXT_PUBLIC_SITE_URL || "https://fluxknight.space").replace(/\/$/, "");
-  const emails = reservation.messages.map(message => {
+  const prepared = reservation.messages.map(message => {
     const unsubscribe = `${unsubscribeOrigin}/api/gencouv/unsubscribe?message=${encodeURIComponent(message.id)}&token=${input.mode === "one_time" ? unsubscribeToken(message.id) : ""}`;
     const body = personalizeGencouvMessage(input.text, message.recipient_name);
-    return { from: `Gencouv <${input.from}>`, to: [message.recipient_email], reply_to: input.from, subject: input.subject,
+    const email = { from: `Gencouv <${input.from}>`, to: [message.recipient_email], reply_to: input.from, subject: input.subject,
       text: input.mode === "one_time" ? `${body}\n\nUnsubscribe from Gencouv marketing: ${unsubscribe}` : body,
       ...(input.mode === "one_time" ? { headers: { "List-Unsubscribe": `<${unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } } : input.reply_headers ? {headers:input.reply_headers} : {}),
       tags: [{ name: "gencouv_message_id", value: message.id }, { name: "gencouv_batch_id", value: reservation.batch_id }] };
+    return { email, body, unsubscribe };
   });
+  const emails = prepared.map(item => item.email);
   let receiptIds: Array<string | null> = [];
   let outcome = "unknown";
   let summary: string | null = null;
   try {
     if (input.provider === "brevo") {
       const { submitGencouvBrevoBatch } = await import("@/lib/gencouv-brevo");
-      const result = await submitGencouvBrevoBatch(emails.map((email,index)=>({from:input.from,to:email.to[0],subject:email.subject,text:email.text,headers:email.headers,idempotencyKey:reservation.messages[index].id})), reservation.batch_id);
+      const result = await submitGencouvBrevoBatch(prepared.map(({ email, body, unsubscribe }) => ({
+        from: input.from, to: email.to[0], subject: email.subject, text: body,
+        unsubscribeUrl: unsubscribe,
+      })), reservation.batch_id);
       receiptIds=result.receiptIds; outcome=result.outcome; summary=result.summary;
     } else {
     const result = await resendApi("/emails/batch", { method: "POST", headers: { "Idempotency-Key": `gencouv-batch-${reservation.batch_id}` }, body: JSON.stringify(emails) });

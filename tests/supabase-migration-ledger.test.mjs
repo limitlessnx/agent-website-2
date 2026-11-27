@@ -38,38 +38,10 @@ const expectedPendingVersions = [
   "20261021230000",
   // Pre-existing production release migration pending review.
   "20261031100000",
-  // Flexible-deposit installment reminder eligibility and catch-up cursor fix (production version).
-  "20261031120144",
   // Limitless Estate Brief template contract registration; reviewed in PR #308.
   "20261031123000",
-  // Previously applied 14:30 reminder-time migration restored to the local history.
-  "20261031125123",
-  // Previous reminder-time migration followed by complete 19:30 alignment.
-  "20261031142757",
-  "20261031181713",
-  // Limitless Realty relationship campaign template contract registration; reviewed in PR #315.
-  "20261101110000",
-  // Align the approved Limitless Realty reminder campaign template variable contract; PR #323.
-  "20261102130000",
-  // Forward-only production authorization update for flexible installment reminders; PR #323.
-  "20261102210000",
-  // PR #333 atomic Flutterwave renewal migration; prepared and tested only.
-  // Production application still requires explicit approval.
-  "20261104114151",
-  // Hotel Phase 2 booking workspace: prepared for review, not applied to production.
-  "20261105064158",
-  // Hotel Catalog private media and publication rules; prepared for review only.
-  "20261105085441",
-  // Hotel Overview read-only tenant-wide aggregates; prepared for review only.
-  "20261105121746",
-  "20261105125822",
-  "20261105134815",
   // Tenant readiness aggregate prepared for review; not applied.
   "20261105163133",
-  // Leo Phase 3A controlled CRM execution: prepared for PR review; not applied.
-  "20261106161658",
-  // Manual Limitless follow-up activation: prepared for review, not applied.
-  "20261106213418",
   // Hotel service operating instructions: additive, prepared for review; not applied.
   "20261109073001",
   // Hotel dashboard trends and inbox index: prepared for review, not applied.

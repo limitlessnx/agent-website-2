@@ -9,11 +9,12 @@ export function verifyBrevoWebhook(received: string | null, secret = process.env
 }
 
 const events: Record<string,string> = {
-  request:"submitted", sent:"submitted", delivered:"delivered",
-  hardbounce:"bounced", softbounce:"delivery_delayed", deferred:"delivery_delayed",
+  request:"submitted", requests:"submitted", sent:"submitted", delivered:"delivered",
+  hardbounce:"bounced", hardbounces:"bounced",
+  softbounce:"delivery_delayed", softbounces:"delivery_delayed", deferred:"delivery_delayed",
   spam:"complained", unsubscribed:"unsubscribed", blocked:"failed",
   invalid:"failed", error:"failed", opened:"opened", uniqueopened:"opened",
-  click:"clicked", clicked:"clicked"
+  click:"clicked", clicks:"clicked", clicked:"clicked"
 };
 
 export function normalizeBrevoEvent(value: unknown) {

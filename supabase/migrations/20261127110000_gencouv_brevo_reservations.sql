@@ -22,13 +22,25 @@ begin
     if v_existing.request_hash<>p_request_hash then raise exception 'Request ID was already used for different content'; end if;
     return public.gencouv_batch_result(p_organization_id,v_existing.id);
   end if;
-  if p_input->>'from' not in ('info@gencouv.com','support@gencouv.com','onboarding@gencouv.com') or p_input->>'subject' is null or p_input->>'text' is null or p_input->>'confirmed' is distinct from 'true' then raise exception 'Invalid recipient selection'; end if;
+  if p_input->>'from' is null or p_input->>'subject' is null or p_input->>'text' is null or p_input->>'confirmed' is distinct from 'true' then raise exception 'Invalid recipient selection'; end if;
+  if v_provider='resend' and p_input->>'from' not in ('info@gencouv.com','support@gencouv.com','onboarding@gencouv.com') then
+    raise exception 'Invalid recipient selection';
+  end if;
+  if v_provider='brevo' and (
+    split_part(p_input->>'from','@',2)='gencouv.com'
+    or not exists(select 1 from public.gencouv_campaign_settings
+      where organization_id=p_organization_id and campaign_key='gencouv_long_form_copy_trading'
+      and jsonb_typeof(metadata->'brevo_approved_senders')='array'
+      and (metadata->'brevo_approved_senders') ? (p_input->>'from'))
+    or coalesce(p_input->>'brevo_capacity','') !~ '^[0-9]{1,12}$'
+  ) then raise exception 'Invalid recipient selection'; end if;
   if v_campaign is not null then
-    perform 1 from public.gencouv_bulk_campaigns where id=v_campaign and organization_id=p_organization_id and status in ('draft','ready') and subject=p_input->>'subject' and text_body=p_input->>'text' and from_email=p_input->>'from' and category_id is not distinct from v_category for update;
+    perform 1 from public.gencouv_bulk_campaigns where id=v_campaign and organization_id=p_organization_id and status in ('draft','ready') and subject=p_input->>'subject' and text_body=p_input->>'text' and (v_mode='one_time' or from_email=p_input->>'from') and category_id is not distinct from v_category for update;
     if not found then raise exception 'Campaign is not available'; end if;
   end if;
   if v_category is not null and not exists(select 1 from public.crm_lead_categories where id=v_category and organization_id=p_organization_id) then raise exception 'Invalid recipient selection'; end if;
   if v_mode='one_time' then
+    if jsonb_typeof(p_input->'contact_ids') is distinct from 'array' then raise exception 'Invalid recipient selection'; end if;
     v_count:=jsonb_array_length(p_input->'contact_ids');
     if v_count not between 1 and 100 or p_input->>'consent_confirmed' is distinct from 'true' or (select count(distinct value) from jsonb_array_elements_text(p_input->'contact_ids'))<>v_count then raise exception 'Invalid recipient selection'; end if;
     for v_id in select value from jsonb_array_elements_text(p_input->'contact_ids') loop
@@ -39,6 +51,11 @@ begin
       if v_category is not null and not exists(select 1 from public.crm_customer_category_assignments where organization_id=p_organization_id and category_id=v_category and customer_id=v_contact.id) then raise exception 'Invalid recipient selection'; end if;
       v_email:=lower(btrim(v_contact.email));
       if v_email is null or v_email!~'^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$' or exists(select 1 from jsonb_array_elements(v_recipients) r where r->>'email'=v_email) then raise exception 'Invalid recipient selection'; end if;
+      if v_provider='brevo' and coalesce(jsonb_typeof(p_input->'brevo_test_recipients'),'null')<>'null' and
+        (v_count<>1 or jsonb_typeof(p_input->'brevo_test_recipients')<>'array'
+        or not ((p_input->'brevo_test_recipients') ? v_email)) then
+        raise exception 'Invalid recipient selection';
+      end if;
       if exists(select 1 from public.gencouv_suppression_list where organization_id=p_organization_id and normalized_email=v_email) then raise exception 'Contact permission or suppression check failed'; end if;
       if v_campaign is not null and exists(select 1 from public.gencouv_email_messages where organization_id=p_organization_id and bulk_campaign_id=v_campaign and lower(recipient_email)=v_email and (status<>'failed' or provider_email_id is not null)) then raise exception 'Duplicate campaign recipient'; end if;
       v_recipients:=v_recipients||jsonb_build_array(jsonb_build_object('id',v_contact.id,'email',v_email,'name',nullif(btrim(v_contact.full_name),'')));
@@ -51,7 +68,7 @@ begin
     v_recipients:=jsonb_build_array(jsonb_build_object('email',v_email,'name',null));
   else raise exception 'Automation submissions must use a verified worker'; end if;
   select case when coalesce(metadata->>'manual_daily_send_limit','')~'^\d{1,5}$' then least(10000,greatest(1,(metadata->>'manual_daily_send_limit')::integer)) else 100 end into v_limit from public.gencouv_campaign_settings where organization_id=p_organization_id and campaign_key='gencouv_long_form_copy_trading';
-  v_limit:=case when v_provider='brevo' then 300 else coalesce(v_limit,100) end;
+  v_limit:=case when v_provider='brevo' then least(300,(p_input->>'brevo_capacity')::bigint)::integer else coalesce(v_limit,100) end;
   select coalesce(sum(recipient_count),0) into v_used from public.gencouv_send_batches where organization_id=p_organization_id and provider=v_provider and created_at >= date_trunc('day',now() at time zone 'UTC') at time zone 'UTC' and status not in ('failed','cancelled');
   if v_used+v_count>v_limit then raise exception 'Daily sending limit reached'; end if;
   insert into public.gencouv_send_batches(organization_id,request_key,request_hash,campaign_id,mode,recipient_count,from_email,subject,text_body,actor_email,provider)

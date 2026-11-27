@@ -180,7 +180,7 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         }),
       });
-      message = created[0] || (await supabaseServerRequest<ThreadMessage[]>(`gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`))[0];
+      message = created[0] || (await supabaseServerRequest<ThreadMessage[]>(`gencouv_email_messages?organization_id=eq.${GENCOUV_ORG_ID}&provider=eq.resend&provider_email_id=eq.${encodeURIComponent(providerEmailId)}&limit=1`))[0];
       if(!message)throw new Error("Inbound ledger unavailable");
 
       if (!autoReply && threadMessage?.id) {

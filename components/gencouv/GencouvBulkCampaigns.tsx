@@ -7,11 +7,14 @@ type Category={id:string;name:string};
 type Contact={id:string;email:string;full_name:string|null;eligible:boolean;reason:string};
 type Audience={total:number;eligible:number;suppressed:number;unverified:number;reserved?:number;invalid?:number;truncated:boolean;contacts:Contact[]};
 type Campaign={id:string;from_email:string;subject:string;text_body:string;status:string;category_id:string|null};
+const resendSenders = ["info@gencouv.com", "support@gencouv.com", "onboarding@gencouv.com"];
+type BrevoDomain = { domain: string; authenticated: boolean; senders: string[] };
 type Settings={enabled:boolean;daily_limit:number;manual_daily_limit:number;worker_verified:boolean};
 export default function GencouvBulkCampaigns(){
   const messageLibrary=useGencouvMessageTemplates();
-  const [brevo,setBrevo]=useState<{configured:boolean;reachable:boolean;verifiedSenders:string[];sendingAvailable:boolean;domainAuthenticated?:boolean;remaining?:number|null;used?:number|null;resendUsed?:number|null;note?:string}|null>(null);
+  const [brevo,setBrevo]=useState<{configured:boolean;reachable:boolean;verifiedSenders:string[];domains:BrevoDomain[];accountCredits:number|null;sendingAvailable:boolean;domainAuthenticated?:boolean;remaining?:number|null;used?:number|null;resendUsed?:number|null;note?:string}|null>(null);
   const [provider,setProvider]=useState<"resend"|"brevo">("resend");
+  const [brevoDomain, setBrevoDomain] = useState("");
   const [brevoChecking,setBrevoChecking]=useState(false);
   async function checkBrevo(){setBrevoChecking(true);try{const response=await fetch("/api/dashboard/gencouv/brevo-readiness",{cache:"no-store"});if(!response.ok)throw new Error("Unavailable");setBrevo(await response.json());}catch{setBrevo(null);}finally{setBrevoChecking(false);}}
   const [categories,setCategories]=useState<Category[]>([]),[campaigns,setCampaigns]=useState<Campaign[]>([]),[settings,setSettings]=useState<Settings|null>(null);
@@ -37,7 +40,14 @@ export default function GencouvBulkCampaigns(){
   }
   function chooseCampaign(id:string){
     setCampaignId(id);setSelected([]);setAudience(null);resetReview();setStatus("");
-    const draft=campaigns.find(item=>item.id===id);setFrom(draft?.from_email||"info@gencouv.com");setSubject(draft?.subject||"");setMessage(draft?.text_body||"");setCategory(draft?.category_id||"");
+    const draft=campaigns.find(item=>item.id===id);
+    const sender = draft?.from_email || (provider === "resend" ? resendSenders[0] : "");
+    setFrom(sender);
+    if (draft) {
+      setProvider(resendSenders.includes(sender) ? "resend" : "brevo");
+      setBrevoDomain(sender.split("@")[1] || "");
+    }
+    setSubject(draft?.subject||"");setMessage(draft?.text_body||"");setCategory(draft?.category_id||"");
   }
   async function saveDraft(){
     setBusy(true);setError("");
@@ -62,7 +72,7 @@ export default function GencouvBulkCampaigns(){
   }
   const previewContacts=(audience?.contacts||[]).filter(contact=>selected.includes(contact.id));
   const previewContact=previewContacts.find(contact=>contact.id===previewContactId)||previewContacts[0];
-  const saved=campaigns.find(item=>item.id===campaignId),dirty=Boolean(saved&&(saved.subject!==subject||saved.text_body!==message||saved.from_email!==from||(saved.category_id||"")!==category)),locked=Boolean(batch||saved&&saved.status!=="draft");
+  const saved=campaigns.find(item=>item.id===campaignId),dirty=Boolean(saved&&(saved.subject!==subject||saved.text_body!==message||(saved.status==="draft"&&saved.from_email!==from)||(saved.category_id||"")!==category)),locked=Boolean(batch||saved&&saved.status!=="draft");
   return <section className="admin-panel gencouv-bulk-workspace" id="bulk-campaigns">
     <div className="admin-panel-header"><div><h2>Campaign management & manual bulk sending</h2><p>Save a draft, review eligible recipients, then authorize one batch of up to 100 contacts.</p></div><Link className="gencouv-upload-link" href="#gencouv-contact-import">Upload CSV or Excel</Link></div>
     <section className="gencouv-automation-status" aria-label="Automated campaign controls">
@@ -70,10 +80,40 @@ export default function GencouvBulkCampaigns(){
       <button disabled={busy||!settings||settings.enabled||!settings.worker_verified} onClick={()=>void toggle(true)}>Turn automation ON</button><button disabled={busy||!settings||!settings.enabled} onClick={()=>void toggle(false)}>Turn automation OFF</button><button disabled={busy} onClick={()=>void refresh()}>Refresh settings</button>
     </section>
     <label className="admin-field">Saved campaign<select value={campaignId} disabled={busy} onChange={event=>chooseCampaign(event.target.value)}><option value="">New campaign</option>{campaigns.map(campaign=><option key={campaign.id} value={campaign.id}>{campaign.subject} · {campaign.status}</option>)}</select></label>
-    <section className="gencouv-automation-status" aria-label="Email provider readiness"><div><strong>Email provider: {provider==="brevo"?"Brevo":"Resend"}</strong><p>Brevo: {brevo ? !brevo.configured ? "API key not configured" : !brevo.reachable ? "Connection not verified" : brevo.verifiedSenders.length ? "Verified sender available" : "No verified Gencouv sender" : "Not checked"}</p>{brevo?<><p>Domain: {brevo.domainAuthenticated?"authenticated":"not verified"}. {brevo.note}</p><p>Brevo reserved today: {brevo.used??"unknown"} · Remaining target: {brevo.remaining??"unknown"} / 300 (UTC). Resend reserved: {brevo.resendUsed??"unknown"}.</p></>:null}{brevo?.verifiedSenders.length ? <p>{brevo.verifiedSenders.join(", ")}</p> : null}</div><button type="button" disabled={busy||brevoChecking} onClick={()=>void checkBrevo()}>{brevoChecking?"Checking…":"Check Brevo connection"}</button></section>
+    <section className="gencouv-automation-status" aria-label="Email provider readiness">
+      <div><strong>Email provider: {provider === "brevo" ? "Brevo" : "Resend"}</strong>
+        {provider === "brevo" ? <><p>{brevo?.note ?? "Connection unchecked"}</p>
+          <p>Reserved today: {brevo?.used ?? "unknown"} · Daily target: 300 · Account credits: {brevo?.accountCredits ?? "unknown"} · Available: {brevo?.remaining ?? "unknown"}</p>
+        </> : <p>Sending domain: gencouv.com · Daily limit: {settings?.manual_daily_limit ?? "unknown"}</p>}
+      </div>
+      {provider === "brevo" && <button type="button" disabled={busy || brevoChecking} onClick={() => void checkBrevo()}>
+        {brevoChecking ? "Checking…" : "Check Brevo connection"}
+      </button>}
+    </section>
     <div className="gencouv-campaign-form">
-      <label className="admin-field">Email provider<select disabled={busy||Boolean(batch)||Boolean(requestId)} value={provider} onChange={event=>{setProvider(event.target.value==="brevo"?"brevo":"resend");setConfirmed(false);setReviewed(false);}}><option value="resend">Resend</option><option value="brevo" disabled={!brevo?.sendingAvailable}>Brevo (300/day target)</option></select></label>
-      <label className="admin-field">Sender<select disabled={busy||locked} value={from} onChange={event=>{setFrom(event.target.value);resetReview();}}>{["info@gencouv.com","support@gencouv.com","onboarding@gencouv.com"].map(sender=><option key={sender} disabled={provider==="brevo"&&!brevo?.verifiedSenders.includes(sender)}>{sender}</option>)}</select></label>
+      <label className="admin-field">Email provider<select disabled={busy || Boolean(batch || requestId)} value={provider} onChange={event => {
+        const selectedProvider = event.target.value === "brevo" ? "brevo" : "resend";
+        setProvider(selectedProvider);
+        setFrom(selectedProvider === "resend" ? resendSenders[0] : "");
+        setBrevoDomain("");
+        resetReview();
+        if (selectedProvider === "brevo") void checkBrevo();
+      }}><option value="resend">Resend</option><option value="brevo">Brevo</option></select></label>
+      {provider === "brevo" && <label className="admin-field">Sending domain<select disabled={busy || Boolean(batch || requestId)} value={brevoDomain} onChange={event => {
+        setBrevoDomain(event.target.value);
+        setFrom("");
+        resetReview();
+      }}><option value="">Select a domain</option>{brevo?.domains?.map(domain => (
+        <option key={domain.domain} value={domain.domain} disabled={!domain.authenticated}>{domain.domain} ({domain.authenticated ? "authenticated" : "unverified"})</option>
+      ))}</select></label>}
+      <label className="admin-field">Sender<select disabled={busy || Boolean(batch || requestId)} value={from} onChange={event => {
+        setFrom(event.target.value);
+        resetReview();
+      }}>
+        {provider === "brevo" && <option value="">Select a verified sender</option>}
+        {(provider === "resend" ? resendSenders : brevo?.domains?.find(domain => domain.domain === brevoDomain)?.senders ?? [])
+          .map(sender => <option key={sender} value={sender}>{sender}</option>)}
+      </select></label>
       <label className="admin-field">Recipient category<select aria-label="Recipient category" disabled={busy||locked} value={category} onChange={event=>{setCategory(event.target.value);setAudience(null);setSelected([]);resetReview();}}><option value="">All saved contacts</option>{categories.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label className="admin-field gencouv-wide">Campaign subject<input disabled={busy||locked} value={subject} maxLength={200} onChange={event=>{setSubject(event.target.value);resetReview();}}/></label>
       <label className="admin-field gencouv-wide">Campaign message<textarea ref={messageInput} aria-label="Campaign message" disabled={busy||locked} value={message} rows={8} maxLength={30000} onChange={event=>{setMessage(event.target.value);resetReview();}}/><small>Use [Name] for each recipient’s saved name. Missing names use “there”. An unsubscribe link is included automatically.</small></label>

@@ -1,6 +1,10 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const {PGlite}=require('@electric-sql/pglite');
 const org='05737e03-f8f0-4202-8e9b-0a8982a1091c',other='aaaaaaaa-1111-4111-8111-111111111111',contact='bbbbbbbb-1111-4111-8111-111111111111';
-let db;test.before(async()=>{db=new PGlite();await db.exec(fs.readFileSync('tests/fixtures/gencouv-marketing.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/20261122181636_gencouv_email_marketing_reliability.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/20261123075453_gencouv_native_dashboard_controls.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/20261124150809_gencouv_contact_name_personalization.sql','utf8'));await db.query('insert into organizations(id) values($1),($2)',[org,other]);await db.query("insert into gencouv_campaign_settings(organization_id,campaign_key,daily_send_limit) values($1,'gencouv_long_form_copy_trading',10)",[org]);await db.query("insert into crm_customers(id,organization_id,email,full_name,metadata) values($1,$2,'eligible@example.test','Synthetic Contact',$3)",[contact,org,JSON.stringify({marketing_consent:'granted',consent_source:'Synthetic explicit opt-in',consent_recorded_at:'2026-11-01T00:00:00Z'})]);});test.after(async()=>{await db?.close();});
+let db;test.before(async()=>{db=new PGlite();await db.exec(fs.readFileSync('tests/fixtures/gencouv-marketing.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/20261122181636_gencouv_email_marketing_reliability.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/20261123075453_gencouv_native_dashboard_controls.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/20261124150809_gencouv_contact_name_personalization.sql','utf8'));for (const migration of [
+  '20261127110000_gencouv_brevo_reservations.sql',
+  '20261127110100_gencouv_brevo_delivery_events.sql',
+  '20261127110200_gencouv_brevo_receipts.sql',
+]) await db.exec(fs.readFileSync('supabase/migrations/' + migration, 'utf8'));await db.query('insert into organizations(id) values($1),($2)',[org,other]);await db.query("insert into gencouv_campaign_settings(organization_id,campaign_key,daily_send_limit) values($1,'gencouv_long_form_copy_trading',10)",[org]);await db.query("insert into crm_customers(id,organization_id,email,full_name,metadata) values($1,$2,'eligible@example.test','Synthetic Contact',$3)",[contact,org,JSON.stringify({marketing_consent:'granted',consent_source:'Synthetic explicit opt-in',consent_recorded_at:'2026-11-01T00:00:00Z'})]);});test.after(async()=>{await db?.close();});
 async function reserve(key,hash='hash',extra={}){const input={mode:'one_time',from:'info@gencouv.com',subject:'Synthetic campaign',text:'Synthetic message',contact_ids:[contact],confirmed:true,consent_confirmed:true,...extra};return(await db.query('select gencouv_reserve_send_batch($1,$2,$3,$4,$5) as result',[org,key,hash,JSON.stringify(input),'operator@example.test'])).rows[0].result;}
 test('new batch reserves existing ledger before submission and request replay never creates duplicates',async()=>{const key='cccccccc-1111-4111-8111-111111111111';const first=await reserve(key);assert.equal(first.created,true);assert.equal(first.messages[0].status,'queued');const second=await reserve(key);assert.equal(second.created,false);assert.equal(second.batch_id,first.batch_id);assert.equal(second.messages[0].id,first.messages[0].id);await assert.rejects(()=>reserve(key,'changed'),/different content/);});
 test('unknown submissions remain held and authorized at most once',async()=>{const r=await reserve('cccccccc-2222-4222-8222-222222222222');assert.equal((await db.query('select gencouv_authorize_send_batch($1,$2) as allowed',[org,r.batch_id])).rows[0].allowed,true);assert.equal((await db.query('select gencouv_authorize_send_batch($1,$2) as allowed',[org,r.batch_id])).rows[0].allowed,false);const done=(await db.query("select gencouv_finish_send_batch($1,$2,'unknown','[]','Synthetic timeout') as result",[org,r.batch_id])).rows[0].result;assert.equal(done.messages[0].status,'unknown');assert.equal((await reserve('cccccccc-2222-4222-8222-222222222222')).created,false);});
@@ -61,4 +65,40 @@ test('reserved personalization matches literal provider rendering and treats mis
  const r=await reserve('77777777-2222-4222-8222-222222222222','literal-name-hash',{contact_ids:[named,blank],text:'Hello [name], welcome [Name].'});
  const messages=(await db.query('select recipient_email,text_body from gencouv_email_messages where send_batch_id=$1',[r.batch_id])).rows;
  assert.equal(messages.find(x=>x.recipient_email==='literal-name@example.test').text_body,'Hello Ada $& Okafor, welcome Ada $& Okafor.');assert.equal(messages.find(x=>x.recipient_email==='blank-name@example.test').text_body,'Hello there, welcome there.');
+});
+
+test('Brevo receipt binding isolates providers and older delivery survives an earlier-arriving open', async () => {
+  const recipient = (await db.query("select id from crm_customers where organization_id=$1 and email='batch0@example.test'", [org])).rows[0].id;
+  await db.query("update gencouv_campaign_settings set metadata=metadata||'{\"brevo_approved_senders\":[\"marketing@brevo.example.test\"]}'::jsonb where organization_id=$1", [org]);
+  await assert.rejects(() => reserve('abababab-3333-4333-8333-333333333333', 'unauthorized-sender', {
+    provider: 'brevo', brevo_capacity: 300, contact_ids: [recipient],
+  }), /Invalid recipient selection/);
+  const reservation = await reserve('abababab-1111-4111-8111-111111111111', 'brevo-receipt', {
+    provider: 'brevo', from: 'marketing@brevo.example.test', brevo_capacity: 300, contact_ids: [recipient],
+  });
+  const messageId = reservation.messages[0].id;
+  const receipt = '<synthetic-receipt@smtp.brevo.test>';
+  await db.query('select gencouv_authorize_send_batch($1,$2)', [org, reservation.batch_id]);
+  const bind = async (email) => (await db.query(
+    'select gencouv_bind_brevo_receipt($1,$2,$3,$4) as bound',
+    [reservation.batch_id, messageId, email, receipt],
+  )).rows[0].bound;
+  assert.equal(await bind('wrong@example.test'), false);
+  assert.equal(await bind('batch0@example.test'), true);
+  const event = async (id, type, date) => (await db.query(
+    'select gencouv_apply_brevo_event($1,$2,$3,$4,$5) as result',
+    [id.repeat(64), type, receipt, 'batch0@example.test', date],
+  )).rows[0].result;
+  const otherProvider = (await db.query(
+    "select gencouv_apply_delivery_event('synthetic-cross-provider','email.delivered',$1,now()) as result",
+    [JSON.stringify({ email_id: receipt, from: 'info@gencouv.com', to: ['batch0@example.test'], tags: { gencouv_message_id: messageId } })],
+  )).rows[0].result;
+  assert.equal(otherProvider.ignored, true);
+  assert.equal((await event('a', 'opened', '2026-11-01T12:05:00Z')).status, 'submitted');
+  assert.equal((await event('b', 'delivered', '2026-11-01T12:00:00Z')).status, 'delivered');
+  assert.equal((await event('b', 'delivered', '2026-11-01T12:00:00Z')).duplicate, true);
+  assert.equal((await event('c', 'complained', '2026-11-01T12:10:00Z')).status, 'complained');
+  await assert.rejects(() => reserve('abababab-2222-4222-8222-222222222222', 'resend-after-complaint', {
+    contact_ids: [recipient],
+  }), /permission or suppression/);
 });

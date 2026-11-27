@@ -20,6 +20,7 @@ begin
   next_status:=case
     when m.status in ('bounced','complained','unsubscribed') then m.status
     when p_type in ('bounced','complained','unsubscribed') then p_type
+    when p_type='delivered' and m.status in ('queued','unknown','submitted','delivery_delayed') then 'delivered'
     when m.last_event_at is not null and p_occurred_at<m.last_event_at then m.status
     when p_type in ('opened','clicked','delivery_delayed') then m.status
     when m.status in ('delivered','replied') and p_type='submitted' then m.status
@@ -47,3 +48,22 @@ end;
 $$;
 revoke all on function public.gencouv_apply_brevo_event(text,text,text,text,timestamptz) from public,anon,authenticated;
 grant execute on function public.gencouv_apply_brevo_event(text,text,text,text,timestamptz) to service_role;
+
+-- Restrict the existing Resend event lookups without changing its event semantics.
+do $$
+declare
+  v_oid regprocedure := 'public.gencouv_apply_delivery_event(text,text,jsonb,timestamptz)'::regprocedure;
+  v_definition text;
+begin
+  if (select md5(prosrc) from pg_proc where oid=v_oid) is distinct from '340ef4c7549f9c72c3034238f040b673' then
+    raise exception 'Gencouv Resend delivery source changed; reconcile before migration';
+  end if;
+  v_definition := replace(pg_get_functiondef(v_oid),
+    'organization_id=v_org and provider_email_id=v_provider for update',
+    'organization_id=v_org and provider=''resend'' and provider_email_id=v_provider for update');
+  v_definition := replace(v_definition,
+    'organization_id=v_org and id=v_id::uuid for update',
+    'organization_id=v_org and provider=''resend'' and id=v_id::uuid for update');
+  execute v_definition;
+end;
+$$;

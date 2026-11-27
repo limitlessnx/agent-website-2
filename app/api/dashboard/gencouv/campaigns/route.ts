@@ -1,3 +1,4 @@
+import { readGencouvBrevoAllowlist } from "@/lib/gencouv-brevo-readiness";
 import { NextResponse } from "next/server";
 import { requireGencouvAdmin, gencouvError, gencouvPrivateHeaders, GENCOUV_UUID, GENCOUV_SENDERS, GencouvRequestError } from "@/lib/gencouv-admin";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ async function save(request: Request) {
     const input = await request.json().catch(() => null);
     const subject = String(input?.subject || "").trim(); const text = String(input?.text || "").trim();
     const sender = String(input?.from || "").trim().toLowerCase(); const category = String(input?.category_id || "");
-    if (!subject || subject.length > 200 || !text || text.length > 30000 || !GENCOUV_SENDERS.has(sender) || category && !GENCOUV_UUID.test(category)) throw new GencouvRequestError("Enter a valid campaign sender, subject, message and category.");
+    const approvedSender = GENCOUV_SENDERS.has(sender) || (await readGencouvBrevoAllowlist(db, organizationId)).includes(sender);
+    if (!subject || subject.length > 200 || !text || text.length > 30000 || !approvedSender || category && !GENCOUV_UUID.test(category)) throw new GencouvRequestError("Enter a valid campaign sender, subject, message and category.");
     if (category) {
       const found = await db.from("crm_lead_categories").select("id").eq("organization_id", organizationId).eq("id", category).maybeSingle();
       if (found.error || !found.data) throw new GencouvRequestError("Category not found in Gencouv.");
