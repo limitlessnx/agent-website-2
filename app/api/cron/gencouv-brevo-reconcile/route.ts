@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     .eq("organization_id", org).eq("provider", "brevo").in("status", ["submitting", "unknown", "partial"])
     .lt("submitted_at", new Date(Date.now() - 120000).toISOString())
     .gte("submitted_at", new Date(Date.now() - 89 * 86400000).toISOString())
-    .order("updated_at").limit(4);
+    .order("updated_at").limit(12);
   if (batches.error) return NextResponse.json({ error: "Brevo batch history unavailable" }, { status: 503 });
 
   let checked = 0;

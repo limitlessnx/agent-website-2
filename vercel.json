@@ -17,7 +17,7 @@
   "crons": [
     {
       "path": "/api/cron/gencouv-brevo-reconcile",
-      "schedule": "*/15 * * * *"
+      "schedule": "31 7 * * *"
     },
     {
       "path": "/api/cron/maia-safety-net",
