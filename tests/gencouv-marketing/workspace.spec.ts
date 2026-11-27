@@ -62,3 +62,36 @@ test('file names and missing names produce accurate per-recipient previews witho
  const state=await(await context.request.get('http://127.0.0.1:4401/__qa/state')).json(),named=state.contacts.find((contact:{email:string})=>contact.email==='chinwe@example.test'),unnamed=state.contacts.find((contact:{email:string})=>contact.email==='no.name@example.test');
  const chooser=bulk.getByRole('combobox',{name:'Preview for recipient',exact:true});await chooser.selectOption(named.id);await expect(bulk.getByLabel('Personalized message text',{exact:true})).toHaveText('Hello Chinwe O’Connor,\n\nThis is a recipient preview.');await capture(page,'personalized-name',info.project.use.viewport!.width);await chooser.selectOption(unnamed.id);await expect(bulk.getByLabel('Personalized message text',{exact:true})).toHaveText('Hello there,\n\nThis is a recipient preview.');await capture(page,'personalized-fallback',info.project.use.viewport!.width);expect(state.calls).toBe(0);expect(state.messages).toHaveLength(0);expect(state.settings[0].sending_enabled).toBe(false);
 });
+
+test('Brevo and Resend show independent sending domains and approved senders', async ({ page, context }) => {
+  await signIn(context);
+  await page.route('**/api/dashboard/gencouv/brevo-readiness', route => route.fulfill({
+    json: {
+      configured: true, reachable: true, sendingAvailable: false, note: 'Sending disabled',
+      accountCredits: 230, remaining: 200, used: 30,
+      verifiedSenders: ['news@first.example.test', 'updates@second.example.test'],
+      domains: [
+        { domain: 'first.example.test', authenticated: true, senders: ['news@first.example.test'] },
+        { domain: 'second.example.test', authenticated: true, senders: ['updates@second.example.test'] },
+        { domain: 'unverified.example.test', authenticated: false, senders: [] },
+      ],
+    },
+  }));
+  await page.goto('/dashboard/gencouv/marketing', { waitUntil: 'networkidle' });
+  const provider = page.getByLabel('Email provider', { exact: true });
+  const sender = page.getByLabel('Sender', { exact: true });
+  await expect(sender).toHaveValue('info@gencouv.com');
+  await provider.selectOption('brevo');
+  const domain = page.getByLabel('Sending domain', { exact: true });
+  await expect(domain.getByRole('option', { name: 'unverified.example.test (unverified)' })).toBeDisabled();
+  await domain.selectOption('first.example.test');
+  await sender.selectOption('news@first.example.test');
+  await expect(sender.getByRole('option', { name: 'updates@second.example.test' })).toHaveCount(0);
+  await domain.selectOption('second.example.test');
+  await sender.selectOption('updates@second.example.test');
+  await expect(sender.getByRole('option', { name: 'info@gencouv.com' })).toHaveCount(0);
+  await expect(page.getByText('Sending disabled', { exact: true })).toBeVisible();
+  await provider.selectOption('resend');
+  await expect(sender).toHaveValue('info@gencouv.com');
+  await expect(domain).toHaveCount(0);
+});

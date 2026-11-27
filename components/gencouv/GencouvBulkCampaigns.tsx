@@ -91,7 +91,7 @@ export default function GencouvBulkCampaigns(){
       </button>}
     </section>
     <div className="gencouv-campaign-form">
-      <label className="admin-field">Email provider<select disabled={busy || Boolean(batch || requestId)} value={provider} onChange={event => {
+      <label className="admin-field">Email provider<select aria-label="Email provider" disabled={busy || Boolean(batch || requestId)} value={provider} onChange={event => {
         const selectedProvider = event.target.value === "brevo" ? "brevo" : "resend";
         setProvider(selectedProvider);
         setFrom(selectedProvider === "resend" ? resendSenders[0] : "");
@@ -99,14 +99,14 @@ export default function GencouvBulkCampaigns(){
         resetReview();
         if (selectedProvider === "brevo") void checkBrevo();
       }}><option value="resend">Resend</option><option value="brevo">Brevo</option></select></label>
-      {provider === "brevo" && <label className="admin-field">Sending domain<select disabled={busy || Boolean(batch || requestId)} value={brevoDomain} onChange={event => {
+      {provider === "brevo" && <label className="admin-field">Sending domain<select aria-label="Sending domain" disabled={busy || Boolean(batch || requestId)} value={brevoDomain} onChange={event => {
         setBrevoDomain(event.target.value);
         setFrom("");
         resetReview();
       }}><option value="">Select a domain</option>{brevo?.domains?.map(domain => (
         <option key={domain.domain} value={domain.domain} disabled={!domain.authenticated}>{domain.domain} ({domain.authenticated ? "authenticated" : "unverified"})</option>
       ))}</select></label>}
-      <label className="admin-field">Sender<select disabled={busy || Boolean(batch || requestId)} value={from} onChange={event => {
+      <label className="admin-field">Sender<select aria-label="Sender" disabled={busy || Boolean(batch || requestId)} value={from} onChange={event => {
         setFrom(event.target.value);
         resetReview();
       }}>

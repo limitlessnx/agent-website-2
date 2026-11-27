@@ -13,7 +13,7 @@ const env = {
   GENCOUV_BREVO_DELIVERY_VERIFIED: 'true',
   GENCOUV_BREVO_WEBHOOK_SECRET: 'synthetic-secret-'.repeat(3),
   GENCOUV_UNSUBSCRIBE_SECRET: 'synthetic',
-  CRON_SECRET: 'synthetic-cron-'.repeat(3),
+  GENCOUV_BREVO_RECONCILE_SECRET: 'synthetic-cron-'.repeat(3),
 };
 
 function brevo(fetch) {

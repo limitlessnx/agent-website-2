@@ -36,7 +36,7 @@ export async function readGencouvBrevoReadiness(db: SupabaseClient, organization
   const activationEnabled = process.env.GENCOUV_BREVO_SENDING_ENABLED === "true";
   const deliveryVerified = process.env.GENCOUV_BREVO_DELIVERY_VERIFIED === "true";
   const trackingConfigured = (process.env.GENCOUV_BREVO_WEBHOOK_SECRET ?? "").length >= 32 &&
-    (process.env.CRON_SECRET ?? "").length >= 32;
+    (process.env.GENCOUV_BREVO_RECONCILE_SECRET ?? "").length >= 32;
   const testOnly = !deliveryVerified && gencouvBrevoTestRecipients().length > 0;
   let domains = [...new Set(allowed.map(email => email.split("@")[1]))]
     .map(domain => ({ domain, authenticated: false, senders: [] as string[] }));

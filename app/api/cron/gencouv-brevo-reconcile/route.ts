@@ -7,7 +7,7 @@ import { reconcileBrevoBatch } from "@/lib/gencouv-brevo-reconcile";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
+  const secret = process.env.GENCOUV_BREVO_RECONCILE_SECRET;
   const authorization = request.headers.get("authorization");
   if (!secret || !authorization?.startsWith("Bearer ") || !verifyBrevoWebhook(authorization.slice(7), secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

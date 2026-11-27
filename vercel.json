@@ -16,10 +16,6 @@
   },
   "crons": [
     {
-      "path": "/api/cron/gencouv-brevo-reconcile",
-      "schedule": "31 7 * * *"
-    },
-    {
       "path": "/api/cron/maia-safety-net",
       "schedule": "0 10 * * *"
     },
