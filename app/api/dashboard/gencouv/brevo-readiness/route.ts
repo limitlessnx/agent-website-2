@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const configured = Boolean(key);
     let verifiedSenders: string[] = [];
     let reachable = false;
+    let domainAuthenticated = false;
     if (key) {
       try {
         const response = await fetch("https://api.brevo.com/v3/senders", {
@@ -26,7 +27,18 @@ export async function GET(request: Request) {
         }
       } catch { /* Fail closed without returning provider payloads or secrets. */ }
     }
-    return NextResponse.json({ configured, reachable, verifiedSenders, sendingAvailable: false,
+    if (key && reachable) {
+      try {
+        const response = await fetch("https://api.brevo.com/v3/domains/gencouv.com", {
+          headers: { "api-key": key, Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(8000),
+        });
+        if (response.ok) {
+          const domain = await response.json();
+          domainAuthenticated = domain.authenticated === true;
+        }
+      } catch { /* Fail closed. */ }
+    }
+    return NextResponse.json({ configured, reachable, verifiedSenders, domainAuthenticated, sendingAvailable: false,
       note: "Brevo delivery integration is pending. Resend remains the active provider." }, { headers: gencouvPrivateHeaders });
   } catch (error) {
     const safe = gencouvError(error);
