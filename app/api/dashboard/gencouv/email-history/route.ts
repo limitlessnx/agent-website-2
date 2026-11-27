@@ -38,7 +38,30 @@ export async function POST(request: Request) {
     ]);
     if (batch.error || messages.error) throw new GencouvRequestError("Batch history is unavailable.", 503);
     if (!batch.data || !messages.data?.length) throw new GencouvRequestError("Batch not found.", 404);
-    if (messages.data.some(message => message.provider === "brevo")) throw new GencouvRequestError("Brevo outcomes must be reconciled through Brevo delivery events. No email was resent.",409);
+    if (messages.data.some(message => message.provider === "brevo")) {
+      if(messages.data.some(message=>message.provider!=="brevo"))throw new GencouvRequestError("Mixed provider batch cannot be reconciled.",409);
+      const {readBrevoBatchEvents}=await import("@/lib/gencouv-brevo-reconcile");
+      const events=await readBrevoBatchEvents(batchId,batch.data.from_email);
+      let checked=0;
+      for(const message of messages.data){
+        const matches=events.filter(e=>e.email===message.recipient_email.toLowerCase()&&Date.parse(e.occurredAt)>=Date.parse(batch.data.submitted_at||"")-60000);
+        const ids=[...new Set(matches.map(e=>e.providerId))];
+        if(ids.length!==1||(message.provider_email_id&&message.provider_email_id!==ids[0]))continue;
+        const bound=await db.rpc("gencouv_bind_brevo_receipt",{p_batch_id:batchId,p_message_id:message.id,p_email:message.recipient_email,p_provider_id:ids[0]});
+        if(bound.error||bound.data!==true)throw new GencouvRequestError("Brevo receipt could not be recorded.",503);
+        for(const event of matches.sort((a,b)=>a.occurredAt.localeCompare(b.occurredAt))){
+          const applied=await db.rpc("gencouv_apply_brevo_event",{p_event_id:event.eventId,p_type:event.type,p_provider_id:event.providerId,p_email:event.email,p_occurred_at:event.occurredAt});
+          if(applied.error)throw new GencouvRequestError("Brevo event could not be recorded.",503);
+        }
+        checked++;
+      }
+      const unresolved=messages.data.length-checked;
+      if(!unresolved){
+        const updated=await db.from("gencouv_send_batches").update({status:"submitted",error_summary:null,updated_at:new Date().toISOString()}).eq("organization_id",organizationId).eq("id",batchId).in("status",["unknown","partial","submitting"]);
+        if(updated.error)throw updated.error;
+      }
+      return NextResponse.json({checked,unresolved,note:"Brevo receipts refreshed. No email was resent."},{headers:gencouvPrivateHeaders});
+    }
     const savedBatch = batch.data;
     let recent: Array<Record<string, unknown>> = [];
     if (messages.data.some(message => !message.provider_email_id) && ["unknown", "partial", "submitting"].includes(batch.data.status)) {
