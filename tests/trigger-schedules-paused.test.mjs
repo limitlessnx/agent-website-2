@@ -7,14 +7,22 @@ function triggerFiles(){
   return readdirSync("src/trigger").filter((name)=>name.endsWith(".ts")||name.endsWith(".tsx")).map((name)=>path.join("src/trigger",name));
 }
 
-test("only approved reminders and scoped Fluxknight review/publishing tasks are scheduled",()=>{
+test("only explicitly approved operational tasks are scheduled",()=>{
   const files=triggerFiles();
   const scheduled=[];
   for(const file of files){
     const source=readFileSync(file,"utf8");
     if(source.includes("schedules.task(")) scheduled.push(file);
   }
-  assert.deepEqual(scheduled.sort(),["src/trigger/social-daily-publishing.ts","src/trigger/social-review-week.ts","src/trigger/limitless-installment-reminders.ts","src/trigger/tenant-reminder-sweep.ts","src/trigger/tenant-reminder-execution-drain.ts","src/trigger/tenant-appointment-reminder-drain.ts"].sort());
+  assert.deepEqual(scheduled.sort(),["src/trigger/gencouv-brevo-reconcile.ts","src/trigger/social-daily-publishing.ts","src/trigger/social-review-week.ts","src/trigger/limitless-installment-reminders.ts","src/trigger/tenant-reminder-sweep.ts","src/trigger/tenant-reminder-execution-drain.ts","src/trigger/tenant-appointment-reminder-drain.ts"].sort());
+});
+
+test("Gencouv Brevo schedules receipt recovery only in production", () => {
+  const task = readFileSync("src/trigger/gencouv-brevo-reconcile.ts", "utf8");
+  assert.match(task, /environments: \["PRODUCTION"\]/);
+  assert.match(task, /GENCOUV_BREVO_RECONCILE_SECRET/);
+  assert.match(task, /https:\/\/fluxknight\.space\/api\/cron\/gencouv-brevo-reconcile/);
+  assert.doesNotMatch(task, /smtp\/email|bulk-send|campaign-enroll/);
 });
 
 test("core operational jobs remain callable on demand while automatic schedules are paused",()=>{
