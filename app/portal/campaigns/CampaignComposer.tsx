@@ -21,7 +21,7 @@ export default function CampaignComposer({ customers, hotel = false }: { custome
     fetch("/api/portal/campaigns/meta-templates", { cache: "no-store" }).then(async (response) => {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Unable to load Meta templates.");
-      const available:Template[]=(payload.templates||[]).filter((item:Template)=>hotel?item.purpose==="hotel_campaign":Boolean(item.purpose)&&item.purpose!=="hotel_campaign"&&item.purpose!=="campaign_promotion");
+      const available:Template[]=(payload.templates||[]).filter((item:Template)=>hotel?item.purpose==="hotel_campaign":item.category==="MARKETING"&&item.purpose==="campaign");
       setTemplates(available);
       if (available[0]) { setSelectedTemplate(templateKey(available[0])); setSelectedLanguage(available[0].language || "en_US"); }
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load Meta templates.")).finally(() => setLoadingTemplates(false));
