@@ -21,7 +21,7 @@ export default function CampaignComposer({ customers, hotel = false }: { custome
     fetch("/api/portal/campaigns/meta-templates", { cache: "no-store" }).then(async (response) => {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Unable to load Meta templates.");
-      const available:Template[]=(payload.templates||[]).filter((item:Template)=>!hotel||item.purpose==="hotel_campaign");
+      const available:Template[]=(payload.templates||[]).filter((item:Template)=>hotel?item.purpose==="hotel_campaign":Boolean(item.purpose)&&item.purpose!=="hotel_campaign"&&item.purpose!=="campaign_promotion");
       setTemplates(available);
       if (available[0]) { setSelectedTemplate(templateKey(available[0])); setSelectedLanguage(available[0].language || "en_US"); }
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load Meta templates.")).finally(() => setLoadingTemplates(false));
@@ -39,7 +39,7 @@ export default function CampaignComposer({ customers, hotel = false }: { custome
     setSending(true);
     let definitiveRejection=false;
     try {
-      const response = await fetch("/api/portal/campaigns/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateName: template.name, languageCode: selectedLanguage, ...(hotel?{templatePurpose:"hotel_campaign"}:{}),customerIds: selectedCustomers, variables }) });
+      const response = await fetch("/api/portal/campaigns/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateName: template.name, languageCode: selectedLanguage, templatePurpose: template.purpose,customerIds: selectedCustomers, variables: Object.fromEntries(editableIndexes.map(index=>[template.variable_keys?.[index-1]||String(index),variables[String(index)]])) }) });
       const payload = await response.json();
       if (!response.ok) {definitiveRejection=response.status>=400&&response.status<500;if(response.status>=500)setUncertain(true);throw new Error(payload.error || "Campaign send failed.");}
       const unknown=Number(payload.unknown||0);if(unknown)setUncertain(true);
@@ -49,9 +49,9 @@ export default function CampaignComposer({ customers, hotel = false }: { custome
   };
 
   return <div className="exposure-campaign-grid">
-    <section className="exposure-panel exposure-campaign-card"><header><div><p className="portal-kicker">Meta WhatsApp campaign</p><h2>Choose an approved template</h2><p>Only templates approved in your connected Meta Business Account can be sent.</p></div></header>
+    <section className="exposure-panel exposure-campaign-card"><header><div><p className="portal-kicker">Meta WhatsApp campaign</p><h2>Choose an approved template</h2><p>Only approved templates with a configured campaign route can be sent.</p></div></header>
       {loadingTemplates ? <p className="exposure-empty">Loading approved templates…</p> : null}
-      {!loadingTemplates && !templates.length && !error ? <p className="exposure-empty">No approved Meta templates are available yet.</p> : null}
+      {!loadingTemplates && !templates.length && !error ? <p className="exposure-empty">No approved templates with a configured campaign route are available yet.</p> : null}
       <div className="exposure-template-grid">{templates.map((item) => <button type="button" disabled={sending||uncertain} aria-pressed={selectedTemplate === templateKey(item)} className={selectedTemplate === templateKey(item) ? "is-selected" : ""} onClick={() => { setSelectedTemplate(templateKey(item)); setSelectedLanguage(item.language || "en_US");setVariables({}); }} key={templateKey(item)}><strong title={item.name}>{item.name}</strong><span>{item.category || "Marketing"} · {item.language || "en_US"}</span><small>{item.placeholder_count} placeholder{item.placeholder_count === 1 ? "" : "s"}</small></button>)}</div>
       {editableIndexes.length ? <div className="exposure-variable-grid">{editableIndexes.map((index) => <label key={index}><span>{hotel?template?.variable_keys?.[index-1]?.replaceAll("_"," ")||`Template value ${index}`:`Template value ${index}`}</span><input value={variables[String(index)] || ""} maxLength={1024} disabled={sending||uncertain} onChange={(event) => setVariables((current) => ({ ...current, [String(index)]: event.target.value }))} placeholder={`Value for {{${index}}}`} /></label>)}</div> : null}
       {hotel&&template?<section className="exposure-panel" aria-label="Campaign message preview"><h3>Message preview</h3><p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{preview||"Template text is unavailable. Check the approved wording before sending."}</p><small>Each recipient gets their own name. Consent, active bookings and manager handover are checked before sending.</small></section>:null}
