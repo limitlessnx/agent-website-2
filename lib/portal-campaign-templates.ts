@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { validPromotionBody, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
 
 export class CampaignTemplateError extends Error { constructor(message: string, public status = 503) { super(message); } }
-type MetaTemplate = { name?: string; status?: string; language?: string; category?: string; components?: Array<{ type?: string; format?: string; text?: string; buttons?: Array<{ type?: string; text?: string; url?: string }> }> };
+type MetaTemplate = { id?: string; name?: string; status?: string; language?: string; category?: string; components?: Array<{ type?: string; format?: string; text?: string; buttons?: Array<{ type?: string; text?: string; url?: string }> }> };
 type MetaResponse = { data?: MetaTemplate[]; paging?: { next?: string }; error?: { message?: string; code?: number; error_subcode?: number; type?: string; fbtrace_id?: string } };
 
 function placeholders(template: MetaTemplate) {
@@ -21,22 +21,35 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   if (promotionOnly && linked?.length !== 1) {
     throw new CampaignTemplateError("Ask your administrator to assign one active WhatsApp promotion template.", 409);
   }
-  const { data: integration, error: integrationError } = await admin.from("organization_integrations").select("configuration,status").eq("organization_id", organizationId).eq("provider", "whatsapp").in("status", ["configured", "connected", "degraded"]).maybeSingle();
-  if (integrationError) throw new CampaignTemplateError("Unable to read WhatsApp configuration.", 500);
-  if (!integration) throw new CampaignTemplateError("Connect WhatsApp before loading Meta templates.", 409);
-  const { data: rawCredentials, error: credentialsError } = await admin.rpc("get_organization_integration_credentials", { p_organization_id: organizationId, p_provider: "whatsapp" });
-  if (credentialsError) throw new CampaignTemplateError("WhatsApp credentials are not available.", 409);
-  const credentials = rawCredentials && typeof rawCredentials === "object" ? rawCredentials as Record<string, unknown> : {};
-  const configuration = integration.configuration && typeof integration.configuration === "object" ? integration.configuration as Record<string, unknown> : {};
-  const wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || "").trim();
-  const accessToken = String(credentials.access_token || credentials.accessToken || "").trim();
-  if (promotionOnly && (credentials.provider_family || configuration.provider_family || "meta") !== "meta") {
-    throw new CampaignTemplateError("The assigned promotion requires a connected Meta WhatsApp account.", 409);
+  // Match the delivery gateway's provider precedence and Graph version. A connected
+  // primary integration must not silently borrow credentials from another account.
+  let wabaId = "", accessToken = "", graphVersion = "";
+  for (const provider of ["whatsapp", "meta_whatsapp"]) {
+    const { data: integration, error: integrationError } = await admin.from("organization_integrations")
+      .select("configuration,status").eq("organization_id", organizationId).eq("provider", provider)
+      .in("status", ["configured", "connected", "degraded"]).maybeSingle();
+    if (integrationError) throw new CampaignTemplateError("Unable to read WhatsApp configuration.", 500);
+    if (!integration) continue;
+    const { data: rawCredentials, error: credentialsError } = await admin.rpc("get_organization_integration_credentials", {
+      p_organization_id: organizationId, p_provider: provider,
+    });
+    if (credentialsError) throw new CampaignTemplateError("WhatsApp credentials are not available.", 409);
+    const credentials = rawCredentials && typeof rawCredentials === "object" ? rawCredentials as Record<string, unknown> : {};
+    const configuration = integration.configuration && typeof integration.configuration === "object" ? integration.configuration as Record<string, unknown> : {};
+    if (String(credentials.provider_family || configuration.provider_family || "meta") !== "meta") {
+      throw new CampaignTemplateError("Template discovery requires a connected Meta WhatsApp account.", 409);
+    }
+    wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || configuration.wabaId || "").trim();
+    accessToken = String(credentials.access_token || credentials.accessToken || "").trim();
+    graphVersion = String(credentials.graph_version || configuration.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v23.0").trim();
+    if (!/^\d+$/.test(wabaId) || !accessToken || !/^v\d+\.\d+$/.test(graphVersion)) {
+      throw new CampaignTemplateError("Meta WhatsApp Business credentials are incomplete.", 409);
+    }
+    break;
   }
-  const graphVersion = String(credentials.graph_version || configuration.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v26.0").trim();
-  if (!/^\d+$/.test(wabaId) || !accessToken || !/^v\d+\.\d+$/.test(graphVersion)) throw new CampaignTemplateError("Meta WhatsApp Business credentials are incomplete.", 409);
+  if (!wabaId) throw new CampaignTemplateError("Connect WhatsApp before loading Meta templates.", 409);
   let nextUrl: URL | null = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
-  nextUrl.searchParams.set("fields", "name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
+  nextUrl.searchParams.set("fields", "id,name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
   const rows: MetaTemplate[] = []; let pageCount = 0;
   while (nextUrl && pageCount < 10) {
     let response: Response;
@@ -84,7 +97,7 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   return { ok: true, templates: rows.flatMap((template) => {
     const config = (linked || []).find((item) => item.template_name === template.name && item.language_code === template.language);
     if (linkedOnly && !config || template.status !== "APPROVED") return [];
-    return [{ name: String(template.name || ""), status: "APPROVED", language: String(template.language || ""), category: String(template.category || ""), purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[], body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"), placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [] }];
+    return [{ id: String(template.id || ""), name: String(template.name || ""), status: "APPROVED", language: String(template.language || ""), category: String(template.category || ""), purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[], body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"), placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [] }];
   }).sort((a, b) => a.name.localeCompare(b.name)) };
 }
 
