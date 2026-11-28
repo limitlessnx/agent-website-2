@@ -11,6 +11,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store, private" } });
+// Saved display wording mirrors the existing Limitless relationship preview. It is draft-only, never evidence of current Meta approval.
+const relationshipDraftBody = "Hello {{1}},\n\n{{2}}\n\n{{3}}\n\nAt Limitless Realty, we appreciate the trust you place in us. We remain committed to helping you make confident property and investment decisions.\n\nWarm regards,\nLimitless Realty 🏡";
 const contracts: Record<string, { purpose: string; name: string; keys: string[] }> = {
   estate_brief_update: { purpose: "estate_brief_update", name: "estate_brief_update", keys: ["customer_name", "property_name", "property_location", "property_price", "selling_point"] },
   limitless_realty_relationship_campaign: { purpose: "limitless_realty_relationship_campaign", name: "limitless_realty_relationship_campaign", keys: ["customer_name", "greeting", "call_to_action"] },
@@ -28,13 +30,26 @@ export async function POST(request: Request) {
     if (!spec && body.campaignType !== "direct_message") return json({ error: "This campaign route is unavailable." }, 409);
     await assertFluxFeatureAccess(scope.organizationId, "follow_ups");
     let contract: WriteupContract = { name: "direct_message", language: "en", body: "{{1}}", keys: ["message"] };
+    let draftOnly = false;
     if (spec) {
-      const { templates } = await loadLinkedCampaignTemplates(scope.organizationId, true, [spec.purpose]);
-      const matching = templates.filter(item => item.name === spec.name && item.purpose === spec.purpose && JSON.stringify(item.variable_keys) === JSON.stringify(spec.keys));
-      // The registered Meta language is authoritative; en and en_US are different template variants.
-      const template = matching.length === 1 ? matching[0] : undefined;
-      if (!template || JSON.stringify(template.variable_keys) !== JSON.stringify(spec.keys)) return json({ error: "The linked, approved template contract is unavailable or has changed." }, 409);
-      contract = { name: template.name, language: template.language, body: template.body, keys: spec.keys };
+      try {
+        const { templates } = await loadLinkedCampaignTemplates(scope.organizationId, true, [spec.purpose]);
+        const matching = templates.filter(item => item.name === spec.name && item.purpose === spec.purpose && JSON.stringify(item.variable_keys) === JSON.stringify(spec.keys));
+        const template = matching.length === 1 ? matching[0] : undefined;
+        if (!template) return json({ error: "The linked, approved template contract is unavailable or has changed." }, 409);
+        contract = { name: template.name, language: template.language, body: template.body, keys: spec.keys };
+      } catch (reason) {
+        // Drafting can use the stored relationship contract when inventory is temporarily
+        // unavailable. A live inventory result that rejects the contract never falls back.
+        if (!(reason instanceof CampaignTemplateError) || reason.status < 500 || spec.name !== "limitless_realty_relationship_campaign") throw reason;
+        const { data, error } = await createAdminClient().from("whatsapp_template_configs")
+          .select("template_name,language_code,variable_keys,metadata").eq("organization_id",scope.organizationId)
+          .eq("purpose",spec.purpose).eq("status","active").eq("template_name",spec.name).limit(2);
+        const row = data?.length === 1 ? data[0] : undefined;
+        if (error || !row || row.metadata?.provider_status !== "approved" || !/^[a-z]{2,3}(?:_[A-Z]{2})?$/.test(row.language_code) || JSON.stringify(row.variable_keys) !== JSON.stringify(spec.keys)) throw reason;
+        contract = { name: spec.name, language: row.language_code, body: relationshipDraftBody, keys: spec.keys };
+        draftOnly = true;
+      }
     }
     const facts: Record<string, string> = {};
     if (body.propertyId) {
@@ -46,7 +61,8 @@ export async function POST(request: Request) {
       facts.property_price = String(property.data.price || "");
     }
     if (body.campaignType === "estate_brief_update" && (!facts.property_name || !facts.property_location || !facts.property_price)) return json({ error: "Choose a property with a name, location and price first." }, 409);
-    return json(await createCampaignWriteup(scope.organizationId, contract, input, facts, request.headers.get("x-flux-operation-id") || crypto.randomUUID()));
+    const draft = await createCampaignWriteup(scope.organizationId, contract, input, facts, request.headers.get("x-flux-operation-id") || crypto.randomUUID());
+    return json({ ...draft, ...(draftOnly ? { warning: "Draft uses the saved relationship template. Live Meta approval could not be checked; sending still requires verification." } : {}) });
   } catch (error) {
     if (error instanceof CampaignWriteupError || error instanceof CampaignTemplateError) return json({ error: error.message }, error.status);
     return json({ error: "AI writing is unavailable. Check your plan and AI credits, or continue editing manually." }, 503);
