@@ -304,7 +304,7 @@ test("reminder logs retain safe delivery metadata only and scheduler output omit
   assert.doesNotMatch(source, /payload: \{[^}]*delivery\s*\}/);
   assert.match(source, /status_counts: statusCounts/);
   assert.doesNotMatch(source, /return \{ checkedPlans: plans\?\.length \|\| 0, processed: results\.filter/);
-  assert.match(sender, /organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && rows\.length !== 1/);
+  assert.match(sender, /if \(rows\.length !== 1\) return null/);
   assert.match(sender, /requestedTemplateName\)/);
   assert.match(sender, /recipient: "\[redacted\]"/);
   assert.match(sender, /request_payload: \{ redacted: true \}/);
