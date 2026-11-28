@@ -69,7 +69,7 @@ function routeHarness(kind, options = {}) {
     'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200, headers: options.headers }) } },
     '@/lib/campaign-ai-writeup': { ...s.api, createCampaignWriteup: async (...args) => { state.drafts.push(args); return { status: 'draft', variables: valid }; } },
     '@/lib/flux-credits': { assertFluxFeatureAccess: async org => { state.gates.push(org); if (options.noPlan) throw Error('denied'); } },
-    '@/lib/portal-campaign-templates': { CampaignTemplateError: class extends Error {}, loadLinkedCampaignTemplates: async (...args) => { state.loads.push(args); return { templates: options.noTemplate ? [] : [{ ...template, ...(options.template || {}) }] }; } },
+    '@/lib/portal-campaign-templates': { CampaignTemplateError: class extends Error {}, loadLinkedCampaignTemplates: async (...args) => { state.loads.push(args); return { templates: options.noTemplate ? [] : options.templates || [{ ...template, ...(options.template || {}) }] }; } },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from(table) { return { select() { return this; }, eq(k, v) { state.filters.push([table, k, v]); return this; }, single: async () => ({ data: { slug: options.otherTenant ? 'hotel' : 'xposure', status: options.inactive ? 'inactive' : 'active' } }), maybeSingle: async () => ({ data: options.missingProperty ? null : { title: 'Estate', location_city: 'Benin', price: 'N650,000' } }) }; } }) },
   };
   const mocks = kind === 'portal' ? {
@@ -107,4 +107,16 @@ test('Limitless property lookup is tenant scoped, rejects missing properties and
   assert.equal(h.state.drafts[0][3].property_price, 'N650,000');
   const missing = routeHarness('limitless', { missingProperty: true }); assert.equal((await missing.route.POST(missing.request({ propertyId: '10000000-0000-4000-8000-000000000001' }))).status, 404);
   const changed = routeHarness('limitless', { template: { variable_keys: ['customer_name', 'wrong'] } }); assert.equal((await changed.route.POST(changed.request())).status, 409);
+});
+
+ test('Limitless writer uses the configured en template instead of hardcoding en_US', async () => {
+  const h = routeHarness('limitless', { template: { language: 'en' } });
+  assert.equal((await h.route.POST(h.request())).status, 200);
+  assert.equal(h.state.drafts[0][1].language, 'en');
+});
+test('Limitless writer rejects ambiguous approved language variants', async () => {
+  const base = { name: 'limitless_realty_reminder', purpose: 'follow_up_outside_24h', body: contract.body, variable_keys: contract.keys };
+  const h = routeHarness('limitless', { templates: [{...base, language:'en'}, {...base, language:'en_US'}] });
+  assert.equal((await h.route.POST(h.request())).status, 409);
+  assert.equal(h.state.drafts.length,0);
 });
