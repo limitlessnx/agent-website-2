@@ -78,9 +78,11 @@ test("F7 signed Twilio inbound webhooks resolve tenants by subaccount SID",()=>{
 
 test("F7 outbound WhatsApp delivery is provider neutral",()=>{
   const delivery=read("lib/whatsapp-delivery.ts");
-  assert.match(delivery,/providerFamily:"twilio"/);
+  const credentials=read("lib/whatsapp-credentials.ts");
+  assert.match(delivery,/resolveTenantWhatsAppCredentials/);
+  assert.match(credentials,/providerFamily: "twilio"/);
   assert.match(delivery,/sendTwilioWhatsAppMessage/);
-  assert.match(delivery,/providerFamily:"meta"/);
+  assert.match(credentials,/providerFamily: "meta"/);
   assert.match(delivery,/No Twilio Content SID is configured/);
   assert.match(delivery,/statusCallbackUrl/);
 });
