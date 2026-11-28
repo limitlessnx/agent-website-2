@@ -13,7 +13,16 @@ function secret(name) {
 async function api(url, headers, method = 'GET', body) {
   const response = await fetch(url, { method, headers: { ...headers, 'Content-Type': 'application/json' },
     body: body && JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(15000) });
-  if (!response.ok) throw new Error(method + ' ' + new URL(url).pathname + ' returned HTTP ' + response.status);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const listing = method === 'GET' && new URL(url).pathname === '/v3/webhooks';
+    if (listing && [400, 404].includes(response.status) &&
+      (error.code === 'document_not_found' || /no webhooks? (?:exist|found|configured)|webhooks? (?:do(?:es)? not exist|not found)|no webhook is registered/i.test(error.message ?? ''))) {
+      return { webhooks: [] };
+    }
+    const code = /^[a-z_]{1,50}$/.test(error.code ?? '') ? error.code : 'unknown';
+    throw new Error(method + ' ' + new URL(url).pathname + ' returned HTTP ' + response.status + ' (' + code + ')');
+  }
   return response.status === 204 ? null : response.json();
 }
 
