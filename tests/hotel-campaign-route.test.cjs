@@ -14,6 +14,7 @@ function harness(options={}) {
     '@/lib/flux-credits':{assertFluxFeatureAccess:async()=>{}},
     '@/lib/supabase/admin':{createAdminClient:()=>admin},
     '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async input=>{state.sent.push(input);if(options.sendError)throw Error("uncertain");return options.noReceipt?{}:{providerMessageId:"meta-receipt"}}},
+    '@/lib/portal-campaign-templates':{CampaignTemplateError:class extends Error{},loadLinkedCampaignTemplates:async(org,_linked,[purpose])=>{state.templateOrg=org;return {templates:options.templateUnavailable?[]:[{name:'hotel_offer',purpose,language:options.language||'en',category:options.category||'MARKETING',variable_keys:['customer_name'],components:[{type:'BODY',text:'Hi {{1}}'}]}]};}},
     '@/lib/portal-whatsapp-promotion':{runPortalPromotion:async()=>{throw Error('Hotel sending must retain its existing template policy')}},
     '@/lib/hotel-communication-policy':policy,
     '@/lib/hotel-communications':{loadHotelAudience:async()=>{if(options.readError)throw Error('offline');return {guests:[guest],bookings:options.bookings||[]}},hotelConversationState:async()=>({handoff:!!options.handoff})},
@@ -48,14 +49,20 @@ test('existing campaign composer selects the hotel template purpose without a ne
   assert.equal(response.body.accepted,1);assert.equal(state.sent[0].templatePurpose,'hotel_campaign');
 });
 
-test('hotel campaigns retain selected language and uncertain submissions never claim acceptance',async()=>{for(const options of [{noReceipt:true},{sendError:true}]){const {route,state}=harness(options);const response=await route.POST(request({languageCode:'fr'}));assert.equal(response.body.accepted,0);assert.equal(response.body.unknown,1);assert.equal(state.sent[0].requestedTemplateLanguage,'fr');}});
+test('hotel campaigns retain selected language and uncertain submissions never claim acceptance',async()=>{for(const options of [{noReceipt:true},{sendError:true}]){const {route,state}=harness({...options,language:'fr'});const response=await route.POST(request({languageCode:'fr'}));assert.equal(response.body.accepted,0);assert.equal(response.body.unknown,1);assert.equal(state.sent[0].requestedTemplateLanguage,'fr');}});
 
 test('non-hotel campaigns preserve the selected language and require a provider receipt',async()=>{
   for(const options of [{noReceipt:true},{sendError:true}]){
-    const {route,state}=harness({industry:'photography',...options});
+    const {route,state}=harness({industry:'photography',language:'fr',...options});
     const response=await route.POST(request({templatePurpose:'campaign',languageCode:'fr'}));
     assert.equal(state.sent[0].requestedTemplateLanguage,'fr');
     assert.equal(response.body.accepted,0);
     assert.equal(response.body.unknown,1);
   }
+});
+
+test('bulk campaign preflight rejects operational, unavailable or non-marketing templates',async()=>{
+ for(const [options,extra,status] of [[{industry:'photography'},{templatePurpose:'human_handoff_staff'},400],[{templateUnavailable:true},{},409],[{category:'UTILITY'},{},409]]){
+ const {route,state}=harness(options);assert.equal((await route.POST(request(extra))).status,status);assert.equal(state.sent.length,0);
+ }
 });
