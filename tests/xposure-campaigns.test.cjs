@@ -350,3 +350,22 @@ test('generic inventory uses only current tenant and respects inactive and denie
   assert.equal(rejected.state.inventory,0);
  }
 });
+
+test('a new real estate tenant can review and send both actual approved starter definitions',async()=>{
+ const starters=source('lib/campaign-starter-templates.ts').campaignStarters(false);
+ const configs=starters.map(item=>({template_name:item.name,language_code:item.language,purpose:item.purpose,variable_keys:[...item.variable_keys]}));
+ const templates=starters.map(item=>({name:item.name,language:item.language,status:'APPROVED',category:item.category,components:[{type:'BODY',text:item.body}]}));
+ for(const starter of starters){
+  const h=harness({slug:'new-real-estate-business',industry:'real-estate',configs,templates});
+  const selection={name:starter.name,language:starter.language};
+  const copy='New estate plots are available for inspection this Saturday';
+  const review=await h.request({campaignTemplate:selection,message:copy});
+  assert.equal(review.status,200);
+  const sent=await h.send(review.body,{campaignTemplate:selection,message:copy});
+  assert.equal(sent.body.accepted,1);
+  assert.equal(h.state.sent[0].organizationId,'tenant-a');
+  assert.equal(h.state.sent[0].requestedTemplateName,starter.name);
+  assert.equal(h.state.sent[0].templatePurpose,starter.purpose);
+  assert.equal(h.state.sent[0].variables[starter.variable_keys[1]],copy);
+ }
+});
