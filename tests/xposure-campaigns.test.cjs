@@ -38,7 +38,7 @@ function harness(options = {}) {
         select() { return this; },
         eq(column, value) { state.filters.push([table, column, value]); return this; },
         in(column, values) { key = column; state.filters.push([table, column, Array.from(values)]); return this; },
-        single: async () => ({ data: { status: 'active', slug: options.slug ?? 'xposure' } }),
+        single: async () => ({ data: { status: options.inactive ? 'inactive' : 'active', slug: options.slug ?? 'xposure', metadata:{industry:options.industry || (options.slug==='hotel'?'hotel':'photography-studio')} } }),
         maybeSingle: async () => ({ data: { configuration: { waba_id: '123' } } }),
         insert: async row => {
           if (options.auditFailure) return { error: { code: '500' } };
@@ -94,7 +94,7 @@ function harness(options = {}) {
     '@/lib/flux-credits': { assertFluxFeatureAccess: async () => {} },
     '@/lib/portal-whatsapp-promotion': promotion,
     '@/lib/portal-campaign-templates': inventory,
-    '@/lib/hotel-communication-policy': {},
+    '@/lib/hotel-communication-policy': source('lib/hotel-communication-policy.ts'),
     '@/lib/hotel-communications': {},
   });
   const request = (extra = {}) => route.POST({ json: async () => ({
@@ -301,4 +301,25 @@ test('template discovery suggests purpose without authorizing unlinked templates
   assert.equal(inventory.find(t=>t.name==='pending_offer').suggested_purpose,null);
   assert.equal(templates.length,1);
   assert.equal(missingMappings[0].name,'missing_mapping');
+});
+
+test('new organization inherits reviewed campaign delivery without Xposure slug', async () => {
+ for (const industry of ['beauty-spa','real-estate','retail','general','photography-studio']) {
+  const h=harness({slug:'new-business-'+industry,industry});
+  const selection={name:config.template_name,language:'en'};
+  const review=await h.request({campaignTemplate:selection});
+  assert.equal(review.status,200);
+  assert.equal((await h.send(review.body,{campaignTemplate:selection})).body.accepted,1);
+  assert.equal(h.state.sent[0].organizationId,'tenant-a');
+  assert.equal(h.state.sent[0].templatePurpose,'campaign_promotion');
+  assert.equal(h.state.audit[0].organization_id,'tenant-a');
+ }
+});
+test('new tenant cannot bypass consent by calling the legacy bulk endpoint',async()=>{
+ const h=harness({slug:'new-business',industry:'retail'});
+ assert.equal((await h.request({whatsappConsentConfirmed:false})).status,400);
+ assert.equal((await h.request({action:undefined,customerIds:[contactId],templateName:config.template_name,templatePurpose:'campaign'})).status,400);
+ assert.equal(h.state.sent.length,0);
+ const inactive=harness({slug:'new-business',inactive:true});
+ assert.equal((await inactive.request()).status,409);
 });
