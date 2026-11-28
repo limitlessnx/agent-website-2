@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveTenantWhatsAppCredentials, WhatsAppCredentialError } from "@/lib/whatsapp-credentials";
 import { validPromotionBody, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
 
 export class CampaignTemplateError extends Error { constructor(message: string, public status = 503) { super(message); } }
@@ -21,33 +22,12 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   if (promotionOnly && linked?.length !== 1) {
     throw new CampaignTemplateError("Ask your administrator to assign one active WhatsApp promotion template.", 409);
   }
-  // Match the delivery gateway's provider precedence and Graph version. A connected
-  // primary integration must not silently borrow credentials from another account.
-  let wabaId = "", accessToken = "", graphVersion = "";
-  for (const provider of ["whatsapp", "meta_whatsapp"]) {
-    const { data: integration, error: integrationError } = await admin.from("organization_integrations")
-      .select("configuration,status").eq("organization_id", organizationId).eq("provider", provider)
-      .in("status", ["configured", "connected", "degraded"]).maybeSingle();
-    if (integrationError) throw new CampaignTemplateError("Unable to read WhatsApp configuration.", 500);
-    if (!integration) continue;
-    const { data: rawCredentials, error: credentialsError } = await admin.rpc("get_organization_integration_credentials", {
-      p_organization_id: organizationId, p_provider: provider,
-    });
-    if (credentialsError) throw new CampaignTemplateError("WhatsApp credentials are not available.", 409);
-    const credentials = rawCredentials && typeof rawCredentials === "object" ? rawCredentials as Record<string, unknown> : {};
-    const configuration = integration.configuration && typeof integration.configuration === "object" ? integration.configuration as Record<string, unknown> : {};
-    if (String(credentials.provider_family || configuration.provider_family || "meta") !== "meta") {
-      throw new CampaignTemplateError("Template discovery requires a connected Meta WhatsApp account.", 409);
-    }
-    wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || configuration.wabaId || "").trim();
-    accessToken = String(credentials.access_token || credentials.accessToken || "").trim();
-    graphVersion = String(credentials.graph_version || configuration.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v23.0").trim();
-    if (!/^\d+$/.test(wabaId) || !accessToken || !/^v\d+\.\d+$/.test(graphVersion)) {
-      throw new CampaignTemplateError("Meta WhatsApp Business credentials are incomplete.", 409);
-    }
-    break;
-  }
-  if (!wabaId) throw new CampaignTemplateError("Connect WhatsApp before loading Meta templates.", 409);
+  const credentials = await resolveTenantWhatsAppCredentials(admin, organizationId, { inventory: true }).catch(error => {
+    if (error instanceof WhatsAppCredentialError) throw new CampaignTemplateError(error.message, error.status);
+    throw error;
+  });
+  if (credentials.providerFamily !== "meta") throw new CampaignTemplateError("Template discovery requires a connected Meta WhatsApp account.", 409);
+  const { wabaId, accessToken, graphVersion } = credentials;
   let nextUrl: URL | null = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
   nextUrl.searchParams.set("fields", "id,name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
   const rows: MetaTemplate[] = []; let pageCount = 0;
