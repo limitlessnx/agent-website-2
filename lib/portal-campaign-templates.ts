@@ -35,7 +35,7 @@ export function suggestTemplatePurpose(name: string, category: string): string |
   return candidates.length === 1 ? candidates[0] : null;
 }
 
-export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes: string[] | null = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"]) {
+export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes: string[] | null = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"], deadline?: AbortSignal) {
   const admin = createAdminClient();
   const query = admin.from("whatsapp_template_configs")
     .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active");
@@ -55,9 +55,10 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   nextUrl.searchParams.set("fields", "id,name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
   const rows: MetaTemplate[] = []; let pageCount = 0;
   while (nextUrl && pageCount < 10) {
+    if (deadline?.aborted) throw new CampaignTemplateError("Template discovery deadline reached.", 503);
     let response: Response;
     try {
-      response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+      response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: deadline ? AbortSignal.any([deadline, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000) });
     } catch (error) {
       console.error("[campaign-template-inventory] Meta request transport failure", {
         organizationId, page: pageCount + 1,
