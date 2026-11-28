@@ -89,6 +89,7 @@ test('Limitless strict template validation blocks missing or mismatched required
    throw new Error('Unexpected network request in test');
   };
   const client=load(path.resolve(__dirname,'../lib/whatsapp-delivery.ts'),{
+   '@/lib/whatsapp-credentials':load(path.resolve(__dirname,'../lib/whatsapp-credentials.ts')),
    '@/lib/whatsapp-message-normalizer':load(path.resolve(__dirname,'../lib/whatsapp-message-normalizer.ts')),
    '@/lib/supabase/admin':{createAdminClient:()=>admin},
    '@/lib/twilio-whatsapp':{sendTwilioWhatsAppMessage:async()=>({sid:'unit-provider-message'})},
