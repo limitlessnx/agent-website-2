@@ -93,6 +93,7 @@ function harness(options = {}) {
     '@/lib/portal-access': { requirePortalPermission: async () => { if (options.denied) throw Error('denied'); } },
     '@/lib/flux-credits': { assertFluxFeatureAccess: async () => {} },
     '@/lib/portal-whatsapp-promotion': promotion,
+    '@/lib/portal-campaign-templates': inventory,
     '@/lib/hotel-communication-policy': {},
     '@/lib/hotel-communications': {},
   });
