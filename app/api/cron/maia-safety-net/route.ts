@@ -43,6 +43,8 @@ export async function GET(request: Request) {
   // The daily Vercel fallback does not dispatch property-inspection reminders.
   // Only the already-verified high-frequency scheduler can reach that opt-in queue.
   if (externalSchedulerAuthorized) tasks.push({ task: "real-estate-inspections", path: "/api/cron/real-estate-inspections" });
+  // Daily Vercel invocation only; do not burden the frequent external runner.
+  if (!externalSchedulerAuthorized && cronSecret) tasks.push({ task: "whatsapp-template-sync", path: "/api/cron/whatsapp-template-sync" });
   const results = await Promise.allSettled(tasks.map((item) => fetch(`${baseUrl}${item.path}`, { method: "GET", headers, cache: "no-store" })));
   const summary = results.map((result, index) => ({
     task: tasks[index].task,
