@@ -1,8 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveTenantWhatsAppCredentials, WhatsAppCredentialError } from "@/lib/whatsapp-credentials";
 import { validPromotionBody, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
 
 export class CampaignTemplateError extends Error { constructor(message: string, public status = 503) { super(message); } }
-type MetaTemplate = { name?: string; status?: string; language?: string; category?: string; components?: Array<{ type?: string; format?: string; text?: string; buttons?: Array<{ type?: string; text?: string; url?: string }> }> };
+type MetaTemplate = { id?: string; name?: string; status?: string; language?: string; category?: string; components?: Array<{ type?: string; format?: string; text?: string; buttons?: Array<{ type?: string; text?: string; url?: string }> }> };
 type MetaResponse = { data?: MetaTemplate[]; paging?: { next?: string }; error?: { message?: string; code?: number; error_subcode?: number; type?: string; fbtrace_id?: string } };
 
 function placeholders(template: MetaTemplate) {
@@ -11,37 +12,53 @@ function placeholders(template: MetaTemplate) {
   return [...found].filter(Number.isInteger).sort((a, b) => a - b);
 }
 
-export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"]) {
+/** Suggestions are advisory only. Existing explicit mappings always take precedence. */
+export function suggestTemplatePurpose(name: string, category: string): string | null {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  if (category === "AUTHENTICATION") return "authentication";
+  if (category === "MARKETING") {
+    if (/(^|_)(follow_?up|follow_ip|reminder|handoff|handover|hand_over|appointment|installment|payment|booking_confirmation|booking_cancellation)(_|$)/.test(normalized)) return null;
+    if (/(^|_)(estate_brief_update)(_|$)/.test(normalized)) return "estate_brief_update";
+    if (/(^|_)(market_update|realty_update)(_|$)/.test(normalized)) return "limitless_realty_update";
+    if (/(^|_)(promotion|promo|offer|offers|discount)(_|$)/.test(normalized)) return "campaign_promotion";
+    if (/(^|_)(wishes|birthday|greeting|relationship|campaign)(_|$)/.test(normalized)) return "campaign";
+    return null;
+  }
+  if (category !== "UTILITY") return null;
+  const candidates: string[] = [];
+  if (/(^|_)(installment|instalment|payment_reminder)(_|$)/.test(normalized)) candidates.push("installment_payment_reminder");
+  if (/(^|_)(appointment_reminder)(_|$)/.test(normalized)) candidates.push("appointment_reminder");
+  if (/(^|_)(booking_confirmation|booking_confirmed)(_|$)/.test(normalized)) candidates.push("booking_confirmation");
+  if (/(^|_)(booking_cancellation|booking_cancelled)(_|$)/.test(normalized)) candidates.push("booking_cancellation");
+  if (/(^|_)(follow_?up|follow_ip)(_|$)/.test(normalized)) candidates.push("customer_follow_up");
+  if (/(^|_)(handoff|handover|hand_over)(_|$)/.test(normalized)) candidates.push("human_handoff_staff");
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes: string[] | null = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"], deadline?: AbortSignal) {
   const admin = createAdminClient();
-  const { data: linked, error: linkedError } = await admin.from("whatsapp_template_configs")
-    .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active")
-    .in("purpose", purposes);
+  const query = admin.from("whatsapp_template_configs")
+    .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active");
+  const { data: linked, error: linkedError } = await (purposes ? query.in("purpose", purposes) : query);
   if (linkedError) throw new CampaignTemplateError("Unable to read linked campaign templates.", 503);
-  const promotionOnly = purposes.length === 1 && purposes[0] === "campaign_promotion";
+  const promotionOnly = purposes?.length === 1 && purposes[0] === "campaign_promotion";
   if (promotionOnly && linked?.length !== 1) {
     throw new CampaignTemplateError("Ask your administrator to assign one active WhatsApp promotion template.", 409);
   }
-  const { data: integration, error: integrationError } = await admin.from("organization_integrations").select("configuration,status").eq("organization_id", organizationId).eq("provider", "whatsapp").in("status", ["configured", "connected", "degraded"]).maybeSingle();
-  if (integrationError) throw new CampaignTemplateError("Unable to read WhatsApp configuration.", 500);
-  if (!integration) throw new CampaignTemplateError("Connect WhatsApp before loading Meta templates.", 409);
-  const { data: rawCredentials, error: credentialsError } = await admin.rpc("get_organization_integration_credentials", { p_organization_id: organizationId, p_provider: "whatsapp" });
-  if (credentialsError) throw new CampaignTemplateError("WhatsApp credentials are not available.", 409);
-  const credentials = rawCredentials && typeof rawCredentials === "object" ? rawCredentials as Record<string, unknown> : {};
-  const configuration = integration.configuration && typeof integration.configuration === "object" ? integration.configuration as Record<string, unknown> : {};
-  const wabaId = String(credentials.waba_id || credentials.wabaId || configuration.waba_id || "").trim();
-  const accessToken = String(credentials.access_token || credentials.accessToken || "").trim();
-  if (promotionOnly && (credentials.provider_family || configuration.provider_family || "meta") !== "meta") {
-    throw new CampaignTemplateError("The assigned promotion requires a connected Meta WhatsApp account.", 409);
-  }
-  const graphVersion = String(credentials.graph_version || configuration.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v26.0").trim();
-  if (!/^\d+$/.test(wabaId) || !accessToken || !/^v\d+\.\d+$/.test(graphVersion)) throw new CampaignTemplateError("Meta WhatsApp Business credentials are incomplete.", 409);
+  const credentials = await resolveTenantWhatsAppCredentials(admin, organizationId, { inventory: true }).catch(error => {
+    if (error instanceof WhatsAppCredentialError) throw new CampaignTemplateError(error.message, error.status);
+    throw error;
+  });
+  if (credentials.providerFamily !== "meta") throw new CampaignTemplateError("Template discovery requires a connected Meta WhatsApp account.", 409);
+  const { wabaId, accessToken, graphVersion } = credentials;
   let nextUrl: URL | null = new URL(`https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`);
-  nextUrl.searchParams.set("fields", "name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
+  nextUrl.searchParams.set("fields", "id,name,status,language,category,components"); nextUrl.searchParams.set("limit", "100");
   const rows: MetaTemplate[] = []; let pageCount = 0;
   while (nextUrl && pageCount < 10) {
+    if (deadline?.aborted) throw new CampaignTemplateError("Template discovery deadline reached.", 503);
     let response: Response;
     try {
-      response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+      response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store", signal: deadline ? AbortSignal.any([deadline, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000) });
     } catch (error) {
       console.error("[campaign-template-inventory] Meta request transport failure", {
         organizationId, page: pageCount + 1,
@@ -81,18 +98,34 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
     pageCount += 1;
   }
   if (nextUrl) throw new CampaignTemplateError("The template inventory is incomplete. Try again later.", 503);
-  return { ok: true, templates: rows.flatMap((template) => {
-    const config = (linked || []).find((item) => item.template_name === template.name && item.language_code === template.language);
-    if (linkedOnly && !config || template.status !== "APPROVED") return [];
-    return [{ name: String(template.name || ""), status: "APPROVED", language: String(template.language || ""), category: String(template.category || ""), purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[], body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"), placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [] }];
-  }).sort((a, b) => a.name.localeCompare(b.name)) };
+  const inventory = rows.filter(template => template.name && template.language).map(template => {
+    const matches = (linked || []).filter(item => item.template_name === template.name && item.language_code === template.language);
+    const config = matches.length === 1 ? matches[0] : undefined;
+    return {
+      id: String(template.id || ""), name: String(template.name), status: String(template.status || "UNKNOWN"),
+      language: String(template.language), category: String(template.category || ""),
+      purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[],
+      mapping_status: matches.length === 1 ? "linked" : matches.length > 1 ? "ambiguous" : "unlinked",
+      suggested_purpose: matches.length === 0 && template.status === "APPROVED" ? suggestTemplatePurpose(String(template.name), String(template.category || "")) : null,
+      body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"),
+      placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [],
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name) || a.language.localeCompare(b.language));
+  // Duplicate provider records must not be eligible for routing.
+  const templates = inventory.filter(item => item.status === "APPROVED" && (!linkedOnly || item.mapping_status === "linked")
+    && inventory.filter(other => other.name === item.name && other.language === item.language).length === 1);
+  const missingMappings = (linked || []).filter(item => !inventory.some(template => template.name === item.template_name && template.language === item.language_code))
+    .map(item => ({ name: item.template_name, language: item.language_code, purpose: item.purpose }));
+  return { ok: true, templates, inventory, missingMappings };
+
 }
 
-export async function loadAssignedPromotion(organizationId: string): Promise<PromotionTemplate> {
-  const { templates } = await loadLinkedCampaignTemplates(organizationId, true, ["campaign_promotion"]);
-  const [template] = templates;
-  if (templates.length !== 1 || template.category !== "MARKETING") {
-    throw new CampaignTemplateError("The assigned promotion is unavailable or is no longer approved for marketing by Meta.", 409);
+type RegistryTemplate = Awaited<ReturnType<typeof loadLinkedCampaignTemplates>>["templates"][number];
+export type RoutedPromotion = PromotionTemplate & { purpose: string };
+
+function asMarketingPromotion(template: RegistryTemplate): RoutedPromotion {
+  if (template.category !== "MARKETING" || !["campaign", "campaign_promotion"].includes(template.purpose)) {
+    throw new CampaignTemplateError("The selected template is not approved for this marketing workflow.", 409);
   }
   const { name, language, body, variable_keys, components } = template;
   const header = components.find(component => component.type === "HEADER");
@@ -108,5 +141,27 @@ export async function loadAssignedPromotion(organizationId: string): Promise<Pro
         || !button.text || !staticText(button.text) || !staticText(button.url))) {
     throw new CampaignTemplateError("The assigned promotion has unsupported fields. Ask your administrator to check its WhatsApp template setup.", 409);
   }
-  return { name, language, body, variable_keys, header: header?.text || "", footer: footer?.text || "", buttonLabels: buttons.map(button => button.text!) };
+  return { name, language, body, variable_keys, purpose: template.purpose, header: header?.text || "", footer: footer?.text || "", buttonLabels: buttons.map(button => button.text!) };
+}
+
+/** Return only safe, explicitly linked marketing templates for the reviewed contact workflow. */
+export async function loadCampaignPromotions(organizationId: string) {
+  const { templates, inventory } = await loadLinkedCampaignTemplates(organizationId, true, null);
+  const promotions = templates.flatMap(template => {
+    try { return [asMarketingPromotion(template)]; }
+    catch (error) { if (error instanceof CampaignTemplateError) return []; throw error; }
+  });
+  return { promotions, inventory };
+}
+
+export async function loadAssignedPromotion(organizationId: string, selection?: { name: string; language: string }): Promise<RoutedPromotion> {
+  if (selection) {
+    const { promotions } = await loadCampaignPromotions(organizationId);
+    const matches = promotions.filter(template => template.name === selection.name && template.language === selection.language);
+    if (matches.length !== 1) throw new CampaignTemplateError("The selected marketing template is unavailable or not approved for this workflow.", 409);
+    return matches[0];
+  }
+  const { templates } = await loadLinkedCampaignTemplates(organizationId, true, ["campaign_promotion"]);
+  if (templates.length !== 1) throw new CampaignTemplateError("The assigned promotion is unavailable or is no longer approved for marketing by Meta.", 409);
+  return asMarketingPromotion(templates[0]);
 }

@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
+import { mapPromotionMessage, renderPromotionMessage, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
+import CampaignAiWriter from "@/components/CampaignAiWriter";
+import SavedCampaignDraftWriter from "./SavedCampaignDraftWriter";
 import { calculateFluxCredits } from "@/lib/fluxknight-plans";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
 
+type CampaignTemplate = PromotionTemplate & { purpose: string };
+type InventoryItem = { name: string; language: string; status: string; category: string; mapping_status: string; suggested_purpose?: string | null };
+const templateKey = (template: PromotionTemplate) => `${template.name}:${template.language}`;
 type Customer = { id: string; full_name: string; phone: string | null };
 type Review = {
   campaignId: string;
@@ -21,7 +26,9 @@ type Review = {
 const digits = (phone: string | null) => (phone || "").replace(/^\+/, "");
 
 export default function XposureCampaignComposer({ customers, canManageContacts }: { customers: Customer[]; canManageContacts: boolean }) {
-  const [template, setTemplate] = useState<PromotionTemplate | null>(null);
+  const [templates, setTemplates] = useState<CampaignTemplate[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [template, setTemplate] = useState<CampaignTemplate | null>(null);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -46,7 +53,11 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
     }
     void Promise.allSettled([load("meta-templates"), load("contacts")]).then(([promotion, audience]) => {
       if (controller.signal.aborted) return;
-      setTemplate(promotion.status === "fulfilled" ? promotion.value.promotion : null);
+      const available: CampaignTemplate[] = promotion.status === "fulfilled" ? promotion.value.promotions || [] : [];
+      setTemplates(available);
+      setInventory(promotion.status === "fulfilled" ? promotion.value.inventory || [] : []);
+      setTemplate(promotion.status === "fulfilled" ? promotion.value.promotion || available[0] || null : null);
+      setReview(null);
       setTemplateError(promotion.status === "rejected" ? promotion.reason.message : "");
       setContacts(audience.status === "fulfilled" ? audience.value.contacts : []);
       setContactError(audience.status === "rejected" ? audience.reason.message : "");
@@ -67,7 +78,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   const crmOnly = customers.filter(customer => !phoneCounts.has(digits(customer.phone)));
   const messageReady = message.trim().length > 0 && message.length <= 4000;
   const issues = [
-    !loading && !template && !templateError && "The approved WhatsApp promotion is unavailable.",
+    !loading && !template && !templateError && "Connect your WhatsApp account and link an approved marketing template to start.",
     !messageReady && "Write a promotional message to continue.",
     !loading && !contactError && !eligible.length && "Add contacts with recorded WhatsApp marketing permission.",
     !loading && !contactError && eligible.length > 0 && !recipients.length && "Select at least one eligible contact.",
@@ -108,6 +119,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action, message, contactIds: recipients, whatsappConsentConfirmed: consent,
+          campaignTemplate: template ? { name: template.name, language: template.language } : undefined,
           campaignId: review?.campaignId, reviewFingerprint: review?.reviewFingerprint,
           writerValues: review?.writerValues, useAiFormatting,
         }),
@@ -135,19 +147,25 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   return <div className={styles.workspace}>
     <div className={styles.promotionColumns}>
       <section className={`${styles.card} ${styles.promotionMessage}`} aria-labelledby="campaign-message-heading">
-        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Write your promotion naturally. We automatically format it using your approved WhatsApp promotional template.</p></div></div>
-        {loading && <p role="status">Checking the assigned promotion and loading contacts…</p>}
+        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Choose the approved marketing template for your campaign. Maia formats your message for the selected template.</p></div></div>
+        {loading && <p role="status">Checking approved marketing templates and loading contacts…</p>}
         {templateError && <p className={styles.error} role="alert">{templateError}</p>}
+        {!loading && !template && <div className={styles.hint}><strong>Campaign setup</strong><p>Connect your own WhatsApp account, then have an approved marketing template linked to this workspace. Add contacts only with their marketing permission.</p><p>{inventory.length ? `${inventory.length} provider template(s) discovered. ${inventory.filter(item => item.status === "APPROVED" && item.mapping_status === "unlinked").length} approved template(s) need a mapping.` : "No provider template inventory is available yet."}</p><a href="/portal/settings">Open workspace settings</a></div>}
+        {!loading && !template && <SavedCampaignDraftWriter/>}
         {template && <div className={styles.promotionFields}>
+          <label className={styles.field}>Campaign template<select value={templateKey(template)} disabled={Boolean(pending)} onChange={event => { setTemplate(templates.find(item => templateKey(item) === event.target.value) || null); setReview(null); setCanUseAiFormatting(false); setError(""); setNotice(""); }}>
+            {templates.map(item => <option key={templateKey(item)} value={templateKey(item)}>{item.name.replaceAll("_", " ")} · {item.language}</option>)}
+          </select></label>
+          <CampaignAiWriter key={templateKey(template)} endpoint="/api/portal/campaigns/writeup" context={{templateName:template.name,language:template.language}} values={mapPromotionMessage(template,message).values || {}} disabled={Boolean(pending) || Boolean(templateError)} onApply={values => changeMessage(renderPromotionMessage(template,{...values,customer_name:"{{customer_name}}"}))} />
           <label className={styles.field}>Message<textarea rows={7} value={message} maxLength={4000} disabled={Boolean(pending)} onChange={event => changeMessage(event.target.value)} aria-describedby="promotion-message-hint" /></label>
           <p id="promotion-message-hint" className={styles.hint}>Your message is automatically formatted on the server. You will see the approved WhatsApp preview before sending.</p>
 
         </div>}
-        {(contactError || templateError || error) && <div className={styles.importActions}><button type="button" className={styles.secondary} disabled={loading || Boolean(pending)} onClick={refresh}>Refresh campaign information</button></div>}
+        {(contactError || templateError || error || !template) && <div className={styles.importActions}><button type="button" className={styles.secondary} disabled={loading || Boolean(pending)} onClick={refresh}>Refresh campaign information</button></div>}
       </section>
 
       <section className={`${styles.card} ${styles.promotionAudience}`} aria-labelledby="campaign-audience-heading">
-        <div className={styles.heading}><div><h2 id="campaign-audience-heading">Studio contacts</h2><p>{eligible.length} eligible · {contacts.length + crmOnly.length} total</p></div>
+        <div className={styles.heading}><div><h2 id="campaign-audience-heading">Campaign contacts</h2><p>{eligible.length} eligible · {contacts.length + crmOnly.length} total</p></div>
           <button type="button" className={styles.textButton} disabled={loading || Boolean(pending) || !eligible.length} onClick={() => changeSelection(recipients.length === eligible.length ? [] : eligible.map(contact => contact.id))}>{recipients.length === eligible.length && eligible.length ? "Clear selection" : "Select eligible"}</button>
         </div>
         {contactError && <p className={styles.error} role="alert">{contactError}</p>}
@@ -158,14 +176,14 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
           </label>)}
           {crmOnly.map(customer => <div className={styles.contact} key={`crm:${customer.id}`}><span><strong>{customer.full_name}</strong><small>{customer.phone || "No phone number"}</small><small>No marketing permission · excluded</small></span></div>)}
         </div>
-        {!contacts.length && !crmOnly.length && !contactError && !loading && <p className={styles.empty}>No studio contacts yet. Add contacts below to build your audience.</p>}
+        {!contacts.length && !crmOnly.length && !contactError && !loading && <p className={styles.empty}>No campaign contacts yet. Add contacts below to build your audience.</p>}
       </section>
 
       <section className={`${styles.card} ${styles.promotionReview}`} aria-labelledby="campaign-review-heading" aria-busy={Boolean(pending)}>
         <div className={styles.heading}><div><h2 id="campaign-review-heading">Review and send</h2><p>{recipients.length} selected</p></div></div>
         <label className={styles.consent}>
           <input type="checkbox" checked={consent} disabled={loading || Boolean(pending) || !recipients.length} onChange={event => { setConsent(event.target.checked); setReview(null); setError(""); }} />
-          <span>I confirm that the selected contacts gave Xposure permission to send them marketing messages on WhatsApp.</span>
+          <span>I confirm that the selected contacts gave this business permission to send them marketing messages on WhatsApp.</span>
         </label>
         {issues.length > 0 && <ul id="promotion-review-issues" className={styles.reviewIssues} aria-live="polite">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
         {(templateError || contactError) && <p className={styles.hint}>Refresh campaign information before reviewing.</p>}

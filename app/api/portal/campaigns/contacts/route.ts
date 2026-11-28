@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
-import { authorizeXposureTenantAccess } from "@/lib/xposure-tenant-authorization";
+import { getClientSession } from "@/lib/client-auth";
+import { requirePortalPermission } from "@/lib/portal-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateCampaignContacts } from "@/lib/campaign-phone-contacts";
 
 export const dynamic = "force-dynamic";
 
+async function authorizeCampaignContacts(permission: "customers.view" | "customers.manage") {
+  const session = await getClientSession();
+  if (!session) return { ok: false as const, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  try {
+    await requirePortalPermission(session, [permission]);
+    const { data, error } = await createAdminClient().from("organizations").select("status").eq("id", session.organizationId).single();
+    if (error || data?.status !== "active") throw new Error("Organization unavailable");
+    return { ok: true as const, organizationId: session.organizationId };
+  } catch {
+    return { ok: false as const, response: NextResponse.json({ error: "Campaign contact permission denied." }, { status: 403 }) };
+  }
+}
+
 export async function GET() {
-  const access = await authorizeXposureTenantAccess("customers.view");
+  const access = await authorizeCampaignContacts("customers.view");
   if (!access.ok) return access.response;
   const { data, error } = await createAdminClient().from("tenant_customer_contacts")
     .select("id,full_name,phone,whatsapp_consent").eq("organization_id", access.organizationId).order("full_name").limit(500);
@@ -15,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const access = await authorizeXposureTenantAccess("customers.manage");
+  const access = await authorizeCampaignContacts("customers.manage");
   if (!access.ok) return access.response;
   const body = await request.json().catch(() => null);
   let parsed;

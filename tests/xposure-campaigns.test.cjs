@@ -38,7 +38,7 @@ function harness(options = {}) {
         select() { return this; },
         eq(column, value) { state.filters.push([table, column, value]); return this; },
         in(column, values) { key = column; state.filters.push([table, column, Array.from(values)]); return this; },
-        single: async () => ({ data: { status: 'active', slug: options.slug ?? 'xposure' } }),
+        single: async () => ({ data: { status: options.inactive ? 'inactive' : 'active', slug: options.slug ?? 'xposure', metadata:{industry:options.industry || (options.slug==='hotel'?'hotel':'photography-studio')} } }),
         maybeSingle: async () => ({ data: { configuration: { waba_id: '123' } } }),
         insert: async row => {
           if (options.auditFailure) return { error: { code: '500' } };
@@ -71,6 +71,7 @@ function harness(options = {}) {
   };
   const inventory = source('lib/portal-campaign-templates.ts', {
     ...common, '@/lib/whatsapp-promotion-message': message,
+    '@/lib/whatsapp-credentials': source('lib/whatsapp-credentials.ts'),
   }, { URL, AbortSignal, fetch: async () => {
     state.inventory++;
     if (options.inventoryError) throw new TypeError('private transport information');
@@ -92,14 +93,22 @@ function harness(options = {}) {
     '@/lib/portal-access': { requirePortalPermission: async () => { if (options.denied) throw Error('denied'); } },
     '@/lib/flux-credits': { assertFluxFeatureAccess: async () => {} },
     '@/lib/portal-whatsapp-promotion': promotion,
-    '@/lib/hotel-communication-policy': {},
+    '@/lib/portal-campaign-templates': inventory,
+    '@/lib/hotel-communication-policy': source('lib/hotel-communication-policy.ts'),
     '@/lib/hotel-communications': {},
+  });
+  const inventoryRoute = source('app/api/portal/campaigns/meta-templates/route.ts', {
+    ...common, 'next/server': { NextResponse: { json } },
+    '@/lib/client-auth': { getClientSession: async () => options.anonymous ? null : { organizationId: 'tenant-a', userId: 'user-a' } },
+    '@/lib/portal-access': { requirePortalPermission: async () => { if (options.denied) throw Error('denied'); } },
+    '@/lib/portal-campaign-templates': inventory,
+    '@/lib/hotel-communication-policy': source('lib/hotel-communication-policy.ts'),
   });
   const request = (extra = {}) => route.POST({ json: async () => ({
     action: 'review', message: draft, contactIds: [contactId], whatsappConsentConfirmed: true, organizationId: 'tenant-b', ...extra,
   }) });
   const send = (review, extra = {}) => request({ action: 'send', campaignId: review.campaignId, reviewFingerprint: review.reviewFingerprint, ...extra });
-  return { state, request, send, inventory };
+  return { state, request, send, inventory, inventoryRoute };
 }
 
 test('the server previews the assigned Meta promotion, audits consent, and submits it once', async () => {
@@ -251,4 +260,112 @@ test('optional AI extraction uses stable identity and send reuses the reviewed o
   assert.equal((await h.send(review.body, { message, writerValues: review.body.writerValues })).status, 409);
   assert.equal(h.state.sent.length, 1);
   assert.equal(h.state.writer.length, 2);
+});
+
+test('registry discovers pending and unlinked templates but routes only eligible linked marketing templates', async () => {
+  const wishesConfig = { ...config, template_name: 'wishes_template', purpose: 'campaign' };
+  const wishes = { ...template, name: 'wishes_template' };
+  const handoffConfig = { ...config, template_name: 'handoff', purpose: 'human_handoff_staff' };
+  const h = harness({ configs: [config, wishesConfig, handoffConfig], templates: [
+    template, wishes, {...template, name:'handoff', category:'UTILITY'},
+    {...template, name:'pending', status:'PENDING'}, {...template, name:'unmapped'},
+  ] });
+  const registry = await h.inventory.loadCampaignPromotions('tenant-a');
+  assert.deepEqual(Array.from(registry.promotions, item => item.name), ['wishes_template','xposure_studio_promotion']);
+  assert.equal(registry.inventory.find(item => item.name === 'pending').status, 'PENDING');
+  assert.equal(registry.inventory.find(item => item.name === 'unmapped').mapping_status, 'unlinked');
+  assert.equal(registry.inventory.find(item => item.name === 'handoff').purpose, 'human_handoff_staff');
+  assert.equal((await h.request({ campaignTemplate: {name:'handoff',language:'en'} })).status,409);
+  assert.equal((await h.request({ campaignTemplate: {name:'unmapped',language:'en'} })).status,409);
+  const selected = {name:'wishes_template',language:'en'};
+  const review = await h.request({campaignTemplate:selected});
+  assert.equal(review.status,200);
+  assert.equal((await h.send(review.body,{campaignTemplate:{name:config.template_name,language:'en'}})).status,409);
+  assert.equal((await h.send(review.body,{campaignTemplate:selected})).body.accepted,1);
+  assert.equal(h.state.sent[0].templatePurpose,'campaign');
+  assert.equal(h.state.sent[0].requestedTemplateName,'wishes_template');
+  assert.equal(h.state.sent[0].organizationId,'tenant-a');
+});
+test('registry rejects ambiguous mapping, duplicate provider variants and forged selection', async () => {
+  for (const options of [{configs:[config,config]}, {templates:[template,template]}]) {
+    const h = harness(options);
+    assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'en'}})).status,409);
+    assert.equal(h.state.sent.length,0);
+  }
+  const h = harness();
+  assert.equal((await h.request({campaignTemplate:{name:'../other',language:'en'}})).status,400);
+  assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'fr'}})).status,409);
+});
+
+test('template discovery suggests purpose without authorizing unlinked templates', async () => {
+  const h = harness({configs:[config,{...config,template_name:'missing_mapping',purpose:'campaign'}],templates:[template,
+    {...template,name:'birthday_wishes'}, {...template,name:'appointment_reminder',category:'UTILITY'},
+    {...template,name:'payment_reminder',category:'MARKETING'}, {...template,name:'pending_offer',status:'PENDING'}]});
+  const {inventory,templates,missingMappings}=await h.inventory.loadLinkedCampaignTemplates('tenant-a',true,null);
+  assert.equal(inventory.find(t=>t.name==='birthday_wishes').suggested_purpose,'campaign');
+  assert.equal(inventory.find(t=>t.name==='appointment_reminder').suggested_purpose,'appointment_reminder');
+  assert.equal(inventory.find(t=>t.name==='payment_reminder').suggested_purpose,null);
+  assert.equal(inventory.find(t=>t.name==='pending_offer').suggested_purpose,null);
+  assert.equal(templates.length,1);
+  assert.equal(missingMappings[0].name,'missing_mapping');
+});
+
+test('new organization inherits reviewed campaign delivery without Xposure slug', async () => {
+ for (const industry of ['beauty-spa','real-estate','retail','general','photography-studio']) {
+  const h=harness({slug:'new-business-'+industry,industry});
+  const selection={name:config.template_name,language:'en'};
+  const review=await h.request({campaignTemplate:selection});
+  assert.equal(review.status,200);
+  assert.equal((await h.send(review.body,{campaignTemplate:selection})).body.accepted,1);
+  assert.equal(h.state.sent[0].organizationId,'tenant-a');
+  assert.equal(h.state.sent[0].templatePurpose,'campaign_promotion');
+  assert.equal(h.state.audit[0].organization_id,'tenant-a');
+ }
+});
+test('new tenant cannot bypass consent by calling the legacy bulk endpoint',async()=>{
+ const h=harness({slug:'new-business',industry:'retail'});
+ assert.equal((await h.request({whatsappConsentConfirmed:false})).status,400);
+ assert.equal((await h.request({action:undefined,customerIds:[contactId],templateName:config.template_name,templatePurpose:'campaign'})).status,400);
+ assert.equal(h.state.sent.length,0);
+ const inactive=harness({slug:'new-business',inactive:true});
+ assert.equal((await inactive.request()).status,409);
+});
+
+test('fresh tenant inventory returns the same marketing contract without preconfigured mappings',async()=>{
+ const h=harness({slug:'new-salon',industry:'beauty-spa',configs:[]});
+ const result=await h.inventoryRoute.GET();
+ assert.equal(result.status,200);
+ assert.equal(result.body.promotions.length,0);
+ assert.equal(result.body.inventory[0].mapping_status,'unlinked');
+ assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'en'}})).status,409);
+ assert.equal(h.state.sent.length,0);
+});
+test('generic inventory uses only current tenant and respects inactive and denied sessions',async()=>{
+ const h=harness({slug:'fresh-retail',industry:'retail'});
+ const result=await h.inventoryRoute.GET();
+ assert.equal(result.status,200);assert.equal(result.body.promotions.length,1);
+ assert.ok(h.state.filters.filter(([,key])=>key==='organization_id').every(([, ,value])=>value==='tenant-a'));
+ for(const [options,status] of [[{anonymous:true},401],[{denied:true},403],[{inactive:true},409]]) {
+  const rejected=harness({slug:'fresh-retail',...options});assert.equal((await rejected.inventoryRoute.GET()).status,status);
+  assert.equal(rejected.state.inventory,0);
+ }
+});
+
+test('a new real estate tenant can review and send both actual approved starter definitions',async()=>{
+ const starters=source('lib/campaign-starter-templates.ts').campaignStarters(false);
+ const configs=starters.map(item=>({template_name:item.name,language_code:item.language,purpose:item.purpose,variable_keys:[...item.variable_keys]}));
+ const templates=starters.map(item=>({name:item.name,language:item.language,status:'APPROVED',category:item.category,components:[{type:'BODY',text:item.body}]}));
+ for(const starter of starters){
+  const h=harness({slug:'new-real-estate-business',industry:'real-estate',configs,templates});
+  const selection={name:starter.name,language:starter.language};
+  const copy='New estate plots are available for inspection this Saturday';
+  const review=await h.request({campaignTemplate:selection,message:copy});
+  assert.equal(review.status,200);
+  const sent=await h.send(review.body,{campaignTemplate:selection,message:copy});
+  assert.equal(sent.body.accepted,1);
+  assert.equal(h.state.sent[0].organizationId,'tenant-a');
+  assert.equal(h.state.sent[0].requestedTemplateName,starter.name);
+  assert.equal(h.state.sent[0].templatePurpose,starter.purpose);
+  assert.equal(h.state.sent[0].variables[starter.variable_keys[1]],copy);
+ }
 });

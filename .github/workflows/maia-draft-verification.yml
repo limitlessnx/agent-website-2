@@ -21,6 +21,8 @@ jobs:
       - run: npm ci
       - run: npm run lint -- app/api/admin/xposure/bookings/route.ts app/api/admin/xposure/payment-settings/route.ts app/dashboard/bookings/page.tsx components/admin/XposureBookingsPanel.tsx lib/human-operations.ts tests/xposure-booking-payment-lifecycle.test.mjs tests/maia-handoff-system.test.mjs
       - run: node --test tests/supabase-migration-ledger.test.mjs
+      - name: Campaign routing and template inventory regressions
+        run: npm run test:campaign-ai && npm run test:xposure-campaigns && node --test tests/whatsapp-credentials.test.cjs tests/whatsapp-template-sync.test.cjs tests/campaign-starter-templates.test.cjs
       - name: Hotel communication and tenant-isolation regressions
         run: npm run test:hotel
       - name: Hotel booking and offline-verification regressions

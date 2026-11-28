@@ -30,6 +30,7 @@ export function campaignApprovalArguments(input: {
   message: string;
   messageParts: string[];
   templateName?: string | null;
+  templateLanguage?: string | null;
   mediaUrl?: string | null;
   audienceMode: string;
   selectedLeadIds?: string[];
@@ -70,6 +71,7 @@ export function campaignApprovalArguments(input: {
     message: input.message,
     messageParts: [...input.messageParts],
     templateName: input.templateName || null,
+    ...(input.templateLanguage ? { templateLanguage: input.templateLanguage } : {}),
     mediaUrl: input.mediaUrl || null,
     audienceMode: input.audienceMode,
     selectedLeadIds: [...(input.selectedLeadIds || [])].map(String).sort(),

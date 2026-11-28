@@ -6,6 +6,7 @@ function fixture(provider, providerStatus='approved') {
  const admin={from:()=>({select(){return this},eq(){return this},in(){return this},limit(){return this},maybeSingle:async()=>({data:{id:'integration',configuration:{provider_family:provider}}})}),rpc:async()=>({data:provider==='twilio'?{provider_family:'twilio',twilio_account_sid:'test',twilio_auth_token:'test',twilio_whatsapp_sender:'+123'}:{phone_number_id:'test',access_token:'test'}})};
  const api=load(path.resolve(__dirname,'../lib/whatsapp-delivery.ts'),{
   '@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/whatsapp-message-normalizer':normalizer,
+  '@/lib/whatsapp-credentials':load(path.resolve(__dirname,'../lib/whatsapp-credentials.ts')),
   '@/lib/twilio-whatsapp':{sendTwilioWhatsAppMessage:async input=>{calls.push(input);return {sid:'twilio-id'}}},
  },'',{process:{env:{SUPABASE_URL:'https://db.test',SUPABASE_SERVICE_ROLE_KEY:'test'}},fetch:async(url,init)=>{
   const response=body=>({ok:true,status:200,json:async()=>body});

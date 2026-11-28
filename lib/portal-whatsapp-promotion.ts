@@ -16,6 +16,7 @@ export type PromotionRequest = {
   campaignId?: unknown;
   writerValues?: unknown;
   useAiFormatting?: unknown;
+  campaignTemplate?: unknown;
 };
 
 const error = (message: string, status: number) => ({ body: { error: message }, status });
@@ -39,9 +40,18 @@ export async function runPortalPromotion(
   const campaignId = review ? randomUUID() : body.campaignId;
   if (typeof campaignId !== "string" || !uuid.test(campaignId)) return error("Review the campaign before sending.", 400);
 
+  let selection: { name: string; language: string } | undefined;
+  if (body.campaignTemplate !== undefined) {
+    const candidate = body.campaignTemplate as { name?: unknown; language?: unknown } | null;
+    if (!candidate || typeof candidate.name !== "string" || !/^[a-z0-9_]{1,512}$/.test(candidate.name)
+        || typeof candidate.language !== "string" || !/^[a-z]{2,3}(?:_[A-Z]{2})?$/.test(candidate.language)) {
+      return error("Select an approved marketing template and language.", 400);
+    }
+    selection = { name: candidate.name, language: candidate.language };
+  }
   let template;
   try {
-    template = await loadAssignedPromotion(organizationId);
+    template = await loadAssignedPromotion(organizationId, selection);
   } catch (reason) {
     return reason instanceof CampaignTemplateError ? error(reason.message, reason.status) : error("Unable to verify the WhatsApp promotion. Try again later.", 503);
   }
@@ -138,7 +148,7 @@ export async function runPortalPromotion(
     resource_id: campaignId,
     metadata: {
       confirmed: true, confirmation_version: 1, recipient_contact_ids: contactIds,
-      template_name: template.name, template_language: template.language, review_fingerprint: reviewFingerprint,
+      template_name: template.name, template_language: template.language, template_purpose: template.purpose, review_fingerprint: reviewFingerprint,
     },
   });
   if (audit.error?.code === "23505") return error("This campaign was already submitted. Check delivery records before sending again.", 409);
@@ -155,7 +165,7 @@ export async function runPortalPromotion(
     try {
       const delivery = await sendWhatsAppMessage({
         organizationId, to: phone, deliveryMode: "template",
-        templatePurpose: "campaign_promotion", requestedTemplateName: template.name,
+        templatePurpose: template.purpose, requestedTemplateName: template.name,
         requestedTemplateLanguage: template.language, expectedMetaVariableKeys: template.variable_keys, variables,
       });
       results.push({ customerId: id, status: delivery?.providerMessageId ? "accepted" : "unknown" });

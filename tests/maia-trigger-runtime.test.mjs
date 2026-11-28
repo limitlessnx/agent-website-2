@@ -117,11 +117,14 @@ test("Phase 4 sends WhatsApp replies from Trigger instead of n8n", () => {
   assert.doesNotMatch(limitlessRuntime, /N8N|n8n/);
 });
 
-test("WhatsApp delivery resolves credentials per tenant and scopes property media", () => {
-  assert.match(whatsappDelivery, /get_organization_integration_credentials/);
+test("WhatsApp delivery resolves credentials per tenant and scopes property media", async () => {
+  const credentialResolver = await readFile(new URL("../lib/whatsapp-credentials.ts", import.meta.url), "utf8");
+  assert.match(whatsappDelivery, /resolveTenantWhatsAppCredentials/);
+  assert.match(credentialResolver, /get_organization_integration_credentials/);
+  assert.match(credentialResolver, /p_organization_id: organizationId/);
   assert.match(whatsappDelivery, /organizationId/);
   assert.match(whatsappDelivery, /properties\?organization_id=eq/);
-  assert.match(whatsappDelivery, /tenant_vault/);
+  assert.match(credentialResolver, /tenant_vault/);
 });
 
 

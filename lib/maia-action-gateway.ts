@@ -22,7 +22,7 @@ type WorkflowNode = { id?: string; name: string; type: string; typeVersion?: num
 type WorkflowConnection = { main?: Array<Array<{ node: string; type: string; index: number }>>; [key: string]: unknown };
 type CampaignSummary = { success?: boolean; action?: string; status?: string; attempted?: number; submitted?: number; accepted_by_whatsapp_api?: number; immediate_failed?: number; skipped?: number; pending_delivery_confirmation?: number; free_form_sent?: number; template_sent?: number; template_name?: string; failed_recipients?: Array<Record<string, unknown>>; accepted_recipients?: Array<Record<string, unknown>>; message?: string };
 
-export type MaiaCampaignAction = { commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; propertyLocation?: string; propertyPrice?: string; sellingPoint?: string; mediaUrl?: string; createdBy?: string };
+export type MaiaCampaignAction = { organizationId?: string; templateLanguage?: string; commandId: string; campaignType?: string; templateName?: string; topic: string; message: string; recipients: ProgressiveLead[]; propertyTitle?: string; propertyLocation?: string; propertyPrice?: string; sellingPoint?: string; mediaUrl?: string; createdBy?: string };
 export type MaiaWhatsAppFollowUpAction = {
   commandId: string;
   recipient: string;
@@ -106,6 +106,8 @@ async function runMaiaActionPayload(commandId: string, payload: Record<string, u
 }
 
 export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
+  const organizationId = command.organizationId || "b15f21b4-5697-4d21-9421-8a34eae3476d";
+  if (organizationId !== "b15f21b4-5697-4d21-9421-8a34eae3476d") throw new Error("The real estate campaign route is not available for this organization.");
   if (!command.message.trim()) throw new Error("A campaign message is required.");
   if (!command.recipients.length) throw new Error("The campaign has no recipients.");
 
@@ -128,6 +130,7 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
   const acceptedRecipients: Array<Record<string, unknown>> = [];
   const failedRecipients: Array<Record<string, unknown>> = [];
   let templateSent = 0;
+  let unknown = 0;
 
   // Sequential delivery avoids an uncontrolled burst and keeps one provider result per recipient.
   const uniqueRecipients = [...new Map(command.recipients.map((lead) => [normalizeLeadPhone(String(lead.phone || "")), lead])).values()]
@@ -165,16 +168,22 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
 
     try {
       const result = await sendWhatsAppMessage({
-        organizationId: "b15f21b4-5697-4d21-9421-8a34eae3476d",
+        organizationId,
         to: phone,
         deliveryMode: "template",
         forceTemplate: true,
         templatePurpose,
         requestedTemplateName: templateName,
+        ...(command.templateLanguage ? { requestedTemplateLanguage: command.templateLanguage } : {}),
         variables,
         strictTemplateContract: { approvedVariableOrder: variableKeys },
         ...(isEstateBrief && command.mediaUrl ? { templateHeaderImageUrl: command.mediaUrl } : {}),
       });
+      if (!result.providerMessageId) {
+        unknown += 1;
+        failedRecipients.push({ leadId: lead.id, phone, status: "unknown", error: "Provider receipt missing. Reconcile before retrying." });
+        continue;
+      }
       templateSent += 1;
       acceptedRecipients.push({
         leadId: lead.id,
@@ -195,7 +204,7 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
   }
 
   const accepted = acceptedRecipients.length;
-  const failed = failedRecipients.length;
+  const failed = failedRecipients.length - unknown;
   return {
     route: { provider: "whatsapp_delivery_gateway", verified: true },
     executionId: command.commandId,
@@ -207,23 +216,24 @@ export async function dispatchMaiaCampaignAction(command: MaiaCampaignAction) {
       pending_delivery_confirmation: accepted,
       free_form_sent: 0,
       template_sent: templateSent,
-      status: accepted > 0 ? "submitted" : "failed",
+      status: accepted > 0 ? "submitted" : unknown > 0 ? "unknown" : "failed",
       accepted_recipients: acceptedRecipients,
       failed_recipients: failedRecipients,
     },
     attempted: uniqueRecipients.length,
     accepted,
     failed,
+    unknown,
     skipped: 0,
     pendingDelivery: accepted,
     freeFormSent: 0,
     templateSent,
     acceptedRecipients,
     failedRecipients,
-    status: accepted > 0 ? "submitted" : "failed",
+    status: accepted > 0 ? "submitted" : unknown > 0 ? "unknown" : "failed",
     message: accepted > 0
       ? `${accepted} template message(s) accepted by WhatsApp; delivery receipts are pending.`
-      : "WhatsApp did not accept any campaign messages.",
+      : unknown > 0 ? "Provider submission is unconfirmed. Reconcile before retrying." : "WhatsApp did not accept any campaign messages.",
   };
 }
 

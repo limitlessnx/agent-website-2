@@ -10,7 +10,7 @@ export default function CampaignAiWriter({ endpoint, context, values, labels = {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [suggestion, setSuggestion] = useState<{ source: string; variables: Record<string, string> } | null>(null);
+  const [suggestion, setSuggestion] = useState<{ source: string; variables: Record<string, string>; warning?: string } | null>(null);
   const inline = message !== undefined;
   const hasText = Object.values(values).some(value => value.trim());
   const brief = inline ? (hasText ? "" : message) : separateBrief;
@@ -34,9 +34,9 @@ export default function CampaignAiWriter({ endpoint, context, values, labels = {
       if (!payload.variables || typeof payload.variables !== "object") throw new Error("The suggestion is incomplete. Your text is unchanged.");
       if (inline) {
         onApply(payload.variables);
-        setNotice("Message fitted to the template. Review the preview before sending.");
+        setNotice(payload.warning || "Message fitted to the template. Review the preview before sending.");
       } else {
-        setSuggestion({ source, variables: payload.variables });
+        setSuggestion({ source, variables: payload.variables, warning: typeof payload.warning === "string" ? payload.warning : undefined });
       }
     } catch (reason) { if (!abort.signal.aborted) setError(reason instanceof Error ? reason.message : "AI writing is unavailable. Your text is unchanged."); }
     finally { if (!abort.signal.aborted) setBusy(false); controller.current = null; }
@@ -56,8 +56,9 @@ export default function CampaignAiWriter({ endpoint, context, values, labels = {
     </>}
     <p className={styles.hint}>{inline ? "AI formats your message into the approved template. AI credits apply." : "AI fits your write-up into the editable template fields. Check facts and offers before applying. AI credits apply."}</p>
     {visible && <div className={styles.suggestion}><strong>Suggested write-up</strong>
+      {visible.warning && <p role="status" className={styles.hint}>{visible.warning}</p>}
       {Object.entries(visible.variables).map(([key, value]) => <div key={key}><span>{labels[key] || key.replaceAll("_", " ")}</span><p>{value}</p></div>)}
-      <div className={styles.actions}><button type="button" disabled={disabled} onClick={() => { onApply(visible.variables); setSuggestion(null); setNotice("Suggestion applied. Review the message preview before sending."); }}>Apply suggestion</button><button type="button" onClick={() => setSuggestion(null)}>Discard suggestion</button></div>
+      <div className={styles.actions}><button type="button" disabled={disabled} onClick={() => { onApply(visible.variables); setSuggestion(null); setNotice(visible.warning || "Suggestion applied. Review the message preview before sending."); }}>Apply suggestion</button><button type="button" onClick={() => setSuggestion(null)}>Discard suggestion</button></div>
       <p className={styles.hint}>Your original text stays in the editor until you apply this suggestion. Nothing has been sent.</p>
     </div>}
     {busy && <p role="status" className={styles.hint}>Preparing a draft. Your current message is unchanged.</p>}

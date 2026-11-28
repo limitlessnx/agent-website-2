@@ -7,6 +7,7 @@ import { getRealEstateCampaignGroup, matchesRealEstateCampaignGroupRules } from 
 import { getProperties } from "@/lib/limitless-data";
 import { getCampaignAudienceLeads, normalizeLeadPhone, type ProgressiveLead } from "@/lib/lead-profile-service";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
+import { CampaignTemplateError, loadLinkedCampaignTemplates } from "@/lib/portal-campaign-templates";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
 import { buildPropertyCampaignContent, PropertyCampaignMessageError } from "@/lib/property-campaign-message";
 import { getMetaCooldownPhones } from "@/lib/whatsapp-status-log";
@@ -123,6 +124,15 @@ export async function POST(request: Request) {
     const cooldownSkipped = matchedRecipients.length - recipients.length;
     if (!recipients.length) return noStore({ error: cooldownSkipped ? "All matched leads are currently in WhatsApp cooldown after Meta delivery blocks. Wait before retrying or ask the contact to message Maia first." : "No campaign-eligible leads matched this audience.", skipped: cooldownSkipped, cooldownSkipped }, 400);
 
+    // Validate the exact tenant mapping against the current Meta inventory before
+    // creating an approval or claiming an outbound request.
+    const purpose = campaignType === "limitless_realty_reminder" ? "follow_up_outside_24h" : campaignType;
+    const { templates } = await loadLinkedCampaignTemplates(organizationId, true, [purpose]);
+    const matches = templates.filter(item => item.name === templateName && item.purpose === purpose
+      && (campaignType === "limitless_realty_reminder" ? ["MARKETING", "UTILITY"].includes(item.category) : item.category === "MARKETING"));
+    if (matches.length !== 1) return noStore({ ok: false, status: "template_unavailable", error: "No unique approved template is linked to this campaign purpose. Review the WhatsApp template mapping before sending." }, 409);
+    const templateLanguage = matches[0].language;
+
     const approvalArguments = campaignApprovalArguments({
       organizationId,
       requestId,
@@ -131,6 +141,7 @@ export async function POST(request: Request) {
       message,
       messageParts,
       templateName,
+      templateLanguage,
       mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || null,
       audienceMode: mode,
       selectedLeadIds: [...selectedIds],
@@ -145,7 +156,7 @@ export async function POST(request: Request) {
       // Preview is read-only: it must not create a durable send approval.
       // The authenticated Send request recomputes the exact payload and consumes
       // a one-time approval immediately before claiming the outbound campaign.
-      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length } }, 200);
+      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, templateLanguage, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length } }, 200);
     }
 
     if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBriefTemplateApproved()) return noStore({ ok: false, status: "template_pending_approval", error: "estate_brief_update remains blocked until its Meta-approved template contract is active." }, 409);
@@ -185,7 +196,7 @@ export async function POST(request: Request) {
     const dispatches: Array<Awaited<ReturnType<typeof dispatchMaiaCampaignAction>>> = [];
     try {
       for (let index = 0; index < messageParts.length; index += 1) {
-        dispatches.push(await dispatchMaiaCampaignAction({ commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`, campaignType, templateName, topic, message: messageParts[index], recipients, propertyTitle: estateBrief?.propertyName || propertyCampaign?.propertyName || selectedProperty?.title, propertyLocation: estateBrief?.location, propertyPrice: estateBrief?.price, sellingPoint: estateBrief?.sellingPoint, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || undefined, createdBy }));
+        dispatches.push(await dispatchMaiaCampaignAction({ organizationId, templateLanguage, commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`, campaignType, templateName, topic, message: messageParts[index], recipients, propertyTitle: estateBrief?.propertyName || propertyCampaign?.propertyName || selectedProperty?.title, propertyLocation: estateBrief?.location, propertyPrice: estateBrief?.price, sellingPoint: estateBrief?.sellingPoint, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || undefined, createdBy }));
       }
     } catch (dispatchError) {
       const detail = dispatchError instanceof Error ? dispatchError.message.slice(0, 1000) : "Provider execution returned an ambiguous failure.";
@@ -196,6 +207,7 @@ export async function POST(request: Request) {
     const attempted = recipients.length * dispatches.length;
     const accepted = dispatches.reduce((total, item) => total + Number(item.accepted || 0), 0);
     const failed = dispatches.reduce((total, item) => total + Number(item.failed || 0), 0);
+    const unknown = dispatches.reduce((total, item) => total + Number(item.unknown || 0), 0);
     const skipped = cooldownSkipped * dispatches.length + dispatches.reduce((total, item) => total + Number(item.skipped || 0), 0);
     const pendingDelivery = dispatches.reduce((total, item) => total + Number(item.pendingDelivery || 0), 0);
     const delivered = dispatches.reduce((total, item) => total + Number((item.summary as Record<string, unknown>).delivered || 0), 0);
@@ -203,10 +215,10 @@ export async function POST(request: Request) {
     const freeFormSent = dispatches.reduce((total, item) => total + Number(item.freeFormSent || 0), 0);
     const templateSent = dispatches.reduce((total, item) => total + Number(item.templateSent || 0), 0);
     const failedRecipients = dispatches.flatMap((item) => item.failedRecipients || []);
-    const deliveryStatus = delivered > 0 && (pendingDelivery > 0 || failed > 0) ? "partial" : delivered > 0 ? (read >= delivered ? "read" : "delivered") : accepted > 0 && failed > 0 ? "partial" : accepted > 0 ? "accepted" : failed > 0 ? "failed" : "unknown";
-    const status = accepted > 0 ? "executed" : failed > 0 ? "failed" : "unknown";
+    const deliveryStatus = delivered > 0 && (pendingDelivery > 0 || failed > 0 || unknown > 0) ? "partial" : delivered > 0 ? (read >= delivered ? "read" : "delivered") : accepted > 0 && (failed > 0 || unknown > 0) ? "partial" : accepted > 0 ? "accepted" : unknown > 0 ? "unknown" : failed > 0 ? "failed" : "unknown";
+    const status = accepted > 0 ? "executed" : unknown > 0 ? "unknown" : failed > 0 ? "failed" : "unknown";
     const allAcceptedRecipients = dispatches.flatMap((item) => Array.isArray(item.acceptedRecipients) ? item.acceptedRecipients : []).filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"));
-    const payload = { ok: accepted > 0, campaignId, campaignType, campaignTypeLabel: campaignLabel(campaignType), templateName, requestId, topic, attempted, recipientCount: recipients.length, sent: accepted, accepted, delivered, read, failed, skipped, pendingDelivery, freeFormSent, templateSent, cooldownSkipped, messageParts: messageParts.length, originalCharacterCount: message.length, status, campaignStatus: status, approvalStatus: "consumed", deliveryStatus, providerStatus: dispatches.map((item) => item.status), message: messageParts.length > 1 ? `Campaign submitted in ${messageParts.length} WhatsApp message parts.` : dispatches[0]?.message, acceptedRecipients: allAcceptedRecipients, failedRecipients, executionId: dispatches.map((item) => item.executionId).join(","), workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))], duplicatePrevented: false, propertyContext: estateBrief?.memory || propertyCampaign?.memory || null, exactPropertyReply: propertyCampaign?.replyInstruction || null, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || null };
+    const payload = { ok: accepted > 0, campaignId, campaignType, campaignTypeLabel: campaignLabel(campaignType), templateName, templateLanguage, requestId, topic, attempted, recipientCount: recipients.length, sent: accepted, accepted, delivered, read, failed, unknown, skipped, pendingDelivery, freeFormSent, templateSent, cooldownSkipped, messageParts: messageParts.length, originalCharacterCount: message.length, status, campaignStatus: status, approvalStatus: "consumed", deliveryStatus, providerStatus: dispatches.map((item) => item.status), message: messageParts.length > 1 ? `Campaign submitted in ${messageParts.length} WhatsApp message parts.` : dispatches[0]?.message, acceptedRecipients: allAcceptedRecipients, failedRecipients, executionId: dispatches.map((item) => item.executionId).join(","), workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))], duplicatePrevented: false, propertyContext: estateBrief?.memory || propertyCampaign?.memory || null, exactPropertyReply: propertyCampaign?.replyInstruction || null, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || null };
 
     for (let index = 0; index < dispatches.length; index += 1) {
       const item = dispatches[index];
@@ -223,12 +235,12 @@ export async function POST(request: Request) {
       }
     }
 
-    const finalLifecycle = accepted > 0 ? "executed" : failed > 0 ? "failed" : "unknown";
+    const finalLifecycle = accepted > 0 ? "executed" : unknown > 0 ? "unknown" : failed > 0 ? "failed" : "unknown";
     await updateOutboundTracking(trackingAdmin, organizationId, parentIdempotencyKey, { lifecycle_status: finalLifecycle, delivery_status: deliveryStatus, metadata: { requestId, campaignType, templateName, topic, attempted, response: payload } });
     await saveCampaignDeliveryReport({ organization_id: organizationId, id: campaignId, campaign_type: campaignType, template_name: templateName, campaign_topic: topic, command_id: campaignId, execution_id: payload.executionId, status, attempted, accepted, delivered, read, failed, skipped, pending_delivery: pendingDelivery, accepted_recipients: allAcceptedRecipients, failed_recipients: failedRecipients, workflow_path: payload.workflowPath, created_by: createdBy, created_at: new Date().toISOString() }).catch((error) => console.error("Campaign delivery ledger save failed.", error));
     return noStore(payload);
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
-    return noStore({ error: error instanceof Error ? error.message : "Campaign dispatch failed.", reason: error instanceof Error ? error.message : "Campaign dispatch failed." }, error instanceof PropertyCampaignMessageError || error instanceof EstateBriefCampaignError ? 400 : 500);
+    return noStore({ error: error instanceof Error ? error.message : "Campaign dispatch failed.", reason: error instanceof Error ? error.message : "Campaign dispatch failed." }, error instanceof CampaignTemplateError ? error.status : error instanceof PropertyCampaignMessageError || error instanceof EstateBriefCampaignError ? 400 : 500);
   }
 }

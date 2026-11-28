@@ -82,7 +82,7 @@ export default function CampaignContactImport({ onImported }: { onImported: (con
       <button type="button" className={styles.secondary} onClick={() => file.current?.click()} disabled={busy}>Import .vcf file</button>
       <input ref={file} type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard" aria-label="Choose a vCard contact file" className={styles.hidden} onChange={event => void readFile(event.target.files?.[0])} />
     </div>
-    <p className={styles.hint}>{supported ? "Only the contacts you choose are shared with Xposure." : "Phone picker unavailable in this browser. On iPhone, share contacts from the Contacts app, save the .vcf file, then import it here."}</p>
+    <p className={styles.hint}>{supported ? "Only the contacts you choose are shared with this organization." : "Phone picker unavailable in this browser. On iPhone, share contacts from the Contacts app, save the .vcf file, then import it here."}</p>
     {drafts.length > 0 && <div className={styles.review}>
       <div className={styles.heading}><h3>Review contacts</h3><span>{selected.length} selected</span></div>
       <p className={styles.hint}>Check each country code. Saving contacts does not send a campaign.</p>
@@ -91,7 +91,7 @@ export default function CampaignContactImport({ onImported }: { onImported: (con
         <label><span className={styles.hidden}>Name for contact {index + 1}</span><input value={contact.name} disabled={busy} onChange={event => { setConsent(false); setDrafts(current => current.map((item, i) => i === index ? { ...item, name: event.target.value } : item)); }} /></label>
         <label><span className={styles.hidden}>Phone for contact {index + 1}</span><input type="tel" value={contact.phone} disabled={busy} onChange={event => { setConsent(false); setDrafts(current => current.map((item, i) => i === index ? { ...item, phone: event.target.value } : item)); }} /></label>
       </div>)}</div>
-      <label className={styles.consent}><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /><span>I confirm every selected contact has agreed to receive WhatsApp marketing messages from Xposure. Without this confirmation, contacts are saved but excluded from campaigns.</span></label>
+      <label className={styles.consent}><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /><span>I confirm every selected contact has agreed to receive WhatsApp marketing messages from this business. Without this confirmation, contacts are saved but excluded from campaigns.</span></label>
       <button type="button" className={styles.primary} onClick={() => void save()} disabled={busy || !selected.length}>{busy ? "Saving contacts…" : `Save ${selected.length} contact${selected.length === 1 ? "" : "s"}`}</button>
     </div>}
     {error && <p className={styles.error} role="alert">{error}</p>}{notice && <p className={styles.success} role="status">{notice}</p>}
