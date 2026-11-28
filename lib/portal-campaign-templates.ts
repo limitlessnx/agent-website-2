@@ -12,6 +12,29 @@ function placeholders(template: MetaTemplate) {
   return [...found].filter(Number.isInteger).sort((a, b) => a - b);
 }
 
+/** Suggestions are advisory only. Existing explicit mappings always take precedence. */
+export function suggestTemplatePurpose(name: string, category: string): string | null {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  if (category === "AUTHENTICATION") return "authentication";
+  if (category === "MARKETING") {
+    if (/(^|_)(follow_?up|follow_ip|reminder|handoff|handover|hand_over|appointment|installment|payment|booking_confirmation|booking_cancellation)(_|$)/.test(normalized)) return null;
+    if (/(^|_)(estate_brief_update)(_|$)/.test(normalized)) return "estate_brief_update";
+    if (/(^|_)(market_update|realty_update)(_|$)/.test(normalized)) return "limitless_realty_update";
+    if (/(^|_)(promotion|promo|offer|offers|discount)(_|$)/.test(normalized)) return "campaign_promotion";
+    if (/(^|_)(wishes|birthday|greeting|relationship|campaign)(_|$)/.test(normalized)) return "campaign";
+    return null;
+  }
+  if (category !== "UTILITY") return null;
+  const candidates: string[] = [];
+  if (/(^|_)(installment|instalment|payment_reminder)(_|$)/.test(normalized)) candidates.push("installment_payment_reminder");
+  if (/(^|_)(appointment_reminder)(_|$)/.test(normalized)) candidates.push("appointment_reminder");
+  if (/(^|_)(booking_confirmation|booking_confirmed)(_|$)/.test(normalized)) candidates.push("booking_confirmation");
+  if (/(^|_)(booking_cancellation|booking_cancelled)(_|$)/.test(normalized)) candidates.push("booking_cancellation");
+  if (/(^|_)(follow_?up|follow_ip)(_|$)/.test(normalized)) candidates.push("customer_follow_up");
+  if (/(^|_)(handoff|handover|hand_over)(_|$)/.test(normalized)) candidates.push("human_handoff_staff");
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes: string[] | null = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"]) {
   const admin = createAdminClient();
   const query = admin.from("whatsapp_template_configs")
@@ -82,6 +105,7 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
       language: String(template.language), category: String(template.category || ""),
       purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[],
       mapping_status: matches.length === 1 ? "linked" : matches.length > 1 ? "ambiguous" : "unlinked",
+      suggested_purpose: matches.length === 0 && template.status === "APPROVED" ? suggestTemplatePurpose(String(template.name), String(template.category || "")) : null,
       body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"),
       placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [],
     };
@@ -89,7 +113,9 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
   // Duplicate provider records must not be eligible for routing.
   const templates = inventory.filter(item => item.status === "APPROVED" && (!linkedOnly || item.mapping_status === "linked")
     && inventory.filter(other => other.name === item.name && other.language === item.language).length === 1);
-  return { ok: true, templates, inventory };
+  const missingMappings = (linked || []).filter(item => !inventory.some(template => template.name === item.template_name && template.language === item.language_code))
+    .map(item => ({ name: item.template_name, language: item.language_code, purpose: item.purpose }));
+  return { ok: true, templates, inventory, missingMappings };
 
 }
 
