@@ -141,6 +141,7 @@ export async function POST(request: Request) {
       message,
       messageParts,
       templateName,
+      templateLanguage,
       mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || null,
       audienceMode: mode,
       selectedLeadIds: [...selectedIds],
@@ -206,6 +207,7 @@ export async function POST(request: Request) {
     const attempted = recipients.length * dispatches.length;
     const accepted = dispatches.reduce((total, item) => total + Number(item.accepted || 0), 0);
     const failed = dispatches.reduce((total, item) => total + Number(item.failed || 0), 0);
+    const unknown = dispatches.reduce((total, item) => total + Number(item.unknown || 0), 0);
     const skipped = cooldownSkipped * dispatches.length + dispatches.reduce((total, item) => total + Number(item.skipped || 0), 0);
     const pendingDelivery = dispatches.reduce((total, item) => total + Number(item.pendingDelivery || 0), 0);
     const delivered = dispatches.reduce((total, item) => total + Number((item.summary as Record<string, unknown>).delivered || 0), 0);
@@ -213,10 +215,10 @@ export async function POST(request: Request) {
     const freeFormSent = dispatches.reduce((total, item) => total + Number(item.freeFormSent || 0), 0);
     const templateSent = dispatches.reduce((total, item) => total + Number(item.templateSent || 0), 0);
     const failedRecipients = dispatches.flatMap((item) => item.failedRecipients || []);
-    const deliveryStatus = delivered > 0 && (pendingDelivery > 0 || failed > 0) ? "partial" : delivered > 0 ? (read >= delivered ? "read" : "delivered") : accepted > 0 && failed > 0 ? "partial" : accepted > 0 ? "accepted" : failed > 0 ? "failed" : "unknown";
-    const status = accepted > 0 ? "executed" : failed > 0 ? "failed" : "unknown";
+    const deliveryStatus = delivered > 0 && (pendingDelivery > 0 || failed > 0 || unknown > 0) ? "partial" : delivered > 0 ? (read >= delivered ? "read" : "delivered") : accepted > 0 && (failed > 0 || unknown > 0) ? "partial" : accepted > 0 ? "accepted" : unknown > 0 ? "unknown" : failed > 0 ? "failed" : "unknown";
+    const status = accepted > 0 ? "executed" : unknown > 0 ? "unknown" : failed > 0 ? "failed" : "unknown";
     const allAcceptedRecipients = dispatches.flatMap((item) => Array.isArray(item.acceptedRecipients) ? item.acceptedRecipients : []).filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"));
-    const payload = { ok: accepted > 0, campaignId, campaignType, campaignTypeLabel: campaignLabel(campaignType), templateName, requestId, topic, attempted, recipientCount: recipients.length, sent: accepted, accepted, delivered, read, failed, skipped, pendingDelivery, freeFormSent, templateSent, cooldownSkipped, messageParts: messageParts.length, originalCharacterCount: message.length, status, campaignStatus: status, approvalStatus: "consumed", deliveryStatus, providerStatus: dispatches.map((item) => item.status), message: messageParts.length > 1 ? `Campaign submitted in ${messageParts.length} WhatsApp message parts.` : dispatches[0]?.message, acceptedRecipients: allAcceptedRecipients, failedRecipients, executionId: dispatches.map((item) => item.executionId).join(","), workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))], duplicatePrevented: false, propertyContext: estateBrief?.memory || propertyCampaign?.memory || null, exactPropertyReply: propertyCampaign?.replyInstruction || null, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || null };
+    const payload = { ok: accepted > 0, campaignId, campaignType, campaignTypeLabel: campaignLabel(campaignType), templateName, templateLanguage, requestId, topic, attempted, recipientCount: recipients.length, sent: accepted, accepted, delivered, read, failed, unknown, skipped, pendingDelivery, freeFormSent, templateSent, cooldownSkipped, messageParts: messageParts.length, originalCharacterCount: message.length, status, campaignStatus: status, approvalStatus: "consumed", deliveryStatus, providerStatus: dispatches.map((item) => item.status), message: messageParts.length > 1 ? `Campaign submitted in ${messageParts.length} WhatsApp message parts.` : dispatches[0]?.message, acceptedRecipients: allAcceptedRecipients, failedRecipients, executionId: dispatches.map((item) => item.executionId).join(","), workflowPath: [...new Set(dispatches.flatMap((item) => item.path || []))], duplicatePrevented: false, propertyContext: estateBrief?.memory || propertyCampaign?.memory || null, exactPropertyReply: propertyCampaign?.replyInstruction || null, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || null };
 
     for (let index = 0; index < dispatches.length; index += 1) {
       const item = dispatches[index];
@@ -233,7 +235,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const finalLifecycle = accepted > 0 ? "executed" : failed > 0 ? "failed" : "unknown";
+    const finalLifecycle = accepted > 0 ? "executed" : unknown > 0 ? "unknown" : failed > 0 ? "failed" : "unknown";
     await updateOutboundTracking(trackingAdmin, organizationId, parentIdempotencyKey, { lifecycle_status: finalLifecycle, delivery_status: deliveryStatus, metadata: { requestId, campaignType, templateName, topic, attempted, response: payload } });
     await saveCampaignDeliveryReport({ organization_id: organizationId, id: campaignId, campaign_type: campaignType, template_name: templateName, campaign_topic: topic, command_id: campaignId, execution_id: payload.executionId, status, attempted, accepted, delivered, read, failed, skipped, pending_delivery: pendingDelivery, accepted_recipients: allAcceptedRecipients, failed_recipients: failedRecipients, workflow_path: payload.workflowPath, created_by: createdBy, created_at: new Date().toISOString() }).catch((error) => console.error("Campaign delivery ledger save failed.", error));
     return noStore(payload);
