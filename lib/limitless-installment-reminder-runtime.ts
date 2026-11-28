@@ -311,7 +311,8 @@ async function sendAttempt(args: {
       text: renderLocalTemplate(String(template.message_template || ""), values),
       deliveryMode: "template",
       templatePurpose: "installment_payment_reminder",
-      ...(isLimitless ? { requestedTemplateName: approved.template_name } : {}),
+      requestedTemplateName: approved.template_name,
+      requestedTemplateLanguage: approved.language_code,
       variables: values,
     }), value => ({accepted:value.providerMessageId ? true : "unknown",provider:String(value.provider||"whatsapp"),reference:value.providerMessageId}));
     const providerMessageId = String(delivery.providerMessageId || "").trim() || null;
