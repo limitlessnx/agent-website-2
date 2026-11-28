@@ -2,7 +2,7 @@ name: Gencouv email marketing verification
 on:
   pull_request:
     branches: [main]
-    paths: ['app/**/gencouv/**', 'components/gencouv/**', 'lib/gencouv-*.ts', 'supabase/migrations/*gencouv*', 'tests/gencouv*', 'tests/gencouv-marketing/**', 'playwright.gencouv.config.ts', '.github/workflows/gencouv-email-marketing.yml']
+    paths: ['app/**/gencouv/**', 'app/api/cron/gencouv-brevo-reconcile/**', 'src/trigger/gencouv-brevo-reconcile.ts', 'components/gencouv/**', 'lib/gencouv-*.ts', 'supabase/migrations/*gencouv*', 'tests/gencouv*', 'tests/gencouv-marketing/**', 'playwright.gencouv.config.ts', '.github/workflows/gencouv-email-marketing.yml']
   workflow_dispatch:
 jobs:
   verify:
@@ -16,9 +16,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
       - name: Gencouv runtime, database and regression tests
-        run: node --test tests/gencouv-marketing-runtime.test.cjs tests/gencouv-marketing-database.test.cjs tests/gencouv-custom-lead-categories.test.mjs tests/gencouv-dashboard-navigation.test.mjs
+        run: node --test tests/gencouv-marketing-runtime.test.cjs tests/gencouv-brevo-runtime.test.cjs tests/gencouv-marketing-database.test.cjs tests/gencouv-custom-lead-categories.test.mjs tests/gencouv-dashboard-navigation.test.mjs
       - name: Scoped lint
-        run: npx eslint app/api/dashboard/gencouv/{bulk-send,contact-import,outbound-settings,proposals,campaigns,email-history,campaign-audience}/route.ts lib/gencouv-*.ts components/gencouv/{GencouvBulkCampaigns,GencouvMarketingWorkspace,GencouvContactImport,GencouvEmailHistory,GencouvInbox,GencouvEmailControls,GencouvMessageTemplates}.tsx app/api/gencouv/{email-control,email-reply,inbox-action,email-sequences,resend-webhook,unsubscribe}/route.ts app/dashboard/gencouv/page.tsx
+        run: npx eslint src/trigger/gencouv-brevo-reconcile.ts app/api/cron/gencouv-brevo-reconcile/route.ts app/api/dashboard/gencouv/{bulk-send,contact-import,outbound-settings,proposals,campaigns,email-history,campaign-audience,brevo-readiness}/route.ts lib/gencouv-*.ts components/gencouv/{GencouvBulkCampaigns,GencouvMarketingWorkspace,GencouvContactImport,GencouvEmailHistory,GencouvInbox,GencouvEmailControls,GencouvMessageTemplates}.tsx app/api/gencouv/{email-control,email-reply,inbox-action,email-sequences,resend-webhook,brevo-webhook,unsubscribe}/route.ts app/dashboard/gencouv/page.tsx
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Browser checks with synthetic contacts and blocked external providers

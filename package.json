@@ -6,6 +6,7 @@
     "dev": "next dev",
     "prebuild": "tsc --noEmit",
     "build": "next build",
+    "postbuild": "node scripts/configure-gencouv-brevo-tracking.mjs",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "node -e \"const fs=require('fs');const path=require('path');const src='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';const dst=path.join(process.cwd(),'node_modules','next','dist','compiled','@vercel','og','Geist-Regular.ttf');if(fs.existsSync(src)){fs.mkdirSync(path.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);console.log('Prepared Flux Social ImageResponse runtime font.')}\"",

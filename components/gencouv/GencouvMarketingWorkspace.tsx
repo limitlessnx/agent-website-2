@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import GencouvEmailHistory from "@/components/gencouv/GencouvEmailHistory";
 import "./gencouv-marketing.css";
 import GencouvContactImport from "@/components/gencouv/GencouvContactImport";
-import GencouvBulkCampaigns from "@/components/gencouv/GencouvBulkCampaigns";
+import GencouvBulkCampaigns, { gencouvResendSenders } from "@/components/gencouv/GencouvBulkCampaigns";
 
 const templates = {
   blank: {subject:"",text:""},
@@ -45,7 +45,7 @@ export default function GencouvMarketingWorkspace(){
       <div className="admin-panel-header"><div><h2>Compose an individual proposal</h2><p>Send a manually reviewed, one-recipient Gencouv email via Resend. This does not start a marketing campaign.</p></div><span className="admin-status">Resend</span></div>
       <div style={{display:"grid",gap:14}}>
         <label className="admin-field">From<select disabled={sending||pending} value={from} onChange={e=>{setFrom(e.target.value);setConfirmed(false);requestId.current=null;}}>
-          <option value="info@gencouv.com">info@gencouv.com</option><option value="support@gencouv.com">support@gencouv.com</option><option value="onboarding@gencouv.com">onboarding@gencouv.com</option>
+          {gencouvResendSenders.map(sender => <option key={sender} value={sender}>{sender}</option>)}
         </select></label>
         <label className="admin-field">Proposal template<select disabled={sending||pending} value={starter} onChange={e=>{setStarter(e.target.value);const key=e.target.value as keyof typeof templates;setSubject(templates[key].subject);setMessage(templates[key].text);setConfirmed(false);requestId.current=null;}}>
           <option value="blank">Custom email</option><option value="copy">Copy trading</option><option value="portfolio">Portfolio management</option>
@@ -53,7 +53,7 @@ export default function GencouvMarketingWorkspace(){
         <label className="admin-field">Recipient<input disabled={sending||pending} type="email" value={to} maxLength={254} placeholder="client@example.com" onChange={e=>{setTo(e.target.value);setConfirmed(false);requestId.current=null;}}/></label>
         <label className="admin-field">Subject<input disabled={sending||pending} value={subject} maxLength={200} onChange={e=>{setSubject(e.target.value);setConfirmed(false);requestId.current=null;}}/></label>
         <label className="admin-field">Message<textarea aria-label="Individual email message" disabled={sending||pending} value={message} rows={10} maxLength={30000} onChange={e=>{setMessage(e.target.value);setConfirmed(false);requestId.current=null;}}/></label>
-        <GencouvMessageTemplates label="Saved proposal message template" content={{from,subject,text:message}} disabled={sending||pending} onUse={saved=>{setFrom(saved.from_email);setSubject(saved.subject);setMessage(saved.text_body);setTo("");setStarter("blank");setConfirmed(false);requestId.current=null;setFeedback("");setError("");}} />
+        <GencouvMessageTemplates label="Saved proposal message template" content={{from,subject,text:message}} disabled={sending||pending} onUse={saved=>{if(gencouvResendSenders.includes(saved.from_email))setFrom(saved.from_email);setSubject(saved.subject);setMessage(saved.text_body);setTo("");setStarter("blank");setConfirmed(false);requestId.current=null;setFeedback("");setError("");}} />
         <label style={{display:"flex",gap:8,alignItems:"start"}}><input disabled={sending||pending} type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> I have checked the recipient, replaced all placeholders, and reviewed this one-to-one email.</label>
         <button className="gencouv-primary" type="button" disabled={sending||(!pending&&(!confirmed||!to||!subject.trim()||!message.trim()))} onClick={()=>void send()}>{sending?"Checking submission…":pending?"Check saved email result":"Send individual email"}</button>
       </div>

@@ -1,0 +1,18 @@
+-- The maintained reservation migration is
+-- supabase/migrations/20261128070620_gencouv_brevo_reservations.sql.
+--
+-- The Gencouv campaign settings row (gencouv_long_form_copy_trading) uses
+-- metadata.brevo_approved_senders, an array of explicitly approved normalized
+-- Brevo email addresses. Discovery and activation are separate. The app
+-- checks account eligibility, active senders and authenticated, verified
+-- domains before reserving a send. The reservation RPC checks the same
+-- organization-scoped allowlist again inside the quota transaction.
+--
+-- For controlled verification, configure GENCOUV_BREVO_TEST_RECIPIENTS with
+-- up to two explicitly authorized inboxes, leave delivery verification false,
+-- and use one opted-in synthetic CRM recipient per reviewed batch. The
+-- test gate also requires the webhook secret and GENCOUV_BREVO_RECONCILE_SECRET.
+-- Configure the reconciliation secret in both Vercel and Trigger.dev production.
+-- Trigger.dev invokes the Vercel endpoint so the Brevo key stays in Vercel.
+-- Set GENCOUV_BREVO_DELIVERY_VERIFIED only after delivery and suppression
+-- evidence has been recorded for each approved domain.

@@ -32,7 +32,7 @@ test("Maia gateway dispatches reminder with the registered four-variable contrac
 });
 
 test("database migration aligns configured and approved reminder variable order", () => {
-  const migration = read("supabase/migrations/20261102130000_align_limitless_reminder_campaign_template_contract.sql");
+  const migration = read("supabase/migrations/20261102160236_20261102130000_align_limitless_reminder_campaign_template_contract.sql");
   assert.match(migration, /purpose = 'follow_up_outside_24h'/);
   assert.match(migration, /template_name = 'limitless_realty_reminder'/);
   assert.match(migration, /metadata->>'provider_status' = 'approved'/);
@@ -42,7 +42,7 @@ test("database migration aligns configured and approved reminder variable order"
 });
 
 test("forward-only production migration removes the fixed installment authorization requirement", () => {
-  const migration = read("supabase/migrations/20261102210000_limitless_flexible_installment_authorization.sql");
+  const migration = read("supabase/migrations/20261102160239_20261102210000_limitless_flexible_installment_authorization.sql");
   assert.match(migration, /authorize_limitless_installment_reminder_send/);
   assert.match(migration, /v_plan\.installment_amount is null/);
   assert.match(migration, /v_plan\.installment_amount > v_plan\.agreed_price/);
