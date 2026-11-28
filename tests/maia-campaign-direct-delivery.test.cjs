@@ -4,13 +4,13 @@ const path=require('node:path');
 const load=require('./helpers/load-typescript.cjs');
 const gatewayPath=path.resolve(__dirname,'../lib/maia-action-gateway.ts');
 
-function fixture(){
+function fixture(noReceipt=false){
  const calls=[];
  const api={findN8nWorkflowByName:async()=>null,getN8nBaseUrl:()=>"https://n8n.invalid",getN8nWorkflow:async()=>null,listN8nExecutions:async()=>[]};
  const gateway=load(gatewayPath,{
   '@/lib/n8n-api':api,
   '@/lib/lead-profile-service':{normalizeLeadPhone:(value)=>String(value||'').replace(/\D/g,'')},
-  '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async(input)=>{calls.push(input);return{ok:true,provider:'meta',providerMessageId:`wamid.${calls.length}`};}},
+  '@/lib/whatsapp-delivery':{sendWhatsAppMessage:async(input)=>{calls.push(input);return{ok:true,provider:'meta',providerMessageId:noReceipt?null:`wamid.${calls.length}`};}},
  });
  return{gateway,calls};
 }
@@ -66,4 +66,13 @@ test('unregistered campaign template types fail closed instead of falling back t
   topic:'Reminder',message:'A reminder',recipients:[{id:'lead-1',name:'Client',phone:'2348012345678'}],
  }),/no verified direct WhatsApp route/);
  assert.equal(calls.length,0);
+});
+
+test('real estate dispatcher refuses a different tenant and does not claim missing receipts',async()=>{
+ const command={commandId:'campaign-tenant',campaignType:'limitless_realty_relationship_campaign',templateName:'limitless_realty_relationship_campaign',topic:'Greeting',message:'Hello!\\n\\nReply for information.',recipients:[{id:'lead',name:'Ada',phone:'2348012345678'}]};
+ const {gateway,calls}=fixture(true);
+ await assert.rejects(gateway.dispatchMaiaCampaignAction({...command,organizationId:'another-tenant'}),/not available for this organization/);
+ assert.equal(calls.length,0);
+ const result=await gateway.dispatchMaiaCampaignAction({...command,organizationId:'b15f21b4-5697-4d21-9421-8a34eae3476d',templateLanguage:'en'});
+ assert.equal(calls[0].requestedTemplateLanguage,'en');assert.equal(result.accepted,0);assert.equal(result.unknown,1);assert.equal(result.status,'unknown');
 });
