@@ -43,3 +43,15 @@ Release checklist: verify a fresh tenant, no connected provider, missing templat
 approved linked template, opt-out, denied permissions, cross-tenant request, changed
 review fingerprint, and missing provider receipt using synthetic recipients. Do not
 send real customer campaigns during CI. Keep the existing plan and permission gates.
+
+## Saved starter template pack (v1)
+
+The reusable source of truth is `lib/campaign-starter-templates.ts`. The baseline includes:
+
+| Template | Category | Purpose | Variable order |
+|---|---|---|---|
+| fluxknight_business_update_v1 | MARKETING | campaign | customer_name, update_details |
+| fluxknight_business_offer_v1 | MARKETING | campaign_promotion | customer_name, offer_details |
+| fluxknight_guest_offer_v1 | MARKETING | hotel_campaign | customer_name, offer_details |
+
+An authorized integration manager can submit missing drafts from Campaigns, then use Check approval and link. The setup route uses the signed tenant session, exact saved name, language, category and body, and inserts an active mapping only after live approval. Existing active, paused and disabled mappings are preserved. A fresh provider approval is required for every WABA; a saved definition is not an approval. No customer send is triggered by setup. These defaults do not replace dedicated utility or authentication templates.
