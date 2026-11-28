@@ -289,3 +289,16 @@ test('registry rejects ambiguous mapping, duplicate provider variants and forged
   assert.equal((await h.request({campaignTemplate:{name:'../other',language:'en'}})).status,400);
   assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'fr'}})).status,409);
 });
+
+test('template discovery suggests purpose without authorizing unlinked templates', async () => {
+  const h = harness({configs:[config,{...config,template_name:'missing_mapping',purpose:'campaign'}],templates:[template,
+    {...template,name:'birthday_wishes'}, {...template,name:'appointment_reminder',category:'UTILITY'},
+    {...template,name:'payment_reminder',category:'MARKETING'}, {...template,name:'pending_offer',status:'PENDING'}]});
+  const {inventory,templates,missingMappings}=await h.inventory.loadLinkedCampaignTemplates('tenant-a',true,null);
+  assert.equal(inventory.find(t=>t.name==='birthday_wishes').suggested_purpose,'campaign');
+  assert.equal(inventory.find(t=>t.name==='appointment_reminder').suggested_purpose,'appointment_reminder');
+  assert.equal(inventory.find(t=>t.name==='payment_reminder').suggested_purpose,null);
+  assert.equal(inventory.find(t=>t.name==='pending_offer').suggested_purpose,null);
+  assert.equal(templates.length,1);
+  assert.equal(missingMappings[0].name,'missing_mapping');
+});
