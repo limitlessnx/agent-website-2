@@ -40,9 +40,9 @@ test('revoked manager and anonymous session cannot send; uncertain audience fail
   for(const [options,status] of [[{noSession:true},401],[{denied:true},403]]) {const {route,state}=harness(options);assert.equal((await route.POST(request())).status,status);assert.equal(state.sent.length,0)}
   const {route,state}=harness({readError:true});assert.equal((await route.POST(request())).body.failed,1);assert.equal(state.sent.length,0);
 });
-test('non-hotel tenants retain existing shared template delivery behavior',async()=>{
-  const {route,state}=harness({industry:'photography'});assert.equal((await route.POST(request({templatePurpose:'campaign'}))).body.accepted,1);
-  assert.equal(state.sent[0].requireProviderApproval,false);
+test('non-hotel tenants cannot bypass the reviewed campaign workflow',async()=>{
+  const {route,state}=harness({industry:'photography'});assert.equal((await route.POST(request({templatePurpose:'campaign'}))).status,400);
+  assert.equal(state.sent.length,0);
 });
 test('existing campaign composer selects the hotel template purpose without a new UI contract',async()=>{
   const {route,state}=harness();const response=await route.POST(request({templatePurpose:undefined}));
@@ -50,16 +50,6 @@ test('existing campaign composer selects the hotel template purpose without a ne
 });
 
 test('hotel campaigns retain selected language and uncertain submissions never claim acceptance',async()=>{for(const options of [{noReceipt:true},{sendError:true}]){const {route,state}=harness({...options,language:'fr'});const response=await route.POST(request({languageCode:'fr'}));assert.equal(response.body.accepted,0);assert.equal(response.body.unknown,1);assert.equal(state.sent[0].requestedTemplateLanguage,'fr');}});
-
-test('non-hotel campaigns preserve the selected language and require a provider receipt',async()=>{
-  for(const options of [{noReceipt:true},{sendError:true}]){
-    const {route,state}=harness({industry:'photography',language:'fr',...options});
-    const response=await route.POST(request({templatePurpose:'campaign',languageCode:'fr'}));
-    assert.equal(state.sent[0].requestedTemplateLanguage,'fr');
-    assert.equal(response.body.accepted,0);
-    assert.equal(response.body.unknown,1);
-  }
-});
 
 test('bulk campaign preflight rejects operational, unavailable or non-marketing templates',async()=>{
  for(const [options,extra,status] of [[{industry:'photography'},{templatePurpose:'human_handoff_staff'},400],[{templateUnavailable:true},{},409],[{category:'UTILITY'},{},409]]){
