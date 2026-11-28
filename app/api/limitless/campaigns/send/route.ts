@@ -7,6 +7,7 @@ import { getRealEstateCampaignGroup, matchesRealEstateCampaignGroupRules } from 
 import { getProperties } from "@/lib/limitless-data";
 import { getCampaignAudienceLeads, normalizeLeadPhone, type ProgressiveLead } from "@/lib/lead-profile-service";
 import { dispatchMaiaCampaignAction } from "@/lib/maia-action-gateway";
+import { CampaignTemplateError, loadLinkedCampaignTemplates } from "@/lib/portal-campaign-templates";
 import { saveCampaignDeliveryReport } from "@/lib/campaign-report-store";
 import { buildPropertyCampaignContent, PropertyCampaignMessageError } from "@/lib/property-campaign-message";
 import { getMetaCooldownPhones } from "@/lib/whatsapp-status-log";
@@ -123,6 +124,15 @@ export async function POST(request: Request) {
     const cooldownSkipped = matchedRecipients.length - recipients.length;
     if (!recipients.length) return noStore({ error: cooldownSkipped ? "All matched leads are currently in WhatsApp cooldown after Meta delivery blocks. Wait before retrying or ask the contact to message Maia first." : "No campaign-eligible leads matched this audience.", skipped: cooldownSkipped, cooldownSkipped }, 400);
 
+    // Validate the exact tenant mapping against the current Meta inventory before
+    // creating an approval or claiming an outbound request.
+    const purpose = campaignType === "limitless_realty_reminder" ? "follow_up_outside_24h" : campaignType;
+    const { templates } = await loadLinkedCampaignTemplates(organizationId, true, [purpose]);
+    const matches = templates.filter(item => item.name === templateName && item.purpose === purpose
+      && (campaignType === "limitless_realty_reminder" ? ["MARKETING", "UTILITY"].includes(item.category) : item.category === "MARKETING"));
+    if (matches.length !== 1) return noStore({ ok: false, status: "template_unavailable", error: "No unique approved template is linked to this campaign purpose. Review the WhatsApp template mapping before sending." }, 409);
+    const templateLanguage = matches[0].language;
+
     const approvalArguments = campaignApprovalArguments({
       organizationId,
       requestId,
@@ -145,7 +155,7 @@ export async function POST(request: Request) {
       // Preview is read-only: it must not create a durable send approval.
       // The authenticated Send request recomputes the exact payload and consumes
       // a one-time approval immediately before claiming the outbound campaign.
-      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length } }, 200);
+      return noStore({ ok: true, status: "preview_ready", requestId, preview: { campaignType, campaignTypeLabel: campaignLabel(campaignType), topic, templateName, templateLanguage, propertyName: estateBrief?.propertyName || propertyCampaign?.propertyName || null, imageHeader: Boolean(estateBrief?.imageUrl), message, recipientPreview: maskedRecipientPreview(recipients), moreRecipients: Math.max(0, recipients.length - 20), attemptedRecipients: recipients.length, cooldownSkipped, messageParts: messageParts.length } }, 200);
     }
 
     if (campaignType === ESTATE_BRIEF_CAMPAIGN_TYPE && !estateBriefTemplateApproved()) return noStore({ ok: false, status: "template_pending_approval", error: "estate_brief_update remains blocked until its Meta-approved template contract is active." }, 409);
@@ -185,7 +195,7 @@ export async function POST(request: Request) {
     const dispatches: Array<Awaited<ReturnType<typeof dispatchMaiaCampaignAction>>> = [];
     try {
       for (let index = 0; index < messageParts.length; index += 1) {
-        dispatches.push(await dispatchMaiaCampaignAction({ commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`, campaignType, templateName, topic, message: messageParts[index], recipients, propertyTitle: estateBrief?.propertyName || propertyCampaign?.propertyName || selectedProperty?.title, propertyLocation: estateBrief?.location, propertyPrice: estateBrief?.price, sellingPoint: estateBrief?.sellingPoint, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || undefined, createdBy }));
+        dispatches.push(await dispatchMaiaCampaignAction({ organizationId, templateLanguage, commandId: messageParts.length === 1 ? campaignId : `${campaignId}-part-${index + 1}`, campaignType, templateName, topic, message: messageParts[index], recipients, propertyTitle: estateBrief?.propertyName || propertyCampaign?.propertyName || selectedProperty?.title, propertyLocation: estateBrief?.location, propertyPrice: estateBrief?.price, sellingPoint: estateBrief?.sellingPoint, mediaUrl: estateBrief?.imageUrl || String(body.mediaUrl || "").trim() || undefined, createdBy }));
       }
     } catch (dispatchError) {
       const detail = dispatchError instanceof Error ? dispatchError.message.slice(0, 1000) : "Provider execution returned an ambiguous failure.";
@@ -229,6 +239,6 @@ export async function POST(request: Request) {
     return noStore(payload);
   } catch (error) {
     console.error("WhatsApp campaign dispatch failed.", error);
-    return noStore({ error: error instanceof Error ? error.message : "Campaign dispatch failed.", reason: error instanceof Error ? error.message : "Campaign dispatch failed." }, error instanceof PropertyCampaignMessageError || error instanceof EstateBriefCampaignError ? 400 : 500);
+    return noStore({ error: error instanceof Error ? error.message : "Campaign dispatch failed.", reason: error instanceof Error ? error.message : "Campaign dispatch failed." }, error instanceof CampaignTemplateError ? error.status : error instanceof PropertyCampaignMessageError || error instanceof EstateBriefCampaignError ? 400 : 500);
   }
 }
