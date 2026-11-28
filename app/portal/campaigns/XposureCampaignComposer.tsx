@@ -7,6 +7,7 @@ import CampaignContactImport, { type CampaignContact } from "./CampaignContactIm
 import styles from "./XposureCampaigns.module.css";
 
 type CampaignTemplate = PromotionTemplate & { purpose: string };
+type InventoryItem = { name: string; language: string; status: string; category: string; mapping_status: string; suggested_purpose?: string | null };
 const templateKey = (template: PromotionTemplate) => `${template.name}:${template.language}`;
 type Customer = { id: string; full_name: string; phone: string | null };
 type Review = {
@@ -24,6 +25,7 @@ const digits = (phone: string | null) => (phone || "").replace(/^\+/, "");
 
 export default function XposureCampaignComposer({ customers, canManageContacts }: { customers: Customer[]; canManageContacts: boolean }) {
   const [templates, setTemplates] = useState<CampaignTemplate[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [template, setTemplate] = useState<CampaignTemplate | null>(null);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
   const [message, setMessage] = useState("");
@@ -51,6 +53,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
       if (controller.signal.aborted) return;
       const available: CampaignTemplate[] = promotion.status === "fulfilled" ? promotion.value.promotions || [] : [];
       setTemplates(available);
+      setInventory(promotion.status === "fulfilled" ? promotion.value.inventory || [] : []);
       setTemplate(promotion.status === "fulfilled" ? promotion.value.promotion || available[0] || null : null);
       setReview(null);
       setTemplateError(promotion.status === "rejected" ? promotion.reason.message : "");
@@ -145,6 +148,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Choose the approved marketing template for your campaign. Maia formats your message for the selected template.</p></div></div>
         {loading && <p role="status">Checking approved marketing templates and loading contacts…</p>}
         {templateError && <p className={styles.error} role="alert">{templateError}</p>}
+        {!loading && !template && <div className={styles.hint}><strong>Campaign setup</strong><p>Connect your own WhatsApp account, then have an approved marketing template linked to this workspace. Add contacts only with their marketing permission.</p><p>{inventory.length ? `${inventory.length} provider template(s) discovered. ${inventory.filter(item => item.status === "APPROVED" && item.mapping_status === "unlinked").length} approved template(s) need a mapping.` : "No provider template inventory is available yet."}</p><a href="/portal/settings">Open workspace settings</a></div>}
         {template && <div className={styles.promotionFields}>
           <label className={styles.field}>Campaign template<select value={templateKey(template)} disabled={Boolean(pending)} onChange={event => { setTemplate(templates.find(item => templateKey(item) === event.target.value) || null); setReview(null); setCanUseAiFormatting(false); setError(""); setNotice(""); }}>
             {templates.map(item => <option key={templateKey(item)} value={templateKey(item)}>{item.name.replaceAll("_", " ")} · {item.language}</option>)}
@@ -153,7 +157,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
           <p id="promotion-message-hint" className={styles.hint}>Your message is automatically formatted on the server. You will see the approved WhatsApp preview before sending.</p>
 
         </div>}
-        {(contactError || templateError || error) && <div className={styles.importActions}><button type="button" className={styles.secondary} disabled={loading || Boolean(pending)} onClick={refresh}>Refresh campaign information</button></div>}
+        {(contactError || templateError || error || !template) && <div className={styles.importActions}><button type="button" className={styles.secondary} disabled={loading || Boolean(pending)} onClick={refresh}>Refresh campaign information</button></div>}
       </section>
 
       <section className={`${styles.card} ${styles.promotionAudience}`} aria-labelledby="campaign-audience-heading">
