@@ -6,6 +6,8 @@ import { calculateFluxCredits } from "@/lib/fluxknight-plans";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
 
+type CampaignTemplate = PromotionTemplate & { purpose: string };
+const templateKey = (template: PromotionTemplate) => `${template.name}:${template.language}`;
 type Customer = { id: string; full_name: string; phone: string | null };
 type Review = {
   campaignId: string;
@@ -21,7 +23,8 @@ type Review = {
 const digits = (phone: string | null) => (phone || "").replace(/^\+/, "");
 
 export default function XposureCampaignComposer({ customers, canManageContacts }: { customers: Customer[]; canManageContacts: boolean }) {
-  const [template, setTemplate] = useState<PromotionTemplate | null>(null);
+  const [templates, setTemplates] = useState<CampaignTemplate[]>([]);
+  const [template, setTemplate] = useState<CampaignTemplate | null>(null);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -46,7 +49,10 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
     }
     void Promise.allSettled([load("meta-templates"), load("contacts")]).then(([promotion, audience]) => {
       if (controller.signal.aborted) return;
-      setTemplate(promotion.status === "fulfilled" ? promotion.value.promotion : null);
+      const available: CampaignTemplate[] = promotion.status === "fulfilled" ? promotion.value.promotions || [] : [];
+      setTemplates(available);
+      setTemplate(promotion.status === "fulfilled" ? promotion.value.promotion || available[0] || null : null);
+      setReview(null);
       setTemplateError(promotion.status === "rejected" ? promotion.reason.message : "");
       setContacts(audience.status === "fulfilled" ? audience.value.contacts : []);
       setContactError(audience.status === "rejected" ? audience.reason.message : "");
@@ -108,6 +114,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action, message, contactIds: recipients, whatsappConsentConfirmed: consent,
+          campaignTemplate: template ? { name: template.name, language: template.language } : undefined,
           campaignId: review?.campaignId, reviewFingerprint: review?.reviewFingerprint,
           writerValues: review?.writerValues, useAiFormatting,
         }),
@@ -135,10 +142,13 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   return <div className={styles.workspace}>
     <div className={styles.promotionColumns}>
       <section className={`${styles.card} ${styles.promotionMessage}`} aria-labelledby="campaign-message-heading">
-        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Write your promotion naturally. We automatically format it using your approved WhatsApp promotional template.</p></div></div>
-        {loading && <p role="status">Checking the assigned promotion and loading contacts…</p>}
+        <div className={styles.heading}><div><h2 id="campaign-message-heading">Campaign message</h2><p>Choose the approved marketing template for your campaign. Maia formats your message for the selected template.</p></div></div>
+        {loading && <p role="status">Checking approved marketing templates and loading contacts…</p>}
         {templateError && <p className={styles.error} role="alert">{templateError}</p>}
         {template && <div className={styles.promotionFields}>
+          <label className={styles.field}>Campaign template<select value={templateKey(template)} disabled={Boolean(pending)} onChange={event => { setTemplate(templates.find(item => templateKey(item) === event.target.value) || null); setReview(null); setCanUseAiFormatting(false); setError(""); setNotice(""); }}>
+            {templates.map(item => <option key={templateKey(item)} value={templateKey(item)}>{item.name.replaceAll("_", " ")} · {item.language}</option>)}
+          </select></label>
           <label className={styles.field}>Message<textarea rows={7} value={message} maxLength={4000} disabled={Boolean(pending)} onChange={event => changeMessage(event.target.value)} aria-describedby="promotion-message-hint" /></label>
           <p id="promotion-message-hint" className={styles.hint}>Your message is automatically formatted on the server. You will see the approved WhatsApp preview before sending.</p>
 
