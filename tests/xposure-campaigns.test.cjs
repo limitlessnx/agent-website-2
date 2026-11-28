@@ -97,11 +97,18 @@ function harness(options = {}) {
     '@/lib/hotel-communication-policy': source('lib/hotel-communication-policy.ts'),
     '@/lib/hotel-communications': {},
   });
+  const inventoryRoute = source('app/api/portal/campaigns/meta-templates/route.ts', {
+    ...common, 'next/server': { NextResponse: { json } },
+    '@/lib/client-auth': { getClientSession: async () => options.anonymous ? null : { organizationId: 'tenant-a', userId: 'user-a' } },
+    '@/lib/portal-access': { requirePortalPermission: async () => { if (options.denied) throw Error('denied'); } },
+    '@/lib/portal-campaign-templates': inventory,
+    '@/lib/hotel-communication-policy': source('lib/hotel-communication-policy.ts'),
+  });
   const request = (extra = {}) => route.POST({ json: async () => ({
     action: 'review', message: draft, contactIds: [contactId], whatsappConsentConfirmed: true, organizationId: 'tenant-b', ...extra,
   }) });
   const send = (review, extra = {}) => request({ action: 'send', campaignId: review.campaignId, reviewFingerprint: review.reviewFingerprint, ...extra });
-  return { state, request, send, inventory };
+  return { state, request, send, inventory, inventoryRoute };
 }
 
 test('the server previews the assigned Meta promotion, audits consent, and submits it once', async () => {
@@ -322,4 +329,24 @@ test('new tenant cannot bypass consent by calling the legacy bulk endpoint',asyn
  assert.equal(h.state.sent.length,0);
  const inactive=harness({slug:'new-business',inactive:true});
  assert.equal((await inactive.request()).status,409);
+});
+
+test('fresh tenant inventory returns the same marketing contract without preconfigured mappings',async()=>{
+ const h=harness({slug:'new-salon',industry:'beauty-spa',configs:[]});
+ const result=await h.inventoryRoute.GET();
+ assert.equal(result.status,200);
+ assert.equal(result.body.promotions.length,0);
+ assert.equal(result.body.inventory[0].mapping_status,'unlinked');
+ assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'en'}})).status,409);
+ assert.equal(h.state.sent.length,0);
+});
+test('generic inventory uses only current tenant and respects inactive and denied sessions',async()=>{
+ const h=harness({slug:'fresh-retail',industry:'retail'});
+ const result=await h.inventoryRoute.GET();
+ assert.equal(result.status,200);assert.equal(result.body.promotions.length,1);
+ assert.ok(h.state.filters.filter(([,key])=>key==='organization_id').every(([, ,value])=>value==='tenant-a'));
+ for(const [options,status] of [[{anonymous:true},401],[{denied:true},403],[{inactive:true},409]]) {
+  const rejected=harness({slug:'fresh-retail',...options});assert.equal((await rejected.inventoryRoute.GET()).status,status);
+  assert.equal(rejected.state.inventory,0);
+ }
 });
