@@ -24,11 +24,11 @@ export async function GET(request: Request) {
   const { data: organizations, error: orgError } = await admin.from("organizations").select("id").eq("status", "active").in("id", ids);
   if (orgError) return NextResponse.json({ error: "Unable to read active organizations." }, { status: 503 });
   const active = (organizations || []).map(row => String(row.id));
-  const startedAt = Date.now();
+  const deadline = AbortSignal.timeout(40000);
   let checked = 0, failed = 0;
   for (let offset = 0; offset < active.length; offset += 3) {
-    if (Date.now() - startedAt > 30000) break;
-    const batch = await Promise.allSettled(active.slice(offset, offset + 3).map(syncWhatsAppTemplateInventory));
+    if (deadline.aborted) break;
+    const batch = await Promise.allSettled(active.slice(offset, offset + 3).map(id => syncWhatsAppTemplateInventory(id, deadline)));
     for (const result of batch) { if (result.status === "fulfilled") checked++; else failed++; }
   }
   const deferred = active.length - checked - failed;
