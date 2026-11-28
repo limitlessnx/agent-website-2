@@ -30,7 +30,9 @@ export async function POST(request: Request) {
     let contract: WriteupContract = { name: "direct_message", language: "en", body: "{{1}}", keys: ["message"] };
     if (spec) {
       const { templates } = await loadLinkedCampaignTemplates(scope.organizationId, true, [spec.purpose]);
-      const template = templates.find(item => item.name === spec.name && item.purpose === spec.purpose && item.language === "en_US");
+      const matching = templates.filter(item => item.name === spec.name && item.purpose === spec.purpose && JSON.stringify(item.variable_keys) === JSON.stringify(spec.keys));
+      // The registered Meta language is authoritative; en and en_US are different template variants.
+      const template = matching.length === 1 ? matching[0] : undefined;
       if (!template || JSON.stringify(template.variable_keys) !== JSON.stringify(spec.keys)) return json({ error: "The linked, approved template contract is unavailable or has changed." }, 409);
       contract = { name: template.name, language: template.language, body: template.body, keys: spec.keys };
     }
