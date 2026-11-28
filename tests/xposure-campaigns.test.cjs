@@ -252,3 +252,38 @@ test('optional AI extraction uses stable identity and send reuses the reviewed o
   assert.equal(h.state.sent.length, 1);
   assert.equal(h.state.writer.length, 2);
 });
+
+test('registry discovers pending and unlinked templates but routes only eligible linked marketing templates', async () => {
+  const wishesConfig = { ...config, template_name: 'wishes_template', purpose: 'campaign' };
+  const wishes = { ...template, name: 'wishes_template' };
+  const handoffConfig = { ...config, template_name: 'handoff', purpose: 'human_handoff_staff' };
+  const h = harness({ configs: [config, wishesConfig, handoffConfig], templates: [
+    template, wishes, {...template, name:'handoff', category:'UTILITY'},
+    {...template, name:'pending', status:'PENDING'}, {...template, name:'unmapped'},
+  ] });
+  const registry = await h.inventory.loadCampaignPromotions('tenant-a');
+  assert.deepEqual(Array.from(registry.promotions, item => item.name), ['wishes_template','xposure_studio_promotion']);
+  assert.equal(registry.inventory.find(item => item.name === 'pending').status, 'PENDING');
+  assert.equal(registry.inventory.find(item => item.name === 'unmapped').mapping_status, 'unlinked');
+  assert.equal(registry.inventory.find(item => item.name === 'handoff').purpose, 'human_handoff_staff');
+  assert.equal((await h.request({ campaignTemplate: {name:'handoff',language:'en'} })).status,409);
+  assert.equal((await h.request({ campaignTemplate: {name:'unmapped',language:'en'} })).status,409);
+  const selected = {name:'wishes_template',language:'en'};
+  const review = await h.request({campaignTemplate:selected});
+  assert.equal(review.status,200);
+  assert.equal((await h.send(review.body,{campaignTemplate:{name:config.template_name,language:'en'}})).status,409);
+  assert.equal((await h.send(review.body,{campaignTemplate:selected})).body.accepted,1);
+  assert.equal(h.state.sent[0].templatePurpose,'campaign');
+  assert.equal(h.state.sent[0].requestedTemplateName,'wishes_template');
+  assert.equal(h.state.sent[0].organizationId,'tenant-a');
+});
+test('registry rejects ambiguous mapping, duplicate provider variants and forged selection', async () => {
+  for (const options of [{configs:[config,config]}, {templates:[template,template]}]) {
+    const h = harness(options);
+    assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'en'}})).status,409);
+    assert.equal(h.state.sent.length,0);
+  }
+  const h = harness();
+  assert.equal((await h.request({campaignTemplate:{name:'../other',language:'en'}})).status,400);
+  assert.equal((await h.request({campaignTemplate:{name:config.template_name,language:'fr'}})).status,409);
+});
