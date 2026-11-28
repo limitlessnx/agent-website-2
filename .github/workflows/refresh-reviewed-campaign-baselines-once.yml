@@ -1,0 +1,38 @@
+name: One-time reviewed campaign visual baseline refresh
+on:
+  push:
+    branches: [fix/tenant-campaign-template-routing-20261128]
+    paths: [.github/workflows/refresh-reviewed-campaign-baselines-once.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Copy only the seven reviewed, hash-pinned screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/limitlessnx/agent-website-2/actions/artifacts/15261711396/zip > /tmp/reviewed.zip
+          echo '76212eb1a1bee146e10cba1e597bf855596e0c95d376368b9ec7aebe33f98ea6  /tmp/reviewed.zip' | sha256sum -c -
+          python3 - <<'PY'
+          import hashlib, pathlib, zipfile
+          reviewed = {"tenant-general-chromium-360-mobile-navigation":"03c78dc02892370ee83ed0532ad365de1461864da281c61512b10f362d21d898","tenant-general-chromium-430-mobile-navigation":"19cd6e074eddf42fc6479326f48294bfd2b43ffbbdcba5636b3bd111c60b9774","tenant-general-chromium-768-mobile-navigation":"05eb03b4ebce729976e0b9605ce8973ec3935148273ee13efbcdebbda2721b81","tenant-real-estate-chromium-1024":"a2e774ce4a11cf8fd2d45907094eaab63a4ce177be97961e6faee489c051dd34","tenant-real-estate-chromium-360-mobile-navigation":"3a633328adefe5921ab7e147cccd2a1a15278f5fcf8bb8ac88c1e9a570dd01d6","tenant-real-estate-chromium-430-mobile-navigation":"458b84fd2592f3c2ecf796833b4339ae88c8a00ab7be2977d9e7868cb61a4993","tenant-real-estate-chromium-768-mobile-navigation":"f989e74543b1216d69c31df3aac057911423c4db6ce6a51296cbb695f14cdc79"}
+          root = pathlib.Path("docs/phase2-evidence/after/phase23-ubuntu")
+          with zipfile.ZipFile("/tmp/reviewed.zip") as archive:
+              for name, expected in reviewed.items():
+                  group = name.removesuffix("-mobile-navigation")
+                  data = archive.read(f"responsive/dashboard-{group}/phase23-ubuntu/{name}-actual.png")
+                  assert hashlib.sha256(data).hexdigest() == expected
+                  assert data.startswith(b"\x89PNG\r\n\x1a\n")
+                  dest = root / (name + ".png")
+                  assert dest.is_file()
+                  dest.write_bytes(data)
+          PY
+          git add -- docs/phase2-evidence/after/phase23-ubuntu/tenant-general-chromium-360-mobile-navigation.png docs/phase2-evidence/after/phase23-ubuntu/tenant-general-chromium-430-mobile-navigation.png docs/phase2-evidence/after/phase23-ubuntu/tenant-general-chromium-768-mobile-navigation.png docs/phase2-evidence/after/phase23-ubuntu/tenant-real-estate-chromium-1024.png docs/phase2-evidence/after/phase23-ubuntu/tenant-real-estate-chromium-360-mobile-navigation.png docs/phase2-evidence/after/phase23-ubuntu/tenant-real-estate-chromium-430-mobile-navigation.png docs/phase2-evidence/after/phase23-ubuntu/tenant-real-estate-chromium-768-mobile-navigation.png
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Refresh seven reviewed campaign navigation screenshots'
+          git push origin HEAD:refs/heads/fix/tenant-campaign-template-routing-20261128
