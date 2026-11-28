@@ -46,10 +46,6 @@ const expectedPendingVersions = [
   "20261109073001",
   // Hotel dashboard trends and inbox index: prepared for review, not applied.
   "20261109090514",
-  // Gencouv Brevo release migrations pending production verification and application.
-  "20261127110000",
-  "20261127110100",
-  "20261127110200",
 ];
 
 test("pending local migrations match the explicitly reviewed release gate", () => {

@@ -1,5 +1,5 @@
 -- The maintained reservation migration is
--- supabase/migrations/20261127110000_gencouv_brevo_reservations.sql.
+-- supabase/migrations/20261128070620_gencouv_brevo_reservations.sql.
 --
 -- The Gencouv campaign settings row (gencouv_long_form_copy_trading) uses
 -- metadata.brevo_approved_senders, an array of explicitly approved normalized
