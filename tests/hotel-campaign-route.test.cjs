@@ -49,3 +49,13 @@ test('existing campaign composer selects the hotel template purpose without a ne
 });
 
 test('hotel campaigns retain selected language and uncertain submissions never claim acceptance',async()=>{for(const options of [{noReceipt:true},{sendError:true}]){const {route,state}=harness(options);const response=await route.POST(request({languageCode:'fr'}));assert.equal(response.body.accepted,0);assert.equal(response.body.unknown,1);assert.equal(state.sent[0].requestedTemplateLanguage,'fr');}});
+
+test('non-hotel campaigns preserve the selected language and require a provider receipt',async()=>{
+  for(const options of [{noReceipt:true},{sendError:true}]){
+    const {route,state}=harness({industry:'photography',...options});
+    const response=await route.POST(request({templatePurpose:'campaign',languageCode:'fr'}));
+    assert.equal(state.sent[0].requestedTemplateLanguage,'fr');
+    assert.equal(response.body.accepted,0);
+    assert.equal(response.body.unknown,1);
+  }
+});
