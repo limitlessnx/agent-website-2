@@ -23,7 +23,8 @@ function harness(){
   '@/lib/real-estate-campaign-groups':{getRealEstateCampaignGroup:async()=>null,matchesRealEstateCampaignGroupRules:()=>false},
   '@/lib/limitless-data':{getProperties:async(_limit,org)=>{state.propertyQueryOrg=org;return properties;}},
   '@/lib/lead-profile-service':{getCampaignAudienceLeads:async()=>state.leadRows,normalizeLeadPhone:(value)=>String(value||'').replace(/\D/g,'')},
-  '@/lib/maia-action-gateway':{dispatchMaiaCampaignAction:async(command)=>{state.dispatches++;return{accepted:1,failed:0,skipped:0,pendingDelivery:1,acceptedRecipients:[{leadId:'lead-1',phone:'2348012345678',name:'Newton',provider:'meta_whatsapp',provider_message_id:'wamid.1'}],failedRecipients:[],executionId:'exec-1',path:['trigger','campaign'],summary:{attempted:1,accepted_by_whatsapp_api:1,pending_delivery_confirmation:1,status:'submitted'}};}},
+  '@/lib/portal-campaign-templates':{CampaignTemplateError:class extends Error{},loadLinkedCampaignTemplates:async(org,_linked,[purpose])=>{state.templateOrg=org;return {templates:state.templateUnavailable?[]:[{name:purpose==='limitless_realty_update'?'limitless_realty_update_v2':purpose==='follow_up_outside_24h'?'limitless_realty_reminder':purpose,purpose,language:'en',category:'MARKETING'}]};}},
+  '@/lib/maia-action-gateway':{dispatchMaiaCampaignAction:async(command)=>{state.dispatches++;state.command=command;return{accepted:1,failed:0,skipped:0,pendingDelivery:1,acceptedRecipients:[{leadId:'lead-1',phone:'2348012345678',name:'Newton',provider:'meta_whatsapp',provider_message_id:'wamid.1'}],failedRecipients:[],executionId:'exec-1',path:['trigger','campaign'],summary:{attempted:1,accepted_by_whatsapp_api:1,pending_delivery_confirmation:1,status:'submitted'}};}},
   '@/lib/estate-brief-campaign':{buildEstateBriefCampaign:()=>({propertyName:'Verified duplex',location:'Abuja',price:'N50m',sellingPoint:'Flexible payment options',imageUrl:'https://cdn.example.test/property.jpg',memory:{}}),EstateBriefCampaignError:class extends Error{},ESTATE_BRIEF_CAMPAIGN_TYPE:'estate_brief_update',ESTATE_BRIEF_TEMPLATE_NAME:'estate_brief_update'},
   '@/lib/campaign-report-store':{saveCampaignDeliveryReport:async(report)=>{state.report=report;}},
   '@/lib/whatsapp-message-splitter':{splitWhatsAppMessage:(message)=>[message]},
@@ -100,4 +101,13 @@ test('unavailable cooldown evidence stops before approval, tracking and provider
  const result=await route.POST(request(base({approvalStage:'send'})));
  assert.equal(result.status,500);assert.match(result.body.error,/evidence is unavailable/);
  assert.equal(state.approvals.size,0);assert.equal(state.tracking.size,0);assert.equal(state.dispatches,0);
+});
+
+test('campaign preflight blocks missing live template before approval or dispatch',async()=>{
+ const {route,state}=harness();state.templateUnavailable=true;
+ for(const approvalStage of ['prepare','send']){const result=await route.POST(request(base({approvalStage})));assert.equal(result.status,409);assert.equal(result.body.status,'template_unavailable');}
+ assert.equal(state.approvals.size,0);assert.equal(state.dispatches,0);assert.equal(state.templateOrg,ORG);
+});
+test('campaign carries verified tenant and language to gateway',async()=>{
+ const {route,state}=harness();const result=await route.POST(request(base({approvalStage:'send'})));assert.equal(result.status,200);assert.equal(state.command.organizationId,ORG);assert.equal(state.command.templateLanguage,'en');
 });
