@@ -71,6 +71,7 @@ function harness(options = {}) {
   };
   const inventory = source('lib/portal-campaign-templates.ts', {
     ...common, '@/lib/whatsapp-promotion-message': message,
+    '@/lib/whatsapp-credentials': source('lib/whatsapp-credentials.ts'),
   }, { URL, AbortSignal, fetch: async () => {
     state.inventory++;
     if (options.inventoryError) throw new TypeError('private transport information');
