@@ -3,9 +3,9 @@ import { CampaignTemplateError, loadLinkedCampaignTemplates } from "@/lib/portal
 
 /** Read-only provider discovery, with a tenant-scoped audit snapshot. Never
  * creates, activates, deactivates or substitutes an outbound template. */
-export async function syncWhatsAppTemplateInventory(organizationId: string) {
+export async function syncWhatsAppTemplateInventory(organizationId: string, deadline?: AbortSignal) {
   const admin = createAdminClient();
-  const { inventory, missingMappings } = await loadLinkedCampaignTemplates(organizationId, true, null);
+  const { inventory, missingMappings } = await loadLinkedCampaignTemplates(organizationId, true, null, deadline);
   const snapshot = {
     observed_at: new Date().toISOString(),
     count: inventory.length,
@@ -18,6 +18,7 @@ export async function syncWhatsAppTemplateInventory(organizationId: string) {
     })),
     missing_mappings: missingMappings,
   };
+  if (deadline?.aborted) throw new CampaignTemplateError("Template synchronization deadline reached.", 503);
   const { error } = await admin.from("audit_logs").insert({
     organization_id: organizationId, action: "whatsapp.template_inventory_synced",
     resource_type: "whatsapp_template_inventory", resource_id: organizationId, metadata: snapshot,
