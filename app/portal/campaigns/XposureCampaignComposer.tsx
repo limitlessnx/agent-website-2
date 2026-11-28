@@ -73,7 +73,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
   const crmOnly = customers.filter(customer => !phoneCounts.has(digits(customer.phone)));
   const messageReady = message.trim().length > 0 && message.length <= 4000;
   const issues = [
-    !loading && !template && !templateError && "The approved WhatsApp promotion is unavailable.",
+    !loading && !template && !templateError && "Connect your WhatsApp account and link an approved marketing template to start.",
     !messageReady && "Write a promotional message to continue.",
     !loading && !contactError && !eligible.length && "Add contacts with recorded WhatsApp marketing permission.",
     !loading && !contactError && eligible.length > 0 && !recipients.length && "Select at least one eligible contact.",
@@ -157,7 +157,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
       </section>
 
       <section className={`${styles.card} ${styles.promotionAudience}`} aria-labelledby="campaign-audience-heading">
-        <div className={styles.heading}><div><h2 id="campaign-audience-heading">Studio contacts</h2><p>{eligible.length} eligible · {contacts.length + crmOnly.length} total</p></div>
+        <div className={styles.heading}><div><h2 id="campaign-audience-heading">Campaign contacts</h2><p>{eligible.length} eligible · {contacts.length + crmOnly.length} total</p></div>
           <button type="button" className={styles.textButton} disabled={loading || Boolean(pending) || !eligible.length} onClick={() => changeSelection(recipients.length === eligible.length ? [] : eligible.map(contact => contact.id))}>{recipients.length === eligible.length && eligible.length ? "Clear selection" : "Select eligible"}</button>
         </div>
         {contactError && <p className={styles.error} role="alert">{contactError}</p>}
@@ -168,14 +168,14 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
           </label>)}
           {crmOnly.map(customer => <div className={styles.contact} key={`crm:${customer.id}`}><span><strong>{customer.full_name}</strong><small>{customer.phone || "No phone number"}</small><small>No marketing permission · excluded</small></span></div>)}
         </div>
-        {!contacts.length && !crmOnly.length && !contactError && !loading && <p className={styles.empty}>No studio contacts yet. Add contacts below to build your audience.</p>}
+        {!contacts.length && !crmOnly.length && !contactError && !loading && <p className={styles.empty}>No campaign contacts yet. Add contacts below to build your audience.</p>}
       </section>
 
       <section className={`${styles.card} ${styles.promotionReview}`} aria-labelledby="campaign-review-heading" aria-busy={Boolean(pending)}>
         <div className={styles.heading}><div><h2 id="campaign-review-heading">Review and send</h2><p>{recipients.length} selected</p></div></div>
         <label className={styles.consent}>
           <input type="checkbox" checked={consent} disabled={loading || Boolean(pending) || !recipients.length} onChange={event => { setConsent(event.target.checked); setReview(null); setError(""); }} />
-          <span>I confirm that the selected contacts gave Xposure permission to send them marketing messages on WhatsApp.</span>
+          <span>I confirm that the selected contacts gave this business permission to send them marketing messages on WhatsApp.</span>
         </label>
         {issues.length > 0 && <ul id="promotion-review-issues" className={styles.reviewIssues} aria-live="polite">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
         {(templateError || contactError) && <p className={styles.hint}>Refresh campaign information before reviewing.</p>}
