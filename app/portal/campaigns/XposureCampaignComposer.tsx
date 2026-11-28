@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { mapPromotionMessage, renderPromotionMessage, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
 import CampaignAiWriter from "@/components/CampaignAiWriter";
+import SavedCampaignDraftWriter from "./SavedCampaignDraftWriter";
 import { calculateFluxCredits } from "@/lib/fluxknight-plans";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
@@ -150,6 +151,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
         {loading && <p role="status">Checking approved marketing templates and loading contacts…</p>}
         {templateError && <p className={styles.error} role="alert">{templateError}</p>}
         {!loading && !template && <div className={styles.hint}><strong>Campaign setup</strong><p>Connect your own WhatsApp account, then have an approved marketing template linked to this workspace. Add contacts only with their marketing permission.</p><p>{inventory.length ? `${inventory.length} provider template(s) discovered. ${inventory.filter(item => item.status === "APPROVED" && item.mapping_status === "unlinked").length} approved template(s) need a mapping.` : "No provider template inventory is available yet."}</p><a href="/portal/settings">Open workspace settings</a></div>}
+        {!loading && !template && <SavedCampaignDraftWriter/>}
         {template && <div className={styles.promotionFields}>
           <label className={styles.field}>Campaign template<select value={templateKey(template)} disabled={Boolean(pending)} onChange={event => { setTemplate(templates.find(item => templateKey(item) === event.target.value) || null); setReview(null); setCanUseAiFormatting(false); setError(""); setNotice(""); }}>
             {templates.map(item => <option key={templateKey(item)} value={templateKey(item)}>{item.name.replaceAll("_", " ")} · {item.language}</option>)}
