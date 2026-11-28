@@ -11,13 +11,13 @@ function placeholders(template: MetaTemplate) {
   return [...found].filter(Number.isInteger).sort((a, b) => a - b);
 }
 
-export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"]) {
+export async function loadLinkedCampaignTemplates(organizationId: string, linkedOnly = true, purposes: string[] | null = ["campaign", "customer_follow_up", "campaign_promotion", "hotel_campaign"]) {
   const admin = createAdminClient();
-  const { data: linked, error: linkedError } = await admin.from("whatsapp_template_configs")
-    .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active")
-    .in("purpose", purposes);
+  const query = admin.from("whatsapp_template_configs")
+    .select("template_name,language_code,purpose,variable_keys").eq("organization_id", organizationId).eq("status", "active");
+  const { data: linked, error: linkedError } = await (purposes ? query.in("purpose", purposes) : query);
   if (linkedError) throw new CampaignTemplateError("Unable to read linked campaign templates.", 503);
-  const promotionOnly = purposes.length === 1 && purposes[0] === "campaign_promotion";
+  const promotionOnly = purposes?.length === 1 && purposes[0] === "campaign_promotion";
   if (promotionOnly && linked?.length !== 1) {
     throw new CampaignTemplateError("Ask your administrator to assign one active WhatsApp promotion template.", 409);
   }
@@ -94,18 +94,31 @@ export async function loadLinkedCampaignTemplates(organizationId: string, linked
     pageCount += 1;
   }
   if (nextUrl) throw new CampaignTemplateError("The template inventory is incomplete. Try again later.", 503);
-  return { ok: true, templates: rows.flatMap((template) => {
-    const config = (linked || []).find((item) => item.template_name === template.name && item.language_code === template.language);
-    if (linkedOnly && !config || template.status !== "APPROVED") return [];
-    return [{ id: String(template.id || ""), name: String(template.name || ""), status: "APPROVED", language: String(template.language || ""), category: String(template.category || ""), purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[], body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"), placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [] }];
-  }).sort((a, b) => a.name.localeCompare(b.name)) };
+  const inventory = rows.filter(template => template.name && template.language).map(template => {
+    const matches = (linked || []).filter(item => item.template_name === template.name && item.language_code === template.language);
+    const config = matches.length === 1 ? matches[0] : undefined;
+    return {
+      id: String(template.id || ""), name: String(template.name), status: String(template.status || "UNKNOWN"),
+      language: String(template.language), category: String(template.category || ""),
+      purpose: String(config?.purpose || ""), variable_keys: (config?.variable_keys || []) as string[],
+      mapping_status: matches.length === 1 ? "linked" : matches.length > 1 ? "ambiguous" : "unlinked",
+      body: (template.components || []).filter(component => component.type === "BODY").map(component => component.text || "").join("\n"),
+      placeholder_count: placeholders(template).length, placeholder_indexes: placeholders(template), components: template.components || [],
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name) || a.language.localeCompare(b.language));
+  // Duplicate provider records must not be eligible for routing.
+  const templates = inventory.filter(item => item.status === "APPROVED" && (!linkedOnly || item.mapping_status === "linked")
+    && inventory.filter(other => other.name === item.name && other.language === item.language).length === 1);
+  return { ok: true, templates, inventory };
+
 }
 
-export async function loadAssignedPromotion(organizationId: string): Promise<PromotionTemplate> {
-  const { templates } = await loadLinkedCampaignTemplates(organizationId, true, ["campaign_promotion"]);
-  const [template] = templates;
-  if (templates.length !== 1 || template.category !== "MARKETING") {
-    throw new CampaignTemplateError("The assigned promotion is unavailable or is no longer approved for marketing by Meta.", 409);
+type RegistryTemplate = Awaited<ReturnType<typeof loadLinkedCampaignTemplates>>["templates"][number];
+export type RoutedPromotion = PromotionTemplate & { purpose: string };
+
+function asMarketingPromotion(template: RegistryTemplate): RoutedPromotion {
+  if (template.category !== "MARKETING" || !["campaign", "campaign_promotion"].includes(template.purpose)) {
+    throw new CampaignTemplateError("The selected template is not approved for this marketing workflow.", 409);
   }
   const { name, language, body, variable_keys, components } = template;
   const header = components.find(component => component.type === "HEADER");
@@ -121,5 +134,27 @@ export async function loadAssignedPromotion(organizationId: string): Promise<Pro
         || !button.text || !staticText(button.text) || !staticText(button.url))) {
     throw new CampaignTemplateError("The assigned promotion has unsupported fields. Ask your administrator to check its WhatsApp template setup.", 409);
   }
-  return { name, language, body, variable_keys, header: header?.text || "", footer: footer?.text || "", buttonLabels: buttons.map(button => button.text!) };
+  return { name, language, body, variable_keys, purpose: template.purpose, header: header?.text || "", footer: footer?.text || "", buttonLabels: buttons.map(button => button.text!) };
+}
+
+/** Return only safe, explicitly linked marketing templates for the reviewed contact workflow. */
+export async function loadCampaignPromotions(organizationId: string) {
+  const { templates, inventory } = await loadLinkedCampaignTemplates(organizationId, true, null);
+  const promotions = templates.flatMap(template => {
+    try { return [asMarketingPromotion(template)]; }
+    catch (error) { if (error instanceof CampaignTemplateError) return []; throw error; }
+  });
+  return { promotions, inventory };
+}
+
+export async function loadAssignedPromotion(organizationId: string, selection?: { name: string; language: string }): Promise<RoutedPromotion> {
+  if (selection) {
+    const { promotions } = await loadCampaignPromotions(organizationId);
+    const matches = promotions.filter(template => template.name === selection.name && template.language === selection.language);
+    if (matches.length !== 1) throw new CampaignTemplateError("The selected marketing template is unavailable or not approved for this workflow.", 409);
+    return matches[0];
+  }
+  const { templates } = await loadLinkedCampaignTemplates(organizationId, true, ["campaign_promotion"]);
+  if (templates.length !== 1) throw new CampaignTemplateError("The assigned promotion is unavailable or is no longer approved for marketing by Meta.", 409);
+  return asMarketingPromotion(templates[0]);
 }
